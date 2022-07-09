@@ -9,7 +9,7 @@ type deadNodes struct {
 }
 
 func (d *deadNodes) decode(data []byte, v int64) error {
-	if v < 2890000 {
+	if v < 2860000 {
 		return json.Unmarshal(data, d)
 	}
 
@@ -18,7 +18,7 @@ func (d *deadNodes) decode(data []byte, v int64) error {
 }
 
 func (d *deadNodes) encode(v int64) ([]byte, error) {
-	if v < 2890000 {
+	if v < 2860000 {
 		return json.Marshal(d)
 	}
 
