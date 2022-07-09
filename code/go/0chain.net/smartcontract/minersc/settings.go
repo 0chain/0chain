@@ -95,7 +95,7 @@ var (
 		"cost.miner_health_check",
 		"cost.sharder_health_check",
 		"cost.kill-miner",
-		"cost.kill-_sharder",
+		"cost.kill-sharder",
 		"cost.shut-down-miner",
 		"cost.shut-down-sharder",
 		"cost.contributeMpk",
