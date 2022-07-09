@@ -76,10 +76,10 @@ smart_contracts:
       delete_sharder: 100
       miner_health_check: 100
       sharder_health_check: 100
-      kill_miner: 100
-      kill_sharder: 100
-      shut_down_miner: 100
-      shut_down_sharder: 100
+      kill-miner: 100
+      kill-sharder: 100
+      shut-down-miner: 100
+      shut-down-sharder: 100
       contributeMpk: 100
       shareSignsOrShares: 100
       wait: 100

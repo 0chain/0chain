@@ -8,6 +8,9 @@ import (
 	"net/url"
 	"sync"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -107,10 +110,10 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["update_globals"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_globals"), nil)
 	msc.SmartContractExecutionStats["update_miner_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_miner_settings"), nil)
 	msc.SmartContractExecutionStats["update_sharder_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_sharder_settings"), nil)
-	msc.SmartContractExecutionStats["kill_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "kill_miner"), nil)
-	msc.SmartContractExecutionStats["kill_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "kill_sharder"), nil)
-	msc.SmartContractExecutionStats["shut_down_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "shut_down_miner"), nil)
-	msc.SmartContractExecutionStats["shut_down_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "shut_down_sharder"), nil)
+	msc.SmartContractExecutionStats["kill-miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "kill-miner"), nil)
+	msc.SmartContractExecutionStats["kill-sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "kill-sharder"), nil)
+	msc.SmartContractExecutionStats["shut-down-miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "shut-down-miner"), nil)
+	msc.SmartContractExecutionStats["shut-down-sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "shut-down-sharder"), nil)
 	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
 	msc.SmartContractExecutionStats["feesPaid"] = metrics.GetOrRegisterCounter("feesPaid", nil)
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterCounter("mintedTokens", nil)
