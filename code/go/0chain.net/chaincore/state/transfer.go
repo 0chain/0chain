@@ -13,11 +13,28 @@ import (
 
 var ErrInvalidTransfer = common.NewError("invalid_transfer", "invalid transfer of state")
 
+type TransferType int
+
+const (
+	ToClient TransferType = iota
+	ToReadPool
+	FromReadPool
+	ToWritePool
+	FromWritePool
+	FromChallengesPool
+	ToChallengesPool
+	FromDelegate
+	ToDelegate
+	Burn
+	PayFee
+)
+
 //Transfer - a data structure to hold state transfer from one client to another
 type Transfer struct {
 	ClientID   string        `json:"from"`
 	ToClientID string        `json:"to"`
 	Amount     currency.Coin `json:"amount"`
+	Type       TransferType  `json:"type"`
 }
 
 //NewTransfer - create a new transfer

@@ -57,6 +57,16 @@ const (
 	TagAddReward
 	TagAddChallenge
 	TagUpdateChallenge
+	TagSendTransfer
+	TagReceiveTransfer
+	TagLockStakePool
+	TagUnlockStakePool
+	TagLockWritePool
+	TagUnlockWritePool
+	TagLockReadPool
+	TagUnlockReadPool
+	TagToChallengePool
+	TagFromChallengePool
 	TagAddMint
 	NumberOfTags
 )
@@ -70,7 +80,7 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		events := <-edb.eventsChannel
-		edb.AddEvents(ctx, events)
+		edb.addEvents(ctx, events)
 		for _, event := range events {
 			var err error = nil
 			switch EventType(event.Type) {
@@ -166,6 +176,10 @@ func (edb *EventDb) addStat(event Event) error {
 		rm.BlockNumber = event.BlockNumber
 		return edb.addOrOverwriteReadMarker(*rm)
 	case TagAddOrOverwriteUser:
+		fallthrough
+	case TagSendTransfer:
+		fallthrough
+	case TagReceiveTransfer:
 		usr, ok := fromEvent[User](event.Data)
 		if !ok {
 			return ErrInvalidEventData

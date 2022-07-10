@@ -64,6 +64,7 @@ func TestTransfer_Encode(t *testing.T) {
 		ClientID   datastore.Key
 		ToClientID datastore.Key
 		Amount     currency.Coin
+		Type       TransferType
 	}
 	tests := []struct {
 		name   string

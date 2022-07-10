@@ -9,24 +9,14 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type ChangeType int
-
-const (
-	Nonce ChangeType = iota
-	Send
-	Receive
-	Mint
-)
-
 type User struct {
-	ID         uint          `json:"-" gorm:"primarykey"`
-	UserID     string        `json:"user_id" gorm:"uniqueIndex"`
-	ChangeType ChangeType    `json:"type"`
-	TxnHash    string        `json:"txn"`
-	Balance    currency.Coin `json:"balance"`
-	Change     currency.Coin `json:"change"`
-	Round      int64         `json:"round"`
-	Nonce      int64         `json:"nonce"`
+	ID      uint          `json:"-" gorm:"primarykey"`
+	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
+	TxnHash string        `json:"txn"`
+	Balance currency.Coin `json:"balance"`
+	Change  currency.Coin `json:"change"`
+	Round   int64         `json:"round"`
+	Nonce   int64         `json:"nonce"`
 }
 
 func (edb *EventDb) GetUser(userID string) (*User, error) {

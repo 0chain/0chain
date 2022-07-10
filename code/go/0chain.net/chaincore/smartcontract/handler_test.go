@@ -130,7 +130,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 39,
+			restpoints: 40,
 		},
 		{
 			name:       "multisig",
@@ -272,7 +272,7 @@ func TestExecuteWithStats(t *testing.T) {
 				balances: stateContextIMock,
 				t:        &transaction.Transaction{},
 			},
-			want:    "{\"from\":\"\",\"to\":\"\",\"amount\":0}",
+			want:    "{\"from\":\"\",\"to\":\"\",\"amount\":0,\"type\":0}",
 			wantErr: false,
 		},
 	}

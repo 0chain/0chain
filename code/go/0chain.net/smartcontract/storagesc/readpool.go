@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
@@ -224,6 +225,13 @@ func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, inpu
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
+	i, _ := txn.Value.Int64()
+	balances.EmitEvent(event.TypeStats, event.TagLockReadPool, txn.ClientID, event.ReadPoolLock{
+		Client: txn.ClientID,
+		PoolId: req.TargetId,
+		Amount: i,
+	})
+
 	return "", nil
 }
 
@@ -246,6 +254,14 @@ func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, in
 	if err = rp.save(ssc.ID, txn.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
+
+	i, _ := balance.Int64()
+	key := readPoolKey(ssc.ID, txn.ClientID)
+	balances.EmitEvent(event.TypeStats, event.TagUnlockReadPool, key, event.ReadPoolLock{
+		Client: txn.ClientID,
+		PoolId: key,
+		Amount: i,
+	})
 
 	return "", nil
 }

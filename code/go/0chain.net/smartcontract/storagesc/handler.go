@@ -119,7 +119,7 @@ func (srh *StorageRestHandler) getRoundsTotalMint(w http.ResponseWriter, r *http
 		common.Respond(w, r, nil, common.NewErrInternal("getting total minted amount for blocks "+err.Error()))
 		return
 	}
-	common.Respond(w, r, rest.Int64Map{
+	common.Respond(w, r, rest.InterfaceMap{
 		"get_rounds_mint_total": total,
 	}, nil)
 }

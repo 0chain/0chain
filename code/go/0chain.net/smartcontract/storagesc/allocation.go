@@ -832,7 +832,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 	}
 
 	var changed bool
-
+	sum := currency.Coin(0)
 	for _, ch := range changes {
 		_, err = ch.Int64()
 		if err != nil {
@@ -841,6 +841,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		switch {
 		case ch > 0:
 			err = alloc.moveToChallengePool(cp, ch)
+			sum += ch
 			changed = true
 		default:
 			// no changes for the blobber
@@ -852,6 +853,18 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	if changed {
 		err = cp.save(sc.ID, alloc.ID, balances)
+		if err != nil {
+			i := int64(0)
+			i, err = sum.Int64()
+			if err != nil {
+				return
+			}
+			balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+				Client:       alloc.Owner,
+				AllocationId: alloc.ID,
+				Amount:       i,
+			})
+		}
 	}
 
 	return
@@ -1630,6 +1643,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				"removing allocation from blobber challenge partition "+b.ID+": "+err.Error())
 		}
 	}
+	prevBal := cp.Balance
 	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
 	if err != nil {
 		return err
@@ -1652,6 +1666,16 @@ func (sc *StorageSmartContract) finishAllocation(
 		return common.NewError("fini_alloc_failed",
 			"saving challenge pool: "+err.Error())
 	}
+	i, err := prevBal.Int64()
+	if err != nil {
+		return common.NewError("fini_alloc_failed",
+			"emitting pool change "+err.Error())
+	}
+	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		Client:       alloc.Owner,
+		AllocationId: alloc.ID,
+		Amount:       i,
+	})
 
 	alloc.Finalized = true
 

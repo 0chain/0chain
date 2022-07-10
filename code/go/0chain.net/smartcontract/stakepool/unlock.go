@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -55,6 +56,15 @@ func (sp *StakePool) UnlockPool(
 	amount, err := sp.MintRewards(
 		clientID, poolId, providerId, providerType, usp, balances,
 	)
+
+	i, _ := amount.Int64()
+	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, poolId, event.DelegatePoolLock{
+		Client:       clientID,
+		PoolId:       poolId,
+		ProviderId:   providerId,
+		ProviderType: providerType,
+		Amount:       i,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("error emptying account, %v", err)
 	}

@@ -513,11 +513,11 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 
-	if err = c.emitUserEvent(sctx, stateToUser(fromClient, fs, event.Send, amount)); err != nil {
+	if err = c.emitSendTransferEvent(sctx, stateToUser(fromClient, fs, amount)); err != nil {
 		return common.NewError("transfer_amount", "could not emit event")
 	}
 
-	if err = c.emitUserEvent(sctx, stateToUser(toClient, ts, event.Receive, amount)); err != nil {
+	if err = c.emitReceiveTransferEvent(sctx, stateToUser(toClient, ts, amount)); err != nil {
 		return common.NewError("transfer_amount", "could not emit event")
 	}
 
@@ -580,7 +580,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return common.NewError("mint_amount - insert", err.Error())
 	}
 
-	if err = c.emitUserEvent(sctx, stateToUser(toClient, ts, event.Mint, amount)); err != nil {
+	if err = c.emitMintEvent(sctx, stateToUser(toClient, ts, amount)); err != nil {
 		return common.NewError("mint_amount", "could not emit event")
 	}
 
@@ -625,7 +625,7 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	}
 	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
 
-	if err = c.emitUserEvent(sctx, stateToUser(fromClient, s, event.Nonce, 0)); err != nil {
+	if err = c.emitUserEvent(sctx, stateToUser(fromClient, s, 0)); err != nil {
 		return common.NewError("increment_nonce", "could not emit event")
 	}
 
@@ -694,15 +694,14 @@ func userToState(u *event.User) *state.State {
 	}
 }
 
-func stateToUser(clientID string, s *state.State, changeType event.ChangeType, change currency.Coin) *event.User {
+func stateToUser(clientID string, s *state.State, change currency.Coin) *event.User {
 	return &event.User{
-		UserID:     clientID,
-		ChangeType: changeType,
-		Change:     change,
-		TxnHash:    s.TxnHash,
-		Balance:    s.Balance,
-		Round:      s.Round,
-		Nonce:      s.Nonce,
+		UserID:  clientID,
+		Change:  change,
+		TxnHash: s.TxnHash,
+		Balance: s.Balance,
+		Round:   s.Round,
+		Nonce:   s.Nonce,
 	}
 }
 
@@ -712,6 +711,33 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) error {
 	}
 
 	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, "", usr)
+
+	return nil
+}
+func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) error {
+	if c.GetEventDb() == nil {
+		return nil
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagAddMint, "", usr)
+
+	return nil
+}
+func (c *Chain) emitSendTransferEvent(sc bcstate.StateContextI, usr *event.User) error {
+	if c.GetEventDb() == nil {
+		return nil
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagSendTransfer, "", usr)
+
+	return nil
+}
+func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.User) error {
+	if c.GetEventDb() == nil {
+		return nil
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, "", usr)
 
 	return nil
 }

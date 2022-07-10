@@ -415,7 +415,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"EmitEvent",
 			event.TypeStats, event.TagAddAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
-
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagLockReadPool, mock.Anything, mock.Anything,
+		).Return().Maybe()
 		balances.On(
 			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()

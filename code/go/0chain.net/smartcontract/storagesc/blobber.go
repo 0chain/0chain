@@ -519,6 +519,12 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 			alloc.restDurationInTimeUnits(wmTime))
 
 		err = alloc.moveToChallengePool(cp, move)
+		coin, _ := move.Int64()
+		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       coin,
+		})
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
@@ -529,6 +535,12 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	} else {
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
 		err = alloc.moveFromChallengePool(cp, move)
+		coin, _ := move.Int64()
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       coin,
+		})
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}

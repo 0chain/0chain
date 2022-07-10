@@ -148,6 +148,12 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		}
 		alloc.MovedBack += back
 		blobAlloc.Returned += back
+		coin, _ := move.Int64()
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       coin,
+		})
 	}
 
 	var sp *stakePool
@@ -298,6 +304,13 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	var until = alloc.Until()
 
 	err = alloc.moveFromChallengePool(cp, move)
+	coin, _ := move.Int64()
+	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		Client:       alloc.Owner,
+		AllocationId: alloc.ID,
+		Amount:       coin,
+	})
+
 	if err != nil {
 		return fmt.Errorf("moving challenge pool rest back to write pool: %v", err)
 	}

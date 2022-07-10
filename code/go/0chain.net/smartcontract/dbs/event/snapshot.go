@@ -23,9 +23,21 @@ type Snapshot struct {
 	DataUtilization  int64 //492 SUM amount saved across all allocations
 }
 
-func (edb *EventDb) GetRoundsMintTotal(from, to int64) (int64, error) {
-	var total int64
-	return total, edb.Store.Get().Model(&Snapshot{}).Where("round between ? and ?", from, to).Select("sum(mint_total_amount)").Scan(&total).Error
+func (edb *EventDb) GetRoundsMintTotal(from, to int64) ([]int64, error) {
+	var totals []int64
+
+	//WITH ranges AS (
+	//    SELECT (ten*10)::text||'-'||(ten*10+9)::text AS range,
+	//           ten*10 AS r_min, ten*10+9 AS r_max
+	//      FROM generate_series(0,90) AS t(ten))
+	//SELECT r.range, count(s.*), sum(total_mint)
+	//  FROM ranges r
+	//  LEFT JOIN snapshots s ON s.round BETWEEN r.r_min AND r.r_max
+	// GROUP BY r.range
+	// ORDER BY r.range;
+
+	return totals, nil
+
 }
 
 func (edb *EventDb) updateSnapshot(e events) error {
@@ -62,19 +74,70 @@ func (edb *EventDb) updateSnapshot(e events) error {
 			}
 		}
 
+		//	TagSendTransfer
+		//	TagReceiveTransfer
+		//	TagLockStakePool
+		//	TagUnlockStakePool
+		//	TagLockWritePool
+		//	TagUnlockWritePool
+		//	TagLockReadPool
+		//	TagUnlockReadPool
+		//	TagToChallengePool
+		//	TagFromChallengePool
+		//	TagAddMint
 		switch EventTag(event.Tag) {
-		case TagAddOrOverwriteUser:
+		case TagAddMint:
 			u, ok := fromEvent[User](event.Data)
 			if !ok {
 				return ErrInvalidEventData
 			}
-			if u.ChangeType == Mint {
-				change, err := u.Change.Int64()
-				if err != nil {
-					return err
-				}
-				current.TotalMint += change
+			change, err := u.Change.Int64()
+			if err != nil {
+				return err
 			}
+			current.TotalMint += change
+		case TagLockStakePool:
+			d, ok := fromEvent[DelegatePoolLock](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			current.TotalStaked += d.Amount
+		case TagUnlockStakePool:
+			d, ok := fromEvent[DelegatePoolLock](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			current.TotalStaked -= d.Amount
+		case TagLockWritePool:
+			d, ok := fromEvent[WritePoolLock](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			current.ClientLocks += d.Amount
+		case TagUnlockWritePool:
+			d, ok := fromEvent[WritePoolLock](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			current.ClientLocks -= d.Amount
+		case TagLockReadPool:
+			d, ok := fromEvent[ReadPoolLock](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			current.ClientLocks += d.Amount
+		case TagUnlockReadPool:
+			d, ok := fromEvent[ReadPoolLock](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			current.ClientLocks -= d.Amount
+		case TagToChallengePool:
+			d, ok := fromEvent[ChallengePoolLock](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			current.ClientLocks -= d.Amount
 		}
 
 	}
