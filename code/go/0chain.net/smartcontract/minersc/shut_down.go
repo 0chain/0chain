@@ -4,6 +4,8 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 func (msc *MinerSmartContract) shutDownMiner(
@@ -20,7 +22,12 @@ func (msc *MinerSmartContract) shutDownMiner(
 	if err = deleteMiner(mn, gn, balances); err != nil {
 		return "", common.NewError("shut-down-miner", err.Error())
 	}
-
+	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, dbs.DbUpdates{
+		Id: mn.ID,
+		Updates: map[string]interface{}{
+			"is_shut_down": mn.IsShutDown,
+		},
+	})
 	return "", err
 }
 
@@ -38,6 +45,11 @@ func (msc *MinerSmartContract) shutDownSharder(
 	if err := deleteSharder(sn, gn, balances); err != nil {
 		return "", common.NewError("shut-down-sharder", err.Error())
 	}
-
+	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, sn.ID, dbs.DbUpdates{
+		Id: sn.ID,
+		Updates: map[string]interface{}{
+			"is_shut_down": sn.IsShutDown,
+		},
+	})
 	return "", err
 }

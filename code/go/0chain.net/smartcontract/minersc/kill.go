@@ -3,6 +3,11 @@ package minersc
 import (
 	"encoding/json"
 
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+
+	"0chain.net/core/logging"
+
 	"0chain.net/chaincore/smartcontractinterface"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -29,6 +34,7 @@ func (msc *MinerSmartContract) killMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
+	logging.Logger.Info("piers killMiner")
 	if err := smartcontractinterface.AuthorizeWithOwner("kill-miner", func() bool {
 		return gn.OwnerId == txn.ClientID
 	}); err != nil {
@@ -52,6 +58,13 @@ func (msc *MinerSmartContract) killMiner(
 	if err := mn.save(balances); err != nil {
 		return "", common.NewError("kill-miner", "saving miner: "+err.Error())
 	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, dbs.DbUpdates{
+		Id: mn.ID,
+		Updates: map[string]interface{}{
+			"is_killed": mn.IsKilled,
+		},
+	})
 
 	return "", err
 }
@@ -85,6 +98,13 @@ func (msc *MinerSmartContract) killSharder(
 	if err := sn.save(balances); err != nil {
 		return "", common.NewError("kill-sharder", "saving sharder: "+err.Error())
 	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, sn.ID, dbs.DbUpdates{
+		Id: sn.ID,
+		Updates: map[string]interface{}{
+			"is_killed": sn.IsKilled,
+		},
+	})
 
 	return "", err
 }

@@ -363,7 +363,9 @@ func BenchmarkTests(
 		{
 			name:     "miner.kill-miner",
 			endpoint: msc.killMiner,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID: owner,
+			},
 			input: (&killInput{
 				ID: GetMockNodeId(1, spenum.Miner),
 			}).Encode(),
@@ -371,7 +373,9 @@ func BenchmarkTests(
 		{
 			name:     "miner.kill-sharder",
 			endpoint: msc.killSharder,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID: owner,
+			},
 			input: (&killInput{
 				ID: GetMockNodeId(1, spenum.Miner),
 			}).Encode(),
@@ -386,7 +390,9 @@ func BenchmarkTests(
 		{
 			name:     "miner.shut-down-sharder",
 			endpoint: msc.shutDownSharder,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID: GetMockNodeId(1, spenum.Sharder),
+			},
 		},
 		{
 			name:     "miner.collect_reward",
