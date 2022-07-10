@@ -339,7 +339,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 	blockReward := currency.Coin(
-		float64(gn.BlockReward) * gn.RewardRate,
+		float64(gn.BlockReward) * gn.RewardRate, // 810
 	)
 	minerRewards, sharderRewards, err := gn.splitByShareRatio(blockReward)
 	if err != nil {

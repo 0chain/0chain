@@ -557,7 +557,7 @@ func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
 	var rr = gn.RewardRate
 	// decline the value
-	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
+	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate) // 810
 
 	// log about the epoch declining
 	logging.Logger.Info("miner sc: epoch decline",
@@ -576,7 +576,7 @@ func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 	if err != nil {
 		return 0, 0, err
 	}
-	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio)
+	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio) // 810
 	if err != nil {
 		return 0, 0, err
 	}
@@ -840,8 +840,8 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.setConfigs(gn)
 	var m = min(dkgmn.MaxN, n)
 	dkgmn.N = m
-	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
-	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
+	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m))) // 810
+	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m))) // 810
 }
 
 func simpleNodesKeys(sns SimpleNodes) (ks []string) {

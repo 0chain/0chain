@@ -287,8 +287,8 @@ type Terms struct {
 // rest of allocation duration in time units are used.
 func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
 
-	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
-	return currency.Coin(mldf * rdtu)                           //
+	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand // // 810
+	return currency.Coin(mldf * rdtu)                           // // 810
 }
 
 // validate a received terms
@@ -1185,8 +1185,8 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
 			owp = float64(d.Terms.WritePrice) // terms weren't changed
 		}
 
-		a = owp * size * odrtu // original value (by original terms)
-		b = nwp * size * ndrtu // new value (by new terms)
+		a = owp * size * odrtu // original value (by original terms) // 810
+		b = nwp * size * ndrtu // new value (by new terms) // 810
 
 		diff = b - a // value difference
 
