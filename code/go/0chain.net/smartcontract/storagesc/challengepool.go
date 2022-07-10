@@ -109,7 +109,7 @@ func (cp *challengePool) moveToWritePool(
 				Balance:   value,
 			})
 		} else {
-			bp.Balance += value
+			bp.Balance += value //810
 		}
 	}
 	_, _, err = cp.TransferTo(ap, value, nil)

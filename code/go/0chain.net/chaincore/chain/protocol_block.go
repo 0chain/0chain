@@ -197,7 +197,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 	if c.ThresholdByStake() > 0 {
 		verifiersStake := 0
 		for _, ticket := range bvt {
-			verifiersStake += c.getMiningStake(ticket.VerifierID)
+			verifiersStake += c.getMiningStake(ticket.VerifierID) //810
 		}
 		if verifiersStake < c.ThresholdByStake() {
 			logging.Logger.Info("not reached notarization - stake < threshold stake",

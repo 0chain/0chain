@@ -285,7 +285,7 @@ func (aps allocationPools) allocUntil(allocID string, until common.Timestamp) (
 	var cut = aps.allocationCut(allocID)
 	cut = removeExpired(cut, until)
 	for _, ap := range cut {
-		value += ap.Balance
+		value += ap.Balance //810
 	}
 	return
 }

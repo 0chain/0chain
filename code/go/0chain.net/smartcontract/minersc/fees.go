@@ -26,7 +26,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 	for _, pool := range mn.Pools {
 		if pool.Status == spenum.Pending {
 			pool.Status = spenum.Active
-			mn.TotalStaked += pool.Balance
+			mn.TotalStaked += pool.Balance //810
 		}
 	}
 }
@@ -478,7 +478,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		if err != nil {
 			return err
 		}
-		sharderShare += clShare
+		sharderShare += clShare //810
 		totalCoinLeft = cl
 	}
 

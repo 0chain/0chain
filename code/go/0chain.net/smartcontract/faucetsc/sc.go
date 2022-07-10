@@ -164,8 +164,8 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 		if err := balances.AddTransfer(transfer); err != nil {
 			return "", err
 		}
-		user.Used += transfer.Amount
-		gn.Used += transfer.Amount
+		user.Used += transfer.Amount //810
+		gn.Used += transfer.Amount //810
 		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
 			return "", err

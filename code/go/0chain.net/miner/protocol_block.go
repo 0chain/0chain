@@ -354,7 +354,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		if err != nil {
 			return nil, err
 		}
-		cost += c
+		cost += c //810
 		costs = append(costs, c)
 	}
 	if cost > mc.ChainConfig.MaxBlockCost() {
@@ -815,7 +815,7 @@ func txnIterHandlerFunc(mc *Chain,
 		}
 
 		if txnProcessor(ctx, bState, txn, tii) {
-			tii.cost += cost
+			tii.cost += cost //810
 			if tii.idx >= mc.ChainConfig.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
 					zap.Bool("idx >= block size", tii.idx >= mc.ChainConfig.BlockSize()),
@@ -938,14 +938,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 		if txnProcessor(ctx, blockState, txn, iterInfo) {
 			rcount++
-			iterInfo.cost += cost
+			iterInfo.cost += cost //810
 			if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
 				break
 			}
 		}
 	}
 	if rcount > 0 {
-		blockSize += int32(rcount)
+		blockSize += int32(rcount) //810
 		logging.Logger.Debug("Processed current transactions", zap.Int("count", rcount))
 	}
 	if blockSize != mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() {
@@ -1050,7 +1050,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				break
 			}
 			costs = append(costs, c)
-			cost += c
+			cost += c //810
 		}
 		logging.Logger.Debug("calculated cost", zap.Int("cost", cost), zap.Ints("costs", costs), zap.String("block_hash", b.Hash))
 	}

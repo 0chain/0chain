@@ -74,7 +74,7 @@ func (ssc *MinerSmartContract) collectReward(
 			"error saving stake pool, %v", err)
 	}
 
-	gn.Minted += minted
+	gn.Minted += minted //810
 	if !gn.canMint() {
 		return "", common.NewErrorf("collect_reward_failed",
 			"max mint %v exceeded, %v", gn.MaxMint, gn.Minted)

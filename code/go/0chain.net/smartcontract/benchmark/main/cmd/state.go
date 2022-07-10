@@ -60,7 +60,7 @@ func mockMint(
 		return
 	}
 	_ = balances.SetStateContext(&toState)
-	toState.Balance += amount
+	toState.Balance += amount //810
 	_, _ = clientState.Insert(util.Path(to), &toState)
 }
 
@@ -87,6 +87,6 @@ func mockTransferAmount(
 		return
 	}
 	_ = balances.SetStateContext(&toState)
-	toState.Balance += amount
+	toState.Balance += amount //810
 	_, _ = clientState.Insert(util.Path(to), &toState)
 }

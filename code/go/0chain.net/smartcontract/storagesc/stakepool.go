@@ -104,7 +104,7 @@ func (sp *stakePool) cleanStake() (stake currency.Coin) {
 // The stake() returns total stake size including delegate pools want to unstake.
 func (sp *stakePool) stake() (stake currency.Coin) {
 	for _, dp := range sp.Pools {
-		stake += dp.Balance
+		stake += dp.Balance //810
 	}
 	return
 }
@@ -130,7 +130,7 @@ func (sp *stakePool) empty(
 	// Instead we mark as unstake to prevent being used for further allocations.
 	if sp.stake() < sp.TotalOffers+dp.Balance {
 		if dp.Status != spenum.Unstaking {
-			sp.TotalUnStake += dp.Balance
+			sp.TotalUnStake += dp.Balance //810
 			dp.Status = spenum.Unstaking
 		}
 		return true, nil
@@ -153,7 +153,7 @@ func (sp *stakePool) empty(
 
 // add offer of an allocation related to blobber owns this stake pool
 func (sp *stakePool) addOffer(amount currency.Coin) error {
-	sp.TotalOffers += amount
+	sp.TotalOffers += amount //810
 	return nil
 }
 
@@ -206,10 +206,10 @@ func (sp *stakePool) slash(
 		if dpSlash == 0 {
 			continue
 		}
-		dp.Balance -= dpSlash
-		ap.Balance += dpSlash
+		dp.Balance -= dpSlash //810
+		ap.Balance += dpSlash //810
 
-		move += dpSlash
+		move += dpSlash //810
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
 	}
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
@@ -225,7 +225,7 @@ func (sp *stakePool) slash(
 				Balance:   move,
 			})
 		} else {
-			bp.Balance += move
+			bp.Balance += move //810
 		}
 	}
 

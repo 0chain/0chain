@@ -1028,7 +1028,7 @@ func spStats(
 
 		dpStats.TotalReward = dp.TotalReward
 
-		stat.Balance += dpStats.Balance
+		stat.Balance += dpStats.Balance //810
 		stat.Delegate = append(stat.Delegate, dpStats)
 	}
 	return stat, nil

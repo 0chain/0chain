@@ -96,7 +96,7 @@ func (d *destination) move(now common.Timestamp, moved currency.Coin) {
 	d.Last = now
 	if moved > 0 {
 		d.Move = now
-		d.Vested += moved
+		d.Vested += moved //810
 	}
 }
 
@@ -270,7 +270,7 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 // required starting pool amount
 func (vp *vestingPool) want() (want currency.Coin) {
 	for _, d := range vp.Destinations {
-		want += d.Amount
+		want += d.Amount //810
 	}
 	return
 }
@@ -367,7 +367,7 @@ func (vp *vestingPool) excess() (amount currency.Coin, err error) {
 		if err != nil {
 			return 0, err
 		}
-		need += destLeft
+		need += destLeft //810
 	}
 	return vp.Balance - need, nil
 }
