@@ -1,18 +1,18 @@
 package minersc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"fmt"
 )
 
 //go:generate msgp -io=false -tests=false -unexported -v
 
 // MinerNode struct that holds information about the registering miner.
-// swagger:model MinerNode
 type MinerNode struct {
 	*SimpleNode          `json:"simple_miner"`
 	*stakepool.StakePool `json:"stake_pool"`

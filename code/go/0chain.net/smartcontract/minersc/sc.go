@@ -136,7 +136,12 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	if !found {
 		return common.NewErrorf("failed execution", "no miner smart contract method with name: %v", funcName).Error(), nil
 	}
-	return scFunc(t, input, gn, balances)
+	resp, err := scFunc(t, input, gn, balances)
+	if funcName != "payFees" {
+		logging.Logger.Info("piers Execute", zap.String("funcName", funcName), zap.Error(err))
+	}
+
+	return resp, err
 }
 
 func getGlobalNode(

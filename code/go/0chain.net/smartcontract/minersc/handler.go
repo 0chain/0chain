@@ -6,6 +6,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"0chain.net/chaincore/currency"
+	"0chain.net/chaincore/node"
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/stakepool"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -628,6 +633,89 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 
 }
 
+// Need a separate simple node because we want to send the status
+// swagger:model SimpleNode
+type RestSimpleNode struct {
+	provider.Provider
+	ID          string                `json:"id" validate:"hexadecimal,len=64"`
+	N2NHost     string                `json:"n2n_host"`
+	Host        string                `json:"host"`
+	Port        int                   `json:"port"`
+	Geolocation SimpleNodeGeolocation `json:"geolocation"`
+	Path        string                `json:"path"`
+	PublicKey   string                `json:"public_key"`
+	ShortName   string                `json:"short_name"`
+	BuildTag    string                `json:"build_tag"`
+	TotalStaked currency.Coin         `json:"total_stake"`
+	Delete      bool                  `json:"delete"`
+
+	// settings and statistic
+
+	// NodeType used for delegate pools statistic.
+	NodeType NodeType `json:"node_type,omitempty"`
+
+	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
+	// We need to save status hence the near copy of SimpleNode
+	Status int `json:"status"`
+
+	//LastSettingUpdateRound will be set to round number when settings were updated
+	LastSettingUpdateRound int64 `json:"last_setting_update_round"`
+}
+
+// swagger:model MinerNode
+type RestMinerNode struct {
+	*RestSimpleNode      `json:"simple_miner"`
+	*stakepool.StakePool `json:"stake_pool"`
+}
+
+func minerTableToMinerNode(edbMiner event.Miner) RestMinerNode {
+	var status = node.NodeStatusInactive
+	msn := RestSimpleNode{
+		Provider: provider.Provider{
+			LastHealthCheck: edbMiner.LastHealthCheck,
+			IsKilled:        edbMiner.IsKilled,
+			IsShutDown:      edbMiner.IsShutDown,
+		},
+		ID:          edbMiner.MinerID,
+		N2NHost:     edbMiner.N2NHost,
+		Host:        edbMiner.Host,
+		Port:        edbMiner.Port,
+		Path:        edbMiner.Path,
+		PublicKey:   edbMiner.PublicKey,
+		ShortName:   edbMiner.ShortName,
+		BuildTag:    edbMiner.BuildTag,
+		TotalStaked: edbMiner.TotalStaked,
+		Delete:      edbMiner.Delete,
+		Geolocation: SimpleNodeGeolocation{
+			Latitude:  edbMiner.Latitude,
+			Longitude: edbMiner.Longitude,
+		},
+		NodeType: NodeTypeMiner,
+		Status:   status,
+	}
+	if edbMiner.Active {
+		msn.Status = node.NodeStatusActive
+	} else {
+		msn.Status = node.NodeStatusInactive
+	}
+
+	return RestMinerNode{
+		RestSimpleNode: &msn,
+		StakePool: &stakepool.StakePool{
+			Reward: edbMiner.Rewards,
+			IsDead: edbMiner.IsKilled,
+			Settings: stakepool.Settings{
+				DelegateWallet:     edbMiner.DelegateWallet,
+				ServiceChargeRatio: edbMiner.ServiceCharge,
+				MaxNumDelegates:    edbMiner.NumberOfDelegates,
+				MinStake:           edbMiner.MinStake,
+				MaxStake:           edbMiner.MaxStake,
+			},
+		},
+	}
+
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList getMinerList
 // lists miners
 //
@@ -681,7 +769,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
 		return
 	}
-	minersArr := make([]MinerNode, len(miners))
+	minersArr := make([]RestMinerNode, len(miners))
 	for i, miner := range miners {
 		minersArr[i] = minerTableToMinerNode(miner)
 	}

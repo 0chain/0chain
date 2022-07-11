@@ -113,11 +113,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 				"saving all miners list: %v", err)
 		}
 
-		err = emitAddMiner(newMiner, balances)
-		if err != nil {
-			return "", common.NewErrorf("add_miner",
-				"insert new miner: %v", err)
-		}
+		emitAddMiner(newMiner, balances)
 	}
 	mn, exists, err := doesMinerExist(newMiner.GetKey(), balances)
 	if err != nil {
@@ -179,7 +175,11 @@ func deleteNode(
 
 	usp, err := stakepool.GetUserStakePools(nodeType, deleteNode.Settings.DelegateWallet, balances)
 	if err != nil {
-		return nil, fmt.Errorf("can't get user pools list: %v", err)
+		logging.Logger.Info("piers deleteNode", zap.Int("len deletNode.Pools", len(deleteNode.Pools)), zap.Error(err))
+		if err != util.ErrValueNotPresent {
+			return nil, fmt.Errorf("can't get user pools list: %v", err)
+		}
+		usp = stakepool.NewUserStakePools()
 	}
 
 	for key, pool := range deleteNode.Pools {
@@ -223,8 +223,7 @@ func deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (er
 			if err != nil {
 				return
 			}
-
-			err = emitDeleteMiner(mn.ID, balances)
+			emitDeleteMiner(mn.ID, balances)
 		}
 	} else {
 		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
@@ -281,9 +280,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
 	}
 
-	if err = emitUpdateMiner(mn, balances, false); err != nil {
-		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
-	}
+	emitUpdateMiner(mn, balances, false)
 
 	return string(mn.Encode()), nil
 }

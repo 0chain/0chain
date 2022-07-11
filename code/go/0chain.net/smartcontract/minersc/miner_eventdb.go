@@ -1,62 +1,12 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/provider"
-
-	"0chain.net/smartcontract/stakepool"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
-
-func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
-	var status = node.NodeStatusInactive
-	if edbMiner.Active {
-		status = node.NodeStatusActive
-	}
-	msn := SimpleNode{
-		Provider: provider.Provider{
-			LastHealthCheck: edbMiner.LastHealthCheck,
-			IsKilled:        edbMiner.IsKilled,
-			IsShutDown:      edbMiner.IsShutDown,
-		},
-		ID:          edbMiner.MinerID,
-		N2NHost:     edbMiner.N2NHost,
-		Host:        edbMiner.Host,
-		Port:        edbMiner.Port,
-		Path:        edbMiner.Path,
-		PublicKey:   edbMiner.PublicKey,
-		ShortName:   edbMiner.ShortName,
-		BuildTag:    edbMiner.BuildTag,
-		TotalStaked: edbMiner.TotalStaked,
-		Delete:      edbMiner.Delete,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbMiner.Latitude,
-			Longitude: edbMiner.Longitude,
-		},
-		NodeType: NodeTypeMiner,
-		Status:   status,
-	}
-
-	return MinerNode{
-		SimpleNode: &msn,
-		StakePool: &stakepool.StakePool{
-			Reward: edbMiner.Rewards,
-			IsDead: edbMiner.IsKilled,
-			Settings: stakepool.Settings{
-				DelegateWallet:     edbMiner.DelegateWallet,
-				ServiceChargeRatio: edbMiner.ServiceCharge,
-				MaxNumDelegates:    edbMiner.NumberOfDelegates,
-				MinStake:           edbMiner.MinStake,
-				MaxStake:           edbMiner.MaxStake,
-			},
-		},
-	}
-
-}
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	return event.Miner{
@@ -85,21 +35,20 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	}
 }
 
-func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
+func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
-	return nil
 }
 
-func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
+func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) {
 
 	logging.Logger.Info("emitting add or overwrite miner event")
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, mn.ID, minerNodeToMinerTable(mn))
 
-	return nil
+	return
 }
 
-func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
+func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) {
 
 	logging.Logger.Info("emitting update miner event")
 
@@ -123,6 +72,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"last_health_check":   mn.LastHealthCheck,
 			"is_killed":           mn.IsKilled,
 			"is_shut_down":        mn.IsShutDown,
+			"active":              mn.Status == node.NodeStatusActive,
 			"longitude":           mn.SimpleNode.Geolocation.Longitude,
 			"latitude":            mn.SimpleNode.Geolocation.Latitude,
 			"rewards":             mn.Reward,
@@ -134,13 +84,11 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, dbUpdates)
-	return nil
 }
 
-func emitDeleteMiner(id string, balances cstate.StateContextI) error {
+func emitDeleteMiner(id string, balances cstate.StateContextI) {
 
 	logging.Logger.Info("emitting delete miner event")
 
 	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, id)
-	return nil
 }

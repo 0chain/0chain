@@ -680,7 +680,6 @@ type SimpleNodeGeolocation struct {
 	Longitude float64 `json:"longitude"`
 }
 
-// swagger:model SimpleNode
 type SimpleNode struct {
 	provider.Provider
 	ID          string                `json:"id" validate:"hexadecimal,len=64"`
