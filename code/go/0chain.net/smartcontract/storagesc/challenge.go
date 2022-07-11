@@ -498,7 +498,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 					SuccessChallenges: 0,
 					WritePrice:        blobber.Terms.WritePrice,
 					ReadPrice:         blobber.Terms.ReadPrice,
-					TotalData:         sizeInGB(blobber.BytesWritten),
+					TotalData:         sizeInGB(blobber.SavedData),
 					DataRead:          dataRead,
 				})
 			if err != nil {
