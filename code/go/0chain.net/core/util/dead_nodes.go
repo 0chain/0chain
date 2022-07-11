@@ -10,7 +10,7 @@ import (
 //go:generate msgp -v -io=false -tests=false -unexported=true
 
 type deadNodes struct {
-	Nodes map[string]int64 `json:"nodes"`
+	Nodes map[string]bool `json:"n"` // value as bool type to pass msgp build error
 }
 
 func (d *deadNodes) decode(data []byte, v int64) error {
@@ -21,7 +21,6 @@ func (d *deadNodes) decode(data []byte, v int64) error {
 
 	_, err := d.UnmarshalMsg(data)
 	if err != nil {
-		// try decode with json again
 		return json.Unmarshal(data, d)
 	}
 	return err

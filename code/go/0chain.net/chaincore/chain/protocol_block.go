@@ -342,7 +342,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	deletedNode := fb.ClientState.GetDeletes()
 	c.rebaseState(fb)
-	deadNodesCount, err := c.stateDB.(*util.PNodeDB).RecordDeadNodesWithVersion(deletedNode, fb.Round)
+	err := c.stateDB.(*util.PNodeDB).RecordDeadNodesWithVersion(deletedNode, fb.Round)
 	if err != nil {
 		logging.Logger.Error("finalize block - record dead nodes failed",
 			zap.Int64("round", fb.Round),
@@ -351,9 +351,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		return
 	}
 
-	if deadNodesCount >= c.MaxDeadNodesCount() {
-		go c.StartPruneClientState()
-	}
+	//if deadNodesCount >= c.MaxDeadNodesCount() {
+	//go c.StartPruneClientState()
+	//}
 
 	if err := c.updateFeeStats(fb); err != nil {
 		logging.Logger.Error("finalize block - update fee stats failed",

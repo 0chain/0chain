@@ -54,8 +54,8 @@ type NodeDB interface {
 	MultiPutNode(keys []Key, nodes []Node) error
 	MultiDeleteNode(keys []Key) error
 
-	RecordDeadNodes([]Node) (int, error)
-	PruneBelowVersion(ctx context.Context, version Sequence) error
+	//RecordDeadNodes([]Node) (int, error)
+	//PruneBelowVersion(ctx context.Context, version Sequence) error
 }
 
 // StrKey - data type for the key used to store the node into some storage

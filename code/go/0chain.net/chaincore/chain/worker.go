@@ -406,8 +406,8 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			} else {
 				timer = time.NewTimer(tick)
 			}
-		case <-c.pruneClientStateC:
-			timer.Reset(0)
+		//case <-c.pruneClientStateC:
+		//	timer.Reset(0)
 		case <-ctx.Done():
 			return
 		}

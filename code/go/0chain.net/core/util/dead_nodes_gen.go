@@ -21,7 +21,7 @@ func (z *deadNodes) MarshalMsg(b []byte) (o []byte, err error) {
 	for _, k := range keys_za0001 {
 		za0002 := z.Nodes[k]
 		o = msgp.AppendString(o, k)
-		o = msgp.AppendInt64(o, za0002)
+		o = msgp.AppendBool(o, za0002)
 	}
 	return
 }
@@ -52,7 +52,7 @@ func (z *deadNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 			if z.Nodes == nil {
-				z.Nodes = make(map[string]int64, zb0002)
+				z.Nodes = make(map[string]bool, zb0002)
 			} else if len(z.Nodes) > 0 {
 				for key := range z.Nodes {
 					delete(z.Nodes, key)
@@ -60,14 +60,14 @@ func (z *deadNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			}
 			for zb0002 > 0 {
 				var za0001 string
-				var za0002 int64
+				var za0002 bool
 				zb0002--
 				za0001, bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "Nodes")
 					return
 				}
-				za0002, bts, err = msgp.ReadInt64Bytes(bts)
+				za0002, bts, err = msgp.ReadBoolBytes(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "Nodes", za0001)
 					return
@@ -92,7 +92,7 @@ func (z *deadNodes) Msgsize() (s int) {
 	if z.Nodes != nil {
 		for za0001, za0002 := range z.Nodes {
 			_ = za0002
-			s += msgp.StringPrefixSize + len(za0001) + msgp.Int64Size
+			s += msgp.StringPrefixSize + len(za0001) + msgp.BoolSize
 		}
 	}
 	return

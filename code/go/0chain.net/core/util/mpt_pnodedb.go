@@ -3,7 +3,7 @@ package util
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"encoding/binary"
 	"sync"
 	"time"
 
@@ -15,15 +15,17 @@ import (
 
 /*PNodeDB - a node db that is persisted */
 type PNodeDB struct {
-	dataDir  string
-	db       *gorocksdb.DB
-	ro       *gorocksdb.ReadOptions
-	wo       *gorocksdb.WriteOptions
-	to       *gorocksdb.TransactionOptions
-	fo       *gorocksdb.FlushOptions
-	mutex    sync.Mutex
-	version  int64
-	versions []int64
+	// state db
+	stateDB *gorocksdb.DB
+	// dead nodes db
+	deadNodesDB *gorocksdb.DB
+
+	ro      *gorocksdb.ReadOptions
+	wo      *gorocksdb.WriteOptions
+	to      *gorocksdb.TransactionOptions
+	fo      *gorocksdb.FlushOptions
+	mutex   sync.Mutex
+	version int64
 }
 
 const (
@@ -38,8 +40,7 @@ var (
 
 var sstType = SSTTypeBlockBasedTable
 
-/*NewPNodeDB - create a new PNodeDB */
-func NewPNodeDB(dataDir, logDir string) (*PNodeDB, error) {
+func newStateDBOptions(logDir string) *gorocksdb.Options {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	opts.SetCompression(PNodeDBCompression)
@@ -57,23 +58,50 @@ func NewPNodeDB(dataDir, logDir string) (*PNodeDB, error) {
 	opts.SetDbLogDir(logDir)
 	opts.EnableStatistics()
 	opts.OptimizeUniversalStyleCompaction(64 * 1024 * 1024)
-	db, err := gorocksdb.OpenDb(opts, dataDir)
+
+	return opts
+}
+
+func newDeadNodesOptions() *gorocksdb.Options {
+	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
+	opts := gorocksdb.NewDefaultOptions()
+	opts.SetKeepLogFileNum(5)
+	opts.SetBlockBasedTableFactory(bbto)
+	opts.SetCreateIfMissing(true)
+	return opts
+}
+
+// NewPNodeDB - create a new PNodeDB
+func NewPNodeDB(stateDir, deadNodesDir, logDir string) (*PNodeDB, error) {
+	opts := newStateDBOptions(logDir)
+	db, err := gorocksdb.OpenDb(opts, stateDir)
 	if err != nil {
 		return nil, err
 	}
-	pnodedb := &PNodeDB{db: db}
-	pnodedb.dataDir = dataDir
-	pnodedb.ro = gorocksdb.NewDefaultReadOptions()
-	pnodedb.wo = gorocksdb.NewDefaultWriteOptions()
-	pnodedb.wo.SetSync(false)
-	pnodedb.to = gorocksdb.NewDefaultTransactionOptions()
-	pnodedb.fo = gorocksdb.NewDefaultFlushOptions()
-	return pnodedb, nil
+
+	dnOpts := newDeadNodesOptions()
+	dnDB, err := gorocksdb.OpenDb(dnOpts, deadNodesDir)
+	if err != nil {
+		return nil, err
+	}
+
+	wo := gorocksdb.NewDefaultWriteOptions()
+	wo.SetSync(false)
+
+	return &PNodeDB{
+		stateDB:     db,
+		deadNodesDB: dnDB,
+		ro:          gorocksdb.NewDefaultReadOptions(),
+		wo:          wo,
+		to:          gorocksdb.NewDefaultTransactionOptions(),
+		fo:          gorocksdb.NewDefaultFlushOptions(),
+	}, nil
 }
 
 /*GetNode - implement interface */
 func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
-	data, err := pndb.db.Get(pndb.ro, key)
+	data, err := pndb.stateDB.Get(pndb.ro, key)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +116,7 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 /*PutNode - implement interface */
 func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	data := node.Encode()
-	err := pndb.db.Put(pndb.wo, key, data)
+	err := pndb.stateDB.Put(pndb.wo, key, data)
 	if DebugMPTNode {
 		logging.Logger.Debug("node put to PersistDB",
 			zap.String("key", ToHex(key)), zap.Error(err),
@@ -98,24 +126,23 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	return err
 }
 
-func (pndb *PNodeDB) getDeadNodes(v int64) (*deadNodes, error) {
-	data, err := pndb.db.Get(pndb.ro, deadNodesKey)
-	if err != nil {
-		return nil, err
-	}
-
-	defer data.Free()
-	buf := data.Data()
-	//logging.Logger.Debug("decode dead node data", zap.String("data", string(buf)))
-
-	dn := deadNodes{Nodes: make(map[string]int64)}
-	if len(buf) > 0 {
-		if err := dn.decode(buf, v); err != nil {
-			return nil, err
-		}
-	}
-	return &dn, nil
-}
+//func (pndb *PNodeDB) getDeadNodes(v int64) (*deadNodes, error) {
+//	data, err := pndb.stateDB.Get(pndb.ro, deadNodesKey)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	defer data.Free()
+//	buf := data.Data()
+//
+//	dn := deadNodes{Nodes: make(map[string]int64)}
+//	if len(buf) > 0 {
+//		if err := dn.decode(buf, v); err != nil {
+//			return nil, err
+//		}
+//	}
+//	return &dn, nil
+//}
 
 func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes, v int64) error {
 	// save back the dead nodes
@@ -124,125 +151,66 @@ func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes, v int64) error {
 		return err
 	}
 
-	return pndb.db.Put(pndb.wo, deadNodesKey, d)
+	return pndb.deadNodesDB.Put(pndb.wo, uint64ToBytes(uint64(v)), d)
 }
 
-func (pndb *PNodeDB) RecordDeadNodes(nodes []Node) (int, error) {
-	dn, err := pndb.getDeadNodes(0)
-	if err != nil {
-		return 0, err
-	}
-
+func (pndb *PNodeDB) RecordDeadNodesWithVersion(nodes []Node, v int64) error {
+	dn := deadNodes{make(map[string]bool, len(nodes))}
 	for _, n := range nodes {
-		dn.Nodes[n.GetHash()] = int64(n.GetVersion())
+		dn.Nodes[n.GetHash()] = true
 	}
 
-	if err := pndb.saveDeadNodes(dn, 0); err != nil {
-		return 0, err
-	}
-
-	return len(dn.Nodes), nil
-}
-
-func (pndb *PNodeDB) RecordDeadNodesWithVersion(nodes []Node, v int64) (int, error) {
-	dn, err := pndb.getDeadNodes(v)
-	if err != nil {
-		return 0, err
-	}
-
-	for _, n := range nodes {
-		dn.Nodes[n.GetHash()] = int64(n.GetVersion())
-	}
-
-	if err := pndb.saveDeadNodes(dn, v); err != nil {
-		return 0, err
-	}
-
-	return len(dn.Nodes), nil
-}
-
-func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
-	var (
-		ps    = GetPruneStats(ctx)
-		count int64
-	)
-
-	dn, err := pndb.getDeadNodes(0)
-	if err != nil {
-		return err
-	}
-
-	keys := make([]Key, 0, len(dn.Nodes))
-	for k, v := range dn.Nodes {
-		if v < int64(version) {
-			key, err := fromHex(k)
-			if err != nil {
-				return fmt.Errorf("decode node hash key failed: %v", err)
-			}
-
-			keys = append(keys, key)
-			count++
-		}
-	}
-
-	// delete nodes
-	if err := pndb.MultiDeleteNode(keys); err != nil {
-		return err
-	}
-
-	// update dead nodes
-	for _, k := range keys {
-		delete(dn.Nodes, ToHex(k))
-	}
-
-	if err := pndb.saveDeadNodes(dn, 0); err != nil {
-		return err
-	}
-
-	pndb.Flush()
-
-	if ps != nil {
-		ps.Deleted = count
-	}
-
-	return nil
+	return pndb.saveDeadNodes(&dn, v)
 }
 
 func (pndb *PNodeDB) PruneBelowVersionV(ctx context.Context, version Sequence, v int64) error {
 	var (
 		ps    = GetPruneStats(ctx)
 		count int64
+
+		keys        []Key
+		pruneRounds []uint64
 	)
 
-	dn, err := pndb.getDeadNodes(v)
-	if err != nil {
-		return err
-	}
+	pndb.iteratorDeadNodes(func(key, value []byte) bool {
+		roundNum := bytesToUint64(key)
+		if roundNum >= uint64(version) {
+			return false // break iteration
+		}
 
-	keys := make([]Key, 0, len(dn.Nodes))
-	for k, v := range dn.Nodes {
-		if v < int64(version) {
-			key, err := fromHex(k)
+		pruneRounds = append(pruneRounds, roundNum)
+
+		// decode node keys
+		dn := deadNodes{}
+		err := dn.decode(value, v)
+		if err != nil {
+			logging.Logger.Warn("prune state iterator - iterator decode node keys failed",
+				zap.Error(err),
+				zap.Uint64("round", roundNum))
+			return true // continue
+		}
+
+		for k := range dn.Nodes {
+			kk, err := fromHex(k)
 			if err != nil {
-				return fmt.Errorf("decode node hash key failed: %v", err)
+				logging.Logger.Warn("prune state - iterator decode key failed",
+					zap.Error(err),
+					zap.Uint64("round", roundNum))
+				return true // continue
 			}
-
-			keys = append(keys, key)
+			keys = append(keys, kk)
 			count++
 		}
-	}
+
+		return true
+	})
 
 	// delete nodes
 	if err := pndb.MultiDeleteNode(keys); err != nil {
 		return err
 	}
 
-	// update dead nodes
-	for _, k := range keys {
-		delete(dn.Nodes, ToHex(k))
-	}
-
-	if err := pndb.saveDeadNodes(dn, v); err != nil {
+	if err := pndb.multiDeleteDeadNodes(pruneRounds); err != nil {
 		return err
 	}
 
@@ -255,9 +223,52 @@ func (pndb *PNodeDB) PruneBelowVersionV(ctx context.Context, version Sequence, v
 	return nil
 }
 
+func uint64ToBytes(r uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, r)
+	return b
+}
+
+func bytesToUint64(data []byte) uint64 {
+	return binary.BigEndian.Uint64(data)
+}
+
+/*MultiDeleteNode - implement interface */
+func (pndb *PNodeDB) multiDeleteDeadNodes(rounds []uint64) error {
+	wb := gorocksdb.NewWriteBatch()
+	defer wb.Destroy()
+	for _, r := range rounds {
+		wb.Delete(uint64ToBytes(r))
+	}
+	return pndb.deadNodesDB.Write(pndb.wo, wb)
+}
+
+func (pndb *PNodeDB) iteratorDeadNodes(handler func(key, value []byte) bool) {
+	ro := gorocksdb.NewDefaultReadOptions()
+	defer ro.Destroy()
+	ro.SetFillCache(false)
+	it := pndb.deadNodesDB.NewIterator(ro)
+	defer it.Close()
+	for it.SeekToFirst(); it.Valid(); it.Next() {
+		key := it.Key()
+		value := it.Value()
+
+		keyData := key.Data()
+		valueData := value.Data()
+		if !handler(keyData, valueData) {
+			key.Free()
+			value.Free()
+			return
+		}
+
+		key.Free()
+		value.Free()
+	}
+}
+
 /*DeleteNode - implement interface */
 func (pndb *PNodeDB) DeleteNode(key Key) error {
-	err := pndb.db.Delete(pndb.wo, key)
+	err := pndb.stateDB.Delete(pndb.wo, key)
 	return err
 }
 
@@ -290,7 +301,7 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 				zap.Int64("Version", int64(nodes[idx].GetVersion())))
 		}
 	}
-	err := pndb.db.Write(pndb.wo, wb)
+	err := pndb.stateDB.Write(pndb.wo, wb)
 	if err != nil {
 		logging.Logger.Error("pnode save nodes failed",
 			zap.Int64("round", pndb.version),
@@ -307,7 +318,7 @@ func (pndb *PNodeDB) MultiDeleteNode(keys []Key) error {
 	for _, key := range keys {
 		wb.Delete(key)
 	}
-	return pndb.db.Write(pndb.wo, wb)
+	return pndb.stateDB.Write(pndb.wo, wb)
 }
 
 /*Iterate - implement interface */
@@ -315,7 +326,7 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 	ro := gorocksdb.NewDefaultReadOptions()
 	defer ro.Destroy()
 	ro.SetFillCache(false)
-	it := pndb.db.NewIterator(ro)
+	it := pndb.stateDB.NewIterator(ro)
 	defer it.Close()
 	for it.SeekToFirst(); it.Valid(); it.Next() {
 		key := it.Key()
@@ -347,7 +358,8 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 
 /*Flush - flush the db */
 func (pndb *PNodeDB) Flush() {
-	pndb.db.Flush(pndb.fo)
+	pndb.stateDB.Flush(pndb.fo)
+	pndb.deadNodesDB.Flush(pndb.fo)
 }
 
 /*PruneBelowVersion - prune the state below the given origin */
@@ -425,22 +437,6 @@ func (pndb *PNodeDB) Size(ctx context.Context) int64 {
 
 // Close close the rocksdb
 func (pndb *PNodeDB) Close() {
-	pndb.db.Close()
-}
-
-// GetDBVersions retusn all tracked db versions
-func (pndb *PNodeDB) GetDBVersions() []int64 {
-	pndb.mutex.Lock()
-	defer pndb.mutex.Unlock()
-	vs := make([]int64, len(pndb.versions))
-	copy(vs, pndb.versions)
-
-	return vs
-}
-
-// TrackDBVersion appends the db version to tracked records
-func (pndb *PNodeDB) TrackDBVersion(v int64) {
-	pndb.mutex.Lock()
-	defer pndb.mutex.Unlock()
-	pndb.versions = append(pndb.versions, v)
+	pndb.stateDB.Close()
+	pndb.deadNodesDB.Close()
 }
