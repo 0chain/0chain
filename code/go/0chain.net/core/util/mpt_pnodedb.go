@@ -106,6 +106,7 @@ func (pndb *PNodeDB) getDeadNodes(v int64) (*deadNodes, error) {
 
 	defer data.Free()
 	buf := data.Data()
+	//logging.Logger.Debug("decode dead node data", zap.String("data", string(buf)))
 
 	dn := deadNodes{Nodes: make(map[string]int64)}
 	if len(buf) > 0 {
