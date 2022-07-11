@@ -40,36 +40,6 @@ func getBlobberAllocationsKey(blobberID string) string {
 	return ADDRESS + encryption.Hash("blobber_allocations_"+blobberID)
 }
 
-type ClientAllocation struct {
-	ClientID    string       `json:"client_id"`
-	Allocations *Allocations `json:"allocations"`
-}
-
-func (sn *ClientAllocation) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ClientID)
-}
-
-func (sn *ClientAllocation) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
-}
-
-func (sn *ClientAllocation) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (sn *ClientAllocation) GetHash() string {
-	return util.ToHex(sn.GetHashBytes())
-}
-
-func (sn *ClientAllocation) GetHashBytes() []byte {
-	return encryption.RawHash(sn.Encode())
-}
-
 type Allocations struct {
 	List SortedList
 }

@@ -950,46 +950,6 @@ func TestTransferAllocation(t *testing.T) {
 					sa.OwnerPublicKey == p.info.NewOwnerPublicKey
 			})).Return("", nil).Once()
 
-		var oldClientAlloc = ClientAllocation{
-			ClientID: mockOldOwner,
-			Allocations: &Allocations{
-				List: SortedList{},
-			},
-		}
-		oldClientAlloc.Allocations.List.add(p.info.AllocationId)
-		balances.On(
-			"GetTrieNode", oldClientAlloc.GetKey(ssc.ID),
-			mock.MatchedBy(func(c *ClientAllocation) bool {
-				*c = oldClientAlloc
-				return true
-			})).Return(nil).Once()
-		balances.On(
-			"InsertTrieNode",
-			oldClientAlloc.GetKey(ssc.ID),
-			mock.MatchedBy(func(ca *ClientAllocation) bool {
-				return ca.ClientID == mockOldOwner &&
-					len(ca.Allocations.List) == 0
-			})).Return("", nil).Once()
-
-		var newClientAlloc = ClientAllocation{
-			ClientID:    p.info.NewOwnerId,
-			Allocations: &Allocations{},
-		}
-		balances.On(
-			"GetTrieNode", newClientAlloc.GetKey(ssc.ID),
-			mock.MatchedBy(func(c *ClientAllocation) bool {
-				*c = newClientAlloc
-				return true
-			})).Return(nil).Once()
-		balances.On(
-			"InsertTrieNode",
-			newClientAlloc.GetKey(ssc.ID),
-			mock.MatchedBy(func(ca *ClientAllocation) bool {
-				_, ok := ca.Allocations.List.getIndex(p.info.AllocationId)
-				return ca.ClientID == p.info.NewOwnerId &&
-					len(ca.Allocations.List) == 1 && ok
-			})).Return("", nil).Once()
-
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateAllocation, mock.Anything, mock.Anything,
