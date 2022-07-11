@@ -360,6 +360,19 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On(
 			"InsertTrieNode",
+			mock.MatchedBy(func(key string) bool {
+				if key != allocation.GetKey(ssc.ID) {
+					return false
+				}
+
+				balances.TestData()[newSaSaved] = true
+				return true
+			}),
+			mock.Anything,
+		).Return("", nil).Once()
+
+		balances.On(
+			"InsertTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
 			&freeStorageAssigner{
 				ClientId:           p.assigner.ClientId,
