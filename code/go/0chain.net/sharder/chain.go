@@ -342,6 +342,27 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 			continue // TODO: can we use os.IsNotExist(err) or should not
 		}
 
+		lfnb, er := func() (*block.Block, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			return sc.GetNotarizedBlockFromSharders(ctx, "", lfb.Round)
+		}()
+
+		if er != nil {
+			logging.Logger.Warn("load_lfb, could not sync LFB from remote",
+				zap.Int64("round", lfb.Round),
+				zap.String("lfb", lfb.Hash))
+			return
+		}
+
+		if lfnb.Hash != lfb.Hash {
+			Logger.Warn("load_lfb, see different lfb, roll back",
+				zap.Int64("round", lfb.Round),
+				zap.String("local lfb", lfb.Hash),
+				zap.String("remote lfb", lfnb.Hash))
+			continue
+		}
+
 		// check out required corresponding state
 
 		// Don't check the state. It can be missing if the state had synced.
@@ -366,27 +387,6 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 					iter.Prev()
 				}
 			}
-			continue
-		}
-
-		lfnb, er := func() (*block.Block, error) {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-			return sc.GetNotarizedBlockFromSharders(ctx, "", lfb.Round)
-		}()
-
-		if er != nil {
-			logging.Logger.Warn("load_lfb, could not sync LFB from remote",
-				zap.Int64("round", lfb.Round),
-				zap.String("lfb", lfb.Hash))
-			return
-		}
-
-		if lfnb.Hash != lfb.Hash {
-			Logger.Warn("load_lfb, see different lfb, roll back",
-				zap.Int64("round", lfb.Round),
-				zap.String("local lfb", lfb.Hash),
-				zap.String("remote lfb", lfnb.Hash))
 			continue
 		}
 

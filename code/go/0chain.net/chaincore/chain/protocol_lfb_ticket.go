@@ -280,6 +280,8 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			// for self updating case (kick itself)
 			if ticket.Sign == "" {
 				latest = ticket
+				logging.Logger.Debug("update lfb ticket - self updating case",
+					zap.Int64("latest", latest.Round))
 				// send for all subscribers
 				c.sendLFBTicketEventToSubscribers(subs, ticket)
 				continue // don't need a block for the blank kick ticket
@@ -350,6 +352,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 func (c *Chain) AddReceivedLFBTicket(ctx context.Context, ticket *LFBTicket) {
 	select {
 	case c.updateLFBTicket <- ticket:
+		logging.Logger.Warn("debug update ticket", zap.Int64("round", ticket.Round))
 	case <-ctx.Done():
 	}
 }

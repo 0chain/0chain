@@ -143,7 +143,9 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 	}
 
 	if round+1 <= tk.Round+int64(ahead) {
-		logging.Logger.Debug("[wait not ahead] [2] not ahead, can move on")
+		logging.Logger.Debug("[wait not ahead] [2] not ahead, can move on",
+			zap.Int64("round", round),
+			zap.Int64("lfb tk round", tk.Round))
 		return true // not ahead, can move on
 	}
 
@@ -1863,6 +1865,8 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	}
 
 	mc.bumpLFBTicket(ctx, lfb)
+
+	// check with remote
 
 	// we can't compute state in the start protocol
 	if err := mc.InitBlockState(lfb); err != nil {
