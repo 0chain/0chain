@@ -645,7 +645,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	blobAlloc.Stats.NumWrites++
 
-	blobber.BytesWritten += commitConnection.WriteMarker.Size
 	blobber.SavedData += commitConnection.WriteMarker.Size
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
@@ -698,7 +697,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
-		brn.TotalData = sizeInGB(blobber.BytesWritten)
+		brn.TotalData = sizeInGB(blobber.SavedData)
 
 		err = parts.UpdateItem(balances, blobber.RewardPartition.Index, &brn)
 		if err != nil {
@@ -783,7 +782,15 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 	logging.Logger.Info("commit_connection, add blobber to challenge ready partitions",
 		zap.String("blobber", txn.ClientID))
 
-	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, blobUsedCapacity)
+	sp, err := getStakePool(blobAlloc.BlobberID, balances)
+	if err != nil {
+		return common.NewError("blobber_add_allocation",
+			"unable to fetch blobbers stake pool")
+	}
+	stakedAlloc := sp.cleanStake()
+	weight := uint64(stakedAlloc) * blobUsedCapacity
+
+	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight)
 	if err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions")
 	}

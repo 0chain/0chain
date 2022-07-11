@@ -358,11 +358,10 @@ type StorageNode struct {
 	ID                      string                 `json:"id"`
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
-	Terms                   Terms                  `json:"terms"`         // terms
-	Capacity                int64                  `json:"capacity"`      // total blobber capacity
-	Allocated               int64                  `json:"allocated"`     // allocated capacity
-	BytesWritten            int64                  `json:"bytes_written"` // in bytes
-	DataRead                float64                `json:"data_read"`     // in GB
+	Terms                   Terms                  `json:"terms"`     // terms
+	Capacity                int64                  `json:"capacity"`  // total blobber capacity
+	Allocated               int64                  `json:"allocated"` // allocated capacity
+	DataRead                float64                `json:"data_read"` // in GB
 	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
