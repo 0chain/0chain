@@ -1695,17 +1695,19 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 	tx.CreationDate = 1050
 
 	alloc, err = ssc.getAllocation(allocTxHash, balances)
+	table, err := storageAllocationToAllocationTable(alloc)
+
 	require.NoError(t, err)
 
 	// 1. expiring allocation
 	alloc.Expiration = 1049
-	_, err = ssc.closeAllocation(&tx, alloc, balances)
+	_, err = ssc.closeAllocation(&tx, alloc, table, balances)
 	requireErrMsg(t, err, errMsg1)
 
 	// 2. close (all related pools has created)
 	alloc.Expiration = tx.CreationDate +
 		toSeconds(alloc.ChallengeCompletionTime) + 20
-	resp, err = ssc.closeAllocation(&tx, alloc, balances)
+	resp, err = ssc.closeAllocation(&tx, alloc, table, balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
 

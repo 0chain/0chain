@@ -500,7 +500,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 // commitMoveTokens moves tokens on connection commit (on write marker),
 // if data written (size > 0) -- from write pool to challenge pool, otherwise
 // (delete write marker) from challenge back to write pool
-func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
+func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation, table *event.Allocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (err error) {
 
@@ -548,7 +548,8 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
+		event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
@@ -587,6 +588,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"can't get allocation: "+err.Error())
+	}
+	table, err := storageAllocationToAllocationTable(alloc)
+	if err != nil {
+		return "", err
 	}
 
 	if alloc.Owner != commitConnection.WriteMarker.ClientID {
@@ -657,7 +662,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, blobAlloc,
+	err = sc.commitMoveTokens(alloc, table, commitConnection.WriteMarker.Size, blobAlloc,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
@@ -715,7 +720,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
+		event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
 
 	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 	if err != nil {

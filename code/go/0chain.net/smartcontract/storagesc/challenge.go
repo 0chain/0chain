@@ -435,6 +435,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"can't get related allocation: %v", err)
 	}
 
+	table, err := storageAllocationToAllocationTable(alloc)
+	if err != nil {
+		return "", err
+	}
+
 	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
 	if !ok {
 		return "", common.NewError("verify_challenge",
@@ -588,7 +593,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
+			event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
 
 		if success < threshold {
 			return "challenge passed partially by blobber", nil
@@ -638,7 +644,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
+			event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
 		if pass && !fresh {
 			return "late challenge (failed)", nil
 		}
@@ -1014,7 +1021,18 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			"error storing allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	stored := &StorageAllocation{}
+	err = balances.GetTrieNode(alloc.ID, stored) //todo remove this MPT read when original value of allocation will be stored in sa
+	if err != nil {
+		return err
+	}
+	table, err := storageAllocationToAllocationTable(stored)
+	if err != nil {
+		return err
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
+		event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
 
 	err = emitAddChallenge(challInfo, balances)
 	if err != nil {

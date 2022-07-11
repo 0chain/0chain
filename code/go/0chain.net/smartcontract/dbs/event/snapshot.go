@@ -1,26 +1,29 @@
 package event
 
+import (
+	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/dbs"
+)
+
 // swagger:model Snapshot
 type Snapshot struct {
-	Round            int64 `gorm:"primaryKey;autoIncrement:false" json:"round"`
-	TotalMint        int64 `json:"total_mint"`
-	StorageCost      int64 //486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
-	StorageCostN     int64
-	ActiveAllocated  int64 //496 SUM total amount of new allocation storage in a period (number of allocations active)
-	AverageRWPrice   int64 //494 AVG it's the price from the terms and triggered with their updates
-	AverageRWPriceN  int64
-	TotalStaked      int64 //485 SUM All providers all pools
-	QualityScore     int64 //493 AVG percentage of challenges failed by a particular blobber
-	QualityScoreN    int64
-	ZCNSupply        int64 //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
-	AllocatedStorage int64 //490 SUM New allocation calculate the size (new + previous + update -sub fin+cancel or reduceed)
-	AvailableStorage int64 //491 SUM available (in the terms)
-	StakedStorage    int64 //491 SUM Allocated (allocations)
-	UsedStorage      int64 //491 SUM Used - write markers (triggers challenge pool / the price).(bytes written used capacity)
-	TotalValueLocked int64 //487 SUM Total value locked = Total staked ZCN * Price per ZCN (across all pools)
-	ClientLocks      int64 //487 SUM How many clients locked in (write/read + challenge)  pools
-	Capitalization   int64 //489 SUM Token price * minted
-	DataUtilization  int64 //492 SUM amount saved across all allocations
+	Round                int64 `gorm:"primaryKey;autoIncrement:false" json:"round"`
+	TotalMint            int64 `json:"total_mint"`
+	StorageCost          int64 //486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
+	ActiveAllocatedDelta int64 //496 SUM total amount of new allocation storage in a period (number of allocations active)
+	AverageRWPrice       int64 //494 AVG it's the price from the terms and triggered with their updates //???
+	TotalStaked          int64 //485 SUM All providers all pools
+	SuccessfulChallenges int64 //493 SUM percentage of challenges failed by a particular blobber
+	FailedChallenges     int64 //493 SUM percentage of challenges failed by a particular blobber
+	ZCNSupply            int64 //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
+	AllocatedStorage     int64 //490 SUM New allocation calculate the size (new + previous + update -sub fin+cancel or reduceed)
+	AvailableStorage     int64 //491 SUM available (in the terms)
+	StakedStorage        int64 //491 SUM Allocated (allocations)
+	UsedStorage          int64 //491 SUM Used - write markers (triggers challenge pool / the price).(bytes written used capacity)
+	TotalValueLocked     int64 //487 SUM Total value locked = Total staked ZCN * Price per ZCN (across all pools)
+	ClientLocks          int64 //487 SUM How many clients locked in (write/read + challenge)  pools
+	Capitalization       int64 //489 SUM Token price * minted
+	DataUtilization      int64 //492 SUM amount saved across all allocations
 }
 
 func (edb *EventDb) GetRoundsMintTotal(from, to int64) ([]int64, error) {
@@ -51,25 +54,23 @@ func (edb *EventDb) updateSnapshot(e events) error {
 					return err
 				}
 				current = Snapshot{
-					Round:            event.Round,
-					TotalMint:        last.TotalMint,
-					StorageCost:      0,
-					StorageCostN:     0,
-					ActiveAllocated:  last.ActiveAllocated,
-					AverageRWPrice:   0,
-					AverageRWPriceN:  0,
-					TotalStaked:      last.TotalStaked,
-					QualityScore:     0,
-					QualityScoreN:    0,
-					ZCNSupply:        last.ZCNSupply,
-					AllocatedStorage: last.AllocatedStorage,
-					AvailableStorage: last.AvailableStorage,
-					StakedStorage:    last.StakedStorage,
-					UsedStorage:      last.UsedStorage,
-					TotalValueLocked: last.TotalValueLocked,
-					ClientLocks:      last.ClientLocks,
-					Capitalization:   last.Capitalization,
-					DataUtilization:  last.DataUtilization,
+					Round:                event.Round,
+					TotalMint:            last.TotalMint,
+					StorageCost:          0,
+					ActiveAllocatedDelta: 0,
+					AverageRWPrice:       0,
+					TotalStaked:          last.TotalStaked,
+					SuccessfulChallenges: 0,
+					FailedChallenges:     0,
+					ZCNSupply:            last.ZCNSupply,
+					AllocatedStorage:     last.AllocatedStorage,
+					AvailableStorage:     last.AvailableStorage,
+					StakedStorage:        last.StakedStorage,
+					UsedStorage:          last.UsedStorage,
+					TotalValueLocked:     last.TotalValueLocked,
+					ClientLocks:          last.ClientLocks,
+					Capitalization:       last.Capitalization,
+					DataUtilization:      last.DataUtilization,
 				}
 			}
 		}
@@ -96,6 +97,17 @@ func (edb *EventDb) updateSnapshot(e events) error {
 				return err
 			}
 			current.TotalMint += change
+			current.ZCNSupply += change
+		case TagBurn:
+			b, ok := fromEvent[currency.Coin](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			i2, err := b.Int64()
+			if err != nil {
+				return ErrInvalidEventData
+			}
+			current.ZCNSupply -= i2
 		case TagLockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -137,7 +149,34 @@ func (edb *EventDb) updateSnapshot(e events) error {
 			if !ok {
 				return ErrInvalidEventData
 			}
-			current.ClientLocks -= d.Amount
+			current.StorageCost += d.Amount
+		case TagAddAllocation:
+			alloc, ok := fromEvent[Allocation](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			current.ActiveAllocatedDelta += alloc.Size
+			current.AllocatedStorage += alloc.Size
+		case TagUpdateAllocation:
+			updates, ok := fromEvent[AllocationUpdate](event.Data)
+			is, ok := updates.Changes.Updates["size"]
+			s := is.(int64)
+			if ok {
+				delta := s - updates.Old.Size
+				current.ActiveAllocatedDelta += delta
+				current.AllocatedStorage += delta
+			}
+		case TagUpdateChallenge:
+			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+			is, ok := updates.Updates["responded"]
+			if ok {
+				b := is.(bool)
+				if b {
+					current.SuccessfulChallenges++
+				} else {
+					current.FailedChallenges++
+				}
+			}
 		}
 
 	}

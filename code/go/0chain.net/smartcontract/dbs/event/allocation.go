@@ -67,6 +67,11 @@ type AllocationTerm struct {
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }
 
+type AllocationUpdate struct {
+	Old     *Allocation
+	Changes *dbs.DbUpdates
+}
+
 func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	var alloc Allocation
 	err := edb.Store.Get().Model(&Allocation{}).Where("allocation_id = ?", id).First(&alloc).Error

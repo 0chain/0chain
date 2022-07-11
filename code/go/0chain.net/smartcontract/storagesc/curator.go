@@ -38,6 +38,10 @@ func (sc *StorageSmartContract) removeCurator(
 	if err != nil {
 		return "", common.NewError("remove_curator_failed alloc_cancel_failed", err.Error())
 	}
+	table, err := storageAllocationToAllocationTable(alloc)
+	if err != nil {
+		return "", err
+	}
 
 	if alloc.Owner != txn.ClientID {
 		return "", common.NewError("remove_curator_failed",
@@ -74,7 +78,8 @@ func (sc *StorageSmartContract) removeCurator(
 		logging.Logger.Error("error while emitting remove curator event", zap.Error(err))
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
+		event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
 	return "", nil
 }
 
@@ -94,6 +99,10 @@ func (sc *StorageSmartContract) addCurator(
 	alloc, err = sc.getAllocation(aci.AllocationId, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
+	}
+	table, err := storageAllocationToAllocationTable(alloc)
+	if err != nil {
+		return "", err
 	}
 
 	if alloc.Owner != txn.ClientID {
@@ -119,7 +128,8 @@ func (sc *StorageSmartContract) addCurator(
 		logging.Logger.Error("error while emitting add curator event", zap.Error(err))
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
+		event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
 
 	return "", nil
 }

@@ -68,6 +68,7 @@ const (
 	TagToChallengePool
 	TagFromChallengePool
 	TagAddMint
+	TagBurn
 	NumberOfTags
 )
 
@@ -299,11 +300,11 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addAllocation(alloc)
 	case TagUpdateAllocation:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		updates, ok := fromEvent[AllocationUpdate](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateAllocation(updates)
+		return edb.updateAllocation(updates.Changes)
 	case TagAddReward:
 		reward, ok := fromEvent[Reward](event.Data)
 		if !ok {

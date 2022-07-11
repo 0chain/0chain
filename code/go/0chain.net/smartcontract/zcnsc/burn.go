@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -106,6 +107,8 @@ func (zcn *ZCNSmartContract) Burn(
 		Nonce:           payload.Nonce,
 		EthereumAddress: payload.EthereumAddress,
 	}
+
+	ctx.EmitEvent(event.TypeStats, event.TagBurn, "", trans.Value)
 
 	resp = string(response.Encode())
 	return
