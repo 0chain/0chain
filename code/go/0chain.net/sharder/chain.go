@@ -10,6 +10,7 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
+	"0chain.net/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -506,8 +507,21 @@ func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 }
 
 func (sc *Chain) ValidateState(b *block.Block) bool {
-	if err := sc.InitBlockState(b); err != nil {
-		Logger.Warn("load_lfb, init block state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	if err := b.InitStateDB(sc.GetStateDB()); err != nil {
+		logging.Logger.Warn("load_lfb, init block state failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.String("state", util.ToHex(b.ClientStateHash)),
+			zap.Error(err))
+
+		return false
+	}
+
+	if b.StateChangesCount == 0 {
+		logging.Logger.Warn("load_lfb, has no state changes",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.String("state", util.ToHex(b.ClientStateHash)))
 		return false
 	}
 

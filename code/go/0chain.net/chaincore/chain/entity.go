@@ -1265,7 +1265,7 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 
 		if err == util.ErrNodeNotFound {
 			// get state from network
-			logging.Logger.Info("init block state by synching block state from network")
+			logging.Logger.Info("init block state by syncing block state from network")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			doneC := make(chan struct{})
