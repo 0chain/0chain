@@ -792,6 +792,8 @@ func (sa *StorageAllocation) moveFromChallengePool(
 		cp.Balance = balance
 	}
 	if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+		return err
+	} else {
 		sa.WritePool = writePool
 	}
 	return nil
