@@ -707,6 +707,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
 			mockSetValue(&challengePool{})).Return(nil).Once()
+		balances.On(
+			"GetTrieNode", mock.Anything,
+			mockSetValue(&StorageAllocation{ID: p.allocationId})).Return(nil)
 
 		balances.On(
 			"GetSignatureScheme",
