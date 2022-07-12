@@ -106,7 +106,7 @@ type Config struct {
 	// ReadPool related configurations.
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
-	WritePool *writePoolConfig `json:"allocation_pool"`
+	WritePool *writePoolConfig `json:"write_pool"`
 	// StakePool related configurations.
 	StakePool *stakePoolConfig `json:"stakepool"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward

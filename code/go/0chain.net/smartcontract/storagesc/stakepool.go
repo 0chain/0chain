@@ -193,14 +193,16 @@ func (sp *stakePool) slash(
 		if dpSlash == 0 {
 			continue
 		}
-		var err error
-		dp.Balance, err = currency.MinusCoin(dp.Balance, dpSlash)
-		if err != nil {
+
+		if balance, err := currency.MinusCoin(dp.Balance, dpSlash); err != nil {
 			return 0, err
+		} else {
+			dp.Balance = balance
 		}
-		alloc.WritePool, err = currency.AddCoin(alloc.WritePool, dpSlash)
-		if err != nil {
+		if writePool, err := currency.AddCoin(alloc.WritePool, dpSlash); err != nil {
 			return 0, err
+		} else {
+			alloc.WritePool = writePool
 		}
 		move += dpSlash
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)

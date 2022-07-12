@@ -133,7 +133,7 @@ var (
 		"min_blobber_capacity",
 
 		"readpool.min_lock",
-		"write_pool.min_lock",
+		"writepool.min_lock",
 		"stakepool.min_lock",
 
 		"max_total_free_allocation",
@@ -229,9 +229,9 @@ var (
 		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
-		"readpool.min_lock":   {ReadPoolMinLock, smartcontract.CurrencyCoin},
-		"write_pool.min_lock": {WritePoolMinLock, smartcontract.CurrencyCoin},
-		"stakepool.min_lock":  {StakePoolMinLock, smartcontract.CurrencyCoin},
+		"readpool.min_lock":  {ReadPoolMinLock, smartcontract.CurrencyCoin},
+		"writepool.min_lock": {WritePoolMinLock, smartcontract.CurrencyCoin},
+		"stakepool.min_lock": {StakePoolMinLock, smartcontract.CurrencyCoin},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},

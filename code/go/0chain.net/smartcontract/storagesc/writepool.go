@@ -67,7 +67,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
+	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value)
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}

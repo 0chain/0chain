@@ -709,8 +709,8 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	require.NoError(t, err)
 	wp, err := currency.ParseZCN(blobberYaml.writePrice)
 	require.NoError(t, err)
-	val *= wp
-
+	val, err = currency.MultCoin(val, wp)
+	require.NoError(t, err)
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: transactionHash,
