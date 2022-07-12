@@ -480,9 +480,7 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
-		fmt.Println("piers", 149861540619, "apb2", apb2)
-		fmt.Println("piers", 98899558, "cpb2", cpb2)
-		//require.EqualValues(t, 90422453, cpb2)
+
 		require.EqualValues(t, 149960440177, apb2)
 		require.EqualValues(t, 98899558, cpb2)
 		require.EqualValues(t, 40*x10, blobb2)
@@ -1167,7 +1165,6 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		)
 
 		require.Zero(t, cpa)
-		fmt.Println("piers", "wpb", wpb, "wpa", wpa)
 		require.EqualValues(t, wpb, wpa)
 		require.Equal(t, alloc.MovedBack, cpb)
 
