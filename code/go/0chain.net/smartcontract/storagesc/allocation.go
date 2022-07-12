@@ -1086,7 +1086,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	if t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner {
 		return "", common.NewError("allocation_updating_failed",
-			" only owner can update the allocation")
+			"only owner can update the allocation")
 	}
 
 	if err = request.validate(conf, alloc); err != nil {
