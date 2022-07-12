@@ -39,7 +39,6 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 	return
 }
 
-
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
 	ta := &StorageAllocation{}
@@ -1085,7 +1084,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"can't get existing allocation: "+err.Error())
 	}
 
-	if request.OwnerID != alloc.Owner {
+	if t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner {
 		return "", common.NewError("allocation_updating_failed",
 			" only owner can update the allocation")
 	}
