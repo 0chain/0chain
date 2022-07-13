@@ -274,11 +274,9 @@ func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
 }
 
 func TestMPT_blockGenerationFlow(t *testing.T) {
-	fmt.Println("here")
 	// persistent node DB represents chain state DB
 	var stateDB, cleanup = newPNodeDB(t)
 	defer cleanup()
-	fmt.Println("here 1")
 
 	var mpt = NewMerklePatriciaTrie(stateDB, 0, nil)
 	// prior block DB and hash

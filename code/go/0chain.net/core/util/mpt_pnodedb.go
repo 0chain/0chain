@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +24,7 @@ type PNodeDB struct {
 	mutex   sync.Mutex
 	version int64
 
+	defaultCFH   *gorocksdb.ColumnFamilyHandle
 	deadNodesCFH *gorocksdb.ColumnFamilyHandle
 }
 
@@ -40,7 +40,7 @@ var (
 
 var sstType = SSTTypeBlockBasedTable
 
-func newStateDBOptions(logDir string) *gorocksdb.Options {
+func newDefaultCFOptions(logDir string) *gorocksdb.Options {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	opts.SetCompression(PNodeDBCompression)
@@ -62,7 +62,7 @@ func newStateDBOptions(logDir string) *gorocksdb.Options {
 	return opts
 }
 
-func newDeadNodesOptions() *gorocksdb.Options {
+func newDeadNodesCFOptions() *gorocksdb.Options {
 	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
 	opts := gorocksdb.NewDefaultOptions()
@@ -72,37 +72,27 @@ func newDeadNodesOptions() *gorocksdb.Options {
 	return opts
 }
 
+func newDBOptions() *gorocksdb.Options {
+	opts := gorocksdb.NewDefaultOptions()
+	opts.SetCreateIfMissing(true)
+	opts.SetCreateIfMissingColumnFamilies(true)
+	return opts
+}
+
 // NewPNodeDB - create a new PNodeDB
 func NewPNodeDB(stateDir, logDir string) (*PNodeDB, error) {
-	opts := newStateDBOptions(logDir)
-
-	deadNodesOpt := newDeadNodesOptions()
 
 	var (
+		defaultCFOpts = newDefaultCFOptions(logDir)
+		deadNodesOpts = newDeadNodesCFOptions()
+
 		cfs     = []string{"default", "dead_nodes"}
-		cfsOpts = []*gorocksdb.Options{opts, deadNodesOpt}
-		cfh     *gorocksdb.ColumnFamilyHandle
+		cfsOpts = []*gorocksdb.Options{defaultCFOpts, deadNodesOpts}
 	)
 
-	db, cfhs, err := gorocksdb.OpenDbColumnFamilies(opts, stateDir, cfs, cfsOpts)
-	switch err {
-	case nil:
-		cfh = cfhs[1]
-	default:
-		if !strings.Contains(err.Error(), "Column family not found") {
-			return nil, err
-		}
-
-		// open db and create family if not exist
-		db, err = gorocksdb.OpenDb(opts, stateDir)
-		if err != nil {
-			return nil, err
-		}
-
-		cfh, err = db.CreateColumnFamily(deadNodesOpt, "dead_nodes")
-		if err != nil {
-			return nil, err
-		}
+	db, cfhs, err := gorocksdb.OpenDbColumnFamilies(newDBOptions(), stateDir, cfs, cfsOpts)
+	if err != nil {
+		return nil, err
 	}
 
 	wo := gorocksdb.NewDefaultWriteOptions()
@@ -110,7 +100,8 @@ func NewPNodeDB(stateDir, logDir string) (*PNodeDB, error) {
 
 	return &PNodeDB{
 		db:           db,
-		deadNodesCFH: cfh,
+		defaultCFH:   cfhs[0],
+		deadNodesCFH: cfhs[1],
 		ro:           gorocksdb.NewDefaultReadOptions(),
 		wo:           wo,
 		to:           gorocksdb.NewDefaultTransactionOptions(),
@@ -420,6 +411,7 @@ func (pndb *PNodeDB) Size(ctx context.Context) int64 {
 
 // Close closes the rocksdb
 func (pndb *PNodeDB) Close() {
+	pndb.defaultCFH.Destroy()
 	pndb.deadNodesCFH.Destroy()
 	pndb.db.Close()
 }
