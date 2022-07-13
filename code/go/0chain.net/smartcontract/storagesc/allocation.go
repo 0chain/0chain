@@ -345,7 +345,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
 
 		b.Allocated += bSize
-		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
 		if err != nil {
 			return "", fmt.Errorf("can't save blobber: %v", err)
 		}

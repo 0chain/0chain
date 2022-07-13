@@ -614,26 +614,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
-
 	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	blobAlloc.Stats.NumWrites++
 
-	blobber.BytesWritten += commitConnection.WriteMarker.Size
+	blobber.SavedData += commitConnection.WriteMarker.Size
 
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
-
-	// UpdateItem saved_data on storage node
-	var storageNode *StorageNode
-	if _, ok := alloc.BlobberAllocsMap[commitConnection.WriteMarker.BlobberID]; ok {
-		storageNode, err = sc.getBlobber(commitConnection.WriteMarker.BlobberID, balances)
-		if err != nil {
-			return "", common.NewError("commit_connection_failed",
-				"can't get blobber")
-		}
-	}
-
-	storageNode.SavedData += alloc.Stats.UsedSize
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
@@ -655,8 +642,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	// the first time the allocation is added  to the blobber, created related resources
-	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
-		if err := sc.blobberAddAllocation(t, blobAlloc, uint64(blobber.BytesWritten), balances); err != nil {
+	if blobAlloc.Stats.UsedSize == 0 {
+		err = removeAllocationFromBlobber(sc, blobAlloc, alloc.ID, balances)
+		if err != nil {
+			return "", common.NewErrorf("commit_connection_failed",
+				"removing allocation from blobAlloc partition: %v", err)
+		}
+	} else if blobAlloc.BlobberAllocationsPartitionLoc == nil {
+		if err := sc.blobberAddAllocation(t, blobAlloc, uint64(blobber.SavedData), balances); err != nil {
 			return "", common.NewErrorf("commit_connection_failed", err.Error())
 		}
 	}
@@ -676,7 +669,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
-		brn.TotalData = sizeInGB(blobber.BytesWritten)
+		brn.TotalData = sizeInGB(blobber.SavedData)
 
 		err = parts.UpdateItem(balances, blobber.RewardPartition.Index, &brn)
 		if err != nil {
@@ -761,7 +754,15 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 	logging.Logger.Info("commit_connection, add blobber to challenge ready partitions",
 		zap.String("blobber", txn.ClientID))
 
-	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, blobUsedCapacity)
+	sp, err := getStakePool(blobAlloc.BlobberID, balances)
+	if err != nil {
+		return common.NewError("blobber_add_allocation",
+			"unable to fetch blobbers stake pool")
+	}
+	stakedAlloc := sp.cleanStake()
+	weight := uint64(stakedAlloc) * blobUsedCapacity
+
+	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight)
 	if err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions")
 	}
