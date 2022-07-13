@@ -43,10 +43,10 @@ func TestPNodeDB_Iterate(t *testing.T) {
 				key := make([]byte, 8)
 				binary.BigEndian.PutUint64(key, uint64(i))
 
-				err := pndb.stateDB.Put(wo, key, []byte{NodeTypeValueNode})
+				err := pndb.db.Put(wo, key, []byte{NodeTypeValueNode})
 				require.NoError(t, err)
 			}
-			err := pndb.stateDB.Put(wo, []byte("key"), make([]byte, 0))
+			err := pndb.db.Put(wo, []byte("key"), make([]byte, 0))
 			require.NoError(t, err)
 
 			if err := pndb.Iterate(tt.args.ctx, tt.args.handler); (err != nil) != tt.wantErr {

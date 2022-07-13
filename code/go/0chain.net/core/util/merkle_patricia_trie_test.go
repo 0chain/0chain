@@ -63,7 +63,6 @@ func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
 	require.NoError(t, err)
 
 	pndb, err = NewPNodeDB(filepath.Join(dirname, "mpt"),
-		filepath.Join(dirname, "deadnodes"),
 		filepath.Join(dirname, "log"))
 	if err != nil {
 		if err := os.RemoveAll(dirname); err != nil {
@@ -130,10 +129,50 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 	}
 }
 
+// newAndReopenPNode - create a new PNodeDB first, create columen families, and
+// reopen to test open db with exist column families.
+func newAndReopenPNode(t *testing.T) (*PNodeDB, func()) {
+	var dirname, err = ioutil.TempDir("", "mpt-pndb")
+	require.NoError(t, err)
+
+	dbPath := filepath.Join(dirname, "mpt")
+	logPath := filepath.Join(dirname, "log")
+	pndb, err := NewPNodeDB(dbPath, logPath)
+	if err != nil {
+		if err := os.RemoveAll(dirname); err != nil {
+			t.Fatal(err)
+		}
+		t.Fatal(err) //
+	}
+	pndb.Flush()
+	pndb.Close()
+
+	// reopen
+	pndb, err = NewPNodeDB(dbPath, logPath)
+	require.NoError(t, err)
+
+	return pndb, func() {
+		pndb.Flush()
+		pndb.Close()
+		if err := os.RemoveAll(dirname); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestMerkeTreePruning(t *testing.T) {
 	pndb, cleanup := newPNodeDB(t)
 	defer cleanup()
+	testPruneState(t, pndb)
+}
 
+func TestMerkleTreePruningReopenDB(t *testing.T) {
+	pndb, cleanup := newAndReopenPNode(t)
+	defer cleanup()
+	testPruneState(t, pndb)
+}
+
+func testPruneState(t *testing.T, pndb *PNodeDB) {
 	mpt := NewMerklePatriciaTrie(NewLevelNodeDB(NewMemoryNodeDB(), pndb, false), Sequence(0), nil)
 	origin := 2016
 	roots := make([]Key, 0, 10)
@@ -338,11 +377,6 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 		require.NoError(t, blockState.SaveChanges(context.TODO(), stateDB, false))
 		mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), priorHash)
 		checkValues(t, mpt, expectedValueSets[round])
-
-		// //  5. prune state
-		// var wps = WithPruneStats(back)
-		// err = stateDB.PruneBelowVersion(wps, Sequence(round-1))
-		// require.NoError(t, err)
 	}
 }
 

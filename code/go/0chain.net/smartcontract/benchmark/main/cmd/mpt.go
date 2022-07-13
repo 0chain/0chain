@@ -123,7 +123,6 @@ func getMpt(loadPath, configPath string, exec *common.WithContextFunc) (*util.Me
 func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
 	pNode, err := util.NewPNodeDB(
 		loadPath,
-		loadPath+"deadnodes",
 		loadPath+"log",
 	)
 	if err != nil {
@@ -172,7 +171,6 @@ func setUpMpt(
 
 	pNode, err := util.NewPNodeDB(
 		dbPath,
-		dbPath+"deadnodes",
 		dbPath+"log",
 	)
 	if err != nil {

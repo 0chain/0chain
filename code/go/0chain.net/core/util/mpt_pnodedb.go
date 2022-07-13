@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,10 +16,7 @@ import (
 
 /*PNodeDB - a node db that is persisted */
 type PNodeDB struct {
-	// state db
-	stateDB *gorocksdb.DB
-	// dead nodes db
-	deadNodesDB *gorocksdb.DB
+	db *gorocksdb.DB
 
 	ro      *gorocksdb.ReadOptions
 	wo      *gorocksdb.WriteOptions
@@ -26,6 +24,8 @@ type PNodeDB struct {
 	fo      *gorocksdb.FlushOptions
 	mutex   sync.Mutex
 	version int64
+
+	deadNodesCFH *gorocksdb.ColumnFamilyHandle
 }
 
 const (
@@ -73,35 +73,56 @@ func newDeadNodesOptions() *gorocksdb.Options {
 }
 
 // NewPNodeDB - create a new PNodeDB
-func NewPNodeDB(stateDir, deadNodesDir, logDir string) (*PNodeDB, error) {
+func NewPNodeDB(stateDir, logDir string) (*PNodeDB, error) {
 	opts := newStateDBOptions(logDir)
-	db, err := gorocksdb.OpenDb(opts, stateDir)
-	if err != nil {
-		return nil, err
-	}
+	defer opts.Destroy()
 
-	dnOpts := newDeadNodesOptions()
-	dnDB, err := gorocksdb.OpenDb(dnOpts, deadNodesDir)
-	if err != nil {
-		return nil, err
+	deadNodesOpt := newDeadNodesOptions()
+	defer deadNodesOpt.Destroy()
+
+	var (
+		cfs     = []string{"default", "dead_nodes"}
+		cfsOpts = []*gorocksdb.Options{opts, deadNodesOpt}
+		cfh     *gorocksdb.ColumnFamilyHandle
+	)
+
+	db, cfhs, err := gorocksdb.OpenDbColumnFamilies(opts, stateDir, cfs, cfsOpts)
+	switch err {
+	case nil:
+		cfh = cfhs[1]
+	default:
+		if !strings.Contains(err.Error(), "Column family not found") {
+			return nil, err
+		}
+
+		// open db and create family if not exist
+		db, err = gorocksdb.OpenDb(opts, stateDir)
+		if err != nil {
+			return nil, err
+		}
+
+		cfh, err = db.CreateColumnFamily(deadNodesOpt, "dead_nodes")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	wo := gorocksdb.NewDefaultWriteOptions()
 	wo.SetSync(false)
 
 	return &PNodeDB{
-		stateDB:     db,
-		deadNodesDB: dnDB,
-		ro:          gorocksdb.NewDefaultReadOptions(),
-		wo:          wo,
-		to:          gorocksdb.NewDefaultTransactionOptions(),
-		fo:          gorocksdb.NewDefaultFlushOptions(),
+		db:           db,
+		deadNodesCFH: cfh,
+		ro:           gorocksdb.NewDefaultReadOptions(),
+		wo:           wo,
+		to:           gorocksdb.NewDefaultTransactionOptions(),
+		fo:           gorocksdb.NewDefaultFlushOptions(),
 	}, nil
 }
 
 /*GetNode - implement interface */
 func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
-	data, err := pndb.stateDB.Get(pndb.ro, key)
+	data, err := pndb.db.Get(pndb.ro, key)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +137,7 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 /*PutNode - implement interface */
 func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	data := node.Encode()
-	err := pndb.stateDB.Put(pndb.wo, key, data)
+	err := pndb.db.Put(pndb.wo, key, data)
 	if DebugMPTNode {
 		logging.Logger.Debug("node put to PersistDB",
 			zap.String("key", ToHex(key)), zap.Error(err),
@@ -126,24 +147,6 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	return err
 }
 
-//func (pndb *PNodeDB) getDeadNodes(v int64) (*deadNodes, error) {
-//	data, err := pndb.stateDB.Get(pndb.ro, deadNodesKey)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	defer data.Free()
-//	buf := data.Data()
-//
-//	dn := deadNodes{Nodes: make(map[string]int64)}
-//	if len(buf) > 0 {
-//		if err := dn.decode(buf, v); err != nil {
-//			return nil, err
-//		}
-//	}
-//	return &dn, nil
-//}
-
 func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes, v int64) error {
 	// save back the dead nodes
 	d, err := dn.encode(v)
@@ -151,7 +154,7 @@ func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes, v int64) error {
 		return err
 	}
 
-	return pndb.deadNodesDB.Put(pndb.wo, uint64ToBytes(uint64(v)), d)
+	return pndb.db.PutCF(pndb.wo, pndb.deadNodesCFH, uint64ToBytes(uint64(v)), d)
 }
 
 // RecordDeadNodesWithVersion records dead nodes with current finalizing block number
@@ -276,16 +279,16 @@ func (pndb *PNodeDB) multiDeleteDeadNodes(rounds []uint64) error {
 	wb := gorocksdb.NewWriteBatch()
 	defer wb.Destroy()
 	for _, r := range rounds {
-		wb.Delete(uint64ToBytes(r))
+		wb.DeleteCF(pndb.deadNodesCFH, uint64ToBytes(r))
 	}
-	return pndb.deadNodesDB.Write(pndb.wo, wb)
+	return pndb.db.Write(pndb.wo, wb)
 }
 
 func (pndb *PNodeDB) iteratorDeadNodes(ctx context.Context, handler func(key, value []byte) bool) {
 	ro := gorocksdb.NewDefaultReadOptions()
 	defer ro.Destroy()
 	ro.SetFillCache(false)
-	it := pndb.deadNodesDB.NewIterator(ro)
+	it := pndb.db.NewIteratorCF(ro, pndb.deadNodesCFH)
 	defer it.Close()
 	for it.SeekToFirst(); it.Valid(); it.Next() {
 		select {
@@ -311,7 +314,7 @@ func (pndb *PNodeDB) iteratorDeadNodes(ctx context.Context, handler func(key, va
 
 /*DeleteNode - implement interface */
 func (pndb *PNodeDB) DeleteNode(key Key) error {
-	err := pndb.stateDB.Delete(pndb.wo, key)
+	err := pndb.db.Delete(pndb.wo, key)
 	return err
 }
 
@@ -344,7 +347,7 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 				zap.Int64("Version", int64(nodes[idx].GetVersion())))
 		}
 	}
-	err := pndb.stateDB.Write(pndb.wo, wb)
+	err := pndb.db.Write(pndb.wo, wb)
 	if err != nil {
 		logging.Logger.Error("pnode save nodes failed",
 			zap.Int64("round", pndb.version),
@@ -361,7 +364,7 @@ func (pndb *PNodeDB) MultiDeleteNode(keys []Key) error {
 	for _, key := range keys {
 		wb.Delete(key)
 	}
-	return pndb.stateDB.Write(pndb.wo, wb)
+	return pndb.db.Write(pndb.wo, wb)
 }
 
 /*Iterate - implement interface */
@@ -369,7 +372,7 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 	ro := gorocksdb.NewDefaultReadOptions()
 	defer ro.Destroy()
 	ro.SetFillCache(false)
-	it := pndb.stateDB.NewIterator(ro)
+	it := pndb.db.NewIterator(ro)
 	defer it.Close()
 	for it.SeekToFirst(); it.Valid(); it.Next() {
 		key := it.Key()
@@ -401,67 +404,8 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 
 /*Flush - flush the db */
 func (pndb *PNodeDB) Flush() {
-	pndb.stateDB.Flush(pndb.fo)
-	pndb.deadNodesDB.Flush(pndb.fo)
+	pndb.db.Flush(pndb.fo)
 }
-
-/*PruneBelowVersion - prune the state below the given origin */
-//func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
-//	ps := GetPruneStats(ctx)
-//	var total int64
-//	var count int64
-//	var leaves int64
-//	batch := make([]Key, 0, BatchSize)
-//	keys := make([]string, 0, BatchSize)
-//	handler := func(ctx context.Context, key Key, node Node) error {
-//		total++
-//		if node.GetVersion() >= version {
-//			if _, ok := node.(*LeafNode); ok {
-//				leaves++
-//			}
-//			return nil
-//		}
-//		count++
-//		tkey := make([]byte, len(key))
-//		copy(tkey, key)
-//		batch = append(batch, tkey)
-//		keys = append(keys, ToHex(tkey))
-//		if len(batch) == BatchSize {
-//			logging.Logger.Debug("prune batch keys", zap.Strings("keys", keys))
-//			err := pndb.MultiDeleteNode(batch)
-//			batch = batch[:0]
-//			keys = keys[:0]
-//			if err != nil {
-//				Logger.Error("prune below origin - error deleting node",
-//					zap.String("key", ToHex(key)),
-//					zap.Any("old_version", node.GetVersion()),
-//					zap.Any("new_version", version),
-//					zap.Error(err))
-//				return err
-//			}
-//		}
-//		return nil
-//	}
-//	err := pndb.Iterate(ctx, handler)
-//	if err != nil {
-//		return err
-//	}
-//	if len(batch) > 0 {
-//		logging.Logger.Debug("prune batch keys", zap.Strings("keys", keys))
-//		err := pndb.MultiDeleteNode(batch)
-//		if err != nil {
-//			Logger.Error("prune below origin - error deleting node", zap.Any("new_version", version), zap.Error(err))
-//			return err
-//		}
-//	}
-//	pndb.Flush()
-//	if ps != nil {
-//		ps.Total = total
-//		ps.Leaves = leaves
-//		ps.Deleted = count
-//	}
-//	return err
-//}
 
 /*Size - count number of keys in the db */
 func (pndb *PNodeDB) Size(ctx context.Context) int64 {
@@ -478,8 +422,7 @@ func (pndb *PNodeDB) Size(ctx context.Context) int64 {
 	return count
 }
 
-// Close close the rocksdb
+// Close closes the rocksdb
 func (pndb *PNodeDB) Close() {
-	pndb.stateDB.Close()
-	pndb.deadNodesDB.Close()
+	pndb.db.Close()
 }
