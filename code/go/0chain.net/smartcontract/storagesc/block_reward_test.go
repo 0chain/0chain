@@ -152,6 +152,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 	pdb, _ := util.NewPNodeDB(dir, dir+"/log")
 
 	clean := func() {
+		pdb.Flush()
 		pdb.Close()
 		_ = os.RemoveAll(dir)
 	}
@@ -267,6 +268,7 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 	pdb, _ := util.NewPNodeDB(dir, dir+"/log")
 
 	clean := func() {
+		pdb.Flush()
 		pdb.Close()
 		_ = os.RemoveAll(dir)
 	}

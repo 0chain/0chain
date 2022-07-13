@@ -147,28 +147,26 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	return err
 }
 
-func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes, v int64) error {
-	// save back the dead nodes
-	d, err := dn.encode(v)
+func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes, version int64) error {
+	d, err := dn.encode()
 	if err != nil {
 		return err
 	}
 
-	return pndb.db.PutCF(pndb.wo, pndb.deadNodesCFH, uint64ToBytes(uint64(v)), d)
+	return pndb.db.PutCF(pndb.wo, pndb.deadNodesCFH, uint64ToBytes(uint64(version)), d)
 }
 
-// RecordDeadNodesWithVersion records dead nodes with current finalizing block number
-func (pndb *PNodeDB) RecordDeadNodesWithVersion(nodes []Node, v int64) error {
+// RecordDeadNodes records dead nodes with version
+func (pndb *PNodeDB) RecordDeadNodes(nodes []Node, version int64) error {
 	dn := deadNodes{make(map[string]bool, len(nodes))}
 	for _, n := range nodes {
 		dn.Nodes[n.GetHash()] = true
 	}
 
-	return pndb.saveDeadNodes(&dn, v)
+	return pndb.saveDeadNodes(&dn, version)
 }
 
-func (pndb *PNodeDB) PruneBelowVersionV(ctx context.Context, version Sequence, v int64) error {
-	// max prune rounds
+func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
 	const (
 		maxPruneRounds = 500
 		maxPruneNodes  = 1000
@@ -201,7 +199,7 @@ func (pndb *PNodeDB) PruneBelowVersionV(ctx context.Context, version Sequence, v
 
 			// decode node keys
 			dn := deadNodes{}
-			err := dn.decode(value, v)
+			err := dn.decode(value)
 			if err != nil {
 				logging.Logger.Warn("prune state iterator - iterator decode node keys failed",
 					zap.Error(err),
@@ -235,7 +233,7 @@ func (pndb *PNodeDB) PruneBelowVersionV(ctx context.Context, version Sequence, v
 		select {
 		case dn, ok := <-deadNodesC:
 			if !ok {
-				// all has been processed
+				// all have been processed
 				pndb.Flush()
 
 				if ps != nil {
@@ -424,5 +422,6 @@ func (pndb *PNodeDB) Size(ctx context.Context) int64 {
 
 // Close closes the rocksdb
 func (pndb *PNodeDB) Close() {
+	pndb.deadNodesCFH.Destroy()
 	pndb.db.Close()
 }

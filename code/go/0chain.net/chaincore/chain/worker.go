@@ -406,16 +406,10 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			} else {
 				timer = time.NewTimer(tick)
 			}
-		//case <-c.pruneClientStateC:
-		//	timer.Reset(0)
 		case <-ctx.Done():
 			return
 		}
 	}
-}
-
-func (c *Chain) StartPruneClientState() {
-	c.pruneClientStateC <- struct{}{}
 }
 
 // SyncLFBStateWorker is a worker for syncing state of latest finalized round block.

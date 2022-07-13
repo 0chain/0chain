@@ -202,7 +202,7 @@ func testPruneState(t *testing.T, pndb *PNodeDB) {
 			totalDelete += len(deletedNodes)
 		}
 
-		err := pndb.RecordDeadNodesWithVersion(deletedNodes, int64(mpt2.GetVersion()))
+		err := pndb.RecordDeadNodes(deletedNodes, int64(mpt2.GetVersion()))
 		require.NoError(t, err)
 
 		require.NoError(t, mpt2.SaveChanges(context.TODO(), pndb, false))
@@ -219,7 +219,7 @@ func testPruneState(t *testing.T, pndb *PNodeDB) {
 
 	checkIterationHash(t, mpt, "7678d38296cab5f5eb34000e5c0d9718cf79ec82949a1cbd65ce46e676199127")
 	ctx := WithPruneStats(context.Background())
-	err := pndb.PruneBelowVersionV(ctx, newOrigin, 0)
+	err := pndb.PruneBelowVersion(ctx, newOrigin)
 	if err != nil {
 		t.Error("error pruning origin:", err)
 	}

@@ -1866,8 +1866,6 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 
 	mc.bumpLFBTicket(ctx, lfb)
 
-	// check with remote
-
 	// we can't compute state in the start protocol
 	if err := mc.InitBlockState(lfb); err != nil {
 		lfb.SetStateStatus(0)

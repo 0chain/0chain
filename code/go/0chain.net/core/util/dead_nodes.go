@@ -6,11 +6,11 @@ type deadNodes struct {
 	Nodes map[string]bool `json:"n"` // value as bool type to pass msgp build error
 }
 
-func (d *deadNodes) decode(data []byte, v int64) error {
+func (d *deadNodes) decode(data []byte) error {
 	_, err := d.UnmarshalMsg(data)
 	return err
 }
 
-func (d *deadNodes) encode(v int64) ([]byte, error) {
+func (d *deadNodes) encode() ([]byte, error) {
 	return d.MarshalMsg(nil)
 }

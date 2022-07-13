@@ -329,7 +329,8 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator, r *round.Round)
 	var rollBackCount int
 	for ; iter.Valid(); iter.Prev() {
 		if rollBackCount >= sc.PruneStateBelowCount() {
-			// nothing could be recovered, set lfb to genesis and re-sync
+			// could not recovery as the state of round below prune count may have nodes missing, and
+			// we can not sync from remote neither, so just panic.
 			logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
 				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
 		}
@@ -521,14 +522,6 @@ func (sc *Chain) ValidateState(b *block.Block) bool {
 
 		return false
 	}
-
-	//if b.StateChangesCount == 0 {
-	//	logging.Logger.Warn("load_lfb, has no state changes",
-	//		zap.Int64("round", b.Round),
-	//		zap.String("block", b.Hash),
-	//		zap.String("state", util.ToHex(b.ClientStateHash)))
-	//	return false
-	//}
 
 	missing, err := b.ClientState.HasMissingNodes(context.Background())
 	if err != nil {

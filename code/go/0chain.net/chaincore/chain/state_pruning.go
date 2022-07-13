@@ -87,7 +87,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	}
 
 	var t = time.Now()
-	err := c.stateDB.(*util.PNodeDB).PruneBelowVersionV(pctx, newVersion, cr)
+	err := c.stateDB.(*util.PNodeDB).PruneBelowVersion(pctx, newVersion)
 	if err != nil {
 		logging.Logger.Error("prune client state error", zap.Error(err))
 	}
