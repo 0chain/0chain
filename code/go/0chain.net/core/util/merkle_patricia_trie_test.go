@@ -62,8 +62,7 @@ func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
 	var dirname, err = ioutil.TempDir("", "mpt-pndb")
 	require.NoError(t, err)
 
-	pndb, err = NewPNodeDB(filepath.Join(dirname, "mpt"),
-		filepath.Join(dirname, "log"))
+	pndb, err = NewPNodeDB(filepath.Join(dirname, "mpt"), filepath.Join(dirname, "log"))
 	if err != nil {
 		if err := os.RemoveAll(dirname); err != nil {
 			t.Fatal(err)
@@ -76,6 +75,7 @@ func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
 		// removing the pndb.db.close() does not work, while run pndb.Flush() before
 		// deleting the dir could help workaround.
 		pndb.Flush()
+		pndb.Close()
 		if err := os.RemoveAll(dirname); err != nil {
 			t.Fatal(err)
 		}
@@ -209,7 +209,7 @@ func testPruneState(t *testing.T, pndb *PNodeDB) {
 		origin++
 	}
 
-	newOrigin := Sequence(origin - numStates)
+	newOrigin := origin - numStates
 	root := roots[len(roots)-numStates]
 	mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), root)
 
@@ -219,7 +219,7 @@ func testPruneState(t *testing.T, pndb *PNodeDB) {
 
 	checkIterationHash(t, mpt, "7678d38296cab5f5eb34000e5c0d9718cf79ec82949a1cbd65ce46e676199127")
 	ctx := WithPruneStats(context.Background())
-	err := pndb.PruneBelowVersion(ctx, newOrigin)
+	err := pndb.PruneBelowVersion(ctx, int64(newOrigin))
 	if err != nil {
 		t.Error("error pruning origin:", err)
 	}
@@ -274,13 +274,13 @@ func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
 }
 
 func TestMPT_blockGenerationFlow(t *testing.T) {
-
+	fmt.Println("here")
 	// persistent node DB represents chain state DB
 	var stateDB, cleanup = newPNodeDB(t)
 	defer cleanup()
+	fmt.Println("here 1")
 
 	var mpt = NewMerklePatriciaTrie(stateDB, 0, nil)
-
 	// prior block DB and hash
 	var (
 		priorDB   NodeDB = stateDB

@@ -73,7 +73,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 
 	var (
-		newVersion = util.Sequence(bs.Round)
+		newVersion = bs.Round
 		pctx       = util.WithPruneStats(ctx)
 		ps         = util.GetPruneStats(pctx)
 	)
@@ -87,7 +87,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	}
 
 	var t = time.Now()
-	err := c.stateDB.(*util.PNodeDB).PruneBelowVersion(pctx, newVersion)
+	err := c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
 		logging.Logger.Error("prune client state error", zap.Error(err))
 	}

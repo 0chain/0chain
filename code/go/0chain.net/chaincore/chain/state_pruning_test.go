@@ -57,6 +57,15 @@ func (fndb *failingNodeDB) Size(ctx context.Context) int64 {
 	return fndb.underlying.Size(ctx)
 }
 
+/*PruneBelowVersion - implement interface */
+func (fndb *failingNodeDB) PruneBelowVersion(ctx context.Context, version int64) error {
+	return fndb.underlying.PruneBelowVersion(ctx, version)
+}
+
+func (fndb *failingNodeDB) RecordDeadNodes(nodes []util.Node, version int64) error {
+	return fndb.underlying.RecordDeadNodes(nodes, version)
+}
+
 func Test_pruneClientState_withFailingMutliPutNode(t *testing.T) {
 	db, err := util.NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	require.NoError(t, err)

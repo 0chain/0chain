@@ -53,6 +53,9 @@ type NodeDB interface {
 	MultiGetNode(keys []Key) ([]Node, error)
 	MultiPutNode(keys []Key, nodes []Node) error
 	MultiDeleteNode(keys []Key) error
+
+	RecordDeadNodes([]Node, int64) error
+	PruneBelowVersion(ctx context.Context, version int64) error
 }
 
 // StrKey - data type for the key used to store the node into some storage
@@ -197,19 +200,19 @@ func (mndb *MemoryNodeDB) Size(_ context.Context) int64 {
 }
 
 /*PruneBelowVersion - implement interface */
-func (mndb *MemoryNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
+func (mndb *MemoryNodeDB) PruneBelowVersion(ctx context.Context, version int64) error {
 	mndb.mutex.Lock()
 	defer mndb.mutex.Unlock()
 	return mndb.iterate(ctx, func(ctx context.Context, key Key, node Node) error {
-		if node.GetVersion() < version {
+		if int64(node.GetVersion()) < version {
 			return mndb.deleteNode(key)
 		}
 		return nil
 	})
 }
 
-func (mndb *MemoryNodeDB) RecordDeadNodes(nodes []Node) (int, error) {
-	return 0, nil
+func (mndb *MemoryNodeDB) RecordDeadNodes([]Node, int64) error {
+	return nil
 }
 
 // unsafe
@@ -518,12 +521,12 @@ func (lndb *LevelNodeDB) Size(ctx context.Context) int64 {
 	return size
 }
 
-func (lndb *LevelNodeDB) RecordDeadNodes(nodes []Node) (int, error) {
-	return 0, nil
+func (lndb *LevelNodeDB) RecordDeadNodes([]Node, int64) error {
+	return nil
 }
 
 // PruneBelowVersion - implement interface.
-func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
+func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version int64) error {
 	return nil
 }
 

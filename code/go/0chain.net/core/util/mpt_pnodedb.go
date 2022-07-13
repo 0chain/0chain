@@ -75,10 +75,8 @@ func newDeadNodesOptions() *gorocksdb.Options {
 // NewPNodeDB - create a new PNodeDB
 func NewPNodeDB(stateDir, logDir string) (*PNodeDB, error) {
 	opts := newStateDBOptions(logDir)
-	defer opts.Destroy()
 
 	deadNodesOpt := newDeadNodesOptions()
-	defer deadNodesOpt.Destroy()
 
 	var (
 		cfs     = []string{"default", "dead_nodes"}
@@ -166,7 +164,7 @@ func (pndb *PNodeDB) RecordDeadNodes(nodes []Node, version int64) error {
 	return pndb.saveDeadNodes(&dn, version)
 }
 
-func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
+func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version int64) error {
 	const (
 		maxPruneRounds = 500
 		maxPruneNodes  = 1000
