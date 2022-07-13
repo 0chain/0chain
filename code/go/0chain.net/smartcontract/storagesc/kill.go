@@ -76,11 +76,16 @@ func (ssc *StorageSmartContract) killBlobber(
 			"can't get related stake pool: "+err.Error())
 	}
 	sp.IsDead = true
-	if err := sp.slashFraction(conf.StakePool.KillSlash, balances); err != nil {
+	if err := sp.SlashFraction(
+		conf.StakePool.KillSlash,
+		req.ID,
+		spenum.Blobber,
+		balances,
+	); err != nil {
 		return "", common.NewError("kill_blobber_failed",
 			"can't slash blobber: "+err.Error())
 	}
-	sp.EmitStakePoolBalanceUpdate(req.ID, spenum.Blobber, balances)
+
 	if err = sp.save(ssc.ID, blobber.ID, balances); err != nil {
 		return "", common.NewError("kill_blobber_failed",
 			fmt.Sprintf("saving stake pool: %v", err))
@@ -145,11 +150,15 @@ func (ssc *StorageSmartContract) killValidator(
 			"can't get related stake pool: "+err.Error())
 	}
 	sp.IsDead = true
-	if err := sp.slashFraction(conf.StakePool.KillSlash, balances); err != nil {
+	if err := sp.SlashFraction(
+		conf.StakePool.KillSlash,
+		req.ID,
+		spenum.Validator,
+		balances,
+	); err != nil {
 		return "", common.NewError("kill_validator_failed",
 			"can't slash validator: "+err.Error())
 	}
-	sp.EmitStakePoolBalanceUpdate(req.ID, spenum.Validator, balances)
 	if err = sp.save(ssc.ID, validator.ID, balances); err != nil {
 		return "", common.NewError("kill_validator_failed",
 			fmt.Sprintf("saving stake pool: %v", err))
