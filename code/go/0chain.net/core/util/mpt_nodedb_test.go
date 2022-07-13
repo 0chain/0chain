@@ -637,31 +637,6 @@ func TestPNodeDB_Full(t *testing.T) {
 		err = mndb.MultiDeleteNode(keys)
 		require.NoError(t, err)
 	})
-
-	t.Run("prune_below_version", func(t *testing.T) {
-		keys, nodes = getTestKeysAndValues(kvs)
-
-		require.NoError(t, mndb.MultiPutNode(keys, nodes))
-		require.EqualValues(t, N, mndb.Size(back))
-
-		nodes, err = mndb.MultiGetNode(keys)
-		require.NoError(t, err)
-		_, err := mndb.RecordDeadNodes(nodes)
-		require.NoError(t, err)
-
-		require.NoError(t, mndb.PruneBelowVersion(back, Sequence(100)))
-		require.Zero(t, mndb.Size(back))
-		for _, kv := range kvs {
-			kv.node.SetVersion(300)
-		}
-		keys, nodes = getTestKeysAndValues(kvs)
-		require.NoError(t, mndb.MultiPutNode(keys, nodes))
-		if err := mndb.PruneBelowVersion(back, Sequence(200)); err != nil {
-			t.Fatal(err)
-		}
-		require.EqualValues(t, N, mndb.Size(back))
-	})
-
 }
 
 func TestMergeState(t *testing.T) {

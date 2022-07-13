@@ -25,8 +25,6 @@ func TestPNodeDB_Iterate(t *testing.T) {
 			name: "Test_PNodeDB_Iterate_Err_Reading_OK",
 			args: args{
 				handler: func(_ context.Context, k Key, _ Node) error {
-					i := binary.BigEndian.Uint64(k)
-					t.Log(i)
 					return nil
 				},
 			},

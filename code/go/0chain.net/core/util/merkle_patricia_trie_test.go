@@ -63,6 +63,7 @@ func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
 	require.NoError(t, err)
 
 	pndb, err = NewPNodeDB(filepath.Join(dirname, "mpt"),
+		filepath.Join(dirname, "deadnodes"),
 		filepath.Join(dirname, "log"))
 	if err != nil {
 		if err := os.RemoveAll(dirname); err != nil {
@@ -137,9 +138,12 @@ func TestMerkeTreePruning(t *testing.T) {
 	origin := 2016
 	roots := make([]Key, 0, 10)
 
-	for i := int64(0); i < 1000; i++ {
-		db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-		mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
+	totalDelete := 0
+	numStates := 100
+
+	for i := int64(0); i < 200; i++ {
 		mpt2.SetVersion(Sequence(origin))
 		if i%2 == 0 {
 			doStateValInsert(t, mpt2, "123456", 100+i)
@@ -155,31 +159,38 @@ func TestMerkeTreePruning(t *testing.T) {
 		}
 		roots = append(roots, mpt2.GetRoot())
 		deletedNodes := mpt2.GetDeletes()
-		_, err := pndb.RecordDeadNodes(deletedNodes)
+		if origin < 2016+200-numStates {
+			totalDelete += len(deletedNodes)
+		}
+
+		err := pndb.RecordDeadNodesWithVersion(deletedNodes, int64(mpt2.GetVersion()))
 		require.NoError(t, err)
 
 		require.NoError(t, mpt2.SaveChanges(context.TODO(), pndb, false))
 		origin++
 	}
 
-	numStates := 200
 	newOrigin := Sequence(origin - numStates)
 	root := roots[len(roots)-numStates]
 	mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), root)
 
-	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
+	checkIterationHash(t, mpt, "7678d38296cab5f5eb34000e5c0d9718cf79ec82949a1cbd65ce46e676199127")
 
 	assert.NoError(t, pndb.Iterate(context.TODO(), dbIteratorHandler()))
 
-	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
-	err := pndb.PruneBelowVersion(context.TODO(), newOrigin)
+	checkIterationHash(t, mpt, "7678d38296cab5f5eb34000e5c0d9718cf79ec82949a1cbd65ce46e676199127")
+	ctx := WithPruneStats(context.Background())
+	err := pndb.PruneBelowVersionV(ctx, newOrigin, 0)
 	if err != nil {
 		t.Error("error pruning origin:", err)
 	}
+	ps := GetPruneStats(ctx)
+	require.NotNil(t, ps)
+	require.Equal(t, int64(totalDelete), ps.Deleted)
 
 	assert.NoError(t, pndb.Iterate(context.TODO(), dbIteratorHandler()))
 
-	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
+	checkIterationHash(t, mpt, "7678d38296cab5f5eb34000e5c0d9718cf79ec82949a1cbd65ce46e676199127")
 }
 
 func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value int64) {
