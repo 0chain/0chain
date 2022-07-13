@@ -93,7 +93,7 @@ func (sm *blockStore) Delete(hash string) error {
 	return nil // Not implemented
 }
 
-func InitializeStore(ctx context.Context, sViper *viper.Viper, workDir string) {
+func Init(ctx context.Context, sViper *viper.Viper, workDir string) {
 	logging.Logger.Info("Initializing storages")
 	storageType := sViper.GetInt("storage_type")
 	if storageType == 0 {
