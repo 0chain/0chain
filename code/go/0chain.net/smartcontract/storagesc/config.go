@@ -70,7 +70,7 @@ type blockRewardZeta struct {
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
-	total := sharderRatio + minerRatio + bRatio
+	total := sharderRatio + minerRatio + bRatio // 810 // ask
 	if total == 0 {
 		br.SharderWeight = 0
 		br.MinerWeight = 0
@@ -425,20 +425,20 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 
-	conf.MaxTotalFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
-	conf.MaxIndividualFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
+	conf.MaxTotalFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10) // 810
+	conf.MaxIndividualFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10) // 810
 	fas := pfx + "free_allocation_settings."
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
 	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
 	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
 	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
-		Min: currency.Coin(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
-		Max: currency.Coin(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
+		Min: currency.Coin(scc.GetFloat64(fas+"read_price_range.min") * 1e10), // 810
+		Max: currency.Coin(scc.GetFloat64(fas+"read_price_range.max") * 1e10), // 810
 	}
 	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
-		Min: currency.Coin(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
-		Max: currency.Coin(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
+		Min: currency.Coin(scc.GetFloat64(fas+"write_price_range.min") * 1e10), // 810
+		Max: currency.Coin(scc.GetFloat64(fas+"write_price_range.max") * 1e10), // 810
 	}
 	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")

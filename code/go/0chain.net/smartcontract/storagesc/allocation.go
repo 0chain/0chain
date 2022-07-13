@@ -778,7 +778,7 @@ func (ap *allocPeriod) weight() float64 {
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
-		ws       = apw + npw                // weights sum
+		ws       = apw + npw                // weights sum // 810
 		rp, wp   float64                    // read sum, write sum (weighted)
 	)
 
@@ -1385,7 +1385,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			//if c.Responded || c.AllocationID != alloc.ID {
 			//	continue // already accepted, already rewarded/penalized
 			//}
-			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime())
+			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime()) // 810
 			if expire < now {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
@@ -1624,8 +1624,8 @@ func (sc *StorageSmartContract) finishAllocation(
 					lack, d.BlobberID, aps, d.MinLockDemand, d.Spent, err.Error())
 			}
 		}
-		d.Spent += paid
-		d.FinalReward += paid
+		d.Spent += paid // 810
+		d.FinalReward += paid // 810
 	}
 
 	if err := wps.saveWritePools(sc.ID, balances); err != nil {

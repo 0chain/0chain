@@ -109,7 +109,7 @@ func (fsa *freeStorageAssigner) validate(
 		return fmt.Errorf("failed to verify signature")
 	}
 
-	newTotal := fsa.CurrentRedeemed + value
+	newTotal := fsa.CurrentRedeemed + value // 810
 	if newTotal > fsa.TotalLimit {
 		return fmt.Errorf("%d exceeded total permitted free storage limit %d", newTotal, fsa.TotalLimit)
 	}

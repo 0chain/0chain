@@ -152,8 +152,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
-		alloc.MovedBack += back
-		blobAlloc.Returned += back
+		alloc.MovedBack += back // 810
+		blobAlloc.Returned += back // 810
 		// save write pool
 		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
 			return fmt.Errorf("can't save allocation's write pool: %v", err)
@@ -170,7 +170,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
-	blobAlloc.ChallengeReward += blobberReward
+	blobAlloc.ChallengeReward += blobberReward // 810
 
 	// validators' stake pools
 	var vsps []*stakePool
@@ -182,7 +182,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += currency.Coin(validatorsReward)
+	alloc.MovedToValidators += currency.Coin(validatorsReward) // 810
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
@@ -298,7 +298,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += validatorsReward
+	alloc.MovedToValidators += validatorsReward // 810
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
@@ -311,8 +311,8 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("moving failed challenge to write pool: %v", err)
 	}
-	alloc.MovedBack += move
-	blobAlloc.Returned += move
+	alloc.MovedBack += move // 810
+	blobAlloc.Returned += move // 810
 
 	slash, err := currency.Float64ToCoin(conf.BlobberSlash * float64(move)) // 810
 	if err != nil {
@@ -336,7 +336,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		}
 
 		sp.TotalOffers -= move    // subtract the offer stake
-		blobAlloc.Penalty += move // penalty statistic
+		blobAlloc.Penalty += move // penalty statistic // 810
 
 		// save stake pool
 		if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {

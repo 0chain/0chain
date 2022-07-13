@@ -78,7 +78,7 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"can't get config: %v", err)
 	}
-	conf.Minted += reward
+	conf.Minted += reward // 810
 	if conf.Minted > conf.MaxMint {
 		return "", common.NewErrorf("collect_reward_failed",
 			"max min %v exceeded: %v", conf.MaxMint, conf.Minted)

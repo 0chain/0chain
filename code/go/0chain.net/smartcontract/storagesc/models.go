@@ -603,7 +603,7 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
-	d.ChallengePoolIntegralValue += move
+	d.ChallengePoolIntegralValue += move // 810
 	return
 }
 
@@ -936,7 +936,7 @@ type StorageAllocationDecode StorageAllocation
 func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin) {
 	for _, details := range sa.BlobberAllocs {
 		if details.MinLockDemand > details.Spent {
-			rest += details.MinLockDemand - details.Spent
+			rest += details.MinLockDemand - details.Spent // 810
 		}
 	}
 	return

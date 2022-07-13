@@ -128,7 +128,7 @@ func (sp *stakePool) empty(
 	// If insufficient funds in stake pool left after unlock,
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
-	if sp.stake() < sp.TotalOffers+dp.Balance {
+	if sp.stake() < sp.TotalOffers+dp.Balance { // 810
 		if dp.Status != spenum.Unstaking {
 			sp.TotalUnStake += dp.Balance //810
 			dp.Status = spenum.Unstaking
@@ -210,7 +210,7 @@ func (sp *stakePool) slash(
 		ap.Balance += dpSlash //810
 
 		move += dpSlash //810
-		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
+		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash) // 810
 	}
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
 		return 0, err

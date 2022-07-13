@@ -297,7 +297,7 @@ func AddMockClientAllocation(
 
 func benchWritePoolExpire(now common.Timestamp) common.Timestamp {
 	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
-		now + common.Timestamp(time.Hour*24*23)
+		now + common.Timestamp(time.Hour*24*23) // 810
 }
 
 func AddMockWritePools(clients []string, balances cstate.StateContextI) {

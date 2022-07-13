@@ -132,10 +132,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			float64(br.ReadPrice),
 		)
 		qualifyingBlobberIds[i] = br.ID
-		totalQStake += stake
+		totalQStake += stake // 810
 		blobberWeight := ((gamma * zeta) + 1) * stake * float64(br.SuccessChallenges) // 810
 		weight = append(weight, blobberWeight)
-		totalWeight += blobberWeight
+		totalWeight += blobberWeight // 810
 	}
 
 	if totalWeight == 0 {

@@ -309,8 +309,8 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 		return err
 	}
 	for i := range delegates {
-		delegates[i].Reward += share
-		spUpdate.DelegateRewards[delegates[i].DelegateID] += iShare
+		delegates[i].Reward += share // 810
+		spUpdate.DelegateRewards[delegates[i].DelegateID] += iShare // 810
 	}
 
 	if r > 0 {
