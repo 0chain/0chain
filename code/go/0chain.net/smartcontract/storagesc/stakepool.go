@@ -232,6 +232,17 @@ func (sp *stakePool) slash(
 	return
 }
 
+func (sp *stakePool) slashFraction(fraction float64, balances chainstate.StateContextI) error {
+	if fraction == 0.0 {
+		return nil
+	}
+	for _, dp := range sp.Pools {
+		var dpSlash = currency.Coin(float64(dp.Balance) * fraction)
+		dp.Balance -= dpSlash
+	}
+	return nil
+}
+
 // free staked capacity of related blobber, excluding delegate pools want to
 // unstake.
 func (sp *stakePool) cleanCapacity(now common.Timestamp,

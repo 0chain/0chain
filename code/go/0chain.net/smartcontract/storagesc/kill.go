@@ -74,8 +74,13 @@ func (ssc *StorageSmartContract) killBlobber(
 			"can't get related stake pool: "+err.Error())
 	}
 	sp.IsDead = true
+	if err := sp.slashFraction(conf.StakePool.KillSlash, balances); err != nil {
+		return "", common.NewError("kill_blobber_failed",
+			"can't slash blobber: "+err.Error())
+	}
 	if err = sp.save(ssc.ID, blobber.ID, balances); err != nil {
-		return "", fmt.Errorf("saving stake pool: %v", err)
+		return "", common.NewError("kill_blobber_failed",
+			fmt.Sprintf("saving stake pool: %v", err))
 	}
 
 	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
@@ -137,8 +142,13 @@ func (ssc *StorageSmartContract) killValidator(
 			"can't get related stake pool: "+err.Error())
 	}
 	sp.IsDead = true
+	if err := sp.slashFraction(conf.StakePool.KillSlash, balances); err != nil {
+		return "", common.NewError("kill_validator_failed",
+			"can't slash validator: "+err.Error())
+	}
 	if err = sp.save(ssc.ID, validator.ID, balances); err != nil {
-		return "", fmt.Errorf("saving stake pool: %v", err)
+		return "", common.NewError("kill_validator_failed",
+			fmt.Sprintf("saving stake pool: %v", err))
 	}
 
 	if _, err = balances.InsertTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
