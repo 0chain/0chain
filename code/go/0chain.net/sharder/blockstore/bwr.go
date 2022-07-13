@@ -12,7 +12,6 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/viper"
 	"github.com/0chain/gorocksdb"
 )
 
@@ -140,10 +139,6 @@ func getUnmovedBlockRecords(maxPrefix []byte) <-chan *unmovedBlockRecord {
 
 func initBlockWhereRecord(cacheSize uint64, mode, workDir string) {
 	dbPath := filepath.Join(workDir, "data/rocksdb", BMR)
-	cacheSize, err := getUint64ValueFromYamlConfig(viper.GetString("cache_size"))
-	if err != nil {
-		panic(err)
-	}
 
 	cfs := []string{"default", BWRCF, UBRCF}
 	bwrOpt := gorocksdb.NewDefaultOptions()
