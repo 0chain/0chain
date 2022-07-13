@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -78,6 +80,7 @@ func (ssc *StorageSmartContract) killBlobber(
 		return "", common.NewError("kill_blobber_failed",
 			"can't slash blobber: "+err.Error())
 	}
+	sp.EmitStakePoolBalanceUpdate(req.ID, spenum.Blobber, balances)
 	if err = sp.save(ssc.ID, blobber.ID, balances); err != nil {
 		return "", common.NewError("kill_blobber_failed",
 			fmt.Sprintf("saving stake pool: %v", err))
@@ -146,6 +149,7 @@ func (ssc *StorageSmartContract) killValidator(
 		return "", common.NewError("kill_validator_failed",
 			"can't slash validator: "+err.Error())
 	}
+	sp.EmitStakePoolBalanceUpdate(req.ID, spenum.Validator, balances)
 	if err = sp.save(ssc.ID, validator.ID, balances); err != nil {
 		return "", common.NewError("kill_validator_failed",
 			fmt.Sprintf("saving stake pool: %v", err))
