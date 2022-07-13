@@ -3,6 +3,8 @@ package minersc
 import (
 	"encoding/json"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -55,6 +57,9 @@ func (msc *MinerSmartContract) killMiner(
 	}
 
 	mn.IsDead = true
+	if err := mn.SlashFraction(gn.StakeKillSlash, id.ID, spenum.Miner, balances); err != nil {
+		return "", common.NewError("kill-miner", "slashing stake pools: "+err.Error())
+	}
 	if err := mn.save(balances); err != nil {
 		return "", common.NewError("kill-miner", "saving miner: "+err.Error())
 	}
@@ -95,6 +100,9 @@ func (msc *MinerSmartContract) killSharder(
 	}
 
 	sn.IsDead = true
+	if err := sn.SlashFraction(gn.StakeKillSlash, id.ID, spenum.Sharder, balances); err != nil {
+		return "", common.NewError("kill-miner", "slashing stake pools: "+err.Error())
+	}
 	if err := sn.save(balances); err != nil {
 		return "", common.NewError("kill-sharder", "saving sharder: "+err.Error())
 	}

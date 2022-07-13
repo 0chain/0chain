@@ -258,6 +258,7 @@ func BenchmarkTests(
 				Fields: map[string]string{
 					"min_stake":              "0.0",
 					"max_stake":              "100",
+					"stake_kill_slash":       "0.5",
 					"max_n":                  "7",
 					"min_n":                  "3",
 					"t_percent":              "0.66",

@@ -42,13 +42,12 @@ smart_contracts:
     # etc
     min_stake: 0.0 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
+    stake_kill_slash: 0.5 # slash stake pools when killing miner or blobber
     start_rounds: 50
     contribute_rounds: 50
     share_rounds: 50
     publish_rounds: 50
     wait_rounds: 50
-    # stake interests, will be declined every epoch
-    interest_rate: 0.0 # [0; 1)
     # reward rate for generators, will be declined every epoch
     reward_rate: 1.0 # [0; 1)
     # share ratio is miner/block sharders rewards ratio, for example 0.1

@@ -23,6 +23,7 @@ type Setting int
 const (
 	MinStake Setting = iota
 	MaxStake
+	StakeKillSlash
 	MaxN
 	MinN
 	TPercent
@@ -70,6 +71,7 @@ var (
 	SettingName = []string{
 		"min_stake",
 		"max_stake",
+		"stake_kill_slash",
 		"max_n",
 		"min_n",
 		"t_percent",
@@ -120,6 +122,7 @@ var (
 	}{
 		"min_stake":                    {MinStake, smartcontract.CurrencyCoin},
 		"max_stake":                    {MaxStake, smartcontract.CurrencyCoin},
+		"stake_kill_slash":             {StakeKillSlash, smartcontract.Float64},
 		"max_n":                        {MaxN, smartcontract.Int},
 		"min_n":                        {MinN, smartcontract.Int},
 		"t_percent":                    {TPercent, smartcontract.Float64},
@@ -228,6 +231,8 @@ func (gn *GlobalNode) setFloat64(key string, change float64) error {
 		gn.MaxCharge = change
 	case RewardDeclineRate:
 		gn.RewardDeclineRate = change
+	case StakeKillSlash:
+		gn.StakeKillSlash = change
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}

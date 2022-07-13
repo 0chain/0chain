@@ -326,3 +326,20 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 
 	return nil
 }
+
+func (sp *StakePool) SlashFraction(
+	fraction float64,
+	providerId string,
+	providerType spenum.Provider,
+	balances cstate.StateContextI,
+) error {
+	if fraction == 0.0 {
+		return nil
+	}
+	for _, dp := range sp.Pools {
+		var dpSlash = currency.Coin(float64(dp.Balance) * fraction)
+		dp.Balance -= dpSlash
+	}
+	sp.EmitStakePoolBalanceUpdate(providerId, providerType, balances)
+	return nil
+}

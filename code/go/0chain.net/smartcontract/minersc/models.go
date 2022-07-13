@@ -222,8 +222,8 @@ type GlobalNode struct {
 	// MaxStake boundary of SC.
 	MaxStake currency.Coin `json:"max_stake"`
 	// MinStake boundary of SC.
-	MinStake currency.Coin `json:"min_stake"`
-
+	MinStake       currency.Coin `json:"min_stake"`
+	StakeKillSlash float64       `json:"stake_kill_slash"`
 	// Reward rate.
 	RewardRate float64 `json:"reward_rate"`
 	// ShareRatio is miner/block sharders rewards ratio.
