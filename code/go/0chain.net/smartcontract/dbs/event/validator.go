@@ -60,12 +60,17 @@ func (edb *EventDb) addValidator(vn Validator) error {
 	return result.Error
 }
 
-func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
+func (edb *EventDb) GetValidators(pg common2.Pagination, killed, shutdown bool) ([]Validator, error) {
 	var validators []Validator
-	result := edb.Store.Get().Model(&Validator{}).Offset(pg.Offset).Limit(pg.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc: pg.IsDescending,
-	}).Find(&validators)
+	result := edb.Store.Get().
+		Model(&Validator{}).
+		Where("is_killed = ? AND is_shut_down = ?", killed, shutdown).
+		Offset(pg.Offset).
+		Limit(pg.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pg.IsDescending,
+		}).Find(&validators)
 
 	return validators, result.Error
 }

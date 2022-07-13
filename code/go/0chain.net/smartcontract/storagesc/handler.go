@@ -1322,13 +1322,21 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 //  200: Validator
 //  400:
 func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request) {
-
 	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	killed := len(r.URL.Query().Get("killed")) > 0
+	shutDown := len(r.URL.Query().Get("killed")) > 0
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
-	validators, err := edb.GetValidators(pagination)
+
+	validators, err := edb.GetValidators(pagination, killed, shutDown)
 	if err != nil {
 		err := common.NewErrInternal("cannot get validator list" + err.Error())
 		common.Respond(w, r, nil, err)
