@@ -436,6 +436,8 @@ func getConfField(conf Config, field string) interface{} {
 
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
+	case StakePoolKillSlash:
+		return conf.StakePool.KillSlash
 
 	case MaxTotalFreeAllocation:
 		return conf.MaxTotalFreeAllocation

@@ -133,11 +133,11 @@ func (edb *EventDb) TotalUsedData() (int64, error) {
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
+func (edb *EventDb) GetBlobbers(limit common2.Pagination, killed, shutdown bool) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().
 		Model(&Blobber{}).
-		Where("is_killed = ? AND is_shut_down = ?", false, false).
+		Where("is_killed = ? AND is_shut_down = ?", killed, shutdown).
 		Offset(limit.Offset).
 		Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},

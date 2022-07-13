@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/viper"
+
 	"0chain.net/chaincore/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -31,7 +33,8 @@ type freeAllocationSettings struct {
 }
 
 type stakePoolConfig struct {
-	MinLock currency.Coin `json:"min_lock"`
+	MinLock   currency.Coin `json:"min_lock"`
+	KillSlash float64       `json:"kill_slash"`
 }
 
 type readPoolConfig struct {
@@ -224,6 +227,9 @@ func (sc *Config) validate() (err error) {
 	if sc.StakePool.MinLock <= 1 {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
 			sc.StakePool.MinLock)
+	}
+	if sc.StakePool.KillSlash < 0 || sc.StakePool.KillSlash > 1 {
+		return fmt.Errorf("stakepool.kill_slash, %v must be in interval [0.1]", sc.StakePool.KillSlash)
 	}
 
 	if sc.FreeAllocationSettings.DataShards < 0 {
@@ -428,6 +434,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.StakePool.KillSlash = viper.GetFloat64(pfx + "stakepool.kill_slash")
 
 	conf.MaxTotalFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
 	conf.MaxIndividualFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)

@@ -122,10 +122,8 @@ smart_contracts:
     stakepool:
       # minimal lock for a delegate pool
       min_lock: 0.1 # tokens
-      # interest_rate is tokens earned by a blobber for its stake
-      interest_rate: 0.0
-      # interest_interval is interval to pay interests for a stake
-      interest_interval: 1m
+      # amount stake holders are slashed if blobber or validator is killed
+      kill_slash: 0.5
     # following settings are for free storage rewards
     #
     # largest value you can have for the total allowed free storage

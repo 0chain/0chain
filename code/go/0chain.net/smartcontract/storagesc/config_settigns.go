@@ -45,6 +45,7 @@ const (
 	WritePoolMaxLockPeriod
 
 	StakePoolMinLock
+	StakePoolKillSlash
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
@@ -254,7 +255,8 @@ var (
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
 		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
 
-		"stakepool.min_lock": {StakePoolMinLock, smartcontract.CurrencyCoin},
+		"stakepool.min_lock":   {StakePoolMinLock, smartcontract.CurrencyCoin},
+		"stakepool.kill_slash": {StakePoolKillSlash, smartcontract.Float64},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
@@ -512,6 +514,11 @@ func (conf *Config) setFloat64(key string, change float64) error {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.Zeta.Mu = change
+	case StakePoolKillSlash:
+		if conf.StakePool == nil {
+			conf.StakePool = &stakePoolConfig{}
+		}
+		conf.StakePool.KillSlash = change
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
@@ -684,6 +691,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.WritePool.MaxLockPeriod
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
+	case StakePoolKillSlash:
+		return conf.StakePool.KillSlash
 	case MaxTotalFreeAllocation:
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
