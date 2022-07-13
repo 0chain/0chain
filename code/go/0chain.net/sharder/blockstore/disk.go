@@ -24,10 +24,9 @@ var unableVolumes map[string]*volume
 
 const (
 	DirPrefix = "blocks/K"
-	// Hot directory content limit
 	// Contains 2000 directories that contains 2000 blocks each, so one twoKilo directory contains 4*10^6blocks.
 	// So 2000 such twokilo directories will contain 8*10^9 blocks
-	DCL = 2000
+	DirectoryContentLimit = 2000
 
 	// minSizeFirst will choose volume that has stored lesser blocks size
 	MinSizeFirst = "min_size_first"
@@ -146,7 +145,7 @@ func (v *volume) selectDir() error {
 	defer v.IndMu.Unlock()
 
 	switch {
-	case v.CurDirBlockNums < DCL:
+	case v.CurDirBlockNums < DirectoryContentLimit:
 
 		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", DirPrefix, v.CurKInd, v.CurDirInd))
 		_, err := os.Stat(blocksPath)
@@ -160,7 +159,7 @@ func (v *volume) selectDir() error {
 		}
 		return err
 
-	case v.CurDirInd < DCL-1:
+	case v.CurDirInd < DirectoryContentLimit-1:
 		dirInd := v.CurDirInd + 1
 		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", DirPrefix, v.CurKInd, dirInd))
 		blocksCount, err := countFiles(blocksPath)
@@ -176,13 +175,13 @@ func (v *volume) selectDir() error {
 			return err
 		}
 
-		if blocksCount >= DCL {
+		if blocksCount >= DirectoryContentLimit {
 			return ErrVolumeFull(v.Path)
 		}
 
 		v.CurDirInd = dirInd
-		// blocksCount < DCL means that a worker is moving blocks to cold tier so that it will
-		// eventually be limited to DCL. Putting v.CurDirBlockNums = blocksCount will result in
+		// blocksCount < DirectoryContentLimit means that a worker is moving blocks to cold tier so that it will
+		// eventually be limited to DirectoryContentLimit. Putting v.CurDirBlockNums = blocksCount will result in
 		// partial fill up of directories.
 		v.CurDirBlockNums = 0
 
@@ -190,7 +189,7 @@ func (v *volume) selectDir() error {
 	}
 
 	var kInd int
-	if v.CurKInd < DCL-1 {
+	if v.CurKInd < DirectoryContentLimit-1 {
 		kInd = v.CurKInd + 1
 	}
 
@@ -213,14 +212,14 @@ func (v *volume) selectDir() error {
 		return err
 	}
 
-	if blocksCount >= DCL {
+	if blocksCount >= DirectoryContentLimit {
 		return ErrVolumeFull(v.Path)
 	}
 
 	v.CurKInd = kInd
 	v.CurDirInd = dirInd
-	// blocksCount < DCL means that a worker is moving blocks to cold tier so that it will
-	// eventually be limited to DCL. Putting v.CurDirBlockNums = blocksCount will result in
+	// blocksCount < DirectoryContentLimit means that a worker is moving blocks to cold tier so that it will
+	// eventually be limited to DirectoryContentLimit. Putting v.CurDirBlockNums = blocksCount will result in
 	// partial fill up of directories.
 	v.CurDirBlockNums = 0
 
@@ -652,7 +651,7 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 				logging.Logger.Error(err.Error())
 				continue
 			}
-			totalBlocksCount, totalBlocksSize = countBlocksInVolumes(vPath, DirPrefix, DCL)
+			totalBlocksCount, totalBlocksSize = countBlocksInVolumes(vPath, DirPrefix, DirectoryContentLimit)
 		}
 
 		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(vPath)

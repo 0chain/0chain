@@ -58,7 +58,7 @@ func TestIsVolumeAbleToStoreBlock(t *testing.T) {
 				IndMu:           &sync.Mutex{},
 				CurKInd:         10,
 				CurDirInd:       100,
-				CurDirBlockNums: DCL,
+				CurDirBlockNums: DirectoryContentLimit,
 			},
 			isAble: true,
 
@@ -279,8 +279,8 @@ func TestSelectDir(t *testing.T) {
 			vol: volume{
 				Path:            "./vol",
 				CurKInd:         1,
-				CurDirInd:       DCL - 1,
-				CurDirBlockNums: DCL,
+				CurDirInd:       DirectoryContentLimit - 1,
+				CurDirBlockNums: DirectoryContentLimit,
 				IndMu:           &sync.Mutex{},
 			},
 			setup: func(t *testing.T) {
@@ -309,9 +309,9 @@ func TestSelectDir(t *testing.T) {
 			name: "Volume full",
 			vol: volume{
 				Path:            "./vol",
-				CurKInd:         DCL - 1,
-				CurDirInd:       DCL - 1,
-				CurDirBlockNums: DCL,
+				CurKInd:         DirectoryContentLimit - 1,
+				CurDirInd:       DirectoryContentLimit - 1,
+				CurDirBlockNums: DirectoryContentLimit,
 				IndMu:           &sync.Mutex{},
 			},
 			setup: func(t *testing.T) {
@@ -320,7 +320,7 @@ func TestSelectDir(t *testing.T) {
 				require.Nil(t, err)
 
 				wg := &sync.WaitGroup{}
-				for i := 0; i < DCL; i++ {
+				for i := 0; i < DirectoryContentLimit; i++ {
 					wg.Add(1)
 					go func(i int) {
 						defer wg.Done()
