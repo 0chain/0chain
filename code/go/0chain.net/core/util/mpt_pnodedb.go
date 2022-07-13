@@ -154,6 +154,7 @@ func (pndb *PNodeDB) saveDeadNodes(dn *deadNodes, v int64) error {
 	return pndb.deadNodesDB.Put(pndb.wo, uint64ToBytes(uint64(v)), d)
 }
 
+// RecordDeadNodesWithVersion records dead nodes with current finalizing block number
 func (pndb *PNodeDB) RecordDeadNodesWithVersion(nodes []Node, v int64) error {
 	dn := deadNodes{make(map[string]bool, len(nodes))}
 	for _, n := range nodes {
@@ -164,63 +165,100 @@ func (pndb *PNodeDB) RecordDeadNodesWithVersion(nodes []Node, v int64) error {
 }
 
 func (pndb *PNodeDB) PruneBelowVersionV(ctx context.Context, version Sequence, v int64) error {
+	// max prune rounds
+	const (
+		maxPruneRounds = 500
+		maxPruneNodes  = 1000
+	)
+
+	type deadNodesRecord struct {
+		round     uint64
+		nodesKeys []Key
+	}
+
 	var (
 		ps    = GetPruneStats(ctx)
 		count int64
 
-		keys        []Key
-		pruneRounds []uint64
+		keys        = make([]Key, 0, maxPruneNodes)
+		pruneRounds = make([]uint64, 0, maxPruneRounds)
+
+		deadNodesC = make(chan deadNodesRecord, 1)
 	)
 
-	pndb.iteratorDeadNodes(func(key, value []byte) bool {
-		roundNum := bytesToUint64(key)
-		if roundNum >= uint64(version) {
-			return false // break iteration
-		}
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-		pruneRounds = append(pruneRounds, roundNum)
+	go func() {
+		pndb.iteratorDeadNodes(cctx, func(key, value []byte) bool {
+			roundNum := bytesToUint64(key)
+			if roundNum >= uint64(version) {
+				return false // break iteration
+			}
 
-		// decode node keys
-		dn := deadNodes{}
-		err := dn.decode(value, v)
-		if err != nil {
-			logging.Logger.Warn("prune state iterator - iterator decode node keys failed",
-				zap.Error(err),
-				zap.Uint64("round", roundNum))
-			return true // continue
-		}
-
-		for k := range dn.Nodes {
-			kk, err := fromHex(k)
+			// decode node keys
+			dn := deadNodes{}
+			err := dn.decode(value, v)
 			if err != nil {
-				logging.Logger.Warn("prune state - iterator decode key failed",
+				logging.Logger.Warn("prune state iterator - iterator decode node keys failed",
 					zap.Error(err),
 					zap.Uint64("round", roundNum))
 				return true // continue
 			}
-			keys = append(keys, kk)
-			count++
+
+			ns := make([]Key, 0, len(dn.Nodes))
+			for k := range dn.Nodes {
+				kk, err := fromHex(k)
+				if err != nil {
+					logging.Logger.Warn("prune state - iterator decode key failed",
+						zap.Error(err),
+						zap.Uint64("round", roundNum))
+					return true // continue
+				}
+				ns = append(ns, kk)
+				count++
+			}
+
+			deadNodesC <- deadNodesRecord{
+				round:     roundNum,
+				nodesKeys: ns,
+			}
+			return true
+		})
+		close(deadNodesC)
+	}()
+
+	for {
+		select {
+		case dn, ok := <-deadNodesC:
+			if !ok {
+				// all has been processed
+				pndb.Flush()
+
+				if ps != nil {
+					ps.Deleted = count
+				}
+
+				return nil
+			}
+
+			pruneRounds = append(pruneRounds, dn.round)
+			keys = append(keys, dn.nodesKeys...)
+			if len(pruneRounds) >= maxPruneRounds || len(keys) >= maxPruneNodes {
+				// delete nodes
+				if err := pndb.MultiDeleteNode(keys); err != nil {
+					return err
+				}
+
+				if err := pndb.multiDeleteDeadNodes(pruneRounds); err != nil {
+					return err
+				}
+
+				pruneRounds = pruneRounds[:0]
+				keys = keys[:0]
+			}
 		}
-
-		return true
-	})
-
-	// delete nodes
-	if err := pndb.MultiDeleteNode(keys); err != nil {
-		return err
 	}
-
-	if err := pndb.multiDeleteDeadNodes(pruneRounds); err != nil {
-		return err
-	}
-
-	pndb.Flush()
-
-	if ps != nil {
-		ps.Deleted = count
-	}
-
-	return nil
 }
 
 func uint64ToBytes(r uint64) []byte {
@@ -243,26 +281,31 @@ func (pndb *PNodeDB) multiDeleteDeadNodes(rounds []uint64) error {
 	return pndb.deadNodesDB.Write(pndb.wo, wb)
 }
 
-func (pndb *PNodeDB) iteratorDeadNodes(handler func(key, value []byte) bool) {
+func (pndb *PNodeDB) iteratorDeadNodes(ctx context.Context, handler func(key, value []byte) bool) {
 	ro := gorocksdb.NewDefaultReadOptions()
 	defer ro.Destroy()
 	ro.SetFillCache(false)
 	it := pndb.deadNodesDB.NewIterator(ro)
 	defer it.Close()
 	for it.SeekToFirst(); it.Valid(); it.Next() {
-		key := it.Key()
-		value := it.Value()
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			key := it.Key()
+			value := it.Value()
 
-		keyData := key.Data()
-		valueData := value.Data()
-		if !handler(keyData, valueData) {
+			keyData := key.Data()
+			valueData := value.Data()
+			if !handler(keyData, valueData) {
+				key.Free()
+				value.Free()
+				return
+			}
+
 			key.Free()
 			value.Free()
-			return
 		}
-
-		key.Free()
-		value.Free()
 	}
 }
 
