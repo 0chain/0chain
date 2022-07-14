@@ -157,8 +157,7 @@ func (pndb *PNodeDB) RecordDeadNodes(nodes []Node, version int64) error {
 
 func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version int64) error {
 	const (
-		maxPruneRounds = 500
-		maxPruneNodes  = 1000
+		maxPruneNodes = 1000
 	)
 
 	type deadNodesRecord struct {
@@ -171,7 +170,7 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version int64) error
 		count int64
 
 		keys        = make([]Key, 0, maxPruneNodes)
-		pruneRounds = make([]uint64, 0, maxPruneRounds)
+		pruneRounds = make([]uint64, 0, 100)
 
 		deadNodesC = make(chan deadNodesRecord, 1)
 	)
@@ -222,6 +221,10 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version int64) error
 		select {
 		case dn, ok := <-deadNodesC:
 			if !ok {
+				if err := pndb.multiDeleteDeadNodes(pruneRounds); err != nil {
+					return err
+				}
+
 				// all have been processed
 				pndb.Flush()
 
@@ -234,17 +237,12 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version int64) error
 
 			pruneRounds = append(pruneRounds, dn.round)
 			keys = append(keys, dn.nodesKeys...)
-			if len(pruneRounds) >= maxPruneRounds || len(keys) >= maxPruneNodes {
+			if len(keys) >= maxPruneNodes {
 				// delete nodes
 				if err := pndb.MultiDeleteNode(keys); err != nil {
 					return err
 				}
 
-				if err := pndb.multiDeleteDeadNodes(pruneRounds); err != nil {
-					return err
-				}
-
-				pruneRounds = pruneRounds[:0]
 				keys = keys[:0]
 			}
 		}
