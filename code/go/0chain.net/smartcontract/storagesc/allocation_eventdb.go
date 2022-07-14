@@ -89,12 +89,18 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		})
 
 		terms := blobberIDTermMapping[b.BlobberID].Terms
+
+		minLockDemand, err := currency.Float64ToCoin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu)
+		if err != nil {
+			return nil, err
+		}
+
 		tempBlobberAllocation := &BlobberAllocation{
 			BlobberID:     b.BlobberID,
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
 			Size:          b.Allocated,
 			Terms:         terms,
-			MinLockDemand: currency.Coin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu), // 810
+			MinLockDemand: minLockDemand,
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation

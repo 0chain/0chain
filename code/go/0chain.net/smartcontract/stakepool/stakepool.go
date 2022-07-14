@@ -210,7 +210,7 @@ func (sp *StakePool) DistributeRewards(
 	if err != nil {
 		return err
 	}
-	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue) // 810
+	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func (sp *StakePool) DistributeRewards(
 			break
 		}
 		ratio := float64(pool.Balance) / float64(stake)
-		reward, err := currency.Float64ToCoin(float64(valueLeft) * ratio) // 810
+		reward, err := currency.Float64ToCoin(float64(valueLeft) * ratio)
 		if err != nil {
 			return err
 		}
@@ -309,7 +309,11 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 		return err
 	}
 	for i := range delegates {
-		delegates[i].Reward += share // 810
+		delegates[i].Reward, err = currency.AddCoin(delegates[i].Reward, share)
+		if err != nil {
+			return err
+		}
+
 		spUpdate.DelegateRewards[delegates[i].DelegateID] += iShare // 810
 	}
 

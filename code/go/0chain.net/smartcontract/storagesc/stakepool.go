@@ -202,14 +202,18 @@ func (sp *stakePool) slash(
 	var ratio = float64(slash) / float64(sp.stake())
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
 	for id, dp := range sp.Pools {
-		var dpSlash = currency.Coin(float64(dp.Balance) * ratio) // 810
+		dpSlash, err := currency.Float64ToCoin(float64(dp.Balance) * ratio)
+		if err != nil {
+			return 0, err
+		}
+
 		if dpSlash == 0 {
 			continue
 		}
 		dp.Balance -= dpSlash //810
 		ap.Balance += dpSlash //810
 
-		move += dpSlash //810
+		move += dpSlash                                    //810
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash) // 810
 	}
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {

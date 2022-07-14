@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
@@ -78,7 +79,12 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"can't get config: %v", err)
 	}
-	conf.Minted += reward // 810
+
+	conf.Minted, err = currency.AddCoin(conf.Minted, reward)
+	if err != nil {
+		return "", err
+	}
+
 	if conf.Minted > conf.MaxMint {
 		return "", common.NewErrorf("collect_reward_failed",
 			"max min %v exceeded: %v", conf.MaxMint, conf.Minted)

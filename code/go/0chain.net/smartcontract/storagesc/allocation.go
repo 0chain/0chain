@@ -802,7 +802,7 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 		return 0, 0, err
 	}
 
-	rp = (apReadF * apw) + (npReadF * npw) // 810
+	rp = (apReadF * apw) + (npReadF * npw)   // 810
 	wp = (apWriteF * apw) + (npWriteF * npw) // 810
 
 	avgRead, err = currency.Float64ToCoin(rp / ws)
@@ -1624,8 +1624,15 @@ func (sc *StorageSmartContract) finishAllocation(
 					lack, d.BlobberID, aps, d.MinLockDemand, d.Spent, err.Error())
 			}
 		}
-		d.Spent += paid // 810
-		d.FinalReward += paid // 810
+		d.Spent, err = currency.AddCoin(d.Spent, paid)
+		if err != nil {
+			return err
+		}
+
+		d.FinalReward, err = currency.AddCoin(d.FinalReward, paid)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := wps.saveWritePools(sc.ID, balances); err != nil {
@@ -1658,7 +1665,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
-			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i]) // 810
+			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i])
 			if err != nil {
 				return err
 			}

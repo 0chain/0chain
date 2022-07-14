@@ -132,7 +132,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			float64(br.ReadPrice),
 		)
 		qualifyingBlobberIds[i] = br.ID
-		totalQStake += stake // 810
+		totalQStake += stake                                                          // 810
 		blobberWeight := ((gamma * zeta) + 1) * stake * float64(br.SuccessChallenges) // 810
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight // 810
@@ -153,7 +153,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			if err != nil {
 				return err
 			}
-			reward, err := currency.Float64ToCoin(fBBR * weightRatio) // 810
+			reward, err := currency.Float64ToCoin(fBBR * weightRatio)
 			if err != nil {
 				return err
 			}
@@ -233,7 +233,7 @@ func getBlockReward(
 	}
 	changeBalance := 1 - brChangeRatio
 	changePeriods := currentRound % brChangePeriod
-	return currency.Float64ToCoin(float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight) // 810
+	return currency.Float64ToCoin(float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight)
 }
 
 func GetCurrentRewardRound(currentRound, period int64) int64 {

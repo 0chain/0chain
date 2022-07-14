@@ -288,7 +288,11 @@ type Terms struct {
 func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
 
 	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand // // 810
-	return currency.Coin(mldf * rdtu)                           // // 810
+	mldc, err := currency.Float64ToCoin(mldf * rdtu)
+	if err != nil {
+		panic(err) // TODO: handle error
+	}
+	return mldc
 }
 
 // validate a received terms
@@ -601,9 +605,14 @@ func newBlobberAllocation(
 // internal integral value.
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin) {
+	var err error
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
-	d.ChallengePoolIntegralValue += move // 810
+	d.ChallengePoolIntegralValue, err = currency.AddCoin(d.ChallengePoolIntegralValue, move)
+	if err != nil {
+		panic(err)
+	}
+
 	return
 }
 
@@ -934,21 +943,25 @@ type StorageAllocationDecode StorageAllocation
 // don't receive tokens, their spent will be zero, and the min lock demand
 // will be blobber reward anyway.
 func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin) {
+	var err error
 	for _, details := range sa.BlobberAllocs {
 		if details.MinLockDemand > details.Spent {
-			rest += details.MinLockDemand - details.Spent // 810
+			rest, err = currency.AddCoin(rest, details.MinLockDemand-details.Spent)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	return
 }
 
-func (sa *StorageAllocation) addWritePoolOwner(userId string) {
+func (sa *StorageAllocation) addWritePoolOwner(userID string) {
 	for _, id := range sa.WritePoolOwners {
-		if userId == id {
+		if userID == id {
 			return
 		}
 	}
-	sa.WritePoolOwners = append(sa.WritePoolOwners, userId)
+	sa.WritePoolOwners = append(sa.WritePoolOwners, userID)
 }
 
 func (sa *StorageAllocation) getAllocationPools(

@@ -418,8 +418,15 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't transfer tokens from read pool to stake pool: %v", err)
 	}
-	details.ReadReward += value // stat // 810
-	details.Spent += value      // reduce min lock demand left // 810
+	details.ReadReward, err = currency.AddCoin(details.ReadReward, value) // stat
+	if err != nil {
+		return "", err
+	}
+
+	details.Spent, err = currency.AddCoin(details.MinLockDemand, value) // reduce min lock demand left
+	if err != nil {
+		return "", err
+	}
 
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
@@ -534,8 +541,15 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 
-		alloc.MovedToChallenge += move // 810
-		details.Spent += move // 810
+		alloc.MovedToChallenge, err = currency.AddCoin(alloc.MovedToChallenge, move)
+		if err != nil {
+			return err
+		}
+
+		details.Spent, err = currency.AddCoin(details.Spent, move)
+		if err != nil {
+			return err
+		}
 	} else {
 		// delete (challenge_pool -> write_pool)
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
@@ -547,8 +561,15 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
-		alloc.MovedBack += move // 810
-		details.Returned += move // 810
+		alloc.MovedBack, err = currency.AddCoin(alloc.MovedBack, move)
+		if err != nil {
+			return err
+		}
+
+		details.Returned, err = currency.AddCoin(details.Returned, move)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := wps.saveWritePools(sc.ID, balances); err != nil {

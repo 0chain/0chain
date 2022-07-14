@@ -109,7 +109,11 @@ func (fsa *freeStorageAssigner) validate(
 		return fmt.Errorf("failed to verify signature")
 	}
 
-	newTotal := fsa.CurrentRedeemed + value // 810
+	newTotal, err := currency.AddCoin(fsa.CurrentRedeemed, value)
+	if err != nil {
+		return err
+	}
+
 	if newTotal > fsa.TotalLimit {
 		return fmt.Errorf("%d exceeded total permitted free storage limit %d", newTotal, fsa.TotalLimit)
 	}
@@ -151,13 +155,21 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't unmarshal input: %v", err)
 	}
 
-	var newTotalLimit = currency.Coin(assignerInfo.TotalLimit * floatToBalance) // 810
+	newTotalLimit, err := currency.Float64ToCoin(assignerInfo.TotalLimit * floatToBalance)
+	if err != nil {
+		return "", err
+	}
+
 	if newTotalLimit > conf.MaxTotalFreeAllocation {
 		return "", common.NewErrorf("add_free_storage_assigner",
 			"total tokens limit %d exceeds maximum permitted: %d", newTotalLimit, conf.MaxTotalFreeAllocation)
 	}
 
-	var newIndividualLimit = currency.Coin(assignerInfo.IndividualLimit * floatToBalance) // 810
+	newIndividualLimit, err := currency.Float64ToCoin(assignerInfo.IndividualLimit * floatToBalance)
+	if err != nil {
+		return "", err
+	}
+
 	if newIndividualLimit > conf.MaxIndividualFreeAllocation {
 		return "", common.NewErrorf("add_free_storage_assigner",
 			"individual allocation token limit %d exceeds maximum permitted: %d", newIndividualLimit, conf.MaxIndividualFreeAllocation)
@@ -269,7 +281,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting transaction value to float: %v", err)
 	}
-	readPoolTokens, err := currency.Float64ToCoin(fTxnVal * conf.FreeAllocationSettings.ReadPoolFraction) // 810
+	readPoolTokens, err := currency.Float64ToCoin(fTxnVal * conf.FreeAllocationSettings.ReadPoolFraction)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting read pool tokens to Coin: %v", err)
 	}

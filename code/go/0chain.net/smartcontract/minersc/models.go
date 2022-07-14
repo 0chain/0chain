@@ -576,7 +576,7 @@ func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 	if err != nil {
 		return 0, 0, err
 	}
-	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio) // 810
+	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio)
 	if err != nil {
 		return 0, 0, err
 	}
