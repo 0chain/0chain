@@ -2263,7 +2263,8 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if queryType == "TransactionHash" {
+	switch queryType {
+	case "TransactionHash":
 		txn, err := edb.GetTransactionByHash(query)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
@@ -2272,10 +2273,8 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 
 		common.Respond(w, r, txn, nil)
 		return
-	}
-
-	if queryType == "BlockHash" {
-		blk, err := edb.GetBlocksByHash(query)
+	case "BlockHash":
+		blk, err := edb.GetBlockByHash(query)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -2283,9 +2282,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 
 		common.Respond(w, r, blk, nil)
 		return
-	}
-
-	if queryType == "UserId" {
+	case "UserId":
 		usr, err := edb.GetUserFromId(query)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
@@ -2294,9 +2291,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 
 		common.Respond(w, r, usr, nil)
 		return
-	}
-
-	if queryType == "BlockRound" {
+	case "BlockRound":
 		blk, err := edb.GetBlocksByRound(query)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
@@ -2305,10 +2300,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 
 		common.Respond(w, r, blk, nil)
 		return
-	}
-
-	if queryType == "ContentHash" {
-
+	case "ContentHash":
 		limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 		if err != nil {
 			common.Respond(w, r, nil, err)
