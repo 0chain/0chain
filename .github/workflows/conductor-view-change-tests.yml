@@ -1,12 +1,8 @@
 name: Conductor View Change Tests
 
 on:
-  # schedule:
-  #   - cron: '0 1 * * * '
-  push:
-    branches: [ master, staging ]
-  pull_request:
-    branches: [ master, staging ]
+  schedule:
+    - cron: '0 1 * * * '
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
