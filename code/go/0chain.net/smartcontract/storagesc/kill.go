@@ -52,22 +52,30 @@ func (ssc *StorageSmartContract) killBlobber(
 		return "", common.NewError("kill_blobber_failed", err.Error())
 	}
 
-	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
-	if err != nil {
-		return "", common.NewError("kill_blobber_failed",
-			"cannot get all blobbers list: "+err.Error())
+	if blobber.LastRewardPartition.valid() {
+		activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
+		if err != nil {
+			return "", common.NewError("kill_blobber_failed",
+				"cannot get all blobbers list: "+err.Error())
+		}
+		err = activePassedBlobberRewardPart.RemoveItem(balances, blobber.LastRewardPartition.Index, blobber.ID)
+		if err != nil {
+			return "", common.NewError("kill_blobber_failed",
+				"cannot remove blobber from active passed rewards partition: "+err.Error())
+		}
 	}
-	err = activePassedBlobberRewardPart.RemoveItem(balances, blobber.LastRewardPartition.Index, blobber.ID)
 
-	parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"cannot fetch ongoing partition: %v", err)
-	}
-	err = parts.RemoveItem(balances, blobber.RewardPartition.Index, blobber.ID)
-	if err != nil {
-		return "", common.NewError("kill_blobber_failed",
-			"cannot remove blobber from ongoing passed rewards partition: "+err.Error())
+	if blobber.RewardPartition.valid() {
+		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
+		if err != nil {
+			return "", common.NewErrorf("commit_connection_failed",
+				"cannot fetch ongoing partition: %v", err)
+		}
+		err = parts.RemoveItem(balances, blobber.RewardPartition.Index, blobber.ID)
+		if err != nil {
+			return "", common.NewError("kill_blobber_failed",
+				"cannot remove blobber from ongoing passed rewards partition: "+err.Error())
+		}
 	}
 
 	var sp *stakePool
@@ -85,7 +93,6 @@ func (ssc *StorageSmartContract) killBlobber(
 		return "", common.NewError("kill_blobber_failed",
 			"can't slash blobber: "+err.Error())
 	}
-
 	if err = sp.save(ssc.ID, blobber.ID, balances); err != nil {
 		return "", common.NewError("kill_blobber_failed",
 			fmt.Sprintf("saving stake pool: %v", err))

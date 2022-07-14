@@ -81,14 +81,17 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	if z.StakePool == nil {
 		o = msgp.AppendNil(o)
 	} else {
-		// map header, size 1
+		// map header, size 2
 		// string "MinLock"
-		o = append(o, 0x81, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
+		o = append(o, 0x82, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
 		o, err = z.StakePool.MinLock.MarshalMsg(o)
 		if err != nil {
 			err = msgp.WrapError(err, "StakePool", "MinLock")
 			return
 		}
+		// string "KillSlash"
+		o = append(o, 0xa9, 0x4b, 0x69, 0x6c, 0x6c, 0x53, 0x6c, 0x61, 0x73, 0x68)
+		o = msgp.AppendFloat64(o, z.StakePool.KillSlash)
 	}
 	// string "ValidatorReward"
 	o = append(o, 0xaf, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
@@ -404,6 +407,12 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 							err = msgp.WrapError(err, "StakePool", "MinLock")
 							return
 						}
+					case "KillSlash":
+						z.StakePool.KillSlash, bts, err = msgp.ReadFloat64Bytes(bts)
+						if err != nil {
+							err = msgp.WrapError(err, "StakePool", "KillSlash")
+							return
+						}
 					default:
 						bts, err = msgp.Skip(bts)
 						if err != nil {
@@ -622,7 +631,7 @@ func (z *Config) Msgsize() (s int) {
 	if z.StakePool == nil {
 		s += msgp.NilSize
 	} else {
-		s += 1 + 8 + z.StakePool.MinLock.Msgsize()
+		s += 1 + 8 + z.StakePool.MinLock.Msgsize() + 10 + msgp.Float64Size
 	}
 	s += 16 + msgp.Float64Size + 13 + msgp.Float64Size + 18 + msgp.DurationSize + 25 + msgp.IntSize + 13 + z.MaxReadPrice.Msgsize() + 14 + z.MaxWritePrice.Msgsize() + 14 + z.MinWritePrice.Msgsize() + 25 + msgp.IntSize + 32 + msgp.IntSize + 23 + z.MaxTotalFreeAllocation.Msgsize() + 28 + z.MaxIndividualFreeAllocation.Msgsize() + 23 + z.FreeAllocationSettings.Msgsize() + 17 + msgp.BoolSize + 27 + msgp.IntSize + 23 + msgp.IntSize + 24 + msgp.Float64Size + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 13 + msgp.IntSize + 10 + msgp.Float64Size + 12
 	if z.BlockReward == nil {
@@ -1191,14 +1200,17 @@ func (z *readPoolConfig) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *stakePoolConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 1
+	// map header, size 2
 	// string "MinLock"
-	o = append(o, 0x81, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
+	o = append(o, 0x82, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
 	o, err = z.MinLock.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MinLock")
 		return
 	}
+	// string "KillSlash"
+	o = append(o, 0xa9, 0x4b, 0x69, 0x6c, 0x6c, 0x53, 0x6c, 0x61, 0x73, 0x68)
+	o = msgp.AppendFloat64(o, z.KillSlash)
 	return
 }
 
@@ -1226,6 +1238,12 @@ func (z *stakePoolConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MinLock")
 				return
 			}
+		case "KillSlash":
+			z.KillSlash, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "KillSlash")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -1240,7 +1258,7 @@ func (z *stakePoolConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *stakePoolConfig) Msgsize() (s int) {
-	s = 1 + 8 + z.MinLock.Msgsize()
+	s = 1 + 8 + z.MinLock.Msgsize() + 10 + msgp.Float64Size
 	return
 }
 

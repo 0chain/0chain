@@ -337,8 +337,14 @@ func (sp *StakePool) SlashFraction(
 		return nil
 	}
 	for _, dp := range sp.Pools {
-		var dpSlash = currency.Coin(float64(dp.Balance) * fraction)
-		dp.Balance -= dpSlash
+		dpSlash, err := currency.Float64ToCoin(float64(dp.Balance) * fraction)
+		if err != nil {
+			return err
+		}
+		dp.Balance, err = currency.MinusCoin(dp.Balance, dpSlash)
+		if err != nil {
+			return err
+		}
 	}
 	sp.EmitStakePoolBalanceUpdate(providerId, providerType, balances)
 	return nil

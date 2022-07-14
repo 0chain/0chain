@@ -353,6 +353,10 @@ type RewardPartitionLocation struct {
 	Timestamp  common.Timestamp `json:"timestamp"`
 }
 
+func (rpl RewardPartitionLocation) valid() bool {
+	return rpl.StartRound > 0 && rpl.Timestamp > 0
+}
+
 // Info represents general information about blobber node
 type Info struct {
 	Name        string `json:"name"`
