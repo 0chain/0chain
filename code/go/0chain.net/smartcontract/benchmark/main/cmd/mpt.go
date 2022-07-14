@@ -344,13 +344,6 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockClientAllocation(clients, balances)
-		log.Println("added client allocations\t", time.Since(timer))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
 	}()
