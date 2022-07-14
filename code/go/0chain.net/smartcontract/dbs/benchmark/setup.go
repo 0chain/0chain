@@ -98,7 +98,7 @@ func AddMockBlocks(
 			block := event.Block{
 				Hash:                  GetMockBlockHash(block_number),
 				Version:               "mock version",
-				CreationDate:          int64(common.Now()),
+				CreationDate:          int64(common.Now().Duration()),
 				Round:                 block_number,
 				MinerID:               miners[int(block_number)%len(miners)],
 				RoundRandomSeed:       block_number,
