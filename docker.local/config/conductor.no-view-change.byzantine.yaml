@@ -16,7 +16,8 @@ sets:
       - "missing lfb tickets"
   - name: "resend past messages"
     tests:
-      - "resend proposed block"
+      # TODO: Review tests specification.
+      #- "resend proposed block"
       #- "resend notarisation"
   - name: "restart"
     tests:
