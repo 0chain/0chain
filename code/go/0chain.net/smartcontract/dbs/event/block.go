@@ -15,7 +15,7 @@ type Block struct {
 
 	Hash                  string    `json:"hash"`
 	Version               string    `json:"version"`
-	CreationDate          int64     `json:"creation_date"`
+	CreationDate          int64     `json:"creation_date" gorm:"index:idx_bcreation_date"`
 	Round                 int64     `json:"round" gorm:"index:idx_bround"`
 	MinerID               string    `json:"miner_id"`
 	RoundRandomSeed       int64     `json:"round_random_seed"`
@@ -32,10 +32,21 @@ type Block struct {
 	CreatedAt             time.Time `json:"created_at"`
 }
 
-func (edb *EventDb) GetBlocksByHash(hash string) (Block, error) {
+func (edb *EventDb) GetBlockByHash(hash string) (Block, error) {
 	block := Block{}
 	res := edb.Store.Get().Table("blocks").Where("hash = ?", hash).First(&block)
 	return block, res.Error
+}
+
+func (edb *EventDb) GetBlockByDate(date string) (Block, error) {
+	block := Block{}
+
+	return block, edb.Store.Get().Table("blocks").Where("creation_date <= ?", date).Limit(1).Order(
+		clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_date"},
+			Desc:   true,
+		},
+	).Scan(&block).Error
 }
 
 func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {

@@ -38,79 +38,6 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 	return
 }
 
-func (sc *StorageSmartContract) getAllocationsList(clientID string,
-	balances chainstate.StateContextI) (*Allocations, error) {
-
-	allocationList := &Allocations{}
-	var clientAlloc ClientAllocation
-	clientAlloc.ClientID = clientID
-	err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID), &clientAlloc)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-
-		return allocationList, nil
-	}
-
-	return clientAlloc.Allocations, nil
-}
-
-func (sc *StorageSmartContract) removeUserAllocation(
-	oldUser string,
-	alloc *StorageAllocation,
-	balances chainstate.StateContextI,
-) error {
-	var err error
-
-	clientAllocation := &ClientAllocation{}
-	clientAllocation.ClientID = oldUser
-	clientAllocation.Allocations, err = sc.getAllocationsList(alloc.Owner, balances)
-	if err != nil {
-		return fmt.Errorf("Failed to get allocation list: %v", err)
-	}
-
-	ok := clientAllocation.Allocations.List.remove(alloc.ID)
-	if !ok {
-		return fmt.Errorf("failed to remove allocation %s from client %s list", alloc.ID, oldUser)
-	}
-
-	_, err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
-	if err != nil {
-		return fmt.Errorf("saving client allocations list (client: %s): %v", oldUser, err)
-	}
-
-	return nil
-}
-
-func (sc *StorageSmartContract) addUserAllocation(
-	newUser string,
-	alloc *StorageAllocation,
-	balances chainstate.StateContextI,
-) error {
-	var err error
-
-	clientAllocation := &ClientAllocation{}
-	clientAllocation.ClientID = newUser
-	clientAllocation.Allocations, err = sc.getAllocationsList(alloc.Owner, balances)
-	if err != nil {
-		return fmt.Errorf("Failed to get allocation list: %v", err)
-	}
-
-	ok := clientAllocation.Allocations.List.add(alloc.ID)
-	if !ok {
-		return fmt.Errorf("failed to add allocation %s to client %s list", alloc.ID, newUser)
-	}
-
-	r, err := balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
-	if err != nil {
-		return fmt.Errorf("saving client allocations list (client: %s): %v", newUser, err)
-	}
-	logging.Logger.Debug("after client allocation save", zap.String("root", r))
-
-	return nil
-}
-
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
 	ta := &StorageAllocation{}
@@ -122,10 +49,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	if err != util.ErrValueNotPresent {
 		return "", common.NewErrorf("add_allocation_failed",
 			"unexpected error: %v", err)
-	}
-
-	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
-		return "", common.NewError("add_allocation_failed", err.Error())
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
@@ -314,7 +237,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
 
 		b.Allocated += bSize
-		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
 		if err != nil {
 			return "", fmt.Errorf("can't save blobber: %v", err)
 		}
@@ -1094,22 +1017,15 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		request.OwnerID = t.ClientID
 	}
 
-	var clist *Allocations // client allocations list
-	if clist, err = sc.getAllocationsList(request.OwnerID, balances); err != nil {
-		return "", common.NewError("allocation_updating_failed",
-			"can't get client's allocations list: "+err.Error())
-	}
-
-	if !clist.has(request.ID) {
-		return "", common.NewErrorf("allocation_updating_failed",
-			"can't find allocation in client's allocations list: %s (%d)",
-			request.ID, len(clist.List))
-	}
-
 	var alloc *StorageAllocation
 	if alloc, err = sc.getAllocation(request.ID, balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			"can't get existing allocation: "+err.Error())
+	}
+
+	if t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner {
+		return "", common.NewError("allocation_updating_failed",
+			"only owner can update the allocation")
 	}
 
 	if err = request.validate(conf, alloc); err != nil {
@@ -1689,16 +1605,8 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"only curators or the owner can transfer allocations; "+txn.ClientID+" is neither")
 	}
 
-	if err := sc.removeUserAllocation(alloc.Owner, alloc, balances); err != nil {
-		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
-	}
-
 	alloc.Owner = tai.NewOwnerId
 	alloc.OwnerPublicKey = tai.NewOwnerPublicKey
-
-	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
-		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
-	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {

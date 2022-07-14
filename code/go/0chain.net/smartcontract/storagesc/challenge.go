@@ -485,7 +485,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 					SuccessChallenges: 0,
 					WritePrice:        blobber.Terms.WritePrice,
 					ReadPrice:         blobber.Terms.ReadPrice,
-					TotalData:         sizeInGB(blobber.BytesWritten),
+					TotalData:         sizeInGB(blobber.SavedData),
 					DataRead:          dataRead,
 				})
 			if err != nil {
@@ -693,7 +693,7 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 		const maxBlobbersSelect = 5
 
 		var challengeBlobber ChallengeReadyBlobber
-		var maxUsedCap uint64
+		var maxWeight uint64
 
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
@@ -706,8 +706,8 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 		}
 
 		for _, bc := range blobbersSelected {
-			if bc.UsedCapacity > maxUsedCap {
-				maxUsedCap = bc.UsedCapacity
+			if bc.Weight > maxWeight {
+				maxWeight = bc.Weight
 				challengeBlobber = bc
 			}
 		}
