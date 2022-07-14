@@ -52,6 +52,10 @@ jobs:
       with:
         go-version: '1.18'
 
+    - name: Replace timeout_cap in 0chain configuration
+      run: |
+        sed -i "s/timeout_cap: 0/timeout_cap: 1/g" ./docker.local/config/0chain.yaml
+
     - name: Running No VC Fault Tolerance Tests.
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
