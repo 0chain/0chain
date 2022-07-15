@@ -47,9 +47,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio,
 		conf.BlockReward.BlobberWeight)
 	if err != nil {
-		logging.Logger.Error("error getting total block rewards",
-			zap.Error(err))
-		return nil
+		return common.NewError("blobber_block_reward_failed",
+			"cannot get block reward value: "+err.Error())
 	}
 
 	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
@@ -63,17 +62,15 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	var randomSeed int64
 	randomSeed, err = strconv.ParseInt(hashString[0:15], 16, 64)
 	if err != nil {
-		logging.Logger.Error("blobber_block_rewards_failed: error in creating seed",
-			zap.Error(err))
-		return nil
+		return common.NewError("blobber_block_rewards_failed",
+			"error in creating seed: "+err.Error())
 	}
 	r := rand.New(rand.NewSource(randomSeed))
 
 	var blobberRewards []BlobberRewardNode
 	if err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards); err != nil {
-		logging.Logger.Error("blobber_block_rewards_failed",
-			zap.String("getting random partition", err.Error()))
-		return nil
+		return common.NewError("blobber_block_rewards_failed",
+			"getting random partition"+err.Error())
 	}
 
 	type spResp struct {
