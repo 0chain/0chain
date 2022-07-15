@@ -555,9 +555,15 @@ func (gn *GlobalNode) canMint() bool {
 
 func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
-	var rr = gn.RewardRate
+	var (
+		rr  = gn.RewardRate
+		err error
+	)
 	// decline the value
-	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate) // 810
+	gn.RewardRate, err = common.SafeMultFloat64(gn.RewardRate, (1.0 - gn.RewardDeclineRate))
+	if err != nil {
+		panic(err)
+	}
 
 	// log about the epoch declining
 	logging.Logger.Info("miner sc: epoch decline",
@@ -576,7 +582,13 @@ func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 	if err != nil {
 		return 0, 0, err
 	}
-	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio) // 810
+
+	fminer, err := common.SafeMultFloat64(fFees, gn.ShareRatio)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	miner, err = currency.Float64ToCoin(fminer)
 	if err != nil {
 		return 0, 0, err
 	}

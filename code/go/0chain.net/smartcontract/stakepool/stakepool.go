@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chaincore/currency"
 
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -314,7 +315,12 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 			return err
 		}
 
-		spUpdate.DelegateRewards[delegates[i].DelegateID] += iShare // 810
+		spUpdate.DelegateRewards[delegates[i].DelegateID], err =
+			common.SafeAddInt64(spUpdate.DelegateRewards[delegates[i].DelegateID], iShare)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	if r > 0 {
