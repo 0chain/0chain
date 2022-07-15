@@ -47,28 +47,31 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio,
 		conf.BlockReward.BlobberWeight)
 	if err != nil {
-		return common.NewError("blobber_block_rewards_failed",
-			"cannot get block rewards: "+err.Error())
+		logging.Logger.Error("error getting total block rewards",
+			zap.Error(err))
+		return nil
 	}
 
 	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 	if err != nil {
-		return common.NewError("blobber_block_rewards_failed",
-			"cannot get all blobbers list: "+err.Error())
+		logging.Logger.Error("blobber_block_rewards_failed cannot get all blobbers list: ",
+			zap.Error(err))
+		return nil
 	}
 
 	hashString := encryption.Hash(balances.GetTransaction().Hash + balances.GetBlock().PrevHash)
 	var randomSeed int64
 	randomSeed, err = strconv.ParseInt(hashString[0:15], 16, 64)
 	if err != nil {
-		return common.NewError("blobber_block_rewards_failed",
-			"error in creating seed"+err.Error())
+		logging.Logger.Error("blobber_block_rewards_failed: error in creating seed",
+			zap.Error(err))
+		return nil
 	}
 	r := rand.New(rand.NewSource(randomSeed))
 
 	var blobberRewards []BlobberRewardNode
 	if err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards); err != nil {
-		logging.Logger.Info("blobber_block_rewards_failed",
+		logging.Logger.Error("blobber_block_rewards_failed",
 			zap.String("getting random partition", err.Error()))
 		return nil
 	}
