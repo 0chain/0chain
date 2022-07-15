@@ -425,12 +425,12 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 
-	conf.MaxTotalFreeAllocation, err = currency.Float64ToCoin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
+	conf.MaxTotalFreeAllocation, err = currency.Float64ToCoin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10) // 810
 	if err != nil {
 		return nil, err
 	}
 
-	conf.MaxIndividualFreeAllocation, err = currency.Float64ToCoin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
+	conf.MaxIndividualFreeAllocation, err = currency.Float64ToCoin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10) // 810
 	if err != nil {
 		return nil, err
 	}
@@ -441,12 +441,12 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
 	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
 
-	readPriceRangeMin, err := currency.Float64ToCoin(scc.GetFloat64(fas+"read_price_range.min") * 1e10)
+	readPriceRangeMin, err := currency.Float64ToCoin(scc.GetFloat64(fas+"read_price_range.min") * 1e10) // 810
 	if err != nil {
 		return nil, err
 	}
 
-	readPriceRangeMax, err := currency.Float64ToCoin(scc.GetFloat64(fas+"read_price_range.max") * 1e10)
+	readPriceRangeMax, err := currency.Float64ToCoin(scc.GetFloat64(fas+"read_price_range.max") * 1e10) // 810
 	if err != nil {
 		return nil, err
 	}
@@ -456,12 +456,12 @@ func getConfiguredConfig() (conf *Config, err error) {
 		Max: readPriceRangeMax,
 	}
 
-	writePriceRangeMin, err := currency.Float64ToCoin(scc.GetFloat64(fas+"write_price_range.min") * 1e10)
+	writePriceRangeMin, err := currency.Float64ToCoin(scc.GetFloat64(fas+"write_price_range.min") * 1e10) // 810
 	if err != nil {
 		return nil, err
 	}
 
-	writePriceRangeMax, err := currency.Float64ToCoin(scc.GetFloat64(fas+"write_price_range.max") * 1e10)
+	writePriceRangeMax, err := currency.Float64ToCoin(scc.GetFloat64(fas+"write_price_range.max") * 1e10) // 810
 	if err != nil {
 		return nil, err
 	}

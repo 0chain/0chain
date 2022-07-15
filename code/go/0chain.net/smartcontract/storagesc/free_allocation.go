@@ -155,7 +155,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't unmarshal input: %v", err)
 	}
 
-	newTotalLimit, err := currency.Float64ToCoin(assignerInfo.TotalLimit * floatToBalance)
+	newTotalLimit, err := currency.Float64ToCoin(assignerInfo.TotalLimit * floatToBalance) // 810
 	if err != nil {
 		return "", err
 	}
@@ -165,7 +165,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"total tokens limit %d exceeds maximum permitted: %d", newTotalLimit, conf.MaxTotalFreeAllocation)
 	}
 
-	newIndividualLimit, err := currency.Float64ToCoin(assignerInfo.IndividualLimit * floatToBalance)
+	newIndividualLimit, err := currency.Float64ToCoin(assignerInfo.IndividualLimit * floatToBalance) // 810
 	if err != nil {
 		return "", err
 	}
@@ -281,7 +281,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting transaction value to float: %v", err)
 	}
-	readPoolTokens, err := currency.Float64ToCoin(fTxnVal * conf.FreeAllocationSettings.ReadPoolFraction)
+	readPoolTokens, err := currency.Float64ToCoin(fTxnVal * conf.FreeAllocationSettings.ReadPoolFraction) // 810
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting read pool tokens to Coin: %v", err)
 	}

@@ -1665,7 +1665,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
-			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i])
+			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i]) // 810
 			if err != nil {
 				return err
 			}

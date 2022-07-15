@@ -210,7 +210,7 @@ func (sp *StakePool) DistributeRewards(
 	if err != nil {
 		return err
 	}
-	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
+	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue) // 810
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func (sp *StakePool) DistributeRewards(
 			break
 		}
 		ratio := float64(pool.Balance) / float64(stake)
-		reward, err := currency.Float64ToCoin(float64(valueLeft) * ratio)
+		reward, err := currency.Float64ToCoin(float64(valueLeft) * ratio) // 810
 		if err != nil {
 			return err
 		}

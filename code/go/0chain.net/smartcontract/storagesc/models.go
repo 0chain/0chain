@@ -288,7 +288,7 @@ type Terms struct {
 func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
 
 	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand // // 810
-	mldc, err := currency.Float64ToCoin(mldf * rdtu)
+	mldc, err := currency.Float64ToCoin(mldf * rdtu) // 810
 	if err != nil {
 		panic(err) // TODO: handle error
 	}

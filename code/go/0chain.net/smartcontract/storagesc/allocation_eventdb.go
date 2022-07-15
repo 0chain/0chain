@@ -90,7 +90,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 		terms := blobberIDTermMapping[b.BlobberID].Terms
 
-		minLockDemand, err := currency.Float64ToCoin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu)
+		minLockDemand, err := currency.Float64ToCoin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu) // 810
 		if err != nil {
 			return nil, err
 		}
