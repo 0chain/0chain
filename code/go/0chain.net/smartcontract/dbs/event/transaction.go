@@ -28,6 +28,7 @@ type Transaction struct {
 
 	//ref
 	ReadMarkers []ReadMarker `gorm:"foreignKey:TransactionID;references:Hash"`
+	WriteMarker []WriteMarker `gorm:"foreignKey:TransactionID;references:Hash"`
 }
 
 func (edb *EventDb) addTransaction(transaction Transaction) error {
