@@ -128,9 +128,19 @@ func (sp *stakePool) empty(
 	// If insufficient funds in stake pool left after unlock,
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
-	if sp.stake() < sp.TotalOffers+dp.Balance { // 810
+
+	totalBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
+	if err != nil {
+		return false, err
+	}
+
+	if sp.stake() < totalBalance {
 		if dp.Status != spenum.Unstaking {
-			sp.TotalUnStake += dp.Balance //810
+			sp.TotalUnStake, err = currency.AddCoin(sp.TotalUnStake, dp.Balance)
+			if err != nil {
+				return false, err
+			}
+
 			dp.Status = spenum.Unstaking
 		}
 		return true, nil
@@ -202,7 +212,7 @@ func (sp *stakePool) slash(
 	var ratio = float64(slash) / float64(sp.stake())
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
 	for id, dp := range sp.Pools {
-		dpSlash, err := currency.Float64ToCoin(float64(dp.Balance) * ratio) // 810
+		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
 		if err != nil {
 			return 0, err
 		}
@@ -210,11 +220,18 @@ func (sp *stakePool) slash(
 		if dpSlash == 0 {
 			continue
 		}
-		dp.Balance -= dpSlash //810
-		ap.Balance += dpSlash //810
+		dp.Balance -= dpSlash
+		ap.Balance, err = currency.AddCoin(ap.Balance, dpSlash)
+		if err != nil {
+			return 0, err
+		}
 
-		move += dpSlash                                    //810
-		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash) // 810
+		move, err = currency.AddCoin(move, dpSlash)
+		if err != nil {
+			return 0, err
+		}
+
+		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
 	}
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
 		return 0, err

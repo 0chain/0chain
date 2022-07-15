@@ -122,7 +122,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
-	validatorsReward, err = currency.Float64ToCoin(conf.ValidatorReward * float64(move)) // 810
+	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	// for a case of a partial verification
-	blobberReward, err := currency.Float64ToCoin(float64(move) * partial) // blobber (partial) reward // 810
+	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	)
 
 	// part of the tokens goes to related validators
-	validatorsReward, err := currency.Float64ToCoin(conf.ValidatorReward * float64(move)) // 810
+	validatorsReward, err := currency.MultFloat64(move, conf.ValidatorReward)
 	if err != nil {
 		return err
 	}
@@ -341,7 +341,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return err
 	}
 
-	slash, err := currency.Float64ToCoin(conf.BlobberSlash * float64(move)) // 810
+	slash, err := currency.MultFloat64(move, conf.BlobberSlash)
 	if err != nil {
 		return err
 	}

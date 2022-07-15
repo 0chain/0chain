@@ -125,7 +125,10 @@ func (d *destination) unlock(now, end common.Timestamp, dry bool) (
 		ratio = float64(period) / float64(full)
 	}
 
-	amount = currency.Coin(float64(left) * ratio) // 810
+	amount, err = currency.MultFloat64(left, ratio)
+	if err != nil {
+		return 0, err
+	}
 
 	if !dry {
 		d.move(now, amount)

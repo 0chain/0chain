@@ -181,11 +181,11 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) (*transaction.Transa
 			break
 		}
 	}
-	fee, err := currency.Int64ToCoin(prng.Int63n(maxFee-minFee) + minFee) // 810
+	fee, err := currency.Int64ToCoin(prng.Int63n(maxFee-minFee) + minFee)
 	if err != nil {
 		return nil, err
 	}
-	value, err := currency.Int64ToCoin(prng.Int63n(maxValue-minValue) + minValue) // 810
+	value, err := currency.Int64ToCoin(prng.Int63n(maxValue-minValue) + minValue)
 	if err != nil {
 		return nil, err
 	}
@@ -266,11 +266,11 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 	time.Sleep(1 * time.Second)
 	for _, w := range wallets {
 		//generous airdrop in dev/test mode :)
-		fee, err := currency.Int64ToCoin(prng.Int63n(10) + 1) // 810
+		fee, err := currency.Int64ToCoin(prng.Int63n(10) + 1)
 		if err != nil {
 			logging.Logger.Info("client generator", zap.Any("error", err))
 		}
-		val, err := currency.Int64ToCoin(prng.Int63n(100) * 10000000000) // 810
+		val, err := currency.Int64ToCoin(prng.Int63n(100) * 10000000000)
 		if err != nil {
 			logging.Logger.Info("client generator", zap.Any("error", err))
 		}

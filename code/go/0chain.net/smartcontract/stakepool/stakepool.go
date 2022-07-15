@@ -239,7 +239,7 @@ func (sp *StakePool) DistributeRewards(
 			break
 		}
 		ratio := float64(pool.Balance) / float64(stake)
-		reward, err := currency.Float64ToCoin(float64(valueLeft) * ratio) // 810
+		reward, err := currency.MultFloat64(valueLeft, ratio)
 		if err != nil {
 			return err
 		}

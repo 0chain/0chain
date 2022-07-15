@@ -171,8 +171,8 @@ func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 func getMockStakePoolSettings(wallet string) stakepool.Settings {
 	return stakepool.Settings{
 		DelegateWallet:     wallet,
-		MinStake:           currency.Coin(1 * 1e10), // 810
-		MaxStake:           currency.Coin(100 * 1e10), // 810
+		MinStake:           currency.Coin(1 * 1e10),
+		MaxStake:           currency.Coin(100 * 1e10),
 		MaxNumDelegates:    10,
 		ServiceChargeRatio: 0.1,
 	}

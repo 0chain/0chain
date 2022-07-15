@@ -338,7 +338,10 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		}
 		var total currency.Coin // total write price
 		for _, b := range alloc.BlobberAllocs {
-			total += b.Terms.WritePrice // 810
+			total, err = currency.AddCoin(total, b.Terms.WritePrice)
+			if err != nil {
+				return "", err
+			}
 		}
 		fTotal, err := total.Float64()
 		if err != nil {
