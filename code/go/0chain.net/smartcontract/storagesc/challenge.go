@@ -319,20 +319,15 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return err
 	}
 
-	var sp *stakePool
-	if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
-		return fmt.Errorf("can't get blobber's stake pool: %v", err)
-	}
-	if sp.IsDead {
-		// If the blobber had been killed then we still
-		// want the smart contract to succeed as validators still need to be paid
-		return nil
-	}
-
 	// blobber stake penalty
 	if conf.BlobberSlash > 0 && move > 0 &&
 		slash > 0 {
 
+		// load stake pool
+		var sp *stakePool
+		if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
+			return fmt.Errorf("can't get blobber's stake pool: %v", err)
+		}
 		var move currency.Coin
 		move, err = sp.slash(alloc, blobAlloc.BlobberID, until, wp, blobAlloc.Offer(), slash, balances)
 		if err != nil {
@@ -360,8 +355,19 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	return
 }
 
-func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI) (resp string, err error) {
+func (sc *StorageSmartContract) verifyChallenge(
+	t *transaction.Transaction,
+	input []byte, balances cstate.StateContextI,
+) (resp string, err error) {
+	blobber, err := sc.getBlobber(t.ClientID, balances)
+	if err != nil {
+		return "", common.NewError("verify_challenge",
+			"can't get blobber"+err.Error())
+	}
+	if blobber.IsKilled {
+		return "", common.NewError("verify_challenge",
+			"blobber had been killed")
+	}
 
 	var challResp ChallengeResponse
 
@@ -479,11 +485,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	// verification, or partial verification
 	if pass && fresh {
-		blobber, err := sc.getBlobber(t.ClientID, balances)
-		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"can't get blobber"+err.Error())
-		}
 
 		// this expiry of blobber needs to be corrected once logic is finalized
 
