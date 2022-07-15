@@ -360,6 +360,11 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"error fetching blobber object")
 	}
 
+	if blobber.IsKilled {
+		return "", common.NewError("commit_blobber_read",
+			"blobber had been killed")
+	}
+
 	const CHUNK_SIZE = 64 * KB
 
 	var (
@@ -402,7 +407,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 	blobber.LastRewardDataReadRound = balances.GetBlock().Round
 
-	if blobber.RewardPartition.StartRound >= rewardRound && blobber.RewardPartition.Timestamp > 0 {
+	if blobber.RewardPartition.StartRound >= rewardRound &&
+		blobber.RewardPartition.Timestamp > 0 {
 		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
@@ -598,6 +604,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"error fetching blobber")
+	}
+
+	if blobber.IsKilled {
+		return "", common.NewError("commit_connection_failed",
+			"blobber had been killed")
 	}
 
 	if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {

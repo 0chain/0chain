@@ -319,15 +319,19 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return err
 	}
 
+	var sp *stakePool
+	if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+	if sp.IsDead {
+		// If the blobber had been killed then we still
+		// want the smart contract to succeed as validators still need to be paid
+		return nil
+	}
+
 	// blobber stake penalty
 	if conf.BlobberSlash > 0 && move > 0 &&
 		slash > 0 {
-
-		// load stake pool
-		var sp *stakePool
-		if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
-			return fmt.Errorf("can't get blobber's stake pool: %v", err)
-		}
 
 		var move currency.Coin
 		move, err = sp.slash(alloc, blobAlloc.BlobberID, until, wp, blobAlloc.Offer(), slash, balances)
