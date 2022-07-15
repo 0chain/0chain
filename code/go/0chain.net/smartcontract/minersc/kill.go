@@ -8,8 +8,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/core/logging"
-
 	"0chain.net/chaincore/smartcontractinterface"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -36,7 +34,6 @@ func (msc *MinerSmartContract) killMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	logging.Logger.Info("piers killMiner")
 	if err := smartcontractinterface.AuthorizeWithOwner("kill-miner", func() bool {
 		return gn.OwnerId == txn.ClientID
 	}); err != nil {

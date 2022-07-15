@@ -175,7 +175,6 @@ func deleteNode(
 
 	usp, err := stakepool.GetUserStakePools(nodeType, deleteNode.Settings.DelegateWallet, balances)
 	if err != nil {
-		logging.Logger.Info("piers deleteNode", zap.Int("len deletNode.Pools", len(deleteNode.Pools)), zap.Error(err))
 		if err != util.ErrValueNotPresent {
 			return nil, fmt.Errorf("can't get user pools list: %v", err)
 		}

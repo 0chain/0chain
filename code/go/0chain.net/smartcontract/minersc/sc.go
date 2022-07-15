@@ -8,9 +8,6 @@ import (
 	"net/url"
 	"sync"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -136,12 +133,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	if !found {
 		return common.NewErrorf("failed execution", "no miner smart contract method with name: %v", funcName).Error(), nil
 	}
-	resp, err := scFunc(t, input, gn, balances)
-	if funcName != "payFees" {
-		logging.Logger.Info("piers Execute", zap.String("funcName", funcName), zap.Error(err))
-	}
-
-	return resp, err
+	return scFunc(t, input, gn, balances)
 }
 
 func getGlobalNode(
