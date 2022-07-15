@@ -150,6 +150,7 @@ var (
 		"writepool.max_lock_period",
 
 		"stakepool.min_lock",
+		"stakepool.kill_slash",
 
 		"max_total_free_allocation",
 		"max_individual_free_allocation",
