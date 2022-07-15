@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/core/viper"
-
 	"0chain.net/chaincore/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -434,8 +432,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
-	conf.StakePool.KillSlash = viper.GetFloat64(pfx + "stakepool.kill_slash")
-
+	conf.StakePool.KillSlash = scc.GetFloat64(pfx + "stakepool.kill_slash")
 	conf.MaxTotalFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
 	conf.MaxIndividualFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
 	fas := pfx + "free_allocation_settings."
