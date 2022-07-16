@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
@@ -145,8 +149,15 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI) (resp string, err error) {
 	_, err = ssc.getReadPool(t.ClientID, balances)
 	if err == nil {
+		logging.Logger.Info("new_real_pool_debug: readpool already exists",
+			zap.String("client id", t.ClientID),
+			zap.String("transaction_hash", t.Hash))
 		return "", common.NewError("new_read_pool_failed", "already exist")
-	} else if err != util.ErrValueNotPresent {
+	} else if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+		logging.Logger.Info("new_real_pool_debug: readpool fetch error",
+			zap.String("client id", t.ClientID),
+			zap.String("transaction_hash", t.Hash),
+			zap.Error(err))
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 

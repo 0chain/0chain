@@ -41,7 +41,18 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
-	_, err := balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	ta := &StorageAllocation{}
+	err := balances.GetTrieNode(alloc.GetKey(sc.ID), ta)
+	if err == nil {
+		return "", common.NewErrorf("add_allocation_failed",
+			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
+	}
+	if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+		return "", common.NewErrorf("add_allocation_failed",
+			"unexpected error: %v", err)
+	}
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation: %v", err)
