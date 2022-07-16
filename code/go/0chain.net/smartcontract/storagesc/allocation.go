@@ -215,7 +215,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err = request.decode(input); err != nil {
 		logging.Logger.Info("new_allocation_request_error: error decoding input",
 			zap.String("client_id", t.ClientID),
-			zap.String("transaction_hash", t.Hash))
+			zap.String("transaction_hash", t.Hash),
+			zap.Error(err))
 		return "", common.NewErrorf("new_allocation_request",
 			"malformed request: %v", err)
 	}
@@ -264,7 +265,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err != nil {
 		logging.Logger.Info("new_allocation_request_error: error fetching blobber pools",
 			zap.String("client_id", t.ClientID),
-			zap.String("transaction_hash", t.Hash))
+			zap.String("transaction_hash", t.Hash),
+			zap.Error(err))
 		return "", common.NewErrorf("new_allocation_request",
 			"error fetching blobber pools: "+err.Error())
 	}
@@ -275,7 +277,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err != nil {
 		logging.Logger.Info("new_allocation_request_error: error validating blobbers",
 			zap.String("client_id", t.ClientID),
-			zap.String("transaction_hash", t.Hash))
+			zap.String("transaction_hash", t.Hash),
+			zap.Error(err))
 		return "", common.NewErrorf("new_allocation_request", "%v", err)
 	}
 	bi := make([]string, 0, len(blobberNodes))
@@ -299,7 +302,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			logging.Logger.Info("new_allocation_request_error: error inserting blobber to MPT",
 				zap.String("client_id", t.ClientID),
 				zap.String("blobber", b.ID),
-				zap.String("transaction_hash", t.Hash))
+				zap.String("transaction_hash", t.Hash),
+				zap.Error(err))
 			return "", common.NewErrorf("new_allocation_request",
 				"can't save blobber: %v", err)
 		}
@@ -308,7 +312,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			logging.Logger.Info("new_allocation_request_error: error adding offer to blobber pool",
 				zap.String("client_id", t.ClientID),
 				zap.String("blobber", b.ID),
-				zap.String("transaction_hash", t.Hash))
+				zap.String("transaction_hash", t.Hash),
+				zap.Error(err))
 			return "", common.NewErrorf("new_allocation_request",
 				"adding offer: %v", err)
 		}
@@ -316,7 +321,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			logging.Logger.Info("new_allocation_request_error: error saving blobber pool",
 				zap.String("client_id", t.ClientID),
 				zap.String("blobber", b.ID),
-				zap.String("transaction_hash", t.Hash))
+				zap.String("transaction_hash", t.Hash),
+				zap.Error(err))
 			return "", common.NewErrorf("new_allocation_request",
 				"can't save blobber's stake pool: %v", err)
 		}
@@ -330,7 +336,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err = sc.createWritePool(t, sa, mintNewTokens, balances); err != nil {
 		logging.Logger.Info("new_allocation_request_error: error creating write pool",
 			zap.String("client_id", t.ClientID),
-			zap.String("transaction_hash", t.Hash))
+			zap.String("transaction_hash", t.Hash),
+			zap.Error(err))
 		return "", common.NewError("new_allocation_request", err.Error())
 	}
 	m.tick("create_write_pool")
@@ -338,7 +345,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err = sc.createChallengePool(t, sa, balances); err != nil {
 		logging.Logger.Info("new_allocation_request_error: error creating challenge pool",
 			zap.String("client_id", t.ClientID),
-			zap.String("transaction_hash", t.Hash))
+			zap.String("transaction_hash", t.Hash),
+			zap.Error(err))
 		return "", common.NewError("new_allocation_request", err.Error())
 	}
 	m.tick("create_challenge_pool")
@@ -346,7 +354,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		logging.Logger.Info("new_allocation_request_error: error saving allocation",
 			zap.String("client_id", t.ClientID),
-			zap.String("transaction_hash", t.Hash))
+			zap.String("transaction_hash", t.Hash),
+			zap.Error(err))
 		return "", common.NewErrorf("new_allocation_request", "%v", err)
 	}
 	m.tick("add_allocation")
