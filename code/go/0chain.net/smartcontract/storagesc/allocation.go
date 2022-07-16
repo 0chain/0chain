@@ -47,7 +47,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", common.NewErrorf("add_allocation_failed",
 			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
 	}
-	if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+	if err != util.ErrValueNotPresent {
 		return "", common.NewErrorf("add_allocation_failed",
 			"unexpected error: %v", err)
 	}

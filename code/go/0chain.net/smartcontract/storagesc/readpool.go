@@ -153,7 +153,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 			zap.String("client id", t.ClientID),
 			zap.String("transaction_hash", t.Hash))
 		return "", common.NewError("new_read_pool_failed", "already exist")
-	} else if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+	} else if err != util.ErrValueNotPresent {
 		logging.Logger.Info("new_real_pool_debug: readpool fetch error",
 			zap.String("client id", t.ClientID),
 			zap.String("transaction_hash", t.Hash),
