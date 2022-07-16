@@ -31,10 +31,10 @@ import (
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
-// ErrLFBClientStateNil is returned when client state of latest finalized block is nil
-var ErrLFBClientStateNil = errors.New("client state of latest finalized block is empty")
-
 var (
+	// ErrLFBClientStateNil is returned when client state of latest finalized block is nil
+	ErrLFBClientStateNil = errors.New("client state of latest finalized block is empty")
+
 	ErrNotTimeTolerant = common.NewError("not_time_tolerant", "transaction is behind time tolerance")
 	FutureTransaction  = common.NewError("future_transaction", "transaction has future nonce")
 	PastTransaction    = common.NewError("past_transaction", "transaction has past nonce")
