@@ -156,7 +156,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't unmarshal input: %v", err)
 	}
 
-	newTotalLimitF, err := maths.SafeMultFloat64(assignerInfo.TotalLimit , floatToBalance)
+	newTotalLimitF, err := maths.SafeMultFloat64(assignerInfo.TotalLimit, floatToBalance)
 	if err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner",
 			"can't convert total limit to balance: %v", err)
@@ -175,6 +175,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	newIndividualLimitF, err := maths.SafeMultFloat64(assignerInfo.IndividualLimit, floatToBalance)
 	if err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner", "overflow in newIndividualLimit: %v", err)
+	}
 
 	newIndividualLimit, err := currency.Float64ToCoin(newIndividualLimitF)
 	if err != nil {
