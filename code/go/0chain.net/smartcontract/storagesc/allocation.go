@@ -385,7 +385,8 @@ func (sc *StorageSmartContract) fetchPools(inputBlobbers *StorageNodes, balances
 			var sp *stakePool
 			var err error
 			if sp, err = sc.getStakePool(blob.ID, balances); err != nil {
-				errs <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
+				errs <- common.NewErrorf("allocation_creation_failed",
+					"can't get blobber's stake pool for blobber: %s: %v", blob.ID, err)
 				return
 			}
 			pools <- &blobberWithPool{blob, sp, ind}
