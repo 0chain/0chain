@@ -9,7 +9,7 @@ import (
 
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/core/common"
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -211,6 +211,7 @@ func (sp *StakePool) DistributeRewards(
 	if err != nil {
 		return err
 	}
+
 	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue) // 810
 	if err != nil {
 		return err
@@ -316,7 +317,7 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 		}
 
 		spUpdate.DelegateRewards[delegates[i].DelegateID], err =
-			common.SafeAddInt64(spUpdate.DelegateRewards[delegates[i].DelegateID], iShare)
+			maths.SafeAddInt64(spUpdate.DelegateRewards[delegates[i].DelegateID], iShare)
 		if err != nil {
 			return err
 		}

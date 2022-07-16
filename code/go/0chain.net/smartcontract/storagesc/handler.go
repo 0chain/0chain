@@ -15,6 +15,7 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/logging"
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool"
 	"go.uber.org/zap"
 
@@ -2164,7 +2165,7 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 			common.Respond(w, r, nil, err)
 			return
 		}
-		total, err = common.SafeAddInt64(total, int64(sp.stake()))
+		total, err = maths.SafeAddInt64(total, int64(sp.stake()))
 		if err != nil {
 			err := common.NewErrInternal("cannot get total stake" + err.Error())
 			common.Respond(w, r, nil, err)

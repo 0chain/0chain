@@ -24,6 +24,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
+	"0chain.net/core/maths"
 	"0chain.net/core/util"
 
 	"github.com/go-playground/validator/v10"
@@ -560,7 +561,7 @@ func (gn *GlobalNode) epochDecline() {
 		err error
 	)
 	// decline the value
-	gn.RewardRate, err = common.SafeMultFloat64(gn.RewardRate, (1.0 - gn.RewardDeclineRate))
+	gn.RewardRate, err = maths.SafeMultFloat64(gn.RewardRate, (1.0 - gn.RewardDeclineRate))
 	if err != nil {
 		panic(err)
 	}
@@ -583,7 +584,7 @@ func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 		return 0, 0, err
 	}
 
-	fminer, err := common.SafeMultFloat64(fFees, gn.ShareRatio)
+	fminer, err := maths.SafeMultFloat64(fFees, gn.ShareRatio)
 	if err != nil {
 		return 0, 0, err
 	}
