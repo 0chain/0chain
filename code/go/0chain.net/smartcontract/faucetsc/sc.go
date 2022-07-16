@@ -154,6 +154,12 @@ func toSeconds(dur time.Duration) common.Timestamp {
 func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
 	user := fc.getUserVariables(t, gn, balances)
 	ok, err := user.validPourRequest(t, balances, gn)
+	if err != nil {
+		logging.Logger.Info("pour_error: error while validating pour request",
+			zap.String("transaction_hash", t.Hash),
+			zap.Error(err))
+		return "", common.NewErrorf("pour_failed", "error validating pour request: %v", err)
+	}
 	if ok {
 		var pourAmount = gn.PourAmount
 		if t.Value > 0 && t.Value < gn.MaxPourAmount {
@@ -162,16 +168,25 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
 		if err := balances.AddTransfer(transfer); err != nil {
+			logging.Logger.Info("pour_error: error adding transfer",
+				zap.String("transaction_hash", t.Hash),
+				zap.Error(err))
 			return "", err
 		}
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
 		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
+			logging.Logger.Info("pour_error: error inserting user",
+				zap.String("transaction_hash", t.Hash),
+				zap.Error(err))
 			return "", err
 		}
 		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
+			logging.Logger.Info("pour_error: error inserting global node",
+				zap.String("transaction_hash", t.Hash),
+				zap.Error(err))
 			return "", err
 		}
 		tokensPoured.Update(int64(transfer.Amount))
