@@ -853,8 +853,19 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.setConfigs(gn)
 	var m = min(dkgmn.MaxN, n)
 	dkgmn.N = m
-	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m))) // 810
-	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m))) // 810
+
+	kF, err := maths.SafeMultFloat64(dkgmn.KPercent, float64(m))
+	if err != nil {
+		panic(err) // TODO: better error handling
+	}
+
+	tF, err := maths.SafeMultFloat64(dkgmn.TPercent, float64(m))
+	if err != nil {
+		panic(err) // TODO: better error handling
+	}
+
+	dkgmn.K = int(math.Ceil(kF))
+	dkgmn.T = int(math.Ceil(tF))
 }
 
 func simpleNodesKeys(sns SimpleNodes) (ks []string) {

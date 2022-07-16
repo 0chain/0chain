@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
@@ -771,16 +772,24 @@ type allocPeriod struct {
 }
 
 func (ap *allocPeriod) weight() float64 {
-	return float64(ap.period) * float64(ap.size) // 810
+	w, err := maths.SafeMultFloat64(float64(ap.period), float64(ap.size))
+	if err != nil {
+		panic(err) // TODO: Better error handling
+	}
+	return w
 }
 
 // returns weighted average read and write prices
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
-		ws       = apw + npw                // weights sum // 810
 		rp, wp   float64                    // read sum, write sum (weighted)
 	)
+
+	ws, err := maths.SafeAddFloat64(apw, npw) // weights sum
+	if err != nil {
+		return 0, 0, err
+	}
 
 	apReadF, err := ap.read.Float64()
 	if err != nil {
@@ -1665,7 +1674,15 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
-			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i]) // 810
+			cpBalRatio, err := maths.SafeMultFloat64(cpBalance, ratio)
+			if err != nil {
+				return err
+			}
+			rewardF, err := maths.SafeMultFloat64(passRates[i], cpBalRatio)
+			if err != nil {
+				return err
+			}
+			reward, err := currency.Float64ToCoin(rewardF)
 			if err != nil {
 				return err
 			}

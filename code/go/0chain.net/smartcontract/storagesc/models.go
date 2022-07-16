@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 
 	"0chain.net/core/logging"
+	"0chain.net/core/maths"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
@@ -287,8 +288,13 @@ type Terms struct {
 // rest of allocation duration in time units are used.
 func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
 
-	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand // // 810
-	mldc, err := currency.Float64ToCoin(mldf * rdtu) // 810
+	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand // 810
+	mldcF, err := maths.SafeMultFloat64(mldf, rdtu)
+	if err != nil {
+		panic(err) // TODO: handle error
+		return
+	}
+	mldc, err := currency.Float64ToCoin(mldcF)
 	if err != nil {
 		panic(err) // TODO: handle error
 	}
