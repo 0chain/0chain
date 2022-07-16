@@ -10,6 +10,7 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
+	"0chain.net/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -323,10 +324,17 @@ func (sc *Chain) loadHighestMagicBlock(ctx context.Context,
 	return // not found
 }
 
-func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
-	r *round.Round) (lfb *block.Block, err error) {
+func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator, r *round.Round) (lfb *block.Block, err error) {
 
+	var rollBackCount int
 	for ; iter.Valid(); iter.Prev() {
+		if rollBackCount >= sc.PruneStateBelowCount() {
+			// could not recovery as the state of round below prune count may have nodes missing, and
+			// we can not sync from remote neither, so just panic.
+			logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
+				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+		}
+
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
 			return nil, common.NewErrorf("load_lfb",
 				"decoding round info: %v", err) // critical
@@ -338,7 +346,30 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
 		if err != nil {
 			Logger.Error("load_lfb, could not get block from store", zap.Error(err))
+			rollBackCount++
 			continue // TODO: can we use os.IsNotExist(err) or should not
+		}
+
+		lfnb, er := func() (*block.Block, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			return sc.GetNotarizedBlockFromSharders(ctx, "", lfb.Round)
+		}()
+
+		if er != nil {
+			logging.Logger.Warn("load_lfb, could not sync LFB from remote",
+				zap.Int64("round", lfb.Round),
+				zap.String("lfb", lfb.Hash))
+			return
+		}
+
+		if lfnb.Hash != lfb.Hash {
+			Logger.Warn("load_lfb, see different lfb, roll back",
+				zap.Int64("round", lfb.Round),
+				zap.String("local lfb", lfb.Hash),
+				zap.String("remote lfb", lfnb.Hash))
+			rollBackCount++
+			continue
 		}
 
 		// check out required corresponding state
@@ -351,6 +382,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 				zap.Int64("round", r.Number),
 				zap.String("block_hash", r.BlockHash))
 			// we can't use this block, because of missing or malformed state
+			rollBackCount++
 			continue
 		}
 
@@ -359,12 +391,8 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 			Logger.Warn("load_lfb, lfb state missing nodes",
 				zap.Int64("round", r.Number),
 				zap.String("block_hash", r.BlockHash))
-			// go back 50 rounds if
-			if lfb.Round > 50 {
-				for i := 0; i < 50; i++ {
-					iter.Prev()
-				}
-			}
+			rollBackCount++
+
 			continue
 		}
 
@@ -485,8 +513,13 @@ func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 }
 
 func (sc *Chain) ValidateState(b *block.Block) bool {
-	if err := sc.InitBlockState(b); err != nil {
-		Logger.Warn("load_lfb, init block state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	if err := b.InitStateDB(sc.GetStateDB()); err != nil {
+		logging.Logger.Warn("load_lfb, init block state failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.String("state", util.ToHex(b.ClientStateHash)),
+			zap.Error(err))
+
 		return false
 	}
 

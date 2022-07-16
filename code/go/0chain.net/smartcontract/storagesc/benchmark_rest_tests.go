@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"strconv"
+
 	"0chain.net/core/encryption"
 
 	"0chain.net/smartcontract/dbs/benchmark"
@@ -97,11 +99,12 @@ func BenchmarkRestTests(
 				Endpoint: srh.getErrors,
 			},
 			{
-				FuncName: "get_block_by_hash",
+				FuncName: "get_block",
 				Params: map[string]string{
 					"block_hash": benchmark.GetMockBlockHash(1),
+					"date":       strconv.FormatInt(int64(data.Now.Duration()), 10),
 				},
-				Endpoint: srh.getBlockByHash,
+				Endpoint: srh.getBlock,
 			},
 			{
 				FuncName: "total-saved-data",

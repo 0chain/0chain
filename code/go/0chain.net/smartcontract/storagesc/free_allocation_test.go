@@ -342,11 +342,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"InsertTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
 		).Return("", nil).Once()
 
-		var clientAlloc = ClientAllocation{ClientID: p.marker.Recipient}
-		balances.On(
-			"GetTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
-		).Return(util.ErrValueNotPresent).Once()
-
 		allocation := StorageAllocation{ID: txn.Hash}
 		balances.On(
 			"GetTrieNode",
@@ -359,9 +354,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 			mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
 
-		balances.On(
-			"InsertTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
-		).Return("", nil).Once()
 		balances.On(
 			"InsertTrieNode",
 			mock.MatchedBy(func(key string) bool {
@@ -669,14 +661,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil).Once()
-
-		ca := ClientAllocation{
-			ClientID:    p.marker.Recipient,
-			Allocations: &Allocations{},
-		}
-		ca.Allocations.List.add(p.allocationId)
-		balances.On("GetTrieNode", ca.GetKey(ssc.ID),
-			mockSetValue(ca)).Return(nil).Once()
 
 		var sa = StorageAllocation{
 			ID:           p.allocationId,
