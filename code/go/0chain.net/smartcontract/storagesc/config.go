@@ -70,7 +70,7 @@ type blockRewardZeta struct {
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
-	total := sharderRatio + minerRatio + bRatio // 810 // ask
+	total := sharderRatio + minerRatio + bRatio
 	if total == 0 {
 		br.SharderWeight = 0
 		br.MinerWeight = 0

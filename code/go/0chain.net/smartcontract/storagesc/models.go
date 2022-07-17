@@ -287,12 +287,14 @@ type Terms struct {
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
 func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
-
-	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand // 810
+	writePriceGB, err := maths.SafeMultFloat64(float64(t.WritePrice), gbSize)
+	if err != nil {
+		panic(err) // TODO: handle error
+	}
+	var mldf = writePriceGB * t.MinLockDemand
 	mldcF, err := maths.SafeMultFloat64(mldf, rdtu)
 	if err != nil {
 		panic(err) // TODO: handle error
-		return
 	}
 	mldc, err := currency.Float64ToCoin(mldcF)
 	if err != nil {
@@ -1204,8 +1206,27 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
 			owp = float64(d.Terms.WritePrice) // terms weren't changed
 		}
 
-		a = owp * size * odrtu // original value (by original terms) // 810
-		b = nwp * size * ndrtu // new value (by new terms) // 810
+		owpSize, err := maths.SafeMultFloat64(owp, size)
+		if err != nil {
+			logging.Logger.Error("error calculating owpSize", zap.Error(err))
+			panic(err) // TODO: handle error
+		}
+		a, err = maths.SafeMultFloat64(owpSize, odrtu) // original value (by original terms)
+		if err != nil {
+			logging.Logger.Error("error calculating a", zap.Error(err))
+			panic(err) // TODO: handle error
+		}
+
+		nwpSize, err := maths.SafeMultFloat64(nwp, size)
+		if err != nil {
+			logging.Logger.Error("error calculating nwpSize", zap.Error(err))
+			panic(err) // TODO: handle error
+		}
+		b, err = maths.SafeMultFloat64(nwpSize, ndrtu) // new value (by new terms)s
+		if err != nil {
+			logging.Logger.Error("error calculating b", zap.Error(err))
+			panic(err) // TODO: handle error
+		}
 
 		diff = b - a // value difference
 
