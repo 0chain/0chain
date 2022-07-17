@@ -72,7 +72,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getchallenge", srh.getChallenge),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", srh.getStakePoolStat),
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
-		rest.MakeEndpoint(storage+"/get_block_by_hash", srh.getBlockByHash),
+		rest.MakeEndpoint(storage+"/block", srh.getBlock),
 		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
 		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
@@ -908,13 +908,18 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, &block, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_block_by_hash get_block_by_hash
-// Gets block information from block hash
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block block
+// Gets block information
 //
 // parameters:
 //    + name: block_hash
 //      description: block hash
-//      required: true
+//      required: false
+//      in: query
+//      type: string
+//    + name: date
+//      description: block created closest to the date (epoch timestamp in nanoseconds)
+//      required: false
 //      in: query
 //      type: string
 //
@@ -922,23 +927,37 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 //  200: Block
 //  400:
 //  500:
-func (srh *StorageRestHandler) getBlockByHash(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) {
 	hash := r.URL.Query().Get("block_hash")
-	if len(hash) == 0 {
-		common.Respond(w, r, nil, common.NewErrBadRequest("annot find valid block hash: "+hash))
-		return
-	}
+	date := r.URL.Query().Get("date")
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
-	block, err := edb.GetBlocksByHash(hash)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
-		return
+
+	if hash != "" {
+		block, err := edb.GetBlockByHash(hash)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error getting block "+err.Error()))
+			return
+		}
+
+		common.Respond(w, r, &block, nil)
 	}
 
-	common.Respond(w, r, &block, nil)
+	if date != "" {
+		block, err := edb.GetBlockByDate(date)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error getting block "+err.Error()))
+			return
+		}
+
+		common.Respond(w, r, &block, nil)
+	}
+
+	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
+	return
 }
 
 // swagger:model userPoolStat

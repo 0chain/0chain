@@ -64,15 +64,16 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 	}
 
+	cr := c.GetCurrentRound()
 	logging.Logger.Info("prune client state",
-		zap.Int64("current_round", c.GetCurrentRound()),
+		zap.Int64("current_round", cr),
 		zap.Int64("latest_finalized_round", lfb.Round),
 		zap.Int64("round", bs.Round),
 		zap.String("block", bs.Hash),
 		zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 
 	var (
-		newVersion = util.Sequence(bs.Round)
+		newVersion = bs.Round
 		pctx       = util.WithPruneStats(ctx)
 		ps         = util.GetPruneStats(pctx)
 	)

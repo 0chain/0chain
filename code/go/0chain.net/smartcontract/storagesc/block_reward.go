@@ -255,13 +255,14 @@ func getBlockReward(
 		return 0, fmt.Errorf("unexpected block reward change ratio: %f", brChangeRatio)
 	}
 	changeBalance := 1 - brChangeRatio
-	changePeriods := currentRound % brChangePeriod
+	changePeriods := currentRound / brChangePeriod
 
 	factor, err := maths.SafeMultFloat64(math.Pow(changeBalance, float64(changePeriods)), blobberWeight)
 	if err != nil {
 		return 0, err
 	}
 	return currency.MultFloat64(br, factor)
+
 }
 
 func GetCurrentRewardRound(currentRound, period int64) int64 {

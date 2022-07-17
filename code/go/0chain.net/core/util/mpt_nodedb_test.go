@@ -202,14 +202,14 @@ func TestMemoryNodeDB_Full(t *testing.T) {
 	})
 
 	t.Run("prune_below_version", func(t *testing.T) {
-		require.NoError(t, mndb.PruneBelowVersion(back, Sequence(100)))
+		require.NoError(t, mndb.PruneBelowVersion(back, 100))
 		require.Zero(t, mndb.Size(back))
 		for _, kv := range kvs {
 			kv.node.SetVersion(300)
 		}
 		keys, nodes = getTestKeysAndValues(kvs)
 		require.NoError(t, mndb.MultiPutNode(keys, nodes))
-		if err := mndb.PruneBelowVersion(back, Sequence(200)); err != nil {
+		if err := mndb.PruneBelowVersion(back, 200); err != nil {
 			t.Fatal(err)
 		}
 		require.EqualValues(t, N, mndb.Size(back))
@@ -409,14 +409,14 @@ func TestLevelNodeDB_Full(t *testing.T) {
 
 	// For the LevelDB PruneBelowVersion is not implemented and does nothing.
 	t.Run("prune_below_version", func(t *testing.T) {
-		require.NoError(t, lndb.PruneBelowVersion(back, Sequence(100)))
+		require.NoError(t, lndb.PruneBelowVersion(back, 100))
 		require.EqualValues(t, N, lndb.Size(back))
 		for _, kv := range kvs {
 			kv.node.SetVersion(300)
 		}
 		keys, nodes = getTestKeysAndValues(kvs)
 		require.NoError(t, lndb.MultiPutNode(keys, nodes))
-		if err := lndb.PruneBelowVersion(back, Sequence(200)); err != nil {
+		if err := lndb.PruneBelowVersion(back, 200); err != nil {
 			t.Fatal(err)
 		}
 		require.EqualValues(t, N, lndb.Size(back))
@@ -637,31 +637,6 @@ func TestPNodeDB_Full(t *testing.T) {
 		err = mndb.MultiDeleteNode(keys)
 		require.NoError(t, err)
 	})
-
-	t.Run("prune_below_version", func(t *testing.T) {
-		keys, nodes = getTestKeysAndValues(kvs)
-
-		require.NoError(t, mndb.MultiPutNode(keys, nodes))
-		require.EqualValues(t, N, mndb.Size(back))
-
-		nodes, err = mndb.MultiGetNode(keys)
-		require.NoError(t, err)
-		_, err := mndb.RecordDeadNodes(nodes)
-		require.NoError(t, err)
-
-		require.NoError(t, mndb.PruneBelowVersion(back, Sequence(100)))
-		require.Zero(t, mndb.Size(back))
-		for _, kv := range kvs {
-			kv.node.SetVersion(300)
-		}
-		keys, nodes = getTestKeysAndValues(kvs)
-		require.NoError(t, mndb.MultiPutNode(keys, nodes))
-		if err := mndb.PruneBelowVersion(back, Sequence(200)); err != nil {
-			t.Fatal(err)
-		}
-		require.EqualValues(t, N, mndb.Size(back))
-	})
-
 }
 
 func TestMergeState(t *testing.T) {
@@ -702,13 +677,6 @@ func TestMergeState(t *testing.T) {
 		require.NoError(t, MergeState(back, fmdb, pndb))
 		require.EqualValues(t, n, pndb.Size(back))
 	})
-}
-
-func noNodeNotFound(err error) error {
-	if err == ErrNodeNotFound {
-		return nil
-	}
-	return err
 }
 
 func TestRaceMemoryNodeDB_Full(t *testing.T) {
@@ -1003,7 +971,7 @@ func TestMemoryNodeDB_reachable(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			mndb := &MemoryNodeDB{
 				Nodes: tt.fields.Nodes,

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"bufio"
 	"context"
 	"errors"
@@ -16,6 +15,8 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	"go.uber.org/zap"
 
@@ -218,12 +219,6 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	// start sharding from the LFB stored
-	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
-		Logger.Error("load latest blocks from store: " + err.Error())
-		return
-	}
-
 	var mb = sc.GetLatestMagicBlock()
 	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, path, description, err := readNonGenesisHostAndPort(keysFile)
@@ -289,6 +284,14 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers(sc)
 	initWorkers(ctx)
+
+	// start sharding from the LFB stored
+	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
+		Logger.Error("load latest blocks from store: " + err.Error())
+		return
+	}
+
+	sharder.SetupWorkers(ctx)
 
 	startBlocksInfoLogs(sc)
 
@@ -473,7 +476,6 @@ func initN2NHandlers(c *sharder.Chain) {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	sharder.SetupWorkers(ctx)
 }
 
 func setupBlockStorageProvider(mConf blockstore.MinioConfiguration, workdir string) {
