@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -1522,9 +1521,6 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 
 	nodes := getBlobbers(unique, balances)
 	for _, b := range nodes.Nodes {
-		if sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())) == math.Inf(-1) {
-			panic("beruh")
-		}
 		minLockDemand += b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
 	}
