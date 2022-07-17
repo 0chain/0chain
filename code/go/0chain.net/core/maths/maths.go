@@ -77,8 +77,8 @@ func SafeMultFloat64(left, right float64) (float64, error) {
 	}
 
 	result := left * right
-	if result == math.Inf(1) || result == math.Inf(-1) {
-		return result, fmt.Errorf("Overflow multiplying %v and %v, result: %v", left, right, result)
-	}
+	// if result == math.Inf(1) || result == math.Inf(-1) {
+	// 	return result, fmt.Errorf("Overflow multiplying %v and %v, result: %v", left, right, result)
+	// }
 	return result, nil
 }
