@@ -273,6 +273,7 @@ func (gn *GlobalNode) readConfig() (err error) {
 	gn.MinS = config.SmartContractConfig.GetInt(pfx + SettingName[MinS])
 	gn.MaxDelegates = config.SmartContractConfig.GetInt(pfx + SettingName[MaxDelegates])
 	gn.RewardRoundFrequency = config.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
+	gn.StakeKillSlash = config.SmartContractConfig.GetFloat64(pfx + SettingName[StakeKillSlash])
 	gn.RewardRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
 	gn.ShareRatio = config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
 	gn.BlockReward, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[BlockReward]))
@@ -365,6 +366,8 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.RewardRoundFrequency, nil
 	case RewardRate:
 		return gn.RewardRate, nil
+	case StakeKillSlash:
+		return gn.StakeKillSlash, nil
 	case ShareRatio:
 		return gn.ShareRatio, nil
 	case BlockReward:

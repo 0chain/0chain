@@ -369,17 +369,17 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	emitUpdateMiner(mn, balances, false)
 
-	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {
-		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
-		if lfmb != nil {
-			err = msc.viewChangePoolsWork(gn, lfmb, mb.Round, balances)
-			if err != nil {
-				return "", err
-			}
-		} else {
-			return "", common.NewError("pay fees", "cannot find latest magic bock")
+	//if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {
+	var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
+	if lfmb != nil {
+		err = msc.viewChangePoolsWork(gn, lfmb, mb.Round, balances)
+		if err != nil {
+			return "", err
 		}
+	} else {
+		return "", common.NewError("pay fees", "cannot find latest magic bock")
 	}
+	//}
 
 	gn.setLastRound(mb.Round)
 	if err = gn.save(balances); err != nil {

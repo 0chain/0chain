@@ -164,7 +164,7 @@ func (sp *StakePool) MintRewards(
 	var dpUpdate = newDelegatePoolUpdate(providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
 
-	if dPool.Status == spenum.Deleting {
+	if dPool.Status == spenum.Deleting || sp.IsDead {
 		delete(sp.Pools, poolId)
 		dpUpdate.Updates["status"] = spenum.Deleted
 		err := dpUpdate.emitUpdate(balances)

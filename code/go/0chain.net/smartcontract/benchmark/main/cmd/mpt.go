@@ -67,6 +67,9 @@ func getBalances(
 	bk := &block.Block{
 		MagicBlock: &block.MagicBlock{
 			StartingRound: 0,
+			Miners: &node.Pool{
+				NodesMap: make(map[string]*node.Node),
+			},
 		},
 		PrevBlock: &block.Block{},
 	}

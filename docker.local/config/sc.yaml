@@ -42,7 +42,7 @@ smart_contracts:
     # etc
     min_stake: 0.0 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
-    stake_kill_slash: 0.5 # slash stake pools when killing miner or blobber
+    stake_kill_slash: 0.53 # slash stake pools when killing miner or blobber
     start_rounds: 50
     contribute_rounds: 50
     share_rounds: 50

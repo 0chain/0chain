@@ -80,6 +80,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
 
 	viper.SetDefault("smart_contracts.storagesc.max_blobbers_per_allocation", 40)
+	viper.SetDefault("smart_contracts.minersc.stake_kill_slash", 0.5)
 }
 
 // SetupConfig setups the main configuration system.

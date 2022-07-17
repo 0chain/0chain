@@ -356,7 +356,6 @@ func (msc *MinerSmartContract) updateSettings(
 	if err = gn.validate(); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
-
 	if err := gn.save(balances); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}

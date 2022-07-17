@@ -554,6 +554,12 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	}
 
 	filter := event.SharderQuery{}
+
+	killed := len(r.URL.Query().Get("killed")) > 0
+	shutDown := len(r.URL.Query().Get("killed")) > 0
+	filter.IsKilled = null.BoolFrom(killed)
+	filter.IsShutDown = null.BoolFrom(shutDown)
+
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
@@ -751,6 +757,12 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		return
 	}
 	filter := event.MinerQuery{}
+
+	killed := len(r.URL.Query().Get("killed")) > 0
+	shutDown := len(r.URL.Query().Get("killed")) > 0
+	filter.IsKilled = null.BoolFrom(killed)
+	filter.IsShutDown = null.BoolFrom(shutDown)
+
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {

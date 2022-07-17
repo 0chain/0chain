@@ -3,6 +3,10 @@ package minersc
 import (
 	"encoding/json"
 
+	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -54,6 +58,8 @@ func (msc *MinerSmartContract) killMiner(
 	}
 
 	mn.IsDead = true
+	logging.Logger.Info("piers killMiner", zap.Float64("gn.StakeKillSlash,", gn.StakeKillSlash),
+		zap.Any("mn", mn))
 	if err := mn.SlashFraction(gn.StakeKillSlash, id.ID, spenum.Miner, balances); err != nil {
 		return "", common.NewError("kill-miner", "slashing stake pools: "+err.Error())
 	}
