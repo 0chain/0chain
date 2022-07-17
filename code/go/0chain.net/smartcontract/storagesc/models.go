@@ -263,13 +263,13 @@ func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
 	}
 	var mldf = writePriceGB * t.MinLockDemand
 	mldcF, err := maths.SafeMultFloat64(mldf, rdtu)
-	if err != nil {
-		panic(err) // TODO: handle error
-	}
+	// if err != nil {
+	// 	panic(err) // TODO: handle error
+	// }
 	mldc, err := currency.Float64ToCoin(mldcF)
-	if err != nil {
-		panic(err) // TODO: handle error
-	}
+	// if err != nil {
+	// 	panic(err) // TODO: handle error
+	// }
 	return mldc
 }
 
