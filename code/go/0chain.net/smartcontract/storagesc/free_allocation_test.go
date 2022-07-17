@@ -419,6 +419,14 @@ func TestFreeAllocationRequest(t *testing.T) {
 			mock.MatchedBy(func(rp *readPool) bool {
 				return rp.Balance == currency.Coin(readPoolLocked)
 			})).Return("", nil).Once()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
+		).Return().Maybe()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}
@@ -726,6 +734,14 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+		).Return().Maybe()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
+		).Return().Maybe()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}

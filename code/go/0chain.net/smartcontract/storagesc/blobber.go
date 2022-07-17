@@ -91,6 +91,15 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	blobber.LastHealthCheck = t.CreationDate
+	aDelta := blobber.Allocated - savedBlobber.Allocated
+	if aDelta != 0 {
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+			FieldType:    event.Allocated,
+			AllocationId: "",
+			BlobberId:    blobber.ID,
+			Delta:        aDelta,
+		})
+	}
 	blobber.Allocated = savedBlobber.Allocated
 	blobber.SavedData = savedBlobber.SavedData
 
@@ -106,7 +115,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
-
+	before := sp.stake()
 	if err = validateStakePoolSettings(blobber.StakePoolSettings, conf); err != nil {
 		return fmt.Errorf("invalid new stake pool settings:  %v", err)
 	}
@@ -132,7 +141,14 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		},
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, data)
-
+	if blobber.Terms.WritePrice > 0 {
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+			FieldType:    event.Staked,
+			AllocationId: "",
+			BlobberId:    blobber.ID,
+			Delta:        int64((sp.stake() - before) / blobber.Terms.WritePrice),
+		})
+	}
 	return
 }
 
@@ -145,6 +161,13 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
+
+	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+		FieldType:    event.Used,
+		AllocationId: "",
+		BlobberId:    blobber.ID,
+		Delta:        -savedBlobber.Capacity,
+	})
 
 	// set to zero explicitly, for "direct" calls
 	blobber.Capacity = 0
@@ -254,8 +277,14 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
-	blobber.Terms = updatedBlobber.Terms
+	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+		FieldType:    event.Used,
+		AllocationId: "",
+		BlobberId:    blobber.ID,
+		Delta:        updatedBlobber.Capacity - blobber.Capacity,
+	})
 	blobber.Capacity = updatedBlobber.Capacity
+	blobber.Terms = updatedBlobber.Terms
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
 
 	// save blobber
@@ -500,7 +529,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 // commitMoveTokens moves tokens on connection commit (on write marker),
 // if data written (size > 0) -- from write pool to challenge pool, otherwise
 // (delete write marker) from challenge back to write pool
-func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation, table *event.Allocation,
+func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (err error) {
 
@@ -548,8 +577,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation, table
 		details.Returned += move
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
-		event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
@@ -588,10 +616,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"can't get allocation: "+err.Error())
-	}
-	table, err := storageAllocationToAllocationTable(alloc)
-	if err != nil {
-		return "", err
 	}
 
 	if alloc.Owner != commitConnection.WriteMarker.ClientID {
@@ -649,6 +673,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
 
+	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
+		FieldType:    event.Used,
+		AllocationId: alloc.ID,
+		BlobberId:    blobber.ID,
+		Delta:        commitConnection.WriteMarker.Size,
+	})
+
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_connection_failed",
@@ -661,7 +692,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	err = sc.commitMoveTokens(alloc, table, commitConnection.WriteMarker.Size, blobAlloc,
+	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, blobAlloc,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
@@ -725,8 +756,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
-		event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
 
 	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 	if err != nil {

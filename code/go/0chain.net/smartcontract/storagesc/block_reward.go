@@ -106,8 +106,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	stakePools := make([]*stakePool, len(blobberRewards))
+	before := make([]currency.Coin, len(blobberRewards))
 	for resp := range spChan {
 		stakePools[resp.index] = resp.sp
+		before[resp.index] = resp.sp.stake()
 	}
 
 	qualifyingBlobberIds := make([]string, len(blobberRewards))
@@ -216,7 +218,14 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			},
 		}
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
-
+		if blobberRewards[i].WritePrice > 0 {
+			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, qualifyingBlobberIds[i], event.AllocationBlobberValueChanged{
+				FieldType:    event.Staked,
+				AllocationId: "",
+				BlobberId:    qualifyingBlobberIds[i],
+				Delta:        int64((qsp.stake() - before[i]) / blobberRewards[i].WritePrice),
+			})
+		}
 	}
 
 	return nil

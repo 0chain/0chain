@@ -161,6 +161,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
+	before := sp.stake()
+
 	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, balances)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
@@ -185,6 +187,14 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return
 	}
 
+	if blobAlloc.Terms.WritePrice > 0 {
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
+			FieldType:    event.Staked,
+			AllocationId: "",
+			BlobberId:    blobAlloc.BlobberID,
+			Delta:        int64((sp.stake() - before) / blobAlloc.Terms.WritePrice),
+		})
+	}
 	// save the pools
 	if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't save sake pool: %v", err)
@@ -340,7 +350,14 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 		sp.TotalOffers -= move    // subtract the offer stake
 		blobAlloc.Penalty += move // penalty statistic
-
+		if blobAlloc.Terms.WritePrice > 0 {
+			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
+				FieldType:    event.Staked,
+				AllocationId: "",
+				BlobberId:    blobAlloc.BlobberID,
+				Delta:        -int64(move / blobAlloc.Terms.WritePrice),
+			})
+		}
 		// save stake pool
 		if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't save blobber's stake pool: %v", err)
@@ -433,11 +450,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf("verify_challenge",
 			"can't get related allocation: %v", err)
-	}
-
-	table, err := storageAllocationToAllocationTable(alloc)
-	if err != nil {
-		return "", err
 	}
 
 	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
@@ -593,8 +605,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
-			event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
 
 		if success < threshold {
 			return "challenge passed partially by blobber", nil
@@ -644,8 +655,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
-			event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
 		if pass && !fresh {
 			return "late challenge (failed)", nil
 		}
@@ -1021,18 +1031,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			"error storing allocation: %v", err)
 	}
 
-	stored := &StorageAllocation{}
-	err = balances.GetTrieNode(alloc.ID, stored) //todo remove this MPT read when original value of allocation will be stored in sa
-	if err != nil {
-		return err
-	}
-	table, err := storageAllocationToAllocationTable(stored)
-	if err != nil {
-		return err
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID,
-		event.AllocationUpdate{Old: table, Changes: alloc.buildDbUpdates(balances)})
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
 
 	err = emitAddChallenge(challInfo, balances)
 	if err != nil {
