@@ -135,7 +135,7 @@ func AddInt64(c Coin, a int64) (Coin, error) {
 
 // MultFloat64 multiplies c by a, returning an error if the values overflow
 func MultFloat64(c Coin, a float64) (Coin, error) {
-	if a < 0 || c < 0 {
+	if a < 0 {
 		return 0, ErrNegativeValue
 	}
 	b := float64(c) * a
