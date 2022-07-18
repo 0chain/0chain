@@ -579,14 +579,10 @@ func newBlobberAllocation(
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin) {
-	var err error
+	rdtu float64) (move currency.Coin, err error) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	d.ChallengePoolIntegralValue, err = currency.AddCoin(d.ChallengePoolIntegralValue, move)
-	if err != nil {
-		panic(err)
-	}
 
 	return
 }

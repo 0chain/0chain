@@ -533,8 +533,11 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	}
 
 	if size > 0 {
-		move = details.upload(size, wmTime,
+		move, err = details.upload(size, wmTime,
 			alloc.restDurationInTimeUnits(wmTime))
+		if err != nil {
+			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
+		}
 
 		err = wps.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
 		if err != nil {
