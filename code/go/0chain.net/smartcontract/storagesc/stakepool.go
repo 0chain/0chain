@@ -438,6 +438,23 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"can't get related stake pool: %v", err)
 	}
 
+	dp, ok := sp.Pools[spr.PoolID]
+	if !ok {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", spr.PoolID)
+	}
+
+	conf, err := getConfiguredConfig()
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "can't get config: %v", err)
+	}
+
+	// if StakeAt has valid value and lock period is less than MinLockPeriod
+	if dp.StakedAt > 0 {
+		stakedAt := common.ToTime(dp.StakedAt)
+		if  stakedAt.Add(conf.StakePool.MinLockPeriod).Before(time.Now()) {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(conf.StakePool.MinLockPeriod))
+	}
+
 	unstake, err := sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
