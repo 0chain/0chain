@@ -270,31 +270,6 @@ func AddMockChallenges(
 	}
 }
 
-func AddMockClientAllocation(
-	clients []string,
-	balances cstate.StateContextI,
-) {
-	cas := make([]*ClientAllocation, len(clients))
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		cIndex := getMockOwnerFromAllocationIndex(i, len(clients))
-		if cas[cIndex] == nil {
-			cas[cIndex] = &ClientAllocation{
-				ClientID:    clients[cIndex],
-				Allocations: &Allocations{},
-			}
-		}
-		cas[cIndex].Allocations.List.add(getMockAllocationId(i))
-	}
-	for _, ca := range cas {
-		if ca != nil {
-			_, err := balances.InsertTrieNode(ca.GetKey(ADDRESS), ca)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
-}
-
 func benchWritePoolExpire(now common.Timestamp) common.Timestamp {
 	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
 		now + common.Timestamp(time.Hour*24*23)
