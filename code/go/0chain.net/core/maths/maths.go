@@ -56,7 +56,7 @@ func SafeMultInt64(a, b int64) (int64, error) {
 	return result, nil
 }
 
-// SafeAddFloat64 adds two integers and returns an error if there is overflows
+// SafeAddFloat64 adds two float64 and returns an error if there is overflows
 func SafeAddFloat64(left, right float64) (float64, error) {
 	if right > 0 {
 		if left > math.MaxFloat64-right {
@@ -77,8 +77,9 @@ func SafeMultFloat64(left, right float64) (float64, error) {
 	}
 
 	result := left * right
-	// if result == math.Inf(1) || result == math.Inf(-1) {
-	// 	return result, fmt.Errorf("Overflow multiplying %v and %v, result: %v", left, right, result)
-	// }
+
+	if math.IsInf(result, 0) {
+		return result, fmt.Errorf("Overflow multiplying %v and %v", left, right)
+	}
 	return result, nil
 }

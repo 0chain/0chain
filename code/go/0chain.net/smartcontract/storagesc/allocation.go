@@ -699,20 +699,24 @@ type allocPeriod struct {
 	size   int64            // size for period
 }
 
-func (ap *allocPeriod) weight() float64 {
-	w, err := maths.SafeMultFloat64(float64(ap.period), float64(ap.size))
-	if err != nil {
-		panic(err) // TODO: Better error handling
-	}
-	return w
+func (ap *allocPeriod) weight() (float64, error) {
+	return maths.SafeMultFloat64(float64(ap.period), float64(ap.size))
 }
 
 // returns weighted average read and write prices
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
-		apw, npw = ap.weight(), np.weight() // weights
-		rp, wp   float64                    // read sum, write sum (weighted)
+		rp, wp float64 // read sum, write sum (weighted)
 	)
+	apw, err := ap.weight()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	npw, err := np.weight()
+	if err != nil {
+		return 0, 0, err
+	}
 
 	ws, err := maths.SafeAddFloat64(apw, npw) // weights sum
 	if err != nil {
