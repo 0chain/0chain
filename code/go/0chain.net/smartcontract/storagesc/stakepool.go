@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
@@ -443,16 +444,12 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", spr.PoolID)
 	}
 
-	conf, err := getConfiguredConfig()
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "can't get config: %v", err)
-	}
-
 	// if StakeAt has valid value and lock period is less than MinLockPeriod
 	if dp.StakedAt > 0 {
 		stakedAt := common.ToTime(dp.StakedAt)
-		if !stakedAt.Add(conf.StakePool.MinLockPeriod).Before(time.Now()) {
-			return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(conf.StakePool.MinLockPeriod))
+		minLockPeriod := config.SmartContractConfig.GetDuration("stakepool.min_lock_period")
+		if !stakedAt.Add(minLockPeriod).Before(time.Now()) {
+			return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(minLockPeriod))
 		}
 	}
 
