@@ -51,7 +51,7 @@ func SafeMultInt64(a, b int64) (int64, error) {
 	}
 	result := a * b
 	if result/b != a {
-		return result, fmt.Errorf("Overflow multiplying %v and %v", a, b)
+		return result, fmt.Errorf("overflow multiplying %v and %v", a, b)
 	}
 	return result, nil
 }
