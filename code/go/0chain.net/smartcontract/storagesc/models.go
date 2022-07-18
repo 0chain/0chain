@@ -256,21 +256,17 @@ type Terms struct {
 // The minLockDemand returns min lock demand value for this Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
+func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin, err error) {
 	writePriceGB, err := maths.SafeMultFloat64(float64(t.WritePrice), gbSize)
 	if err != nil {
-		panic(err) // TODO: handle error
+		return 0, err
 	}
 	var mldf = writePriceGB * t.MinLockDemand
 	mldcF, err := maths.SafeMultFloat64(mldf, rdtu)
-	// if err != nil {
-	// 	panic(err) // TODO: handle error
-	// }
-	mldc, err := currency.Float64ToCoin(mldcF)
-	// if err != nil {
-	// 	panic(err) // TODO: handle error
-	// }
-	return mldc
+	if err != nil {
+		return 0, err
+	}
+	return currency.Float64ToCoin(mldcF)
 }
 
 // validate a received terms
@@ -566,17 +562,18 @@ func newBlobberAllocation(
 	allocation *StorageAllocation,
 	blobber *StorageNode,
 	date common.Timestamp,
-) *BlobberAllocation {
+) (*BlobberAllocation, error) {
+	var err error
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
 	ba.Terms = blobber.Terms
 	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
-	ba.MinLockDemand = blobber.Terms.minLockDemand(
+	ba.MinLockDemand, err = blobber.Terms.minLockDemand(
 		sizeInGB(size), allocation.restDurationInTimeUnits(date),
 	)
-	return ba
+	return ba, err
 }
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
@@ -830,7 +827,11 @@ func (sa *StorageAllocation) changeBlobbers(
 	afterSize := sa.bSize()
 
 	blobbers = append(blobbers, addedBlobber)
-	ba := newBlobberAllocation(afterSize, sa, addedBlobber, now)
+	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now)
+	if err != nil {
+		return nil, fmt.Errorf("can't allocate blobber: %v", err)
+	}
+
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 

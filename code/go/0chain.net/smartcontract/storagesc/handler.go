@@ -1521,8 +1521,17 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 
 	nodes := getBlobbers(unique, balances)
 	for _, b := range nodes.Nodes {
-		minLockDemand += b.Terms.minLockDemand(gbSize,
+		bMinLockDemand, err := b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
+		if err != nil {
+			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
+			return
+		}
+		minLockDemand, err = currency.AddCoin(minLockDemand, bMinLockDemand)
+		if err != nil {
+			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
+			return
+		}
 	}
 
 	var response = map[string]interface{}{
