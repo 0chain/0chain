@@ -256,7 +256,7 @@ type Terms struct {
 // The minLockDemand returns min lock demand value for this Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin, err error) {
+func (t *Terms) minLockDemand(gbSize, rdtu float64) (currency.Coin, error) {
 	writePriceGB, err := maths.SafeMultFloat64(float64(t.WritePrice), gbSize)
 	if err != nil {
 		return 0, err
