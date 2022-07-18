@@ -396,7 +396,7 @@ func BenchmarkTests(
 					BaseURL:           "my_new_blobber.com",
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
-					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_blobber")),
+					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_blobber"), data.Clients[0]),
 				})
 				return bytes
 			}(),
@@ -416,7 +416,7 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&ValidationNode{
 					ID:                encryption.Hash("my_new_validator"),
 					BaseURL:           "my_new_validator.com",
-					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_validator")),
+					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_validator"), data.Clients[0]),
 				})
 				return bytes
 			}(),
@@ -463,7 +463,7 @@ func BenchmarkTests(
 					ID:                getMockBlobberId(0),
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
-					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
+					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0), data.Clients[0]),
 				})
 				return bytes
 			}(),
@@ -483,7 +483,7 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&ValidationNode{
 					ID:                getMockValidatorId(0),
 					BaseURL:           getMockValidatorUrl(0),
-					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
+					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0), data.Clients[0]),
 				})
 				return bytes
 			}(),
@@ -496,10 +496,15 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: data.Now,
-				ClientID:     getMockBlobberId(0),
+				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
-			input: []byte{},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&providerRequest{
+					ID: getMockBlobberId(0),
+				})
+				return bytes
+			}(),
 		},
 		{
 			name:     "storage.shut-down-validator",
@@ -509,10 +514,15 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: data.Now,
-				ClientID:     getMockValidatorId(0),
+				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
-			input: []byte{},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&providerRequest{
+					ID: getMockValidatorId(0),
+				})
+				return bytes
+			}(),
 		},
 		{
 			name:     "storage.kill-blobber",

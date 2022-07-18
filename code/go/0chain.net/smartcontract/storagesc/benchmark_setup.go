@@ -427,6 +427,7 @@ func setupMockChallenge(
 }
 
 func AddMockBlobbers(
+	clients []string,
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*StorageNode {
@@ -468,7 +469,7 @@ func AddMockBlobbers(
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
 			PublicKey:         "",
-			StakePoolSettings: getMockStakePoolSettings(id),
+			StakePoolSettings: getMockStakePoolSettings(id, clients[i]),
 			//TotalStake: viper.GetInt64(sc.StorageMaxStake), todo missing field
 		}
 		blobbers.Nodes.add(blobber)
@@ -532,6 +533,7 @@ func AddMockBlobbers(
 }
 
 func AddMockValidators(
+	clients []string,
 	publicKeys []string,
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
@@ -555,7 +557,7 @@ func AddMockValidators(
 			ID:                id,
 			BaseURL:           url,
 			PublicKey:         publicKeys[i%len(publicKeys)],
-			StakePoolSettings: getMockStakePoolSettings(id),
+			StakePoolSettings: getMockStakePoolSettings(id, clients[i]),
 		}
 		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
 		if err != nil {
@@ -604,7 +606,7 @@ func GetMockBlobberStakePools(
 			StakePool: stakepool.StakePool{
 				Pools:    make(map[string]*stakepool.DelegatePool),
 				Reward:   0,
-				Settings: getMockStakePoolSettings(bId),
+				Settings: getMockStakePoolSettings(bId, clients[0]),
 			},
 			TotalOffers: currency.Coin(100000),
 		}
@@ -772,9 +774,9 @@ func getMockBlobberTerms() Terms {
 	}
 }
 
-func getMockStakePoolSettings(blobber string) stakepool.Settings {
+func getMockStakePoolSettings(blobber, wallet string) stakepool.Settings {
 	return stakepool.Settings{
-		DelegateWallet:     blobber,
+		DelegateWallet:     wallet,
 		MinStake:           currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10),
 		MaxStake:           currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10),
 		MaxNumDelegates:    viper.GetInt(sc.NumBlobberDelegates),

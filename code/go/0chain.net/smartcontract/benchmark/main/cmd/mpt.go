@@ -237,7 +237,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		blobbers = storagesc.AddMockBlobbers(eventDb, balances)
+		blobbers = storagesc.AddMockBlobbers(clients, eventDb, balances)
 		log.Println("added blobbers\t", time.Since(timer))
 	}()
 
@@ -245,7 +245,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		_ = storagesc.AddMockValidators(publicKeys, eventDb, balances)
+		_ = storagesc.AddMockValidators(clients, publicKeys, eventDb, balances)
 		log.Println("added validators\t", time.Since(timer))
 	}()
 
