@@ -239,8 +239,7 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 
 	var total, offers = sp.cleanStake(), sp.TotalOffers
 	if total <= offers {
-		// zero, since the offer stake (not updated) can be greater
-		// then the clean stake
+		// zero, since the offer stake (not updated) can be greater than the clean stake
 		return
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)

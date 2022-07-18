@@ -787,8 +787,8 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 		return common.NewError("blobber_add_allocation",
 			"unable to fetch blobbers stake pool")
 	}
-	stakedAlloc := sp.cleanStake()
-	weight := uint64(stakedAlloc) * blobUsedCapacity
+	stakedAmount := sp.cleanStake()
+	weight := uint64(stakedAmount) * blobUsedCapacity
 
 	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight)
 	if err != nil {
