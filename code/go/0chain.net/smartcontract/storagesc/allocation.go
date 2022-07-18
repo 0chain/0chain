@@ -265,11 +265,16 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	sa.ID = t.Hash
 	for _, b := range blobberNodes {
-		balloc := newBlobberAllocation(bSize, sa, b.StorageNode, t.CreationDate)
+		balloc, err := newBlobberAllocation(bSize, sa, b.StorageNode, t.CreationDate)
+		if err != nil {
+			return "", common.NewErrorf("allocation_creation_failed",
+				"can't create blobber allocation: %v", err)
+		}
+
 		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
 
 		b.Allocated += bSize
-		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
+		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
 		if err != nil {
 			return "", fmt.Errorf("can't save blobber: %v", err)
 		}
@@ -911,8 +916,11 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		// new blobber's min lock demand (alloc.Expiration is already updated
 		// and we can use restDurationInTimeUnits method here)
-		var nbmld = details.Terms.minLockDemand(gbSize,
+		nbmld, err := details.Terms.minLockDemand(gbSize,
 			alloc.restDurationInTimeUnits(alloc.StartTime))
+		if err != nil {
+			return err
+		}
 
 		// min_lock_demand can be increased only
 		if nbmld > details.MinLockDemand {
@@ -958,7 +966,11 @@ func (sc *StorageSmartContract) extendAllocation(
 	// is it about size increasing? if so, we should make sure the write
 	// pool has enough tokens
 	if diff > 0 {
-		if mldLeft := alloc.restMinLockDemand(); mldLeft > 0 {
+		if mldLeft, err := alloc.restMinLockDemand(); mldLeft > 0 {
+			if err != nil {
+				return common.NewErrorf("allocation_extending_failed",
+					"can't get min lock demand: %v", err)
+			}
 			if wps.allocUntil(alloc.ID, until) < mldLeft {
 				return common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")

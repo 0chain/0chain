@@ -921,13 +921,12 @@ type StorageAllocationDecode StorageAllocation
 // client doesn't send a data to a blobber (or blobbers) then this blobbers
 // don't receive tokens, their spent will be zero, and the min lock demand
 // will be blobber reward anyway.
-func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin) {
-	var err error
+func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error) {
 	for _, details := range sa.BlobberAllocs {
 		if details.MinLockDemand > details.Spent {
 			rest, err = currency.AddCoin(rest, details.MinLockDemand-details.Spent)
 			if err != nil {
-				panic(err)
+				return
 			}
 		}
 	}

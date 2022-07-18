@@ -235,7 +235,11 @@ func (ssc *StorageSmartContract) createWritePool(
 		wp = new(writePool)
 	}
 
-	var mld = alloc.restMinLockDemand()
+	mld, err := alloc.restMinLockDemand()
+	if err != nil {
+		return fmt.Errorf("error getting min lock demand: %v", err)
+	}
+
 	if t.Value < mld || t.Value == 0 {
 		return fmt.Errorf("not enough tokens to honor the min lock demand"+
 			" (%d < %d)", t.Value, mld)
@@ -466,10 +470,14 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 
 	if !alloc.Finalized && !alloc.Canceled {
 		var (
-			want  = alloc.restMinLockDemand()
 			unitl = alloc.Until()
 			leave = wp.allocUntil(ap.AllocationID, unitl) - ap.Balance
 		)
+		want, err := alloc.restMinLockDemand()
+		if err != nil {
+			return "", err
+		}
+
 		if leave < want && ap.ExpireAt >= unitl {
 			return "", common.NewError("write_pool_unlock_failed",
 				"can't unlock, because min lock demand is not paid yet")
