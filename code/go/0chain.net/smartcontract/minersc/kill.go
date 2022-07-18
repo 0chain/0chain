@@ -19,15 +19,15 @@ import (
 	"0chain.net/core/common"
 )
 
-type killInput struct {
+type idInput struct {
 	ID string `json:"id"`
 }
 
-func (ki *killInput) decode(p []byte) error {
+func (ki *idInput) decode(p []byte) error {
 	return json.Unmarshal(p, ki)
 }
 
-func (ki *killInput) Encode() []byte {
+func (ki *idInput) Encode() []byte {
 	buff, _ := json.Marshal(ki)
 	return buff
 }
@@ -43,7 +43,7 @@ func (msc *MinerSmartContract) killMiner(
 	}); err != nil {
 		return "", err
 	}
-	var id killInput
+	var id idInput
 	if err := id.decode(input); err != nil {
 		return "", common.NewError("kill-miner", err.Error())
 	}
@@ -88,7 +88,7 @@ func (msc *MinerSmartContract) killSharder(
 	}); err != nil {
 		return "", err
 	}
-	var id killInput
+	var id idInput
 	if err := id.decode(input); err != nil {
 		return "", common.NewError("kill-sharder", err.Error())
 	}

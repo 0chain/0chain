@@ -367,7 +367,7 @@ func BenchmarkTests(
 			txn: &transaction.Transaction{
 				ClientID: owner,
 			},
-			input: (&killInput{
+			input: (&idInput{
 				ID: GetMockNodeId(1, spenum.Miner),
 			}).Encode(),
 		},
@@ -377,7 +377,7 @@ func BenchmarkTests(
 			txn: &transaction.Transaction{
 				ClientID: owner,
 			},
-			input: (&killInput{
+			input: (&idInput{
 				ID: GetMockNodeId(1, spenum.Miner),
 			}).Encode(),
 		},

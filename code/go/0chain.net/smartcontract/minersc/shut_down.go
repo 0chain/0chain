@@ -10,14 +10,25 @@ import (
 
 func (msc *MinerSmartContract) shutDownMiner(
 	txn *transaction.Transaction,
-	_ []byte,
+	input []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	mn, err := getMinerNode(txn.ClientID, balances)
+	var id idInput
+	if err := id.decode(input); err != nil {
+		return "", common.NewError("kill-miner", err.Error())
+	}
+
+	mn, err := getMinerNode(id.ID, balances)
 	if err != nil {
 		return "", common.NewError("shut-down-miner", err.Error())
 	}
+
+	if txn.ClientID != mn.StakePool.Settings.DelegateWallet {
+		return "", common.NewError("shut-down-miner",
+			"access denied, allowed for delegate_wallet owner only")
+	}
+
 	mn.IsShutDown = true
 	if err = deleteMiner(mn, gn, balances); err != nil {
 		return "", common.NewError("shut-down-miner", err.Error())
@@ -33,14 +44,25 @@ func (msc *MinerSmartContract) shutDownMiner(
 
 func (msc *MinerSmartContract) shutDownSharder(
 	txn *transaction.Transaction,
-	_ []byte,
+	input []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	sn, err := msc.getSharderNode(txn.ClientID, balances)
+	var id idInput
+	if err := id.decode(input); err != nil {
+		return "", common.NewError("kill-sharder", err.Error())
+	}
+
+	sn, err := msc.getSharderNode(id.ID, balances)
 	if err != nil {
 		return "", common.NewError("shut-down-sharder", err.Error())
 	}
+
+	if txn.ClientID != sn.StakePool.Settings.DelegateWallet {
+		return "", common.NewError("shut-down-sharder",
+			"access denied, allowed for delegate_wallet owner only")
+	}
+
 	sn.IsShutDown = true
 	if err := deleteSharder(sn, gn, balances); err != nil {
 		return "", common.NewError("shut-down-sharder", err.Error())
