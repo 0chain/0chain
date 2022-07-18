@@ -234,8 +234,7 @@ func (sp *stakePool) slash(
 
 // free staked capacity of related blobber, excluding delegate pools want to
 // unstake.
-func (sp *stakePool) cleanCapacity(now common.Timestamp,
-	writePrice currency.Coin) (free int64) {
+func (sp *stakePool) cleanCapacity(writePrice currency.Coin) (free int64) {
 
 	var total, offers = sp.cleanStake(), sp.TotalOffers
 	if total <= offers {
