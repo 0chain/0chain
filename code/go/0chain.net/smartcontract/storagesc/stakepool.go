@@ -451,8 +451,9 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	// if StakeAt has valid value and lock period is less than MinLockPeriod
 	if dp.StakedAt > 0 {
 		stakedAt := common.ToTime(dp.StakedAt)
-		if  stakedAt.Add(conf.StakePool.MinLockPeriod).Before(time.Now()) {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(conf.StakePool.MinLockPeriod))
+		if stakedAt.Add(conf.StakePool.MinLockPeriod).Before(time.Now()) {
+			return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(conf.StakePool.MinLockPeriod))
+		}
 	}
 
 	unstake, err := sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
