@@ -17,26 +17,21 @@ func (ssc *StorageSmartContract) shutDownBlobber(
 	}
 
 	var err error
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(req.ID, balances); err != nil {
-		return "", common.NewError("shut_down_blobber_failed",
-			"can't get related stake pool: "+err.Error())
-	}
-	if t.ClientID != sp.Settings.DelegateWallet {
-		return "", common.NewError("shut_down_blobber_failed",
-			"access denied, allowed for delegate_wallet owner only")
-	}
-
 	var blobber *StorageNode
 	if blobber, err = ssc.getBlobber(req.ID, balances); err != nil {
 		return "", common.NewError("shut_down_blobber_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
+	if t.ClientID != blobber.StakePoolSettings.DelegateWallet {
+		return "", common.NewError("shut_down_blobber_failed",
+			"access denied, allowed for delegate_wallet owner only")
+	}
+
 	blobber.ShutDown()
-	if err = emitUpdateBlobber(blobber, balances); err != nil {
+	if err := emitUpdateBlobber(blobber, balances); err != nil {
 		return "", common.NewError("shut_down_blobber_failed", err.Error())
 	}
-	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
+	if _, err := balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
 		return "", common.NewError("shut_down_blobber_failed",
 			"can't save blobber: "+err.Error())
 	}
@@ -53,27 +48,20 @@ func (ssc *StorageSmartContract) shutDownValidator(
 		return "", common.NewError("shut_down_validator_failed", err.Error())
 	}
 
-	var err error
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(req.ID, balances); err != nil {
-		return "", common.NewError("shut_down_validator_failed",
-			"can't get related stake pool: "+err.Error())
+	var validator = &ValidationNode{
+		ID: t.ClientID,
 	}
-	if t.ClientID != sp.Settings.DelegateWallet {
+	if err := balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
+		return "", common.NewError("shut_down_validator_failed",
+			"can't get the validator "+t.ClientID+": "+err.Error())
+	}
+	if t.ClientID != validator.StakePoolSettings.DelegateWallet {
 		return "", common.NewError("shut_down_validator_failed",
 			"access denied, allowed for delegate_wallet owner only")
 	}
 
-	var validator = &ValidationNode{
-		ID: t.ClientID,
-	}
-	if err = balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
-		return "", common.NewError("shut_down_validator_failed",
-			"can't get the validator "+t.ClientID+": "+err.Error())
-	}
 	validator.ShutDown()
-	err = validator.emitUpdate(balances)
-	if err != nil {
+	if err := validator.emitUpdate(balances); err != nil {
 		return "", common.NewErrorf("shut_down_validator_failed", "emitting validation node failed: %v", err.Error())
 	}
 
