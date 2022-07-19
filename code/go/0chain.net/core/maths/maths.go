@@ -56,20 +56,6 @@ func SafeMultInt64(a, b int64) (int64, error) {
 	return result, nil
 }
 
-// SafeAddFloat64 adds two float64 and returns an error if there is overflows
-func SafeAddFloat64(left, right float64) (float64, error) {
-	if right > 0 {
-		if left > math.MaxFloat64-right {
-			return 0, currency.ErrFloat64AddOverflow
-		}
-	} else {
-		if left < -math.MaxFloat64-right { // for floating point numbers MinFloat64 == -MaxFloat64
-			return 0, currency.ErrFloat64AddOverflow
-		}
-	}
-	return left + right, nil
-}
-
 // SafeMultFloat64 multiplies two float64 and returns an error if there is overflows
 func SafeMultFloat64(left, right float64) (float64, error) {
 	if left == 0 || right == 0 {

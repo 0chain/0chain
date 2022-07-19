@@ -24,7 +24,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"0chain.net/core/maths"
 	"0chain.net/core/util"
 
 	"github.com/go-playground/validator/v10"
@@ -557,14 +556,10 @@ func (gn *GlobalNode) canMint() bool {
 func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
 	var (
-		rr  = gn.RewardRate
-		err error
+		rr = gn.RewardRate
 	)
 	// decline the value
-	gn.RewardRate, err = maths.SafeMultFloat64(gn.RewardRate, (1.0 - gn.RewardDeclineRate))
-	if err != nil {
-		panic(err)
-	}
+	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
 
 	// log about the epoch declining
 	logging.Logger.Info("miner sc: epoch decline",
@@ -584,12 +579,7 @@ func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 		return 0, 0, err
 	}
 
-	fminer, err := maths.SafeMultFloat64(fFees, gn.ShareRatio)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	miner, err = currency.Float64ToCoin(fminer)
+	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -854,18 +844,8 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	var m = min(dkgmn.MaxN, n)
 	dkgmn.N = m
 
-	kF, err := maths.SafeMultFloat64(dkgmn.KPercent, float64(m))
-	if err != nil {
-		panic(err) // TODO: better error handling
-	}
-
-	tF, err := maths.SafeMultFloat64(dkgmn.TPercent, float64(m))
-	if err != nil {
-		panic(err) // TODO: better error handling
-	}
-
-	dkgmn.K = int(math.Ceil(kF))
-	dkgmn.T = int(math.Ceil(tF))
+	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
+	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 }
 
 func simpleNodesKeys(sns SimpleNodes) (ks []string) {

@@ -119,7 +119,8 @@ func MultCoin(c, b Coin) (Coin, error) {
 func AddCoin(c, b Coin) (Coin, error) {
 	sum := c + b
 	if sum < c || sum < b {
-		return 0, ErrUint64AddOverflow
+		// return 0, ErrUint64AddOverflow
+		return c, ErrUint64AddOverflow
 	}
 	return sum, nil
 }

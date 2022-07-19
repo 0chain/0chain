@@ -718,10 +718,7 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 		return 0, 0, err
 	}
 
-	ws, err := maths.SafeAddFloat64(apw, npw) // weights sum
-	if err != nil {
-		return 0, 0, err
-	}
+	ws := apw + npw // weights sum
 
 	apReadF, err := ap.read.Float64()
 	if err != nil {
@@ -751,10 +748,8 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 	if err != nil {
 		return 0, 0, err
 	}
-	rp, err = maths.SafeAddFloat64(npReadW, apReadW)
-	if err != nil {
-		return 0, 0, err
-	}
+
+	rp = npReadW + apReadW
 
 	npWriteW, err := maths.SafeMultFloat64(npWriteF, npw)
 	if err != nil {
@@ -764,10 +759,7 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 	if err != nil {
 		return 0, 0, err
 	}
-	wp, err = maths.SafeAddFloat64(npWriteW, apWriteW)
-	if err != nil {
-		return 0, 0, err
-	}
+	wp = npWriteW + apWriteW
 
 	avgRead, err = currency.Float64ToCoin(rp / ws)
 	if err != nil {
@@ -1350,10 +1342,6 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			//	continue // already accepted, already rewarded/penalized
 			//}
 			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime())
-			if expire < oc.CreatedAt || expire < toSeconds(getMaxChallengeCompletionTime()) {
-				return nil, fmt.Errorf("overflow while calculating expire time")
-			}
-
 			if expire < now {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
