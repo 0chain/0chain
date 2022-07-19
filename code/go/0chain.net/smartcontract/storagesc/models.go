@@ -717,6 +717,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	}
 
 	if blobber.Terms.WritePrice > 0 && sp.cleanCapacity(now, blobber.Terms.WritePrice) < bSize {
+		logging.Logger.Debug("clean_capacity_after")
 		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
 			blobber.ID, sp.cleanCapacity(now, blobber.Terms.WritePrice), bSize)
 	}
