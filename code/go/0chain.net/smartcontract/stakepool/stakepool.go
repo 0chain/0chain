@@ -333,6 +333,9 @@ func (sp *StakePool) SlashFraction(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
+	if fraction < 0.0 || fraction > 1.0 {
+		return fmt.Errorf("kill slash fraction %v, not in interval [0.1]", fraction)
+	}
 	if fraction == 0.0 {
 		return nil
 	}

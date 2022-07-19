@@ -366,7 +366,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", common.NewErrorf("pay_fees",
 			"saving generator node: %v", err)
 	}
-
 	emitUpdateMiner(mn, balances, false)
 
 	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {

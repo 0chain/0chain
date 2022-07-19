@@ -104,7 +104,6 @@ type smartContractTransactionData struct {
 
 func (t *Transaction) ValidateNonce() error {
 	if t.Nonce <= 0 {
-		logging.Logger.Info("piers ValidateNonce", zap.Any("transaction", t))
 		return errors.New("invalid transaction nonce")
 	}
 
