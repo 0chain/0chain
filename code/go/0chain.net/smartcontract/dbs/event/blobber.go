@@ -218,9 +218,20 @@ func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 
+const (
+	KB = 1024      // kilobyte
+	MB = 1024 * KB // megabyte
+	GB = 1024 * MB // gigabyte
+)
+
+// size in gigabytes
+func sizeInGB(size int64) float64 {
+	return float64(size) / GB
+}
+
 func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit common2.Pagination, now common.Timestamp) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
-	shardSize := int64(math.Ceil(float64(allocation.AllocationSize) / float64(allocation.NumberOfDataShards)))
+	shardSize := sizeInGB(int64(math.Ceil(float64(allocation.AllocationSize) / float64(allocation.NumberOfDataShards))))
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
@@ -237,7 +248,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
 		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
 		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Int64("last_health_check", common.ToTime(now).Add(-time.Hour).Unix()),
-		zap.Int64("(total_stake - offers_total) > ? * write_price", shardSize),
+		zap.Float64("(total_stake - offers_total) > ? * write_price", shardSize),
 	)
 
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
