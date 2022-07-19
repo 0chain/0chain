@@ -1927,7 +1927,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		var blob *StorageNode
 		blob, err = ssc.getBlobber(b.id, balances)
 		require.NoError(t, err)
-		blob.Terms.WritePrice = currency.Coin(1.8 * x10)
+		blob.Terms.WritePrice = currency.Coin(5 * x10)
 		blob.Terms.ReadPrice = currency.Coin(0.8 * x10)
 		_, err = updateBlobber(t, blob, 0, tp, ssc, balances)
 		require.NoError(t, err)
