@@ -23,6 +23,12 @@ func (msc *MinerSmartContract) shutDownMiner(
 	if err != nil {
 		return "", common.NewError("shut-down-miner", err.Error())
 	}
+	if mn.IsShutDown {
+		return "", common.NewError("shut-down-miner", "miner already shut down")
+	}
+	if mn.IsKilled {
+		return "", common.NewError("shut-down-miner", "miner has already been killed")
+	}
 
 	if txn.ClientID != mn.StakePool.Settings.DelegateWallet {
 		return "", common.NewError("shut-down-miner",
@@ -56,6 +62,12 @@ func (msc *MinerSmartContract) shutDownSharder(
 	sn, err := msc.getSharderNode(id.ID, balances)
 	if err != nil {
 		return "", common.NewError("shut-down-sharder", err.Error())
+	}
+	if sn.IsShutDown {
+		return "", common.NewError("shut-down-sharder", "sharder already shut down")
+	}
+	if sn.IsKilled {
+		return "", common.NewError("shut-down-sharder", "sharder has already been killed")
 	}
 
 	if txn.ClientID != sn.StakePool.Settings.DelegateWallet {

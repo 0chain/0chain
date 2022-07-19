@@ -152,7 +152,7 @@ func deleteMiner(
 	if err = deleteMinerFromViewChange(updatedMn, balances); err != nil {
 		return common.NewError("delete_miner", err.Error())
 	}
-
+	mn.Delete = true
 	return nil
 }
 

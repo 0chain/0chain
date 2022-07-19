@@ -48,6 +48,10 @@ func (msc *MinerSmartContract) killMiner(
 	if err != nil {
 		return "", common.NewError("kill-miner", err.Error())
 	}
+	if mn.IsKilled {
+		return "", common.NewError("kill-miner", "miner already dead")
+	}
+
 	mn.IsKilled = true
 	if err = deleteMiner(mn, gn, balances); err != nil {
 		return "", common.NewError("kill-miner", err.Error())
