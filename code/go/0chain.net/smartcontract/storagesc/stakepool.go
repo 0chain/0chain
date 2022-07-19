@@ -93,6 +93,14 @@ func (sp *stakePool) save(sscKey, blobberID string,
 	r, err := balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
 	logging.Logger.Debug("after stake pool save", zap.String("root", r))
 
+	data := dbs.DbUpdates{
+		Id: blobberID,
+		Updates: map[string]interface{}{
+			"offers_total": int64(sp.TotalOffers),
+		},
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobberID, data)
+
 	return
 }
 

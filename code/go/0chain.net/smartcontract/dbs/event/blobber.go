@@ -3,11 +3,12 @@ package event
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"0chain.net/core/common"
-	common2 "0chain.net/smartcontract/common"
 	"0chain.net/core/logging"
+	common2 "0chain.net/smartcontract/common"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
@@ -201,10 +202,10 @@ type AllocationQuery struct {
 		Min int64
 		Max int64
 	}
-	Size              int
-	AllocationSize    int64
-	PreferredBlobbers []string
-	NumberOfBlobbers  int
+	Size               int
+	AllocationSize     int64
+	PreferredBlobbers  []string
+	NumberOfDataShards int
 }
 
 func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination) ([]string, error) {
@@ -219,12 +220,13 @@ func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination
 
 func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit common2.Pagination, now common.Timestamp) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
+	shardSize := int64(math.Ceil(float64(allocation.AllocationSize) / float64(allocation.NumberOfDataShards)))
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix())
-	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
+	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", shardSize)
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
@@ -235,7 +237,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
 		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
 		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Int64("last_health_check", common.ToTime(now).Add(-time.Hour).Unix()),
-		zap.Int64("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers)),
+		zap.Int64("(total_stake - offers_total) > ? * write_price", shardSize),
 	)
 
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error

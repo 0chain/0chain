@@ -387,10 +387,10 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 			Min: int64(request.WritePriceRange.Min),
 			Max: int64(request.WritePriceRange.Max),
 		},
-		Size:              int(request.Size),
-		AllocationSize:    allocationSize,
-		PreferredBlobbers: request.Blobbers,
-		NumberOfBlobbers:  numberOfBlobbers,
+		Size:               int(request.Size),
+		AllocationSize:     allocationSize,
+		PreferredBlobbers:  request.Blobbers,
+		NumberOfDataShards: sa.DataShards,
 	}, limit, balances.Now())
 
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -724,8 +725,8 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 }
 
 func (sa *StorageAllocation) bSize() int64 {
-	var size = sa.DataShards + sa.ParityShards
-	return (sa.Size + int64(size-1)) / int64(size)
+	var size = sa.DataShards
+	return int64(math.Ceil(float64(sa.Size) / float64(size)))
 }
 
 func (sa *StorageAllocation) removeBlobber(
