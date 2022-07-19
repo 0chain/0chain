@@ -252,6 +252,8 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 		return
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
+	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
+		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	return
 }
 
