@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strings"
 
-	"0chain.net/chaincore/node"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
@@ -144,32 +143,16 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 // GetBalanceHandler - get the balance of a client
 func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
-	if node.Self.IsSharder() {
-		if c.GetEventDb() == nil {
-			return nil, common.NewError("get_balance_error", "event database not enabled")
-		}
-
-		user, err := c.GetEventDb().GetUser(clientID)
-		if err != nil {
-			return nil, err
-		}
-
-		return userToState(user), nil
-	} else {
-		lfb := c.GetLatestFinalizedBlock()
-		if lfb == nil {
-			return nil, common.ErrTemporaryFailure
-		}
-
-		cs, err := c.GetState(lfb, clientID)
-		if err != nil {
-			return nil, err
-		}
-		if err := cs.ComputeProperties(); err != nil {
-			return nil, err
-		}
-		return cs, nil
+	if c.GetEventDb() == nil {
+		return nil, common.NewError("get_balance_error", "event database not enabled")
 	}
+
+	user, err := c.GetEventDb().GetUser(clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	return userToState(user), nil
 }
 
 func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {
