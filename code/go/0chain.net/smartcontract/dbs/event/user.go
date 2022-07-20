@@ -60,10 +60,6 @@ func (edb *EventDb) GetUserFromId(userId string) (User, error) {
 
 }
 
-func (edb *EventDb) CreateUser(usr *User) error {
-	return edb.Store.Get().Create(usr).Error
-}
-
 func (u *User) exists(edb *EventDb) (bool, error) {
 	var user User
 	err := edb.Store.Get().Model(&User{}).
