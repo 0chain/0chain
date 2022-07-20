@@ -95,6 +95,10 @@ func (msc *MinerSmartContract) killSharder(
 	if err != nil {
 		return "", common.NewError("kill-sharder", err.Error())
 	}
+	if sn.IsKilled {
+		return "", common.NewError("kill-miner", "miner already dead")
+	}
+
 	sn.IsKilled = true
 	if err := deleteSharder(sn, gn, balances); err != nil {
 		return "", common.NewError("kill-sharder", err.Error())
