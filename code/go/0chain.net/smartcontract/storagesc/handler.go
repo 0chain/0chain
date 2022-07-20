@@ -2231,7 +2231,7 @@ type readMarkersCount struct {
 // Generic search endpoint
 //
 // parameters:
-//    + name: query
+//    + name: searchString
 //      description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address
 //      required: true
 //      in: query
@@ -2243,11 +2243,11 @@ type readMarkersCount struct {
 //  500:
 func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Request) {
 	var (
-		query = r.URL.Query().Get("query")
+		query = r.URL.Query().Get("searchString")
 	)
 
 	if len(query) == 0 {
-		common.Respond(w, r, nil, common.NewErrInternal("query param required"))
+		common.Respond(w, r, nil, common.NewErrInternal("searchString param required"))
 		return
 	}
 
@@ -2260,6 +2260,12 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 	queryType, err := edb.GetGenericSearchType(query)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
 		return
 	}
 
@@ -2301,12 +2307,16 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, blk, nil)
 		return
 	case "ContentHash":
-		limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{ContentHash: query}, "", limit)
 		if err != nil {
-			common.Respond(w, r, nil, err)
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
 		}
-		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{ContentHash: query}, "", limit)
+
+		common.Respond(w, r, wm, nil)
+		return
+	case "FileName":
+		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{Name: query}, "", limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -2316,5 +2326,5 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	common.Respond(w, r, nil, common.NewErrInternal("Request failed, query isn't a (wallet address)/(block hash)/(txn hash)/(round num)/(content hash)/(file name)"))
+	common.Respond(w, r, nil, common.NewErrInternal("Request failed, searchString isn't a (wallet address)/(block hash)/(txn hash)/(round num)/(content hash)/(file name)"))
 }
