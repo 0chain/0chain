@@ -726,8 +726,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 }
 
 func (sa *StorageAllocation) bSize() int64 {
-	var size = sa.DataShards
-	return int64(math.Ceil(float64(sa.Size) / float64(size)))
+	return int64(math.Ceil(float64(sa.Size) / float64(sa.DataShards)))
 }
 
 func (sa *StorageAllocation) removeBlobber(

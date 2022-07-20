@@ -514,8 +514,7 @@ func (uar *updateAllocationRequest) validate(
 // calculate size difference for every blobber of the allocations
 func (uar *updateAllocationRequest) getBlobbersSizeDiff(
 	alloc *StorageAllocation) (diff int64) {
-	var size = alloc.DataShards
-	return int64(math.Ceil(float64(uar.Size) / float64(size)))
+	return int64(math.Ceil(float64(uar.Size) / float64(alloc.DataShards)))
 }
 
 // new size of blobbers' allocation

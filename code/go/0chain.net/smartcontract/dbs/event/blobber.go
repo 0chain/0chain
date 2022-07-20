@@ -219,9 +219,7 @@ func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination
 }
 
 const (
-	KB = 1024      // kilobyte
-	MB = 1024 * KB // megabyte
-	GB = 1024 * MB // gigabyte
+	GB = 1024 * 1024 * 1024 // gigabyte
 )
 
 // size in gigabytes
