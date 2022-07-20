@@ -216,41 +216,45 @@ func (sa *StorageAllocation) buildDbUpdates() *dbs.DbUpdates {
 
 	termsByte, _ := sa.marshalTerms() //err always is nil
 
-	return &dbs.DbUpdates{
+	dbUpdates := &dbs.DbUpdates{
 		Id: sa.ID,
 		Updates: map[string]interface{}{
-			"allocation_name":             sa.Name,
-			"transaction_id":              sa.Tx,
-			"data_shards":                 sa.DataShards,
-			"parity_shards":               sa.ParityShards,
-			"size":                        sa.Size,
-			"expiration":                  int64(sa.Expiration),
-			"terms":                       string(termsByte),
-			"owner":                       sa.Owner,
-			"owner_public_key":            sa.OwnerPublicKey,
-			"is_immutable":                sa.IsImmutable,
-			"read_price_min":              sa.ReadPriceRange.Min,
-			"read_price_max":              sa.ReadPriceRange.Max,
-			"write_price_min":             sa.WritePriceRange.Min,
-			"write_price_max":             sa.WritePriceRange.Max,
-			"challenge_completion_time":   int64(sa.ChallengeCompletionTime),
-			"start_time":                  int64(sa.StartTime),
-			"finalized":                   sa.Finalized,
-			"cancelled":                   sa.Canceled,
-			"used_size":                   sa.UsedSize,
-			"moved_to_challenge":          sa.MovedToChallenge,
-			"moved_back":                  sa.MovedBack,
-			"moved_to_validators":         sa.MovedToValidators,
-			"time_unit":                   int64(sa.TimeUnit),
-			"num_writes":                  sa.Stats.NumWrites,
-			"num_reads":                   sa.Stats.NumReads,
-			"total_challenges":            sa.Stats.TotalChallenges,
-			"open_challenges":             sa.Stats.OpenChallenges,
-			"successful_challenges":       sa.Stats.SuccessChallenges,
-			"failed_challenges":           sa.Stats.FailedChallenges,
-			"latest_closed_challenge_txn": sa.Stats.LastestClosedChallengeTxn,
+			"allocation_name":           sa.Name,
+			"transaction_id":            sa.Tx,
+			"data_shards":               sa.DataShards,
+			"parity_shards":             sa.ParityShards,
+			"size":                      sa.Size,
+			"expiration":                int64(sa.Expiration),
+			"terms":                     string(termsByte),
+			"owner":                     sa.Owner,
+			"owner_public_key":          sa.OwnerPublicKey,
+			"is_immutable":              sa.IsImmutable,
+			"read_price_min":            sa.ReadPriceRange.Min,
+			"read_price_max":            sa.ReadPriceRange.Max,
+			"write_price_min":           sa.WritePriceRange.Min,
+			"write_price_max":           sa.WritePriceRange.Max,
+			"challenge_completion_time": int64(sa.ChallengeCompletionTime),
+			"start_time":                int64(sa.StartTime),
+			"finalized":                 sa.Finalized,
+			"cancelled":                 sa.Canceled,
+			"used_size":                 sa.UsedSize,
+			"moved_to_challenge":        sa.MovedToChallenge,
+			"moved_back":                sa.MovedBack,
+			"moved_to_validators":       sa.MovedToValidators,
+			"time_unit":                 int64(sa.TimeUnit),
 		},
 	}
+
+	if sa.Stats != nil {
+		dbUpdates.Updates["num_writes"] = sa.Stats.NumWrites
+		dbUpdates.Updates["num_reads"] = sa.Stats.NumReads
+		dbUpdates.Updates["total_challenges"] = sa.Stats.TotalChallenges
+		dbUpdates.Updates["open_challenges"] = sa.Stats.OpenChallenges
+		dbUpdates.Updates["successful_challenges"] = sa.Stats.SuccessChallenges
+		dbUpdates.Updates["failed_challenges"] = sa.Stats.FailedChallenges
+		dbUpdates.Updates["latest_closed_challenge_txn"] = sa.Stats.LastestClosedChallengeTxn
+	}
+	return dbUpdates
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
