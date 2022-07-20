@@ -103,6 +103,7 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"block_hash": benchmark.GetMockBlockHash(1),
 					"date":       strconv.FormatInt(int64(data.Now.Duration()), 10),
+					"round":      "1",
 				},
 				Endpoint: srh.getBlock,
 			},
