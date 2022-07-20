@@ -55,17 +55,3 @@ func SafeMultInt64(a, b int64) (int64, error) {
 	}
 	return result, nil
 }
-
-// SafeMultFloat64 multiplies two float64 and returns an error if there is overflows
-func SafeMultFloat64(left, right float64) (float64, error) {
-	if left == 0 || right == 0 {
-		return 0, nil
-	}
-
-	result := left * right
-
-	if math.IsInf(result, 0) {
-		return result, fmt.Errorf("Overflow multiplying %v and %v", left, right)
-	}
-	return result, nil
-}

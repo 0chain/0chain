@@ -13,7 +13,6 @@ import (
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
-	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
@@ -699,8 +698,8 @@ type allocPeriod struct {
 	size   int64            // size for period
 }
 
-func (ap *allocPeriod) weight() (float64, error) {
-	return maths.SafeMultFloat64(float64(ap.period), float64(ap.size))
+func (ap *allocPeriod) weight() float64 {
+	return float64(ap.period) * float64(ap.size)
 }
 
 // returns weighted average read and write prices
@@ -708,15 +707,9 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 	var (
 		rp, wp float64 // read sum, write sum (weighted)
 	)
-	apw, err := ap.weight()
-	if err != nil {
-		return 0, 0, err
-	}
+	apw := ap.weight()
 
-	npw, err := np.weight()
-	if err != nil {
-		return 0, 0, err
-	}
+	npw := np.weight()
 
 	ws := apw + npw // weights sum
 
@@ -740,26 +733,8 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 		return 0, 0, err
 	}
 
-	npReadW, err := maths.SafeMultFloat64(npReadF, npw)
-	if err != nil {
-		return 0, 0, err
-	}
-	apReadW, err := maths.SafeMultFloat64(apReadF, apw)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	rp = npReadW + apReadW
-
-	npWriteW, err := maths.SafeMultFloat64(npWriteF, npw)
-	if err != nil {
-		return 0, 0, err
-	}
-	apWriteW, err := maths.SafeMultFloat64(apWriteF, apw)
-	if err != nil {
-		return 0, 0, err
-	}
-	wp = npWriteW + apWriteW
+	rp = (npReadF * npw) + (apReadF * apw)
+	wp = (npWriteF * npw) + (apWriteF * apw)
 
 	avgRead, err = currency.Float64ToCoin(rp / ws)
 	if err != nil {
@@ -1621,15 +1596,8 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
-			cpBalRatio, err := maths.SafeMultFloat64(cpBalance, ratio)
-			if err != nil {
-				return err
-			}
-			rewardF, err := maths.SafeMultFloat64(passRates[i], cpBalRatio)
-			if err != nil {
-				return err
-			}
-			reward, err := currency.Float64ToCoin(rewardF)
+
+			reward, err := currency.Float64ToCoin(passRates[i] * cpBalance * ratio)
 			if err != nil {
 				return err
 			}

@@ -12,7 +12,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
-	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 )
@@ -91,11 +90,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 		terms := blobberIDTermMapping[b.BlobberID].Terms
 
-		bwF, err := maths.SafeMultFloat64(gbSize*terms.MinLockDemand, rdtu)
-		if err != nil {
-			return nil, fmt.Errorf("error calculating blobber weight: %v", err)
-		}
-
+		bwF := gbSize * terms.MinLockDemand * rdtu
 		minLockDemand, err := currency.MultFloat64(terms.WritePrice, bwF)
 		if err != nil {
 			return nil, err

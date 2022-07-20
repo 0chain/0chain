@@ -143,7 +143,7 @@ func MultFloat64(c Coin, a float64) (Coin, error) {
 	if b < 0 {
 		return 0, ErrUint64OverflowsFloat64
 	}
-	return Coin(b), nil
+	return Float64ToCoin(b)
 }
 
 // MinusCoin subtracts b from c, returning an error if the values overflow

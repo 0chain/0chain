@@ -134,18 +134,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		qualifyingBlobberIds[i] = br.ID
 		totalQStake += stake
 
-		gz, err := maths.SafeMultFloat64(gamma, zeta)
-		if err != nil {
-			return err
-		}
-		gzStake, err := maths.SafeMultFloat64(gz+1, stake)
-		if err != nil {
-			return err
-		}
-		blobberWeight, err := maths.SafeMultFloat64(gzStake, float64(br.SuccessChallenges))
-		if err != nil {
-			return err
-		}
+		blobberWeight := ((gamma * zeta) + 1) * stake * float64(br.SuccessChallenges)
 
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
@@ -167,11 +156,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			if err != nil {
 				return err
 			}
-			rewardF, err := maths.SafeMultFloat64(fBBR, weightRatio)
-			if err != nil {
-				return err
-			}
-			reward, err := currency.Float64ToCoin(rewardF)
+
+			reward, err := currency.Float64ToCoin(fBBR * weightRatio)
 			if err != nil {
 				return err
 			}
@@ -252,10 +238,7 @@ func getBlockReward(
 	changeBalance := 1 - brChangeRatio
 	changePeriods := currentRound / brChangePeriod
 
-	factor, err := maths.SafeMultFloat64(math.Pow(changeBalance, float64(changePeriods)), blobberWeight)
-	if err != nil {
-		return 0, err
-	}
+	factor := math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
 	return currency.MultFloat64(br, factor)
 
 }

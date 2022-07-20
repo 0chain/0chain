@@ -7,7 +7,6 @@ import (
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
-	"0chain.net/core/maths"
 	"0chain.net/core/util"
 
 	"go.uber.org/zap"
@@ -145,12 +144,8 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value currency.Coin) (b
 			return nil, err
 		}
 		ratio := fBlobWP / fTotal
-		balF, err := maths.SafeMultFloat64(fValue, ratio)
-		if err != nil {
-			return nil, err
-		}
 
-		balance, err := currency.Float64ToCoin(balF)
+		balance, err := currency.Float64ToCoin(fValue * ratio)
 		if err != nil {
 			return nil, err
 		}
@@ -367,11 +362,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			}
 			var ratio = fBlobWP / fTotal
 
-			balF, err := maths.SafeMultFloat64(fTxnVal, ratio)
-			if err != nil {
-				return "", err
-			}
-			bal, err := currency.Float64ToCoin(balF)
+			bal, err := currency.Float64ToCoin(fTxnVal * ratio)
 			if err != nil {
 				return "", common.NewErrorf("write_pool_lock_failed",
 					"converting blobber pool balance to coin: %v", err)

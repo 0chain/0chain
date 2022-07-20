@@ -13,7 +13,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/maths"
 	"0chain.net/core/util"
 )
 
@@ -156,13 +155,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't unmarshal input: %v", err)
 	}
 
-	newTotalLimitF, err := maths.SafeMultFloat64(assignerInfo.TotalLimit, floatToBalance)
-	if err != nil {
-		return "", common.NewErrorf("add_free_storage_assigner",
-			"can't convert total limit to balance: %v", err)
-	}
-
-	newTotalLimit, err := currency.Float64ToCoin(newTotalLimitF)
+	newTotalLimit, err := currency.Float64ToCoin(assignerInfo.TotalLimit * floatToBalance)
 	if err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner", "can't convert total limit to coin: %v", err)
 	}
@@ -172,12 +165,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"total tokens limit %d exceeds maximum permitted: %d", newTotalLimit, conf.MaxTotalFreeAllocation)
 	}
 
-	newIndividualLimitF, err := maths.SafeMultFloat64(assignerInfo.IndividualLimit, floatToBalance)
-	if err != nil {
-		return "", common.NewErrorf("add_free_storage_assigner", "overflow in newIndividualLimit: %v", err)
-	}
-
-	newIndividualLimit, err := currency.Float64ToCoin(newIndividualLimitF)
+	newIndividualLimit, err := currency.Float64ToCoin(assignerInfo.IndividualLimit * floatToBalance)
 	if err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner", "can't convert individual limit to coin: %v", err)
 	}
@@ -293,11 +281,8 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting transaction value to float: %v", err)
 	}
-	readPoolTokensF, err := maths.SafeMultFloat64(fTxnVal, conf.FreeAllocationSettings.ReadPoolFraction)
-	if err != nil {
-		return "", common.NewErrorf("free_allocation_failed", "calculating read pool tokens: %v", err)
-	}
-	readPoolTokens, err := currency.Float64ToCoin(readPoolTokensF)
+
+	readPoolTokens, err := currency.Float64ToCoin(fTxnVal * conf.FreeAllocationSettings.ReadPoolFraction)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting read pool tokens to Coin: %v", err)
 	}
