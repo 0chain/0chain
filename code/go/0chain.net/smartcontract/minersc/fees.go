@@ -462,11 +462,11 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 
 	sn := len(sharders)
 	// fess and mint
-	feeShare, feeLeft, err := currency.DivideCoin(fee, int64(sn))
+	feeShare, feeLeft, err := currency.DistributeCoin(fee, int64(sn))
 	if err != nil {
 		return err
 	}
-	mintShare, mintLeft, err := currency.DivideCoin(mint, int64(sn))
+	mintShare, mintLeft, err := currency.DistributeCoin(mint, int64(sn))
 	if err != nil {
 		return err
 	}
@@ -474,7 +474,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	totalCoinLeft := feeLeft + mintLeft
 
 	if totalCoinLeft > currency.Coin(sn) {
-		clShare, cl, err := currency.DivideCoin(totalCoinLeft, int64(sn))
+		clShare, cl, err := currency.DistributeCoin(totalCoinLeft, int64(sn))
 		if err != nil {
 			return err
 		}
