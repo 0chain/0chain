@@ -44,6 +44,34 @@ func SafeAddInt64(left, right int64) (int64, error) {
 	return left + right, nil
 }
 
+// SafeAddInt adds two integers and returns an error if there is overflows
+func SafeAddInt(left, right int) (int, error) {
+	if right > 0 {
+		if left > math.MaxInt-right {
+			return 0, currency.ErrInt64AddOverflow
+		}
+	} else {
+		if left < math.MinInt-right {
+			return 0, currency.ErrInt64AddOverflow
+		}
+	}
+	return left + right, nil
+}
+
+// SafeAddInt32 adds two integers and returns an error if there is overflows
+func SafeAddInt32(left, right int32) (int32, error) {
+	if right > 0 {
+		if left > math.MaxInt32-right {
+			return 0, currency.ErrInt64AddOverflow
+		}
+	} else {
+		if left < math.MinInt32-right {
+			return 0, currency.ErrInt64AddOverflow
+		}
+	}
+	return left + right, nil
+}
+
 // SafeMultInt64 multiplies two integers and returns an error if there is overflows
 func SafeMultInt64(a, b int64) (int64, error) {
 	if a == 0 || b == 0 {

@@ -23,6 +23,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
+	"0chain.net/core/maths"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
@@ -354,7 +355,12 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		if err != nil {
 			return nil, err
 		}
-		cost += c //810
+
+		newCost, err := maths.SafeAddInt(cost, c)
+		if err != nil {
+			return nil, err
+		}
+		cost = newCost
 		costs = append(costs, c)
 	}
 	if cost > mc.ChainConfig.MaxBlockCost() {
@@ -815,7 +821,12 @@ func txnIterHandlerFunc(mc *Chain,
 		}
 
 		if txnProcessor(ctx, bState, txn, tii) {
-			tii.cost += cost //810
+			newCost, err := maths.SafeAddInt(tii.cost, cost)
+			if err != nil {
+				logging.Logger.Error("generate block (bad cost)", zap.Error(err))
+				return true
+			}
+			tii.cost = newCost
 			if tii.idx >= mc.ChainConfig.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
 					zap.Bool("idx >= block size", tii.idx >= mc.ChainConfig.BlockSize()),
@@ -938,14 +949,24 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 		if txnProcessor(ctx, blockState, txn, iterInfo) {
 			rcount++
-			iterInfo.cost += cost //810
+			newCost, err := maths.SafeAddInt(iterInfo.cost, cost)
+			if err != nil {
+				logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+				return err
+			}
+			iterInfo.cost = newCost
 			if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
 				break
 			}
 		}
 	}
 	if rcount > 0 {
-		blockSize += int32(rcount) //810
+		newBlockSize, err := maths.SafeAddInt32(blockSize, int32(rcount))
+		if err != nil {
+			logging.Logger.Debug("Can't calculate Block Size", zap.Error(err))
+			return err
+		}
+		blockSize = newBlockSize
 		logging.Logger.Debug("Processed current transactions", zap.Int("count", rcount))
 	}
 	if blockSize != mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() {
@@ -1050,7 +1071,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				break
 			}
 			costs = append(costs, c)
-			cost += c //810
+			newCost, err := maths.SafeAddInt(cost, c)
+			cost = newCost
 		}
 		logging.Logger.Debug("calculated cost", zap.Int("cost", cost), zap.Ints("costs", costs), zap.String("block_hash", b.Hash))
 	}

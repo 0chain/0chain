@@ -104,7 +104,11 @@ func (sp *stakePool) cleanStake() (stake currency.Coin) {
 // The stake() returns total stake size including delegate pools want to unstake.
 func (sp *stakePool) stake() (stake currency.Coin) {
 	for _, dp := range sp.Pools {
-		stake += dp.Balance //810
+		newStake, err := currency.AddCoin(stake, dp.Balance)
+		if err != nil {
+			panic(err) // TODO: handle error
+		}
+		stake = newStake
 	}
 	return
 }
@@ -163,7 +167,11 @@ func (sp *stakePool) empty(
 
 // add offer of an allocation related to blobber owns this stake pool
 func (sp *stakePool) addOffer(amount currency.Coin) error {
-	sp.TotalOffers += amount //810
+	newTotalOffers, err := currency.AddCoin(sp.TotalOffers, amount)
+	if err != nil {
+		return err
+	}
+	sp.TotalOffers = newTotalOffers
 	return nil
 }
 
@@ -246,7 +254,11 @@ func (sp *stakePool) slash(
 				Balance:   move,
 			})
 		} else {
-			bp.Balance += move //810
+			newBal, err := currency.AddCoin(bp.Balance, move)
+			if err != nil {
+				return 0, err
+			}
+			bp.Balance = newBal
 		}
 	}
 

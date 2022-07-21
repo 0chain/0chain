@@ -157,7 +157,11 @@ func (sp *StakePool) MintRewards(
 		}); err != nil {
 			return 0, fmt.Errorf("minting rewards: %v", err)
 		}
-		reward += dPool.Reward //810
+		newReward, err := currency.AddCoin(reward, dPool.Reward)
+		if err != nil {
+			return 0, err
+		}
+		reward = newReward
 		dPool.Reward = 0
 	}
 
@@ -280,7 +284,12 @@ func (sp *StakePool) DistributeRewards(
 
 func (sp *StakePool) stake() (stake currency.Coin) {
 	for _, pool := range sp.Pools {
-		stake += pool.Balance //810
+		newStake, err := currency.AddCoin(stake, pool.Balance)
+		if err != nil {
+			panic(err) // TODO: handle error
+			return
+		}
+		stake = newStake
 	}
 	return
 }

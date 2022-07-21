@@ -109,7 +109,11 @@ func (cp *challengePool) moveToWritePool(
 				Balance:   value,
 			})
 		} else {
-			bp.Balance += value //810
+			newBal, err := currency.AddCoin(bp.Balance, value)
+			if err != nil {
+				return err
+			}
+			bp.Balance = newBal
 		}
 	}
 	_, _, err = cp.TransferTo(ap, value, nil)

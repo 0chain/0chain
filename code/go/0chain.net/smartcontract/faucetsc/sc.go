@@ -164,13 +164,23 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 		if err := balances.AddTransfer(transfer); err != nil {
 			return "", err
 		}
-		user.Used += transfer.Amount //810
-		gn.Used += transfer.Amount //810
+
+		usedByUser, err := currency.AddCoin(user.Used, transfer.Amount)
+		if err != nil {
+			return "", common.NewError("pour", fmt.Sprintf("adding tokens to user's used amount resulted in an error: %v", err.Error()))
+		}
+		user.Used = usedByUser
+
+		gnUsed, err := currency.AddCoin(gn.Used, transfer.Amount)
+		if err != nil {
+			return "", common.NewError("pour", fmt.Sprintf("adding tokens to global used amount resulted in an error: %v", err.Error()))
+		}
+		gn.Used = gnUsed
 		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
 			return "", err
 		}
-		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
+		_, err = balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
 			return "", err
 		}

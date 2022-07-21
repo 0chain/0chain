@@ -276,7 +276,12 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	assigner.CurrentRedeemed += txn.Value //810
+	newRedeemed, err := currency.AddCoin(assigner.CurrentRedeemed, txn.Value)
+	if err != nil {
+		return "", common.NewErrorf("free_allocation_failed",
+			"can't add redeemed tokens: %v", err)
+	}
+	assigner.CurrentRedeemed = newRedeemed
 	fTxnVal, err := txn.Value.Float64()
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting transaction value to float: %v", err)
@@ -377,7 +382,12 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 		return "", common.NewErrorf("update_free_storage_request", err.Error())
 	}
 
-	assigner.CurrentRedeemed += txn.Value //810
+	newRedeemed, err := currency.AddCoin(assigner.CurrentRedeemed, txn.Value)
+	if err != nil {
+		return "", common.NewErrorf("update_free_storage_request",
+			"can't add redeemed tokens: %v", err)
+	}
+	assigner.CurrentRedeemed = newRedeemed
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request", "assigner save failed: %v", err)

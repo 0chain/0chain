@@ -6,6 +6,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
@@ -74,7 +75,12 @@ func (ssc *MinerSmartContract) collectReward(
 			"error saving stake pool, %v", err)
 	}
 
-	gn.Minted += minted //810
+	gnMinted, err := currency.AddCoin(gn.Minted, minted)
+	if err != nil {
+		return "", common.NewErrorf("collect_reward_failed",
+			"error adding minted to global node, %v", err)
+	}
+	gn.Minted = gnMinted
 	if !gn.canMint() {
 		return "", common.NewErrorf("collect_reward_failed",
 			"max mint %v exceeded, %v", gn.MaxMint, gn.Minted)

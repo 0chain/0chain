@@ -26,7 +26,13 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 	for _, pool := range mn.Pools {
 		if pool.Status == spenum.Pending {
 			pool.Status = spenum.Active
-			mn.TotalStaked += pool.Balance //810
+
+			newTotalStaked, err := currency.AddCoin(mn.TotalStaked, pool.Balance)
+			if err != nil {
+				Logger.Error("Staked_Amount_Overflow", zap.Error(err))
+				panic(err) // TODO: handle this
+			}
+			mn.TotalStaked = newTotalStaked
 		}
 	}
 }

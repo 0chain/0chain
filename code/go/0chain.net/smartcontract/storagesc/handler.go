@@ -1048,7 +1048,11 @@ func spStats(
 
 		dpStats.TotalReward = dp.TotalReward
 
-		stat.Balance += dpStats.Balance //810
+		newBal, err := currency.AddCoin(stat.Balance, dpStats.Balance)
+		if err != nil {
+			return nil, err
+		}
+		stat.Balance = newBal
 		stat.Delegate = append(stat.Delegate, dpStats)
 	}
 	return stat, nil

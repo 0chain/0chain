@@ -285,7 +285,11 @@ func (aps allocationPools) allocUntil(allocID string, until common.Timestamp) (
 	var cut = aps.allocationCut(allocID)
 	cut = removeExpired(cut, until)
 	for _, ap := range cut {
-		value += ap.Balance //810
+		newValue, err := currency.AddCoin(value, ap.Balance)
+		if err != nil {
+			panic(err) // TODO: handle error
+		}
+		value = newValue
 	}
 	return
 }
