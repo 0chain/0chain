@@ -240,23 +240,36 @@ func (sp *stakePool) slash(
 	return
 }
 
-// free staked capacity of related blobber, excluding delegate pools want to
+// unallocated capacity of related blobber, excluding delegate pools want to
 // unstake.
-func (sp *stakePool) cleanCapacity(now common.Timestamp,
-	writePrice currency.Coin) (free int64) {
+func (sp *stakePool) unallocatedCapacity(writePrice currency.Coin) (free int64) {
 
 	var total, offers = sp.cleanStake(), sp.TotalOffers
 	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
 		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	if total <= offers {
-		// zero, since the offer stake (not updated) can be greater
-		// then the clean stake
+		// zero, since the offer stake (not updated) can be greater than the clean stake
 		return
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
 	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
 		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	return
+}
+
+func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
+
+	cleanStake, err := sp.cleanStake().Float64()
+	if err != nil {
+		return 0, err
+	}
+
+	fWritePrice, err := writePrice.Float64()
+	if err != nil {
+		return 0, err
+	}
+
+	return int64((cleanStake / fWritePrice) * GB), nil
 }
 
 type delegatePoolStat struct {
