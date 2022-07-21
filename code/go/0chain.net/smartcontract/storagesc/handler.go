@@ -921,14 +921,22 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 //      required: false
 //      in: query
 //      type: string
+//    + name: round
+//      description: block round
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200: Block
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) {
-	hash := r.URL.Query().Get("block_hash")
-	date := r.URL.Query().Get("date")
+	var (
+		hash        = r.URL.Query().Get("block_hash")
+		date        = r.URL.Query().Get("date")
+		roundString = r.URL.Query().Get("round")
+	)
 
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -943,6 +951,7 @@ func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) 
 		}
 
 		common.Respond(w, r, &block, nil)
+		return
 	}
 
 	if date != "" {
@@ -953,6 +962,24 @@ func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) 
 		}
 
 		common.Respond(w, r, &block, nil)
+		return
+	}
+
+	if roundString != "" {
+		round, err := strconv.ParseUint(roundString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error parsing parameter string "+err.Error()))
+			return
+		}
+
+		block, err := edb.GetBlockByRound(int64(round))
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error getting block "+err.Error()))
+			return
+		}
+
+		common.Respond(w, r, &block, nil)
+		return
 	}
 
 	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
@@ -1825,8 +1852,12 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
-	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
-
+	rtv, err := edb.GetTransactions(limit)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	common.Respond(w, r, rtv, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes transactionHashes
