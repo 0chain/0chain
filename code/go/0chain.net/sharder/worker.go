@@ -443,7 +443,7 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 
 			mb := sc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls); err != nil {
+			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
 				logging.Logger.Warn("sharder health check failed, try again")
 			}
 
