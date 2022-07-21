@@ -14,6 +14,7 @@ type Event struct {
 	gorm.Model
 	BlockNumber int64       `json:"block_number" gorm:"index:idx_event"`
 	TxHash      string      `json:"tx_hash" gorm:"index:idx_event"`
+	Round       int64       `json:"round" gorm:"index:idx_event"`
 	Type        int         `json:"type" gorm:"index:idx_event"`
 	Tag         int         `json:"tag" gorm:"index:idx_event"`
 	Index       string      `json:"index" gorm:"index:idx_event"`
@@ -142,6 +143,11 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Challenge{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&BlobberSnapshot{})
 	if err != nil {
 		return err
 	}

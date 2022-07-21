@@ -94,7 +94,20 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
+func (edb *EventDb) addRoundEventsWorker(ctx context.Context) {
+	for {
+		select {
+		case e := <-edb.roundEventsChan:
+			edb.updateBlobberSnapshot(e)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 func (edb *EventDb) addStat(event Event) error {
+	edb.copyToRoundChan(event)
+
 	switch EventTag(event.Tag) {
 	// blobber
 	case TagAddOrOverwriteBlobber:
