@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -150,25 +149,6 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 
 	user, err := c.GetEventDb().GetUser(clientID)
 	if err != nil {
-
-		if errors.Is(err, util.ErrValueNotPresent) {
-			sctx := c.GetStateContextI()
-
-			clientState := sctx.GetState()
-
-			fs, err := c.GetStateById(clientState, clientID)
-
-			fmt.Println("-----------------")
-			fmt.Println("load user from MPT:", fs, err)
-			fmt.Println("-----------------")
-
-			if err != nil {
-				return nil, err
-			}
-
-			return fs, nil
-		}
-
 		return nil, err
 	}
 
