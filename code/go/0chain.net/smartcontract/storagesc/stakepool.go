@@ -93,6 +93,14 @@ func (sp *stakePool) save(sscKey, blobberID string,
 	r, err := balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
 	logging.Logger.Debug("after stake pool save", zap.String("root", r))
 
+	data := dbs.DbUpdates{
+		Id: blobberID,
+		Updates: map[string]interface{}{
+			"offers_total": int64(sp.TotalOffers),
+		},
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobberID, data)
+
 	return
 }
 
@@ -238,12 +246,16 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 	writePrice currency.Coin) (free int64) {
 
 	var total, offers = sp.cleanStake(), sp.TotalOffers
+	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
+		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater
 		// then the clean stake
 		return
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
+	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
+		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	return
 }
 

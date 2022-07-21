@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -716,6 +717,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	}
 
 	if blobber.Terms.WritePrice > 0 && sp.cleanCapacity(now, blobber.Terms.WritePrice) < bSize {
+		logging.Logger.Debug("clean_capacity_after")
 		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
 			blobber.ID, sp.cleanCapacity(now, blobber.Terms.WritePrice), bSize)
 	}
@@ -724,8 +726,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 }
 
 func (sa *StorageAllocation) bSize() int64 {
-	var size = sa.DataShards + sa.ParityShards
-	return (sa.Size + int64(size-1)) / int64(size)
+	return int64(math.Ceil(float64(sa.Size) / float64(sa.DataShards)))
 }
 
 func (sa *StorageAllocation) removeBlobber(
