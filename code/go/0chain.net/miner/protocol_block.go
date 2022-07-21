@@ -1072,6 +1072,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			}
 			costs = append(costs, c)
 			newCost, err := maths.SafeAddInt(cost, c)
+			if err != nil {
+				logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+				return err
+			}
 			cost = newCost
 		}
 		logging.Logger.Debug("calculated cost", zap.Int("cost", cost), zap.Ints("costs", costs), zap.String("block_hash", b.Hash))

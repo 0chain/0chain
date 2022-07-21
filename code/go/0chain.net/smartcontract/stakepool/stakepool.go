@@ -282,7 +282,7 @@ func (sp *StakePool) stake() (stake currency.Coin) {
 		newStake, err := currency.AddCoin(stake, pool.Balance)
 		if err != nil {
 			panic(err) // TODO: handle error
-			return
+			// return
 		}
 		stake = newStake
 	}
