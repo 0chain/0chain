@@ -372,9 +372,8 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 }
 
 type stakePoolRequest struct {
-	BlobberID  string        `json:"blobber_id,omitempty"`
-	PoolID     string        `json:"pool_id,omitempty"`
-	LockPeriod time.Duration `json:"lock_period"`
+	BlobberID string `json:"blobber_id,omitempty"`
+	PoolID    string `json:"pool_id,omitempty"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
