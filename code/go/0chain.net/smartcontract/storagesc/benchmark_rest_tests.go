@@ -182,6 +182,13 @@ func BenchmarkRestTests(
 				Endpoint: srh.getOpenChallenges,
 			},
 			{
+				FuncName: "blobber-rank",
+				Params: map[string]string{
+					"id": getMockBlobberId(3),
+				},
+				Endpoint: srh.getBlobberRank,
+			},
+			{
 				FuncName: "getchallenge",
 				Params: map[string]string{
 					"blobber":   getMockBlobberId(0),

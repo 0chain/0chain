@@ -61,3 +61,8 @@ type SpReward struct {
 	SpReward       int64            `json:"sp_reward"`
 	DelegateReward map[string]int64 `json:"delegate_reward"`
 }
+
+type ChallengeResult struct {
+	BlobberId string `json:"blobberId"`
+	Passed    bool   `json:"passed"`
+}
