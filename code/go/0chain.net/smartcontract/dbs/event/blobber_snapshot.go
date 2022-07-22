@@ -21,26 +21,29 @@ func (edb *EventDb) updateBlobberSnapshot(e events) error {
 	if len(e) == 0 {
 		return nil
 	}
-	last, err := edb.getBlobberSnapshot(e[0].Round)
-	current := BlobberSnapshot{}
+	//	round := e[0].Round
+	snapshots := make(map[string]BlobberSnapshot)
 
-	for i, event := range e {
+	//	for i, event := range e {
 
-	}
+	//}
 
-	if err := edb.addBlobberSnapshot(current); err != nil {
+	if err := edb.addBlobberSnapshot(snapshots); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (edb *EventDb) getBlobberSnapshot(round int64) (BlobberSnapshot, error) {
+func (edb *EventDb) getBlobberSnapshot(blobberId string, round int64) (BlobberSnapshot, error) {
 	snapshot := BlobberSnapshot{}
-	res := edb.Store.Get().Model(BlobberSnapshot{}).Where(BlobberSnapshot{Round: round}).First(&snapshot)
+	res := edb.Store.Get().Model(BlobberSnapshot{}).Where(BlobberSnapshot{
+		BlobberID: blobberId,
+		Round:     round},
+	).First(&snapshot)
 	return snapshot, res.Error
 }
 
-func (edb *EventDb) addBlobberSnapshot(bs BlobberSnapshot) error {
+func (edb *EventDb) addBlobberSnapshot(bs map[string]BlobberSnapshot) error {
 	res := edb.Store.Get().Create(&bs)
 	return res.Error
 }
