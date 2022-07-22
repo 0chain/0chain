@@ -24,7 +24,7 @@ pre-push: go-mod check-commit
 .PHONY: check-commit go-get run-test
 check-commit: go-get run-test
 
-.PHONY: install-mockery mockery
+.PHONY: install-mockery mockery install-msgp msgp build-mocks swagger
 
 go-mod:
 	@echo "Prepare Go mod files..."

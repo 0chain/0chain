@@ -58,6 +58,10 @@ type Blobber struct {
 	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
 	Description string `json:"description" gorm:"description"`
 
+	ChallengesPassed    uint64  `json:"challenges_passed"`
+	ChallengesCompleted uint64  `json:"challenges_completed"`
+	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
@@ -94,6 +98,37 @@ func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
 		},
 	}
 	return edb.updateBlobber(update)
+}
+
+func (edb *EventDb) updateBlobberChallenges(challenge dbs.ChallengeResult) error {
+	blobber, err := edb.GetBlobber(challenge.BlobberId)
+	if err != nil {
+		return err
+	}
+	blobber.ChallengesCompleted++
+	if challenge.Passed {
+		blobber.ChallengesPassed++
+	}
+	update := dbs.NewDbUpdates(challenge.BlobberId)
+	update.Updates["challenges_completed"] = blobber.ChallengesCompleted
+	if challenge.Passed {
+		update.Updates["challenges_passed"] = blobber.ChallengesPassed
+	}
+	update.Updates["rank_metric"] = blobber.ChallengesPassed / blobber.ChallengesCompleted
+	return edb.updateBlobber(*update)
+}
+
+func (edb *EventDb) GetBlobberRank(blobberId string) (int64, error) {
+	blobber, err := edb.GetBlobber(blobberId)
+	if err != nil {
+		return 0, err
+	}
+	var rank int64
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where("rank_metric > ?", blobber.RankMetric).
+		Count(&rank)
+	return rank + 1, result.Error
 }
 
 func (edb *EventDb) BlobberTotalCapacity() (int64, error) {

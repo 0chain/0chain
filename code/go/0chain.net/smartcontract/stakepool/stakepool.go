@@ -13,6 +13,7 @@ import (
 
 	"0chain.net/smartcontract/dbs/event"
 
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -48,6 +49,7 @@ type DelegatePool struct {
 	Status       spenum.PoolStatus `json:"status"`
 	RoundCreated int64             `json:"round_created"` // used for cool down
 	DelegateID   string            `json:"delegate_id"`
+	StakedAt     common.Timestamp  `json:"staked_at"`
 }
 
 func NewStakePool() *StakePool {
