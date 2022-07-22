@@ -77,12 +77,13 @@ func (sp *StakePool) LockPool(
 		return fmt.Errorf("can't get user pools list: %v", err)
 	}
 	usp.add(providerId, newPoolId)
+	i, _ := txn.Value.Int64()
 	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, event.DelegatePoolLock{
 		Client:       txn.ClientID,
 		PoolId:       newPoolId,
 		ProviderId:   providerId,
 		ProviderType: providerType,
-		Amount:       txn.Value,
+		Amount:       i,
 	})
 	if err = usp.Save(providerType, txn.ClientID, balances); err != nil {
 		return fmt.Errorf("saving user pools: %v", err)

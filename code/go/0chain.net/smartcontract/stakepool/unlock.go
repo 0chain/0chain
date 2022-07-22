@@ -61,12 +61,13 @@ func (sp *StakePool) UnlockPool(
 	if err != nil {
 		return 0, fmt.Errorf("error emptying account, %v", err)
 	}
+	i, _ := amount.Int64()
 	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, poolId, event.DelegatePoolLock{
 		Client:       clientID,
 		PoolId:       poolId,
 		ProviderId:   providerId,
 		ProviderType: providerType,
-		Amount:       amount,
+		Amount:       i,
 	})
 	return amount, nil
 }

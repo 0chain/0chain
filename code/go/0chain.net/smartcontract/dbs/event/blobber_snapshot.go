@@ -49,7 +49,11 @@ func (edb *EventDb) updateBlobberSnapshot(e events) error {
 			if err != nil {
 				logging.Logger.Error("get snapshot row", zap.Error(err))
 			}
-			row.Stake, err = currency.AddCoin(row.Stake, d.Amount)
+			amount, err := currency.Int64ToCoin(d.Amount)
+			if err != nil {
+				logging.Logger.Error("get snapshot row", zap.Error(err))
+			}
+			row.Stake, err = currency.AddCoin(row.Stake, amount)
 			if err != nil {
 				logging.Logger.Error("increment stake", zap.Error(err))
 			}
@@ -62,12 +66,15 @@ func (edb *EventDb) updateBlobberSnapshot(e events) error {
 			if err != nil {
 				logging.Logger.Error("get snapshot row", zap.Error(err))
 			}
-			row.Stake, err = currency.MinusCoin(row.Stake, d.Amount)
+			amount, err := currency.Int64ToCoin(d.Amount)
+			if err != nil {
+				logging.Logger.Error("get snapshot row", zap.Error(err))
+			}
+			row.Stake, err = currency.MinusCoin(row.Stake, amount)
 			if err != nil {
 				logging.Logger.Error("decrement stake", zap.Error(err))
 			}
 		}
-
 	}
 
 	edb.addBlobberSnapshot(snapshots)
