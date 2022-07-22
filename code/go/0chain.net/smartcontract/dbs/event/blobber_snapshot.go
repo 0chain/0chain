@@ -27,7 +27,7 @@ func (edb *EventDb) getRow(id string, round int64, snapshots map[string]*Blobber
 	if round <= 1 {
 		return &BlobberSnapshot{}, nil
 	}
-	return edb.getBlobberSnapshot(id, round-1)
+	return edb.GetBlobberSnapshot(id, round-1)
 }
 
 func (edb *EventDb) updateBlobberSnapshot(e events) error {
@@ -74,7 +74,7 @@ func (edb *EventDb) updateBlobberSnapshot(e events) error {
 	return nil
 }
 
-func (edb *EventDb) getBlobberSnapshot(blobberId string, round int64) (*BlobberSnapshot, error) {
+func (edb *EventDb) GetBlobberSnapshot(blobberId string, round int64) (*BlobberSnapshot, error) {
 	snapshot := BlobberSnapshot{}
 	res := edb.Store.Get().Model(BlobberSnapshot{}).Where(BlobberSnapshot{
 		BlobberID: blobberId,
