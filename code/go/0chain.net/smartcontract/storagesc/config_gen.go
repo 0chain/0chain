@@ -1012,9 +1012,9 @@ func (z blockRewardZeta) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *freeAllocationSettings) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 8
+	// map header, size 9
 	// string "DataShards"
-	o = append(o, 0x88, 0xaa, 0x44, 0x61, 0x74, 0x61, 0x53, 0x68, 0x61, 0x72, 0x64, 0x73)
+	o = append(o, 0x89, 0xaa, 0x44, 0x61, 0x74, 0x61, 0x53, 0x68, 0x61, 0x72, 0x64, 0x73)
 	o = msgp.AppendInt(o, z.DataShards)
 	// string "ParityShards"
 	o = append(o, 0xac, 0x50, 0x61, 0x72, 0x69, 0x74, 0x79, 0x53, 0x68, 0x61, 0x72, 0x64, 0x73)
@@ -1045,6 +1045,9 @@ func (z *freeAllocationSettings) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "ReadPoolFraction"
 	o = append(o, 0xb0, 0x52, 0x65, 0x61, 0x64, 0x50, 0x6f, 0x6f, 0x6c, 0x46, 0x72, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e)
 	o = msgp.AppendFloat64(o, z.ReadPoolFraction)
+	// string "MintAmount"
+	o = append(o, 0xaa, 0x4d, 0x69, 0x6e, 0x74, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
+	o = msgp.AppendFloat64(o, z.MintAmount)
 	return
 }
 
@@ -1114,6 +1117,12 @@ func (z *freeAllocationSettings) UnmarshalMsg(bts []byte) (o []byte, err error) 
 				err = msgp.WrapError(err, "ReadPoolFraction")
 				return
 			}
+		case "MintAmount":
+			z.MintAmount, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MintAmount")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -1128,7 +1137,7 @@ func (z *freeAllocationSettings) UnmarshalMsg(bts []byte) (o []byte, err error) 
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *freeAllocationSettings) Msgsize() (s int) {
-	s = 1 + 11 + msgp.IntSize + 13 + msgp.IntSize + 5 + msgp.Int64Size + 9 + msgp.DurationSize + 15 + z.ReadPriceRange.Msgsize() + 16 + z.WritePriceRange.Msgsize() + 27 + msgp.DurationSize + 17 + msgp.Float64Size
+	s = 1 + 11 + msgp.IntSize + 13 + msgp.IntSize + 5 + msgp.Int64Size + 9 + msgp.DurationSize + 15 + z.ReadPriceRange.Msgsize() + 16 + z.WritePriceRange.Msgsize() + 27 + msgp.DurationSize + 17 + msgp.Float64Size + 11 + msgp.Float64Size
 	return
 }
 

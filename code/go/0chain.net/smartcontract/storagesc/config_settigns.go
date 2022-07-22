@@ -159,6 +159,7 @@ var (
 		"free_allocation_settings.write_price_range.max",
 		"free_allocation_settings.max_challenge_completion_time",
 		"free_allocation_settings.read_pool_fraction",
+		"free_allocation_settings.mint_amount",
 
 		"validator_reward",
 		"blobber_slash",

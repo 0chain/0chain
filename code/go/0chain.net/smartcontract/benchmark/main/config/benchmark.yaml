@@ -115,17 +115,18 @@ smart_contracts:
       min_lock: 0.1
     free_allocation_settings:
       data_shards: 2
-      parity_shards: 2
-      size: 10000000
       duration: 50h
-      read_price_range:
-        min: 0.0
-        max: 2.0
-      write_price_range:
-        min: 0.0
-        max: 2.0
       max_challenge_completion_time: 1m
+      parity_shards: 2
       read_pool_fraction: 0.2
+      mint_amount: 0.5
+      read_price_range:
+        max: 1
+        min: 0
+      size: 10000000
+      write_price_range:
+        max: 1
+        min: 0
     max_mint: 1500000.0
     challenge_enabled: true
     block_reward:
