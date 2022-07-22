@@ -80,10 +80,11 @@ func (ssc *StorageSmartContract) collectReward(
 			"can't get config: %v", err)
 	}
 
-	conf.Minted, err = currency.AddCoin(conf.Minted, reward)
+	minted, err := currency.AddCoin(conf.Minted, reward)
 	if err != nil {
 		return "", err
 	}
+	conf.Minted = minted
 
 	if conf.Minted > conf.MaxMint {
 		return "", common.NewErrorf("collect_reward_failed",

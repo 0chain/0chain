@@ -229,10 +229,12 @@ func (sp *stakePool) slash(
 			continue
 		}
 		dp.Balance -= dpSlash
-		ap.Balance, err = currency.AddCoin(ap.Balance, dpSlash)
+
+		newBal, err := currency.AddCoin(ap.Balance, dpSlash)
 		if err != nil {
 			return 0, err
 		}
+		ap.Balance = newBal
 
 		move, err = currency.AddCoin(move, dpSlash)
 		if err != nil {
