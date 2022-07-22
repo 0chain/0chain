@@ -2,6 +2,8 @@ package event
 
 import (
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -21,16 +23,17 @@ func (edb *EventDb) updateBlobberSnapshot(e events) error {
 	if len(e) == 0 {
 		return nil
 	}
-	//	round := e[0].Round
+	round := e[0].Round
+	round = round
 	snapshots := make(map[string]BlobberSnapshot)
 
-	//	for i, event := range e {
+	for _, event := range e {
+		switch EventTag(event.Tag) {
 
-	//}
-
-	if err := edb.addBlobberSnapshot(snapshots); err != nil {
-		return err
+		}
 	}
+
+	edb.addBlobberSnapshot(snapshots)
 	return nil
 }
 
@@ -43,7 +46,11 @@ func (edb *EventDb) getBlobberSnapshot(blobberId string, round int64) (BlobberSn
 	return snapshot, res.Error
 }
 
-func (edb *EventDb) addBlobberSnapshot(bs map[string]BlobberSnapshot) error {
-	res := edb.Store.Get().Create(&bs)
-	return res.Error
+func (edb *EventDb) addBlobberSnapshot(bs map[string]BlobberSnapshot) {
+	for _, row := range bs {
+		res := edb.Store.Get().Create(&row)
+		if res.Error != nil {
+			logging.Logger.Error("adding row to blobber snapshot", zap.Error(res.Error))
+		}
+	}
 }
