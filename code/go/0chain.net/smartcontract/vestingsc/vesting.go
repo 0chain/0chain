@@ -92,16 +92,17 @@ func (d *destination) period(now common.Timestamp) (period common.Timestamp) {
 }
 
 // move updates last vesting period
-func (d *destination) move(now common.Timestamp, moved currency.Coin) {
+func (d *destination) move(now common.Timestamp, moved currency.Coin) error {
 	d.Last = now
 	if moved > 0 {
 		d.Move = now
 		newVested, err := currency.AddCoin(d.Vested, moved)
 		if err != nil {
-			panic(err) // TODO: handle error
+			return err
 		}
 		d.Vested = newVested
 	}
+	return nil
 }
 
 // The unlock returns amount of tokens to vest for current period.
@@ -135,7 +136,7 @@ func (d *destination) unlock(now, end common.Timestamp, dry bool) (
 	}
 
 	if !dry {
-		d.move(now, amount)
+		err = d.move(now, amount)
 	}
 
 	return
