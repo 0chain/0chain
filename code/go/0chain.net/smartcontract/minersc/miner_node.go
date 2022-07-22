@@ -26,6 +26,11 @@ func NewMinerNode() *MinerNode {
 	return mn
 }
 
+type NodePool struct {
+	PoolID string `json:"pool_id"`
+	*stakepool.DelegatePool
+}
+
 func GetSharderKey(sid string) datastore.Key {
 	return ADDRESS + sid
 }
@@ -65,16 +70,23 @@ func (mn *MinerNode) Decode(p []byte) error {
 	return json.Unmarshal(p, mn)
 }
 
-func (mn *MinerNode) GetNodePools(status string) map[string]*stakepool.DelegatePool {
-	if len(status) == 0 {
-		return mn.Pools
-	}
-
-	var pools = make(map[string]*stakepool.DelegatePool)
+func (mn *MinerNode) GetNodePools(status string) []*NodePool {
+	nodePools := make([]*NodePool, 0)
 	for id, pool := range mn.Pools {
-		if pool.Status.String() == status {
-			pools[id] = pool
+		nodePool := NodePool{id, pool}
+		if len(status) == 0 || pool.Status.String() == status {
+			nodePools = append(nodePools, &nodePool)
 		}
 	}
-	return pools
+
+	return nodePools
+}
+
+func (mn *MinerNode) GetNodePool(poolID string) *NodePool {
+	dp, ok := mn.Pools[poolID]
+	if !ok {
+		return nil
+	}
+
+	return &NodePool{poolID, dp}
 }

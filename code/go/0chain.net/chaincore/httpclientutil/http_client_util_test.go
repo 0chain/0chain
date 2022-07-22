@@ -583,7 +583,7 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 				tt.args.urls = append(tt.args.urls, URL)
 			}
 
-			got, err := MakeClientBalanceRequest(tt.args.clientID, tt.args.urls, tt.args.consensus)
+			got, err := MakeClientBalanceRequest(context.TODO(), tt.args.clientID, tt.args.urls, tt.args.consensus)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MakeClientBalanceRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1148,7 +1148,7 @@ func TestSendSmartContractTxn(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if err := SendSmartContractTxn(tt.args.txn, tt.args.address, tt.args.value, tt.args.fee, tt.args.scData, tt.args.minerUrls); (err != nil) != tt.wantErr {
+			if err := SendSmartContractTxn(tt.args.txn, tt.args.address, tt.args.value, tt.args.fee, tt.args.scData, tt.args.minerUrls, tt.args.minerUrls); (err != nil) != tt.wantErr {
 				t.Errorf("SendSmartContractTxn() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, nonce+2, node.Self.GetNextNonce())

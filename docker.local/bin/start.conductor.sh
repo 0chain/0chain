@@ -7,6 +7,8 @@ do
     docker stop "$running"
 done
 
+./clean.sh
+
 # go caches all build by default
 (cd ./code/go/0chain.net/conductor/conductor/ && go build)
 # start the conductor

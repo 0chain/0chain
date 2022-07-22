@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -41,7 +42,7 @@ func TestSelectBlobbers(t *testing.T) {
 		mockPoolId           = "mock pool id"
 		mockMinPrice         = 0
 		confTimeUnit         = 720 * time.Hour
-		confMinAllocSize     = 1024
+		confMinAllocSize     = 800
 		confMinAllocDuration = 5 * time.Minute
 		mockMaxOffDuration   = 744 * time.Hour
 	)
@@ -667,6 +668,11 @@ func TestExtendAllocation(t *testing.T) {
 					stakePoolKey(ssc.ID, mockBlobber.ID),
 					mock.Anything,
 				).Return("", nil).Once()
+				balances.On(
+					"EmitEvent",
+					event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+				).Return().Maybe()
+
 			}
 		}
 
@@ -1039,7 +1045,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.1,
 				MaxOfferDuration: 200 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
+			Capacity:        25 * GB, // 20 GB
 			Allocated:       5 * GB,  //  5 GB
 			LastHealthCheck: 0,
 		},
@@ -1105,7 +1111,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	conf = setConfig(t, balances)
 	conf.MaxChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
-	conf.MinAllocSize = 20 * GB
+	conf.MinAllocSize = 10 * GB
 	conf.TimeUnit = 2 * time.Minute
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
@@ -1231,7 +1237,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Owner = clientID
 		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
 		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
-		nar.Size = 20 * GB
+		nar.Size = 10 * GB
 		nar.DataShards = 1
 		nar.ParityShards = 1
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
@@ -1272,7 +1278,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Owner = clientID
 		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
 		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
-		nar.Size = 20 * GB
+		nar.Size = 10 * GB
 		nar.DataShards = 1
 		nar.ParityShards = 1
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
@@ -1317,7 +1323,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.Owner = clientID
 		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
 		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
-		nar.Size = 20 * GB
+		nar.Size = 10 * GB
 		nar.DataShards = 1
 		nar.ParityShards = 1
 		nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
@@ -1363,7 +1369,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		assert.Equal(t, txHash, aresp.ID)
 		assert.Equal(t, 1, aresp.DataShards)
 		assert.Equal(t, 1, aresp.ParityShards)
-		assert.Equal(t, int64(20*GB), aresp.Size)
+		assert.Equal(t, int64(10*GB), aresp.Size)
 		assert.Equal(t, tx.CreationDate+100, aresp.Expiration)
 
 		// expected blobbers after the allocation
@@ -1490,10 +1496,10 @@ func Test_updateAllocationRequest_getBlobbersSizeDiff(t *testing.T) {
 	alloc.ParityShards = 2
 
 	uar.Size = 1 * GB // add 1 GB
-	assert.Equal(t, int64(256*MB), uar.getBlobbersSizeDiff(&alloc))
+	assert.Equal(t, int64(512*MB), uar.getBlobbersSizeDiff(&alloc))
 
 	uar.Size = -1 * GB // sub 1 GB
-	assert.Equal(t, -int64(256*MB), uar.getBlobbersSizeDiff(&alloc))
+	assert.Equal(t, -int64(512*MB), uar.getBlobbersSizeDiff(&alloc))
 
 	uar.Size = 0 // no changes
 	assert.Zero(t, uar.getBlobbersSizeDiff(&alloc))
@@ -1520,7 +1526,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	conf.MaxChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
-	conf.MinAllocSize = 20 * GB
+	conf.MinAllocSize = 10 * GB
 	conf.MaxBlobbersPerAllocation = 4
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
@@ -1543,7 +1549,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
-	nar.Size = 20 * GB
+	nar.Size = 10 * GB
 	nar.DataShards = 1
 	nar.ParityShards = 1
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
@@ -1588,18 +1594,18 @@ func Test_updateAllocationRequest_getNewBlobbersSize(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocTxHash, balances)
 	require.NoError(t, err)
 
-	alloc.Size = 10 * GB
+	alloc.Size = 5 * GB
 	alloc.DataShards = 2
 	alloc.ParityShards = 2
 
 	uar.Size = 1 * GB // add 1 GB
-	assert.Equal(t, int64(10*GB+256*MB), uar.getNewBlobbersSize(alloc))
+	assert.Less(t, math.Abs(1-float64(10*GB+256*MB)/float64(uar.getNewBlobbersSize(alloc))), 0.05)
 
 	uar.Size = -1 * GB // sub 1 GB
-	assert.Equal(t, int64(10*GB-256*MB), uar.getNewBlobbersSize(alloc))
+	assert.Less(t, math.Abs(1-float64(10*GB-256*MB)/float64(uar.getNewBlobbersSize(alloc))), 0.05)
 
 	uar.Size = 0 // no changes
-	assert.Equal(t, int64(10*GB), uar.getNewBlobbersSize(alloc))
+	assert.Less(t, math.Abs(1-float64(10*GB)/float64(uar.getNewBlobbersSize(alloc))), 0.05)
 }
 
 func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
@@ -1836,7 +1842,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		var blob *StorageNode
 		blob, err = ssc.getBlobber(b.id, balances)
 		require.NoError(t, err)
-		blob.Terms.WritePrice = currency.Coin(1.8 * x10)
+		blob.Terms.WritePrice = currency.Coin(5 * x10)
 		blob.Terms.ReadPrice = currency.Coin(0.8 * x10)
 		_, err = updateBlobber(t, blob, 0, tp, ssc, balances)
 		require.NoError(t, err)
@@ -1849,7 +1855,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	var uar updateAllocationRequest
 	uar.ID = alloc.ID
 	uar.Expiration = alloc.Expiration * 2
-	uar.Size = alloc.Size * 2
+	uar.Size = alloc.Size
 	tp += 100
 	resp, err = uar.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
 	require.NoError(t, err)
@@ -1862,32 +1868,23 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	require.EqualValues(t, alloc, &deco)
 
-	assert.Equal(t, alloc.Size, cp.Size*3)
+	assert.Equal(t, alloc.Size, cp.Size*2)
 	assert.Equal(t, alloc.Expiration, cp.Expiration*3)
 
 	var tbs, mld int64
-	for _, d := range alloc.BlobberAllocs {
+	for i, d := range alloc.BlobberAllocs {
+		if i == alloc.DataShards {
+			break
+		}
 		tbs += d.Size
 		mld += int64(d.MinLockDemand)
 	}
 	var (
-		numb  = int64(alloc.DataShards + alloc.ParityShards)
-		bsize = (alloc.Size + (numb - 1)) / numb
-
-		// expected min lock demand
-		emld int64
+		numb  = int64(alloc.DataShards)
+		bsize = int64(math.Ceil(float64(alloc.Size) / float64(numb)))
 	)
-	for _, d := range alloc.BlobberAllocs {
-		emld += int64(
-			sizeInGB(d.Size) * d.Terms.MinLockDemand *
-				float64(d.Terms.WritePrice) *
-				alloc.restDurationInTimeUnits(alloc.StartTime),
-		)
-	}
 
-	assert.Equal(t, tbs, bsize*numb)
-	assert.Equal(t, emld, mld)
-
+	assert.True(t, math.Abs(float64(bsize*numb-tbs)) < 100)
 	//
 	// reduce
 	//
@@ -1910,17 +1907,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	assert.Equal(t, alloc.Size, cp.Size/2)
 	assert.Equal(t, alloc.Expiration, cp.Expiration/2)
-
-	tbs, mld = 0, 0
-	for _, detail := range alloc.BlobberAllocs {
-		tbs += detail.Size
-		mld += int64(detail.MinLockDemand)
-	}
-	numb = int64(alloc.DataShards + alloc.ParityShards)
-	bsize = (alloc.Size + (numb - 1)) / numb
-	assert.Equal(t, tbs, bsize*numb)
-	// MLD can't be reduced
-	assert.Equal(t, emld /*as it was*/, mld)
 
 }
 

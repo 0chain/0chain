@@ -267,24 +267,24 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 	return // ok
 }
 
-func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (currency.Coin, error) {
-	s, err := MakeClientStateRequest(clientID, urls, consensus)
+func MakeClientBalanceRequest(ctx context.Context, clientID string, urls []string, consensus int) (currency.Coin, error) {
+	s, err := MakeClientStateRequest(ctx, clientID, urls, consensus)
 	if err != nil {
 		return 0, err
 	}
 	return s.Balance, nil
 }
 
-func MakeClientNonceRequest(clientID string, urls []string, consensus int) (int64, error) {
-	s, err := MakeClientStateRequest(clientID, urls, consensus)
+func MakeClientNonceRequest(ctx context.Context, clientID string, urls []string, consensus int) (int64, error) {
+	s, err := MakeClientStateRequest(ctx, clientID, urls, consensus)
 	if err != nil {
 		return 0, err
 	}
 	return s.Nonce, nil
 }
 
-//MakeClientBalanceRequest to get a client's balance
-func MakeClientStateRequest(clientID string, urls []string, consensus int) (state.State, error) {
+// MakeClientStateRequest to get a client's balance
+func MakeClientStateRequest(ctx context.Context, clientID string, urls []string, consensus int) (state.State, error) {
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
 
 	//maxCount := 0
@@ -299,7 +299,15 @@ func MakeClientStateRequest(clientID string, urls []string, consensus int) (stat
 
 		logging.N2n.Info("Running GetClientBalance on", zap.String("url", u))
 
-		response, err := http.Get(u)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+		if err != nil {
+			logging.N2n.Error("Error creating request for sc rest api", zap.Any("error", err))
+			numErrs++
+			errString = errString + sharder + ":" + err.Error()
+			continue
+		}
+
+		response, err := httpClient.Do(req)
 		if err != nil {
 			logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
@@ -728,7 +736,19 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 
 }
 
-func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, scData *SmartContractTxnData, minerUrls []string) error {
+func syncClientNonce(sharders []string) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	return MakeClientNonceRequest(ctx, node.Self.Underlying().GetKey(), sharders, 33)
+}
+
+func SendSmartContractTxn(txn *Transaction,
+	address string,
+	value, fee int64,
+	scData *SmartContractTxnData,
+	minerUrls []string,
+	sharderUrls []string,
+) error {
 	txn.ToClientID = address
 	txn.Value = value
 	txn.Fee = fee
@@ -742,11 +762,11 @@ func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, sc
 
 	nextNonce := node.Self.GetNextNonce()
 	if nextNonce == 0 {
-		request, err := MakeClientNonceRequest(node.Self.Underlying().GetKey(), minerUrls, 33)
+		nonce, err := syncClientNonce(sharderUrls)
 		if err != nil {
-			logging.Logger.Error("Can't get nonce from remote", zap.Error(err))
+			logging.Logger.Error("can't get nonce from remote", zap.Error(err))
 		}
-		node.Self.SetNonce(request)
+		node.Self.SetNonce(nonce)
 		nextNonce = node.Self.GetNextNonce()
 	}
 	txn.Nonce = nextNonce

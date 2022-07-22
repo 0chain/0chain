@@ -91,6 +91,20 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				cr = lfb.Round
 			}
 
+			if lfb.Round+aheadN <= cr {
+				logging.Logger.Debug("process block, synced to lfb+ahead, start to force finalize rounds",
+					zap.Int64("current round", cr),
+					zap.Int64("lfb", lfb.Round),
+					zap.Int64("lfb+ahead", lfb.Round+aheadN))
+
+				for rn := lfb.Round + 1; rn <= cr; rn++ {
+					if r := sc.GetRound(rn); r != nil {
+						sc.FinalizeRound(sc.GetRound(rn))
+					}
+				}
+				continue
+			}
+
 			endRound = lfbTk.Round + aheadN
 
 			if endRound <= cr {
@@ -135,11 +149,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 						zap.Int64("current round", cr),
 						zap.Int64("lfb", lfb.Round),
 						zap.Bool("syncing", syncing))
-					go func() {
-						// sleep for a while to avoid pushing back too often
-						time.Sleep(100 * time.Millisecond)
-						sc.blockChannel <- b
-					}()
 				}
 
 				continue
@@ -434,7 +443,7 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 
 			mb := sc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls); err != nil {
+			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
 				logging.Logger.Warn("sharder health check failed, try again")
 			}
 

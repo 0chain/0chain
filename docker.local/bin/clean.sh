@@ -23,7 +23,8 @@ do
   rm -rf docker.local/sharder"$i"/data/cassandra/*
   echo "deleting sharder$i rocksdb db"
   rm -rf docker.local/sharder"$i"/data/rocksdb/*
-    rm -rf docker.local/sharder"$i"/data/postgresql/*
+  echo "delete sharder$i postgres db"
+  rm -rf docker.local/sharder"$i"/data/postgresql/*
 done
 
 for i in $(seq 1 4)

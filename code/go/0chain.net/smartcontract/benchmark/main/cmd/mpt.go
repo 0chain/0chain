@@ -188,7 +188,6 @@ func setUpMpt(
 	log.Println("funded faucet\t", time.Since(timer))
 
 	timer = time.Now()
-	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 
 	bk := &block.Block{}
 	magicBlock := &block.MagicBlock{}

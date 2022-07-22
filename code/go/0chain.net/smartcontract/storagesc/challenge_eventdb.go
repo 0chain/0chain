@@ -56,13 +56,13 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	}, nil
 }
 
-func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) error {
+func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) {
 
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch))
-	return nil
+	return
 }
 
-func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.StateContextI) error {
+func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.StateContextI) {
 	data := &dbs.DbUpdates{
 		Id: chID,
 		Updates: map[string]interface{}{
@@ -71,7 +71,14 @@ func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.St
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, data)
-	return nil
+}
+
+func emitUpdateBlobberChallengeStats(blobberId string, passed bool, balances cstate.StateContextI) {
+	data := dbs.ChallengeResult{
+		BlobberId: blobberId,
+		Passed:    passed,
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberId, data)
 }
 
 func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {

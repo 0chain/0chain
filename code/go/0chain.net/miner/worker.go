@@ -235,7 +235,7 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 			mb := mc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
 			go func() {
-				if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls); err != nil {
+				if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
 					logging.Logger.Warn("miner health check -  send smart contract failed",
 						zap.Int("urls len", len(minerUrls)),
 						zap.Error(err))

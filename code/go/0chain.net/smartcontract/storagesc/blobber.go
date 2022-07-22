@@ -101,14 +101,24 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
 	}
 
+	if err = validateStakePoolSettings(blobber.StakePoolSettings, conf); err != nil {
+		return fmt.Errorf("invalid new stake pool settings:  %v", err)
+	}
+
 	// update stake pool settings
 	var sp *stakePool
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
-	if err = validateStakePoolSettings(blobber.StakePoolSettings, conf); err != nil {
-		return fmt.Errorf("invalid new stake pool settings:  %v", err)
+	stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
+	if err != nil {
+		return fmt.Errorf("error calculating staked capacity: %v", err)
+	}
+
+	if blobber.Capacity < stakedCapacity {
+		return fmt.Errorf("write_price_change: staked capacity(%d) exceeding total_capacity(%d)",
+			stakedCapacity, blobber.Capacity)
 	}
 
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
@@ -536,7 +546,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
@@ -708,7 +718,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 	if err != nil {
@@ -769,8 +779,8 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 		return common.NewError("blobber_add_allocation",
 			"unable to fetch blobbers stake pool")
 	}
-	stakedAlloc := sp.cleanStake()
-	weight := uint64(stakedAlloc) * blobUsedCapacity
+	stakedAmount := sp.cleanStake()
+	weight := uint64(stakedAmount) * blobUsedCapacity
 
 	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight)
 	if err != nil {
