@@ -13,6 +13,7 @@ type BlobberSnapshot struct {
 	BlobberID string `json:"blobber_id" gorm:"index:idx_blobber_snapshot"`
 
 	Stake currency.Coin `json:"stake"`
+	// todo implement the following fields
 	//ReservedSpace int64         `json:"reserved-space"`
 	//BlockRewards  currency.Coin `json:"blockRewards"`
 	//Updated       int64         `json:"written_to"`
