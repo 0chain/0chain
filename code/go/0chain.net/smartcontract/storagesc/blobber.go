@@ -125,10 +125,15 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
+	staked, err := sp.stake()
+	if err != nil {
+		return fmt.Errorf("can't get stake: %v", err)
+	}
+
 	data := dbs.DbUpdates{
 		Id: blobber.ID,
 		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
+			"total_stake": int64(staked),
 		},
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, data)
@@ -811,7 +816,11 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 		return common.NewError("blobber_add_allocation",
 			"unable to fetch blobbers stake pool")
 	}
-	stakedAlloc := sp.cleanStake()
+	stakedAlloc, err := sp.cleanStake()
+	if err != nil {
+		return common.NewError("blobber_add_allocation",
+			"unable to clean stake pool")
+	}
 	weight := uint64(stakedAlloc) * blobUsedCapacity
 
 	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight)
@@ -865,10 +874,14 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
+	staked, err := sp.stake()
+	if err != nil {
+		return fmt.Errorf("getting stake: %v", err)
+	}
 	data := dbs.DbUpdates{
 		Id: t.ClientID,
 		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
+			"total_stake": int64(staked),
 		},
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, data)

@@ -716,9 +716,14 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 		return fmt.Errorf("blobber %s failed health check", blobber.ID)
 	}
 
-	if blobber.Terms.WritePrice > 0 && sp.cleanCapacity(now, blobber.Terms.WritePrice) < bSize {
+	cleanCapacity, err := sp.cleanCapacity(now, blobber.Terms.WritePrice)
+	if err != nil {
+		return fmt.Errorf("failed to get clean capacity: %v", err)
+	}
+
+	if blobber.Terms.WritePrice > 0 && cleanCapacity < bSize {
 		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
-			blobber.ID, sp.cleanCapacity(now, blobber.Terms.WritePrice), bSize)
+			blobber.ID, cleanCapacity, bSize)
 	}
 
 	return nil

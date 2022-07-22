@@ -158,7 +158,10 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 			return false // keep, ok or already filtered by bid
 		}
 		// clean capacity (without delegate pools want to 'unstake')
-		var free = sp.cleanCapacity(now, b.Terms.WritePrice)
+		free, err := sp.cleanCapacity(now, b.Terms.WritePrice)
+		if err != nil {
+			return true // kick off
+		}
 		return free < size // kick off if it hasn't enough free space
 	})
 }
@@ -1631,10 +1634,16 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
 
+		staked, err := sps[i].stake()
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"getting stake of "+d.BlobberID+": "+err.Error())
+		}
+
 		data := dbs.DbUpdates{
 			Id: d.BlobberID,
 			Updates: map[string]interface{}{
-				"total_stake": int64(sps[i].stake()),
+				"total_stake": int64(staked),
 			},
 		}
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, data)

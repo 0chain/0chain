@@ -245,10 +245,14 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 		if err = sp.save(ssc.ID, validators[i], balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
+		staked, err := sp.stake()
+		if err != nil {
+			return fmt.Errorf("can't get stake: %v", err)
+		}
 		data := dbs.DbUpdates{
 			Id: validators[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(sp.stake()),
+				"total_stake": int64(staked),
 			},
 		}
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, validators[i], data)

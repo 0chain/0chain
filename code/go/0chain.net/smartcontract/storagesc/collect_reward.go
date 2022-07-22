@@ -96,10 +96,16 @@ func (ssc *StorageSmartContract) collectReward(
 			"cannot save config: %v", err)
 	}
 
+	staked, err := sp.stake()
+	if err != nil {
+		return "", common.NewErrorf("collect_reward_failed",
+			"can't get stake: %v", err)
+	}
+
 	data := dbs.DbUpdates{
 		Id: providerID,
 		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
+			"total_stake": int64(staked),
 		},
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)

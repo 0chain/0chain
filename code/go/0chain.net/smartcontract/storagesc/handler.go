@@ -2197,7 +2197,14 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 			common.Respond(w, r, nil, err)
 			return
 		}
-		total, err = maths.SafeAddInt64(total, int64(sp.stake()))
+		staked, err := sp.stake()
+		if err != nil {
+			err := common.NewErrInternal("cannot get stake" + err.Error())
+			common.Respond(w, r, nil, err)
+			return
+		}
+
+		maths.SafeAddInt64(total, int64(staked)) // 810
 		if err != nil {
 			err := common.NewErrInternal("cannot get total stake" + err.Error())
 			common.Respond(w, r, nil, err)

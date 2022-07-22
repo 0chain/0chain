@@ -115,7 +115,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	for i, br := range blobberRewards {
 		sp := stakePools[i]
 
-		stake := float64(sp.stake())
+		staked, err := sp.stake()
+		if err != nil {
+			return err
+		}
+
+		stake := float64(staked)
 
 		gamma := maths.GetGamma(
 			conf.BlockReward.Gamma.A,
@@ -213,10 +218,16 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}
+		staked, err := qsp.stake()
+		if err != nil {
+			return common.NewError("blobber_block_rewards_failed",
+				"getting stake pool stake: "+err.Error())
+		}
+
 		data := dbs.DbUpdates{
 			Id: qualifyingBlobberIds[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(qsp.stake()),
+				"total_stake": int64(staked),
 			},
 		}
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
