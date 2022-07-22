@@ -1516,7 +1516,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var wp *writePool
 		wp, err = ssc.getWritePool(clientID, balances)
 		require.NoError(t, err)
-		assert.Equal(t, currency.Coin(400), wp.allocUntil(aresp.ID, aresp.Until()))
+
+		allocated, err := wp.allocUntil(aresp.ID, aresp.Until())
+		require.NoError(t, err)
+		assert.Equal(t, currency.Coin(400), allocated)
 
 		_, err = ssc.getStakePool("b1", balances)
 		require.NoError(t, err)
@@ -2166,8 +2169,11 @@ func Test_finalize_allocation(t *testing.T) {
 
 	tp += int64(toSeconds(alloc.ChallengeCompletionTime))
 	assert.Zero(t, cp.Balance, "should be drained")
-	assert.Zero(t, wp.allocUntil(allocID, common.Timestamp(tp)),
-		"should be drained")
+
+	allocated, err := wp.allocUntil(allocID, common.Timestamp(tp))
+
+	require.NoError(t, err)
+	assert.Zero(t, allocated, "should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)

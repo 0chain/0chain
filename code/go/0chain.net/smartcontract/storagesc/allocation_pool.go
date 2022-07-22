@@ -280,14 +280,14 @@ func (aps allocationPools) blobberCut(allocID, blobberID string,
 }
 
 func (aps allocationPools) allocUntil(allocID string, until common.Timestamp) (
-	value currency.Coin) {
+	value currency.Coin, err error) {
 
 	var cut = aps.allocationCut(allocID)
 	cut = removeExpired(cut, until)
 	for _, ap := range cut {
 		newValue, err := currency.AddCoin(value, ap.Balance)
 		if err != nil {
-			panic(err) // TODO: handle error
+			return value, err
 		}
 		value = newValue
 	}

@@ -942,7 +942,12 @@ func (sc *StorageSmartContract) extendAllocation(
 				return common.NewErrorf("allocation_extending_failed",
 					"can't get min lock demand: %v", err)
 			}
-			if wps.allocUntil(alloc.ID, until) < mldLeft {
+			allocated, err := wps.allocUntil(alloc.ID, until)
+			if err != nil {
+				return common.NewErrorf("allocation_extending_failed",
+					"can't allocate tokens: %v", err)
+			}
+			if allocated < mldLeft {
 				return common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")
 			}

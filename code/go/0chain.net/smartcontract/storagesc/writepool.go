@@ -158,7 +158,7 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value currency.Coin) (b
 }
 
 func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
-	value currency.Coin) {
+	value currency.Coin, err error) {
 
 	return wp.Pools.allocUntil(allocID, until)
 }
@@ -462,8 +462,14 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 	if !alloc.Finalized && !alloc.Canceled {
 		var (
 			unitl = alloc.Until()
-			leave = wp.allocUntil(ap.AllocationID, unitl) - ap.Balance
 		)
+		allocated, err := wp.allocUntil(ap.AllocationID, unitl)
+		if err != nil {
+			return "", common.NewError("write_pool_unlock_failed",
+				"can't get allocated tokens: "+err.Error())
+		}
+		leave := allocated - ap.Balance
+
 		want, err := alloc.restMinLockDemand()
 		if err != nil {
 			return "", err

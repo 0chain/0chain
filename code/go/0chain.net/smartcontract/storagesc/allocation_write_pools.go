@@ -60,7 +60,7 @@ func (awp *allocationWritePools) moveToChallenge(
 
 func (aps allocationWritePools) allocUntil(
 	allocID string, until common.Timestamp,
-) (value currency.Coin) {
+) (value currency.Coin, err error) {
 	return aps.allocationPools.allocUntil(allocID, until)
 }
 

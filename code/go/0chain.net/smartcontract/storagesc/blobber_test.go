@@ -842,7 +842,8 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(client.id, balances)
 	require.NoError(t, err)
-	var wps = wp.allocUntil(alloc.ID, alloc.Until())
+	wps, err := wp.allocUntil(alloc.ID, alloc.Until())
+	require.NoError(t, err)
 
 	t.Run("challenges without a response", func(t *testing.T) {
 
@@ -899,10 +900,11 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 		// values before
 		var (
-			wpb = wp.allocUntil(alloc.ID, alloc.Until())
-			cpb = cp.Balance
+			wpb, err = wp.allocUntil(alloc.ID, alloc.Until())
+			cpb      = cp.Balance
 		)
 
+		require.NoError(t, err)
 		require.EqualValues(t, wps, wpb+cpb)
 
 		// until the end
@@ -991,11 +993,10 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// values before
-		var (
-			wpa = wp.allocUntil(alloc.ID, alloc.Until())
-			cpa = cp.Balance
-		)
+		wpa, err := wp.allocUntil(alloc.ID, alloc.Until())
+		var cpa = cp.Balance
 
+		require.NoError(t, err)
 		require.Zero(t, cpa)
 		require.EqualValues(t, wpa, wps)
 		require.EqualValues(t, wps, wp.Pools.gimmeAll())
@@ -1069,7 +1070,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(client.id, balances)
 	require.NoError(t, err)
-	var wps = wp.allocUntil(alloc.ID, alloc.Until())
+	wps, err := wp.allocUntil(alloc.ID, alloc.Until())
+	require.NoError(t, err)
 
 	t.Run("challenges without a response", func(t *testing.T) {
 
@@ -1132,10 +1134,11 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 		// values before
 		var (
-			wpb = wp.allocUntil(alloc.ID, alloc.Until())
-			cpb = cp.Balance
+			wpb, err = wp.allocUntil(alloc.ID, alloc.Until())
+			cpb      = cp.Balance
 		)
 
+		require.NoError(t, err)
 		require.EqualValues(t, wps, wpb+cpb)
 
 		// until the end
@@ -1223,11 +1226,10 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// values before
-		var (
-			wpa = wp.allocUntil(alloc.ID, alloc.Until())
-			cpa = cp.Balance
-		)
+		wpa, err := wp.allocUntil(alloc.ID, alloc.Until())
+		var cpa = cp.Balance
 
+		require.NoError(t, err)
 		require.Zero(t, cpa)
 		require.EqualValues(t, wpb, wpa)
 		require.EqualValues(t, wps, wp.Pools.gimmeAll())
