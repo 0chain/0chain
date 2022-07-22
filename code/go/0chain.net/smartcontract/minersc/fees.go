@@ -22,7 +22,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
+func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 	for _, pool := range mn.Pools {
 		if pool.Status == spenum.Pending {
 			pool.Status = spenum.Active
@@ -30,11 +30,12 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 			newTotalStaked, err := currency.AddCoin(mn.TotalStaked, pool.Balance)
 			if err != nil {
 				Logger.Error("Staked_Amount_Overflow", zap.Error(err))
-				panic(err) // TODO: handle this
+				return err
 			}
 			mn.TotalStaked = newTotalStaked
 		}
 	}
+	return nil
 }
 
 // LRU cache in action.
@@ -158,7 +159,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			minerDelete = true
 			continue
 		}
-		msc.activatePending(mn)
+		if err = msc.activatePending(mn); err != nil {
+			return
+		}
 		if _, ok := mbMiners[mn.ID]; !ok {
 			minersOffline = append(minersOffline, mn)
 			continue
@@ -194,7 +197,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			sharderDelete = true
 			continue
 		}
-		msc.activatePending(sn)
+		if err = msc.activatePending(sn); err != nil {
+			return
+		}
 		if _, ok := mbSharders[sn.ID]; !ok {
 			shardersOffline = append(shardersOffline, sn)
 			continue
