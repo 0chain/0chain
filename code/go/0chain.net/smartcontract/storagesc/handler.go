@@ -89,7 +89,53 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
+		rest.MakeEndpoint(storage+"/blobber-historic-stake", srh.getBlobberHistoricStake),
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-historic-stake blobber-historic-stake
+// Gets the amount staked on a blobber on a previous round
+//
+// parameters:
+//    + name: id
+//      description: id of blobber
+//      required: true
+//      in: query
+//      type: string
+//    + name: round
+//      description: round of which to get stake
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getBlobberHistoricStake(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	roundName := r.URL.Query().Get("round")
+	round, err := strconv.ParseInt(roundName, 10, 64)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	row, err := edb.GetBlobberSnapshot(id, round)
+	stake, err := row.Stake.Int64()
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, rest.Int64Map{
+		"round":         round,
+		"blobber-stake": stake,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_rounds_mint_total get_rounds_mint_total
