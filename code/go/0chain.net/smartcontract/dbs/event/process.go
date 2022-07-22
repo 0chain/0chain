@@ -57,6 +57,8 @@ const (
 	TagAddReward
 	TagAddChallenge
 	TagUpdateChallenge
+	TagLockStakePool
+	TagUnlockStakePool
 	NumberOfTags
 )
 

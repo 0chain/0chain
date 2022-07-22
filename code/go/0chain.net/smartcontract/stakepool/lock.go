@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -74,6 +76,13 @@ func (sp *StakePool) LockPool(
 		return fmt.Errorf("can't get user pools list: %v", err)
 	}
 	usp.add(providerId, newPoolId)
+	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, event.DelegatePoolLock{
+		Client:       txn.ClientID,
+		PoolId:       newPoolId,
+		ProviderId:   providerId,
+		ProviderType: providerType,
+		Amount:       txn.Value,
+	})
 	if err = usp.Save(providerType, txn.ClientID, balances); err != nil {
 		return fmt.Errorf("saving user pools: %v", err)
 	}
