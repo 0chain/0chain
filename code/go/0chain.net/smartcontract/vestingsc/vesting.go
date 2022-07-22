@@ -276,11 +276,11 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 }
 
 // required starting pool amount
-func (vp *vestingPool) want() (want currency.Coin) {
+func (vp *vestingPool) want() (want currency.Coin, err error) {
 	for _, d := range vp.Destinations {
 		newWant, err := currency.AddCoin(want, d.Amount)
 		if err != nil {
-			panic(err) // TODO: handle error
+			return 0, err
 		}
 		want = newWant
 	}
@@ -613,7 +613,12 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 	var vp = newVestingPoolFromReqeust(t.ClientID, &ar)
 	vp.ID = poolKey(vsc.ID, t.Hash) // set ID by this transaction
 
-	if t.Value < vp.want() {
+	amtWanted, err := vp.want()
+	if err != nil {
+		return "", common.NewError("create_vesting_pool_failed",
+			"couldn't calculate wanted amount: "+err.Error())
+	}
+	if t.Value < amtWanted {
 		return "", common.NewError("create_vesting_pool_failed",
 			"not enough tokens to create pool provided")
 	}
