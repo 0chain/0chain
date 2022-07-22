@@ -215,10 +215,14 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 func (ssc *StorageSmartContract) createWritePool(
 	t *transaction.Transaction,
 	alloc *StorageAllocation,
-	mintNewTokens bool,
+	mintNewTokens currency.Coin,
 	balances chainState.StateContextI,
 ) (err error) {
 	var wp *writePool
+	value := t.Value
+	if mintNewTokens != 0 {
+		value = mintNewTokens
+	}
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
@@ -230,12 +234,12 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	var mld = alloc.restMinLockDemand()
-	if t.Value < mld || t.Value == 0 {
+	if value < mld || value == 0 {
 		return fmt.Errorf("not enough tokens to honor the min lock demand"+
-			" (%d < %d)", t.Value, mld)
+			" (%d < %d)", value, mld)
 	}
 
-	if t.Value > 0 {
+	if value > 0 {
 		var until = alloc.Until()
 		ap, err := newAllocationPool(t, alloc, until, mintNewTokens, balances)
 		if err != nil {
@@ -303,7 +307,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	}
 
 	// check client balance
-	if err = stakepool.CheckClientBalance(t, balances); err != nil {
+	if err = stakepool.CheckClientBalance(t.ClientID, t.Value, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 

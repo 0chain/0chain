@@ -462,6 +462,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.FreeAllocationSettings.MaxChallengeCompletionTime
 	case FreeAllocationReadPoolFraction:
 		return conf.FreeAllocationSettings.ReadPoolFraction
+	case FreeAllocationMintAmount:
+		return conf.FreeAllocationSettings.MintAmount
 
 	case ValidatorReward:
 		return conf.ValidatorReward

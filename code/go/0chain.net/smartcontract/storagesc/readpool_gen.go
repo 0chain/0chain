@@ -65,13 +65,10 @@ func (z *readPool) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z readPoolLockRequest) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
+	// map header, size 1
 	// string "TargetId"
-	o = append(o, 0x82, 0xa8, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x49, 0x64)
+	o = append(o, 0x81, 0xa8, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x49, 0x64)
 	o = msgp.AppendString(o, z.TargetId)
-	// string "MintTokens"
-	o = append(o, 0xaa, 0x4d, 0x69, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x73)
-	o = msgp.AppendBool(o, z.MintTokens)
 	return
 }
 
@@ -99,12 +96,6 @@ func (z *readPoolLockRequest) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "TargetId")
 				return
 			}
-		case "MintTokens":
-			z.MintTokens, bts, err = msgp.ReadBoolBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MintTokens")
-				return
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -119,6 +110,6 @@ func (z *readPoolLockRequest) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z readPoolLockRequest) Msgsize() (s int) {
-	s = 1 + 9 + msgp.StringPrefixSize + len(z.TargetId) + 11 + msgp.BoolSize
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.TargetId)
 	return
 }

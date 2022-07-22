@@ -157,14 +157,15 @@ func newAllocationPool(
 	t *transaction.Transaction,
 	alloc *StorageAllocation,
 	until common.Timestamp,
-	mintNewTokens bool,
+	mintNewTokens currency.Coin,
 	balances chainState.StateContextI,
 ) (*allocationPool, error) {
 	var err error
-	if !mintNewTokens {
-		if err = stakepool.CheckClientBalance(t, balances); err != nil {
-			return nil, err
-		}
+	shouldMint := false
+	value := t.Value
+	if mintNewTokens > 0 {
+		shouldMint = true
+		value = mintNewTokens
 	}
 
 	var ap allocationPool
@@ -172,15 +173,19 @@ func newAllocationPool(
 	if transfer, _, err = ap.DigPool(t.Hash, t); err != nil {
 		return nil, fmt.Errorf("digging write pool: %v", err)
 	}
-	if mintNewTokens {
+
+	if shouldMint {
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     t.Value,
+			Amount:     value,
 		}); err != nil {
 			return nil, fmt.Errorf("minting tokens for write pool: %v", err)
 		}
 	} else {
+		if err = stakepool.CheckClientBalance(t.ClientID, value, balances); err != nil {
+			return nil, err
+		}
 		if err = balances.AddTransfer(transfer); err != nil {
 			return nil, fmt.Errorf("adding transfer to write pool: %v", err)
 		}
@@ -189,7 +194,7 @@ func newAllocationPool(
 	// set fields
 	ap.AllocationID = alloc.ID
 	ap.ExpireAt = until
-	ap.Blobbers, err = makeCopyAllocationBlobbers(*alloc, t.Value)
+	ap.Blobbers, err = makeCopyAllocationBlobbers(*alloc, value)
 	if err != nil {
 		return nil, fmt.Errorf("error creating blobber pools: %v", err)
 	}

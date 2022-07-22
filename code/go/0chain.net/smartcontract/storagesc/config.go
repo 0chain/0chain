@@ -28,6 +28,7 @@ type freeAllocationSettings struct {
 	WritePriceRange            PriceRange    `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
 	ReadPoolFraction           float64       `json:"read_pool_fraction"`
+	MintAmount                 float64       `json:"mint_amount"`
 }
 
 type stakePoolConfig struct {
@@ -443,6 +444,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
+	conf.FreeAllocationSettings.MintAmount = scc.GetFloat64(fas + "min_amount")
 
 	// allocation cancellation
 	conf.FailedChallengesToCancel = scc.GetInt(

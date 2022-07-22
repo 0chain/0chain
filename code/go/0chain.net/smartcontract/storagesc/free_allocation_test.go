@@ -209,6 +209,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		mockUserPublicKey        = "mock user public key"
 		mockTransactionHash      = "12345678"
 		mockReadPoolFraction     = 0.2
+		mockMintAmount           = 0.2
 		mockMinLock              = 10
 		mockFreeTokens           = 5 * mockMinLock
 		mockIndividualTokenLimit = mockFreeTokens + 1
@@ -226,6 +227,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			MaxChallengeCompletionTime: 1 * time.Hour,
 			Duration:                   24 * 365 * time.Hour,
 			ReadPoolFraction:           mockReadPoolFraction,
+			MintAmount:                 mockMintAmount,
 		}
 		mockAllBlobbers = &StorageNodes{}
 		conf            = &Config{
