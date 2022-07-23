@@ -1,6 +1,12 @@
 package chain
 
 import (
+	"0chain.net/smartcontract/faucetsc"
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/rest"
+	"0chain.net/smartcontract/storagesc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -10,13 +16,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/rest"
-	"0chain.net/smartcontract/storagesc"
-	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
@@ -222,15 +221,13 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
 
-	scaddress := pathParams[1]
-	names := GetFunctionNames(scaddress)
+	key := pathParams[1]
+	names := GetFunctionNames(pathParams[1])
 
 	sort.Strings(names)
 	for _, funcName := range names {
 		friendlyName := strings.TrimLeft(funcName, "/")
-		lastSlash := strings.LastIndex(friendlyName, "/")
-		shortName := friendlyName[lastSlash:]
-		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, shortName, "/v1/screst/*"+funcName+"*")
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+funcName, "/v1/screst/*"+funcName+"*")
 	}
 	fmt.Fprintf(w, "</table>")
 }
