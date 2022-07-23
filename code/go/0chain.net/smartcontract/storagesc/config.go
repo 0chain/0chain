@@ -31,7 +31,8 @@ type freeAllocationSettings struct {
 }
 
 type stakePoolConfig struct {
-	MinLock currency.Coin `json:"min_lock"`
+	MinLock       currency.Coin `json:"min_lock"`
+	MinLockPeriod time.Duration `json:"min_lock_period"`
 }
 
 type readPoolConfig struct {

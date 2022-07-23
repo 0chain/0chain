@@ -91,7 +91,39 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
+		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank blobber-rank
+// Gets the rank of a blobber.
+//   challenges passed / total challenges
+//
+// parameters:
+//    + name: id
+//      description: id of blobber
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getBlobberRank(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	rank, err := edb.GetBlobberRank(id)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"blobber-rank": rank,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
@@ -388,10 +420,10 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 			Min: int64(request.WritePriceRange.Min),
 			Max: int64(request.WritePriceRange.Max),
 		},
-		Size:              int(request.Size),
-		AllocationSize:    allocationSize,
-		PreferredBlobbers: request.Blobbers,
-		NumberOfBlobbers:  numberOfBlobbers,
+		Size:               int(request.Size),
+		AllocationSize:     allocationSize,
+		PreferredBlobbers:  request.Blobbers,
+		NumberOfDataShards: sa.DataShards,
 	}, limit, balances.Now())
 
 	if err != nil {
@@ -922,14 +954,22 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 //      required: false
 //      in: query
 //      type: string
+//    + name: round
+//      description: block round
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200: Block
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) {
-	hash := r.URL.Query().Get("block_hash")
-	date := r.URL.Query().Get("date")
+	var (
+		hash        = r.URL.Query().Get("block_hash")
+		date        = r.URL.Query().Get("date")
+		roundString = r.URL.Query().Get("round")
+	)
 
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -944,6 +984,7 @@ func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) 
 		}
 
 		common.Respond(w, r, &block, nil)
+		return
 	}
 
 	if date != "" {
@@ -954,6 +995,24 @@ func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) 
 		}
 
 		common.Respond(w, r, &block, nil)
+		return
+	}
+
+	if roundString != "" {
+		round, err := strconv.ParseUint(roundString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error parsing parameter string "+err.Error()))
+			return
+		}
+
+		block, err := edb.GetBlockByRound(int64(round))
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error getting block "+err.Error()))
+			return
+		}
+
+		common.Respond(w, r, &block, nil)
+		return
 	}
 
 	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
@@ -1794,7 +1853,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 
 	if toClientID != "" {
-		rtv, err := edb.GetTransactionByToClientId(clientID, limit)
+		rtv, err := edb.GetTransactionByToClientId(toClientID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1839,8 +1898,12 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
-	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
-
+	rtv, err := edb.GetTransactions(limit)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	common.Respond(w, r, rtv, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes transactionHashes
@@ -1962,7 +2025,8 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 type storageNodeResponse struct {
 	StorageNode
-	TotalStake currency.Coin `json:"total_stake"`
+	TotalServiceCharge currency.Coin `json:"total_service_charge"`
+	TotalStake         currency.Coin `json:"total_stake"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
@@ -1997,7 +2061,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				Description: blobber.Description,
 			},
 		},
-		TotalStake: blobber.TotalStake,
+		TotalServiceCharge: blobber.TotalServiceCharge,
+		TotalStake:         blobber.TotalStake,
 	}
 }
 

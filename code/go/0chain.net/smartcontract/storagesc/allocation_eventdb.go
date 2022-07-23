@@ -219,11 +219,11 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	return alloc, nil
 }
 
-func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) *dbs.DbUpdates {
+func (sa *StorageAllocation) buildDbUpdates() *dbs.DbUpdates {
 
 	termsByte, _ := sa.marshalTerms() //err always is nil
 
-	return &dbs.DbUpdates{
+	dbUpdates := &dbs.DbUpdates{
 		Id: sa.ID,
 		Updates: map[string]interface{}{
 			"allocation_name":           sa.Name,
@@ -251,6 +251,17 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) *dbs.
 			"time_unit":                 int64(sa.TimeUnit),
 		},
 	}
+
+	if sa.Stats != nil {
+		dbUpdates.Updates["num_writes"] = sa.Stats.NumWrites
+		dbUpdates.Updates["num_reads"] = sa.Stats.NumReads
+		dbUpdates.Updates["total_challenges"] = sa.Stats.TotalChallenges
+		dbUpdates.Updates["open_challenges"] = sa.Stats.OpenChallenges
+		dbUpdates.Updates["successful_challenges"] = sa.Stats.SuccessChallenges
+		dbUpdates.Updates["failed_challenges"] = sa.Stats.FailedChallenges
+		dbUpdates.Updates["latest_closed_challenge_txn"] = sa.Stats.LastestClosedChallengeTxn
+	}
+	return dbUpdates
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {

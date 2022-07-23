@@ -765,7 +765,7 @@ func (c *Chain) updateFeeStats(fb *block.Block) error {
 			return err
 		}
 	}
-	meanFees, _, err := currency.DivideCoin(totalFees, int64(len(fb.Txns)))
+	meanFees, _, err := currency.DistributeCoin(totalFees, int64(len(fb.Txns)))
 	if err != nil {
 		return err
 	}

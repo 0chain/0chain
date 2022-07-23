@@ -38,6 +38,12 @@ func (edb *EventDb) GetBlockByHash(hash string) (Block, error) {
 	return block, res.Error
 }
 
+func (edb *EventDb) GetBlockByRound(round int64) (Block, error) {
+	block := Block{}
+	res := edb.Store.Get().Table("blocks").Where(Block{Round: round}).First(&block)
+	return block, res.Error
+}
+
 func (edb *EventDb) GetBlockByDate(date string) (Block, error) {
 	block := Block{}
 

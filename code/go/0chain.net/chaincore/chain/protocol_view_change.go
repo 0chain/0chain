@@ -277,7 +277,7 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	logging.Logger.Debug("Register nodes to", zap.Strings("urls", minerUrls))
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
 
@@ -306,7 +306,7 @@ func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 
 	txn.PublicKey = selfNode.PublicKey
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
-	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
 

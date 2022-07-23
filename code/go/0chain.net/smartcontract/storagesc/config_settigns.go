@@ -45,6 +45,7 @@ const (
 	WritePoolMaxLockPeriod
 
 	StakePoolMinLock
+	StakePoolMinLockPeriod
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
@@ -142,6 +143,7 @@ var (
 		"writepool.max_lock_period",
 
 		"stakepool.min_lock",
+		"stakepool.min_lock_period",
 
 		"max_total_free_allocation",
 		"max_individual_free_allocation",
@@ -241,7 +243,8 @@ var (
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
 		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
 
-		"stakepool.min_lock": {StakePoolMinLock, smartcontract.CurrencyCoin},
+		"stakepool.min_lock":        {StakePoolMinLock, smartcontract.CurrencyCoin},
+		"stakepool.min_lock_period": {StakePoolMinLockPeriod, smartcontract.Duration},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
@@ -519,6 +522,11 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 			conf.WritePool = &writePoolConfig{}
 		}
 		conf.WritePool.MaxLockPeriod = change
+	case StakePoolMinLockPeriod:
+		if conf.StakePool == nil {
+			conf.StakePool = &stakePoolConfig{}
+		}
+		conf.StakePool.MinLockPeriod = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
@@ -663,6 +671,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.WritePool.MaxLockPeriod
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
+	case StakePoolMinLockPeriod:
+		return conf.StakePool.MinLockPeriod
 	case MaxTotalFreeAllocation:
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
