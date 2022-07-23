@@ -894,11 +894,18 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	cctx, cancel := context.WithTimeout(ctx, mc.ChainConfig.BlockProposalMaxWaitTime())
 	defer cancel()
 
+	buildInTxns, cost, err := mc.buildInTxns(ctx, lfb, b, blockState)
+	if err != nil {
+		return fmt.Errorf("get build-in txns failed: %v", err)
+	}
+
+	iterInfo.cost += cost
+
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
 	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
-	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
+	err = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(iterInfo.invalidTxns) > 0 {
 		var keys []string
 		for _, txn := range iterInfo.pastTxns {
@@ -994,30 +1001,13 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 	}
 
-	challengesEnabled := config.SmartContractConfig.GetBool(
-		"smart_contracts.storagesc.challenge_enabled")
-	if challengesEnabled {
-		err = mc.processTxn(ctx, mc.createGenerateChallengeTxn(b, blockState), b, blockState, iterInfo.clients)
+	for _, biTxn := range buildInTxns {
+		err = mc.processTxn(ctx, biTxn, b, blockState, iterInfo.clients)
 		if err != nil {
-			logging.Logger.Error("generate block (generate_challenge)",
-				zap.Int64("round", b.Round), zap.Error(err))
-		}
-	}
-
-	if mc.ChainConfig.IsBlockRewardsEnabled() &&
-		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
-		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
-		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b, blockState), b, blockState, iterInfo.clients)
-		if err != nil {
-			logging.Logger.Error("generate block (blockRewards)", zap.Int64("round", b.Round), zap.Error(err))
-		}
-	}
-
-	if mc.SmartContractSettingUpdatePeriod() != 0 &&
-		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
-		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b, blockState), b, blockState, iterInfo.clients)
-		if err != nil {
-			logging.Logger.Error("generate block (commit settings)", zap.Int64("round", b.Round), zap.Error(err))
+			logging.Logger.Warn("generate block - process build-in txn failed",
+				zap.String("SC", txn.TransactionData),
+				zap.Int64("round", b.Round),
+				zap.Error(err))
 		}
 	}
 
@@ -1100,4 +1090,39 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	return nil
+}
+
+func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block, state util.MerklePatriciaTrieI) ([]*transaction.Transaction, int, error) {
+	txns := make([]*transaction.Transaction, 0, 4)
+
+	if mc.ChainConfig.IsFeeEnabled() {
+		txns = append(txns, mc.createFeeTxn(b, state))
+	}
+
+	if config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled") {
+		txns = append(txns, mc.createGenerateChallengeTxn(b, state))
+	}
+
+	if mc.ChainConfig.IsBlockRewardsEnabled() &&
+		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
+		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
+		txns = append(txns, mc.createBlockRewardTxn(b, state))
+	}
+
+	if mc.SmartContractSettingUpdatePeriod() != 0 &&
+		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
+		txns = append(txns, mc.storageScCommitSettingChangesTx(b, state))
+	}
+
+	var cost int
+	for _, txn := range txns {
+		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+		if err != nil {
+			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+			return nil, 0, err
+		}
+		cost += c
+	}
+
+	return txns, cost, nil
 }
