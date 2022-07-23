@@ -26,7 +26,10 @@ func (c *Chain) SetupSC(ctx context.Context) {
 			func() {
 				isRegisteredC := make(chan bool)
 				cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-				defer cancel()
+				defer func() {
+					logging.Logger.Info("cancelling setup sc context")
+					cancel()
+				}()
 
 				go func() {
 					isRegistered := c.isRegistered(cctx)
