@@ -228,7 +228,9 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(names)
 	for _, funcName := range names {
 		friendlyName := strings.TrimLeft(funcName, "/")
-		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, friendlyName, "/v1/screst/*"+funcName+"*")
+		lastSlash := strings.LastIndex(friendlyName, "/")
+		shortName := friendlyName[lastSlash:]
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, shortName, "/v1/screst/*"+funcName+"*")
 	}
 	fmt.Fprintf(w, "</table>")
 }
