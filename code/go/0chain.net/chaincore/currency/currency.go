@@ -27,8 +27,6 @@ var (
 	ErrUint64AddOverflow = errors.New("uint64 addition overflow")
 	// ErrInt64AddOverflow is returned if when adding int64 values overflow int64
 	ErrInt64AddOverflow = errors.New("int64 addition overflow")
-	// ErrFloat64AddOverflow is returned if when adding float64 values overflow float64
-	ErrFloat64AddOverflow = errors.New("float64 addition overflow")
 	// ErrUint64MinusOverflow is returned if when subtracting uint64 values overflow uint64
 	ErrUint64MinusOverflow = errors.New("uint64 minus overflow")
 	// ErrUint64OverflowsInt64 is returned if when converting a uint64 to an int64 overflow int64
@@ -119,8 +117,7 @@ func MultCoin(c, b Coin) (Coin, error) {
 func AddCoin(c, b Coin) (Coin, error) {
 	sum := c + b
 	if sum < c || sum < b {
-		// return 0, ErrUint64AddOverflow
-		return c, ErrUint64AddOverflow
+		return 0, ErrUint64AddOverflow
 	}
 	return sum, nil
 }

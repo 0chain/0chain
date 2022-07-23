@@ -708,13 +708,10 @@ func (ap *allocPeriod) weight() float64 {
 // returns weighted average read and write prices
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
-		rp, wp float64 // read sum, write sum (weighted)
+		apw, npw = ap.weight(), np.weight() // weights
+		ws       = apw + npw                // weights sum
+		rp, wp   float64                    // read sum, write sum (weighted)
 	)
-	apw := ap.weight()
-
-	npw := np.weight()
-
-	ws := apw + npw // weights sum
 
 	apReadF, err := ap.read.Float64()
 	if err != nil {
@@ -736,8 +733,8 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 		return 0, 0, err
 	}
 
-	rp = (npReadF * npw) + (apReadF * apw)
-	wp = (npWriteF * npw) + (apWriteF * apw)
+	rp = (apReadF * apw) + (npReadF * npw)
+	wp = (apWriteF * apw) + (npWriteF * npw)
 
 	avgRead, err = currency.Float64ToCoin(rp / ws)
 	if err != nil {
@@ -1605,7 +1602,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				return err
 			}
 
-			reward, err := currency.Float64ToCoin(passRates[i] * cpBalance * ratio)
+			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i])
 			if err != nil {
 				return err
 			}

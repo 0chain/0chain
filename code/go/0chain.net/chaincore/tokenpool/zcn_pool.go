@@ -76,7 +76,7 @@ func (p *ZcnPool) TransferTo(op TokenPoolI, value currency.Coin, _ interface{}) 
 		return nil, "", common.NewError("pool-to-pool transfer failed", "value exceeds balance")
 	}
 	tpr := &TokenPoolTransferResponse{FromPool: p.ID, ToPool: op.GetID(), Value: value}
-	bal, err := currency.AddCoin(p.Balance, value)
+	bal, err := currency.AddCoin(op.GetBalance(), value)
 	if err != nil {
 		return nil, "", err
 	}

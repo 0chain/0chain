@@ -215,7 +215,6 @@ func (sp *StakePool) DistributeRewards(
 	if err != nil {
 		return err
 	}
-
 	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
 	if err != nil {
 		return err

@@ -144,7 +144,6 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value currency.Coin) (b
 			return nil, err
 		}
 		ratio := fBlobWP / fTotal
-
 		balance, err := currency.Float64ToCoin(fValue * ratio)
 		if err != nil {
 			return nil, err
@@ -343,10 +342,11 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		}
 		var total currency.Coin // total write price
 		for _, b := range alloc.BlobberAllocs {
-			total, err = currency.AddCoin(total, b.Terms.WritePrice)
+			newTotal, err := currency.AddCoin(total, b.Terms.WritePrice)
 			if err != nil {
 				return "", err
 			}
+			total = newTotal
 		}
 		fTotal, err := total.Float64()
 		if err != nil {
@@ -361,7 +361,6 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 					"converting blobber write price to float64: %v", err)
 			}
 			var ratio = fBlobWP / fTotal
-
 			bal, err := currency.Float64ToCoin(fTxnVal * ratio)
 			if err != nil {
 				return "", common.NewErrorf("write_pool_lock_failed",
@@ -460,20 +459,19 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 	}
 
 	if !alloc.Finalized && !alloc.Canceled {
-		var (
-			unitl = alloc.Until()
-		)
+		var unitl = alloc.Until()
+
+		want, err := alloc.restMinLockDemand()
+		if err != nil {
+			return "", err
+		}
+
 		allocated, err := wp.allocUntil(ap.AllocationID, unitl)
 		if err != nil {
 			return "", common.NewError("write_pool_unlock_failed",
 				"can't get allocated tokens: "+err.Error())
 		}
 		leave := allocated - ap.Balance
-
-		want, err := alloc.restMinLockDemand()
-		if err != nil {
-			return "", err
-		}
 
 		if leave < want && ap.ExpireAt >= unitl {
 			return "", common.NewError("write_pool_unlock_failed",

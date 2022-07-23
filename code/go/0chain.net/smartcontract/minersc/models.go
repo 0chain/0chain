@@ -555,9 +555,7 @@ func (gn *GlobalNode) canMint() bool {
 
 func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
-	var (
-		rr = gn.RewardRate
-	)
+	var rr = gn.RewardRate
 	// decline the value
 	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
 
@@ -578,7 +576,6 @@ func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 	if err != nil {
 		return 0, 0, err
 	}
-
 	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio)
 	if err != nil {
 		return 0, 0, err
@@ -843,7 +840,6 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.setConfigs(gn)
 	var m = min(dkgmn.MaxN, n)
 	dkgmn.N = m
-
 	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
 	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 }

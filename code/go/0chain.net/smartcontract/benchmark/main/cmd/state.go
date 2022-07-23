@@ -95,7 +95,7 @@ func mockTransferAmount(
 
 	newBal, err := currency.AddCoin(toState.Balance, amount)
 	if err != nil {
-		return // TODO: handle error
+		return
 	}
 	toState.Balance = newBal
 	_, _ = clientState.Insert(util.Path(to), &toState)

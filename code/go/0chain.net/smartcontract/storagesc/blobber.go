@@ -423,15 +423,17 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't transfer tokens from read pool to stake pool: %v", err)
 	}
-	details.ReadReward, err = currency.AddCoin(details.ReadReward, value) // stat
+	readReward, err := currency.AddCoin(details.ReadReward, value) // stat
 	if err != nil {
 		return "", err
 	}
+	details.ReadReward = readReward
 
-	details.Spent, err = currency.AddCoin(details.MinLockDemand, value) // reduce min lock demand left
+	spent, err := currency.AddCoin(details.MinLockDemand, value) // reduce min lock demand left
 	if err != nil {
 		return "", err
 	}
+	details.Spent = spent
 
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
@@ -549,15 +551,17 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 
-		alloc.MovedToChallenge, err = currency.AddCoin(alloc.MovedToChallenge, move)
+		movedToChallenge, err := currency.AddCoin(alloc.MovedToChallenge, move)
 		if err != nil {
 			return err
 		}
+		alloc.MovedToChallenge = movedToChallenge
 
-		details.Spent, err = currency.AddCoin(details.Spent, move)
+		spent, err := currency.AddCoin(details.Spent, move)
 		if err != nil {
 			return err
 		}
+		details.Spent = spent
 	} else {
 		// delete (challenge_pool -> write_pool)
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
@@ -569,15 +573,17 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
-		alloc.MovedBack, err = currency.AddCoin(alloc.MovedBack, move)
+		movedBack, err := currency.AddCoin(alloc.MovedBack, move)
 		if err != nil {
 			return err
 		}
+		alloc.MovedBack = movedBack
 
-		details.Returned, err = currency.AddCoin(details.Returned, move)
+		returned, err := currency.AddCoin(details.Returned, move)
 		if err != nil {
 			return err
 		}
+		details.Returned = returned
 	}
 
 	if err := wps.saveWritePools(sc.ID, balances); err != nil {

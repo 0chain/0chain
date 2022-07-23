@@ -149,10 +149,11 @@ func (sp *stakePool) empty(
 	}
 	if staked < totalBalance {
 		if dp.Status != spenum.Unstaking {
-			sp.TotalUnStake, err = currency.AddCoin(sp.TotalUnStake, dp.Balance)
+			totalUnStake, err := currency.AddCoin(sp.TotalUnStake, dp.Balance)
 			if err != nil {
 				return false, err
 			}
+			sp.TotalUnStake = totalUnStake
 
 			dp.Status = spenum.Unstaking
 		}
