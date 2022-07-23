@@ -354,7 +354,6 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		if err != nil {
 			return nil, err
 		}
-
 		cost += c
 		costs = append(costs, c)
 	}
