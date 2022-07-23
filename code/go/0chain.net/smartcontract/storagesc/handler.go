@@ -1839,7 +1839,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 
 	if toClientID != "" {
-		rtv, err := edb.GetTransactionByToClientId(clientID, limit)
+		rtv, err := edb.GetTransactionByToClientId(toClientID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
