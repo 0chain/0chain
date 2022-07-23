@@ -39,7 +39,7 @@ options:
     - "zcnscbridge"
     - "zcnscbridge_rest"
   omitted_tests:
-  save_path: # do not add a load_path key, this is read from command line options
+  save_path: ./saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
 
 dbs:
