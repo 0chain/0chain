@@ -62,6 +62,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&Authorizer{},
 		&Challenge{},
 		&Snapshot{},
+		&BlobberSnapshot{},
 	); err != nil {
 		return err
 	}

@@ -113,6 +113,7 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context) {
 		select {
 		case e := <-edb.roundEventsChan:
 			edb.updateSnapshot(e)
+			edb.updateBlobberSnapshot(e)
 		case <-ctx.Done():
 			return
 		}
