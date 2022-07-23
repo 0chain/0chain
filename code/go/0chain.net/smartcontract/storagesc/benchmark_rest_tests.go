@@ -155,6 +155,14 @@ func BenchmarkRestTests(
 				Endpoint: srh.getAllocations,
 			},
 			{
+				FuncName: "blobber-snapshot",
+				Params: map[string]string{
+					"id":    getMockBlobberId(1),
+					"round": "2",
+				},
+				Endpoint: srh.getBlobberSnapshot,
+			},
+			{
 				FuncName: "allocation_min_lock",
 				Params: map[string]string{
 					"allocation_data": func() string {

@@ -426,6 +426,7 @@ func AddMockBlobbers(
 				panic(err)
 			}
 			_ = eventDb.Store.Get().Create(&blobberDb)
+			addMockBlobberSnapshots(blobberDb, eventDb)
 		}
 
 		if i < numRewardPartitionBlobbers {
@@ -449,6 +450,27 @@ func AddMockBlobbers(
 		panic(err)
 	}
 	return rtvBlobbers
+}
+
+func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
+	for i := 1; i < viper.GetInt(sc.NumBlocks); i++ {
+		snapshot := event.BlobberSnapshot{
+			Round:              int64(i),
+			BlobberID:          blobber.BlobberID,
+			Capacity:           blobber.Capacity,
+			Allocated:          blobber.Allocated,
+			Used:               blobber.Used,
+			SavedData:          blobber.SavedData,
+			OffersTotal:        blobber.OffersTotal,
+			UnstakeTotal:       blobber.UnstakeTotal,
+			TotalServiceCharge: blobber.TotalServiceCharge,
+			TotalStake:         blobber.TotalStake,
+		}
+		res := edb.Store.Get().Create(&snapshot)
+		if res.Error != nil {
+			log.Fatal(res.Error)
+		}
+	}
 }
 
 func AddMockValidators(
