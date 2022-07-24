@@ -14,7 +14,7 @@ import (
 func (c *Chain) SetupSC(ctx context.Context) {
 	logging.Logger.Info("SetupSC start...")
 	// create timer with 0 duration to start it immediately
-	tm := time.NewTimer(0)
+	tm := time.NewTimer(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():

@@ -276,7 +276,9 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	txn.PublicKey = selfNode.PublicKey
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
-	logging.Logger.Debug("Register nodes to", zap.Strings("urls", minerUrls))
+	logging.Logger.Debug("Register nodes to",
+		zap.Strings("urls", minerUrls),
+		zap.String("id", mn.ID))
 	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
