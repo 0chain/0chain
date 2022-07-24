@@ -98,7 +98,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/v1/transaction/put": common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
-					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
+					memorystore.WithConnectionEntityJSONHandler(PutTransaction(c), transactionEntityMetadata),
 					transaction.TransactionEntityChannel,
 				),
 				transactionEntityMetadata,
@@ -1294,34 +1294,35 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 }
 
 /*PutTransaction - for validation of transactions using chain level parameters */
-func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	txn, ok := entity.(*transaction.Transaction)
-	if !ok {
-		return nil, fmt.Errorf("invalid request %T", entity)
-	}
-
-	sc := GetServerChain()
-	if sc.TxnMaxPayload() > 0 {
-		if len(txn.TransactionData) > sc.TxnMaxPayload() {
-			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload())
-			return nil, common.NewError("txn_exceed_max_payload", s)
+func PutTransaction(c Chainer) datastore.JSONEntityReqResponderF {
+	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		txn, ok := entity.(*transaction.Transaction)
+		if !ok {
+			return nil, fmt.Errorf("invalid request %T", entity)
 		}
-	}
 
-	// Calculate and update fee
-	if err := txn.ValidateFee(sc.ChainConfig.TxnExempt(), sc.ChainConfig.MinTxnFee()); err != nil {
-		return nil, err
-	}
-	if err := txn.ValidateNonce(); err != nil {
-		return nil, err
-	}
+		if c.GetChainConfig().TxnMaxPayload() > 0 {
+			if len(txn.TransactionData) > c.GetChainConfig().TxnMaxPayload() {
+				s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", c.GetChainConfig().TxnMaxPayload())
+				return nil, common.NewError("txn_exceed_max_payload", s)
+			}
+		}
 
-	// save validated transactions to cache for miners only
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
+		// Calculate and update fee
+		if err := txn.ValidateFee(c.GetChainConfig().TxnExempt(), c.GetChainConfig().MinTxnFee()); err != nil {
+			return nil, err
+		}
+		if err := txn.ValidateNonce(); err != nil {
+			return nil, err
+		}
+
+		// save validated transactions to cache for miners only
+		if node.Self.Underlying().Type == node.NodeTypeMiner {
+			return transaction.PutTransaction(ctx, txn)
+		}
+
 		return transaction.PutTransaction(ctx, txn)
 	}
-
-	return transaction.PutTransaction(ctx, txn)
 }
 
 //RoundInfoHandler collects and writes information about current round

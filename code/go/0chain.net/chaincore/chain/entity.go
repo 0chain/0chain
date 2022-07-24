@@ -213,6 +213,10 @@ type SyncBlockReq struct {
 	SaveToDB bool
 }
 
+func (c *Chain) GetChainConfig() config.ChainConfig {
+	return c.ChainConfig
+}
+
 func (c *Chain) SetupEventDatabase() error {
 	c.eventMutex.Lock()
 	defer c.eventMutex.Unlock()

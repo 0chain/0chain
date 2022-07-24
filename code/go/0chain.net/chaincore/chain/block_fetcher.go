@@ -345,6 +345,7 @@ type FetchedNotarizedBlockHandler interface {
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
 // The Chainer represents Chain.
 type Chainer interface {
+	GetChainConfig() config.ChainConfig
 	// LFB tickets work
 	SubLFBTicket() (sub chan *LFBTicket)
 	UnsubLFBTicket(sub chan *LFBTicket)
