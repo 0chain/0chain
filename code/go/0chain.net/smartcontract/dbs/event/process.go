@@ -71,6 +71,7 @@ const (
 	TagBurn
 	TagAllocValueChange
 	TagAllocBlobberValueChange
+	TagUpdateBlobberChallenge
 	NumberOfTags
 )
 
@@ -326,6 +327,12 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateChallenge(*updates)
+	case TagUpdateBlobberChallenge:
+		challenge, ok := fromEvent[dbs.ChallengeResult](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateBlobberChallenges(*challenge)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

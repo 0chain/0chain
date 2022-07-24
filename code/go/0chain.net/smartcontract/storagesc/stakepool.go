@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
@@ -92,6 +94,14 @@ func (sp *stakePool) save(sscKey, blobberID string,
 
 	r, err := balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
 	logging.Logger.Debug("after stake pool save", zap.String("root", r))
+
+	data := dbs.DbUpdates{
+		Id: blobberID,
+		Updates: map[string]interface{}{
+			"offers_total": int64(sp.TotalOffers),
+		},
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobberID, data)
 
 	return
 }
@@ -212,19 +222,36 @@ func (sp *stakePool) slash(
 	return
 }
 
-// free staked capacity of related blobber, excluding delegate pools want to
+// unallocated capacity of related blobber, excluding delegate pools want to
 // unstake.
-func (sp *stakePool) cleanCapacity(now common.Timestamp,
-	writePrice currency.Coin) (free int64) {
+func (sp *stakePool) unallocatedCapacity(writePrice currency.Coin) (free int64) {
 
 	var total, offers = sp.cleanStake(), sp.TotalOffers
+	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
+		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	if total <= offers {
-		// zero, since the offer stake (not updated) can be greater
-		// then the clean stake
+		// zero, since the offer stake (not updated) can be greater than the clean stake
 		return
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
+	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
+		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	return
+}
+
+func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
+
+	cleanStake, err := sp.cleanStake().Float64()
+	if err != nil {
+		return 0, err
+	}
+
+	fWritePrice, err := writePrice.Float64()
+	if err != nil {
+		return 0, err
+	}
+
+	return int64((cleanStake / fWritePrice) * GB), nil
 }
 
 type delegatePoolStat struct {
@@ -431,6 +458,20 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"can't get related stake pool: %v", err)
 	}
 	before := sp.stake()
+
+	dp, ok := sp.Pools[spr.PoolID]
+	if !ok {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", spr.PoolID)
+	}
+
+	// if StakeAt has valid value and lock period is less than MinLockPeriod
+	if dp.StakedAt > 0 {
+		stakedAt := common.ToTime(dp.StakedAt)
+		minLockPeriod := config.SmartContractConfig.GetDuration("stakepool.min_lock_period")
+		if !stakedAt.Add(minLockPeriod).Before(time.Now()) {
+			return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(minLockPeriod))
+		}
+	}
 
 	unstake, err := sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
 	if err != nil {

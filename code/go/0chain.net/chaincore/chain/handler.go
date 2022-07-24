@@ -127,7 +127,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 /*setupHandlers sets up the necessary API end points */
 func setupHandlers(handlersMap map[string]func(http.ResponseWriter, *http.Request)) {
 	for pattern, handler := range handlersMap {
-		http.HandleFunc(pattern, handler)
+		http.HandleFunc(pattern, common.WithCORS(handler))
 	}
 }
 

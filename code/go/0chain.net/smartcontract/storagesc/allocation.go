@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"strings"
@@ -132,7 +133,7 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 			return false // keep, ok or already filtered by bid
 		}
 		// clean capacity (without delegate pools want to 'unstake')
-		var free = sp.cleanCapacity(now, b.Terms.WritePrice)
+		var free = sp.unallocatedCapacity(b.Terms.WritePrice)
 		return free < size // kick off if it hasn't enough free space
 	})
 }
@@ -499,16 +500,7 @@ func (uar *updateAllocationRequest) validate(
 // calculate size difference for every blobber of the allocations
 func (uar *updateAllocationRequest) getBlobbersSizeDiff(
 	alloc *StorageAllocation) (diff int64) {
-
-	var size = alloc.DataShards + alloc.ParityShards
-	if uar.Size > 0 {
-		diff = (uar.Size + int64(size-1)) / int64(size)
-	} else if uar.Size < 0 {
-		diff = (uar.Size - int64(size-1)) / int64(size)
-	}
-	// else -> (0), no changes, avoid unnecessary calculation
-
-	return
+	return int64(math.Ceil(float64(uar.Size) / float64(alloc.DataShards)))
 }
 
 // new size of blobbers' allocation
@@ -642,7 +634,8 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			"can't save allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+
 	return string(alloc.Encode()), nil // closing
 }
 
@@ -664,8 +657,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		return
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates(balances))
-
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	return
 }
 
@@ -1389,7 +1381,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"saving allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return "canceled", nil
 }
@@ -1465,7 +1457,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"saving allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return "finalized", nil
 }
@@ -1683,7 +1675,7 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"saving new allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	// txn.Hash is the id of the new token pool
 	return txn.Hash, nil

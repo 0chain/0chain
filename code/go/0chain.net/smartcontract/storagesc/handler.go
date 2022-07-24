@@ -88,6 +88,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
+		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
 		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
 		rest.MakeEndpoint(storage+"/blobber-snapshot", srh.getBlobberSnapshot),
 	}
@@ -162,6 +163,37 @@ func (srh *StorageRestHandler) getRoundsTotalMint(w http.ResponseWriter, r *http
 	}
 	common.Respond(w, r, rest.InterfaceMap{
 		"get_rounds_mint_total": total,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank blobber-rank
+// Gets the rank of a blobber.
+//   challenges passed / total challenges
+//
+// parameters:
+//    + name: id
+//      description: id of blobber
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getBlobberRank(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	rank, err := edb.GetBlobberRank(id)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"blobber-rank": rank,
 	}, nil)
 }
 
@@ -459,10 +491,10 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 			Min: int64(request.WritePriceRange.Min),
 			Max: int64(request.WritePriceRange.Max),
 		},
-		Size:              int(request.Size),
-		AllocationSize:    allocationSize,
-		PreferredBlobbers: request.Blobbers,
-		NumberOfBlobbers:  numberOfBlobbers,
+		Size:               int(request.Size),
+		AllocationSize:     allocationSize,
+		PreferredBlobbers:  request.Blobbers,
+		NumberOfDataShards: sa.DataShards,
 	}, limit, balances.Now())
 
 	if err != nil {
@@ -1782,7 +1814,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 
 	if toClientID != "" {
-		rtv, err := edb.GetTransactionByToClientId(clientID, limit)
+		rtv, err := edb.GetTransactionByToClientId(toClientID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1954,7 +1986,8 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 type storageNodeResponse struct {
 	StorageNode
-	TotalStake currency.Coin `json:"total_stake"`
+	TotalServiceCharge currency.Coin `json:"total_service_charge"`
+	TotalStake         currency.Coin `json:"total_stake"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
@@ -1989,7 +2022,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				Description: blobber.Description,
 			},
 		},
-		TotalStake: blobber.TotalStake,
+		TotalServiceCharge: blobber.TotalServiceCharge,
+		TotalStake:         blobber.TotalStake,
 	}
 }
 

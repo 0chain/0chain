@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -271,7 +272,9 @@ func confirmTransaction(hash string) (httpclientutil.Transaction, error) {
 }
 
 func getBalance(clientID string) currency.Coin {
-	balance, err := httpclientutil.MakeClientBalanceRequest(clientID, members.Sharders, confirmationQuorum)
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	balance, err := httpclientutil.MakeClientBalanceRequest(ctx, clientID, members.Sharders, confirmationQuorum)
 	if err != nil {
 		Logger.Fatal("Couldn't get client balance", zap.Error(err))
 	}
