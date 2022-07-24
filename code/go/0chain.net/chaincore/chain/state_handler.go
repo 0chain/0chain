@@ -1,12 +1,6 @@
 package chain
 
 import (
-	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/rest"
-	"0chain.net/smartcontract/storagesc"
-	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zcnsc"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -16,6 +10,13 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"0chain.net/smartcontract/faucetsc"
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/rest"
+	"0chain.net/smartcontract/storagesc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
@@ -61,11 +62,11 @@ func SetupScRestApiHandlers() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
-	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
-	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
-	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
-	http.HandleFunc("/v1/screst/", common.UserRateLimit(c.HandleSCRest))
-	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
+	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
+	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
+	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
+	http.HandleFunc("/v1/screst/", common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
+	http.HandleFunc("/_smart_contract_stats", common.WithCORS(common.UserRateLimit(c.SCStats)))
 }
 
 func (c *Chain) GetQueryStateContext() state.TimedQueryStateContextI {
