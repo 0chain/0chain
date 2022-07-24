@@ -553,6 +553,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
+			fmt.Println("RUNNING TEST:", test.name)
+
 			_, err := args.ssc.freeAllocationRequest(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil, err)

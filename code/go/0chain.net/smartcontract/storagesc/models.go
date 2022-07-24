@@ -918,7 +918,10 @@ type StorageAllocationDecode StorageAllocation
 // don't receive tokens, their spent will be zero, and the min lock demand
 // will be blobber reward anyway.
 func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error) {
+	fmt.Println("================><===================")
 	for _, details := range sa.BlobberAllocs {
+		fmt.Println("rest: ", rest, "details.MinLockDemand: ", details.MinLockDemand, "details.Spent: ", details.Spent)
+
 		if details.MinLockDemand > details.Spent {
 			rest, err = currency.AddCoin(rest, details.MinLockDemand-details.Spent)
 			if err != nil {

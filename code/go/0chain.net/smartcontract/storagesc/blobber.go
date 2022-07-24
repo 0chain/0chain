@@ -439,7 +439,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 	details.ReadReward = readReward
 
-	spent, err := currency.AddCoin(details.MinLockDemand, value) // reduce min lock demand left
+	spent, err := currency.AddCoin(details.Spent, value) // reduce min lock demand left
 	if err != nil {
 		return "", err
 	}
