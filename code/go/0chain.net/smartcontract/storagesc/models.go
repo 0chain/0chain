@@ -257,8 +257,9 @@ type Terms struct {
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
 func (t *Terms) minLockDemand(gbSize, rdtu float64) (currency.Coin, error) {
-	mldcF := float64(t.WritePrice) * gbSize * t.MinLockDemand * rdtu
-	return currency.Float64ToCoin(mldcF)
+
+	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
+	return currency.Float64ToCoin(mldf * rdtu)                  //
 }
 
 // validate a received terms
@@ -918,10 +919,7 @@ type StorageAllocationDecode StorageAllocation
 // don't receive tokens, their spent will be zero, and the min lock demand
 // will be blobber reward anyway.
 func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error) {
-	fmt.Println("================><===================")
 	for _, details := range sa.BlobberAllocs {
-		fmt.Println("rest: ", rest, "details.MinLockDemand: ", details.MinLockDemand, "details.Spent: ", details.Spent)
-
 		if details.MinLockDemand > details.Spent {
 			rest, err = currency.AddCoin(rest, details.MinLockDemand-details.Spent)
 			if err != nil {
