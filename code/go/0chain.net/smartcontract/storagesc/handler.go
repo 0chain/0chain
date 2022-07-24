@@ -89,11 +89,11 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
-		rest.MakeEndpoint(storage+"/blobber-historic-stake", srh.getBlobberHistoricStake),
+		rest.MakeEndpoint(storage+"/blobber-snapshot", srh.getBlobberSnapshot),
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-historic-stake blobber-historic-stake
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-snapshot blobber-snapshot
 // Gets the amount staked on a blobber on a previous round
 //
 // parameters:
@@ -109,12 +109,11 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //      type: string
 //
 // responses:
-//  200: Int64Map
+//  200: BlobberSnapshot
 //  400:
-func (srh *StorageRestHandler) getBlobberHistoricStake(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getBlobberSnapshot(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
-	roundName := r.URL.Query().Get("round")
-	round, err := strconv.ParseInt(roundName, 10, 64)
+	round, err := strconv.ParseInt(r.URL.Query().Get("round"), 10, 64)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -125,17 +124,13 @@ func (srh *StorageRestHandler) getBlobberHistoricStake(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	row, err := edb.GetBlobberSnapshot(id, round)
-	stake, err := row.Stake.Int64()
+	snapshot, err := edb.GetBlobberSnapshot(id, round)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
 
-	common.Respond(w, r, rest.Int64Map{
-		"round":         round,
-		"blobber-stake": stake,
-	}, nil)
+	common.Respond(w, r, snapshot, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_rounds_mint_total get_rounds_mint_total
