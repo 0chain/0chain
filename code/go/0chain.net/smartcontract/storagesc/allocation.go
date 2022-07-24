@@ -296,7 +296,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	// create write pool and lock tokens
 	if err = sc.createWritePool(t, sa, mintNewTokens, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed !this!", err.Error())
+		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 	m.tick("create_write_pool")
 
