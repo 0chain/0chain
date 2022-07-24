@@ -27,6 +27,10 @@ var (
 	ErrUint64AddOverflow = errors.New("uint64 addition overflow")
 	// ErrInt64AddOverflow is returned if when adding int64 values overflow int64
 	ErrInt64AddOverflow = errors.New("int64 addition overflow")
+	// ErrInt32AddOverflow is returned if when adding int32 values overflow int64
+	ErrInt32AddOverflow = errors.New("int64 addition overflow")
+	// ErrIntAddOverflow is returned if when adding int values overflow int64
+	ErrIntAddOverflow = errors.New("int64 addition overflow")
 	// ErrUint64MinusOverflow is returned if when subtracting uint64 values overflow uint64
 	ErrUint64MinusOverflow = errors.New("uint64 minus overflow")
 	// ErrUint64OverflowsInt64 is returned if when converting a uint64 to an int64 overflow int64

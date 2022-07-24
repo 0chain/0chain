@@ -48,11 +48,11 @@ func SafeAddInt64(left, right int64) (int64, error) {
 func SafeAddInt(left, right int) (int, error) {
 	if right > 0 {
 		if left > math.MaxInt-right {
-			return 0, currency.ErrInt64AddOverflow
+			return 0, currency.ErrIntAddOverflow
 		}
 	} else {
 		if left < math.MinInt-right {
-			return 0, currency.ErrInt64AddOverflow
+			return 0, currency.ErrIntAddOverflow
 		}
 	}
 	return left + right, nil
@@ -62,11 +62,11 @@ func SafeAddInt(left, right int) (int, error) {
 func SafeAddInt32(left, right int32) (int32, error) {
 	if right > 0 {
 		if left > math.MaxInt32-right {
-			return 0, currency.ErrInt64AddOverflow
+			return 0, currency.ErrInt32AddOverflow
 		}
 	} else {
 		if left < math.MinInt32-right {
-			return 0, currency.ErrInt64AddOverflow
+			return 0, currency.ErrInt32AddOverflow
 		}
 	}
 	return left + right, nil
