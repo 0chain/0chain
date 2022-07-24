@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Transfer) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 4
 	// string "ClientID"
-	o = append(o, 0x83, 0xa8, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x44)
+	o = append(o, 0x84, 0xa8, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ClientID)
 	// string "ToClientID"
 	o = append(o, 0xaa, 0x54, 0x6f, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x44)
@@ -23,6 +23,9 @@ func (z *Transfer) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "Amount")
 		return
 	}
+	// string "Type"
+	o = append(o, 0xa4, 0x54, 0x79, 0x70, 0x65)
+	o = msgp.AppendInt(o, int(z.Type))
 	return
 }
 
@@ -62,6 +65,16 @@ func (z *Transfer) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Amount")
 				return
 			}
+		case "Type":
+			{
+				var zb0002 int
+				zb0002, bts, err = msgp.ReadIntBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Type")
+					return
+				}
+				z.Type = TransferType(zb0002)
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -76,6 +89,34 @@ func (z *Transfer) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Transfer) Msgsize() (s int) {
-	s = 1 + 9 + msgp.StringPrefixSize + len(z.ClientID) + 11 + msgp.StringPrefixSize + len(z.ToClientID) + 7 + z.Amount.Msgsize()
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.ClientID) + 11 + msgp.StringPrefixSize + len(z.ToClientID) + 7 + z.Amount.Msgsize() + 5 + msgp.IntSize
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z TransferType) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	o = msgp.AppendInt(o, int(z))
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *TransferType) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	{
+		var zb0001 int
+		zb0001, bts, err = msgp.ReadIntBytes(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		(*z) = TransferType(zb0001)
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z TransferType) Msgsize() (s int) {
+	s = msgp.IntSize
 	return
 }

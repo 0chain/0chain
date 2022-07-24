@@ -657,7 +657,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		return
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
 	return
 }
 

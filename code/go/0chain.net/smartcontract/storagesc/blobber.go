@@ -120,19 +120,15 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 	before := sp.stake()
-	if err = validateStakePoolSettings(blobber.StakePoolSettings, conf); err != nil {
-		return fmt.Errorf("invalid new stake pool settings:  %v", err)
+	stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
+	if err != nil {
+		return fmt.Errorf("error calculating staked capacity: %v", err)
 	}
-	// todo piers do we need to merge this as well
-	//stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
-	//if err != nil {
-	//	return fmt.Errorf("error calculating staked capacity: %v", err)
-	//}
 
-	//if blobber.Capacity < stakedCapacity {
-	//	return fmt.Errorf("write_price_change: staked capacity(%d) exceeding total_capacity(%d)",
-	//		stakedCapacity, blobber.Capacity)
-	//}
+	if blobber.Capacity < stakedCapacity {
+		return fmt.Errorf("write_price_change: staked capacity(%d) exceeding total_capacity(%d)",
+			stakedCapacity, blobber.Capacity)
+	}
 
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
 	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
@@ -591,7 +587,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
