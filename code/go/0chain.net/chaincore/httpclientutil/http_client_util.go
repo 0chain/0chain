@@ -142,6 +142,10 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 
 //SendTransaction send a transaction
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
+	logging.Logger.Info("send_transaction",
+		zap.Strings("urls", urls),
+		zap.String("id", ID),
+		zap.String("p_key", pkey))
 	for _, u := range urls {
 		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
 		go func(url string) {
