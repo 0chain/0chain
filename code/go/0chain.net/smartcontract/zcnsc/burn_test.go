@@ -22,7 +22,6 @@ func TestBurnPayload_Encode_Decode(t *testing.T) {
 	expected := createBurnPayload()
 	err := actual.Decode(expected.Encode())
 	require.NoError(t, err)
-	require.Equal(t, expected.Nonce, actual.Nonce)
 	require.Equal(t, expected.EthereumAddress, actual.EthereumAddress)
 }
 
@@ -44,11 +43,9 @@ func Test_BurnPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 
-	payload.Nonce = 1
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce - 1
 	require.NoError(t, node.Save(ctx))
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
@@ -56,41 +53,40 @@ func Test_BurnPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	require.NotNil(t, burn)
 }
 
-func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
+func Test_BurnNonceShouldIncrementBurnNonceBy1(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 
-	payload.Nonce = 1
-
-	// case 1
+	// Save initial user node
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce
 	require.NoError(t, node.Save(ctx))
+	require.Equal(t, int64(0), node.BurnNonce, "Initial nonce value should be 0")
 
+	// Burn increments user node nonce
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "nonce given (1) for burning client (fred_0) must be greater by 1 than the current node nonce (1) for Node.ID: 'fred_0'")
-	require.Empty(t, burn)
+	require.Contains(t, burn, "\"nonce\":1")
+	require.NoError(t, err)
+	require.NotEmpty(t, burn)
 
-	// case 2
 	node, err = GetUserNode(defaultClient, ctx)
+	require.Equal(t, int64(1), node.BurnNonce, "Nonce should be incremented to 1")
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce + 1
 	require.NoError(t, node.Save(ctx))
 
 	burn, err = contract.Burn(tr, payload.Encode(), ctx)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "nonce given (1) for burning client (fred_0) must be greater by 1 than the current node nonce (2) for Node.ID: 'fred_0'")
-	require.Empty(t, burn)
+	require.NoError(t, err)
+	require.NotEmpty(t, burn)
+	require.Contains(t, burn, "\"nonce\":2")
+	node, err = GetUserNode(defaultClient, ctx)
+	require.Equal(t, int64(2), node.BurnNonce, "Nonce should be incremented to 2")
 }
 
 func Test_EthereumAddressShouldBeFilled(t *testing.T) {
-
 	// Without address
 
 	payload := createBurnPayload()
@@ -119,38 +115,38 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 	require.NotEmpty(t, resp)
 }
 
-func Test_UserNodeNonceShouldIncrement(t *testing.T) {
+func Test_BurnNonceShouldIncrementDuringBurn(t *testing.T) {
 	ctx := MakeMockStateContext()
 
 	payload := createBurnPayload()
 	contract := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(defaultClient, ctx)
 
-	node, err := GetUserNode(tr.ClientID, ctx)
+	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	nonce := node.Nonce
+	nonce := node.BurnNonce
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotNil(t, burn)
 	require.NotEmpty(t, burn)
 
-	node, err = GetUserNode(tr.ClientID, ctx)
+	node, err = GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	require.Equal(t, node.Nonce, nonce+1)
+	require.Equal(t, node.BurnNonce, nonce+1)
 }
 
-func Test_UpdateUserNode(t *testing.T) {
+func Test_UserNodeSaveTest(t *testing.T) {
 	ctx := MakeMockStateContext()
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	node.Nonce += 2
+	node.BurnNonce += 2
 	err = node.Save(ctx)
 	require.NoError(t, err)
 
@@ -158,16 +154,17 @@ func Test_UpdateUserNode(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	require.Equal(t, node.Nonce, node2.Nonce)
+	require.Equal(t, node.BurnNonce, node2.BurnNonce)
 }
 
 func Test_UserNodeEncode_Decode(t *testing.T) {
-	node := createUserNode(defaultClient, 10)
+	ctx := MakeMockStateContext()
+	node, err := GetUserNode(defaultClient, ctx)
 	actual := UserNode{}
-	err := actual.Decode(node.Encode())
+	err = actual.Decode(node.Encode())
 	require.NoError(t, err)
 	require.Equal(t, node.ID, actual.ID)
-	require.Equal(t, node.Nonce, actual.Nonce)
+	require.Equal(t, node.BurnNonce, actual.BurnNonce)
 }
 
 func Test_Burn_should_return_encoded_payload(t *testing.T) {

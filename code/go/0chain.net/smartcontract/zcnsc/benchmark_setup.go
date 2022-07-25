@@ -22,7 +22,6 @@ import (
 )
 
 var (
-	burnNonce = int64(0)
 	mintNonce = int64(0)
 )
 
@@ -132,7 +131,7 @@ func addMockStakePools(clients []string, ctx cstate.StateContextI) {
 
 func addMockUserNodes(clients []string, balances cstate.StateContextI) {
 	for _, clientId := range clients {
-		un := NewUserNode(clientId, 0)
+		un := NewUserNode(clientId)
 		_, _ = balances.InsertTrieNode(un.GetKey(), un)
 	}
 }
