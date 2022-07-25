@@ -89,8 +89,21 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
+
+		// historical data endpoints
 		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
 		rest.MakeEndpoint(storage+"/blobber-snapshot", srh.getBlobberSnapshot),
+		rest.MakeEndpoint(storage+"/data-storage-cost", srh.getDataStorageCost),
+		rest.MakeEndpoint(storage+"/daily-allocations", srh.getDataDailyAllocations),
+		rest.MakeEndpoint(storage+"/average-rw-price", srh.getAverageReadWritePrice),
+		rest.MakeEndpoint(storage+"/total-staked", srh.getTotalStaked),
+		rest.MakeEndpoint(storage+"/network-data-quality", srh.getNetworkDataQuality),
+		rest.MakeEndpoint(storage+"/zcn-supply", srh.getMarketZCNSupply),
+		rest.MakeEndpoint(storage+"/allocated-storage", srh.getAllocatedStorage),
+		rest.MakeEndpoint(storage+"/cloud-growth", srh.getCloudGrowthData),
+		rest.MakeEndpoint(storage+"/total-locked", srh.getTotalTokenLocked),
+		rest.MakeEndpoint(storage+"/data-capitalization", srh.getDataCapitalization),
+		rest.MakeEndpoint(storage+"/data-utilization", srh.getDataUtilization),
 	}
 }
 
@@ -135,11 +148,24 @@ func (srh *StorageRestHandler) getBlobberSnapshot(w http.ResponseWriter, r *http
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_rounds_mint_total get_rounds_mint_total
-// Gets the total amount minted on all blocks til the current round.
+// Gets the total amount minted between from and to dates.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
-//  200: Int64Map
+//  200:
 //  400:
+//  500:
 func (srh *StorageRestHandler) getRoundsTotalMint(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -1402,6 +1428,11 @@ func (srh *StorageRestHandler) getReadMarkersCount(w http.ResponseWriter, r *htt
 	common.Respond(w, r, readMarkersCount{ReadMarkersCount: count}, nil)
 }
 
+// swagger:model readMarkersCount
+type readMarkersCount struct {
+	ReadMarkersCount int64 `json:"read_markers_count"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers readmarkers
 // Gets read markers according to a filter
 //
@@ -2289,7 +2320,515 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, sn, nil)
 }
 
-// swagger:model readMarkersCount
-type readMarkersCount struct {
-	ReadMarkersCount int64 `json:"read_markers_count"`
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-storage-cost data-storage-cost
+// Get market data storage cost info between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getDataStorageCost(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+	storageCosts, err := edb.GetDataStorageCosts(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data storage costs failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": storageCosts,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/daily-allocations daily-allocations
+// Get storage data daily allocations between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getDataDailyAllocations(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	dailyAllocations, err := edb.GetDailyAllocations(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data daily allocations failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": dailyAllocations,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-rw-price average-rw-price
+// Get storage data average read/write price between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getAverageReadWritePrice(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	dailyPrices, err := edb.GetDataReadWritePrice(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting average data read/write price failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": dailyPrices,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-staked total-staked
+// Get market data total staked between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getTotalStaked(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	data, err := edb.GetTotalStaked(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting total data staked failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": data,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/network-data-quality network-data-quality
+// Get network data quality score between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getNetworkDataQuality(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	scores, err := edb.GetNetworkQualityScores(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting network data quality score failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, scores, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/zcn-supply zcn-supply
+// Get market data zcn supply between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getMarketZCNSupply(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	supplyRecord, err := edb.GetZCNSupply(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting network zcn supply failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": supplyRecord,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocated-storage allocated-storage
+// Get market data allocated storage between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	res, err := edb.GetAllocatedStorage(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting network allocated storage failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": res,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/cloud-growth cloud-growth
+// Get market data cloud growth data between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getCloudGrowthData(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	res, err := edb.GetCloudGrowthData(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting network cloud growth data failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": res,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-locked total-locked
+// Get total locked tokens historical data between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getTotalTokenLocked(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	res, err := edb.GetTotalLocked(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting total token locked data failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": res,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-capitalization data-capitalization
+// Get historic market data capitalization between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getDataCapitalization(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	res, err := edb.GetDataCap(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data capitaliztion failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": res,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-utilization data-utilization
+// Get historic market data utilization between from and to interval
+// returns array of 100 datapoints for any specified interval
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getDataUtilization(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	fromStr := r.URL.Query().Get("from")
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	toStr := r.URL.Query().Get("to")
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	res, err := edb.GetDataUtilization(time.Unix(from, 0), time.Unix(to, 0))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.InterfaceMap{
+		"data": res,
+	}, nil)
 }
