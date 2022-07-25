@@ -18,7 +18,6 @@ type BlobberSnapshot struct {
 	WritePrice         currency.Coin `json:"write_price"`
 	Capacity           int64         `json:"capacity"`  // total blobber capacity
 	Allocated          int64         `json:"allocated"` // allocated capacity
-	Used               int64         `json:"used"`      // total of files saved on blobber "`
 	SavedData          int64         `json:"saved_data"`
 	OffersTotal        currency.Coin `json:"offers_total"`
 	UnstakeTotal       currency.Coin `json:"unstake_total"`
@@ -31,33 +30,23 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 		return
 	}
 	thisRound := e[0].BlockNumber
-
 	blobberIds := make(map[string]struct{})
 
 	for _, event := range e {
 		switch EventTag(event.Tag) {
-		case TagAddWriteMarker:
-			wm, ok := fromEvent[WriteMarker](event.Data)
-			if !ok {
-				logging.Logger.Error("", zap.Error(ErrInvalidEventData))
-				continue
-			}
-			if _, found := blobberIds[wm.BlobberID]; !found {
-				blobberIds[wm.BlobberID] = struct{}{}
-			}
 		case TagUpdateBlobber:
 			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 			if !ok {
-				logging.Logger.Error("", zap.Error(ErrInvalidEventData))
+				logging.Logger.Error("blobber snapshot", zap.Error(ErrInvalidEventData))
 				continue
 			}
 			if _, found := blobberIds[updates.Id]; !found {
 				blobberIds[updates.Id] = struct{}{}
 			}
-		case TagStakePoolReward:
+		case TagStakePoolReward: // maybe Distribute reward
 			spu, ok := fromEvent[dbs.StakePoolReward](event.Data)
 			if !ok {
-				logging.Logger.Error("", zap.Error(ErrInvalidEventData))
+				logging.Logger.Error("blobber snapshot", zap.Error(ErrInvalidEventData))
 				continue
 			}
 			if spu.ProviderType == int(spenum.Blobber) {
@@ -65,10 +54,10 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 					blobberIds[spu.ProviderId] = struct{}{}
 				}
 			}
-		case TagAddOrOverwriteBlobber:
+		case TagAddOrOverwriteBlobber: // ok
 			blobber, ok := fromEvent[Blobber](event.Data)
 			if !ok {
-				logging.Logger.Error("", zap.Error(ErrInvalidEventData))
+				logging.Logger.Error("blobber snapshot", zap.Error(ErrInvalidEventData))
 				continue
 			}
 			if _, found := blobberIds[blobber.BlobberID]; !found {
@@ -77,32 +66,40 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 		}
 	}
 
-	for blobberId := range blobberIds {
-		blobber, err := edb.GetBlobber(blobberId)
-		if err != nil {
-			logging.Logger.Error("getting blobber "+blobberId, zap.Error(err))
-			continue
-		}
-		row := BlobberSnapshot{
+	if len(blobberIds) == 0 {
+		return
+	}
+
+	var blobbers []Blobber
+	var blobberIdsSlice []string
+	for key := range blobberIds {
+		blobberIdsSlice = append(blobberIdsSlice, key)
+	}
+
+	result := edb.Store.Get().
+		Where("blobber_id IN", blobberIdsSlice).
+		Find(&blobbers)
+	if result.Error != nil {
+		logging.Logger.Error("getting blobber list for blobber snapshot",
+			zap.Error(result.Error))
+		return
+	}
+
+	var snapshots []BlobberSnapshot
+	for _, blobber := range blobbers {
+		snapshots = append(snapshots, BlobberSnapshot{
 			Round:              thisRound,
-			BlobberID:          blobberId,
+			BlobberID:          blobber.BlobberID,
 			WritePrice:         blobber.WritePrice,
 			Capacity:           blobber.Capacity,
 			Allocated:          blobber.Allocated,
-			Used:               blobber.Used,
-			SavedData:          blobber.SavedData,
 			OffersTotal:        blobber.OffersTotal,
 			UnstakeTotal:       blobber.UnstakeTotal,
 			TotalServiceCharge: blobber.TotalServiceCharge,
 			TotalStake:         blobber.TotalStake,
-		}
-
-		res := edb.Store.Get().Create(&row)
-		if res.Error != nil {
-			logging.Logger.Error("adding row to blobber snapshot", zap.Error(res.Error))
-			continue
-		}
+		})
 	}
+	edb.Store.Get().Create(&snapshots)
 }
 
 func (edb *EventDb) GetBlobberSnapshot(blobberId string, round int64) (BlobberSnapshot, error) {
