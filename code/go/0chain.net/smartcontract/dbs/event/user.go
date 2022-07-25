@@ -10,8 +10,7 @@ import (
 )
 
 type User struct {
-	ID      uint          `json:"-" gorm:"primarykey"`
-	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
+	UserID  string        `json:"user_id" gorm:"primarykey"`
 	TxnHash string        `json:"txn"`
 	Balance currency.Coin `json:"balance"`
 	Change  currency.Coin `json:"change"`
@@ -34,7 +33,7 @@ func (edb *EventDb) GetUser(userID string) (*User, error) {
 
 func (edb *EventDb) addOrOverwriteUser(u User) error {
 	result := edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "id"}, {Name: "user_id"}},
+		Columns: []clause.Column{{Name: "user_id"}},
 		DoUpdates: clause.Assignments(map[string]interface{}{
 			"txn_hash": u.TxnHash,
 			"balance":  u.Balance,
