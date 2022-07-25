@@ -1,8 +1,10 @@
 package event
 
 import (
-	"sync"
 	"time"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
@@ -23,7 +25,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 		roundEventsChan: make(chan events, 10),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
-
+	go eventDb.addRoundEventsWorker(common.GetRootContext())
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}
@@ -36,7 +38,6 @@ type EventDb struct {
 	roundEventsChan    chan events
 	currentRound       int64
 	currentRoundEvents []Event
-	currentGuard       sync.Mutex
 }
 
 type events []Event
@@ -70,14 +71,13 @@ func (edb *EventDb) AutoMigrate() error {
 }
 
 func (edb *EventDb) copyToRoundChan(event Event) {
-	edb.currentGuard.Lock()
-	defer edb.currentGuard.Unlock()
+	logging.Logger.Info("piers copyToRoundChan", zap.Any("current", edb.currentRound), zap.Any("event round", event.Round))
 	if edb.currentRound == event.Round {
 		edb.currentRoundEvents = append(edb.currentRoundEvents, event)
 		return
 	}
 
-	go func() {
-		edb.roundEventsChan <- edb.currentRoundEvents
-	}()
+	edb.roundEventsChan <- edb.currentRoundEvents
+	edb.currentRound = event.Round
+	edb.currentRoundEvents = []Event{}
 }

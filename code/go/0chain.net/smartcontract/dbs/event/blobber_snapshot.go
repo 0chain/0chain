@@ -75,6 +75,7 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 			}
 		}
 	}
+	logging.Logger.Info("piers updateBlobberSnapshot", zap.Any("blobber ids", blobberIds))
 
 	for blobberId := range blobberIds {
 		blobber, err := edb.GetBlobber(blobberId)

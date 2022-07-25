@@ -82,6 +82,7 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
+	logging.Logger.Info("events worker started")
 	for {
 		events := <-edb.eventsChannel
 		edb.addEvents(ctx, events)
@@ -110,6 +111,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 }
 
 func (edb *EventDb) addRoundEventsWorker(ctx context.Context) {
+	logging.Logger.Info("round events worker started")
 	for {
 		select {
 		case e := <-edb.roundEventsChan:
@@ -122,6 +124,11 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context) {
 }
 
 func (edb *EventDb) addStat(event Event) error {
+	if event.Round == 0 {
+		logging.Logger.Info("piers addStat", zap.Any("round", event.Round),
+			zap.Any("event", event))
+	}
+
 	edb.copyToRoundChan(event)
 
 	switch EventTag(event.Tag) {

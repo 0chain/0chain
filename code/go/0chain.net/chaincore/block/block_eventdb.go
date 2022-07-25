@@ -30,10 +30,11 @@ func blockToBlockEvent(block *Block) *event.Block {
 }
 
 func CreateBlockEvent(block *Block) (error, event.Event) {
-
+	// todo block.Round is zero, need to replace with block/round number
 	return nil, event.Event{
 		BlockNumber: block.Round,
 		TxHash:      "",
+		Round:       block.Round,
 		Type:        int(event.TypeStats),
 		Tag:         int(event.TagAddBlock),
 		Index:       block.Hash,
