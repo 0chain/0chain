@@ -3,9 +3,6 @@ package event
 import (
 	"time"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
@@ -71,13 +68,12 @@ func (edb *EventDb) AutoMigrate() error {
 }
 
 func (edb *EventDb) copyToRoundChan(event Event) {
-	logging.Logger.Info("piers copyToRoundChan", zap.Any("current", edb.currentRound), zap.Any("event round", event.Round))
-	if edb.currentRound == event.Round {
+	if edb.currentRound == event.BlockNumber {
 		edb.currentRoundEvents = append(edb.currentRoundEvents, event)
 		return
 	}
 
 	edb.roundEventsChan <- edb.currentRoundEvents
-	edb.currentRound = event.Round
+	edb.currentRound = event.BlockNumber
 	edb.currentRoundEvents = []Event{}
 }

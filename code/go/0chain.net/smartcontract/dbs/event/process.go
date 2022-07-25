@@ -124,11 +124,6 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context) {
 }
 
 func (edb *EventDb) addStat(event Event) error {
-	if event.Round == 0 {
-		logging.Logger.Info("piers addStat", zap.Any("round", event.Round),
-			zap.Any("event", event))
-	}
-
 	edb.copyToRoundChan(event)
 
 	switch EventTag(event.Tag) {

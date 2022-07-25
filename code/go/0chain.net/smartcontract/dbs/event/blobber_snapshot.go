@@ -29,7 +29,7 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 	if len(e) == 0 {
 		return
 	}
-	thisRound := e[0].Round
+	thisRound := e[0].BlockNumber
 
 	blobberIds := make(map[string]struct{})
 
@@ -75,7 +75,6 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 			}
 		}
 	}
-	logging.Logger.Info("piers updateBlobberSnapshot", zap.Any("blobber ids", blobberIds))
 
 	for blobberId := range blobberIds {
 		blobber, err := edb.GetBlobber(blobberId)
@@ -106,9 +105,10 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 
 func (edb *EventDb) GetBlobberSnapshot(blobberId string, round int64) (BlobberSnapshot, error) {
 	snapshot := BlobberSnapshot{}
-	res := edb.Store.Get().Model(BlobberSnapshot{}).Where(BlobberSnapshot{
-		BlobberID: blobberId,
-		Round:     round},
-	).First(&snapshot)
+	res := edb.Store.Get().
+		Model(BlobberSnapshot{}).
+		Where("blobber_id = ? and round <= ?", blobberId, round).
+		Order("round desc").
+		First(&snapshot)
 	return snapshot, res.Error
 }

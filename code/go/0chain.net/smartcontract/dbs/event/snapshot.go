@@ -152,14 +152,14 @@ func (edb *EventDb) updateSnapshot(e events) error {
 	current := Snapshot{}
 	for i, event := range e {
 		if i == 0 { //first event on this round
-			previousRound := event.Round - 1
+			previousRound := event.BlockNumber - 1
 			if previousRound > -1 {
 				last, err := edb.getSnapshot(int64(i))
 				if err != nil {
 					return err
 				}
 				current = Snapshot{
-					Round:                event.Round,
+					Round:                event.BlockNumber,
 					TotalMint:            last.TotalMint,
 					StorageCost:          0,
 					ActiveAllocatedDelta: 0,

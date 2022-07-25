@@ -242,7 +242,6 @@ func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag,
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
-		Round:       sc.block.Round,
 		Type:        int(eventType),
 		Tag:         int(tag),
 		Index:       index,
