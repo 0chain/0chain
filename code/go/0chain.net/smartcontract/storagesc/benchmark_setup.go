@@ -460,6 +460,7 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 		snapshot := event.BlobberSnapshot{
 			Round:              int64(i),
 			BlobberID:          blobber.BlobberID,
+			WritePrice:         blobber.WritePrice,
 			Capacity:           blobber.Capacity,
 			Allocated:          blobber.Allocated,
 			Used:               blobber.Used,

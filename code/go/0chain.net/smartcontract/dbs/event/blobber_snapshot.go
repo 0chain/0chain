@@ -15,6 +15,7 @@ type BlobberSnapshot struct {
 	Round     int64  `json:"round" gorm:"index:idx_blobber_snapshot"`
 	BlobberID string `json:"blobber_id" gorm:"index:idx_blobber_snapshot"`
 
+	WritePrice         currency.Coin `json:"write_price"`
 	Capacity           int64         `json:"capacity"`  // total blobber capacity
 	Allocated          int64         `json:"allocated"` // allocated capacity
 	Used               int64         `json:"used"`      // total of files saved on blobber "`
@@ -85,6 +86,7 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 		row := BlobberSnapshot{
 			Round:              thisRound,
 			BlobberID:          blobberId,
+			WritePrice:         blobber.WritePrice,
 			Capacity:           blobber.Capacity,
 			Allocated:          blobber.Allocated,
 			Used:               blobber.Used,
