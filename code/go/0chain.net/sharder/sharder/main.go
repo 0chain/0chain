@@ -310,7 +310,7 @@ func main() {
 
 	go sc.RegisterClient()
 	if sc.ChainConfig.IsFeeEnabled() {
-		logging.Logger.Info("setting up sharder")
+		logging.Logger.Info("setting up sharder(sc)")
 		go sc.SetupSC(ctx)
 	}
 

@@ -1300,9 +1300,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
-	logging.Logger.Info("put_transaction",
-		zap.Any("transaction", txn))
-
 	sc := GetServerChain()
 	if sc.TxnMaxPayload() > 0 {
 		if len(txn.TransactionData) > sc.TxnMaxPayload() {
