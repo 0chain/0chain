@@ -77,10 +77,12 @@ func (edb *EventDb) updateBlobberSnapshot(e events) {
 	}
 
 	result := edb.Store.Get().
-		Where("blobber_id IN", blobberIdsSlice).
+		Model(&Blobber{}).
+		Where("blobber_id IN ?", blobberIdsSlice).
 		Find(&blobbers)
 	if result.Error != nil {
 		logging.Logger.Error("getting blobber list for blobber snapshot",
+			zap.Strings("blobberIds", blobberIdsSlice),
 			zap.Error(result.Error))
 		return
 	}

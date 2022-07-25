@@ -463,7 +463,6 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 			WritePrice:         blobber.WritePrice,
 			Capacity:           blobber.Capacity,
 			Allocated:          blobber.Allocated,
-			Used:               blobber.Used,
 			SavedData:          blobber.SavedData,
 			OffersTotal:        blobber.OffersTotal,
 			UnstakeTotal:       blobber.UnstakeTotal,
