@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"strconv"
+	"time"
 
 	"0chain.net/core/encryption"
 
@@ -402,6 +403,94 @@ func BenchmarkRestTests(
 					"from": "0",
 				},
 				Endpoint: srh.getRoundsTotalMint,
+			},
+			{
+				FuncName: "data-storage-cost",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getDataStorageCost,
+			},
+			{
+				FuncName: "daily-allocations",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getDataDailyAllocations,
+			},
+			{
+				FuncName: "average-rw-price",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getAverageReadWritePrice,
+			},
+			{
+				FuncName: "total-staked",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getTotalStaked,
+			},
+			{
+				FuncName: "network-data-quality",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getNetworkDataQuality,
+			},
+			{
+				FuncName: "zcn-supply",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getMarketZCNSupply,
+			},
+			{
+				FuncName: "allocated-storage",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getAllocatedStorage,
+			},
+			{
+				FuncName: "cloud-growth",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getCloudGrowthData,
+			},
+			{
+				FuncName: "total-locked",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getTotalTokenLocked,
+			},
+			{
+				FuncName: "data-capitalization",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getDataCapitalization,
+			},
+			{
+				FuncName: "data-utilization",
+				Params: map[string]string{
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getDataUtilization,
 			},
 		},
 		ADDRESS,
