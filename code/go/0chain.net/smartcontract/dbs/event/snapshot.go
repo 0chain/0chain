@@ -62,92 +62,93 @@ type AllocationBlobberValueChanged struct {
 	Delta        int64
 }
 
-func (edb *EventDb) GetRoundsMintTotal(from, to int64) ([]int64, error) {
+func (edb *EventDb) GetRoundsMintTotal(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var totals []int64
 
-	query := graphDataPointsGeneratorQuery(from, to, "sum(total_mint)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(total_mint)", dataPoints)
 	return totals, edb.Store.Get().Raw(query).Scan(&totals).Error
 }
 
-func (edb *EventDb) GetDataStorageCosts(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetDataStorageCosts(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "avg(storage_cost)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "avg(storage_cost)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetDailyAllocations(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetDailyAllocations(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//496 SUM total amount of new allocation storage in a period (number of allocations active)
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "sum(active_allocated_delta)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(active_allocated_delta)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetDataReadWritePrice(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetDataReadWritePrice(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//494 AVG it's the price from the terms and triggered with their updates
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "avg(average_rw_price)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "avg(average_rw_price)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetTotalStaked(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetTotalStaked(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//485 SUM All providers all pools
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "sum(total_staked)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(total_staked)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetNetworkQualityScores(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetNetworkQualityScores(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//493 SUM percentage of challenges failed by a particular blobber
 	query := graphDataPointsGeneratorQuery(
-		from.Unix(),
-		to.Unix(),
+		from.UnixNano(),
+		to.UnixNano(),
 		"(((sum(successful_challenges)/(sum(failed_challenges) + sum(successful_challenges))) * 100)::INT)",
+		dataPoints,
 	)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetZCNSupply(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetZCNSupply(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "sum(zcn_supply)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(zcn_supply)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetAllocatedStorage(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetAllocatedStorage(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//490 SUM New allocation calculate the size (new + previous + update -sub fin+cancel or reduceed)
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "sum(allocated_storage)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(allocated_storage)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetCloudGrowthData(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetCloudGrowthData(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//491 SUM available (in the terms)
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "sum(available_storage)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(available_storage)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetTotalLocked(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetTotalLocked(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//487 SUM Total value locked = Total staked ZCN * Price per ZCN (across all pools)
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "sum(total_value_locked)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(total_value_locked)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 
 }
 
-func (edb *EventDb) GetDataCap(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetDataCap(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//489 SUM Token price * minted
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "avg(capitalization)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "avg(capitalization)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetDataUtilization(from, to time.Time) ([]int64, error) {
+func (edb *EventDb) GetDataUtilization(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//492 SUM amount saved across all allocations
-	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "sum(data_utilization)")
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(data_utilization)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
@@ -321,11 +322,11 @@ func (edb *EventDb) addSnapshot(s Snapshot) error {
 	return res.Error
 }
 
-func graphDataPointsGeneratorQuery(from, to int64, aggQuery string) string {
+func graphDataPointsGeneratorQuery(from, to int64, aggQuery string, dataPoints uint16) string {
 	query := fmt.Sprintf(`
 		WITH
 		block_info as (
-			select b.from as from, b.to as to, ceil((b.to::FLOAT - b.from::FLOAT)/ 100)::INTEGER as step from
+			select b.from as from, b.to as to, ceil((b.to::FLOAT - b.from::FLOAT)/ %d)::INTEGER as step from
 				(select min(round) as from, max(round) as to from blocks where creation_date between %d and %d) as b
 		),
 		ranges AS (
@@ -337,7 +338,7 @@ func graphDataPointsGeneratorQuery(from, to int64, aggQuery string) string {
 		LEFT JOIN snapshots s ON s.round BETWEEN r.r_min AND r.r_max
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
-	`, from, to, aggQuery)
+	`, dataPoints, from, to, aggQuery)
 
 	return query
 }

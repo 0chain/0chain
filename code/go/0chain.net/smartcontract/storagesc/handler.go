@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -161,34 +160,50 @@ func (srh *StorageRestHandler) getBlobberSnapshot(w http.ResponseWriter, r *http
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh *StorageRestHandler) getRoundsTotalMint(w http.ResponseWriter, r *http.Request) {
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	fromStr := r.URL.Query().Get("from")
-	from, err := strconv.ParseInt(fromStr, 10, 64)
+
+	res, err := edb.GetRoundsMintTotal(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
-		from = 0
-	}
-	toStr := r.URL.Query().Get("to")
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = math.MaxInt64
-	}
-	total, err := edb.GetRoundsMintTotal(from, to)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting total minted amount for blocks "+err.Error()))
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
 		return
 	}
 	common.Respond(w, r, rest.InterfaceMap{
-		"get_rounds_mint_total": total,
+		"get_rounds_mint_total": res,
 	}, nil)
 }
 
@@ -2335,28 +2350,44 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getDataStorageCost(w http.ResponseWriter, r *http.Request) {
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
+	from, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		from = time.Now().Add(-24 * time.Hour).Unix()
+	}
+	to, err := strconv.ParseInt(toStr, 10, 64)
+	if err != nil {
+		to = time.Now().Unix()
+	}
+
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	fromStr := r.URL.Query().Get("from")
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	toStr := r.URL.Query().Get("to")
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-	storageCosts, err := edb.GetDataStorageCosts(time.Unix(from, 0), time.Unix(to, 0))
+
+	storageCosts, err := edb.GetDataStorageCosts(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data storage costs failed, Error: "+err.Error()))
 		return
@@ -2381,29 +2412,44 @@ func (srh StorageRestHandler) getDataStorageCost(w http.ResponseWriter, r *http.
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getDataDailyAllocations(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	dailyAllocations, err := edb.GetDailyAllocations(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	dailyAllocations, err := edb.GetDailyAllocations(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data daily allocations failed, Error: "+err.Error()))
 		return
@@ -2428,29 +2474,44 @@ func (srh StorageRestHandler) getDataDailyAllocations(w http.ResponseWriter, r *
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getAverageReadWritePrice(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	dailyPrices, err := edb.GetDataReadWritePrice(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	dailyPrices, err := edb.GetDataReadWritePrice(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting average data read/write price failed, Error: "+err.Error()))
 		return
@@ -2475,29 +2536,44 @@ func (srh StorageRestHandler) getAverageReadWritePrice(w http.ResponseWriter, r 
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getTotalStaked(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	data, err := edb.GetTotalStaked(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	data, err := edb.GetTotalStaked(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting total data staked failed, Error: "+err.Error()))
 		return
@@ -2522,29 +2598,44 @@ func (srh StorageRestHandler) getTotalStaked(w http.ResponseWriter, r *http.Requ
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getNetworkDataQuality(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	scores, err := edb.GetNetworkQualityScores(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	scores, err := edb.GetNetworkQualityScores(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting network data quality score failed, Error: "+err.Error()))
 		return
@@ -2567,29 +2658,44 @@ func (srh StorageRestHandler) getNetworkDataQuality(w http.ResponseWriter, r *ht
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getMarketZCNSupply(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	supplyRecord, err := edb.GetZCNSupply(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	supplyRecord, err := edb.GetZCNSupply(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting network zcn supply failed, Error: "+err.Error()))
 		return
@@ -2614,29 +2720,44 @@ func (srh StorageRestHandler) getMarketZCNSupply(w http.ResponseWriter, r *http.
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	res, err := edb.GetAllocatedStorage(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := edb.GetAllocatedStorage(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting network allocated storage failed, Error: "+err.Error()))
 		return
@@ -2661,29 +2782,44 @@ func (srh StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *http
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getCloudGrowthData(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	res, err := edb.GetCloudGrowthData(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := edb.GetCloudGrowthData(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting network cloud growth data failed, Error: "+err.Error()))
 		return
@@ -2708,29 +2844,44 @@ func (srh StorageRestHandler) getCloudGrowthData(w http.ResponseWriter, r *http.
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getTotalTokenLocked(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	res, err := edb.GetTotalLocked(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := edb.GetTotalLocked(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting total token locked data failed, Error: "+err.Error()))
 		return
@@ -2755,29 +2906,44 @@ func (srh StorageRestHandler) getTotalTokenLocked(w http.ResponseWriter, r *http
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getDataCapitalization(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	res, err := edb.GetDataCap(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := edb.GetDataCap(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data capitaliztion failed, Error: "+err.Error()))
 		return
@@ -2801,29 +2967,44 @@ func (srh StorageRestHandler) getDataCapitalization(w http.ResponseWriter, r *ht
 //      required: false
 //      in: query
 //      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200:
 //  400:
 //  500:
 func (srh StorageRestHandler) getDataUtilization(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	fromStr := r.URL.Query().Get("from")
+	var (
+		fromStr       = r.URL.Query().Get("from")
+		toStr         = r.URL.Query().Get("to")
+		dataPointsStr = r.URL.Query().Get("data-points")
+	)
+
 	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
 		from = time.Now().Add(-24 * time.Hour).Unix()
 	}
-	toStr := r.URL.Query().Get("to")
 	to, err := strconv.ParseInt(toStr, 10, 64)
 	if err != nil {
 		to = time.Now().Unix()
 	}
 
-	res, err := edb.GetDataUtilization(time.Unix(from, 0), time.Unix(to, 0))
+	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
+	if err != nil {
+		dataPoints = 100
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := edb.GetDataUtilization(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
 		return
