@@ -98,6 +98,14 @@ func TestUpdateSettings(t *testing.T) {
 				return true
 			})).Return(nil).Once()
 
+		err := conf.update(*expected)
+		require.NoError(t, err)
+
+		balances.On(
+			"InsertTrieNode",
+			scConfigKey(ssc.ID), conf,
+		).Return("", nil).Once()
+
 		return args{
 			ssc:      ssc,
 			txn:      txn,
