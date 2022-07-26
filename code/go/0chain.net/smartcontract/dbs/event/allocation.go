@@ -7,9 +7,8 @@ import (
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 
-	"gorm.io/gorm/clause"
-
 	"0chain.net/chaincore/currency"
+	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
 )
@@ -47,6 +46,7 @@ type Allocation struct {
 	SuccessfulChallenges     int64         `json:"successful_challenges"`
 	FailedChallenges         int64         `json:"failed_challenges"`
 	LatestClosedChallengeTxn string        `json:"latest_closed_challenge_txn"`
+	WritePool                currency.Coin `json:"write_pool"`
 	//ref
 	User User `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
