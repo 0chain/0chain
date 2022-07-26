@@ -523,37 +523,22 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		return errors.New("can't get related challenge pool")
 	}
 
-	var (
-		until = alloc.Until()
-		move  currency.Coin
-	)
-
-	// the details will be saved in caller with allocation object (the details
-	// is part of the allocation object)
-	wps, err := alloc.getAllocationPools(sc, balances)
-	if err != nil {
-		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
-	}
-
+	var move currency.Coin
 	if size > 0 {
 		move = details.upload(size, wmTime,
 			alloc.restDurationInTimeUnits(wmTime))
 
-		err = wps.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
+		err = alloc.moveToChallengePool(cp, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 
 		alloc.MovedToChallenge += move
 		details.Spent += move
+
 	} else {
-		// delete (challenge_pool -> write_pool)
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
-		wp, err := wps.getOwnerWP()
-		if err != nil {
-			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
-		}
-		err = cp.moveToWritePool(alloc, details.BlobberID, until, wp, move)
+		err = alloc.moveFromChallengePool(cp, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
@@ -561,10 +546,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	if err := wps.saveWritePools(sc.ID, balances); err != nil {
-		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
-	}
-
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}

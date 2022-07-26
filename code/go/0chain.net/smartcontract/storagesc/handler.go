@@ -76,9 +76,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
-		rest.MakeEndpoint(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat),
-		rest.MakeEndpoint(storage+"/getWritePoolStat", srh.getWritePoolStat),
-		rest.MakeEndpoint(storage+"/getWritePoolAllocBlobberStat", srh.getWritePoolAllocBlobberStat),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
 		rest.MakeEndpoint(storage+"/alloc_written_size", srh.getWrittenAmount),
 		rest.MakeEndpoint(storage+"/alloc-written-size-per-period", srh.getWrittenAmountPerPeriod),
@@ -700,103 +697,6 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 	common.Respond(w, r, cp.stat(alloc), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolAllocBlobberStat getWritePoolAllocBlobberStat
-// Gets statistic for all locked tokens of the indicated read pools
-//
-// parameters:
-//    + name: client_id
-//      description: client for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: allocation_id
-//      description: allocation for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: blobber_id
-//      description: blobber for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//
-// responses:
-//  200: []untilStat
-//  400:
-func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
-	var (
-		clientID  = r.URL.Query().Get("client_id")
-		allocID   = r.URL.Query().Get("allocation_id")
-		blobberID = r.URL.Query().Get("blobber_id")
-		wp        = &writePool{}
-	)
-
-	if err := srh.GetQueryStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
-		return
-	}
-
-	var (
-		cut  = wp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	common.Respond(w, r, &stat, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolStat getWritePoolStat
-// Gets  statistic for all locked tokens of the write pool
-//
-// parameters:
-//    + name: client_id
-//      description: client for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//
-// responses:
-//  200: allocationPoolsStat
-//  400:
-func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.Request) {
-	var wp = &writePool{}
-	clientID := r.URL.Query().Get("client_id")
-	if err := srh.GetQueryStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
-		return
-	}
-
-	common.Respond(w, r, wp.stat(common.Now()), nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolAllocBlobberStat getReadPoolAllocBlobberStat
-// Gets statistic locked tokens of the indicated read pools. This now a shortcut to readpool stats.
-//
-// parameters:
-//    + name: client_id
-//      description: client for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//
-// responses:
-//  200: []untilStat
-//  400:
-func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
-	srh.getReadPoolStat(w, r)
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat
 // Gets  statistic for all locked tokens of the read pool
 //
@@ -808,7 +708,7 @@ func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter
 //      type: string
 //
 // responses:
-//  200: allocationPoolsStat
+//  200: readPool
 //  400:
 func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Request) {
 	rp := readPool{}
