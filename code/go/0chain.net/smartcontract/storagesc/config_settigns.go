@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/chaincore/smartcontractinterface"
@@ -844,6 +847,9 @@ func (ssc *StorageSmartContract) updateSettings(
 	}
 
 	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+		logging.Logger.Info("storagesc_update_settings",
+			zap.String("owner", conf.OwnerId),
+			zap.String("txn_client", t.ClientID))
 		return conf.OwnerId == t.ClientID
 	}); err != nil {
 		return "", err
