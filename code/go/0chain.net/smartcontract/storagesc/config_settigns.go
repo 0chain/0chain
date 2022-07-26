@@ -880,7 +880,12 @@ func (ssc *StorageSmartContract) updateSettings(
 
 	_, err = balances.InsertTrieNode(settingChangesKey, updateChanges)
 	if err != nil {
-		return "", common.NewError("update_settings", err.Error())
+		return "", common.NewError("update_settings save changes", err.Error())
+	}
+
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewError("update_settings save config", err.Error())
 	}
 
 	return "", nil
