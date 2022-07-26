@@ -234,6 +234,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			MaxChallengeCompletionTime: 1 * time.Hour,
 			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:     mockFreeAllocationSettings,
+			TimeUnit:                   time.Hour,
 			ReadPool: &readPoolConfig{
 				MinLock: mockMinLock,
 			},
@@ -251,6 +252,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Terms: Terms{
 				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
+				MinLockDemand:    mockMinLock,
 			},
 			LastHealthCheck: now - blobberHealthTime + 1,
 		}
