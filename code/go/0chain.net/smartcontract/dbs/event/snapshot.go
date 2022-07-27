@@ -126,7 +126,7 @@ func (edb *EventDb) GetAllocatedStorage(from, to time.Time, dataPoints uint16) (
 func (edb *EventDb) GetCloudGrowthData(from, to time.Time, dataPoints uint16) ([]int64, error) {
 	var res []int64
 	//491 SUM available (in the terms)
-	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "sum(available_storage)", dataPoints)
+	query := graphDataPointsGeneratorQuery(from.Unix(), to.Unix(), "sum(allocated_storage) - sum(used_storage)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
