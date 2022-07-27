@@ -1297,7 +1297,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*transaction.Transaction)
 	if !ok {
-		return nil, fmt.Errorf("invalid request %T", entity)
+		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
 	sc := GetServerChain()
