@@ -26,7 +26,10 @@ func (c *Chain) SetupSC(ctx context.Context) {
 			func() {
 				isRegisteredC := make(chan bool)
 				cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-				defer cancel()
+				defer func() {
+					logging.Logger.Info("cancelling setup sc context")
+					cancel()
+				}()
 
 				go func() {
 					isRegistered := c.isRegistered(cctx)
@@ -56,7 +59,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 					return
 				}
 
-				if txn != nil && c.ConfirmTransaction(ctx, txn) {
+				if txn != nil && c.ConfirmTransaction(ctx, txn, 30) {
 					logging.Logger.Debug("Register node transaction confirmed")
 					return
 				}

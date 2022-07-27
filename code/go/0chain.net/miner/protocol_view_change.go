@@ -217,7 +217,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.Any("next_phase", pn),
 			zap.Any("txn", txn))
 
-		if txn == nil || (txn != nil && mc.ConfirmTransaction(ctx, txn)) {
+		if txn == nil || (txn != nil && mc.ConfirmTransaction(ctx, txn, 0)) {
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)
 			phaseStartRound = pn.StartRound

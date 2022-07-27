@@ -364,9 +364,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		MinLock: 10,
 	}
 	conf.WritePool = &writePoolConfig{
-		MinLock:       10,
-		MinLockPeriod: 5 * time.Second,
-		MaxLockPeriod: 20 * time.Minute,
+		MinLock: 10,
 	}
 
 	conf.StakePool = &stakePoolConfig{

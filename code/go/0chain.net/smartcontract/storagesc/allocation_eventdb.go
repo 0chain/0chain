@@ -110,6 +110,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		Expiration:     common.Timestamp(alloc.Expiration),
 		Owner:          alloc.Owner,
 		OwnerPublicKey: alloc.OwnerPublicKey,
+		WritePool:      alloc.WritePool,
 		Stats: &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
@@ -120,14 +121,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
-		BlobberAllocs:    blobberDetails,
-		BlobberAllocsMap: blobberMap,
-		IsImmutable:      alloc.IsImmutable,
-		ReadPriceRange:   PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
-		WritePriceRange:  PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
-
-		// todo: to be added with WritePool : select user_id from WritePools where allocation_id = ?
-		// WritePoolOwners:            nil,
+		BlobberAllocs:           blobberDetails,
+		BlobberAllocsMap:        blobberMap,
+		IsImmutable:             alloc.IsImmutable,
+		ReadPriceRange:          PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
+		WritePriceRange:         PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
 		ChallengeCompletionTime: time.Duration(alloc.ChallengeCompletionTime),
 		StartTime:               common.Timestamp(alloc.StartTime),
 		Finalized:               alloc.Finalized,
@@ -197,6 +195,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		MovedBack:               sa.MovedBack,
 		MovedToValidators:       sa.MovedToValidators,
 		TimeUnit:                int64(sa.TimeUnit),
+		WritePool:               sa.WritePool,
 	}
 
 	if sa.Stats != nil {
@@ -242,6 +241,7 @@ func (sa *StorageAllocation) buildDbUpdates() *dbs.DbUpdates {
 			"moved_back":                sa.MovedBack,
 			"moved_to_validators":       sa.MovedToValidators,
 			"time_unit":                 int64(sa.TimeUnit),
+			"write_pool":                sa.WritePool,
 		},
 	}
 

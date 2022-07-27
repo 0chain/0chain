@@ -373,7 +373,6 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	return resp, nil
 }
 
-// getWritePool of current client
 func (ssc *StorageSmartContract) getFreeStorageAssigner(
 	clientID datastore.Key,
 	balances cstate.StateContextI,

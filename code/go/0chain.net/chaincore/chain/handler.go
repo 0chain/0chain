@@ -1298,7 +1298,7 @@ func PutTransaction(c Chainer) datastore.JSONEntityReqResponderF {
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		txn, ok := entity.(*transaction.Transaction)
 		if !ok {
-			return nil, fmt.Errorf("invalid request %T", entity)
+			return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 		}
 
 		if c.GetChainConfig().TxnMaxPayload() > 0 {

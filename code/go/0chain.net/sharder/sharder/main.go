@@ -237,7 +237,7 @@ func main() {
 			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
 		}
 	}
-	if node.NodeType(selfNode.Type) != node.NodeTypeSharder {
+	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
 	}
 
@@ -310,6 +310,7 @@ func main() {
 
 	go sc.RegisterClient()
 	if sc.ChainConfig.IsFeeEnabled() {
+		logging.Logger.Info("setting up sharder(sc)")
 		go sc.SetupSC(ctx)
 	}
 

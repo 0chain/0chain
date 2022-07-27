@@ -336,10 +336,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 
 		balances.On(
-			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
-		).Return(util.ErrValueNotPresent).Once()
-
-		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
 		).Return(util.ErrValueNotPresent).Once()
 		balances.On(
@@ -389,21 +385,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 			ToClientID: ADDRESS,
 			Amount:     currency.Coin(writePoolLocked),
 		}).Return(nil).Once()
-
-		balances.On("InsertTrieNode",
-			writePoolKey(ssc.ID, p.marker.Recipient),
-			mock.MatchedBy(func(wp *writePool) bool {
-				pool, found := wp.Pools.get(mockTransactionHash)
-				require.True(t, found)
-				return pool.Balance == currency.Coin(writePoolLocked) &&
-					pool.ID == mockTransactionHash &&
-					pool.AllocationID == mockTransactionHash &&
-					len(pool.Blobbers) == mockNumBlobbers &&
-					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
-						conf.FreeAllocationSettings.Duration).Unix())
-			})).Return("", nil).Once()
-
-		// readPoolLock blockchain access
 
 		balances.On(
 			"GetSignatureScheme",
@@ -675,7 +656,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				mockSetValue(p.assigner),
 			).Return(nil).Once()
 		}
-
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil).Once()
 
@@ -706,10 +686,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		).Return("", nil).Once()
 
 		balances.On(
-			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
-			mockSetValue(&writePool{})).Return(nil).Once()
-
-		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
 			mockSetValue(&challengePool{})).Return(nil).Once()
 
@@ -735,23 +711,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			ToClientID: ADDRESS,
 			Amount:     zcnToBalance(p.marker.FreeTokens),
 		}).Return(nil).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			writePoolKey(ssc.ID, p.marker.Recipient),
-			//mock.Anything,
-			mock.MatchedBy(func(wp *writePool) bool {
-				pool, found := wp.Pools.get(p.allocationId)
-				if found {
-					return pool.Balance == zcnToBalance(p.marker.FreeTokens) &&
-						pool.ID == mockTransactionHash &&
-						pool.AllocationID == p.allocationId &&
-						len(pool.Blobbers) == mockNumBlobbers
-				}
-				//require.True(t, found)
-				return false
-			}),
-		).Return("", nil).Once()
 
 		balances.On(
 			"EmitEvent",
