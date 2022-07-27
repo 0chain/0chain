@@ -476,6 +476,34 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 	}
 }
 
+func AddMockSnapshots(edb *event.EventDb) {
+	for i := 1; i < viper.GetInt(sc.NumBlocks); i++ {
+		snapshot := event.Snapshot{
+			Round:                int64(i),
+			TotalMint:            int64(i),
+			StorageCost:          int64(currency.Coin(i + (0.1 * 1e10))),
+			ActiveAllocatedDelta: int64(i),
+			AverageRWPrice:       int64(currency.Coin(i * (0.1 * 1e10))),
+			TotalStaked:          int64(i),
+			SuccessfulChallenges: int64(i),
+			FailedChallenges:     0,
+			ZCNSupply:            100 + int64(i),
+			AllocatedStorage:     int64(i),
+			MaxCapacityStorage:   int64(i),
+			StakedStorage:        int64(i),
+			UsedStorage:          int64(i),
+			TotalValueLocked:     int64(i),
+			ClientLocks:          int64(i),
+			Capitalization:       int64(i),
+			DataUtilization:      int64(i),
+		}
+		res := edb.Store.Get().Create(&snapshot)
+		if res.Error != nil {
+			log.Fatal(res.Error)
+		}
+	}
+}
+
 func AddMockValidators(
 	publicKeys []string,
 	eventDb *event.EventDb,
