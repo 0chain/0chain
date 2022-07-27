@@ -56,7 +56,6 @@ const (
 	FreeAllocationWritePriceRangeMin
 	FreeAllocationWritePriceRangeMax
 	FreeAllocationReadPoolFraction
-	FreeAllocationMintAmount
 
 	ValidatorReward
 	BlobberSlash
@@ -150,7 +149,6 @@ var (
 		"free_allocation_settings.write_price_range.min",
 		"free_allocation_settings.write_price_range.max",
 		"free_allocation_settings.read_pool_fraction",
-		"free_allocation_settings.mint_amount",
 
 		"validator_reward",
 		"blobber_slash",
@@ -248,7 +246,6 @@ var (
 		"free_allocation_settings.write_price_range.min": {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
 		"free_allocation_settings.write_price_range.max": {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
 		"free_allocation_settings.read_pool_fraction":    {FreeAllocationReadPoolFraction, smartcontract.Float64},
-		"free_allocation_settings.mint_amount":           {FreeAllocationMintAmount, smartcontract.Float64},
 
 		"validator_reward":                     {ValidatorReward, smartcontract.Float64},
 		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
@@ -435,8 +432,6 @@ func (conf *Config) setFloat64(key string, change float64) error {
 	switch Settings[key].setting {
 	case FreeAllocationReadPoolFraction:
 		conf.FreeAllocationSettings.ReadPoolFraction = change
-	case FreeAllocationMintAmount:
-		conf.FreeAllocationSettings.MintAmount = change
 	case ValidatorReward:
 		conf.ValidatorReward = change
 	case BlobberSlash:
@@ -671,8 +666,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.FreeAllocationSettings.WritePriceRange.Max
 	case FreeAllocationReadPoolFraction:
 		return conf.FreeAllocationSettings.ReadPoolFraction
-	case FreeAllocationMintAmount:
-		return conf.FreeAllocationSettings.MintAmount
 	case ValidatorReward:
 		return conf.ValidatorReward
 	case BlobberSlash:

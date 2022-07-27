@@ -27,7 +27,6 @@ type freeAllocationSettings struct {
 	ReadPriceRange   PriceRange    `json:"read_price_range"`
 	WritePriceRange  PriceRange    `json:"write_price_range"`
 	ReadPoolFraction float64       `json:"read_pool_fraction"`
-	MintAmount       float64       `json:"mint_amount"`
 }
 
 type stakePoolConfig struct {
@@ -432,7 +431,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 		Max: currency.Coin(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
-	conf.FreeAllocationSettings.MintAmount = scc.GetFloat64(fas + "min_amount")
 
 	// allocation cancellation
 	conf.FailedChallengesToCancel = scc.GetInt(

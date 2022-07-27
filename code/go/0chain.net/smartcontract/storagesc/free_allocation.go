@@ -264,7 +264,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	totalMint, err := currency.ParseZCN(conf.FreeAllocationSettings.MintAmount)
+	totalMint, err := currency.ParseZCN(marker.FreeTokens)
 	if err != nil {
 		return "", err
 	}

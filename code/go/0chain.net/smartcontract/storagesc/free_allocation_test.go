@@ -209,7 +209,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		mockUserPublicKey        = "mock user public key"
 		mockTransactionHash      = "12345678"
 		mockReadPoolFraction     = 0.2
-		mockMintAmount           = 0.2
 		mockMinLock              = 10
 		mockFreeTokens           = 5 * mockMinLock
 		mockIndividualTokenLimit = mockFreeTokens + 1
@@ -219,15 +218,13 @@ func TestFreeAllocationRequest(t *testing.T) {
 	var (
 		mockMaxAnnualFreeAllocation = zcnToBalance(100354)
 		mockFreeAllocationSettings  = freeAllocationSettings{
-			DataShards:                 5,
-			ParityShards:               5,
-			Size:                       123456,
-			ReadPriceRange:             PriceRange{0, 5000},
-			WritePriceRange:            PriceRange{0, 5000},
-			MaxChallengeCompletionTime: 1 * time.Hour,
-			Duration:                   24 * 365 * time.Hour,
-			ReadPoolFraction:           mockReadPoolFraction,
-			MintAmount:                 mockMintAmount,
+			DataShards:       5,
+			ParityShards:     5,
+			Size:             123456,
+			ReadPriceRange:   PriceRange{0, 5000},
+			WritePriceRange:  PriceRange{0, 5000},
+			Duration:         24 * 365 * time.Hour,
+			ReadPoolFraction: mockReadPoolFraction,
 		}
 		mockAllBlobbers = &StorageNodes{}
 		conf            = &Config{
@@ -278,8 +275,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 		var err error
 		var balances = &mocks.StateContextI{}
 		balances.TestData()[newSaSaved] = false
-		var readPoolLocked = zcnToInt64(mockMintAmount * mockReadPoolFraction)
-		var writePoolLocked = zcnToInt64(mockMintAmount) - readPoolLocked
+		var readPoolLocked = zcnToInt64(mockFreeTokens * mockReadPoolFraction)
+		var writePoolLocked = zcnToInt64(mockFreeTokens) - readPoolLocked
 
 		var txn = &transaction.Transaction{
 			ClientID:     p.marker.Recipient,
@@ -372,7 +369,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			mock.Anything,
 		).Return("", nil).Once()
 
-		zcn, _ := currency.ParseZCN(mockMintAmount)
+		zcn, _ := currency.ParseZCN(mockFreeTokens)
 		balances.On(
 			"InsertTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
@@ -568,13 +565,12 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	var mockTimeUnit = 1 * time.Hour
 	var mockMaxAnnualFreeAllocation = zcnToBalance(100354)
 	var mockFreeAllocationSettings = freeAllocationSettings{
-		DataShards:                 5,
-		ParityShards:               5,
-		Size:                       123456,
-		ReadPriceRange:             PriceRange{0, 5000},
-		WritePriceRange:            PriceRange{0, 5000},
-		MaxChallengeCompletionTime: 1 * time.Hour,
-		Duration:                   24 * 365 * time.Hour,
+		DataShards:      5,
+		ParityShards:    5,
+		Size:            123456,
+		ReadPriceRange:  PriceRange{0, 5000},
+		WritePriceRange: PriceRange{0, 5000},
+		Duration:        24 * 365 * time.Hour,
 	}
 	var mockAllBlobbers = &StorageNodes{}
 	var conf = &Config{
