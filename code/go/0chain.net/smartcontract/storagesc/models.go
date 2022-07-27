@@ -687,31 +687,35 @@ type StorageAllocation struct {
 
 func (sa *StorageAllocation) addToWritePool(
 	txn *transaction.Transaction,
-	mintNewTokens bool,
+	mintNewTokens currency.Coin,
 	balances cstate.StateContextI,
 ) error {
-	if !mintNewTokens {
-		if err := stakepool.CheckClientBalance(txn, balances); err != nil {
-			return fmt.Errorf("client balance check failed: %v", err)
-		}
+	shouldMint := false
+	value := txn.Value
+	if mintNewTokens > 0 {
+		shouldMint = true
+		value = mintNewTokens
 	}
 
-	if mintNewTokens {
+	if shouldMint {
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     txn.Value,
+			Amount:     value,
 		}); err != nil {
 			return fmt.Errorf("minting tokens for write pool: %v", err)
 		}
 	} else {
-		transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
+		if err := stakepool.CheckClientBalance(txn.ClientID, value, balances); err != nil {
+			return err
+		}
+		transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, value)
 		if err := balances.AddTransfer(transfer); err != nil {
 			return fmt.Errorf("adding transfer to allocation pool: %v", err)
 		}
 	}
 
-	if writePool, err := currency.AddCoin(sa.WritePool, txn.Value); err != nil {
+	if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
 		return err
 	} else {
 		sa.WritePool = writePool

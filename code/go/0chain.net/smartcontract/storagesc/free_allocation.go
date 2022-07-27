@@ -264,13 +264,19 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	totalMint, _ := currency.ParseZCN(conf.FreeAllocationSettings.MintAmount)
+	totalMint, err := currency.ParseZCN(conf.FreeAllocationSettings.MintAmount)
+	if err != nil {
+		return "", err
+	}
 	assigner.CurrentRedeemed += totalMint
 
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting transaction value to float: %v", err)
 	}
-	f, _ := totalMint.Float64()
+	f, err := totalMint.Float64()
+	if err != nil {
+		return "", err
+	}
 	readPoolTokens, err := currency.Float64ToCoin(f * conf.FreeAllocationSettings.ReadPoolFraction)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting read pool tokens to Coin: %v", err)

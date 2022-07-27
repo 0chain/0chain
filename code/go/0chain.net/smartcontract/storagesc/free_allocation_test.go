@@ -278,8 +278,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 		var err error
 		var balances = &mocks.StateContextI{}
 		balances.TestData()[newSaSaved] = false
-		var readPoolLocked = zcnToInt64(p.marker.FreeTokens * mockReadPoolFraction)
-		var writePoolLocked = zcnToInt64(p.marker.FreeTokens) - readPoolLocked
+		var readPoolLocked = zcnToInt64(mockMintAmount * mockReadPoolFraction)
+		var writePoolLocked = zcnToInt64(mockMintAmount) - readPoolLocked
 
 		var txn = &transaction.Transaction{
 			ClientID:     p.marker.Recipient,
@@ -315,6 +315,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil)
+
+		balances.On("GetClientBalance", mockRecipient,
+			mockSetValue(conf)).Return(nil).Maybe()
 
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
@@ -369,6 +372,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			mock.Anything,
 		).Return("", nil).Once()
 
+		zcn, _ := currency.ParseZCN(mockMintAmount)
 		balances.On(
 			"InsertTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
@@ -377,7 +381,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + txn.Value,
+				CurrentRedeemed:    zcn,
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
@@ -686,6 +690,8 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"InsertTrieNode", sa.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()
+		balances.On("GetClientBalance", mockRecipient).Return(currency.Coin(1000000000000), nil).Maybe().Once()
+		balances.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(nil).Once()
 
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
@@ -708,11 +714,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 		).Return("", nil).Once()
 
-		balances.On("AddMint", &state.Mint{
-			Minter:     ADDRESS,
-			ToClientID: ADDRESS,
-			Amount:     zcnToBalance(p.marker.FreeTokens),
-		}).Return(nil).Once()
+		//balances.On("AddMint", &state.Mint{
+		//	Minter:     ADDRESS,
+		//	ToClientID: ADDRESS,
+		//	Amount:     zcnToBalance(p.marker.FreeTokens),
+		//}).Return(nil).Once()
 
 		balances.On(
 			"EmitEvent",

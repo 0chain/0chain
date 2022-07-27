@@ -953,7 +953,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
-		if err = alloc.addToWritePool(txn, t.Value, balances); err != nil {
+		if err = alloc.addToWritePool(txn, txn.Value, balances); err != nil {
 			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 	}
