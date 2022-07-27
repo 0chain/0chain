@@ -4,9 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -80,14 +77,6 @@ func (sp *StakePool) LockPool(
 	}
 	usp.add(providerId, newPoolId)
 	i, _ := txn.Value.Int64()
-	logging.Logger.Info("piers LockPool", zap.Int64("txn.value", i),
-		zap.Any("event", event.DelegatePoolLock{
-			Client:       txn.ClientID,
-			PoolId:       newPoolId,
-			ProviderId:   providerId,
-			ProviderType: providerType,
-			Amount:       i,
-		}))
 	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, event.DelegatePoolLock{
 		Client:       txn.ClientID,
 		PoolId:       newPoolId,

@@ -157,10 +157,11 @@ func (edb *EventDb) updateSnapshot(e events) {
 	}
 	thisRound := e[0].BlockNumber
 	var current Snapshot
+	var err error
 	if thisRound > 1 {
-		current, err := edb.getSnapshot(thisRound - 1)
+		current, err = edb.getSnapshot(thisRound - 1)
 		if err != nil {
-			logging.Logger.Error("piers getting last snapshot", zap.Int64("last round", thisRound-1), zap.Error(err))
+			logging.Logger.Error("getting last snapshot", zap.Int64("last round", thisRound-1), zap.Error(err))
 		}
 		current.StorageCost = 0
 		current.ActiveAllocatedDelta = 0
@@ -207,8 +208,6 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.TotalStaked += d.Amount
-			logging.Logger.Info("piers updateSnapshot TagLockStakePool",
-				zap.Any("DelegatePoolLock", d), zap.Any("current", current))
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -300,14 +299,6 @@ func (edb *EventDb) updateSnapshot(e events) {
 	if err := edb.addSnapshot(current); err != nil {
 		logging.Logger.Error("snapshot", zap.Error(err))
 	}
-
-	savedSnapshot, err := edb.getSnapshot(current.Round)
-	logging.Logger.Info("piers added",
-		zap.Any("this round", thisRound),
-		zap.Any("snapshot", current),
-		zap.Any("saved snapshot", savedSnapshot),
-		zap.Error(err),
-	)
 }
 
 func (edb *EventDb) getSnapshot(round int64) (Snapshot, error) {
