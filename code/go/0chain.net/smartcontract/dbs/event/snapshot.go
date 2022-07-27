@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
 )
@@ -148,111 +151,107 @@ func (edb *EventDb) GetDataUtilization(from, to time.Time) ([]int64, error) {
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) updateSnapshot(e events) error {
-	current := Snapshot{}
-	for i, event := range e {
-		if i == 0 { //first event on this round
-			previousRound := event.BlockNumber - 1
-			if previousRound > -1 {
-				last, err := edb.getSnapshot(int64(i))
-				if err != nil {
-					return err
-				}
-				current = Snapshot{
-					Round:                event.BlockNumber,
-					TotalMint:            last.TotalMint,
-					StorageCost:          0,
-					ActiveAllocatedDelta: 0,
-					AverageRWPrice:       0,
-					TotalStaked:          last.TotalStaked,
-					SuccessfulChallenges: 0,
-					FailedChallenges:     0,
-					ZCNSupply:            last.ZCNSupply,
-					AllocatedStorage:     last.AllocatedStorage,
-					MaxCapacityStorage:   last.MaxCapacityStorage,
-					UsedStorage:          last.UsedStorage,
-					StakedStorage:        last.StakedStorage,
-					TotalValueLocked:     last.TotalValueLocked,
-					ClientLocks:          last.ClientLocks,
-					Capitalization:       last.Capitalization,
-					DataUtilization:      last.DataUtilization,
-				}
-			}
+func (edb *EventDb) updateSnapshot(e events) {
+	if len(e) == 0 {
+		return
+	}
+	thisRound := e[0].BlockNumber
+	var current Snapshot
+	if thisRound > 1 {
+		current, err := edb.getSnapshot(thisRound)
+		if err != nil {
+			logging.Logger.Error("getting last snapshot", zap.Error(err))
 		}
+		current.StorageCost = 0
+		current.ActiveAllocatedDelta = 0
+		current.AverageRWPrice = 0
+		current.SuccessfulChallenges = 0
+		current.FailedChallenges = 0
+	}
 
-		//	TagSendTransfer
-		//	TagReceiveTransfer
-		//	TagLockStakePool
-		//	TagUnlockStakePool
-		//	TagLockWritePool
-		//	TagUnlockWritePool
-		//	TagLockReadPool
-		//	TagUnlockReadPool
-		//	TagToChallengePool
-		//	TagFromChallengePool
-		//	TagAddMint
+	for _, event := range e {
 		switch EventTag(event.Tag) {
 		case TagAddMint:
 			u, ok := fromEvent[User](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			change, err := u.Change.Int64()
 			if err != nil {
-				return err
+				logging.Logger.Error("snapshot", zap.Error(err))
+				continue
 			}
 			current.TotalMint += change
 			current.ZCNSupply += change
 		case TagBurn:
 			b, ok := fromEvent[currency.Coin](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			i2, err := b.Int64()
 			if err != nil {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot", zap.Error(err))
+				continue
 			}
 			current.ZCNSupply -= i2
 		case TagLockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			current.TotalStaked += d.Amount
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			current.TotalStaked -= d.Amount
 		case TagLockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			current.ClientLocks += d.Amount
 		case TagUnlockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			current.ClientLocks -= d.Amount
 		case TagLockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			current.ClientLocks += d.Amount
 		case TagUnlockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			current.ClientLocks -= d.Amount
 		case TagToChallengePool:
 			d, ok := fromEvent[ChallengePoolLock](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			current.StorageCost += d.Amount
 		case TagUpdateChallenge:
@@ -269,7 +268,9 @@ func (edb *EventDb) updateSnapshot(e events) error {
 		case TagAllocValueChange:
 			updates, ok := fromEvent[AllocationValueChanged](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			switch updates.FieldType {
 			case Allocated:
@@ -279,7 +280,9 @@ func (edb *EventDb) updateSnapshot(e events) error {
 		case TagAllocBlobberValueChange:
 			updates, ok := fromEvent[AllocationBlobberValueChanged](event.Data)
 			if !ok {
-				return ErrInvalidEventData
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
 			}
 			switch updates.FieldType {
 			case MaxCapacity:
@@ -289,13 +292,11 @@ func (edb *EventDb) updateSnapshot(e events) error {
 			}
 
 		}
-
 	}
+
 	if err := edb.addSnapshot(current); err != nil {
-		return err
+		logging.Logger.Error("snapshot", zap.Error(err))
 	}
-
-	return nil
 }
 
 func (edb *EventDb) getSnapshot(round int64) (Snapshot, error) {
