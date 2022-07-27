@@ -29,6 +29,7 @@ func readPoolKey(scKey, clientID string) datastore.Key {
 // readPool represents new trimmed down readPool consisting of two balances,
 // one for the allocations that the client (client_id) owns
 // and the other for the allocations that the client (client_id) doesn't own
+// swagger:model readPool
 type readPool struct {
 	Balance currency.Coin `json:"balance"`
 }

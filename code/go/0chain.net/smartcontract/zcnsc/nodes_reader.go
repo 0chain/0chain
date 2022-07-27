@@ -24,7 +24,7 @@ func GetAuthorizerNode(id string, ctx state.StateContextI) (*AuthorizerNode, err
 
 // GetUserNode returns error if node not found
 func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
-	node := NewUserNode(id, 0)
+	node := NewUserNode(id)
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	switch err {
 	case nil, util.ErrValueNotPresent:
@@ -41,6 +41,9 @@ func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
 	case nil, util.ErrValueNotPresent:
 		if node.ZCNSConfig == nil {
 			node.ZCNSConfig = loadGlobalNode()
+		}
+		if node.WZCNNonceMinted == nil {
+			node.WZCNNonceMinted = make(map[int64]bool)
 		}
 		return node, nil
 	default:
