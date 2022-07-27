@@ -20,15 +20,14 @@ func scConfigKey(scKey string) datastore.Key {
 }
 
 type freeAllocationSettings struct {
-	DataShards                 int           `json:"data_shards"`
-	ParityShards               int           `json:"parity_shards"`
-	Size                       int64         `json:"size"`
-	Duration                   time.Duration `json:"duration"`
-	ReadPriceRange             PriceRange    `json:"read_price_range"`
-	WritePriceRange            PriceRange    `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
-	ReadPoolFraction           float64       `json:"read_pool_fraction"`
-	MintAmount                 float64       `json:"mint_amount"`
+	DataShards       int           `json:"data_shards"`
+	ParityShards     int           `json:"parity_shards"`
+	Size             int64         `json:"size"`
+	Duration         time.Duration `json:"duration"`
+	ReadPriceRange   PriceRange    `json:"read_price_range"`
+	WritePriceRange  PriceRange    `json:"write_price_range"`
+	ReadPoolFraction float64       `json:"read_pool_fraction"`
+	MintAmount       float64       `json:"mint_amount"`
 }
 
 type stakePoolConfig struct {
@@ -247,10 +246,6 @@ func (sc *Config) validate() (err error) {
 		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
 			sc.FreeAllocationSettings.WritePriceRange)
 	}
-	if sc.FreeAllocationSettings.MaxChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
-			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
-	}
 	if sc.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < sc.FreeAllocationSettings.ReadPoolFraction {
 		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
 			sc.FreeAllocationSettings.ReadPoolFraction)
@@ -436,7 +431,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 		Min: currency.Coin(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
 		Max: currency.Coin(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
 	}
-	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
 	conf.FreeAllocationSettings.MintAmount = scc.GetFloat64(fas + "min_amount")
 
