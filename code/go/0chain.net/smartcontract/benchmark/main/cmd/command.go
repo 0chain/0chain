@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"sort"
@@ -106,6 +107,7 @@ var rootCmd = &cobra.Command{
 
 		GetViper(loadPath)
 		log.PrintSimSettings()
+		common.SetupRootContext(context.Background())
 
 		tests, omittedTests := suitesOmits()
 		log.Println("read in command line options")

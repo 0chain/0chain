@@ -37,7 +37,7 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 func Test_FuzzyMintTest(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
-	payload, err := CreateMintPayload(ctx, defaultAuthorizer)
+	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 
 	for _, client := range clients {
@@ -64,7 +64,6 @@ func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce - 1
 	require.NoError(t, node.Save(ctx))
 
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)

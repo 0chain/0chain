@@ -1,8 +1,9 @@
 package zcnsc
 
 import (
-	"0chain.net/smartcontract/rest"
 	"net/http"
+
+	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/currency"
 
@@ -36,7 +37,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizerNodes getAuthorizerNodes
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes getAuthorizerNodes
 // get authorizer nodes
 //
 // responses:
