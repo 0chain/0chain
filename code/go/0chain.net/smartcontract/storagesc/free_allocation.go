@@ -270,9 +270,6 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 	assigner.CurrentRedeemed += totalMint
 
-	if err != nil {
-		return "", common.NewErrorf("free_allocation_failed", "converting transaction value to float: %v", err)
-	}
 	f, err := totalMint.Float64()
 	if err != nil {
 		return "", err
