@@ -71,6 +71,8 @@ type TimedQueryStateContextI interface {
 	Now() common.Timestamp
 }
 
+type Appender func(events []event.Event, current event.Event) []event.Event
+
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
@@ -94,7 +96,7 @@ type StateContextI interface {
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
-	EmitEvent(event.EventType, event.EventTag, string, interface{})
+	EmitEvent(event.EventType, event.EventTag, string, interface{}, ...Appender)
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 }
@@ -236,17 +238,22 @@ func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
 }
 
-func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}) {
+func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...Appender) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
-	sc.events = append(sc.events, event.Event{
+	e := event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
 		Type:        int(eventType),
 		Tag:         int(tag),
 		Index:       index,
 		Data:        data,
-	})
+	}
+	if len(appenders) != 0 {
+		sc.events = appenders[0](sc.events, e)
+	} else {
+		sc.events = append(sc.events, e)
+	}
 }
 
 func (sc *StateContext) EmitError(err error) {
