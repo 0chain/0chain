@@ -27,7 +27,8 @@ type Transaction struct {
 	Status            int
 
 	//ref
-	ReadMarkers []ReadMarker `gorm:"foreignKey:TransactionID;references:Hash"`
+	ReadMarkers []ReadMarker  `gorm:"foreignKey:TransactionID;references:Hash"`
+	WriteMarker []WriteMarker `gorm:"foreignKey:TransactionID;references:Hash"`
 }
 
 func (edb *EventDb) addTransaction(transaction Transaction) error {
@@ -65,6 +66,17 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Offset(limit.Offset).Limit(limit.Limit).Scan(&tr)
+	return tr, res.Error
+}
+
+// GetTransactions finds the transaction
+func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, error) {
+	tr := []Transaction{}
+	res := edb.Store.Get().Model(&Transaction{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "creation_date"},
+		Desc:   limit.IsDescending,
+	}).Find(&tr)
+
 	return tr, res.Error
 }
 

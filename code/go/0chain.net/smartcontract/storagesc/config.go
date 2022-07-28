@@ -31,7 +31,8 @@ type freeAllocationSettings struct {
 }
 
 type stakePoolConfig struct {
-	MinLock currency.Coin `json:"min_lock"`
+	MinLock       currency.Coin `json:"min_lock"`
+	MinLockPeriod time.Duration `json:"min_lock_period"`
 }
 
 type readPoolConfig struct {
@@ -39,9 +40,7 @@ type readPoolConfig struct {
 }
 
 type writePoolConfig struct {
-	MinLock       currency.Coin `json:"min_lock"`
-	MinLockPeriod time.Duration `json:"min_lock_period"`
-	MaxLockPeriod time.Duration `json:"max_lock_period"`
+	MinLock currency.Coin `json:"min_lock"`
 }
 
 type blockReward struct {
@@ -108,7 +107,7 @@ type Config struct {
 	// ReadPool related configurations.
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
-	WritePool *writePoolConfig `json:"writepool"`
+	WritePool *writePoolConfig `json:"write_pool"`
 	// StakePool related configurations.
 	StakePool *stakePoolConfig `json:"stakepool"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
@@ -414,10 +413,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
-	conf.WritePool.MinLockPeriod = scc.GetDuration(
-		pfx + "writepool.min_lock_period")
-	conf.WritePool.MaxLockPeriod = scc.GetDuration(
-		pfx + "writepool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "stakepool.min_lock"))
@@ -523,18 +518,6 @@ func (ssc *StorageSmartContract) getConfig(
 	default:
 		return nil, err
 	}
-}
-
-// getWritePoolConfig
-func (ssc *StorageSmartContract) getWritePoolConfig(
-	balances chainState.StateContextI, setup bool) (
-	conf *writePoolConfig, err error) {
-
-	var scconf *Config
-	if scconf, err = ssc.getConfig(balances, setup); err != nil {
-		return
-	}
-	return scconf.WritePool, nil
 }
 
 // getReadPoolConfig

@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -341,17 +342,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	deletedNode := fb.ClientState.GetDeletes()
 	c.rebaseState(fb)
-	deadNodesCount, err := c.stateDB.RecordDeadNodes(deletedNode)
+	err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 	if err != nil {
 		logging.Logger.Error("finalize block - record dead nodes failed",
 			zap.Int64("round", fb.Round),
 			zap.String("block", fb.Hash),
 			zap.Error(err))
 		return
-	}
-
-	if deadNodesCount >= c.MaxDeadNodesCount() {
-		go c.StartPruneClientState()
 	}
 
 	if err := c.updateFeeStats(fb); err != nil {
@@ -762,7 +759,7 @@ func (c *Chain) updateFeeStats(fb *block.Block) error {
 			return err
 		}
 	}
-	meanFees, _, err := currency.DivideCoin(totalFees, int64(len(fb.Txns)))
+	meanFees, _, err := currency.DistributeCoin(totalFees, int64(len(fb.Txns)))
 	if err != nil {
 		return err
 	}

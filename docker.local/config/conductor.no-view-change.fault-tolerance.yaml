@@ -155,14 +155,14 @@ tests:
       - start: ["miner-4"]
       - wait_round:
           shift: 10
-          timeout: "1m"
+          timeout: "3m"
       - command:
           name: "sleep_3m"
       - stop: ["miner-2"]
       - start: ["miner-3"]
       - wait_round:
           shift: 10
-          timeout: "1m"
+          timeout: "3m"
 
   # SHARDERS GO DOWN
   - name: "All sharders go down"
@@ -174,7 +174,7 @@ tests:
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
           start: true
       - wait_round:
-          shift: 20   
+          shift: 20
       - stop: ["sharder-1"]
       - wait_no_progress:
           timeout: "5m"
@@ -193,7 +193,7 @@ tests:
       - stop: ["sharder-1"]
       - start: ["sharder-1"]
       - wait_round:
-          shift: 50    
+          shift: 50
 
   - name: "Sharder goes down for 3 minutes simultaneously with coming up of the previous one"
     flow:

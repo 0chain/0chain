@@ -203,7 +203,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		minerUrls)
+		minerUrls, mb.Sharders.N2NURLs())
 	return
 }
 
@@ -226,7 +226,7 @@ func getBaseN2NURLs(nodes []*node.Node) (urls []string) {
 }
 
 func (mc *Chain) sendMpkTransaction(selfNode *node.Node, mpk *block.MPK,
-	urls []string) (tx *httpclientutil.Transaction, err error) {
+	urls []string, sharders []string) (tx *httpclientutil.Transaction, err error) {
 
 	var scData = new(httpclientutil.SmartContractTxnData)
 	scData.Name = scNameContributeMpk
@@ -235,7 +235,7 @@ func (mc *Chain) sendMpkTransaction(selfNode *node.Node, mpk *block.MPK,
 		selfNode.PublicKey)
 	tx.ToClientID = minersc.ADDRESS
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0,
-		scData, urls)
+		scData, urls, sharders)
 	return
 }
 
@@ -285,11 +285,12 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 		good, bad         = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
 		goodurls, badurls = getBaseN2NURLs(good), getBaseN2NURLs(bad)
 		badMPK            = getBadMPK(mpk)
+		shardersUrls      = mb.Sharders.N2NURLs()
 	)
 
 	// send bad MPK first
 	if len(bad) > 0 {
-		tx, err = mc.sendMpkTransaction(selfNode, badMPK, badurls)
+		tx, err = mc.sendMpkTransaction(selfNode, badMPK, badurls, shardersUrls)
 		if err != nil {
 			return
 		}
@@ -297,7 +298,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 
 	// send good MPK second
 	if len(good) > 0 {
-		tx, err = mc.sendMpkTransaction(selfNode, mpk, goodurls)
+		tx, err = mc.sendMpkTransaction(selfNode, mpk, goodurls, shardersUrls)
 	}
 
 	return

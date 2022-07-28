@@ -134,6 +134,7 @@ func (msc *MinerSmartContract) AddSharder(
 
 		// and found in all
 		if allSharders.FindNodeById(newSharder.ID) != nil {
+			logging.Logger.Info("add_sharder: found node by id")
 			return string(newSharder.Encode()), nil
 		}
 		// otherwise the sharder has saved by block sharders reward

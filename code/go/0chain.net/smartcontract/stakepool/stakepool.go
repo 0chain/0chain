@@ -13,6 +13,7 @@ import (
 
 	"0chain.net/smartcontract/dbs/event"
 
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -49,6 +50,7 @@ type DelegatePool struct {
 	Status       spenum.PoolStatus `json:"status"`
 	RoundCreated int64             `json:"round_created"` // used for cool down
 	DelegateID   string            `json:"delegate_id"`
+	StakedAt     common.Timestamp  `json:"staked_at"`
 }
 
 func NewStakePool() *StakePool {
@@ -292,7 +294,7 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 		return strings.Compare(delegates[i].DelegateID, delegates[j].DelegateID) == -1
 	})
 
-	share, r, err := currency.DivideCoin(coins, int64(len(delegates)))
+	share, r, err := currency.DistributeCoin(coins, int64(len(delegates)))
 	if err != nil {
 		return err
 	}

@@ -189,13 +189,20 @@ func BenchmarkTests(
 				},
 				ClientID:     data.Clients[0],
 				CreationDate: creationTime,
-				Value:        currency.Coin(100 * viper.GetUint64(bk.StorageMinAllocSize)),
+				Value: func() currency.Coin {
+					v, err := currency.ParseZCN(100 * viper.GetFloat64(bk.StorageMaxWritePrice))
+					if err != nil {
+						panic(err)
+					}
+					return v
+				}(),
 			},
 			input: func() []byte {
+
 				bytes, _ := (&newAllocationRequest{
 					DataShards:      len(blobbers) / 2,
 					ParityShards:    len(blobbers) / 2,
-					Size:            100 * viper.GetInt64(bk.StorageMinAllocSize),
+					Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
 					Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
 					Owner:           data.Clients[0],
 					OwnerPublicKey:  data.PublicKeys[0],
@@ -559,7 +566,7 @@ func BenchmarkTests(
 				Value:        rpMinLock,
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
-				CreationDate: benchWritePoolExpire(creationTime) + 1,
+				CreationDate: creationTime + 1,
 			},
 			input: []byte{},
 		},
@@ -579,7 +586,6 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
 					AllocationID: getMockAllocationId(0),
-					Duration:     10 * time.Minute,
 				})
 				return bytes
 			}(),
@@ -594,19 +600,11 @@ func BenchmarkTests(
 				Value: rpMinLock,
 				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
 					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
-				ToClientID:   ADDRESS,
-				CreationDate: benchWritePoolExpire(creationTime) + 1,
+				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
-					PoolID: getMockWritePoolId(
-						viper.GetInt(bk.NumAllocations)-1,
-						getMockOwnerFromAllocationIndex(
-							viper.GetInt(bk.NumAllocations)-1,
-							viper.GetInt(bk.NumActiveClients),
-						),
-						0,
-					),
+					AllocationID: getMockAllocationId(viper.GetInt(bk.NumAllocations) - 1),
 				})
 				return bytes
 			}(),

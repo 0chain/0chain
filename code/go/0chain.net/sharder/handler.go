@@ -38,7 +38,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))
 	for pattern, handler := range reqRespHandlers {
-		handlers[pattern] = common.UserRateLimit(handler)
+		handlers[pattern] = common.WithCORS(common.UserRateLimit(handler))
 	}
 	return handlers
 }

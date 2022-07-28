@@ -127,7 +127,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 /*setupHandlers sets up the necessary API end points */
 func setupHandlers(handlersMap map[string]func(http.ResponseWriter, *http.Request)) {
 	for pattern, handler := range handlersMap {
-		http.HandleFunc(pattern, handler)
+		http.HandleFunc(pattern, common.WithCORS(handler))
 	}
 }
 
@@ -1297,7 +1297,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*transaction.Transaction)
 	if !ok {
-		return nil, fmt.Errorf("invalid request %T", entity)
+		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
 	sc := GetServerChain()
@@ -1314,11 +1314,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	if err := txn.ValidateNonce(); err != nil {
 		return nil, err
-	}
-
-	// save validated transactions to cache for miners only
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		return transaction.PutTransaction(ctx, txn)
 	}
 
 	return transaction.PutTransaction(ctx, txn)

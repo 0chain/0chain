@@ -62,8 +62,7 @@ func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
 	var dirname, err = ioutil.TempDir("", "mpt-pndb")
 	require.NoError(t, err)
 
-	pndb, err = NewPNodeDB(filepath.Join(dirname, "mpt"),
-		filepath.Join(dirname, "log"))
+	pndb, err = NewPNodeDB(filepath.Join(dirname, "mpt"), filepath.Join(dirname, "log"))
 	if err != nil {
 		if err := os.RemoveAll(dirname); err != nil {
 			t.Fatal(err)
@@ -76,6 +75,7 @@ func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
 		// removing the pndb.db.close() does not work, while run pndb.Flush() before
 		// deleting the dir could help workaround.
 		pndb.Flush()
+		pndb.Close()
 		if err := os.RemoveAll(dirname); err != nil {
 			t.Fatal(err)
 		}
@@ -129,17 +129,60 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 	}
 }
 
+// newAndReopenPNode - create a new PNodeDB first, create columen families, and
+// reopen to test open db with exist column families.
+func newAndReopenPNode(t *testing.T) (*PNodeDB, func()) {
+	var dirname, err = ioutil.TempDir("", "mpt-pndb")
+	require.NoError(t, err)
+
+	dbPath := filepath.Join(dirname, "mpt")
+	logPath := filepath.Join(dirname, "log")
+	pndb, err := NewPNodeDB(dbPath, logPath)
+	if err != nil {
+		if err := os.RemoveAll(dirname); err != nil {
+			t.Fatal(err)
+		}
+		t.Fatal(err) //
+	}
+	pndb.Flush()
+	pndb.Close()
+
+	// reopen
+	pndb, err = NewPNodeDB(dbPath, logPath)
+	require.NoError(t, err)
+
+	return pndb, func() {
+		pndb.Flush()
+		pndb.Close()
+		if err := os.RemoveAll(dirname); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestMerkeTreePruning(t *testing.T) {
 	pndb, cleanup := newPNodeDB(t)
 	defer cleanup()
+	testPruneState(t, pndb)
+}
 
+func TestMerkleTreePruningReopenDB(t *testing.T) {
+	pndb, cleanup := newAndReopenPNode(t)
+	defer cleanup()
+	testPruneState(t, pndb)
+}
+
+func testPruneState(t *testing.T, pndb *PNodeDB) {
 	mpt := NewMerklePatriciaTrie(NewLevelNodeDB(NewMemoryNodeDB(), pndb, false), Sequence(0), nil)
 	origin := 2016
 	roots := make([]Key, 0, 10)
 
-	for i := int64(0); i < 1000; i++ {
-		db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-		mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
+	totalDelete := 0
+	numStates := 100
+
+	for i := int64(0); i < 200; i++ {
 		mpt2.SetVersion(Sequence(origin))
 		if i%2 == 0 {
 			doStateValInsert(t, mpt2, "123456", 100+i)
@@ -155,31 +198,38 @@ func TestMerkeTreePruning(t *testing.T) {
 		}
 		roots = append(roots, mpt2.GetRoot())
 		deletedNodes := mpt2.GetDeletes()
-		_, err := pndb.RecordDeadNodes(deletedNodes)
+		if origin < 2016+200-numStates {
+			totalDelete += len(deletedNodes)
+		}
+
+		err := pndb.RecordDeadNodes(deletedNodes, int64(mpt2.GetVersion()))
 		require.NoError(t, err)
 
 		require.NoError(t, mpt2.SaveChanges(context.TODO(), pndb, false))
 		origin++
 	}
 
-	numStates := 200
-	newOrigin := Sequence(origin - numStates)
+	newOrigin := origin - numStates
 	root := roots[len(roots)-numStates]
 	mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), root)
 
-	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
+	checkIterationHash(t, mpt, "7678d38296cab5f5eb34000e5c0d9718cf79ec82949a1cbd65ce46e676199127")
 
 	assert.NoError(t, pndb.Iterate(context.TODO(), dbIteratorHandler()))
 
-	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
-	err := pndb.PruneBelowVersion(context.TODO(), newOrigin)
+	checkIterationHash(t, mpt, "7678d38296cab5f5eb34000e5c0d9718cf79ec82949a1cbd65ce46e676199127")
+	ctx := WithPruneStats(context.Background())
+	err := pndb.PruneBelowVersion(ctx, int64(newOrigin))
 	if err != nil {
 		t.Error("error pruning origin:", err)
 	}
+	ps := GetPruneStats(ctx)
+	require.NotNil(t, ps)
+	require.Equal(t, int64(totalDelete), ps.Deleted)
 
 	assert.NoError(t, pndb.Iterate(context.TODO(), dbIteratorHandler()))
 
-	checkIterationHash(t, mpt, "228148611c45e8e5a3ebf4be9e70b788e00bead3e2815920246b5ec6d6719989")
+	checkIterationHash(t, mpt, "7678d38296cab5f5eb34000e5c0d9718cf79ec82949a1cbd65ce46e676199127")
 }
 
 func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value int64) {
@@ -224,13 +274,11 @@ func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
 }
 
 func TestMPT_blockGenerationFlow(t *testing.T) {
-
 	// persistent node DB represents chain state DB
 	var stateDB, cleanup = newPNodeDB(t)
 	defer cleanup()
 
 	var mpt = NewMerklePatriciaTrie(stateDB, 0, nil)
-
 	// prior block DB and hash
 	var (
 		priorDB   NodeDB = stateDB
@@ -327,11 +375,6 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 		require.NoError(t, blockState.SaveChanges(context.TODO(), stateDB, false))
 		mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), priorHash)
 		checkValues(t, mpt, expectedValueSets[round])
-
-		// //  5. prune state
-		// var wps = WithPruneStats(back)
-		// err = stateDB.PruneBelowVersion(wps, Sequence(round-1))
-		// require.NoError(t, err)
 	}
 }
 

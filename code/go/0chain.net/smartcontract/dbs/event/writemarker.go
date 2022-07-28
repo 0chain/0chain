@@ -11,9 +11,6 @@ import (
 // swagger:model WriteMarker
 type WriteMarker struct {
 	gorm.Model
-
-	// foreign keys
-	// todo: as user(ID), allocation(ID) and transaction(ID) tables are created, enable it
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
 	AllocationID  string `json:"allocation_id" gorm:"index:idx_walloc_block,priority:1;index:idx_walloc_file,priority:2"` //used in alloc_write_marker_count, alloc_written_size
@@ -32,7 +29,8 @@ type WriteMarker struct {
 	ContentHash string `json:"content_hash" gorm:"index:idx_wcontent,priority:1"`
 
 	//ref
-	User User `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	User       User       `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
