@@ -1,4 +1,4 @@
- package storagesc
+package storagesc
 
 import (
 	"encoding/json"
@@ -33,7 +33,7 @@ type freeAllocationSettings struct {
 type stakePoolConfig struct {
 	MinLock       currency.Coin `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
-	KillSlash float64       `json:"kill_slash"`
+	KillSlash     float64       `json:"kill_slash"`
 }
 
 type readPoolConfig struct {
