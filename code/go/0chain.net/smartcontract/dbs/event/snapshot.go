@@ -259,7 +259,13 @@ func (edb *EventDb) updateSnapshot(e events) {
 			current.StorageCost += d.Amount
 		case TagUpdateChallenge:
 			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
-			is, ok := updates.Updates["responded"]
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			var is interface{}
+			is, ok = updates.Updates["responded"]
 			if ok {
 				b := is.(bool)
 				if b {
