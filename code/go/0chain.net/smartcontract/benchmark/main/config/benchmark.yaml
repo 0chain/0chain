@@ -107,7 +107,7 @@ smart_contracts:
     validators_per_challenge: 2
     readpool:
       min_lock: 0.3
-    write_pool:
+    writepool:
       min_lock: 0.1
     stakepool:
       min_lock: 0.1
@@ -126,7 +126,6 @@ smart_contracts:
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true
-    max_pools_per_allocation: 10
     block_reward:
       block_reward: 1
       block_reward_change_period: 10000

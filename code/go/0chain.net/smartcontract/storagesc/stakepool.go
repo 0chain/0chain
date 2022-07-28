@@ -179,9 +179,7 @@ func (sp *stakePool) removeOffer(amount currency.Coin) error {
 // slash represents blobber penalty; it returns number of tokens moved in
 // reality, in regard to division errors
 func (sp *stakePool) slash(
-	alloc *StorageAllocation,
 	blobID string,
-	until common.Timestamp,
 	offer, slash currency.Coin,
 	balances chainstate.StateContextI,
 ) (move currency.Coin, err error) {
@@ -203,18 +201,16 @@ func (sp *stakePool) slash(
 		if dpSlash == 0 {
 			continue
 		}
-		var err error
-		dp.Balance, err = currency.MinusCoin(dp.Balance, dpSlash)
-		if err != nil {
+
+		if balance, err := currency.MinusCoin(dp.Balance, dpSlash); err != nil {
 			return 0, err
-		}
-		alloc.WritePool, err = currency.AddCoin(alloc.WritePool, dpSlash)
-		if err != nil {
-			return 0, err
+		} else {
+			dp.Balance = balance
 		}
 		move += dpSlash
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
 	}
+	// todo we should slash from stake pools not rewards. 0chain issue 1495
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
 		return 0, err
 	}

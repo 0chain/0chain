@@ -728,7 +728,7 @@ func TestExtendAllocation(t *testing.T) {
 			},
 		},
 		{
-			name: "ok_multiple_allocation_pools",
+			name: "ok_multiple_write_pools",
 			args: args{
 				request: updateAllocationRequest{
 					ID:           mockAllocationId,

@@ -437,8 +437,7 @@ func Test_flow_reward(t *testing.T) {
 		var blobb1 = balances.balances[b3.id]
 
 		var wpb1, cpb1 = alloc.WritePool, cp.Balance
-		//require.EqualValues(t, 149963265878, wpb1)
-		//require.EqualValues(t, 36734122, cpb1)
+
 		require.EqualValues(t, 149960440177, wpb1)
 		require.EqualValues(t, 39559823, cpb1)
 		require.EqualValues(t, 40*x10, blobb1)
@@ -481,8 +480,7 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
-		//require.EqualValues(t, 149861540619, wpb2)
-		//require.EqualValues(t, 90422453, cpb2)
+
 		require.EqualValues(t, 149960440177, apb2)
 		require.EqualValues(t, 98899558, cpb2)
 		require.EqualValues(t, 40*x10, blobb2)

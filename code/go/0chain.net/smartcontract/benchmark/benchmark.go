@@ -156,7 +156,7 @@ const (
 	StorageDiverseBlobbers               = SmartContract + StorageSc + "diverse_blobbers"
 	StorageFailedChallengesToCancel      = SmartContract + StorageSc + "failed_challenges_to_cancel"
 	StorageReadPoolMinLock               = SmartContract + StorageSc + "readpool.min_lock"
-	StorageWritePoolMinLock              = SmartContract + StorageSc + "write_pool.min_lock"
+	StorageWritePoolMinLock              = SmartContract + StorageSc + "writepool.min_lock"
 	StorageStakePoolMinLock              = SmartContract + StorageSc + "stakepool.min_lock"
 	StorageChallengeEnabled              = SmartContract + StorageSc + "challenge_enabled"
 	StorageMaxTotalFreeAllocation        = SmartContract + StorageSc + "max_total_free_allocation"

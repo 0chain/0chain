@@ -189,9 +189,16 @@ func BenchmarkTests(
 				},
 				ClientID:     data.Clients[0],
 				CreationDate: creationTime,
-				Value:        currency.Coin(100 * viper.GetUint64(bk.StorageMaxWritePrice) * 1e10),
+				Value: func() currency.Coin {
+					v, err := currency.ParseZCN(100 * viper.GetFloat64(bk.StorageMaxWritePrice))
+					if err != nil {
+						panic(err)
+					}
+					return v
+				}(),
 			},
 			input: func() []byte {
+
 				bytes, _ := (&newAllocationRequest{
 					DataShards:      len(blobbers) / 2,
 					ParityShards:    len(blobbers) / 2,

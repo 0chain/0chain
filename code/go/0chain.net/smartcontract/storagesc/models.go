@@ -712,9 +712,12 @@ func (sa *StorageAllocation) addToWritePool(
 		}
 	}
 
-	var err error
-	sa.WritePool, err = currency.AddCoin(sa.WritePool, txn.Value)
-	return err
+	if writePool, err := currency.AddCoin(sa.WritePool, txn.Value); err != nil {
+		return err
+	} else {
+		sa.WritePool = writePool
+	}
+	return nil
 }
 
 func (sa *StorageAllocation) moveToChallengePool(
@@ -727,13 +730,18 @@ func (sa *StorageAllocation) moveToChallengePool(
 	if value > sa.WritePool {
 		return fmt.Errorf("insufficent funds %v in write pool to pay %v", sa.WritePool, value)
 	}
-	var err error
-	cp.Balance, err = currency.AddCoin(cp.Balance, value)
-	if err != nil {
+
+	if balance, err := currency.AddCoin(cp.Balance, value); err != nil {
 		return err
+	} else {
+		cp.Balance = balance
 	}
-	sa.WritePool, err = currency.MinusCoin(sa.WritePool, value)
-	return err
+	if writePool, err := currency.MinusCoin(sa.WritePool, value); err != nil {
+		return err
+	} else {
+		sa.WritePool = writePool
+	}
+	return nil
 }
 
 func (sa *StorageAllocation) moveFromChallengePool(
@@ -748,13 +756,18 @@ func (sa *StorageAllocation) moveFromChallengePool(
 		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
 			cp.ID, cp.Balance, value)
 	}
-	var err error
-	cp.Balance, err = currency.MinusCoin(cp.Balance, value)
-	if err != nil {
+
+	if balance, err := currency.MinusCoin(cp.Balance, value); err != nil {
 		return err
+	} else {
+		cp.Balance = balance
 	}
-	sa.WritePool, err = currency.AddCoin(sa.WritePool, value)
-	return err
+	if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+		return err
+	} else {
+		sa.WritePool = writePool
+	}
+	return nil
 }
 
 func (sa *StorageAllocation) validateAllocationBlobber(

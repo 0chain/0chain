@@ -134,7 +134,7 @@ var (
 		"min_blobber_capacity",
 
 		"readpool.min_lock",
-		"write_pool.min_lock",
+		"writepool.min_lock",
 		"stakepool.min_lock",
 		"stakepool.min_lock_period",
 

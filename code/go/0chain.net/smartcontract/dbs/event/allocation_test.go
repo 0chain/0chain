@@ -149,7 +149,6 @@ func TestAllocations(t *testing.T) {
 		ReadPriceRange  PriceRange `json:"read_price_range"`
 		WritePriceRange PriceRange `json:"write_price_range"`
 
-		//AllocationPools allocationPools `json:"allocation_pools"`
 		WritePoolOwners []string `json:"write_pool_owners"`
 
 		// ChallengeCompletionTime is max challenge completion time of
