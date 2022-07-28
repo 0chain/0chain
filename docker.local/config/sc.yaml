@@ -116,14 +116,14 @@ smart_contracts:
     # users' write pool related configurations
     writepool:
       min_lock: 0.1 # tokens
-      min_lock_period: 2m
-      max_lock_period: 8760h
     # stake pool configurations
     stakepool:
       # minimal lock for a delegate pool
       min_lock: 0.1 # tokens
       # amount stake holders are slashed if blobber or validator is killed
       kill_slash: 0.5
+      # min_lock_period is min lock period. Default lock period is 3 years worth of blocks.
+      min_lock_period: 36m
     # following settings are for free storage rewards
     #
     # largest value you can have for the total allowed free storage
@@ -159,7 +159,6 @@ smart_contracts:
     max_read_price: 100.0
     max_write_price: 100.0
     # min_write_price: 0.1
-
     max_blobbers_per_allocation: 40
     # allocation cancellation
     #

@@ -142,22 +142,12 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	if back > 0 {
-		// move back to write pool
-		var wp *writePool
-		if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-			return fmt.Errorf("can't get allocation's write pool: %v", err)
-		}
-		var until = alloc.Until()
-		err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, back)
+		err = alloc.moveFromChallengePool(cp, back)
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
 		alloc.MovedBack += back
 		blobAlloc.Returned += back
-		// save write pool
-		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-			return fmt.Errorf("can't save allocation's write pool: %v", err)
-		}
 	}
 
 	var sp *stakePool
@@ -196,6 +186,10 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
+	}
+
+	if err = alloc.saveUpdatedAllocation(nil, balances); err != nil {
+		return fmt.Errorf("can't save allocation: %v", err)
 	}
 
 	return
@@ -266,11 +260,6 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return fmt.Errorf("can't get allocation's write pool: %v", err)
-	}
-
 	var (
 		rdtu = alloc.restDurationInTimeUnits(prev)
 		dtu  = alloc.durationInTimeUnits(tp - prev)
@@ -305,11 +294,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return
 	}
 
-	// move back to write pool
-	var until = alloc.Until()
-	err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, move)
+	err = alloc.moveFromChallengePool(cp, move)
 	if err != nil {
-		return fmt.Errorf("moving failed challenge to write pool: %v", err)
+		return fmt.Errorf("moving challenge pool rest back to write pool: %v", err)
 	}
 	alloc.MovedBack += move
 	blobAlloc.Returned += move
@@ -329,7 +316,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 		var move currency.Coin
-		move, err = sp.slash(alloc, blobAlloc.BlobberID, until, wp, blobAlloc.Offer(), slash, balances)
+		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
@@ -343,9 +330,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		}
 	}
 
-	// save pools
-	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return fmt.Errorf("can't save allocation's write pool: %v", err)
+	if err = alloc.saveUpdatedAllocation(nil, balances); err != nil {
+		return common.NewError("fini_alloc_failed",
+			"saving allocation pools: "+err.Error())
 	}
 
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
@@ -549,10 +536,8 @@ func (sc *StorageSmartContract) verifyChallenge(
 			return "", common.NewError("verify_challenge_error", err.Error())
 		}
 
-		err = emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
-		if err != nil {
-			return "", common.NewError("verify_challenge_error", err.Error())
-		}
+		emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
+		emitUpdateBlobberChallengeStats(challenge.BlobberID, true, balances)
 
 		err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
 		if err != nil {
@@ -586,11 +571,11 @@ func (sc *StorageSmartContract) verifyChallenge(
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
-		if err := alloc.Save(balances, sc.ID); err != nil {
+		if err := alloc.save(balances, sc.ID); err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 		if success < threshold {
 			return "challenge passed partially by blobber", nil
@@ -617,10 +602,8 @@ func (sc *StorageSmartContract) verifyChallenge(
 		blobAlloc.Stats.FailedChallenges++
 		blobAlloc.Stats.OpenChallenges--
 
-		err = emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
-		if err != nil {
-			return "", common.NewError("verify_challenge_error", err.Error())
-		}
+		emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
+		emitUpdateBlobberChallengeStats(challenge.BlobberID, false, balances)
 
 		if err := allocChallenges.Save(balances, sc.ID); err != nil {
 			return "", common.NewError("challenge_penalty_error", err.Error())
@@ -640,7 +623,7 @@ func (sc *StorageSmartContract) verifyChallenge(
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 		if pass && !fresh {
 			return "late challenge (failed)", nil
 		}
@@ -811,7 +794,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil, err
 			}
 		}
-		err = alloc.Save(balances, sc.ID)
+		err = alloc.save(balances, sc.ID)
 		if err != nil {
 			return nil, common.NewErrorf("populate_challenge",
 				"error saving expired allocation: %v", err)
@@ -1011,18 +994,14 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobAlloc.Stats.OpenChallenges++
 	blobAlloc.Stats.TotalChallenges++
 
-	if err := alloc.Save(balances, sc.ID); err != nil {
+	if err := alloc.save(balances, sc.ID); err != nil {
 		return common.NewErrorf("add_challenge",
 			"error storing allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	err = emitAddChallenge(challInfo, balances)
-	if err != nil {
-		return common.NewError("add_challenge",
-			"error adding challenge to db: "+err.Error())
-	}
+	emitAddChallenge(challInfo, balances)
 
 	return nil
 }

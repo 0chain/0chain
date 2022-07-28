@@ -303,7 +303,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.OwnerPublicKey = client.pk
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
-	nar.Size = 2 * GB // 2 GB
+	nar.Size = 1 * GB // 2 GB
 
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
@@ -364,9 +364,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		MinLock: 10,
 	}
 	conf.WritePool = &writePoolConfig{
-		MinLock:       10,
-		MinLockPeriod: 5 * time.Second,
-		MaxLockPeriod: 20 * time.Minute,
+		MinLock: 10,
 	}
 
 	conf.StakePool = &stakePoolConfig{

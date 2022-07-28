@@ -70,7 +70,7 @@ func TestFindBlock(t *testing.T) {
 	}
 	err = eventDb.addBlock(block)
 	require.NoError(t, err, "Error while inserting Block to event Database")
-	gotBlock, err := eventDb.GetBlocksByHash("test")
+	gotBlock, err := eventDb.GetBlockByHash("test")
 
 	// To ignore createdAt and updatedAt
 	block.CreatedAt = gotBlock.CreatedAt
