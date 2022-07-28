@@ -255,8 +255,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	sa.StartTime = txn.CreationDate
 	sa.Tx = txn.Hash
 
+	var options []WithOption
+	if mintNewTokens > 0 {
+		options = []WithOption{WithTokenMint(mintNewTokens)}
+	}
 	// create write pool and lock tokens
-	if err := sa.addToWritePool(txn, mintNewTokens, balances); err != nil {
+	if err := sa.addToWritePool(txn, balances, options...); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
@@ -870,7 +874,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
-		if err = alloc.addToWritePool(txn, 0, balances); err != nil {
+		if err = alloc.addToWritePool(txn, balances); err != nil {
 			return common.NewErrorf("allocation_extending_failed", "%v", err)
 		}
 	}
@@ -953,7 +957,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
-		if err = alloc.addToWritePool(txn, txn.Value, balances); err != nil {
+		if err = alloc.addToWritePool(txn, balances); err != nil {
 			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 	}

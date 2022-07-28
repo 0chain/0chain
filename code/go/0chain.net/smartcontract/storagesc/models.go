@@ -685,40 +685,64 @@ type StorageAllocation struct {
 	Name string `json:"name"`
 }
 
-func (sa *StorageAllocation) addToWritePool(
-	txn *transaction.Transaction,
-	mintNewTokens currency.Coin,
-	balances cstate.StateContextI,
-) error {
-	shouldMint := false
-	value := txn.Value
-	if mintNewTokens > 0 {
-		shouldMint = true
-		value = mintNewTokens
-	}
+type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
 
-	if shouldMint {
+func WithTokenMint(coin currency.Coin) WithOption {
+	return func(balances cstate.StateContextI) (currency.Coin, error) {
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     value,
+			Amount:     coin,
 		}); err != nil {
-			return fmt.Errorf("minting tokens for write pool: %v", err)
+			return 0, fmt.Errorf("minting tokens for write pool: %v", err)
 		}
-	} else {
-		if err := stakepool.CheckClientBalance(txn.ClientID, value, balances); err != nil {
+		return coin, nil
+	}
+}
+
+func WithTokenTransfer(value currency.Coin, clientId, toClientId string) WithOption {
+	return func(balances cstate.StateContextI) (currency.Coin, error) {
+		if err := stakepool.CheckClientBalance(clientId, value, balances); err != nil {
+			return 0, err
+		}
+		transfer := state.NewTransfer(clientId, toClientId, value)
+		if err := balances.AddTransfer(transfer); err != nil {
+			return 0, fmt.Errorf("adding transfer to allocation pool: %v", err)
+		}
+
+		return value, nil
+	}
+}
+
+func (sa *StorageAllocation) addToWritePool(
+	txn *transaction.Transaction,
+	balances cstate.StateContextI,
+	opts ...WithOption,
+) error {
+	//default behaviour
+	if len(opts) == 0 {
+		value, err := WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)(balances)
+		if err != nil {
 			return err
 		}
-		transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, value)
-		if err := balances.AddTransfer(transfer); err != nil {
-			return fmt.Errorf("adding transfer to allocation pool: %v", err)
+		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+			return err
+		} else {
+			sa.WritePool = writePool
 		}
+		return nil
 	}
 
-	if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
-		return err
-	} else {
-		sa.WritePool = writePool
+	for _, opt := range opts {
+		value, err := opt(balances)
+		if err != nil {
+			return err
+		}
+		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+			return err
+		} else {
+			sa.WritePool = writePool
+		}
 	}
 	return nil
 }
