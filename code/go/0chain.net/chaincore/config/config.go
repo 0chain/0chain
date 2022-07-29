@@ -17,7 +17,7 @@ var (
 	SmartContractConfig = viper.New()
 )
 
-//SetupDefaultConfig - setup the default config options that can be overridden via the config file
+// SetupDefaultConfig - setup the default config options that can be overridden via the config file
 func SetupDefaultConfig() {
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("network.relay_time", 200)
@@ -194,9 +194,10 @@ type DbAccess struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
 
-	MaxIdleConns    int           `json:"max_idle_conns"`
-	MaxOpenConns    int           `json:"max_open_conns"`
-	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
+	MaxIdleConns           int           `json:"max_idle_conns"`
+	MaxOpenConns           int           `json:"max_open_conns"`
+	ConnMaxLifetime        time.Duration `json:"conn_max_lifetime"`
+	BlobberAggregatePeriod int64         `json:"blobber_aggregate_period"`
 }
 
 // HealthCheckCycleScan -

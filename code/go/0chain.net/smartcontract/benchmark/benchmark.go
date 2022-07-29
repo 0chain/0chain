@@ -211,15 +211,16 @@ const (
 	ZcnBurnAddress        = SmartContract + ZcnSc + "burn_address"
 	ZcnMaxDelegates       = SmartContract + ZcnSc + "max_delegates"
 
-	EventDbEnabled         = DbsEvents + "enabled"
-	EventDbName            = DbsEvents + "name"
-	EventDbUser            = DbsEvents + "user"
-	EventDbPassword        = DbsEvents + "password"
-	EventDbHost            = DbsEvents + "host"
-	EventDbPort            = DbsEvents + "port"
-	EventDbMaxIdleConns    = DbsEvents + "max_idle_conns"
-	EventDbOpenConns       = DbsEvents + "max_open_conns"
-	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
+	EventDbEnabled                = DbsEvents + "enabled"
+	EventDbName                   = DbsEvents + "name"
+	EventDbUser                   = DbsEvents + "user"
+	EventDbPassword               = DbsEvents + "password"
+	EventDbHost                   = DbsEvents + "host"
+	EventDbPort                   = DbsEvents + "port"
+	EventDbMaxIdleConns           = DbsEvents + "max_idle_conns"
+	EventDbOpenConns              = DbsEvents + "max_open_conns"
+	EventDbConnMaxLifetime        = DbsEvents + "conn_max_lifetime"
+	EventDbBlobberAggregatePeriod = DbsEvents + "blobber_aggregate_period"
 )
 
 func (s Source) String() string {

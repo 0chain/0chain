@@ -176,6 +176,7 @@ var GlobalSettingName = []string{
 	"server_chain.dbs.events.max_idle_conns",
 	"server_chain.dbs.events.max_open_conns",
 	"server_chain.dbs.events.conn_max_lifetime",
+	"server_chain.dbs.events.blobber_aggregate_period",
 
 	"server_chain.health_check.deep_scan.enabled",
 	"server_chain.health_check.deep_scan.batch_size",
