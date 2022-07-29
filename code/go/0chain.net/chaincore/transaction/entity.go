@@ -412,7 +412,10 @@ func (t *Transaction) GetSummary() *TransactionSummary {
 - applicable only when running in test mode and the transaction_data string contains debug keyword somewhere in it
 */
 func (t *Transaction) DebugTxn() bool {
-	return true
+	if !config.Development() {
+		return false
+	}
+	return strings.Contains(t.TransactionData, "debug")
 }
 
 /*ComputeOutputHash - compute the hash from the transaction output */
