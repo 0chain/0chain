@@ -1434,23 +1434,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		assert.Equal(t, len(details), len(aresp.BlobberAllocs))
 
-<<<<<<< HEAD
-		// check out pools created and changed:
-		//  - write pool, should be created and filled with value of transaction
-		//  - stake pool, offer should be added
-		//  - challenge pool, should be created
-
-		// 1. write pool
-		var wp *writePool
-		wp, err = ssc.getWritePool(clientID, balances)
-		require.NoError(t, err)
-
-		allocated, err := wp.allocUntil(aresp.ID, aresp.Until())
-		require.NoError(t, err)
-		assert.Equal(t, currency.Coin(400), allocated)
-
-=======
->>>>>>> staging
 		_, err = ssc.getStakePool("b1", balances)
 		require.NoError(t, err)
 

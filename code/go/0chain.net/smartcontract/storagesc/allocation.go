@@ -268,7 +268,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	var mld = sa.restMinLockDemand()
+	mld, err := sa.restMinLockDemand()
+	if err != nil {
+		return "", common.NewError("allocation_creation_failed", err.Error())
+	}
 	if sa.WritePool < mld {
 		return "", common.NewError("allocation_creation_failed",
 			fmt.Sprintf("not enough tokens to honor the min lock demand"+" (%d < %d)", txn.Value, mld))

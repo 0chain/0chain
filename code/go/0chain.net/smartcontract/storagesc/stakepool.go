@@ -219,6 +219,11 @@ func (sp *stakePool) slash(
 		slash = offer // can't move the offer left
 	}
 
+	staked, err := sp.stake()
+	if err != nil {
+		return 0, err
+	}
+
 	// offer ratio of entire stake; we are slashing only part of the offer
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
