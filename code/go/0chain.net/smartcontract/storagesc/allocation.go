@@ -232,7 +232,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	m.tick("validate_blobbers")
 
 	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
+		return "", common.NewErrorf("allocation_creation_failed", "error in validating blobbers: %v", err)
 	}
 
 	sa.ID = txn.Hash
@@ -265,12 +265,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	// create write pool and lock tokens
 	if err := sa.addToWritePool(txn, mintNewTokens, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
+		return "", common.NewError("allocation_creation_failed", "error in writing to pool: "+err.Error())
 	}
 
 	mld, err := sa.restMinLockDemand()
 	if err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
+		return "", common.NewError("allocation_creation_failed", "error in calculating min lock demand: "+err.Error())
 	}
 	if sa.WritePool < mld {
 		return "", common.NewError("allocation_creation_failed",
@@ -280,12 +280,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	m.tick("create_write_pool")
 
 	if err = sc.createChallengePool(txn, sa, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
+		return "", common.NewErrorf("allocation_creation_failed", "error in creating challenge pool: %v", err.Error())
 	}
 	m.tick("create_challenge_pool")
 
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
+		return "", common.NewErrorf("allocation_creation_failed", "error in adding allocation: %v", err)
 	}
 	m.tick("add_allocation")
 
