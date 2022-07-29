@@ -709,9 +709,8 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) error {
 		return nil
 	}
 
-	//sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, "", usr, func(events []event.Event, current event.Event) []event.Event {
-	//	return append([]event.Event{current}, events...)
-	//})
-	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, "", usr)
+	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, "", usr, func(events []event.Event, current event.Event) []event.Event {
+		return append([]event.Event{current}, events...)
+	})
 	return nil
 }
