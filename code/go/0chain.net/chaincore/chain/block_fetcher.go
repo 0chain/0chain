@@ -360,6 +360,8 @@ type Chainer interface {
 	GetMagicBlock(round int64) *block.MagicBlock
 	GetLatestFinalizedMagicBlockRound(rn int64) *block.Block
 	GetRound(roundNumber int64) round.RoundI
+	GetLatestFinalizedBlock() *block.Block
+	// GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error)
 	IsRoundGenerator(r round.RoundI, nd *node.Node) bool
 }
 

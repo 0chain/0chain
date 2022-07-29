@@ -98,7 +98,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/v1/transaction/put": common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
-					memorystore.WithConnectionEntityJSONHandler(PutTransaction(c), transactionEntityMetadata),
+					memorystore.WithConnectionEntityJSONHandler(PutTransaction(c, transaction.PutTransaction), transactionEntityMetadata),
 					transaction.TransactionEntityChannel,
 				),
 				transactionEntityMetadata,
@@ -1294,7 +1294,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 }
 
 /*PutTransaction - for validation of transactions using chain level parameters */
-func PutTransaction(c Chainer) datastore.JSONEntityReqResponderF {
+func PutTransaction(c Chainer, lowerLevelFunc func(ctx context.Context, entity datastore.Entity) (interface{}, error)) datastore.JSONEntityReqResponderF {
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		txn, ok := entity.(*transaction.Transaction)
 		if !ok {
@@ -1315,13 +1315,20 @@ func PutTransaction(c Chainer) datastore.JSONEntityReqResponderF {
 		if err := txn.ValidateNonce(); err != nil {
 			return nil, err
 		}
-
-		// save validated transactions to cache for miners only
-		if node.Self.Underlying().Type == node.NodeTypeMiner {
-			return transaction.PutTransaction(ctx, txn)
-		}
-
-		return transaction.PutTransaction(ctx, txn)
+		/*
+			s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, c.GetChainConfig().OwnerID())
+			if !isValid(err) {
+				return nil, err
+			}
+			nonce := int64(0)
+			if s != nil {
+				nonce = s.Nonce
+			}
+			if txn.Nonce <= nonce {
+				return nil, errors.New("invalid transaction nonce")
+			}
+		*/
+		return lowerLevelFunc(ctx, txn) // transaction.PutTransaction
 	}
 }
 

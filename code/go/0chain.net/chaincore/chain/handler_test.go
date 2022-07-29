@@ -3,7 +3,9 @@ package chain
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/rand"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,6 +16,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/currency"
+	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
@@ -266,5 +270,46 @@ func TestRoundInfoHandler(t *testing.T) {
 	body = runRequest(&c)
 	require.Contains(t, string(body), blocksSubstring)
 	require.Contains(t, string(body), vrfSubstring)
+
+}
+
+func TestPutTransaction(t *testing.T) {
+	tt := []struct {
+		name      string
+		txn       *transaction.Transaction
+		lfmb      *block.Block
+		expectErr error
+	}{
+		{
+			name: "Nonce = 0 results in failure",
+			txn: &transaction.Transaction{
+				Nonce: 0,
+			},
+			lfmb:      &block.Block{},
+			expectErr: errors.New("invalid transaction nonce"),
+		},
+		{
+			name: "Nonce = 1 succeeds",
+			txn: &transaction.Transaction{
+				Nonce: 1,
+			},
+			lfmb:      &block.Block{},
+			expectErr: nil,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &mocks.ChainConfig{}
+			cfg.On("TxnMaxPayload").Return(0)
+			cfg.On("TxnExempt").Return(map[string]bool{})
+			cfg.On("MinTxnFee").Return(currency.Coin(0))
+			c := MockChainer{}
+			c.On("GetChainConfig").Return(cfg)
+			c.On("GetLatestFinalizedBlock").Return(tc.lfmb)
+			_, err := PutTransaction(&c, func(ctx context.Context, entity datastore.Entity) (interface{}, error) { return nil, nil })(context.TODO(), tc.txn)
+			require.Equal(t, tc.expectErr, err)
+		})
+	}
 
 }
