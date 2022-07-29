@@ -1316,11 +1316,6 @@ func PutTransaction(c Chainer) datastore.JSONEntityReqResponderF {
 			return nil, err
 		}
 
-		// save validated transactions to cache for miners only
-		if node.Self.Underlying().Type == node.NodeTypeMiner {
-			return transaction.PutTransaction(ctx, txn)
-		}
-
 		return transaction.PutTransaction(ctx, txn)
 	}
 }
