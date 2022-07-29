@@ -1561,11 +1561,17 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 	}
 	allocation, err := edb.GetAllocation(allocationID)
 	if err != nil {
+		logging.Logger.Error("unable to fetch allocation",
+			zap.String("allocation", allocationID),
+			zap.Error(err))
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
 	}
 	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
+		logging.Logger.Error("unable to create allocation response",
+			zap.String("allocation", allocationID),
+			zap.Error(err))
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't convert to storageAllocationBlobbers"))
 		return
 	}
