@@ -146,6 +146,9 @@ func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
 		go func(url string) {
 			if _, err := sendTransactionToURL(url, txn, ID, pkey, nil); err != nil {
+				logging.Logger.Error("send transaction failed",
+					zap.String("url", url),
+					zap.Error(err))
 				logging.N2n.Error("send transaction failed",
 					zap.String("url", url),
 					zap.Error(err))

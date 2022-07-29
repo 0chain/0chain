@@ -203,7 +203,6 @@ func (bp *BurnPayloadResponse) Decode(input []byte) error {
 // ------ BurnPayload ----------------
 
 type BurnPayload struct {
-	Nonce           int64  `json:"nonce"`
 	EthereumAddress string `json:"ethereum_address"`
 }
 

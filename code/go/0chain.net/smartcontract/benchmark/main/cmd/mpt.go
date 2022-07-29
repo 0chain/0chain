@@ -310,22 +310,6 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockWritePools(clients, balances)
-		log.Println("added allocation write pools\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		storagesc.AddMockFundedPools(clients, balances)
-		log.Println("added allocation funded pools\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
 		storagesc.AddMockChallengePools(balances)
 		log.Println("added challenge pools\t", time.Since(timer))
 	}()
