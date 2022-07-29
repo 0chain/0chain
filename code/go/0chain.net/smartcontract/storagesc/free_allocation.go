@@ -264,22 +264,27 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	assigner.CurrentRedeemed += txn.Value
-	fTxnVal, err := txn.Value.Float64()
+	totalMint, err := currency.ParseZCN(marker.FreeTokens)
 	if err != nil {
-		return "", common.NewErrorf("free_allocation_failed", "converting transaction value to float: %v", err)
+		return "", err
 	}
-	readPoolTokens, err := currency.Float64ToCoin(fTxnVal * conf.FreeAllocationSettings.ReadPoolFraction)
+	assigner.CurrentRedeemed += totalMint
+
+	f, err := totalMint.Float64()
+	if err != nil {
+		return "", err
+	}
+	readPoolTokens, err := currency.Float64ToCoin(f * conf.FreeAllocationSettings.ReadPoolFraction)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting read pool tokens to Coin: %v", err)
 	}
-	txn.Value, err = currency.MinusCoin(txn.Value, readPoolTokens)
+	writePoolTokens, err := currency.MinusCoin(totalMint, readPoolTokens)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"subtracting read pool token from transaction value: %v", err)
 	}
 
-	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, true, balances, nil)
+	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, writePoolTokens, balances, nil)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "creating new allocation: %v", err)
 	}
@@ -294,17 +299,8 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed", "assigner save failed: %v", err)
 	}
 
-	var lr = readPoolLockRequest{
-		TargetId:   marker.Recipient,
-		MintTokens: true,
-	}
-	input, err = json.Marshal(lr)
-	if err != nil {
-		return "", common.NewErrorf("free_allocation_failed", "marshal read lock request: %v", err)
-	}
-
 	txn.Value = readPoolTokens
-	_, err = ssc.readPoolLock(txn, input, balances)
+	_, err = ssc.readPoolLockInternal(txn, readPoolTokens, true, marker.Recipient, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "locking tokens in read pool: %v", err)
 	}
@@ -359,7 +355,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"marshal marker: %v", err)
 	}
 
-	resp, err := ssc.updateAllocationRequestInternal(txn, input, conf, true, balances)
+	resp, err := ssc.updateAllocationRequestInternal(txn, input, conf, balances)
 	if err != nil {
 		return "", common.NewErrorf("update_free_storage_request", err.Error())
 	}

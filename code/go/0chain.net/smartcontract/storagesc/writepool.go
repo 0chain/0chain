@@ -63,7 +63,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 	}
 
 	// check client balance
-	if err = stakepool.CheckClientBalance(txn, balances); err != nil {
+	if err = stakepool.CheckClientBalance(txn.ClientID, txn.Value, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 

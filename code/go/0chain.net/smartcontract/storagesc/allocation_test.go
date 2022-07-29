@@ -765,7 +765,6 @@ func TestExtendAllocation(t *testing.T) {
 				&sa,
 				aBlobbers,
 				&tt.args.request,
-				false,
 				balances,
 			)
 			if tt.want.err != (err != nil) {
@@ -1085,9 +1084,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg7 = "allocation_creation_failed: " +
 			"can't get blobber's stake pool: value not present"
 		errMsg8 = "allocation_creation_failed: " +
-			"client balance check failed: no tokens to lock"
+			"no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
-			"client balance check failed: no tokens to lock"
+			"no tokens to lock"
 	)
 
 	var (
@@ -1834,7 +1833,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	var cp = alloc.deepCopy(t)
+	cp := StorageAllocation{}
+	err = cp.Decode(alloc.Encode())
+	require.NoError(t, err)
 
 	// change terms
 	tp += 100
@@ -1889,7 +1890,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	// reduce
 	//
 
-	cp = alloc.deepCopy(t)
+	cp = StorageAllocation{}
+	err = cp.Decode(alloc.Encode())
+	require.NoError(t, err)
 
 	uar.ID = alloc.ID
 	uar.Expiration = -(alloc.Expiration / 2)

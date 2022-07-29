@@ -218,14 +218,13 @@ func TestFreeAllocationRequest(t *testing.T) {
 	var (
 		mockMaxAnnualFreeAllocation = zcnToBalance(100354)
 		mockFreeAllocationSettings  = freeAllocationSettings{
-			DataShards:                 5,
-			ParityShards:               5,
-			Size:                       123456,
-			ReadPriceRange:             PriceRange{0, 5000},
-			WritePriceRange:            PriceRange{0, 5000},
-			MaxChallengeCompletionTime: 1 * time.Hour,
-			Duration:                   24 * 365 * time.Hour,
-			ReadPoolFraction:           mockReadPoolFraction,
+			DataShards:       5,
+			ParityShards:     5,
+			Size:             123456,
+			ReadPriceRange:   PriceRange{0, 5000},
+			WritePriceRange:  PriceRange{0, 5000},
+			Duration:         24 * 365 * time.Hour,
+			ReadPoolFraction: mockReadPoolFraction,
 		}
 		mockAllBlobbers = &StorageNodes{}
 		conf            = &Config{
@@ -276,8 +275,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 		var err error
 		var balances = &mocks.StateContextI{}
 		balances.TestData()[newSaSaved] = false
-		var readPoolLocked = zcnToInt64(p.marker.FreeTokens * mockReadPoolFraction)
-		var writePoolLocked = zcnToInt64(p.marker.FreeTokens) - readPoolLocked
+		var readPoolLocked = zcnToInt64(mockFreeTokens * mockReadPoolFraction)
+		var writePoolLocked = zcnToInt64(mockFreeTokens) - readPoolLocked
 
 		var txn = &transaction.Transaction{
 			ClientID:     p.marker.Recipient,
@@ -313,6 +312,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
 			mockSetValue(conf)).Return(nil)
+
+		balances.On("GetClientBalance", mockRecipient,
+			mockSetValue(conf)).Return(nil).Maybe()
 
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
@@ -367,6 +369,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			mock.Anything,
 		).Return("", nil).Once()
 
+		zcn, _ := currency.ParseZCN(mockFreeTokens)
 		balances.On(
 			"InsertTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
@@ -375,7 +378,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				PublicKey:          p.assigner.PublicKey,
 				IndividualLimit:    p.assigner.IndividualLimit,
 				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + txn.Value,
+				CurrentRedeemed:    zcn,
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
@@ -562,13 +565,12 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	var mockTimeUnit = 1 * time.Hour
 	var mockMaxAnnualFreeAllocation = zcnToBalance(100354)
 	var mockFreeAllocationSettings = freeAllocationSettings{
-		DataShards:                 5,
-		ParityShards:               5,
-		Size:                       123456,
-		ReadPriceRange:             PriceRange{0, 5000},
-		WritePriceRange:            PriceRange{0, 5000},
-		MaxChallengeCompletionTime: 1 * time.Hour,
-		Duration:                   24 * 365 * time.Hour,
+		DataShards:      5,
+		ParityShards:    5,
+		Size:            123456,
+		ReadPriceRange:  PriceRange{0, 5000},
+		WritePriceRange: PriceRange{0, 5000},
+		Duration:        24 * 365 * time.Hour,
 	}
 	var mockAllBlobbers = &StorageNodes{}
 	var conf = &Config{
@@ -684,6 +686,8 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"InsertTrieNode", sa.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()
+		balances.On("GetClientBalance", mockRecipient).Return(currency.Coin(1000000000000), nil).Maybe().Once()
+		balances.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(nil).Once()
 
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
@@ -706,11 +710,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 		).Return("", nil).Once()
 
-		balances.On("AddMint", &state.Mint{
-			Minter:     ADDRESS,
-			ToClientID: ADDRESS,
-			Amount:     zcnToBalance(p.marker.FreeTokens),
-		}).Return(nil).Once()
+		//balances.On("AddMint", &state.Mint{
+		//	Minter:     ADDRESS,
+		//	ToClientID: ADDRESS,
+		//	Amount:     zcnToBalance(p.marker.FreeTokens),
+		//}).Return(nil).Once()
 
 		balances.On(
 			"EmitEvent",
