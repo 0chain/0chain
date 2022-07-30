@@ -171,37 +171,45 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	timings map[string]time.Duration,
 ) (resp string, err error) {
 	m := Timings{timings: timings, start: time.Now()}
-	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
-			"getting blobber list: %v", err)
-	}
-
-	if txn.ClientID == "" {
-		return "", common.NewError("allocation_creation_failed",
-			"Invalid client in the transaction. No client id in transaction")
-	}
 
 	var request newAllocationRequest
 	logging.Logger.Debug("new_allocation_request", zap.String("request", string(input)))
 	if err = request.decode(input); err != nil {
+		logging.Logger.Error("new_allocation_request_failed: error decoding input",
+			zap.String("txn", txn.Hash),
+			zap.Error(err))
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
 
 	m.tick("decode")
 	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {
+		logging.Logger.Error("new_allocation_request_failed: input blobbers less than requirement",
+			zap.String("txn", txn.Hash),
+			zap.Int("request blobbers", len(request.Blobbers)),
+			zap.Int("data shards", request.DataShards),
+			zap.Int("parity_shards", request.ParityShards))
 		return "", common.NewErrorf("allocation_creation_failed",
 			"Blobbers provided are not enough to honour the allocation")
 	}
 
 	//if more than limit blobbers sent, just cut them
 	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
+		logging.Logger.Error("new_allocation_request_failed: request blobbers more than max_blobbers_per_allocation",
+			zap.String("txn", txn.Hash),
+			zap.Int("requested blobbers", len(request.Blobbers)),
+			zap.Int("max blobbers per allocation", conf.MaxBlobbersPerAllocation))
 		logging.Logger.Info("Too many blobbers selected, max available", zap.Int("max_blobber_size", conf.MaxBlobbersPerAllocation))
 		request.Blobbers = request.Blobbers[:conf.MaxBlobbersPerAllocation]
 	}
 
 	inputBlobbers := sc.getBlobbers(request.Blobbers, balances)
 	if len(inputBlobbers.Nodes) < (request.DataShards + request.ParityShards) {
+		logging.Logger.Error("new_allocation_request_failed: blobbers fetched are less than requested blobbers",
+			zap.String("txn", txn.Hash),
+			zap.Int("fetched blobbers", len(inputBlobbers.Nodes)),
+			zap.Int("data shards", request.DataShards),
+			zap.Int("parity_shards", request.ParityShards))
 		return "", common.NewErrorf("allocation_creation_failed",
 			"Not enough provided blobbers found in mpt")
 	}
@@ -215,22 +223,27 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	blobbers, err := sc.fetchPools(inputBlobbers, balances)
 	if err != nil {
+		logging.Logger.Error("new_allocation_request_failed: error fetching blobber pools",
+			zap.String("txn", txn.Hash),
+			zap.Error(err))
 		return "", err
 	}
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
 
 	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(txn.CreationDate), sa, balances, blobbers)
+	if err != nil {
+		logging.Logger.Error("new_allocation_request_failed: error validating blobbers",
+			zap.String("txn", txn.Hash),
+			zap.Error(err))
+		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
+	}
 	bi := make([]string, 0, len(blobberNodes))
 	for _, b := range blobberNodes {
 		bi = append(bi, b.ID)
 	}
 	logging.Logger.Debug("new_allocation_request", zap.Int64("size", bSize), zap.Strings("blobbers", bi))
 	m.tick("validate_blobbers")
-
-	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
-	}
 
 	sa.ID = txn.Hash
 	for _, b := range blobberNodes {
@@ -240,13 +253,25 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		b.Allocated += bSize
 		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
 		if err != nil {
+			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
+				zap.String("txn", txn.Hash),
+				zap.String("blobber", b.ID),
+				zap.Error(err))
 			return "", fmt.Errorf("can't save blobber: %v", err)
 		}
 
 		if err := b.Pool.addOffer(balloc.Offer()); err != nil {
+			logging.Logger.Error("new_allocation_request_failed: error adding offer to blobber",
+				zap.String("txn", txn.Hash),
+				zap.String("blobber", b.ID),
+				zap.Error(err))
 			return "", fmt.Errorf("ading offer: %v", err)
 		}
 		if err = b.Pool.save(sc.ID, b.ID, balances); err != nil {
+			logging.Logger.Error("new_allocation_request_failed: error saving blobber pool",
+				zap.String("txn", txn.Hash),
+				zap.String("blobber", b.ID),
+				zap.Error(err))
 			return "", fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
@@ -261,11 +286,18 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	// create write pool and lock tokens
 	if err := sa.addToWritePool(txn, balances, options...); err != nil {
+		logging.Logger.Error("new_allocation_request_failed: error adding to allocation write pool",
+			zap.String("txn", txn.Hash),
+			zap.Error(err))
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	var mld = sa.restMinLockDemand()
 	if sa.WritePool < mld {
+		logging.Logger.Error("new_allocation_request_failed: writepool balance less than min lock demand",
+			zap.String("txn", txn.Hash),
+			zap.Any("writepool", sa.WritePool),
+			zap.Any("mld", mld))
 		return "", common.NewError("allocation_creation_failed",
 			fmt.Sprintf("not enough tokens to honor the min lock demand"+" (%d < %d)", txn.Value, mld))
 	}
@@ -273,11 +305,17 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	m.tick("create_write_pool")
 
 	if err = sc.createChallengePool(txn, sa, balances); err != nil {
+		logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
+			zap.String("txn", txn.Hash),
+			zap.Error(err))
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 	m.tick("create_challenge_pool")
 
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
+		logging.Logger.Error("new_allocation_request_failed: error adding allocation",
+			zap.String("txn", txn.Hash),
+			zap.Error(err))
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
 	m.tick("add_allocation")
