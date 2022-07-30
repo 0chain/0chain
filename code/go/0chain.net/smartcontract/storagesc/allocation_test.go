@@ -1073,8 +1073,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		errMsg1 = "allocation_creation_failed: " +
 			"malformed request: unexpected end of JSON input"
-		errMsg3 = "allocation_creation_failed: " +
-			"Invalid client in the transaction. No client id in transaction"
 		errMsg4 = "allocation_creation_failed: malformed request: " +
 			"invalid character '}' looking for beginning of value"
 		errMsg5 = "allocation_creation_failed: " +
@@ -1121,12 +1119,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		_, err = ssc.newAllocationRequest(&tx, nil, balances, nil)
 		requireErrMsg(t, err, errMsg1)
 	})
-	t.Run("No client id in transaction", func(t *testing.T) {
-		tx.ClientID = ""
-		_, err = ssc.newAllocationRequest(&tx, nil, balances, nil)
-		requireErrMsg(t, err, errMsg3)
-	})
-	// 3.
 	t.Run("invalid character", func(t *testing.T) {
 		tx.ClientID = clientID
 		_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances, nil)
@@ -1527,6 +1519,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 10 * GB
 	conf.MaxBlobbersPerAllocation = 4
+	conf.TimeUnit = 48 * time.Hour
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)
