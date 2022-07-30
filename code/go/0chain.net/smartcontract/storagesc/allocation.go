@@ -172,13 +172,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 ) (resp string, err error) {
 	m := Timings{timings: timings, start: time.Now()}
 
-	if txn.ClientID == "" {
-		logging.Logger.Error("new_allocation_request_failed: empty client id",
-			zap.String("txn", txn.Hash))
-		return "", common.NewError("allocation_creation_failed",
-			"Invalid client in the transaction. No client id in transaction")
-	}
-
 	var request newAllocationRequest
 	logging.Logger.Debug("new_allocation_request", zap.String("request", string(input)))
 	if err = request.decode(input); err != nil {
@@ -260,34 +253,25 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		b.Allocated += bSize
 		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
 		if err != nil {
-			if err != nil {
-				logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
-					zap.String("txn", txn.Hash),
-					zap.String("blobber", b.ID),
-					zap.Error(err))
-				return "", common.NewErrorf("allocation_creation_failed", "%v", err)
-			}
+			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
+				zap.String("txn", txn.Hash),
+				zap.String("blobber", b.ID),
+				zap.Error(err))
 			return "", fmt.Errorf("can't save blobber: %v", err)
 		}
 
 		if err := b.Pool.addOffer(balloc.Offer()); err != nil {
-			if err != nil {
-				logging.Logger.Error("new_allocation_request_failed: error adding offer to blobber",
-					zap.String("txn", txn.Hash),
-					zap.String("blobber", b.ID),
-					zap.Error(err))
-				return "", common.NewErrorf("allocation_creation_failed", "%v", err)
-			}
+			logging.Logger.Error("new_allocation_request_failed: error adding offer to blobber",
+				zap.String("txn", txn.Hash),
+				zap.String("blobber", b.ID),
+				zap.Error(err))
 			return "", fmt.Errorf("ading offer: %v", err)
 		}
 		if err = b.Pool.save(sc.ID, b.ID, balances); err != nil {
-			if err != nil {
-				logging.Logger.Error("new_allocation_request_failed: error saving blobber pool",
-					zap.String("txn", txn.Hash),
-					zap.String("blobber", b.ID),
-					zap.Error(err))
-				return "", common.NewErrorf("allocation_creation_failed", "%v", err)
-			}
+			logging.Logger.Error("new_allocation_request_failed: error saving blobber pool",
+				zap.String("txn", txn.Hash),
+				zap.String("blobber", b.ID),
+				zap.Error(err))
 			return "", fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
