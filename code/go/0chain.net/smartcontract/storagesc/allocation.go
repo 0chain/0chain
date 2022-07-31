@@ -515,9 +515,9 @@ func (uar *updateAllocationRequest) validate(
 		}
 	}
 
-	if uar.Expiration < 0 {
-		return errors.New("duration of an allocation cannot be reduced")
-	}
+	//if uar.Expiration < 0 {
+	//	return errors.New("duration of an allocation cannot be reduced")
+	//}
 
 	if len(alloc.BlobberAllocs) == 0 {
 		return errors.New("invalid allocation for updating: no blobbers")
