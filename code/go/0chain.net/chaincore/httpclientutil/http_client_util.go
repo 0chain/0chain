@@ -44,7 +44,7 @@ var clientBalanceURL = miner_endpoint.GetClientBalance.FormattedPath(endpoint.No
 var txnSubmitURL = miner_endpoint.PutTransaction.FormattedPath(endpoint.NoSlash)
 var txnVerifyURL = sharder_endpoint.GetTransactionConfirmation.FormattedPath(endpoint.NoSlash) + "?hash="
 var specificMagicBlockURL = sharder_endpoint.GetMagicBlock.FormattedPath(endpoint.NoSlash) + "?magic_block_number="
-var scRestAPIURL =  sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.NoSlash)
+var scRestAPIURL =  sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.TrailingSlash)
 var magicBlockURL = chain_endpoint.GetLatestFinalizedMagicBlock.FormattedPath(endpoint.NoSlash)
 var finalizeBlockURL =  chain_endpoint.GetLatestFinalizedBlock.FormattedPath(endpoint.NoSlash)
 
