@@ -3,7 +3,6 @@ module 0chain.net
 go 1.18
 
 require (
-	github.com/0chain/common v0.0.0-20220731173521-2e844d59417c
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
 	github.com/alicebob/miniredis/v2 v2.22.0
 	github.com/didip/tollbooth v4.0.2+incompatible
@@ -44,6 +43,7 @@ require (
 )
 
 require (
+	github.com/0chain/common v0.0.0-20220731173521-2e844d59417c // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
