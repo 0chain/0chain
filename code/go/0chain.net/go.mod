@@ -106,5 +106,3 @@ require (
 )
 
 replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
-
-replace github.com/0chain/common => /Users/ryanstewart/projects/common
