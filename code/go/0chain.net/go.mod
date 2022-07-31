@@ -3,7 +3,7 @@ module 0chain.net
 go 1.18
 
 require (
-	github.com/0chain/common v0.0.0-00010101000000-000000000000
+	github.com/0chain/common v0.0.0-20220731173521-2e844d59417c
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
 	github.com/alicebob/miniredis/v2 v2.22.0
 	github.com/didip/tollbooth v4.0.2+incompatible
@@ -106,3 +106,5 @@ require (
 )
 
 replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
+
+replace github.com/0chain/common => /Users/ryanstewart/projects/common
