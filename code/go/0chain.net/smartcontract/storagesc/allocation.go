@@ -934,8 +934,22 @@ func (sc *StorageSmartContract) extendAllocation(
 			if sp, err = sc.getStakePool(details.BlobberID, balances); err != nil {
 				return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID, err)
 			}
-			if err := sp.addOffer(newOffer - oldOffer); err != nil {
-				return fmt.Errorf("adding offer: %v", err)
+			if newOffer > oldOffer {
+				coin, err := currency.MinusCoin(newOffer, oldOffer)
+				if err != nil {
+					return err
+				}
+				if err := sp.addOffer(coin); err != nil {
+					return fmt.Errorf("adding offer: %v", err)
+				}
+			} else {
+				coin, err := currency.MinusCoin(oldOffer, newOffer)
+				if err != nil {
+					return err
+				}
+				if err := sp.reduceOffer(coin); err != nil {
+					return fmt.Errorf("adding offer: %v", err)
+				}
 			}
 			if err = sp.save(sc.ID, details.BlobberID, balances); err != nil {
 				return fmt.Errorf("can't save stake pool of %s: %v", details.BlobberID,

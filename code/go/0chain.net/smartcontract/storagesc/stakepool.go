@@ -195,6 +195,16 @@ func (sp *stakePool) addOffer(amount currency.Coin) error {
 	return nil
 }
 
+// add offer of an allocation related to blobber owns this stake pool
+func (sp *stakePool) reduceOffer(amount currency.Coin) error {
+	newTotalOffers, err := currency.MinusCoin(sp.TotalOffers, amount)
+	if err != nil {
+		return err
+	}
+	sp.TotalOffers = newTotalOffers
+	return nil
+}
+
 // remove offer of an allocation related to blobber owns this stake pool
 func (sp *stakePool) removeOffer(amount currency.Coin) error {
 	if amount > sp.TotalOffers {
