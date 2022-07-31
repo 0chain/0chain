@@ -1880,7 +1880,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	assert.True(t, math.Abs(float64(bsize*numb-tbs)) < 100)
 	//
-	// reduce
+	// increase duration
 	//
 
 	cp = StorageAllocation{}
@@ -1888,7 +1888,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	uar.ID = alloc.ID
-	uar.Expiration = -(alloc.Expiration / 2)
+	uar.Expiration = (alloc.Expiration)
 	uar.Size = -(alloc.Size / 2)
 
 	tp += 100
@@ -1902,7 +1902,33 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.EqualValues(t, alloc, &deco)
 
 	assert.Equal(t, alloc.Size, cp.Size/2)
-	assert.Equal(t, alloc.Expiration, cp.Expiration/2)
+	assert.Equal(t, alloc.Expiration, cp.Expiration*2)
+
+	tbs, mld = 0, 0
+	for i, detail := range alloc.BlobberAllocs {
+		if i == alloc.DataShards {
+			break
+		}
+		tbs += detail.Size
+		mld += int64(detail.MinLockDemand)
+	}
+	numb = int64(alloc.DataShards + alloc.ParityShards)
+	bsize = (alloc.Size + (numb - 1)) / numb
+	assert.True(t, math.Abs(float64(bsize*numb-tbs)) < 100)
+
+	//
+	// reduce
+	//
+
+	cp = alloc.deepCopy(t)
+
+	uar.ID = alloc.ID
+	uar.Expiration = -(alloc.Expiration / 2)
+	uar.Size = -(alloc.Size / 2)
+
+	tp += 100
+	resp, err = uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	require.Error(t, err)
 
 }
 

@@ -645,7 +645,23 @@ type StorageAllocation struct {
 	// if Blobbers are getting used in any smart-contract, we should avoid.
 	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
-	IsImmutable      bool                          `json:"is_immutable"`
+
+	// Defines mutability of the files in the allocation, used by blobber on CommitWrite
+	IsImmutable bool `json:"is_immutable"`
+
+	// Flag to determine if anyone can extend this allocation
+	ThirdPartyExtendable bool `json:"third_party_extendable"`
+
+	// FileOptions to define file restrictions on an allocation for third-parties
+	// default 00000000 for all crud operations suggesting only owner has the below listed abilities.
+	// enabling option/s allows any third party to perform certain ops
+	// 00000001 - 1  - upload
+	// 00000010 - 2  - delete
+	// 00000100 - 4  - update
+	// 00001000 - 8  - move
+	// 00010000 - 16 - copy
+	// 00100000 - 32 - rename
+	FileOptions uint8 `json:"file_options"`
 
 	WritePool currency.Coin `json:"write_pool"`
 
