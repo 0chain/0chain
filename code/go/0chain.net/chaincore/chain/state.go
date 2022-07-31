@@ -521,7 +521,12 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 			zap.Error(err))
 		return nil, err
 	}
-	ts.Balance += amount
+	ts.Balance, err = currency.AddCoin(ts.Balance, amount)
+	if err != nil {
+		logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		return nil, err
+	}
+
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {
@@ -571,7 +576,12 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return nil, err
 	}
 
-	ts.Balance += amount
+	ts.Balance, err = currency.AddCoin(ts.Balance, amount)
+	if err != nil {
+		logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		return nil, err
+	}
+
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {

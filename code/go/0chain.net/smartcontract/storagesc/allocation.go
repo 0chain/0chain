@@ -135,7 +135,10 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 			return false // keep, ok or already filtered by bid
 		}
 		// clean capacity (without delegate pools want to 'unstake')
-		var free = sp.unallocatedCapacity(b.Terms.WritePrice)
+		free, err := sp.unallocatedCapacity(b.Terms.WritePrice)
+		if err != nil {
+			return true // kick off
+		}
 		return free < size // kick off if it hasn't enough free space
 	})
 }
@@ -252,13 +255,22 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	logging.Logger.Debug("new_allocation_request", zap.Int64("size", bSize), zap.Strings("blobbers", bi))
 	m.tick("validate_blobbers")
 
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed", "error in validating blobbers: %v", err)
+	}
+
 	sa.ID = txn.Hash
 	for _, b := range blobberNodes {
-		balloc := newBlobberAllocation(bSize, sa, b.StorageNode, txn.CreationDate)
+		balloc, err := newBlobberAllocation(bSize, sa, b.StorageNode, txn.CreationDate)
+		if err != nil {
+			return "", common.NewErrorf("allocation_creation_failed",
+				"can't create blobber allocation: %v", err)
+		}
+
 		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
 
 		b.Allocated += bSize
-		_, err := balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
+		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
 		if err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
 				zap.String("txn", txn.Hash),
@@ -299,7 +311,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	var mld = sa.restMinLockDemand()
+	mld, err := sa.restMinLockDemand()
+	if err != nil {
+		return "", common.NewError("allocation_creation_failed", "error in calculating min lock demand: "+err.Error())
+	}
 	if sa.WritePool < mld {
 		logging.Logger.Error("new_allocation_request_failed: writepool balance less than min lock demand",
 			zap.String("txn", txn.Hash),
@@ -515,9 +530,9 @@ func (uar *updateAllocationRequest) validate(
 		}
 	}
 
-	if uar.Expiration < 0 {
-		return errors.New("duration of an allocation cannot be reduced")
-	}
+	//if uar.Expiration < 0 {
+	//	return errors.New("duration of an allocation cannot be reduced")
+	//}
 
 	if len(alloc.BlobberAllocs) == 0 {
 		return errors.New("invalid allocation for updating: no blobbers")
@@ -902,8 +917,11 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		// new blobber's min lock demand (alloc.Expiration is already updated
 		// and we can use restDurationInTimeUnits method here)
-		var nbmld = details.Terms.minLockDemand(gbSize,
+		nbmld, err := details.Terms.minLockDemand(gbSize,
 			alloc.restDurationInTimeUnits(alloc.StartTime))
+		if err != nil {
+			return err
+		}
 
 		// min_lock_demand can be increased only
 		if nbmld > details.MinLockDemand {
@@ -916,8 +934,22 @@ func (sc *StorageSmartContract) extendAllocation(
 			if sp, err = sc.getStakePool(details.BlobberID, balances); err != nil {
 				return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID, err)
 			}
-			if err := sp.addOffer(newOffer - oldOffer); err != nil {
-				return fmt.Errorf("adding offer: %v", err)
+			if newOffer > oldOffer {
+				coin, err := currency.MinusCoin(newOffer, oldOffer)
+				if err != nil {
+					return err
+				}
+				if err := sp.addOffer(coin); err != nil {
+					return fmt.Errorf("adding offer: %v", err)
+				}
+			} else {
+				coin, err := currency.MinusCoin(oldOffer, newOffer)
+				if err != nil {
+					return err
+				}
+				if err := sp.reduceOffer(coin); err != nil {
+					return fmt.Errorf("adding offer: %v", err)
+				}
 			}
 			if err = sp.save(sc.ID, details.BlobberID, balances); err != nil {
 				return fmt.Errorf("can't save stake pool of %s: %v", details.BlobberID,
@@ -937,7 +969,11 @@ func (sc *StorageSmartContract) extendAllocation(
 	// is it about size increasing? if so, we should make sure the write
 	// pool has enough tokens
 	if diff > 0 {
-		if mldLeft := alloc.restMinLockDemand(); mldLeft > 0 {
+		if mldLeft, err := alloc.restMinLockDemand(); mldLeft > 0 {
+			if err != nil {
+				return common.NewErrorf("allocation_extending_failed",
+					"can't get min lock demand: %v", err)
+			}
 			if alloc.WritePool < mldLeft {
 				return common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")
@@ -1537,6 +1573,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
+
 			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i])
 			if err != nil {
 				return err
@@ -1566,10 +1603,16 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
 
+		staked, err := sps[i].stake()
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"getting stake of "+d.BlobberID+": "+err.Error())
+		}
+
 		data := dbs.DbUpdates{
 			Id: d.BlobberID,
 			Updates: map[string]interface{}{
-				"total_stake": int64(sps[i].stake()),
+				"total_stake": int64(staked),
 			},
 		}
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, data)

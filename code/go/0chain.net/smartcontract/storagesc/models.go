@@ -259,10 +259,10 @@ type Terms struct {
 // The minLockDemand returns min lock demand value for this Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl currency.Coin) {
+func (t *Terms) minLockDemand(gbSize, rdtu float64) (currency.Coin, error) {
 
 	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
-	return currency.Coin(mldf * rdtu)                           //
+	return currency.Float64ToCoin(mldf * rdtu)                  //
 }
 
 // validate a received terms
@@ -558,26 +558,32 @@ func newBlobberAllocation(
 	allocation *StorageAllocation,
 	blobber *StorageNode,
 	date common.Timestamp,
-) *BlobberAllocation {
+) (*BlobberAllocation, error) {
+	var err error
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
 	ba.Terms = blobber.Terms
 	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
-	ba.MinLockDemand = blobber.Terms.minLockDemand(
+	ba.MinLockDemand, err = blobber.Terms.minLockDemand(
 		sizeInGB(size), allocation.restDurationInTimeUnits(date),
 	)
-	return ba
+	return ba, err
 }
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin) {
+	rdtu float64) (move currency.Coin, err error) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
-	d.ChallengePoolIntegralValue += move
+	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
+	if err != nil {
+		return
+	}
+	d.ChallengePoolIntegralValue = challengePoolIntegralValue
+
 	return
 }
 
@@ -846,10 +852,14 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 		return fmt.Errorf("blobber %s failed health check", blobber.ID)
 	}
 
-	if blobber.Terms.WritePrice > 0 && sp.unallocatedCapacity(blobber.Terms.WritePrice) < bSize {
+	unallocCapacity, err := sp.unallocatedCapacity(blobber.Terms.WritePrice)
+	if err != nil {
+		return fmt.Errorf("failed to get unallocated capacity: %v", err)
+	}
 
+	if blobber.Terms.WritePrice > 0 && unallocCapacity < bSize {
 		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
-			blobber.ID, sp.unallocatedCapacity(blobber.Terms.WritePrice), bSize)
+			blobber.ID, unallocCapacity, bSize)
 	}
 
 	return nil
@@ -944,7 +954,11 @@ func (sa *StorageAllocation) changeBlobbers(
 	afterSize := sa.bSize()
 
 	blobbers = append(blobbers, addedBlobber)
-	ba := newBlobberAllocation(afterSize, sa, addedBlobber, now)
+	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now)
+	if err != nil {
+		return nil, fmt.Errorf("can't allocate blobber: %v", err)
+	}
+
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 
@@ -1034,10 +1048,13 @@ type StorageAllocationDecode StorageAllocation
 // client doesn't send a data to a blobber (or blobbers) then this blobbers
 // don't receive tokens, their spent will be zero, and the min lock demand
 // will be blobber reward anyway.
-func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin) {
+func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error) {
 	for _, details := range sa.BlobberAllocs {
 		if details.MinLockDemand > details.Spent {
-			rest += details.MinLockDemand - details.Spent
+			rest, err = currency.AddCoin(rest, details.MinLockDemand-details.Spent)
+			if err != nil {
+				return
+			}
 		}
 	}
 	return

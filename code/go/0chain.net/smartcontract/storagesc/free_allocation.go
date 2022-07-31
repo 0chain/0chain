@@ -109,7 +109,11 @@ func (fsa *freeStorageAssigner) validate(
 		return fmt.Errorf("failed to verify signature")
 	}
 
-	newTotal := fsa.CurrentRedeemed + value
+	newTotal, err := currency.AddCoin(fsa.CurrentRedeemed, value)
+	if err != nil {
+		return err
+	}
+
 	if newTotal > fsa.TotalLimit {
 		return fmt.Errorf("%d exceeded total permitted free storage limit %d", newTotal, fsa.TotalLimit)
 	}
@@ -151,13 +155,21 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't unmarshal input: %v", err)
 	}
 
-	var newTotalLimit = currency.Coin(assignerInfo.TotalLimit * floatToBalance)
+	newTotalLimit, err := currency.Float64ToCoin(assignerInfo.TotalLimit * floatToBalance)
+	if err != nil {
+		return "", common.NewErrorf("add_free_storage_assigner", "can't convert total limit to coin: %v", err)
+	}
+
 	if newTotalLimit > conf.MaxTotalFreeAllocation {
 		return "", common.NewErrorf("add_free_storage_assigner",
 			"total tokens limit %d exceeds maximum permitted: %d", newTotalLimit, conf.MaxTotalFreeAllocation)
 	}
 
-	var newIndividualLimit = currency.Coin(assignerInfo.IndividualLimit * floatToBalance)
+	newIndividualLimit, err := currency.Float64ToCoin(assignerInfo.IndividualLimit * floatToBalance)
+	if err != nil {
+		return "", common.NewErrorf("add_free_storage_assigner", "can't convert individual limit to coin: %v", err)
+	}
+
 	if newIndividualLimit > conf.MaxIndividualFreeAllocation {
 		return "", common.NewErrorf("add_free_storage_assigner",
 			"individual allocation token limit %d exceeds maximum permitted: %d", newIndividualLimit, conf.MaxIndividualFreeAllocation)
@@ -264,17 +276,21 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
+	free, err := currency.ParseZCN(marker.FreeTokens)
+	if err != nil {
+		return "", err
+	}
+	newRedeemed, err := currency.AddCoin(assigner.CurrentRedeemed, free)
 	totalMint, err := currency.ParseZCN(marker.FreeTokens)
 	if err != nil {
 		return "", err
 	}
-	assigner.CurrentRedeemed += totalMint
+	assigner.CurrentRedeemed = newRedeemed
 
-	f, err := totalMint.Float64()
 	if err != nil {
 		return "", err
 	}
-	readPoolTokens, err := currency.Float64ToCoin(f * conf.FreeAllocationSettings.ReadPoolFraction)
+	readPoolTokens, err := currency.Float64ToCoin(float64(totalMint) * conf.FreeAllocationSettings.ReadPoolFraction)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting read pool tokens to Coin: %v", err)
 	}
@@ -360,7 +376,12 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 		return "", common.NewErrorf("update_free_storage_request", err.Error())
 	}
 
-	assigner.CurrentRedeemed += txn.Value
+	newRedeemed, err := currency.AddCoin(assigner.CurrentRedeemed, txn.Value)
+	if err != nil {
+		return "", common.NewErrorf("update_free_storage_request",
+			"can't add redeemed tokens: %v", err)
+	}
+	assigner.CurrentRedeemed = newRedeemed
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request", "assigner save failed: %v", err)

@@ -167,8 +167,18 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 				zap.Error(err))
 			return "", common.NewErrorf("pour", "error adding transfer: %v", err)
 		}
-		user.Used += transfer.Amount
-		gn.Used += transfer.Amount
+
+		usedByUser, err := currency.AddCoin(user.Used, transfer.Amount)
+		if err != nil {
+			return "", common.NewError("pour", fmt.Sprintf("adding tokens to user's used amount resulted in an error: %v", err.Error()))
+		}
+		user.Used = usedByUser
+
+		gnUsed, err := currency.AddCoin(gn.Used, transfer.Amount)
+		if err != nil {
+			return "", common.NewError("pour", fmt.Sprintf("adding tokens to global used amount resulted in an error: %v", err.Error()))
+		}
+		gn.Used = gnUsed
 		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
 			logging.Logger.Error("pour_failed: error inserting user",
@@ -176,7 +186,7 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 				zap.Error(err))
 			return "", common.NewErrorf("pour", "error inserting user: %v", err)
 		}
-		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
+		_, err = balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
 			logging.Logger.Error("pour_failed: error inserting global node",
 				zap.String("txn", t.Hash),

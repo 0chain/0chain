@@ -15,6 +15,7 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/logging"
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool"
 	"go.uber.org/zap"
 
@@ -1006,7 +1007,11 @@ func spStats(
 
 		dpStats.TotalReward = dp.TotalReward
 
-		stat.Balance += dpStats.Balance
+		newBal, err := currency.AddCoin(stat.Balance, dpStats.Balance)
+		if err != nil {
+			return nil, err
+		}
+		stat.Balance = newBal
 		stat.Delegate = append(stat.Delegate, dpStats)
 	}
 	return stat, nil
@@ -1479,8 +1484,17 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 
 	nodes := getBlobbers(unique, balances)
 	for _, b := range nodes.Nodes {
-		minLockDemand += b.Terms.minLockDemand(gbSize,
+		bMinLockDemand, err := b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
+		if err != nil {
+			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
+			return
+		}
+		minLockDemand, err = currency.AddCoin(minLockDemand, bMinLockDemand)
+		if err != nil {
+			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
+			return
+		}
 	}
 
 	var response = map[string]interface{}{
@@ -2154,7 +2168,19 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 			common.Respond(w, r, nil, err)
 			return
 		}
-		total += int64(sp.stake())
+		staked, err := sp.stake()
+		if err != nil {
+			err := common.NewErrInternal("cannot get stake" + err.Error())
+			common.Respond(w, r, nil, err)
+			return
+		}
+
+		total, err = maths.SafeAddInt64(total, int64(staked))
+		if err != nil {
+			err := common.NewErrInternal("cannot get total stake" + err.Error())
+			common.Respond(w, r, nil, err)
+			return
+		}
 	}
 	common.Respond(w, r, rest.Int64Map{
 		"total": total,
