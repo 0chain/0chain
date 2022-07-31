@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/miner_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 	"strconv"
 
@@ -19,8 +22,8 @@ import (
 
 /*SetupNodeHandlers - setup the handlers for the chain */
 func (c *Chain) SetupNodeHandlers() {
-	http.HandleFunc("/_nh/list/m", common.Recover(c.GetMinersHandler))
-	http.HandleFunc("/_nh/list/s", common.Recover(c.GetShardersHandler))
+	http.HandleFunc(chain_endpoint.ListMiners.Path(), common.Recover(c.GetMinersHandler))
+	http.HandleFunc(chain_endpoint.ListSharders.Path(), common.Recover(c.GetShardersHandler))
 }
 
 var (
@@ -49,34 +52,33 @@ func setupX2MRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
-	MinerNotarizedBlockRequestor = node.RequestEntityHandler("/v1/_x2m/block/notarized_block/get", options, blockEntityMetadata)
+	MinerNotarizedBlockRequestor = node.RequestEntityHandler(miner_endpoint.AnyServiceToMinerGetNotarizedBlock.Path(), options, blockEntityMetadata)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	blockStateChangeEntityMetadata := datastore.GetEntityMetadata("block_state_change")
-	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2x/block/state_change/get", options, blockStateChangeEntityMetadata)
-	// ShardersBlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2s/block/state_change/get", options, blockStateChangeEntityMetadata)
+	BlockStateChangeRequestor = node.RequestEntityHandler(chain_endpoint.AnyServiceToAnyServiceGetBlockStateChange.Path(), options, blockStateChangeEntityMetadata)
 
 	stateNodesEntityMetadata := datastore.GetEntityMetadata("state_nodes")
-	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/get_nodes", options, stateNodesEntityMetadata)
+	StateNodesRequestor = node.RequestEntityHandler(chain_endpoint.AnyServiceToAnyServiceGetNodes.Path(), options, stateNodesEntityMetadata)
 }
 
 func setupX2SRequestors() {
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
+	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler(chain_endpoint.GetLatestFinalizedMagicBlock.Path(), options, blockEntityMetadata)
 
 	var opts = node.SendOptions{
 		Timeout:  node.TimeoutLargeMessage,
 		CODEC:    node.CODEC_MSGPACK,
 		Compress: true,
 	}
-	FBRequestor = node.RequestEntityHandler("/v1/_x2s/block/get", &opts,
+	FBRequestor = node.RequestEntityHandler(sharder_endpoint.AnyServiceToSharderGetBlock.Path(), &opts,
 		datastore.GetEntityMetadata("block"))
 }
 
 func SetupX2XResponders(c *Chain) {
-	http.HandleFunc("/v1/_x2x/state/get_nodes", common.N2NRateLimit(node.ToN2NSendEntityHandler(StateNodesHandler)))
-	http.HandleFunc("/v1/_x2x/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(c.BlockStateChangeHandler)))
+	http.HandleFunc(chain_endpoint.AnyServiceToAnyServiceGetNodes.Path(), common.N2NRateLimit(node.ToN2NSendEntityHandler(StateNodesHandler)))
+	http.HandleFunc(chain_endpoint.AnyServiceToAnyServiceGetBlockStateChange.Path(), common.N2NRateLimit(node.ToN2NSendEntityHandler(c.BlockStateChangeHandler)))
 }
 
 //StateNodesHandler - return a list of state nodes

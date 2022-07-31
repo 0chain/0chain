@@ -3,6 +3,9 @@ package miner
 import (
 	"context"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/miner_endpoint"
 	"net/http"
 	"time"
 
@@ -19,10 +22,10 @@ import (
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
-	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
-	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
-	http.HandleFunc("/_diagnostics/wallet_stats", common.UserRateLimit(GetWalletStats))
-	http.HandleFunc("/v1/miner/get/stats", common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
+	http.HandleFunc(chain_endpoint.GetChainStats.Path(), common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
+	http.HandleFunc(chain_endpoint.ChainStatsFunction.Path(), common.UserRateLimit(ChainStatsWriter))
+	http.HandleFunc(chain_endpoint.WalletStatsDiagnostics.Path(), common.UserRateLimit(GetWalletStats))
+	http.HandleFunc(miner_endpoint.GetMinerStats.Path(), common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */
@@ -45,7 +48,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h3>Configuration <a href='v1/config/get'>...</a></h3>")
+	fmt.Fprintf(w, "<h3>Configuration <a href='" + chain_endpoint.GetConfig.FormattedPath(endpoint.NoSlash) + "'>...</a></h3>")
 	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Current Status</h3>")

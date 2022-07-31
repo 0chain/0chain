@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
 	"io"
 	"net/http"
 	"sort"
@@ -15,9 +16,9 @@ import (
 
 //SetupHandlers - setup all the handlers
 func SetupHandlers() {
-	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler))
-	http.HandleFunc("/_nh/status", common.UserRateLimit(StatusHandler))
-	http.HandleFunc("/_nh/getpoolmembers", common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
+	http.HandleFunc(chain_endpoint.WhoAmI.Path(), common.UserRateLimit(WhoAmIHandler))
+	http.HandleFunc(chain_endpoint.Status.Path(), common.UserRateLimit(StatusHandler))
+	http.HandleFunc(chain_endpoint.GetPoolMembers.Path(), common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
 }
 
 //WhoAmIHandler - who am i?

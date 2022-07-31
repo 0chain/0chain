@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
 	"net/http"
 	"strconv"
 	"time"
@@ -35,7 +36,7 @@ func setupLFBTicketSender() {
 		CurrentRelayLength: 0,
 		Compress:           false,
 	}
-	LFBTicketSender = node.SendEntityHandler("/v1/block/get/latest_finalized_ticket", &options)
+	LFBTicketSender = node.SendEntityHandler(chain_endpoint.GetLatestFinalizedTicket.Path(), &options)
 	// 2. Register LFBTicket EntityMetadata implementation.
 	datastore.RegisterEntityMetadata("lfb_ticket", new(LFBTicketEntityMetadata))
 }

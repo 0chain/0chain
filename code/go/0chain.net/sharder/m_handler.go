@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 
 	"0chain.net/chaincore/block"
@@ -18,10 +19,9 @@ func SetupM2SReceivers() {
 	sc := GetSharderChain()
 	options := &node.ReceiveOptions{}
 	options.MessageFilter = sc
-	http.HandleFunc("/v1/_m2s/block/finalized", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(FinalizedBlockHandler(sc), options)))
-	http.HandleFunc("/v1/_m2s/block/notarized", common.N2NRateLimit(node.RejectDuplicateNotarizedBlockHandler(
-		sc, node.ToN2NReceiveEntityHandler(NotarizedBlockHandler(sc), options))))
-	http.HandleFunc("/v1/_m2s/block/notarized/kick", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockKickHandler(sc), nil)))
+	http.HandleFunc(sharder_endpoint.MinerToSharderGetFinalizedBlock.Path(), common.N2NRateLimit(node.ToN2NReceiveEntityHandler(FinalizedBlockHandler(sc), options)))
+	http.HandleFunc(sharder_endpoint.MinerToSharderGetNotarisedBlock.Path(), common.N2NRateLimit(node.RejectDuplicateNotarizedBlockHandler(sc, node.ToN2NReceiveEntityHandler(NotarizedBlockHandler(sc), options))))
+	http.HandleFunc(sharder_endpoint.MinerToSharderKickNotarisedBlock.Path(), common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockKickHandler(sc), nil)))
 }
 
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
@@ -49,7 +49,7 @@ func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 
 /*SetupM2SResponders - setup handlers for all the requests from the miner */
 func SetupM2SResponders(sc Chainer) {
-	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", common.N2NRateLimit(
+	http.HandleFunc(sharder_endpoint.MinerToSharderGetLatestFinalizedBlock.Path(), common.N2NRateLimit(
 		node.ToS2MSendEntityHandler(LatestFinalizedBlockHandler(sc))))
 }
 

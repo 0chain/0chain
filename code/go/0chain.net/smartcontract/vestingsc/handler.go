@@ -2,6 +2,8 @@ package vestingsc
 
 import (
 	"0chain.net/smartcontract/rest"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 
 	"0chain.net/core/common"
@@ -22,7 +24,7 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	vrh := NewVestingRestHandler(rh)
-	vesting := "/v1/screst/" + ADDRESS
+	vesting := sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.LeadingAndTrailingSlash) + ADDRESS
 	return []rest.Endpoint{
 		rest.MakeEndpoint(vesting+"/getPoolInfo", vrh.getPoolInfo),
 		rest.MakeEndpoint(vesting+"/getClientPools", vrh.getClientPools),

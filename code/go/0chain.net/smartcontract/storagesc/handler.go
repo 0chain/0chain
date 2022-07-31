@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 	"strconv"
 	"time"
@@ -46,8 +48,8 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	srh := NewStorageRestHandler(rh)
-	storage := "/v1/screst/" + ADDRESS
-	return []rest.Endpoint{
+	storage := sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.LeadingAndTrailingSlash) + ADDRESS
+	return []rest.Endpoint{ //todo extract to constants
 		rest.MakeEndpoint(storage+"/get_blobber_count", srh.getBlobberCount),
 		rest.MakeEndpoint(storage+"/getBlobber", srh.getBlobber),
 		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 	"strconv"
 	"time"
@@ -38,34 +39,34 @@ func SetupS2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundEntityMetadata := datastore.GetEntityMetadata("round")
 
-	RoundRequestor = node.RequestEntityHandler("/v1/_s2s/round/get", options, roundEntityMetadata)
+	RoundRequestor = node.RequestEntityHandler(sharder_endpoint.SharderToSharderGetRound.Path(), options, roundEntityMetadata)
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
-	BlockRequestor = node.RequestEntityHandler("/v1/_s2s/block/get", options, blockEntityMetadata)
+	BlockRequestor = node.RequestEntityHandler(sharder_endpoint.SharderToSharderGetBlock.Path(), options, blockEntityMetadata)
 
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
-	BlockSummaryRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummary/get", options, blockSummaryEntityMetadata)
+	BlockSummaryRequestor = node.RequestEntityHandler(sharder_endpoint.SharderToSharderGetBlockSummary.Path(), options, blockSummaryEntityMetadata)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundSummariesEntityMetadata := datastore.GetEntityMetadata("round_summaries")
-	RoundSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/roundsummaries/get", options, roundSummariesEntityMetadata)
+	RoundSummariesRequestor = node.RequestEntityHandler(sharder_endpoint.SharderToSharderGetRoundSummaries.Path(), options, roundSummariesEntityMetadata)
 
 	blockSummariesEntityMetadata := datastore.GetEntityMetadata("block_summaries")
-	BlockSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummaries/get", options, blockSummariesEntityMetadata)
+	BlockSummariesRequestor = node.RequestEntityHandler(sharder_endpoint.SharderToSharderGetBlockSummaries.Path(), options, blockSummariesEntityMetadata)
 }
 
 // SetupS2SResponders -
 func SetupS2SResponders() {
-	http.HandleFunc("/v1/_s2s/latest_round/get", node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
-	http.HandleFunc("/v1/_s2s/round/get", node.ToN2NSendEntityHandler(RoundRequestHandler))
-	http.HandleFunc("/v1/_s2s/roundsummaries/get", node.ToN2NSendEntityHandler(RoundSummariesHandler))
-	http.HandleFunc("/v1/_s2s/block/get", node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
-	http.HandleFunc("/v1/_s2s/blocksummary/get", node.ToN2NSendEntityHandler(BlockSummaryRequestHandler))
-	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
+	http.HandleFunc(sharder_endpoint.SharderToSharderGetLatestRound.Path(), node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
+	http.HandleFunc(sharder_endpoint.SharderToSharderGetRound.Path(), node.ToN2NSendEntityHandler(RoundRequestHandler))
+	http.HandleFunc(sharder_endpoint.SharderToSharderGetRoundSummaries.Path(), node.ToN2NSendEntityHandler(RoundSummariesHandler))
+	http.HandleFunc(sharder_endpoint.SharderToSharderGetBlock.Path(), node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
+	http.HandleFunc(sharder_endpoint.SharderToSharderGetBlockSummary.Path(), node.ToN2NSendEntityHandler(BlockSummaryRequestHandler))
+	http.HandleFunc(sharder_endpoint.SharderToSharderGetBlockSummaries.Path(), node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }
 
-const (
-	getBlockX2SV1Pattern = "/v1/_x2s/block/get"
+var (
+	getBlockX2SV1Pattern = sharder_endpoint.AnyServiceToSharderGetBlock.Path()
 )
 
 func x2sRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {

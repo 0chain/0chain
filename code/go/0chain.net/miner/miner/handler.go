@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
 	"net/http"
 	"strconv"
 
@@ -16,14 +17,14 @@ import (
 	"0chain.net/core/viper"
 )
 
-const updateConfigURL = "/v1/config/update"
-const updateConfigAllURL = "/v1/config/update_all"
+var updateConfigURL = chain_endpoint.UpdateConfig.Path()
+var updateConfigAllURL = chain_endpoint.UpdateAllConfig.Path()
 
 /*SetupHandlers - setup update config related handlers */
 func SetupHandlers() {
 	if config.Development() {
-		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
-		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
+		http.HandleFunc(chain_endpoint.HashFunction.Path(), common.Recover(encryption.HashHandler))
+		http.HandleFunc(chain_endpoint.SignFunction.Path(), common.Recover(common.ToJSONResponse(encryption.SignHandler)))
 		http.HandleFunc(updateConfigURL, common.Recover(ConfigUpdateHandler))
 		http.HandleFunc(updateConfigAllURL, common.Recover(ConfigUpdateAllHandler))
 	}

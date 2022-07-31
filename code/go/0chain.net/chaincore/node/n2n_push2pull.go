@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
 	"net/http"
 	"net/url"
 	"sync"
@@ -27,7 +28,7 @@ type pushDataCacheEntry struct {
 	EntityName string
 }
 
-var pullURL = "/v1/n2n/entity_pull/get"
+var pullURL = chain_endpoint.NodeToNodeGetEntity.Path()
 
 func getPushToPullTime(n *Node) float64 {
 	var pullRequestTime float64

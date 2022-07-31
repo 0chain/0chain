@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -25,6 +26,9 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/miner_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/tinylib/msgp/msgp"
 )
@@ -62,11 +66,11 @@ func SetupScRestApiHandlers() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
-	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
-	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
-	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
-	http.HandleFunc("/v1/screst/", common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
-	http.HandleFunc("/_smart_contract_stats", common.WithCORS(common.UserRateLimit(c.SCStats)))
+	http.HandleFunc(miner_endpoint.GetClientBalance.Path(), common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
+	http.HandleFunc(chain_endpoint.GetSmartContractState.Path(), common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
+	http.HandleFunc(chain_endpoint.GetSmartContractStats.FormattedPath(endpoint.LeadingAndTrailingSlash), common.WithCORS(common.UserRateLimit(c.GetSCStats)))
+	http.HandleFunc(sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.LeadingAndTrailingSlash), common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
+	http.HandleFunc(chain_endpoint.SmartContractStatsFunction.Path(), common.WithCORS(common.UserRateLimit(c.SCStats)))
 }
 
 func (c *Chain) GetQueryStateContext() state.TimedQueryStateContextI {
@@ -89,14 +93,14 @@ func (c *Chain) GetStateContextI() state.StateContextI {
 }
 
 func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
-	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
+	scRestRE := regexp.MustCompile(sharder_endpoint.SmartContractFunction.Path() + `/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
 	if len(pathParams) < 2 {
 		return
 	}
 
 	if len(pathParams) == 2 {
-		scRestRE = regexp.MustCompile(`/v1/screst/(.*)?/(.*)`)
+		scRestRE = regexp.MustCompile(sharder_endpoint.SmartContractFunction.Path() + `/(.*)?/(.*)`)
 		pathParams = scRestRE.FindStringSubmatch(r.URL.Path)
 		if len(pathParams) == 3 {
 			return
@@ -156,7 +160,7 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 }
 
 func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {
-	scRestRE := regexp.MustCompile(`/v1/scstats/(.*)`)
+	scRestRE := regexp.MustCompile(chain_endpoint.GetSmartContractStats.Path() + `/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
 	if len(pathParams) < 2 {
 		fmt.Fprintf(w, "invalid_path: Invalid Rest API path")
@@ -183,7 +187,7 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	for _, k := range keys {
 		sc := smartcontract.ContractMap[k]
 		scType := re.ReplaceAllString(reflect.TypeOf(sc).String(), "")
-		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "v1/scstats/"+k, "/v1/scstats/"+scType, "v1/screst/"+k, "/v1/screst/*key*")
+		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), chain_endpoint.GetSmartContractStats.FormattedPath(endpoint.TrailingSlash)+k, chain_endpoint.GetSmartContractStats.FormattedPath(endpoint.LeadingAndTrailingSlash)+scType, sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.TrailingSlash)+k, sharder_endpoint.SmartContractFunction.Path() + "/*key*")
 	}
 	fmt.Fprintf(w, "</table>")
 }
@@ -212,7 +216,7 @@ func GetFunctionNames(address string) []string {
 }
 
 func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
-	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
+	scRestRE := regexp.MustCompile(sharder_endpoint.SmartContractFunction.Path() + `/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
 	if len(pathParams) < 2 {
 		return
@@ -228,7 +232,7 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(names)
 	for _, funcName := range names {
 		friendlyName := strings.TrimLeft(funcName, "/")
-		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+funcName, "/v1/screst/*"+funcName+"*")
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+funcName, sharder_endpoint.SmartContractFunction.Path() + "/*"+funcName+"*")
 	}
 	fmt.Fprintf(w, "</table>")
 }

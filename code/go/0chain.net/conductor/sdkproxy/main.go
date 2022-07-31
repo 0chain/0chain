@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/blobber_endpoint"
 	"io"
 	"log"
 	"mime/multipart"
@@ -19,10 +20,10 @@ import (
 	"syscall"
 )
 
-const (
-	UPLOAD   = "/v1/file/upload/"
-	COMMIT   = "/v1/connection/commit/"
-	DOWNLOAD = "/v1/file/download/"
+var (
+	UPLOAD   = blobber_endpoint.FileUpload.Path()
+	COMMIT   = blobber_endpoint.UploadCommit.Path()
+	DOWNLOAD = blobber_endpoint.FileDownload.Path()
 )
 
 func init() {

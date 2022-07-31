@@ -3,6 +3,8 @@ package minersc
 import (
 	"errors"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 	"strconv"
 
@@ -35,7 +37,7 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	mrh := NewMinerRestHandler(rh)
-	miner := "/v1/screst/" + ADDRESS
+	miner := sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.LeadingAndTrailingSlash) + ADDRESS
 	return []rest.Endpoint{
 		rest.MakeEndpoint(miner+"/globalSettings", mrh.getGlobalSettings),
 		rest.MakeEndpoint(miner+"/getNodepool", mrh.getNodePool),

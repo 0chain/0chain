@@ -2,6 +2,7 @@ package miner
 
 import (
 	"0chain.net/chaincore/node"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 )
 
 /*This file contains the Miner To Sharder send/receive messages */
@@ -19,13 +20,13 @@ var NotarizedBlockForcePushSender node.EntitySendHandler
 /*SetupM2SSenders - setup message senders from miners to sharders */
 func SetupM2SSenders() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true, Pull: true}
-	FinalizedBlockSender = node.SendEntityHandler("/v1/_m2s/block/finalized", options)
+	FinalizedBlockSender = node.SendEntityHandler(sharder_endpoint.MinerToSharderGetFinalizedBlock.Path(), options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true, Pull: true}
-	NotarizedBlockSender = node.SendEntityHandler("/v1/_m2s/block/notarized", options)
+	NotarizedBlockSender = node.SendEntityHandler(sharder_endpoint.MinerToSharderGetNotarisedBlock.Path(), options)
 
 	NotarizedBlockForcePushSender = node.SendEntityHandler(
-		"/v1/_m2s/block/notarized/kick",
+		sharder_endpoint.MinerToSharderKickNotarisedBlock.Path(),
 		&node.SendOptions{
 			Timeout:            node.TimeoutLargeMessage, // try to increase the timeout
 			MaxRelayLength:     0,

@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 
 	"0chain.net/core/common"
@@ -14,7 +15,7 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/transaction/get", common.UserRateLimit(common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction))))
+	http.HandleFunc(sharder_endpoint.GetTransaction.Path(), common.UserRateLimit(common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction))))
 }
 
 /*GetTransaction - given an id returns the transaction information */

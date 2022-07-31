@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
 	"net/http"
 
 	"gopkg.in/yaml.v2"
@@ -11,7 +12,7 @@ import (
 
 /*SetupHandlers - setup config related handlers */
 func SetupHandlers() {
-	http.HandleFunc("/v1/config/get", GetConfigHandler)
+	http.HandleFunc(chain_endpoint.GetConfig.Path(), GetConfigHandler)
 }
 
 /*GetConfigHandler - display configuration */

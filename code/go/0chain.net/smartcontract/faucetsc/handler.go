@@ -3,6 +3,8 @@ package faucetsc
 import (
 	"0chain.net/smartcontract/rest"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 	"strings"
 	"time"
@@ -34,7 +36,7 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	frh := NewFaucetscRestHandler(rh)
-	faucet := "/v1/screst/" + ADDRESS
+	faucet := sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.LeadingAndTrailingSlash) + ADDRESS
 	return []rest.Endpoint{
 		rest.MakeEndpoint(faucet+"/personalPeriodicLimit", frh.getPersonalPeriodicLimit),
 		rest.MakeEndpoint(faucet+"/globalPeriodicLimit", frh.getGlobalPeriodicLimit),

@@ -1,10 +1,15 @@
 package httpclientutil
 
 import (
+	"0chain.net/chaincore/currency"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/miner_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"io/ioutil"
 	"math"
 	"net"
@@ -16,8 +21,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"0chain.net/chaincore/currency"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -37,16 +40,16 @@ import (
 //SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
 
-const clientBalanceURL = "v1/client/get/balance?client_id="
-const txnSubmitURL = "v1/transaction/put"
-const txnVerifyURL = "v1/transaction/get/confirmation?hash="
-const specificMagicBlockURL = "v1/block/magic/get?magic_block_number="
-const scRestAPIURL = "v1/screst/"
-const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
-const finalizeBlockURL = "v1/block/get/latest_finalized"
+var clientBalanceURL = miner_endpoint.GetClientBalance.FormattedPath(endpoint.NoSlash) + "?client_id="
+var txnSubmitURL = miner_endpoint.PutTransaction.FormattedPath(endpoint.NoSlash)
+var txnVerifyURL = sharder_endpoint.GetTransactionConfirmation.FormattedPath(endpoint.NoSlash) + "?hash="
+var specificMagicBlockURL = sharder_endpoint.GetMagicBlock.FormattedPath(endpoint.NoSlash) + "?magic_block_number="
+var scRestAPIURL =  sharder_endpoint.SmartContractFunction.FormattedPath(endpoint.NoSlash)
+var magicBlockURL = chain_endpoint.GetLatestFinalizedMagicBlock.FormattedPath(endpoint.NoSlash)
+var finalizeBlockURL =  chain_endpoint.GetLatestFinalizedBlock.FormattedPath(endpoint.NoSlash)
 
 //RegisterClient path to RegisterClient
-const RegisterClient = "/v1/client/put"
+var RegisterClient = miner_endpoint.PutClient.Path()
 
 var httpClient *http.Client
 

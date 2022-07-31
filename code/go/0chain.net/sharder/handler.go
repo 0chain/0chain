@@ -3,6 +3,9 @@ package sharder
 import (
 	"context"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,23 +20,19 @@ import (
 	"0chain.net/core/common"
 )
 
-const (
-	getBlockV1Pattern = "/v1/block/get"
-)
-
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
-		getBlockV1Pattern:                  common.ToJSONResponse(BlockHandler),
-		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
-		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
-		"/v1/healthcheck":                  common.ToJSONResponse(HealthcheckHandler),
-		"/v1/chain/get/stats":              common.ToJSONResponse(ChainStatsHandler),
-		"/_chain_stats":                    ChainStatsWriter,
-		"/_healthcheck":                    HealthCheckWriter,
-		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
+		chain_endpoint.GetBlock.Path():                     common.ToJSONResponse(BlockHandler),
+		sharder_endpoint.GetMagicBlock.Path():              common.ToJSONResponse(MagicBlockHandler),
+		sharder_endpoint.GetTransactionConfirmation.Path(): common.ToJSONResponse(TransactionConfirmationHandler),
+		sharder_endpoint.HealthCheck.Path():                common.ToJSONResponse(HealthcheckHandler),
+		chain_endpoint.GetChainStats.Path():                common.ToJSONResponse(ChainStatsHandler),
+		chain_endpoint.ChainStatsFunction.Path():           ChainStatsWriter,
+		sharder_endpoint.HealthCheckFunction.Path():        HealthCheckWriter,
+		sharder_endpoint.GetSharderStats.Path():            common.ToJSONResponse(SharderStatsHandler),
 
-		"/v1/state/nodes":        common.ToJSONResponse(chain.StateNodesHandler),
-		"/v1/block/state_change": common.ToJSONResponse(BlockStateChangeHandler),
+		sharder_endpoint.NodesState.Path():        common.ToJSONResponse(chain.StateNodesHandler),
+		chain_endpoint.GetBlockStateChange.Path(): common.ToJSONResponse(BlockStateChangeHandler),
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))
@@ -167,7 +166,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h3>Configuration <a href='v1/config/get'>...</a></h3>")
+	fmt.Fprintf(w, "<h3>Configuration <a href='"+chain_endpoint.GetConfig.FormattedPath(endpoint.NoSlash)+"'>...</a></h3>")
 	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Current Status</h3>")

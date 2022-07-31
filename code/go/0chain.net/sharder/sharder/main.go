@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
 	"io"
 	"log"
 	"net/http"
@@ -416,8 +417,8 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 
 func initHandlers(c chain.Chainer) {
 	if config.Development() {
-		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
-		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
+		http.HandleFunc(chain_endpoint.HashFunction.Path(), common.Recover(encryption.HashHandler))
+		http.HandleFunc(chain_endpoint.SignFunction.Path(), common.Recover(common.ToJSONResponse(encryption.SignHandler)))
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()

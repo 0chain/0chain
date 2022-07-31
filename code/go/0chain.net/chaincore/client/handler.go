@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/miner_endpoint"
 	"net/http"
 
 	"0chain.net/core/common"
@@ -11,12 +12,12 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/client/get",
+	http.HandleFunc(miner_endpoint.GetClient.Path(),
 		common.WithCORS(
 			common.UserRateLimit(
 				common.ToJSONResponse(
 					memorystore.WithConnectionHandler(GetClientHandler)))))
-	http.HandleFunc("/v1/client/put",
+	http.HandleFunc(miner_endpoint.PutClient.Path(),
 		common.WithCORS(
 			common.UserRateLimit(
 				datastore.ToJSONEntityReqResponse(

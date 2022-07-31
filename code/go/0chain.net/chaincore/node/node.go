@@ -3,6 +3,7 @@ package node
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
 	"io"
 	"math"
 	"strings"
@@ -326,7 +327,7 @@ func (n *Node) GetN2NURLBase() string {
 
 /*GetStatusURL - get the end point where to ping for the status */
 func (n *Node) GetStatusURL() string {
-	return fmt.Sprintf("%v/_nh/status", n.GetN2NURLBase())
+	return fmt.Sprintf("%v" + chain_endpoint.Status.Path(), n.GetN2NURLBase())
 }
 
 /*GetNodeType - as a string */

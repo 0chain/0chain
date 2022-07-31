@@ -5,6 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/chain_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/miner_endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"html/template"
 	"io/ioutil"
 	"math"
@@ -35,67 +39,67 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-const (
-	getBlockV1Pattern = "/v1/block/get"
+var (
+	getBlockV1Pattern = chain_endpoint.GetBlock.Path()
 )
 
 func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
-		"/v1/chain/get": common.Recover(
+		chain_endpoint.GetChain.Path(): common.Recover(
 			common.ToJSONResponse(
 				memorystore.WithConnectionHandler(
 					GetChainHandler,
 				),
 			),
 		),
-		"/v1/chain/put": common.Recover(
+		chain_endpoint.PutChain.Path(): common.Recover(
 			datastore.ToJSONEntityReqResponse(
 				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
 				chainEntityMetadata,
 			),
 		),
-		"/v1/block/get/latest_finalized": common.UserRateLimit(
+		chain_endpoint.GetLatestFinalizedBlock.Path(): common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/get/latest_finalized_magic_block_summary": common.UserRateLimit(
+		chain_endpoint.GetLatestFinalizedMagicBlockSummary.Path(): common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
 		),
-		"/v1/block/get/latest_finalized_magic_block": common.UserRateLimit(
+		chain_endpoint.GetLatestFinalizedBlock.Path(): common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockHandler(c),
 			),
 		),
-		"/v1/block/get/recent_finalized": common.UserRateLimit(
+		chain_endpoint.GetRecentFinalizedBlock.Path(): common.UserRateLimit(
 			common.ToJSONResponse(
 				RecentFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/get/fee_stats": common.UserRateLimit(
+		chain_endpoint.GetBlockFeeStats.Path(): common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestBlockFeeStatsHandler,
 			),
 		),
-		"/": common.UserRateLimit(
+		endpoint.RootEndpoint.Path(): common.UserRateLimit(
 			HomePageAndNotFoundHandler,
 		),
-		"/_diagnostics": common.UserRateLimit(
+		chain_endpoint.Diagnostics.Path(): common.UserRateLimit(
 			DiagnosticsHomepageHandler,
 		),
-		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
+		chain_endpoint.CurrentMbNodesDiagnostics.Path(): common.UserRateLimit(
 			DiagnosticsNodesHandler,
 		),
-		"/_diagnostics/dkg_process": common.UserRateLimit(
+		chain_endpoint.DkgProcessDiagnostics.Path(): common.UserRateLimit(
 			DiagnosticsDKGHandler,
 		),
-		"/_diagnostics/round_info": common.UserRateLimit(
+		chain_endpoint.RoundInfoDiagnostics.Path(): common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
-		"/v1/transaction/put": common.UserRateLimit(
+		miner_endpoint.PutTransaction.Path(): common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
 					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
@@ -104,10 +108,10 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				transactionEntityMetadata,
 			),
 		),
-		"/_diagnostics/state_dump": common.UserRateLimit(
+		chain_endpoint.StateDumpDiagnostics.Path(): common.UserRateLimit(
 			StateDumpHandler,
 		),
-		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
+		chain_endpoint.GetLatestFinalizedTicket.Path(): common.N2NRateLimit(
 			common.ToJSONResponse(
 				LFBTicketHandler,
 			),
@@ -700,41 +704,41 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr class='header'><td>Config</td><td>Stats</td><td>Info</td><td>Debug</td></tr>")
 	fmt.Fprintf(w, "<tr>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
+	fmt.Fprintf(w, "<li><a href='" + chain_endpoint.GetConfig.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.GetConfig.Path() + "</a></li>")
 	selfNodeType := node.Self.Underlying().Type
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
-		fmt.Fprintf(w, "<li><a href='v1/config/update_all'>/v1/config/update_all</a></li>")
+		fmt.Fprintf(w, "<li><a href='" + chain_endpoint.UpdateConfig.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.UpdateConfig.Path() + "</a></li>")
+		fmt.Fprintf(w, "<li><a href='" + chain_endpoint.UpdateAllConfig.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.UpdateAllConfig.Path() + "</a></li>")
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
+	fmt.Fprintf(w, "<li><a href='" + chain_endpoint.ChainStatsFunction.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.ChainStatsFunction.Path() + "</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeSharder {
-		fmt.Fprintf(w, "<li><a href='_healthcheck'>/_healthcheck</a></li>")
+		fmt.Fprintf(w, "<li><a href='" + sharder_endpoint.HealthCheckFunction.FormattedPath(endpoint.NoSlash)+ "'>" + sharder_endpoint.HealthCheckFunction.Path() + "</a></li>")
 	}
 
-	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
+	fmt.Fprintf(w, "<li><a href='" + chain_endpoint.MinerStatsDiagnostics.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.MinerStatsDiagnostics.Path() + "</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
+		fmt.Fprintf(w, "<li><a href='" + chain_endpoint.WalletStatsDiagnostics.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.WalletStatsDiagnostics.Path() + "</a></li>")
 	}
-	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
+	fmt.Fprintf(w, "<li><a href='" + chain_endpoint.SmartContractStatsFunction.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.SmartContractStatsFunction.Path() + "</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
-	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
+	fmt.Fprintf(w, "<li><a href='" + chain_endpoint.DiagnosticsInfo.FormattedPath(endpoint.NoSlash) + "'>" + chain_endpoint.SmartContractStatsFunction.Path() + "</a> (with <a href='" + chain_endpoint.SmartContractStatsFunction.FormattedPath(endpoint.NoSlash) + "?ts=1'>ts</a>)</li>")
+	fmt.Fprintf(w, "<li><a href='" + chain_endpoint.DiagnosticsNodeToNodeInfo.FormattedPath(endpoint.NoSlash) + "'>" + chain_endpoint.DiagnosticsNodeToNodeInfo.Path() + "</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner {
 		//ToDo: For sharders show who all can store the blocks
-		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
+		fmt.Fprintf(w, "<li><a href='" + chain_endpoint.RoundInfoDiagnostics.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.RoundInfoDiagnostics.Path() + "</a></li>")
 	}
-	fmt.Fprintf(w, "<li><a href='_diagnostics/dkg_process'>/_diagnostics/dkg_process</a></li>")
+	fmt.Fprintf(w, "<li><a href='" + chain_endpoint.DkgProcessDiagnostics.FormattedPath(endpoint.NoSlash)+ "'>" + chain_endpoint.DkgProcessDiagnostics.Path() + "</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='_diagnostics/logs?detail=1'>1</a>, <a href='_diagnostics/logs?detail=2'>2</a>, <a href='_diagnostics/logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='_diagnostics/n2n_logs?detail=1'>1</a>, <a href='_diagnostics/n2n_logs?detail=2'>2</a>, <a href='_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li>/_diagnostics/mem_logs [Level <a href='_diagnostics/mem_logs?detail=1'>1</a>, <a href='_diagnostics/mem_logs?detail=2'>2</a>, <a href='_diagnostics/mem_logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li><a href='debug/pprof/'>/debug/pprof/</a></li>")
+	fmt.Fprintf(w, "<li>" + chain_endpoint.DiagnosticsLogs.Path() + " [Level <a href='" + chain_endpoint.DiagnosticsLogs.FormattedPath(endpoint.NoSlash) + "?detail=1'>1</a>, <a href='" + chain_endpoint.DiagnosticsLogs.FormattedPath(endpoint.NoSlash) + "?detail=2'>2</a>, <a href='" + chain_endpoint.DiagnosticsLogs.FormattedPath(endpoint.NoSlash) + "?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>" + chain_endpoint.DiagnosticsNodeToNodeLogs.Path() + " [Level <a href='" + chain_endpoint.DiagnosticsNodeToNodeLogs.FormattedPath(endpoint.NoSlash) + "?detail=1'>1</a>, <a href='" + chain_endpoint.DiagnosticsNodeToNodeLogs.FormattedPath(endpoint.NoSlash) + "?detail=2'>2</a>, <a href='" + chain_endpoint.DiagnosticsNodeToNodeLogs.FormattedPath(endpoint.NoSlash) + "?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>" + chain_endpoint.DiagnosticsMemoryLogs.Path() + " [Level <a href='" + chain_endpoint.DiagnosticsMemoryLogs.FormattedPath(endpoint.NoSlash) + "?detail=1'>1</a>, <a href='" + chain_endpoint.DiagnosticsMemoryLogs.FormattedPath(endpoint.NoSlash) + "?detail=2'>2</a>, <a href='" + chain_endpoint.DiagnosticsMemoryLogs.FormattedPath(endpoint.NoSlash) + "?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li><a href='" + chain_endpoint.Debug.FormattedPath(endpoint.TrailingSlash) + "'>" + chain_endpoint.Debug.FormattedPath(endpoint.LeadingAndTrailingSlash) + "</a></li>")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
@@ -788,9 +792,9 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 			fmt.Fprintf(w, "<td>%v</td>", nd.GetPseudoName())
 		} else {
 			if len(nd.Path) > 0 {
-				fmt.Fprintf(w, "<td><a href='https://%v/%v/_diagnostics'>%v</a></td>", nd.Host, nd.Path, nd.GetPseudoName())
+				fmt.Fprintf(w, "<td><a href='https://%v/%v" + chain_endpoint.Diagnostics.Path() + "'>%v</a></td>", nd.Host, nd.Path, nd.GetPseudoName())
 			} else {
-				fmt.Fprintf(w, "<td><a href='http://%v:%v/_diagnostics'>%v</a></td>", nd.Host, nd.Port, nd.GetPseudoName())
+				fmt.Fprintf(w, "<td><a href='http://%v:%v" + chain_endpoint.Diagnostics.Path() + "'>%v</a></td>", nd.Host, nd.Port, nd.GetPseudoName())
 			}
 		}
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.GetSent())
@@ -1387,9 +1391,9 @@ func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 				return fmt.Sprintf("%v", n.GetPseudoName())
 			}
 			if len(n.Path) > 0 {
-				return fmt.Sprintf("<a href='https://%v/%v/_diagnostics/round_info%s'>%v</a>", n.Host, n.Path, roundParamQuery, n.GetPseudoName())
+				return fmt.Sprintf("<a href='https://%v/%v" + chain_endpoint.RoundInfoDiagnostics.Path() + "%s'>%v</a>", n.Host, n.Path, roundParamQuery, n.GetPseudoName())
 			}
-			return fmt.Sprintf("<a href='http://%v:%v/_diagnostics/round_info%s'>%v</a>", n.Host, n.Port, roundParamQuery, n.GetPseudoName())
+			return fmt.Sprintf("<a href='http://%v:%v" + chain_endpoint.RoundInfoDiagnostics.Path() + "%s'>%v</a>", n.Host, n.Port, roundParamQuery, n.GetPseudoName())
 		}
 
 		// Verification and Notarization

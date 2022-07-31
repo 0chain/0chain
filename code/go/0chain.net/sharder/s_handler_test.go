@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"fmt"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestLatestRoundRequestHandler(t *testing.T) {
-	const baseUrl = "/v1/_s2s/latest_round/get"
+	var baseUrl = sharder_endpoint.SharderToSharderGetLatestRound.Path()
 
 	sc := makeTestChain(t)
 	var num int64 = 1
@@ -60,7 +61,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 func TestBlockSummaryRequestHandler(t *testing.T) {
 	t.Parallel()
 
-	const baseUrl = "/v1/_s2s/blocksummary/get"
+	var baseUrl = sharder_endpoint.SharderToSharderGetBlockSummary.Path()
 
 	b := block.NewBlock("", 1)
 	b.HashBlock()
