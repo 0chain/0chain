@@ -1826,7 +1826,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	cp := StorageAllocation{}
+	cp := &StorageAllocation{}
 	err = cp.Decode(alloc.Encode())
 	require.NoError(t, err)
 
@@ -1883,7 +1883,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	// increase duration
 	//
 
-	cp = StorageAllocation{}
+	cp = &StorageAllocation{}
 	err = cp.Decode(alloc.Encode())
 	require.NoError(t, err)
 
