@@ -2,6 +2,8 @@ package zcnsc
 
 import (
 	"0chain.net/smartcontract/rest"
+	"github.com/0chain/common/constants/endpoint"
+	"github.com/0chain/common/constants/endpoint/v1_endpoint/sharder_endpoint"
 	"net/http"
 
 	"0chain.net/chaincore/currency"
