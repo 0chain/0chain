@@ -223,8 +223,7 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
-			TargetId:   client.id,
-			MintTokens: false,
+			TargetId: client.id,
 		}), balances)
 		require.NoError(t, err)
 
@@ -285,8 +284,7 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(reader.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
-			TargetId:   reader.id,
-			MintTokens: false,
+			TargetId: reader.id,
 		}), balances)
 		require.NoError(t, err)
 

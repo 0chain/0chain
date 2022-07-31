@@ -651,7 +651,23 @@ type StorageAllocation struct {
 	// if Blobbers are getting used in any smart-contract, we should avoid.
 	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
-	IsImmutable      bool                          `json:"is_immutable"`
+
+	// Defines mutability of the files in the allocation, used by blobber on CommitWrite
+	IsImmutable bool `json:"is_immutable"`
+
+	// Flag to determine if anyone can extend this allocation
+	ThirdPartyExtendable bool `json:"third_party_extendable"`
+
+	// FileOptions to define file restrictions on an allocation for third-parties
+	// default 00000000 for all crud operations suggesting only owner has the below listed abilities.
+	// enabling option/s allows any third party to perform certain ops
+	// 00000001 - 1  - upload
+	// 00000010 - 2  - delete
+	// 00000100 - 4  - update
+	// 00001000 - 8  - move
+	// 00010000 - 16 - copy
+	// 00100000 - 32 - rename
+	FileOptions uint8 `json:"file_options"`
 
 	WritePool currency.Coin `json:"write_pool"`
 
@@ -691,36 +707,64 @@ type StorageAllocation struct {
 	Name string `json:"name"`
 }
 
-func (sa *StorageAllocation) addToWritePool(
-	txn *transaction.Transaction,
-	mintNewTokens bool,
-	balances cstate.StateContextI,
-) error {
-	if !mintNewTokens {
-		if err := stakepool.CheckClientBalance(txn, balances); err != nil {
-			return fmt.Errorf("client balance check failed: %v", err)
-		}
-	}
+type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
 
-	if mintNewTokens {
+func WithTokenMint(coin currency.Coin) WithOption {
+	return func(balances cstate.StateContextI) (currency.Coin, error) {
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     txn.Value,
+			Amount:     coin,
 		}); err != nil {
-			return fmt.Errorf("minting tokens for write pool: %v", err)
+			return 0, fmt.Errorf("minting tokens for write pool: %v", err)
 		}
-	} else {
-		transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
+		return coin, nil
+	}
+}
+
+func WithTokenTransfer(value currency.Coin, clientId, toClientId string) WithOption {
+	return func(balances cstate.StateContextI) (currency.Coin, error) {
+		if err := stakepool.CheckClientBalance(clientId, value, balances); err != nil {
+			return 0, err
+		}
+		transfer := state.NewTransfer(clientId, toClientId, value)
 		if err := balances.AddTransfer(transfer); err != nil {
-			return fmt.Errorf("adding transfer to allocation pool: %v", err)
+			return 0, fmt.Errorf("adding transfer to allocation pool: %v", err)
 		}
+
+		return value, nil
+	}
+}
+
+func (sa *StorageAllocation) addToWritePool(
+	txn *transaction.Transaction,
+	balances cstate.StateContextI,
+	opts ...WithOption,
+) error {
+	//default behaviour
+	if len(opts) == 0 {
+		value, err := WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)(balances)
+		if err != nil {
+			return err
+		}
+		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+			return err
+		} else {
+			sa.WritePool = writePool
+		}
+		return nil
 	}
 
-	if writePool, err := currency.AddCoin(sa.WritePool, txn.Value); err != nil {
-		return err
-	} else {
-		sa.WritePool = writePool
+	for _, opt := range opts {
+		value, err := opt(balances)
+		if err != nil {
+			return err
+		}
+		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+			return err
+		} else {
+			sa.WritePool = writePool
+		}
 	}
 	return nil
 }

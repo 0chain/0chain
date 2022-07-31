@@ -1556,7 +1556,7 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 // Gets allocation object
 //
 // parameters:
-//    + name: transaction_hash
+//    + name: allocation
 //      description: offset
 //      required: true
 //      in: query
