@@ -89,6 +89,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
+		rest.MakeEndpoint(storage+"/search", srh.getSearchHandler),
 	}
 }
 
@@ -2249,4 +2250,107 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 // swagger:model readMarkersCount
 type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
+}
+
+/*getSearchHandler - Get result based on query*/
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search search
+// Generic search endpoint
+//
+// parameters:
+//    + name: searchString
+//      description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Request) {
+	var (
+		query = r.URL.Query().Get("searchString")
+	)
+
+	if len(query) == 0 {
+		common.Respond(w, r, nil, common.NewErrInternal("searchString param required"))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	queryType, err := edb.GetGenericSearchType(query)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	switch queryType {
+	case "TransactionHash":
+		txn, err := edb.GetTransactionByHash(query)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, txn, nil)
+		return
+	case "BlockHash":
+		blk, err := edb.GetBlockByHash(query)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, blk, nil)
+		return
+	case "UserId":
+		usr, err := edb.GetUserFromId(query)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, usr, nil)
+		return
+	case "BlockRound":
+		blk, err := edb.GetBlocksByRound(query)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, blk, nil)
+		return
+	case "ContentHash":
+		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{ContentHash: query}, "", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, wm, nil)
+		return
+	case "FileName":
+		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{Name: query}, "", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, wm, nil)
+		return
+	}
+
+	common.Respond(w, r, nil, common.NewErrInternal("Request failed, searchString isn't a (wallet address)/(block hash)/(txn hash)/(round num)/(content hash)/(file name)"))
 }

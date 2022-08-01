@@ -11,7 +11,7 @@ import (
 // swagger:model Transaction
 type Transaction struct {
 	gorm.Model
-	Hash              string `gorm:"uniqueIndex"`
+	Hash              string `gorm:"uniqueIndex:idx_thash"`
 	BlockHash         string `gorm:"index:idx_tblock_hash"`
 	Version           string
 	ClientId          string `gorm:"index:idx_tclient_id"`

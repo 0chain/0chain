@@ -388,6 +388,13 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.getFreeAllocationBlobbers,
 			},
+			{
+				FuncName: "getSearchHandler",
+				Params: map[string]string{
+					"query": benchmark.GetMockTransactionHash(3, 3),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
 		},
 		ADDRESS,
 		srh,
