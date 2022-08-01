@@ -71,7 +71,7 @@ func newStakePool() *stakePool {
 
 // stake pool key for the storage SC and  blobber
 func stakePoolKey(scKey, blobberID string) datastore.Key {
-	return datastore.Key(scKey + ":stakepool:" + blobberID)
+	return scKey + ":stakepool:" + blobberID
 }
 
 // Encode to []byte
@@ -171,7 +171,11 @@ func (sp *stakePool) empty(
 	}
 
 	if dp.Status == spenum.Unstaking {
-		sp.TotalUnStake -= dp.Balance
+		totalUnstake, err := currency.MinusCoin(sp.TotalUnStake, dp.Balance)
+		if err != nil {
+			return false, err
+		}
+		sp.TotalUnStake = totalUnstake
 	}
 
 	transfer := state.NewTransfer(sscID, clientID, dp.Balance)

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"sync"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/core/common"
 
 	"0chain.net/chaincore/currency"
@@ -241,6 +244,12 @@ func (sc *StateContext) GetMints() []*state.Mint {
 func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...Appender) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
+	if index == "" {
+		logging.Logger.Error("error emitting event: empty index",
+			zap.Any("event_type", eventType),
+			zap.Any("tag", tag),
+			zap.Any("data", data))
+	}
 	e := event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
