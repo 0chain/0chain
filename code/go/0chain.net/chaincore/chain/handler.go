@@ -84,7 +84,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				LatestBlockFeeStatsHandler,
 			),
 		),
-		endpoint.RootEndpoint.Path(): common.UserRateLimit(
+		endpoint.Root.Path(): common.UserRateLimit(
 			HomePageAndNotFoundHandler,
 		),
 		chain_endpoint.Diagnostics.Path(): common.UserRateLimit(
