@@ -10,8 +10,9 @@ import (
 
 type DelegatePoolUpdate dbs.DelegatePoolUpdate
 
-func newDelegatePoolUpdate(pId string, pType spenum.Provider) *DelegatePoolUpdate {
+func newDelegatePoolUpdate(poolID, pId string, pType spenum.Provider) *DelegatePoolUpdate {
 	var spu DelegatePoolUpdate
+	spu.PoolId = poolID
 	spu.ProviderId = pId
 	spu.ProviderType = int(pType)
 	spu.Updates = make(map[string]interface{})
