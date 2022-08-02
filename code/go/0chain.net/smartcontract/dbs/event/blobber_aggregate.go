@@ -20,14 +20,14 @@ type BlobberAggregate struct {
 	Allocated  int64         `json:"allocated"` // allocated capacity
 	SavedData  int64         `json:"saved_data"`
 
-	OffersTotal        currency.Coin `json:"offers_total"`
-	UnstakeTotal       currency.Coin `json:"unstake_total"`
-	TotalServiceCharge currency.Coin `json:"total_service_charge"`
-	TotalStake         currency.Coin `json:"total_stake"`
+	OffersTotal  currency.Coin `json:"offers_total"`
+	UnstakeTotal currency.Coin `json:"unstake_total"`
+	TotalStake   currency.Coin `json:"total_stake"`
 
-	ChallengesPassed    uint64 `json:"challenges_passed"`
-	ChallengesCompleted uint64 `json:"challenges_completed"`
-	InactiveRounds      int64  `json:"inactive_rounds"`
+	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
+	ChallengesPassed    uint64        `json:"challenges_passed"`
+	ChallengesCompleted uint64        `json:"challenges_completed"`
+	InactiveRounds      int64         `json:"InactiveRounds"`
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64) {
@@ -54,10 +54,12 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 		aggregate.Capacity = (old.Capacity + current.Capacity) / 2
 		aggregate.Allocated = (old.Allocated + current.Allocated) / 2
 		aggregate.SavedData = (old.SavedData + current.SavedData) / 2
+		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 
 		aggregate.ChallengesPassed = current.ChallengesPassed - old.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted - old.ChallengesPassed
 		aggregate.InactiveRounds = current.InactiveRounds - old.InactiveRounds
+		aggregate.TotalServiceCharge = current.TotalServiceCharge - old.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 	}
 

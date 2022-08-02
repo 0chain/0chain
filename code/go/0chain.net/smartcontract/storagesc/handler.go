@@ -99,9 +99,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber-average-saved-data", srh.getAveargeSavedData),
 		rest.MakeEndpoint(storage+"/blobber-average-offers-total", srh.getAverageOffersTotal),
 		rest.MakeEndpoint(storage+"/blobber-average-unstake-total", srh.getAverageUnstakeTotal),
-		rest.MakeEndpoint(storage+"/blobber-average-total-service-charge", srh.getAverageTotalServiceCharge),
 		rest.MakeEndpoint(storage+"/blobber-average-total-stake", srh.getAverageTotalStake),
 
+		rest.MakeEndpoint(storage+"/blobber-average-total-service-charge", srh.getAverageTotalServiceCharge),
 		rest.MakeEndpoint(storage+"/blobber-challenges-passed", srh.getChallengesPassed),
 		rest.MakeEndpoint(storage+"/blobber-challenges-completed", srh.getChallengesCompleted),
 		rest.MakeEndpoint(storage+"/blobber-inactive-rounds", srh.getBlobberInactiveRounds),
@@ -447,23 +447,25 @@ func (srh *StorageRestHandler) getAverageTotalServiceCharge(w http.ResponseWrite
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
 		return
 	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
-
-	data, err := edb.GetAggregateData(
-		from, to, points,
-		"avg(total_service_charge)",
-		"blobber_aggregates",
-		id,
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	data, err := edb.GetDifference(
+		start, end, roundsPerPoint, "total_service_charge", "blobber_aggregates", id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
