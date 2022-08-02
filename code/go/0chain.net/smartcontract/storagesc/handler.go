@@ -101,7 +101,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber-average-unstake-total", srh.getAverageUnstakeTotal),
 		rest.MakeEndpoint(storage+"/blobber-average-total-stake", srh.getAverageTotalStake),
 
-		rest.MakeEndpoint(storage+"/blobber-average-total-service-charge", srh.getAverageTotalServiceCharge),
+		rest.MakeEndpoint(storage+"/blobber-service-charge", srh.getServiceCharge),
 		rest.MakeEndpoint(storage+"/blobber-challenges-passed", srh.getChallengesPassed),
 		rest.MakeEndpoint(storage+"/blobber-challenges-completed", srh.getChallengesCompleted),
 		rest.MakeEndpoint(storage+"/blobber-inactive-rounds", srh.getBlobberInactiveRounds),
@@ -416,7 +416,7 @@ func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *ht
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-average-total-service-charge blobber-average-total-service-charge
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-service-charge blobber-service-charge
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
@@ -441,7 +441,7 @@ func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *ht
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAverageTotalServiceCharge(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getServiceCharge(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))

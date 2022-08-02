@@ -458,14 +458,14 @@ func BenchmarkRestTests(
 				Endpoint: srh.getAverageUnstakeTotal,
 			},
 			{
-				FuncName: "blobber-average-total-service-charge",
+				FuncName: "blobber-service-charge",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getAverageTotalServiceCharge,
+				Endpoint: srh.getServiceCharge,
 			},
 			{
 				FuncName: "blobber-average-total-stake",
