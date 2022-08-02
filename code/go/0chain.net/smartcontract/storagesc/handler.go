@@ -385,6 +385,11 @@ func (srh *StorageRestHandler) getChallengesPassed(w http.ResponseWriter, r *htt
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -401,6 +406,7 @@ func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *ht
 		from, to, points,
 		"avg(total_stake)",
 		"blobber_aggregates",
+		id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
@@ -436,6 +442,11 @@ func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *ht
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAverageTotalServiceCharge(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -452,6 +463,7 @@ func (srh *StorageRestHandler) getAverageTotalServiceCharge(w http.ResponseWrite
 		from, to, points,
 		"avg(total_service_charge)",
 		"blobber_aggregates",
+		id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
@@ -487,6 +499,11 @@ func (srh *StorageRestHandler) getAverageTotalServiceCharge(w http.ResponseWrite
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAverageUnstakeTotal(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -503,6 +520,7 @@ func (srh *StorageRestHandler) getAverageUnstakeTotal(w http.ResponseWriter, r *
 		from, to, points,
 		"avg(unstake_total)",
 		"blobber_aggregates",
+		id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
@@ -538,6 +556,11 @@ func (srh *StorageRestHandler) getAverageUnstakeTotal(w http.ResponseWriter, r *
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAverageOffersTotal(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -554,6 +577,7 @@ func (srh *StorageRestHandler) getAverageOffersTotal(w http.ResponseWriter, r *h
 		from, to, points,
 		"avg(offers_total)",
 		"blobber_aggregates",
+		id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
@@ -589,6 +613,11 @@ func (srh *StorageRestHandler) getAverageOffersTotal(w http.ResponseWriter, r *h
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAveargeSavedData(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -605,6 +634,7 @@ func (srh *StorageRestHandler) getAveargeSavedData(w http.ResponseWriter, r *htt
 		from, to, points,
 		"avg(saved_data)",
 		"blobber_aggregates",
+		id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
@@ -640,6 +670,11 @@ func (srh *StorageRestHandler) getAveargeSavedData(w http.ResponseWriter, r *htt
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -656,6 +691,7 @@ func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *htt
 		from, to, points,
 		"avg(alocated)",
 		"blobber_aggregates",
+		id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
@@ -691,6 +727,11 @@ func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *htt
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAverageCapacity(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -707,6 +748,7 @@ func (srh *StorageRestHandler) getAverageCapacity(w http.ResponseWriter, r *http
 		from, to, points,
 		"avg(capacity)",
 		"blobber_aggregates",
+		id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
@@ -742,6 +784,12 @@ func (srh *StorageRestHandler) getAverageCapacity(w http.ResponseWriter, r *http
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlobberAverageWritePrice(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -758,6 +806,7 @@ func (srh *StorageRestHandler) getBlobberAverageWritePrice(w http.ResponseWriter
 		from, to, points,
 		"avg(write_price)",
 		"blobber_aggregates",
+		id,
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))

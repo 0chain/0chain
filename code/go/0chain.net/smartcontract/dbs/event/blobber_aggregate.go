@@ -76,9 +76,11 @@ func (edb *EventDb) GetBlobberAggregate(id string, round int64) (BlobberAggregat
 	return aggregate, res.Error
 }
 
-func (edb *EventDb) GetAggregateData(from, to int64, dataPoints uint16, aggregate, table string) ([]float64, error) {
-	query := graphDataPointsGeneratorQuery2(
-		from, to, aggregate, dataPoints, "blobber_aggregates",
+func (edb *EventDb) GetAggregateData(
+	from, to int64, dataPoints uint16, aggregate, table, id string,
+) ([]float64, error) {
+	query := graphDataPointsGeneratorQueryByBlobber(
+		from, to, aggregate, dataPoints, table, id,
 	)
 	var res []float64
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
@@ -104,7 +106,9 @@ func (edb *EventDb) GetDifference(start, end int64, roundsPerPoint int64, row, t
 
 }
 
-func graphDataPointsGeneratorQuery2(from, to int64, aggQuery string, dataPoints uint16, table string) string {
+func graphDataPointsGeneratorQueryByBlobber(
+	from, to int64, aggQuery string, dataPoints uint16, table, id string,
+) string {
 	query := fmt.Sprintf(`
 		WITH
 		block_info as (
@@ -117,10 +121,10 @@ func graphDataPointsGeneratorQuery2(from, to int64, aggQuery string, dataPoints 
 		)
 		SELECT coalesce(%s, 0) as val
 		FROM ranges r
-		LEFT JOIN %s s ON s.round BETWEEN r.r_min AND r.r_max
+		LEFT JOIN %s s ON (s.round BETWEEN r.r_min AND r.r_max) AND (blobber_id = '%s')
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
-	`, dataPoints, from, to, aggQuery, table)
+	`, dataPoints, from, to, aggQuery, table, id)
 
 	return query
 }
