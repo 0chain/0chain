@@ -689,7 +689,7 @@ func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *htt
 
 	data, err := edb.GetAggregateData(
 		from, to, points,
-		"avg(alocated)",
+		"avg(allocated)",
 		"blobber_aggregates",
 		id,
 	)
