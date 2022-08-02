@@ -64,6 +64,9 @@ type Blobber struct {
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
+
+	CreationRound  int64 `json:"birth_round" gorm:"index:idx_blobber_creation_round"`
+	InactiveRounds int64 `json:"inactive_rounds"`
 }
 
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.
@@ -169,6 +172,14 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 		Desc:   limit.IsDescending,
 	}).Find(&blobbers)
 
+	return blobbers, result.Error
+}
+
+func (edb *EventDb) getBlobbersByCreationRound(round, period int64) ([]Blobber, error) {
+	var blobbers []Blobber
+	result := edb.Store.Get().
+		Raw(fmt.Sprintf("SELECT * FROM Blobbers WHERE MOD(creation_date, %d) = ?", period), round%period).
+		Scan(&blobbers)
 	return blobbers, result.Error
 }
 
@@ -317,15 +328,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 		}).Error
 }
 
-func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
-	exists, err := blobber.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteBlobber(blobber)
-	}
-
+func (edb *EventDb) addBlobber(blobber Blobber) error {
 	return edb.Store.Get().Create(&blobber).Error
 }
 

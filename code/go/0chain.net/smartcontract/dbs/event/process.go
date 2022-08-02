@@ -26,7 +26,8 @@ const (
 
 const (
 	TagNone EventTag = iota
-	TagAddOrOverwriteBlobber
+	TagAddBlobber
+	TagOverwriteBlobber
 	TagUpdateBlobber
 	TagDeleteBlobber
 	TagAddAuthorizer
@@ -110,13 +111,15 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) addRoundEventsWorker(ctx context.Context) {
+func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 	logging.Logger.Info("round events worker started")
+	var round int64
 	for {
 		select {
 		case e := <-edb.roundEventsChan:
+			round++
 			edb.updateSnapshot(e)
-			edb.updateBlobberSnapshot(e)
+			edb.updateBlobberAggregate(round, period)
 		case <-ctx.Done():
 			return
 		}
@@ -128,12 +131,18 @@ func (edb *EventDb) addStat(event Event) error {
 
 	switch EventTag(event.Tag) {
 	// blobber
-	case TagAddOrOverwriteBlobber:
+	case TagAddBlobber:
 		blobber, ok := fromEvent[Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteBlobber(*blobber)
+		return edb.addBlobber(*blobber)
+	case TagOverwriteBlobber:
+		blobber, ok := fromEvent[Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.overwriteBlobber(*blobber)
 	case TagUpdateBlobber:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {

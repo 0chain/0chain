@@ -69,8 +69,8 @@ func (edb *EventDb) GetRoundsMintTotal(from, to time.Time, dataPoints uint16) ([
 	return totals, edb.Store.Get().Raw(query).Scan(&totals).Error
 }
 
-func (edb *EventDb) GetDataStorageCosts(from, to time.Time, dataPoints uint16) ([]int64, error) {
-	var res []int64
+func (edb *EventDb) GetDataStorageCosts(from, to time.Time, dataPoints uint16) ([]float64, error) {
+	var res []float64
 	//486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
 	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "avg(storage_cost)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
@@ -83,8 +83,8 @@ func (edb *EventDb) GetDailyAllocations(from, to time.Time, dataPoints uint16) (
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetDataReadWritePrice(from, to time.Time, dataPoints uint16) ([]int64, error) {
-	var res []int64
+func (edb *EventDb) GetDataReadWritePrice(from, to time.Time, dataPoints uint16) ([]float64, error) {
+	var res []float64
 	//494 AVG it's the price from the terms and triggered with their updates
 	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "avg(average_rw_price)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
@@ -138,8 +138,8 @@ func (edb *EventDb) GetTotalLocked(from, to time.Time, dataPoints uint16) ([]int
 
 }
 
-func (edb *EventDb) GetDataCap(from, to time.Time, dataPoints uint16) ([]int64, error) {
-	var res []int64
+func (edb *EventDb) GetDataCap(from, to time.Time, dataPoints uint16) ([]float64, error) {
+	var res []float64
 	//489 SUM Token price * minted
 	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "avg(capitalization)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error

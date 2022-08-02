@@ -57,7 +57,7 @@ func AddMockTransactions(
 		return
 	}
 	const txnTypeSmartContract = 1000
-	for blockNumber := int64(0); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
+	for blockNumber := int64(1); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
 		for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			if viper.GetBool(benchmark.EventDbEnabled) {
 				transaction := event.Transaction{
@@ -93,7 +93,7 @@ func AddMockBlocks(
 	if !viper.GetBool(benchmark.EventDbEnabled) {
 		return
 	}
-	for block_number := int64(0); block_number <= viper.GetInt64(benchmark.NumBlocks); block_number++ {
+	for block_number := int64(1); block_number <= viper.GetInt64(benchmark.NumBlocks); block_number++ {
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			block := event.Block{
 				Hash:                  GetMockBlockHash(block_number),

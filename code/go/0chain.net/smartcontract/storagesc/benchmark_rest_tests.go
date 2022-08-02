@@ -155,14 +155,14 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.getAllocations,
 			},
-			{
-				FuncName: "blobber-snapshot",
-				Params: map[string]string{
-					"id":    getMockBlobberId(1),
-					"round": "2",
-				},
-				Endpoint: srh.getBlobberSnapshot,
-			},
+			//{
+			//	FuncName: "blobber-aggregate",
+			//	Params: map[string]string{
+			//		"id":    getMockBlobberId(1),
+			//		"round": "2",
+			//	},
+			//	Endpoint: srh.getBlobberAggregate,
+			//},
 			{
 				FuncName: "allocation_min_lock",
 				Params: map[string]string{
@@ -396,6 +396,116 @@ func BenchmarkRestTests(
 					}(),
 				},
 				Endpoint: srh.getFreeAllocationBlobbers,
+			},
+			{
+				FuncName: "blobber-average-write-price",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getBlobberAverageWritePrice,
+			},
+			{
+				FuncName: "blobber-average-capacity",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getAverageCapacity,
+			},
+			{
+				FuncName: "blobber-average-allocated",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getAveargeAllocated,
+			},
+			{
+				FuncName: "blobber-average-saved-data",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getAveargeSavedData,
+			},
+			{
+				FuncName: "blobber-average-offers-total",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getAverageOffersTotal,
+			},
+			{
+				FuncName: "blobber-average-unstake-total",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getAverageUnstakeTotal,
+			},
+			{
+				FuncName: "blobber-average-total-service-charge",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getAverageTotalServiceCharge,
+			},
+			{
+				FuncName: "blobber-average-total-stake",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getAverageTotalStake,
+			},
+			{
+				FuncName: "blobber-challenges-passed",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getChallengesPassed,
+			},
+			{
+				FuncName: "blobber-challenges-completed",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getChallengesCompleted,
+			},
+			{
+				FuncName: "blobber-inactive-rounds",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.getBlobberInactiveRounds,
 			},
 			{
 				FuncName: "total-mint",

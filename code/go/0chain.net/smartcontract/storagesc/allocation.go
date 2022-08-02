@@ -647,9 +647,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		if _, err = balances.InsertTrieNode(b.GetKey(ADDRESS), b); err != nil {
 			return
 		}
-		if err := emitUpdateBlobber(b, balances); err != nil {
-			return fmt.Errorf("emmiting blobber %v: %v", b, err)
-		}
+		emitUpdateBlobber(b, balances)
 	}
 	// save allocation
 	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
@@ -990,9 +988,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 				return fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
 					err)
 			}
-			if err := emitUpdateBlobber(b, balances); err != nil {
-				return fmt.Errorf("emitting blobber %s, error:%v", b.ID, err)
-			}
+			emitUpdateBlobber(b, balances)
 		}
 	}
 
@@ -1586,10 +1582,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
 		// update the blobber in all (replace with existing one)
-		if err := emitUpdateBlobber(b, balances); err != nil {
-			return common.NewError("fini_alloc_failed",
-				"emitting blobber "+b.ID+": "+err.Error())
-		}
+		emitUpdateBlobber(b, balances)
 		err = removeAllocationFromBlobber(sc, d, alloc.ID, balances)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
