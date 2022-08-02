@@ -228,7 +228,7 @@ func (edb *EventDb) GetBlobberCount() (int64, error) {
 }
 
 type AllocationQuery struct {
-	MaxOfferDuration time.Duration
+	MaxOfferDuration time.Time
 	ReadPriceRange   struct {
 		Min int64
 		Max int64
@@ -267,7 +267,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	shardSize := sizeInGB(int64(math.Ceil(float64(allocation.AllocationSize) / float64(allocation.NumberOfDataShards))))
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
-	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
+	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.UnixMicro())
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", shardSize)
@@ -279,7 +279,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 
 	logging.Logger.Debug("request params", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
 		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
-		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
+		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.UnixMicro()),
 		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Int64("last_health_check", common.ToTime(now).Add(-time.Hour).Unix()),
 		zap.Float64("(total_stake - offers_total) > ? * write_price", shardSize),
 	)

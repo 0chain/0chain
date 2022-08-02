@@ -385,7 +385,6 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 		return nil, fmt.Errorf("can't get config: %v", err)
 	}
 
-	var creationDate = balances.Now()
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
 
 	// number of blobbers required
@@ -401,7 +400,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
-	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
+	dur := common.ToTime(sa.Expiration)
 	blobberIDs, err := edb.GetBlobbersFromParams(event.AllocationQuery{
 		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
