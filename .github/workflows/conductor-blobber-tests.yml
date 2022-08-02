@@ -97,7 +97,7 @@ jobs:
   
     - name: 0dns Patching
       run: |
-        cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch
+        cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
     
     - name: Blobbers Patching
       run: |
