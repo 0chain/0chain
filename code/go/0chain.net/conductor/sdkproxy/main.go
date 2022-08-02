@@ -22,7 +22,7 @@ import (
 
 var (
 	UPLOAD   = blobber_endpoint.FileUpload.Path()
-	COMMIT   = blobber_endpoint.UploadCommit.Path()
+	COMMIT   = blobber_endpoint.ConnectionCommit.Path()
 	DOWNLOAD = blobber_endpoint.FileDownload.Path()
 )
 
