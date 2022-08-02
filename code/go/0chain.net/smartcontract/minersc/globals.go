@@ -95,6 +95,7 @@ const (
 	DbsEventsMaxIdleConns
 	DbsEventsMaxOpenConns
 	DbsEventsConnMaxLifetime
+	DbsBlobberAggregatePeriod
 
 	HealthCheckDeepScanEnabled                 // todo restart worker
 	HealthCheckDeepScanBatchSize               // todo restart worker
@@ -194,15 +195,16 @@ var GlobalSettingName = []string{
 }
 
 var GlobalSettingsIgnored = map[string]bool{
-	GlobalSettingName[DbsEventsEnabled]:         true,
-	GlobalSettingName[DbsEventsName]:            true,
-	GlobalSettingName[DbsEventsUser]:            true,
-	GlobalSettingName[DbsEventsPassword]:        true,
-	GlobalSettingName[DbsEventsHost]:            true,
-	GlobalSettingName[DbsEventsPort]:            true,
-	GlobalSettingName[DbsEventsMaxIdleConns]:    true,
-	GlobalSettingName[DbsEventsMaxOpenConns]:    true,
-	GlobalSettingName[DbsEventsConnMaxLifetime]: true,
+	GlobalSettingName[DbsEventsEnabled]:          true,
+	GlobalSettingName[DbsEventsName]:             true,
+	GlobalSettingName[DbsEventsUser]:             true,
+	GlobalSettingName[DbsEventsPassword]:         true,
+	GlobalSettingName[DbsEventsHost]:             true,
+	GlobalSettingName[DbsEventsPort]:             true,
+	GlobalSettingName[DbsEventsMaxIdleConns]:     true,
+	GlobalSettingName[DbsEventsMaxOpenConns]:     true,
+	GlobalSettingName[DbsEventsConnMaxLifetime]:  true,
+	GlobalSettingName[DbsBlobberAggregatePeriod]: true,
 }
 
 // GlobalSettingInfo Indicates the type of each global settings, and whether it is possible to change each setting
@@ -267,15 +269,16 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   {smartcontract.Int, false},
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromSharders]: {smartcontract.Int, false},
 
-	GlobalSettingName[DbsEventsEnabled]:         {smartcontract.Boolean, false},
-	GlobalSettingName[DbsEventsName]:            {smartcontract.String, false},
-	GlobalSettingName[DbsEventsUser]:            {smartcontract.String, false},
-	GlobalSettingName[DbsEventsPassword]:        {smartcontract.String, false},
-	GlobalSettingName[DbsEventsHost]:            {smartcontract.String, false},
-	GlobalSettingName[DbsEventsPort]:            {smartcontract.String, false},
-	GlobalSettingName[DbsEventsMaxIdleConns]:    {smartcontract.Int, false},
-	GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, false},
-	GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, false},
+	GlobalSettingName[DbsEventsEnabled]:          {smartcontract.Boolean, false},
+	GlobalSettingName[DbsEventsName]:             {smartcontract.String, false},
+	GlobalSettingName[DbsEventsUser]:             {smartcontract.String, false},
+	GlobalSettingName[DbsEventsPassword]:         {smartcontract.String, false},
+	GlobalSettingName[DbsEventsHost]:             {smartcontract.String, false},
+	GlobalSettingName[DbsEventsPort]:             {smartcontract.String, false},
+	GlobalSettingName[DbsEventsMaxIdleConns]:     {smartcontract.Int, false},
+	GlobalSettingName[DbsEventsMaxOpenConns]:     {smartcontract.Int, false},
+	GlobalSettingName[DbsEventsConnMaxLifetime]:  {smartcontract.Duration, false},
+	GlobalSettingName[DbsBlobberAggregatePeriod]: {smartcontract.Int64, false},
 
 	GlobalSettingName[HealthCheckDeepScanEnabled]:                 {smartcontract.Boolean, false},
 	GlobalSettingName[HealthCheckDeepScanBatchSize]:               {smartcontract.Int64, false},

@@ -7,7 +7,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func emitAddOrOverwriteBlobber(
+func emitAddBlobber(
 	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
 ) error {
 	data := &event.Blobber{
@@ -40,13 +40,15 @@ func emitAddOrOverwriteBlobber(
 		WebsiteUrl:  sn.Information.WebsiteUrl,
 		Description: sn.Information.Description,
 		LogoUrl:     sn.Information.LogoUrl,
+
+		CreationRound: balances.GetBlock().Round,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)
 	return nil
 }
 
-func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
+func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) {
 	data := &dbs.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
@@ -70,5 +72,4 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
-	return nil
 }

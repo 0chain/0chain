@@ -32,6 +32,29 @@ type Block struct {
 	CreatedAt             time.Time `json:"created_at"`
 }
 
+func (edb *EventDb) GetRoundFromTime(at time.Time, asc bool) (int64, error) {
+	round := struct {
+		Round int64 `json:"round" gorm:"index:idx_bround"`
+	}{}
+	var direction, sign string
+	if asc {
+		direction = "asc"
+		sign = ">="
+	} else {
+		sign = "<="
+		direction = "desc"
+	}
+
+	if res := edb.Store.Get().
+		Table("blocks").
+		Where("created_at "+sign+" ?", at).
+		Order("round " + direction).
+		First(&round); res.Error != nil {
+		return 0, res.Error
+	}
+	return round.Round, nil
+}
+
 func (edb *EventDb) GetBlockByHash(hash string) (Block, error) {
 	block := Block{}
 	res := edb.Store.Get().Table("blocks").Where("hash = ?", hash).First(&block)

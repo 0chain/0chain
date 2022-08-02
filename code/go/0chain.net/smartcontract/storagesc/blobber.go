@@ -135,9 +135,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
-		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
-	}
+	emitUpdateBlobber(blobber, balances)
 
 	// save stake pool
 	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {
@@ -304,10 +302,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"saving blobber: "+err.Error())
 	}
 
-	if err := emitUpdateBlobber(blobber, balances); err != nil {
-		return "", common.NewError("update_blobber_settings_failed",
-			"emitting update blobber: "+err.Error())
-	}
+	emitUpdateBlobber(blobber, balances)
 
 	return string(blobber.Encode()), nil
 }
@@ -332,10 +327,8 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 	blobber.LastHealthCheck = t.CreationDate
 
-	err = emitUpdateBlobber(blobber, balances)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed", err.Error())
-	}
+	emitUpdateBlobber(blobber, balances)
+
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)
 	if err != nil {
@@ -890,7 +883,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, data)
 
 	// update the list
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+	if err := emitAddBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 
