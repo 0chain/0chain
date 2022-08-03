@@ -415,7 +415,7 @@ func (t *Transaction) DebugTxn() bool {
 	if !config.Development() {
 		return false
 	}
-	return strings.Contains(t.TransactionData, "debug")
+	return true
 }
 
 /*ComputeOutputHash - compute the hash from the transaction output */

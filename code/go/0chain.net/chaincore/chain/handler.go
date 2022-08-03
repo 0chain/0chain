@@ -107,6 +107,9 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
+		"/_diagnostics/tx_pool": common.UserRateLimit(
+			TxPoolHandler,
+		),
 		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
 			common.ToJSONResponse(
 				LFBTicketHandler,
@@ -1694,6 +1697,21 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "tr.green td {background-color:light-green;}")
 	fmt.Fprintf(w, "tr.grey td {background-color:light-grey;}")
 	fmt.Fprintf(w, "</style>")
+}
+
+func TxPoolHandler(w http.ResponseWriter, r *http.Request) {
+	txn, ok := transaction.Provider().(*transaction.Transaction)
+	if ok {
+		transactionEntityMetadata := txn.GetEntityMetadata()
+		collectionName := txn.GetCollectionName()
+		ctx := common.GetRootContext()
+		cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+		defer memorystore.Close(cctx)
+		mstore, ok := transactionEntityMetadata.GetStore().(*memorystore.Store)
+		if ok {
+			fmt.Fprintf(w, "%v", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName))
+		}
+	}
 }
 
 //StateDumpHandler - a handler to dump the state
