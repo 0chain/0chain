@@ -3,7 +3,6 @@ package event
 import (
 	"errors"
 	"fmt"
-
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -91,9 +90,13 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			continue
 		}
 		if round > events[0].BlockNumber {
+			logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
+				"events for round %v recieved after events for ruond %v", events[0].BlockNumber, round))
 			continue
 		}
-		round = events[0].BlockNumber
+		if round != events[0].BlockNumber {
+			round = events[0].BlockNumber
+		}
 
 		edb.addEvents(ctx, events)
 		for _, event := range events {
@@ -130,18 +133,16 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 				continue
 			}
 			if round > e[0].BlockNumber {
+				logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
+					"events for round %v recieved after events for ruond %v", e[0].BlockNumber, round))
 				continue
 			}
-			logging.Logger.Info("piers addRoundEventsWorker",
-				zap.Int64("round", round),
-				zap.Int64("block number", e[0].BlockNumber),
-			)
-			if round+1 < e[0].BlockNumber {
-				for r := round + 1; round <= e[0].BlockNumber; r++ {
+			if round != e[0].BlockNumber {
+				for r := round + 1; r <= e[0].BlockNumber; r++ {
 					edb.updateBlobberAggregate(r, period)
 				}
+				round = e[0].BlockNumber
 			}
-			round = e[0].BlockNumber
 			edb.updateSnapshot(e)
 		case <-ctx.Done():
 			return
