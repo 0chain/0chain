@@ -9,7 +9,7 @@ import (
 )
 
 type User struct {
-	ID      uint          `json:"-" gorm:"primarykey"`
+	gorm.Model
 	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
 	TxnHash string        `json:"txn"`
 	Balance currency.Coin `json:"balance"`
