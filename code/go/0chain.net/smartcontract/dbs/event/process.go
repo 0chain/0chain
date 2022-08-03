@@ -90,7 +90,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		if len(events) == 0 {
 			continue
 		}
-		if round >= events[0].BlockNumber {
+		if round > events[0].BlockNumber {
 			continue
 		}
 		round = events[0].BlockNumber
@@ -129,7 +129,7 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 			if len(e) == 0 {
 				continue
 			}
-			if round >= e[0].BlockNumber {
+			if round > e[0].BlockNumber {
 				continue
 			}
 			logging.Logger.Info("piers addRoundEventsWorker",
