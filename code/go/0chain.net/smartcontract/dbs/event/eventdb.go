@@ -71,8 +71,8 @@ func (edb *EventDb) AutoMigrate() error {
 }
 
 func (edb *EventDb) copyToRoundChan(event Event) {
+	edb.currentRoundEvents = append(edb.currentRoundEvents, event)
 	if edb.currentRound == event.BlockNumber {
-		edb.currentRoundEvents = append(edb.currentRoundEvents, event)
 		return
 	}
 

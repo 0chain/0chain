@@ -1,13 +1,12 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/stakepool"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
 )
 
 func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
@@ -77,8 +76,6 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 }
 
 func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
-
-	logging.Logger.Info("emitting add miner event")
 
 	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
 

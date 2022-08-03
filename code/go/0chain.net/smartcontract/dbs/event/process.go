@@ -94,10 +94,14 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				"events for round %v recieved after events for ruond %v", events[0].BlockNumber, round))
 			continue
 		}
+
 		if round != events[0].BlockNumber {
+			if round != events[0].BlockNumber+1 {
+				logging.Logger.Error(fmt.Sprintf("skipped events for rounds between %v and %v",
+					round, events[0].BlockNumber))
+			}
 			round = events[0].BlockNumber
 		}
-
 		edb.addEvents(ctx, events)
 		for _, event := range events {
 			var err error = nil
@@ -151,7 +155,6 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 }
 
 func (edb *EventDb) addStat(event Event) error {
-	logging.Logger.Info("piers addStat", zap.Int64("BlockNumber", event.BlockNumber))
 	edb.copyToRoundChan(event)
 
 	switch EventTag(event.Tag) {

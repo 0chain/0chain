@@ -31,21 +31,25 @@ type BlobberAggregate struct {
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64) {
-	ids, oldBlobbers, err := edb.getBlobberSnapshots(round, period)
+	_, oldBlobbers, err := edb.getBlobberSnapshots(round, period)
 	if err != nil {
 		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
 		return
 	}
 
-	currentBlobbers, err := edb.GetBlobbersFromIDs(ids)
-	if err != nil {
-		logging.Logger.Error("getting blobbers", zap.Error(err))
+	var currentBlobbers []Blobber
+	result := edb.Store.Get().Model(&Blobber{}).Find(&currentBlobbers)
+	if result.Error != nil {
+		logging.Logger.Error("error getting current blobbers", zap.Error(err))
 		return
 	}
 
 	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
-		old := oldBlobbers[current.BlobberID]
+		old, found := oldBlobbers[current.BlobberID]
+		if !found {
+			continue
+		}
 		aggregate := BlobberAggregate{
 			Round:     round,
 			BlobberID: current.BlobberID,
