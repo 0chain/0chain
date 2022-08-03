@@ -95,8 +95,8 @@ func (ssc *StorageSmartContract) collectReward(
 	//		"total_stake": int64(sp.stake()),
 	//	},
 	//}
-	//balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
-	//balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, providerID, event.AllocationBlobberValueChanged{
+	//balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, providerID, data)
+	//balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, providerID, event.AllocationBlobberValueChanged{
 	//	FieldType:    event.Staked,
 	//	AllocationId: "",
 	//	BlobberId:    providerID,

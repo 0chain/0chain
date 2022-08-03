@@ -59,7 +59,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	}
 
 	err = alloc.emitAdd(balances)
-	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, alloc.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: alloc.ID,
 		Delta:        alloc.Size,
@@ -243,7 +243,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
 
 		b.Allocated += bSize
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, b.ID, event.AllocationValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, b.ID, event.AllocationValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: sa.ID,
 			Delta:        bSize,
@@ -634,7 +634,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			"can't save allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return string(alloc.Encode()), nil // closing
 }
@@ -655,7 +655,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		return
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
 	return
 }
 
@@ -781,7 +781,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 			if err != nil {
 				return
 			}
-			balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+			balances.EmitEvent(event.TypeSmartContract, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
 				Client:       alloc.Owner,
 				AllocationId: alloc.ID,
 				Amount:       i,
@@ -817,7 +817,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	var prevExpiration = alloc.Expiration
 	alloc.Expiration += req.Expiration // new expiration
 	alloc.Size += req.Size             // new size
-	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: alloc.ID,
 		Delta:        req.Size,
@@ -845,7 +845,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		b.Allocated += diff // new capacity used
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: alloc.ID,
 			BlobberId:    b.ID,
@@ -947,7 +947,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 	// adjust the expiration if changed, boundaries has already checked
 	alloc.Expiration += req.Expiration
 	alloc.Size += req.Size
-	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: alloc.ID,
 		Delta:        req.Size,
@@ -958,7 +958,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 		var b = blobbers[i]
 		oldOffer := ba.Offer()
 		b.Allocated += diff // new capacity used
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: alloc.ID,
 			BlobberId:    b.ID,
@@ -1377,7 +1377,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"saving allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return "canceled", nil
 }
@@ -1453,7 +1453,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"saving allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return "finalized", nil
 }
@@ -1567,9 +1567,9 @@ func (sc *StorageSmartContract) finishAllocation(
 				"total_stake": int64(sps[i].stake()),
 			},
 		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, data)
+		balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, d.BlobberID, data)
 		if d.Terms.WritePrice > 0 {
-			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, d.BlobberID, event.AllocationBlobberValueChanged{
+			balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, d.BlobberID, event.AllocationBlobberValueChanged{
 				FieldType:    event.Staked,
 				AllocationId: "",
 				BlobberId:    d.BlobberID,
@@ -1617,7 +1617,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return common.NewError("fini_alloc_failed",
 			"emitting pool change "+err.Error())
 	}
-	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+	balances.EmitEvent(event.TypeSmartContract, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 		Client:       alloc.Owner,
 		AllocationId: alloc.ID,
 		Amount:       i,
@@ -1668,7 +1668,7 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"saving new allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	// txn.Hash is the id of the new token pool
 	return txn.Hash, nil

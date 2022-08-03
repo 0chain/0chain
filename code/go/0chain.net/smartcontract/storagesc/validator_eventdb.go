@@ -65,7 +65,7 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 		},
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateValidator, vn.ID, data)
 	return nil
 }
 
@@ -80,6 +80,6 @@ func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddValidator, vn.ID, data)
 	return nil
 }

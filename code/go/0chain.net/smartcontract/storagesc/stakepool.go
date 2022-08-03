@@ -101,7 +101,7 @@ func (sp *stakePool) save(sscKey, blobberID string,
 			"offers_total": int64(sp.TotalOffers),
 		},
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobberID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, blobberID, data)
 
 	return
 }
@@ -425,9 +425,9 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"no blobber with id: %v", spr.BlobberID)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, spr.BlobberID, data)
 	if blobber.Terms.WritePrice > 0 {
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    spr.BlobberID,
@@ -495,8 +495,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 				"total_stake": int64(sp.stake()),
 			},
 		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, spr.BlobberID, data)
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    spr.BlobberID,
@@ -521,9 +521,9 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"total_stake": int64(sp.stake()),
 		},
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, spr.BlobberID, data)
 	if blobber.Terms.WritePrice > 0 {
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    spr.BlobberID,

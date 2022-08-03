@@ -44,7 +44,7 @@ func emitAddBlobber(
 		CreationRound: balances.GetBlock().Round,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddBlobber, sn.ID, data)
 	return nil
 }
 
@@ -71,5 +71,5 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) {
 		},
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, sn.ID, data)
 }

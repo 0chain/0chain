@@ -160,7 +160,7 @@ func TestSharders(t *testing.T) {
 	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
-		Type:        int(TypeStats),
+		Type:        int(TypeSmartContract),
 		Tag:         int(TagAddSharder),
 		Data:        string(data),
 	}
@@ -181,7 +181,7 @@ func TestSharders(t *testing.T) {
 	eventAddOrOverwriteSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        int(TypeStats),
+		Type:        int(TypeSmartContract),
 		Tag:         int(TagAddOrOverwriteSharder),
 		Data:        string(data),
 	}
@@ -205,7 +205,7 @@ func TestSharders(t *testing.T) {
 	eventUpdateSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
-		Type:        int(TypeStats),
+		Type:        int(TypeSmartContract),
 		Tag:         int(TagUpdateSharder),
 		Data:        string(data),
 	}
@@ -220,7 +220,7 @@ func TestSharders(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
-		Type:        int(TypeStats),
+		Type:        int(TypeSmartContract),
 		Tag:         int(TagDeleteSharder),
 		Data:        sn.ID,
 	}

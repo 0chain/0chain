@@ -58,7 +58,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 
 func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) {
 
-	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch))
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch))
 	return
 }
 
@@ -70,7 +70,7 @@ func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.St
 		},
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateChallenge, chID, data)
 }
 
 func emitUpdateBlobberChallengeStats(blobberId string, passed bool, balances cstate.StateContextI) {
@@ -78,7 +78,7 @@ func emitUpdateBlobberChallengeStats(blobberId string, passed bool, balances cst
 		BlobberId: blobberId,
 		Passed:    passed,
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberId, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobberChallenge, blobberId, data)
 }
 
 func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {

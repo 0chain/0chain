@@ -19,7 +19,7 @@ func emitAddOrOverwriteReward(amount currency.Coin, providerID string, prr stake
 		ProviderID:   providerID,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddReward, t.Hash, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddReward, t.Hash, data)
 
 	return nil
 }

@@ -135,7 +135,7 @@ func TestBlobbers(t *testing.T) {
 	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
-		Type:        int(TypeStats),
+		Type:        int(TypeSmartContract),
 		Tag:         int(TagAddOrOverwriteBlobber),
 		Data:        string(data),
 	}
@@ -162,7 +162,7 @@ func TestBlobbers(t *testing.T) {
 	eventUpdateSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        int(TypeStats),
+		Type:        int(TypeSmartContract),
 		Tag:         int(TagUpdateBlobber),
 		Data:        string(data),
 	}
@@ -204,7 +204,7 @@ func TestBlobbers(t *testing.T) {
 	eventOverwrite := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
-		Type:        int(TypeStats),
+		Type:        int(TypeSmartContract),
 		Tag:         int(TagAddOrOverwriteBlobber),
 		Data:        string(data),
 	}
@@ -216,7 +216,7 @@ func TestBlobbers(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
-		Type:        int(TypeStats),
+		Type:        int(TypeSmartContract),
 		Tag:         int(TagDeleteBlobber),
 		Data:        blobber.BlobberID,
 	}

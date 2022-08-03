@@ -35,7 +35,7 @@ func (dp DelegatePool) emitNew(
 	}
 
 	balances.EmitEvent(
-		event.TypeStats,
+		event.TypeSmartContract,
 		event.TagAddOrOverwriteDelegatePool,
 		providerId,
 		data,
@@ -48,7 +48,7 @@ func (dpu DelegatePoolUpdate) emitUpdate(
 ) error {
 
 	balances.EmitEvent(
-		event.TypeStats,
+		event.TypeSmartContract,
 		event.TagUpdateDelegatePool,
 		dpu.PoolId,
 		delegatePoolUpdateToDbsDelegatePoolUpdate(dpu),

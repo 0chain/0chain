@@ -20,7 +20,8 @@ type (
 const (
 	TypeNone EventType = iota
 	TypeError
-	TypeStats
+	TypeChain
+	TypeSmartContract
 )
 
 const (
@@ -89,31 +90,30 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		if len(events) == 0 {
 			continue
 		}
-		if round > events[0].BlockNumber {
-			logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
-				"events for round %v recieved after events for ruond %v", events[0].BlockNumber, round))
-			continue
-		}
-
-		if round != events[0].BlockNumber {
-			if round != events[0].BlockNumber+1 {
-				logging.Logger.Error(fmt.Sprintf("skipped events for rounds between %v and %v",
-					round, events[0].BlockNumber))
-			}
-			round = events[0].BlockNumber
-		}
 		edb.addEvents(ctx, events)
 		for _, event := range events {
 			var err error = nil
 			switch EventType(event.Type) {
-			case TypeStats:
-				err = edb.addStat(event)
+			case TypeChain:
+				err = edb.addChainEvent(event)
+			case TypeSmartContract:
+
+				// todo remove check bellow when satisfied everything working ok
+				if round > events[0].BlockNumber {
+					logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
+						"events for round %v recieved after events for ruond %v", events[0].BlockNumber, round))
+					continue
+				}
+				if round != events[0].BlockNumber {
+					round = events[0].BlockNumber
+				}
+
+				err = edb.addSmartContractEvent(event)
 			case TypeError:
 				err = edb.addError(Error{
 					TransactionID: event.TxHash,
 					Error:         fmt.Sprintf("%v", event.Data),
 				})
-
 			default:
 			}
 			if err != nil {
@@ -154,7 +154,7 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 	}
 }
 
-func (edb *EventDb) addStat(event Event) error {
+func (edb *EventDb) addSmartContractEvent(event Event) error {
 	edb.copyToRoundChan(event)
 
 	switch EventTag(event.Tag) {
@@ -236,12 +236,6 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.addTransaction(*transaction)
-	case TagAddBlock:
-		block, ok := fromEvent[Block](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addBlock(*block)
 	case TagAddValidator:
 		vn, ok := fromEvent[Validator](event.Data)
 		if !ok {

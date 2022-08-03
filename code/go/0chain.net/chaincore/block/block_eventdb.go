@@ -38,7 +38,7 @@ func CreateBlockEvent(block *Block) (error, event.Event) {
 	return nil, event.Event{
 		BlockNumber: block.Round,
 		TxHash:      "",
-		Type:        int(event.TypeStats),
+		Type:        int(event.TypeChain),
 		Tag:         int(event.TagAddBlock),
 		Index:       block.Hash,
 		Data:        blockToBlockEvent(block),

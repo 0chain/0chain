@@ -59,7 +59,7 @@ func (sp *StakePool) UnlockPool(
 	)
 
 	i, _ := amount.Int64()
-	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, poolId, event.DelegatePoolLock{
+	balances.EmitEvent(event.TypeSmartContract, event.TagUnlockStakePool, poolId, event.DelegatePoolLock{
 		Client:       clientID,
 		PoolId:       poolId,
 		ProviderId:   providerId,

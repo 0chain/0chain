@@ -93,7 +93,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	blobber.LastHealthCheck = t.CreationDate
 	aDelta := blobber.Allocated - savedBlobber.Allocated
 	if aDelta != 0 {
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: "",
 			BlobberId:    blobber.ID,
@@ -148,9 +148,9 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			"total_stake": int64(sp.stake()),
 		},
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, blobber.ID, data)
 	if blobber.Terms.WritePrice > 0 {
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    blobber.ID,
@@ -170,7 +170,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Used,
 		AllocationId: "",
 		BlobberId:    blobber.ID,
@@ -186,7 +186,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 		sc.statDecr(statNumberOfBlobbers)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagDeleteBlobber, blobber.ID, blobber.ID)
+	balances.EmitEvent(event.TypeSmartContract, event.TagDeleteBlobber, blobber.ID, blobber.ID)
 
 	return // opened offers are still opened
 }
@@ -285,7 +285,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Used,
 		AllocationId: "",
 		BlobberId:    blobber.ID,
@@ -552,7 +552,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
-		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+		balances.EmitEvent(event.TypeSmartContract, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
 			AllocationId: alloc.ID,
 			Amount:       coin,
@@ -568,7 +568,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
 		err = alloc.moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
-		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		balances.EmitEvent(event.TypeSmartContract, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
 			AllocationId: alloc.ID,
 			Amount:       coin,
@@ -580,7 +580,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
@@ -676,7 +676,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
 
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Used,
 		AllocationId: alloc.ID,
 		BlobberId:    blobber.ID,
@@ -759,7 +759,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 	if err != nil {
@@ -880,7 +880,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 			"total_stake": int64(sp.stake()),
 		},
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, t.ClientID, data)
 
 	// update the list
 	if err := emitAddBlobber(blobber, sp, balances); err != nil {

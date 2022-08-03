@@ -217,9 +217,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				"total_stake": int64(qsp.stake()),
 			},
 		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
+		balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
 		if blobberRewards[i].WritePrice > 0 {
-			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, qualifyingBlobberIds[i], event.AllocationBlobberValueChanged{
+			balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, qualifyingBlobberIds[i], event.AllocationBlobberValueChanged{
 				FieldType:    event.Staked,
 				AllocationId: "",
 				BlobberId:    qualifyingBlobberIds[i],

@@ -77,7 +77,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 
 func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
-	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
 
 	return nil
 }
@@ -86,7 +86,7 @@ func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error
 
 	logging.Logger.Info("emitting add or overwrite miner event")
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, mn.ID, minerNodeToMinerTable(mn))
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrOverwriteMiner, mn.ID, minerNodeToMinerTable(mn))
 
 	return nil
 }
@@ -123,7 +123,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 		dbUpdates.Updates["active"] = mn.Status == node.NodeStatusActive
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, dbUpdates)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateMiner, mn.ID, dbUpdates)
 	return nil
 }
 
@@ -131,6 +131,6 @@ func emitDeleteMiner(id string, balances cstate.StateContextI) error {
 
 	logging.Logger.Info("emitting delete miner event")
 
-	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, id)
+	balances.EmitEvent(event.TypeSmartContract, event.TagDeleteMiner, id, id)
 	return nil
 }

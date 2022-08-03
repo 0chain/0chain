@@ -898,7 +898,7 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 	addedBlobber.Allocated += sa.bSize()
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, addedBlobber.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, addedBlobber.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: sa.ID,
 		BlobberId:    addedBlobber.ID,
