@@ -91,8 +91,45 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	txn := transactionEntityMetadata.Instance().(*Transaction)
 	collectionName := txn.GetCollectionName()
 
+	logging.Logger.Debug("cleaning invalid transactions")
+	mappedTxns := make(map[string][]*Transaction)
+	for _, e := range txns {
+		blockTx, ok := e.(*Transaction)
+		if !ok {
+			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", e))
+			continue
+		}
+		mappedTxns[blockTx.GetKey()] = append(mappedTxns[blockTx.GetKey()], blockTx)
+	}
+
+	var past []datastore.Entity
+	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName,
+		func(ctx context.Context, qe datastore.CollectionEntity) bool {
+			current, ok := qe.(*Transaction)
+			if !ok {
+				logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
+				return true
+			}
+
+			list := mappedTxns[txn.GetKey()]
+			for _, fromList := range list {
+				if fromList.GetKey() == current.GetKey() {
+					if current.Nonce <= fromList.Nonce {
+						past = append(past, current)
+					}
+					break
+				}
+			}
+
+			return true
+		})
+	if err != nil {
+		logging.Logger.Error("error finding past transactions", zap.Error(err))
+		//try to delete what we can, so no return here
+	}
+	txns = append(past, txns...)
 	logging.Logger.Info("cleaning transactions", zap.String("collection", collectionName), zap.Int("missing_count", len(txns)))
-	err := transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
+	err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
 	if err != nil {
 		logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
 	}
