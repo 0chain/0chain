@@ -84,8 +84,17 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	logging.Logger.Info("events worker started")
+	var round int64
 	for {
 		events := <-edb.eventsChannel
+		if len(events) == 0 {
+			continue
+		}
+		if round >= events[0].BlockNumber {
+			continue
+		}
+		round = events[0].BlockNumber
+
 		edb.addEvents(ctx, events)
 		for _, event := range events {
 			var err error = nil
@@ -117,9 +126,23 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 	for {
 		select {
 		case e := <-edb.roundEventsChan:
-			round++
+			if len(e) == 0 {
+				continue
+			}
+			if round >= e[0].BlockNumber {
+				continue
+			}
+			logging.Logger.Info("piers addRoundEventsWorker",
+				zap.Int64("round", round),
+				zap.Int64("block number", e[0].BlockNumber),
+			)
+			if round+1 < e[0].BlockNumber {
+				for r := round + 1; round <= e[0].BlockNumber; r++ {
+					edb.updateBlobberAggregate(r, period)
+				}
+			}
+			round = e[0].BlockNumber
 			edb.updateSnapshot(e)
-			edb.updateBlobberAggregate(round, period)
 		case <-ctx.Done():
 			return
 		}
@@ -127,6 +150,7 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 }
 
 func (edb *EventDb) addStat(event Event) error {
+	logging.Logger.Info("piers addStat", zap.Int64("BlockNumber", event.BlockNumber))
 	edb.copyToRoundChan(event)
 
 	switch EventTag(event.Tag) {
