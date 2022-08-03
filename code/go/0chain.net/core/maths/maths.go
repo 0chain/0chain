@@ -44,17 +44,13 @@ func SafeAddInt64(left, right int64) (int64, error) {
 	return left + right, nil
 }
 
-// SafeAddInt adds two integers and returns an error if there is overflows
-func SafeAddInt(left, right int) (int, error) {
-	if right > 0 {
-		if left > math.MaxInt-right {
-			return 0, currency.ErrIntAddOverflow
-		}
-	} else {
-		if left < math.MinInt-right {
-			return 0, currency.ErrIntAddOverflow
-		}
+// SafeAddUInt64 adds two uint64 and returns an error if there is an overflow
+func SafeAddUInt64(left, right uint64) (uint64, error) {
+
+	if left > math.MaxUint64-right {
+		return 0, currency.ErrIntAddOverflow
 	}
+
 	return left + right, nil
 }
 
