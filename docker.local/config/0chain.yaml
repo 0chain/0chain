@@ -139,7 +139,7 @@ server_chain:
       max_idle_conns: 100
       max_open_conns: 200
       conn_max_lifetime: 20s
-      blobber_aggregate_period: 100
+      blobber_aggregate_period: 20
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_2_sharders.json

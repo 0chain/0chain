@@ -43,7 +43,8 @@ func (edb *EventDb) getBlobberSnapshots(round, period int64) ([]string, map[stri
 	}
 
 	result = edb.Store.Get().Where("blobber_id IN ?", ids).Delete(&BlobberSnapshot{})
-	logging.Logger.Info("piers getBlobberSnapshots", zap.Strings("ids", ids))
+	logging.Logger.Info("piers getBlobberSnapshots", zap.Any("snapshots", snapshots))
+
 	return ids, mapSnapshots, result.Error
 }
 

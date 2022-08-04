@@ -48,6 +48,9 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 		logging.Logger.Error("piers error getting current blobbers", zap.Error(result.Error))
 		return
 	}
+	logging.Logger.Info("piers updateBlobberAggregate",
+		zap.Any("currentBlobbers", currentBlobbers))
+
 	if round <= period && len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
 			logging.Logger.Error("error saving blobbers snapshots", zap.Error(err))
@@ -70,6 +73,8 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 		aggregate.Allocated = (old.Allocated + current.Allocated) / 2
 		aggregate.SavedData = (old.SavedData + current.SavedData) / 2
 		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
+		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
+		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 
 		aggregate.ChallengesPassed = current.ChallengesPassed - old.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted - old.ChallengesPassed
@@ -82,6 +87,9 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 			logging.Logger.Error("piers saving aggregates", zap.Error(result.Error))
 		}
 	}
+	logging.Logger.Info("piers updateBlobberAggregate",
+		zap.Any("new aggregates", aggregates),
+	)
 
 	if len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
