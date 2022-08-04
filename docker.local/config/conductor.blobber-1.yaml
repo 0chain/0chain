@@ -64,7 +64,7 @@ tests:
       #     timeout: '1m'
       - command:
           name: 'init_allocation'
-          timeout: '10m'
+          timeout: '15m'
       - stop: ['blobber-3']
       - command:
           name: 'sleep_20s'
