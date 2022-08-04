@@ -421,6 +421,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "", common.NewErrorf("verify_challenge", "could not find challenge, %v", err)
 	}
 
+	logging.Logger.Info("time_taken: receive challenge response",
+		zap.String("challenge_id", challenge.ID),
+		zap.Duration("delay", time.Since(common.ToTime(challenge.Created))))
+
 	for _, vn := range challResp.ValidationTickets {
 		if _, ok := challenge.ValidatorIDMap[vn.ValidatorID]; !ok {
 			return "", common.NewError("verify_challenge",
