@@ -59,7 +59,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	}
 
 	err = alloc.emitAdd(balances)
-	balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, alloc.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: alloc.ID,
 		Delta:        alloc.Size,
@@ -243,7 +243,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
 
 		b.Allocated += bSize
-		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, b.ID, event.AllocationValueChanged{
+		balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, b.ID, event.AllocationValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: sa.ID,
 			Delta:        bSize,
