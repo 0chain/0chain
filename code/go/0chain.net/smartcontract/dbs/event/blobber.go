@@ -65,7 +65,7 @@ type Blobber struct {
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 
-	CreationRound  int64 `json:"birth_round" gorm:"index:idx_blobber_creation_round"`
+	CreationRound  int64 `json:"creation_round" gorm:"index:idx_blobber_creation_round"`
 	InactiveRounds int64 `json:"inactive_rounds"`
 }
 

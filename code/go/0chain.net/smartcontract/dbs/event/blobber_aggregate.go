@@ -31,21 +31,32 @@ type BlobberAggregate struct {
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64) {
+	logging.Logger.Info("piers updateBlobberAggregate",
+		zap.Int64("round", round), zap.Int64("period", period),
+	)
 	_, oldBlobbers, err := edb.getBlobberSnapshots(round, period)
 	if err != nil {
-		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
+		logging.Logger.Error("piers getting blobber snapshots", zap.Error(err))
 		return
 	}
 
 	var currentBlobbers []Blobber
-	result := edb.Store.Get().Model(&Blobber{}).Find(&currentBlobbers)
+	result := edb.Store.Get().
+		Raw(fmt.Sprintf("SELECT * FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period).
+		Scan(&currentBlobbers)
 	if result.Error != nil {
-		logging.Logger.Error("error getting current blobbers", zap.Error(err))
+		logging.Logger.Error("piers error getting current blobbers", zap.Error(result.Error))
 		return
+	}
+	if round <= period && len(currentBlobbers) > 0 {
+		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
+			logging.Logger.Error("error saving blobbers snapshots", zap.Error(err))
+		}
 	}
 
 	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
+		logging.Logger.Info("piers updateBlobberAggregate for loop", zap.String("id", current.BlobberID))
 		old, found := oldBlobbers[current.BlobberID]
 		if !found {
 			continue
@@ -65,10 +76,21 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 		aggregate.InactiveRounds = current.InactiveRounds - old.InactiveRounds
 		aggregate.TotalServiceCharge = current.TotalServiceCharge - old.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
+		logging.Logger.Info("piers updateBlobberAggregate for loop made aggregates",
+			zap.String("id", current.BlobberID),
+			zap.Any("aggregate", aggregate),
+		)
+	}
+	if len(aggregates) > 0 {
+		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
+			logging.Logger.Error("piers saving aggregates", zap.Error(result.Error))
+		}
 	}
 
-	if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
-		logging.Logger.Error("saving aggregates", zap.Error(result.Error))
+	if len(currentBlobbers) > 0 {
+		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
+			logging.Logger.Error("piers error saving blobbers snapshots", zap.Error(err))
+		}
 	}
 }
 

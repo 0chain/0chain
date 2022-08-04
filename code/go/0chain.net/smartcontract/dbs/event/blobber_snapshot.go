@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"gorm.io/gorm"
 )
@@ -24,27 +26,27 @@ type BlobberSnapshot struct {
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	InactiveRounds      int64         `json:"inactive_rounds"`
+	CreationRound       int64         `json:"creation_round"`
 }
 
 func (edb *EventDb) getBlobberSnapshots(round, period int64) ([]string, map[string]BlobberSnapshot, error) {
 	var snapshots []BlobberSnapshot
 	result := edb.Store.Get().
-		Raw(fmt.Sprintf("SELECT * FROM BlobberSnapshot WHERE MOD(creation_date, %d) = ?", period), round%period).
+		Raw(fmt.Sprintf("SELECT * FROM blobber_snapshots WHERE MOD(creation_round, %d) = ?", period), round%period).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, nil, result.Error
 	}
 
 	var mapSnapshots = make(map[string]BlobberSnapshot, len(snapshots))
-	for _, snapshot := range snapshots {
-		mapSnapshots[snapshot.BlobberID] = snapshot
-	}
-
 	var ids []string
 	for _, snapshot := range snapshots {
+		mapSnapshots[snapshot.BlobberID] = snapshot
 		ids = append(ids, snapshot.BlobberID)
 	}
+
 	result = edb.Store.Get().Where("blobber_id IN ?", ids).Delete(&BlobberSnapshot{})
+	logging.Logger.Info("piers getBlobberSnapshots", zap.Strings("ids", ids))
 	return ids, mapSnapshots, result.Error
 }
 
@@ -65,6 +67,7 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 			ChallengesPassed:    blobber.ChallengesPassed,
 			ChallengesCompleted: blobber.ChallengesCompleted,
 			InactiveRounds:      blobber.InactiveRounds,
+			CreationRound:       blobber.CreationRound,
 		})
 	}
 	return edb.Store.Get().Create(&snapshots).Error
