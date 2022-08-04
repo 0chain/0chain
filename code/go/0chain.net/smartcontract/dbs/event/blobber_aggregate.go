@@ -76,10 +76,6 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 		aggregate.InactiveRounds = current.InactiveRounds - old.InactiveRounds
 		aggregate.TotalServiceCharge = current.TotalServiceCharge - old.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
-		logging.Logger.Info("piers updateBlobberAggregate for loop made aggregates",
-			zap.String("id", current.BlobberID),
-			zap.Any("aggregate", aggregate),
-		)
 	}
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {

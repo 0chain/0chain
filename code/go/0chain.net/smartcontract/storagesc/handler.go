@@ -2706,6 +2706,7 @@ type storageNodeResponse struct {
 	StorageNode
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 	TotalStake         currency.Coin `json:"total_stake"`
+	CreationRound      int64         `json:"creation_round"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
@@ -2742,6 +2743,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		},
 		TotalServiceCharge: blobber.TotalServiceCharge,
 		TotalStake:         blobber.TotalStake,
+		CreationRound:      blobber.CreationRound,
 	}
 }
 

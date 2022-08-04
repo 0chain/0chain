@@ -6,13 +6,10 @@ import (
 	"0chain.net/chaincore/currency"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
-
-	"gorm.io/gorm"
 )
 
 // swagger:model BlobberSnapshot
 type BlobberSnapshot struct {
-	gorm.Model
 	BlobberID           string        `json:"id" gorm:"index"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
