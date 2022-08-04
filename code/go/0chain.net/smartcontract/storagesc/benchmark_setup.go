@@ -852,11 +852,14 @@ func SetMockConfig(
 	conf.BlockReward.QualifyingStake = currency.Coin(viper.GetFloat64(sc.StorageBlockRewardQualifyingStake) * 1e10)
 	conf.MaxBlobbersPerAllocation = viper.GetInt(sc.StorageMaxBlobbersPerAllocation)
 	conf.BlockReward.TriggerPeriod = viper.GetInt64(sc.StorageBlockRewardTriggerPeriod)
-	conf.BlockReward.setWeightsFromRatio(
+	err = conf.BlockReward.setWeightsFromRatio(
 		viper.GetFloat64(sc.StorageBlockRewardSharderRatio),
 		viper.GetFloat64(sc.StorageBlockRewardMinerRatio),
 		viper.GetFloat64(sc.StorageBlockRewardBlobberRatio),
 	)
+	if err != nil {
+		panic(err)
+	}
 
 	conf.ExposeMpt = true
 
