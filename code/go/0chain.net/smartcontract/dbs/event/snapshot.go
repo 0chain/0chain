@@ -209,6 +209,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.TotalStaked += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -217,6 +218,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.TotalStaked -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagLockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -225,6 +227,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -233,6 +236,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagLockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -241,6 +245,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -249,6 +254,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagToChallengePool:
 			d, ok := fromEvent[ChallengePoolLock](event.Data)
 			if !ok {
@@ -299,7 +305,15 @@ func (edb *EventDb) updateSnapshot(e events) {
 			case Staked:
 				current.StakedStorage += updates.Delta
 			}
-
+		case TagAddWriteMarker:
+			updates, ok := fromEvent[WriteMarker](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			current.UsedStorage += updates.Size
+			current.DataUtilization = current.AllocatedStorage / current.UsedStorage
 		}
 	}
 
@@ -315,8 +329,7 @@ func (edb *EventDb) getSnapshot(round int64) (Snapshot, error) {
 }
 
 func (edb *EventDb) addSnapshot(s Snapshot) error {
-	res := edb.Store.Get().Create(&s)
-	return res.Error
+	return edb.Store.Get().Create(&s).Error
 }
 
 func graphDataPointsGeneratorQuery(from, to int64, aggQuery string, dataPoints uint16) string {
