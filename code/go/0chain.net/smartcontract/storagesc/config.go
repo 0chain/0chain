@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
-	"golang.org/x/tools/go/analysis/passes/nilfunc"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
