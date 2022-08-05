@@ -897,8 +897,7 @@ func SetMockConfig(
 			Min: currency.Coin(viper.GetFloat64(sc.StorageFasWritePriceMin) * 1e10),
 			Max: currency.Coin(viper.GetFloat64(sc.StorageFasWritePriceMax) * 1e10),
 		},
-		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
-		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
+		ReadPoolFraction: viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
 	conf.BlockReward = new(blockReward)
 	conf.BlockReward.BlockReward = currency.Coin(viper.GetFloat64(sc.StorageBlockReward) * 1e10)

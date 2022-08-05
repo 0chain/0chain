@@ -38,7 +38,7 @@ BLOBBER4=2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
 
 # add to read pools
 ./zboxcli/zbox --wallet testing.json rp-lock \
-    --duration=1h --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
+    --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
 
 # create random file
 head -c 5M < /dev/urandom > random.bin

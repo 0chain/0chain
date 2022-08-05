@@ -92,12 +92,17 @@ func (d *destination) period(now common.Timestamp) (period common.Timestamp) {
 }
 
 // move updates last vesting period
-func (d *destination) move(now common.Timestamp, moved currency.Coin) {
+func (d *destination) move(now common.Timestamp, moved currency.Coin) error {
 	d.Last = now
 	if moved > 0 {
 		d.Move = now
-		d.Vested += moved
+		newVested, err := currency.AddCoin(d.Vested, moved)
+		if err != nil {
+			return err
+		}
+		d.Vested = newVested
 	}
+	return nil
 }
 
 // The unlock returns amount of tokens to vest for current period.
@@ -125,10 +130,13 @@ func (d *destination) unlock(now, end common.Timestamp, dry bool) (
 		ratio = float64(period) / float64(full)
 	}
 
-	amount = currency.Coin(float64(left) * ratio)
+	amount, err = currency.MultFloat64(left, ratio)
+	if err != nil {
+		return 0, err
+	}
 
 	if !dry {
-		d.move(now, amount)
+		err = d.move(now, amount)
 	}
 
 	return
@@ -268,9 +276,13 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 }
 
 // required starting pool amount
-func (vp *vestingPool) want() (want currency.Coin) {
+func (vp *vestingPool) want() (want currency.Coin, err error) {
 	for _, d := range vp.Destinations {
-		want += d.Amount
+		newWant, err := currency.AddCoin(want, d.Amount)
+		if err != nil {
+			return 0, err
+		}
+		want = newWant
 	}
 	return
 }
@@ -367,7 +379,11 @@ func (vp *vestingPool) excess() (amount currency.Coin, err error) {
 		if err != nil {
 			return 0, err
 		}
-		need += destLeft
+		newNeed, err := currency.AddCoin(need, destLeft)
+		if err != nil {
+			return 0, err
+		}
+		need = newNeed
 	}
 	return vp.Balance - need, nil
 }
@@ -597,7 +613,12 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 	var vp = newVestingPoolFromReqeust(t.ClientID, &ar)
 	vp.ID = poolKey(vsc.ID, t.Hash) // set ID by this transaction
 
-	if t.Value < vp.want() {
+	amtWanted, err := vp.want()
+	if err != nil {
+		return "", common.NewError("create_vesting_pool_failed",
+			"couldn't calculate wanted amount: "+err.Error())
+	}
+	if t.Value < amtWanted {
 		return "", common.NewError("create_vesting_pool_failed",
 			"not enough tokens to create pool provided")
 	}

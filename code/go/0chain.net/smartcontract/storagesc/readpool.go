@@ -36,8 +36,7 @@ type readPool struct {
 }
 
 type readPoolLockRequest struct {
-	TargetId   string `json:"target_id,omitempty"`
-	MintTokens bool   `json:"mint_tokens,omitempty"`
+	TargetId string `json:"target_id,omitempty"`
 }
 
 func (lr *readPoolLockRequest) decode(input []byte) (err error) {
@@ -186,27 +185,31 @@ func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, inpu
 		req.TargetId = txn.ClientID
 	}
 
-	if !req.MintTokens {
+	return ssc.readPoolLockInternal(txn, txn.Value, false, req.TargetId, balances)
+}
+
+func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transaction, toLock currency.Coin, mint bool, targetId string, balances cstate.StateContextI) (string, error) {
+	if !mint {
 		// check client balance
-		if err = stakepool.CheckClientBalance(txn, balances); err != nil {
+		if err := stakepool.CheckClientBalance(txn.ClientID, toLock, balances); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
 		// transfer balance from client to smart contract
 		transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, currency.Coin(txn.Value))
-		if err = balances.AddTransfer(transfer); err != nil {
+		if err := balances.AddTransfer(transfer); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
 	} else {
-		if err = balances.AddMint(&state.Mint{
+		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
-			Amount:     txn.Value,
+			Amount:     toLock,
 		}); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
 	}
 
-	rp, err := ssc.getReadPool(req.TargetId, balances)
+	rp, err := ssc.getReadPool(targetId, balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
@@ -216,12 +219,12 @@ func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, inpu
 	}
 
 	//add to read pool balance
-	if err = rp.add(currency.Coin(txn.Value)); err != nil {
+	if err = rp.add(toLock); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
 	// save read pool
-	if err = rp.save(ssc.ID, req.TargetId, balances); err != nil {
+	if err = rp.save(ssc.ID, targetId, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 

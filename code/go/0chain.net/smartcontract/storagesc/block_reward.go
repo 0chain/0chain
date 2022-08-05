@@ -117,7 +117,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	for i, br := range blobberRewards {
 		sp := stakePools[i]
 
-		stake := float64(sp.stake())
+		staked, err := sp.stake()
+		if err != nil {
+			return err
+		}
+
+		stake := float64(staked)
 
 		gamma := maths.GetGamma(
 			conf.BlockReward.Gamma.A,
@@ -211,10 +216,16 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}
+		staked, err := qsp.stake()
+		if err != nil {
+			return common.NewError("blobber_block_rewards_failed",
+				"getting stake pool stake: "+err.Error())
+		}
+
 		data := dbs.DbUpdates{
 			Id: qualifyingBlobberIds[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(qsp.stake()),
+				"total_stake": int64(staked),
 			},
 		}
 		balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
@@ -242,7 +253,9 @@ func getBlockReward(
 	}
 	changeBalance := 1 - brChangeRatio
 	changePeriods := currentRound / brChangePeriod
-	return currency.Float64ToCoin(float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight)
+
+	factor := math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
+	return currency.MultFloat64(br, factor)
 }
 
 func GetCurrentRewardRound(currentRound, period int64) int64 {
