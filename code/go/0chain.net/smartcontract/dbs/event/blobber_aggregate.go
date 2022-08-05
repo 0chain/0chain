@@ -31,12 +31,9 @@ type BlobberAggregate struct {
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64) {
-	logging.Logger.Info("piers updateBlobberAggregate",
-		zap.Int64("round", round), zap.Int64("period", period),
-	)
 	_, oldBlobbers, err := edb.getBlobberSnapshots(round, period)
 	if err != nil {
-		logging.Logger.Error("piers getting blobber snapshots", zap.Error(err))
+		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
 		return
 	}
 
@@ -45,11 +42,9 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 		Raw(fmt.Sprintf("SELECT * FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period).
 		Scan(&currentBlobbers)
 	if result.Error != nil {
-		logging.Logger.Error("piers error getting current blobbers", zap.Error(result.Error))
+		logging.Logger.Error("error getting current blobbers", zap.Error(result.Error))
 		return
 	}
-	logging.Logger.Info("piers updateBlobberAggregate",
-		zap.Any("currentBlobbers", currentBlobbers))
 
 	if round <= period && len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
@@ -59,7 +54,6 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 
 	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
-		logging.Logger.Info("piers updateBlobberAggregate for loop", zap.String("id", current.BlobberID))
 		old, found := oldBlobbers[current.BlobberID]
 		if !found {
 			continue
@@ -84,16 +78,13 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 	}
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
-			logging.Logger.Error("piers saving aggregates", zap.Error(result.Error))
+			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
 		}
 	}
-	logging.Logger.Info("piers updateBlobberAggregate",
-		zap.Any("new aggregates", aggregates),
-	)
 
 	if len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
-			logging.Logger.Error("piers error saving blobbers snapshots", zap.Error(err))
+			logging.Logger.Error("error saving blobbers snapshots", zap.Error(err))
 		}
 	}
 }

@@ -201,7 +201,6 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 		spUpdate.Reward = value
-
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
 		}
