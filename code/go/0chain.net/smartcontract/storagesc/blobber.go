@@ -157,6 +157,15 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			Delta:        int64((sp.stake() - before) / blobber.Terms.WritePrice),
 		})
 	}
+
+	cDelta := blobber.Capacity - savedBlobber.Capacity
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+		FieldType:    event.MaxCapacity,
+		AllocationId: "",
+		BlobberId:    blobber.ID,
+		Delta:        cDelta,
+	})
+
 	return
 }
 
@@ -239,6 +248,13 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 				"saving blobber url: "+err.Error())
 		}
 	}
+
+	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+		FieldType:    event.MaxCapacity,
+		AllocationId: "",
+		BlobberId:    blobber.ID,
+		Delta:        blobber.Capacity,
+	})
 
 	return string(blobber.Encode()), nil
 }

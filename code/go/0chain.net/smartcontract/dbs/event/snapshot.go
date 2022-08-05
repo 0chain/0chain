@@ -213,6 +213,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.TotalStaked += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -221,6 +222,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.TotalStaked -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagLockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -229,6 +231,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -237,6 +240,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagLockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -245,6 +249,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -253,6 +258,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagToChallengePool:
 			d, ok := fromEvent[ChallengePoolLock](event.Data)
 			if !ok {
@@ -303,7 +309,15 @@ func (edb *EventDb) updateSnapshot(e events) {
 			case Staked:
 				current.StakedStorage += updates.Delta
 			}
-
+		case TagAddWriteMarker:
+			updates, ok := fromEvent[WriteMarker](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			current.UsedStorage += updates.Size
+			current.DataUtilization = current.AllocatedStorage / current.UsedStorage
 		}
 	}
 
