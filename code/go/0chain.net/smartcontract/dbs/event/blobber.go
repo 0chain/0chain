@@ -298,36 +298,6 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 
-func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
-	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", blobber.BlobberID).
-		Updates(map[string]interface{}{
-			"base_url":             blobber.BaseURL,
-			"latitude":             blobber.Latitude,
-			"longitude":            blobber.Longitude,
-			"read_price":           blobber.ReadPrice,
-			"write_price":          blobber.WritePrice,
-			"min_lock_demand":      blobber.MinLockDemand,
-			"max_offer_duration":   blobber.MaxOfferDuration,
-			"capacity":             blobber.Capacity,
-			"used":                 blobber.Used,
-			"last_health_check":    blobber.LastHealthCheck,
-			"delegate_wallet":      blobber.DelegateWallet,
-			"min_stake":            blobber.MinStake,
-			"max_stake":            blobber.MaxStake,
-			"num_delegates":        blobber.NumDelegates,
-			"service_charge":       blobber.ServiceCharge,
-			"offers_total":         blobber.OffersTotal,
-			"unstake_total":        blobber.UnstakeTotal,
-			"reward":               blobber.Reward,
-			"total_service_charge": blobber.TotalServiceCharge,
-			"saved_data":           blobber.SavedData,
-			"name":                 blobber.Name,
-			"website_url":          blobber.WebsiteUrl,
-			"logo_url":             blobber.LogoUrl,
-			"description":          blobber.Description,
-		}).Error
-}
-
 func (edb *EventDb) addBlobber(blobber Blobber) error {
 	return edb.Store.Get().Create(&blobber).Error
 }

@@ -165,12 +165,6 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.addBlobber(*blobber)
-	case TagOverwriteBlobber:
-		blobber, ok := fromEvent[Blobber](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.overwriteBlobber(*blobber)
 	case TagUpdateBlobber:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {

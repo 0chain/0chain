@@ -76,10 +76,10 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64) {
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 
-		aggregate.ChallengesPassed = current.ChallengesPassed - old.ChallengesPassed
-		aggregate.ChallengesCompleted = current.ChallengesCompleted - old.ChallengesPassed
-		aggregate.InactiveRounds = current.InactiveRounds - old.InactiveRounds
-		aggregate.TotalServiceCharge = current.TotalServiceCharge - old.TotalServiceCharge
+		aggregate.ChallengesPassed = current.ChallengesPassed
+		aggregate.ChallengesCompleted = current.ChallengesCompleted
+		aggregate.InactiveRounds = current.InactiveRounds
+		aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 	}
 	if len(aggregates) > 0 {
@@ -119,7 +119,6 @@ func (edb *EventDb) GetAggregateData(
 }
 func (edb *EventDb) GetDifference(start, end int64, roundsPerPoint int64, row, table, bloberId string) ([]int64, error) {
 	if roundsPerPoint < edb.Config().BlobberAggregatePeriod {
-		//common.Respond(w, r, nil, common.NewErrInternal("too many points for aggregate period"))
 		return nil, fmt.Errorf("too many points %v for aggregate period %v",
 			roundsPerPoint, edb.Config().BlobberAggregatePeriod)
 	}
