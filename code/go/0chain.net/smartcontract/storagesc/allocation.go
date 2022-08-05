@@ -1578,7 +1578,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
-			before[i] = sps[i].stake()
+			before[i], _ = sps[i].stake()
 			err = sps[i].DistributeRewards(delta, d.BlobberID, spenum.Blobber, balances)
 			if err != nil {
 				return fmt.Errorf("alloc_cancel_failed, paying min_lock %v for blobber "+
@@ -1664,12 +1664,13 @@ func (sc *StorageSmartContract) finishAllocation(
 			},
 		}
 		balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, d.BlobberID, data)
-		if d.Terms.WritePrice > 0 {
+		stake, err := sps[i].stake()
+		if d.Terms.WritePrice > 0 && err == nil {
 			balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, d.BlobberID, event.AllocationBlobberValueChanged{
 				FieldType:    event.Staked,
 				AllocationId: "",
 				BlobberId:    d.BlobberID,
-				Delta:        int64((sps[i].stake() - before[i]) / d.Terms.WritePrice),
+				Delta:        int64((stake - before[i]) / d.Terms.WritePrice),
 			})
 		}
 		// update the blobber

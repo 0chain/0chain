@@ -454,7 +454,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
-	before := sp.stake()
+	before, err := sp.stake()
 
 	if len(sp.Pools) >= conf.MaxDelegates {
 		return "", common.NewErrorf("stake_pool_lock_failed",
@@ -494,11 +494,12 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 
 	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, spr.BlobberID, data)
 	if blobber.Terms.WritePrice > 0 {
+		stake, _ := sp.stake()
 		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    spr.BlobberID,
-			Delta:        int64((sp.stake() - before) / blobber.Terms.WritePrice),
+			Delta:        int64((stake - before) / blobber.Terms.WritePrice),
 		})
 	}
 	return
@@ -520,7 +521,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
-	before := sp.stake()
+	before, err := sp.stake()
 
 	dp, ok := sp.Pools[spr.PoolID]
 	if !ok {
@@ -568,11 +569,12 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			},
 		}
 		balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, spr.BlobberID, data)
+		stake, err := sp.stake()
 		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    spr.BlobberID,
-			Delta:        int64((sp.stake() - before) / blobber.Terms.WritePrice),
+			Delta:        int64((stake - before) / blobber.Terms.WritePrice),
 		})
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
@@ -601,11 +603,12 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	}
 	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, spr.BlobberID, data)
 	if blobber.Terms.WritePrice > 0 {
+		stake, _ := sp.stake()
 		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, spr.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    spr.BlobberID,
-			Delta:        int64((sp.stake() - before) / blobber.Terms.WritePrice),
+			Delta:        int64((stake - before) / blobber.Terms.WritePrice),
 		})
 	}
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil

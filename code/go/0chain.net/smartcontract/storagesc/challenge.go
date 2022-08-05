@@ -172,7 +172,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	before := sp.stake()
+	before, err := sp.stake()
 
 	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, balances)
 	if err != nil {
@@ -207,14 +207,16 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return
 	}
 
-	if blobAlloc.Terms.WritePrice > 0 {
+	stake, err := sp.stake()
+	if blobAlloc.Terms.WritePrice > 0 && err == nil {
 		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    blobAlloc.BlobberID,
-			Delta:        int64((sp.stake() - before) / blobAlloc.Terms.WritePrice),
+			Delta:        int64((stake - before) / blobAlloc.Terms.WritePrice),
 		})
 	}
+
 	// save the pools
 	if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't save sake pool: %v", err)

@@ -6,6 +6,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
@@ -97,19 +98,13 @@ func (ssc *StorageSmartContract) collectReward(
 	}
 
 	//TODO sort out this code, we cant simply update here for validator and for blobber at the same time, also we need write price to calculate staked capacity change
-	//data := dbs.DbUpdates{
-	//	Id: providerID,
-	//	Updates: map[string]interface{}{
-	//		"total_stake": int64(sp.stake()),
-	//	},
-	//}
-	//balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, providerID, data)
-	//balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, providerID, event.AllocationBlobberValueChanged{
-	//	FieldType:    event.Staked,
-	//	AllocationId: "",
-	//	BlobberId:    providerID,
-	//	Delta:        int64((sp.stake() - before) ),
-	//})
+	// balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, providerID, event.AllocationBlobberValueChanged{
+	// 	FieldType:    event.Staked,
+	// 	AllocationId: "",
+	// 	BlobberId:    providerID,
+	// 	Delta:        int64(staked - before),
+	// })
+
 	staked, err := sp.stake()
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
@@ -122,7 +117,7 @@ func (ssc *StorageSmartContract) collectReward(
 			"total_stake": int64(staked),
 		},
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, providerID, data)
 
 	err = emitAddOrOverwriteReward(reward, providerID, prr, balances, txn)
 	if err != nil {

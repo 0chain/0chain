@@ -541,14 +541,14 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 
 	if err = c.emitSendTransferEvent(sctx, stateToUser(fromClient, fs, amount)); err != nil {
-		return common.NewError("transfer_amount", "could not emit event")
+		return nil, common.NewError("transfer_amount", "could not emit event")
 	}
 
 	if err = c.emitReceiveTransferEvent(sctx, stateToUser(toClient, ts, amount)); err != nil {
-		return common.NewError("transfer_amount", "could not emit event")
+		return nil, common.NewError("transfer_amount", "could not emit event")
 	}
 
-	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
+	return []*event.User{stateToUser(fromClient, fs, amount), stateToUser(toClient, ts, amount)}, nil
 }
 
 func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (*event.User, error) {
@@ -613,10 +613,10 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	}
 
 	if err = c.emitMintEvent(sctx, stateToUser(toClient, ts, amount)); err != nil {
-		return common.NewError("mint_amount", "could not emit event")
+		return nil, common.NewError("mint_amount", "could not emit event")
 	}
 
-	return stateToUser(toClient, ts), nil
+	return stateToUser(toClient, ts, amount), nil
 }
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
@@ -658,10 +658,10 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
 
 	if err = c.emitUserEvent(sctx, stateToUser(fromClient, s, 0)); err != nil {
-		return common.NewError("increment_nonce", "could not emit event")
+		return nil, common.NewError("increment_nonce", "could not emit event")
 	}
 
-	return stateToUser(fromClient, s), nil
+	return stateToUser(fromClient, s, 0), nil
 }
 
 func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
@@ -742,7 +742,7 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) error {
 		return nil
 	}
 
-	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, usr.UserID, usr,
+	sc.EmitEvent(event.TypeChain, event.TagAddOrOverwriteUser, usr.UserID, usr,
 		func(events []event.Event, current event.Event) []event.Event {
 			return append([]event.Event{current}, events...)
 		})

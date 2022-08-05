@@ -119,7 +119,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
-	before := sp.stake()
+	before, _ := sp.stake()
 	stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
 	if err != nil {
 		return fmt.Errorf("error calculating staked capacity: %v", err)
@@ -155,11 +155,12 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, blobber.ID, data)
 	if blobber.Terms.WritePrice > 0 {
+		stake, _ := sp.stake()
 		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    blobber.ID,
-			Delta:        int64((sp.stake() - before) / blobber.Terms.WritePrice),
+			Delta:        int64((stake - before) / blobber.Terms.WritePrice),
 		})
 	}
 

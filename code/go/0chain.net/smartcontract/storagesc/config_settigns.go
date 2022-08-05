@@ -230,7 +230,7 @@ var (
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
 		"readpool.min_lock":         {ReadPoolMinLock, smartcontract.CurrencyCoin},
-		"write_pool.min_lock":       {WritePoolMinLock, smartcontract.CurrencyCoin},
+		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
 		"stakepool.min_lock":        {StakePoolMinLock, smartcontract.CurrencyCoin},
 		"stakepool.min_lock_period": {StakePoolMinLockPeriod, smartcontract.Duration},
 
