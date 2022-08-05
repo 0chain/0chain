@@ -6,7 +6,6 @@ import (
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
@@ -161,18 +160,15 @@ func (edb *EventDb) updateSnapshot(e events) {
 	var current Snapshot
 	var err error
 	if thisRound > 1 {
-		current, err = edb.getSnapshot(thisRound)
+		current, err = edb.getSnapshot(thisRound - 1)
 		if err != nil {
-			current, err = edb.getSnapshot(thisRound - 1)
-			if err != nil {
-				logging.Logger.Error("getting last snapshot", zap.Int64("last round", thisRound-1), zap.Error(err))
-			}
-			current.StorageCost = 0
-			current.ActiveAllocatedDelta = 0
-			current.AverageRWPrice = 0
-			current.SuccessfulChallenges = 0
-			current.FailedChallenges = 0
+			logging.Logger.Error("getting last snapshot", zap.Int64("last round", thisRound-1), zap.Error(err))
 		}
+		current.StorageCost = 0
+		current.ActiveAllocatedDelta = 0
+		current.AverageRWPrice = 0
+		current.SuccessfulChallenges = 0
+		current.FailedChallenges = 0
 	}
 	current.Round = thisRound
 
@@ -321,7 +317,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 		}
 	}
 
-	if err := edb.addOrOverwriteSnapshot(current); err != nil {
+	if err := edb.addSnapshot(current); err != nil {
 		logging.Logger.Error("snapshot", zap.Error(err))
 	}
 }
@@ -332,10 +328,8 @@ func (edb *EventDb) getSnapshot(round int64) (Snapshot, error) {
 	return s, res.Error
 }
 
-func (edb *EventDb) addOrOverwriteSnapshot(s Snapshot) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		UpdateAll: true,
-	}).Create(&s).Error
+func (edb *EventDb) addSnapshot(s Snapshot) error {
+	return edb.Store.Get().Create(&s).Error
 }
 
 func graphDataPointsGeneratorQuery(from, to int64, aggQuery string, dataPoints uint16) string {
