@@ -67,22 +67,18 @@ type blockRewardZeta struct {
 	Mu float64 `json:"mu"`
 }
 
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) error {
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
 	total := sharderRatio + minerRatio + bRatio
-	switch total {
-	case 0:
+	if total == 0 {
 		br.SharderWeight = 0
 		br.MinerWeight = 0
 		br.BlobberWeight = 0
-		return nil
-	case 1:
-		br.SharderWeight = sharderRatio
-		br.MinerWeight = minerRatio
-		br.BlobberWeight = bRatio
-		return nil
-	default:
-		return fmt.Errorf("weights sum must be 1: %v", total)
+	} else {
+		br.SharderWeight = sharderRatio / total
+		br.MinerWeight = minerRatio / total
+		br.BlobberWeight = bRatio / total
 	}
+
 }
 
 // Config represents SC configurations ('storagesc:' from sc.yaml).
@@ -495,14 +491,11 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
-	err = conf.BlockReward.setWeightsFromRatio(
+	conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
 	)
-	if err != nil {
-		return nil, err
-	}
 	conf.BlockReward.Gamma.Alpha = scc.GetFloat64(pfx + "block_reward.gamma.alpha")
 	conf.BlockReward.Gamma.A = scc.GetFloat64(pfx + "block_reward.gamma.a")
 	conf.BlockReward.Gamma.B = scc.GetFloat64(pfx + "block_reward.gamma.b")

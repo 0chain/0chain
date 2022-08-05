@@ -1,9 +1,8 @@
 package storagesc
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestGetBlockPayments(t *testing.T) {
@@ -44,8 +43,7 @@ func TestGetBlockPayments(t *testing.T) {
 			t.Parallel()
 
 			var br = blockReward{}
-			err := br.setWeightsFromRatio(tt.SharderRatio, tt.MinerRatio, tt.BlobberCapacityRatio)
-			require.NoError(t, err)
+			br.setWeightsFromRatio(tt.SharderRatio, tt.MinerRatio, tt.BlobberCapacityRatio)
 			require.EqualValues(t, br, tt.want.reward)
 		})
 	}
