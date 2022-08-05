@@ -401,8 +401,9 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
+
 	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
-	blobberIDs, err := edb.GetBlobbersFromParams(event.AllocationQuery{
+	allocation := event.AllocationQuery{
 		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
 			Min int64
@@ -418,12 +419,20 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 			Min: int64(request.WritePriceRange.Min),
 			Max: int64(request.WritePriceRange.Max),
 		},
-		Size:               int(request.Size),
 		AllocationSize:     allocationSize,
+		AllocationSizeInGB: sizeInGB(sa.bSize()),
 		PreferredBlobbers:  request.Blobbers,
 		NumberOfDataShards: sa.DataShards,
-	}, limit, balances.Now())
+	}
 
+	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
+		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
+		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
+		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Float64("AllocationSizeInGB", allocation.AllocationSizeInGB),
+		zap.Int64("last_health_check", int64(balances.Now())),
+	)
+
+	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now())
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
