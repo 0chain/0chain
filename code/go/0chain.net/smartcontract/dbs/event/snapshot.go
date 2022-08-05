@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
@@ -160,15 +161,18 @@ func (edb *EventDb) updateSnapshot(e events) {
 	var current Snapshot
 	var err error
 	if thisRound > 1 {
-		current, err = edb.getSnapshot(thisRound - 1)
+		current, err = edb.getSnapshot(thisRound)
 		if err != nil {
-			logging.Logger.Error("getting last snapshot", zap.Int64("last round", thisRound-1), zap.Error(err))
+			current, err = edb.getSnapshot(thisRound - 1)
+			if err != nil {
+				logging.Logger.Error("getting last snapshot", zap.Int64("last round", thisRound-1), zap.Error(err))
+			}
+			current.StorageCost = 0
+			current.ActiveAllocatedDelta = 0
+			current.AverageRWPrice = 0
+			current.SuccessfulChallenges = 0
+			current.FailedChallenges = 0
 		}
-		current.StorageCost = 0
-		current.ActiveAllocatedDelta = 0
-		current.AverageRWPrice = 0
-		current.SuccessfulChallenges = 0
-		current.FailedChallenges = 0
 	}
 	current.Round = thisRound
 
@@ -209,6 +213,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.TotalStaked += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -217,6 +222,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.TotalStaked -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagLockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -225,6 +231,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -233,6 +240,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagLockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -241,6 +249,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks += d.Amount
+			current.TotalValueLocked += d.Amount
 		case TagUnlockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -249,6 +258,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				continue
 			}
 			current.ClientLocks -= d.Amount
+			current.TotalValueLocked -= d.Amount
 		case TagToChallengePool:
 			d, ok := fromEvent[ChallengePoolLock](event.Data)
 			if !ok {
@@ -299,11 +309,19 @@ func (edb *EventDb) updateSnapshot(e events) {
 			case Staked:
 				current.StakedStorage += updates.Delta
 			}
-
+		case TagAddWriteMarker:
+			updates, ok := fromEvent[WriteMarker](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			current.UsedStorage += updates.Size
+			current.DataUtilization = current.AllocatedStorage / current.UsedStorage
 		}
 	}
 
-	if err := edb.addSnapshot(current); err != nil {
+	if err := edb.addOrOverwriteSnapshot(current); err != nil {
 		logging.Logger.Error("snapshot", zap.Error(err))
 	}
 }
@@ -314,9 +332,10 @@ func (edb *EventDb) getSnapshot(round int64) (Snapshot, error) {
 	return s, res.Error
 }
 
-func (edb *EventDb) addSnapshot(s Snapshot) error {
-	res := edb.Store.Get().Create(&s)
-	return res.Error
+func (edb *EventDb) addOrOverwriteSnapshot(s Snapshot) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).Create(&s).Error
 }
 
 func graphDataPointsGeneratorQuery(from, to int64, aggQuery string, dataPoints uint16) string {
