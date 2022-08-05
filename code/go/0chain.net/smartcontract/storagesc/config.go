@@ -86,8 +86,8 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio floa
 		return nil
 	default:
 		return fmt.Errorf("total weight is not 1: %v", totalWeight)
-
-
+	}
+	return nil
 }
 
 // Config represents SC configurations ('storagesc:' from sc.yaml).
