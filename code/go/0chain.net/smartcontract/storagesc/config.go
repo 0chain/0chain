@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
+	"golang.org/x/tools/go/analysis/passes/nilfunc"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -67,7 +68,7 @@ type blockRewardZeta struct {
 	Mu float64 `json:"mu"`
 }
 
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) error {
 	total := sharderRatio + minerRatio + bRatio
 	if total == 0 {
 		br.SharderWeight = 0
@@ -78,6 +79,15 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio floa
 		br.MinerWeight = minerRatio / total
 		br.BlobberWeight = bRatio / total
 	}
+
+	totalWeight := br.SharderWeight + br.MinerWeight + br.BlobberWeight
+	switch totalWeight {
+	case 0:
+	case 1:
+		return nil
+	default:
+		return fmt.Errorf("total weight is not 1: %v", totalWeight)
+
 
 }
 
@@ -491,11 +501,14 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
-	conf.BlockReward.setWeightsFromRatio(
+	err = conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
 	)
+	if err != nil {
+		return nil, err
+	}
 	conf.BlockReward.Gamma.Alpha = scc.GetFloat64(pfx + "block_reward.gamma.alpha")
 	conf.BlockReward.Gamma.A = scc.GetFloat64(pfx + "block_reward.gamma.a")
 	conf.BlockReward.Gamma.B = scc.GetFloat64(pfx + "block_reward.gamma.b")
