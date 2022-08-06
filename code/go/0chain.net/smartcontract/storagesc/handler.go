@@ -91,9 +91,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
 		rest.MakeEndpoint(storage+"/search", srh.getSearchHandler),
 
-		// historical data endpoints
-		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
-
 		//rest.MakeEndpoint(storage+"/blobber-aggregate", srh.getBlobberAggregate),
 		rest.MakeEndpoint(storage+"/blobber-average-write-price", srh.getBlobberAverageWritePrice),
 		rest.MakeEndpoint(storage+"/blobber-average-capacity", srh.getAverageCapacity),
@@ -108,6 +105,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber-challenges-completed", srh.getChallengesCompleted),
 		rest.MakeEndpoint(storage+"/blobber-inactive-rounds", srh.getBlobberInactiveRounds),
 
+		// historical data endpoints
+		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
 		rest.MakeEndpoint(storage+"/data-storage-cost", srh.getDataStorageCost),
 		rest.MakeEndpoint(storage+"/daily-allocations", srh.getDataDailyAllocations),
 		rest.MakeEndpoint(storage+"/average-rw-price", srh.getAverageReadWritePrice),
