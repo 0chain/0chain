@@ -33,6 +33,9 @@ import (
 // swagger:model stringArray
 type stringArray []string
 
+// swagger:model floatArray
+type floatArray []float64
+
 type StorageRestHandler struct {
 	rest.RestHandlerI
 }
@@ -125,26 +128,26 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 // Gets the count of challenges passed in a time range
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getBlobberInactiveRounds(w http.ResponseWriter, r *http.Request) {
@@ -185,26 +188,26 @@ func (srh *StorageRestHandler) getBlobberInactiveRounds(w http.ResponseWriter, r
 // Gets the count of challenges passed in a time range
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getChallengesCompleted(w http.ResponseWriter, r *http.Request) {
@@ -307,26 +310,26 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 // Gets the count of challenges passed in a time range
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getChallengesPassed(w http.ResponseWriter, r *http.Request) {
@@ -367,26 +370,26 @@ func (srh *StorageRestHandler) getChallengesPassed(w http.ResponseWriter, r *htt
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *http.Request) {
@@ -425,26 +428,26 @@ func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *ht
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getServiceCharge(w http.ResponseWriter, r *http.Request) {
@@ -485,26 +488,26 @@ func (srh *StorageRestHandler) getServiceCharge(w http.ResponseWriter, r *http.R
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAverageUnstakeTotal(w http.ResponseWriter, r *http.Request) {
@@ -543,26 +546,26 @@ func (srh *StorageRestHandler) getAverageUnstakeTotal(w http.ResponseWriter, r *
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAverageOffersTotal(w http.ResponseWriter, r *http.Request) {
@@ -601,26 +604,26 @@ func (srh *StorageRestHandler) getAverageOffersTotal(w http.ResponseWriter, r *h
 // Gets the average saved data
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAveargeSavedData(w http.ResponseWriter, r *http.Request) {
@@ -659,26 +662,26 @@ func (srh *StorageRestHandler) getAveargeSavedData(w http.ResponseWriter, r *htt
 // Gets the average allocated storage
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *http.Request) {
@@ -717,26 +720,26 @@ func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *htt
 // Gets the average capacity
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAverageCapacity(w http.ResponseWriter, r *http.Request) {
@@ -775,26 +778,26 @@ func (srh *StorageRestHandler) getAverageCapacity(w http.ResponseWriter, r *http
 // Gets the average write price
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
-//	200:[]float64
+//	200: floatArray
 //	400:
 //	500:
 func (srh *StorageRestHandler) getBlobberAverageWritePrice(w http.ResponseWriter, r *http.Request) {
@@ -833,22 +836,22 @@ func (srh *StorageRestHandler) getBlobberAverageWritePrice(w http.ResponseWriter
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_rounds_mint_total get_rounds_mint_total
 // Gets the total amount minted between from and to dates.
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -897,12 +900,12 @@ func (srh *StorageRestHandler) getRoundsTotalMint(w http.ResponseWriter, r *http
 //
 //	challenges passed / total challenges
 //
-// parameters:
-//   - name: id
-//     description: id of blobber
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: id
+//	    description: id of blobber
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -974,24 +977,24 @@ func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *ht
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids blobber_ids
 // convert list of blobber urls into ids
 //
-// parameters:
-//   - name: free_allocation_data
-//     description: allocation data
-//     required: true
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: free_allocation_data
+//	    description: allocation data
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1043,24 +1046,24 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers free_alloc_blobbers
 // returns list of all blobbers alive that match the free allocation request.
 //
-// parameters:
-//   - name: free_allocation_data
-//     description: allocation data
-//     required: true
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: free_allocation_data
+//	    description: allocation data
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1128,24 +1131,24 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers alloc_blobbers
 // returns list of all blobbers alive that match the allocation request.
 //
-// parameters:
-//   - name: allocation_data
-//     description: allocation data
-//     required: true
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation_data
+//	    description: allocation data
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1252,22 +1255,22 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
 //
-// parameters:
-//   - name: start_block
-//     description: start block
-//     required: true
-//     in: query
-//     type: string
-//   - name: end_block
-//     description: end block
-//     required: true
-//     in: query
-//     type: string
-//   - name: client_id
-//     description: client id
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: start_block
+//	    description: start block
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: end_block
+//	    description: end block
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: client_id
+//	    description: client id
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1303,12 +1306,12 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count alloc_write_marker_count
 //
-// parameters:
-//   - name: allocation_id
-//     description: allocation for which to get challenge pools statistics
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation_id
+//	    description: allocation for which to get challenge pools statistics
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1333,17 +1336,17 @@ func (srh *StorageRestHandler) getWriteMarkerCount(w http.ResponseWriter, r *htt
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_read_size alloc_read_size
 //
-// parameters:
-//   - name: allocation_id
-//     description: allocation for which to get challenge pools statistics
-//     required: true
-//     in: query
-//     type: string
-//   - name: block_number
-//     description:block number
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation_id
+//	    description: allocation for which to get challenge pools statistics
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: block_number
+//	    description:block number
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1374,17 +1377,17 @@ func (srh *StorageRestHandler) getReadAmount(w http.ResponseWriter, r *http.Requ
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_written_size alloc_written_size
 // statistic for all locked tokens of a challenge pool
 //
-// parameters:
-//   - name: allocation_id
-//     description: allocation for which to get challenge pools statistics
-//     required: true
-//     in: query
-//     type: string
-//   - name: block_number
-//     description:block number
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation_id
+//	    description: allocation for which to get challenge pools statistics
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: block_number
+//	    description:block number
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1418,17 +1421,17 @@ func (srh *StorageRestHandler) getWrittenAmount(w http.ResponseWriter, r *http.R
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocWrittenSizePerPeriod allocWrittenSizePerPeriod
 // Total amount of data added during given blocks
 //
-// parameters:
-//   - name: block-start
-//     description:start block number
-//     required: true
-//     in: query
-//     type: string
-//   - name: block-end
-//     description:end block number
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: block-start
+//	    description:start block number
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: block-end
+//	    description:end block number
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1478,12 +1481,12 @@ func (srh *StorageRestHandler) getWrittenAmountPerPeriod(w http.ResponseWriter, 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat getChallengePoolStat
 // statistic for all locked tokens of a challenge pool
 //
-// parameters:
-//   - name: allocation_id
-//     description: allocation for which to get challenge pools statistics
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation_id
+//	    description: allocation for which to get challenge pools statistics
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1520,12 +1523,12 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat
 // Gets  statistic for all locked tokens of the read pool
 //
-// parameters:
-//   - name: client_id
-//     description: client for which to get read pools statistics
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: client_id
+//	    description: client for which to get read pools statistics
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1618,24 +1621,24 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
 // Gets block information for all blocks. Todo: We need to add a filter to this.
 //
-// parameters:
-//   - name: block_hash
-//     description: block hash
-//     required: true
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: block_hash
+//	    description: block hash
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1665,22 +1668,22 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block block
 // Gets block information
 //
-// parameters:
-//   - name: block_hash
-//     description: block hash
-//     required: false
-//     in: query
-//     type: string
-//   - name: date
-//     description: block created closest to the date (epoch timestamp in nanoseconds)
-//     required: false
-//     in: query
-//     type: string
-//   - name: round
-//     description: block round
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: block_hash
+//	    description: block hash
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: date
+//	    description: block created closest to the date (epoch timestamp in nanoseconds)
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: round
+//	    description: block round
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1750,12 +1753,12 @@ type userPoolStat struct {
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat getUserStakePoolStat
 // Gets statistic for a user's stake pools
 //
-// parameters:
-//   - name: client_id
-//     description: client for which to get stake pool information
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: client_id
+//	    description: client for which to get stake pool information
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1844,12 +1847,12 @@ func spStats(
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
 // Gets statistic for all locked tokens of a stake pool
 //
-// parameters:
-//   - name: blobber_id
-//     description: id of blobber
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: blobber_id
+//	    description: id of blobber
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1884,17 +1887,17 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
 // Gets challenges for a blobber by challenge id
 //
-// parameters:
-//   - name: blobber
-//     description: id of blobber
-//     required: true
-//     in: query
-//     type: string
-//   - name: challenge
-//     description: id of challenge
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: blobber
+//	    description: id of blobber
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: challenge
+//	    description: id of challenge
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1931,24 +1934,24 @@ type ChallengesResponse struct {
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges openchallenges
 // Gets open challenges for a blobber
 //
-// parameters:
-//   - name: blobber
-//     description: id of blobber for which to get open challenges
-//     required: true
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: blobber
+//	    description: id of blobber for which to get open challenges
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -1991,12 +1994,12 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator get_validator
 // Gets validator information
 //
-// parameters:
-//   - name: validator_id
-//     description: validator on which to get information
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: validator_id
+//	    description: validator on which to get information
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2053,29 +2056,29 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers
 // Gets read markers according to a filter
 //
-// parameters:
-//   - name: allocation_id
-//     description: count write markers for this allocation
-//     required: true
-//     in: query
-//     type: string
-//   - name: filename
-//     description: file name
-//     required: true
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation_id
+//	    description: count write markers for this allocation
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: filename
+//	    description: file name
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2123,12 +2126,12 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers count_readmarkers
 // Gets read markers according to a filter
 //
-// parameters:
-//   - name: allocation_id
-//     description: count read markers for this allocation
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation_id
+//	    description: count read markers for this allocation
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2171,27 +2174,27 @@ type readMarkersCount struct {
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers readmarkers
 // Gets read markers according to a filter
 //
-// parameters:
-//   - name: allocation_id
-//     description: filter read markers by this allocation
-//     in: query
-//     type: string
-//   - name: auth_ticket
-//     description: filter in only read markers using auth thicket
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation_id
+//	    description: filter read markers by this allocation
+//	    in: query
+//	    type: string
+//	  + name: auth_ticket
+//	    description: filter in only read markers using auth thicket
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2234,15 +2237,15 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker latestreadmarker
 // Gets latest read marker for a client and blobber
 //
-// parameters:
-//   - name: client
-//     description: client
-//     in: query
-//     type: string
-//   - name: blobber
-//     description: blobber
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: client
+//	    description: client
+//	    in: query
+//	    type: string
+//	  + name: blobber
+//	    description: blobber
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2346,24 +2349,24 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations allocations
 // Gets a list of allocation information for allocations owned by the client
 //
-// parameters:
-//   - name: client
-//     description: owner of allocations we wish to list
-//     required: true
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: client
+//	    description: owner of allocations we wish to list
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2395,12 +2398,12 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 // getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation allocation
 // Gets allocation object
 //
-// parameters:
-//   - name: allocation
-//     description: offset
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: allocation
+//	    description: offset
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2437,24 +2440,24 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors errors
 // Gets errors returned by indicated transaction
 //
-// parameters:
-//   - name: transaction_hash
-//     description: transaction_hash
-//     required: true
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: transaction_hash
+//	    description: transaction_hash
+//	    required: true
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2493,19 +2496,19 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers writemarkers
 // Gets list of write markers satisfying filter
 //
-// parameters:
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: is_descending
-//     description: is descending
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: is_descending
+//	    description: is descending
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2534,39 +2537,39 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions transactions
 // Gets filtered list of transaction information
 //
-// parameters:
-//   - name: client_id
-//     description: restrict to transactions sent by the specified client
-//     in: query
-//     type: string
-//   - name: to_client_id
-//     description: restrict to transactions sent to a specified client
-//     in: query
-//     type: string
-//   - name: block_hash
-//     description: restrict to transactions in indicated block
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
-//   - name: block-start
-//     description: restrict to transactions in specified start block and endblock
-//     in: query
-//     type: string
-//   - name: block-end
-//     description: restrict to transactions in specified start block and endblock
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: client_id
+//	    description: restrict to transactions sent by the specified client
+//	    in: query
+//	    type: string
+//	  + name: to_client_id
+//	    description: restrict to transactions sent to a specified client
+//	    in: query
+//	    type: string
+//	  + name: block_hash
+//	    description: restrict to transactions in indicated block
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
+//	  + name: block-start
+//	    description: restrict to transactions in specified start block and endblock
+//	    in: query
+//	    type: string
+//	  + name: block-end
+//	    description: restrict to transactions in specified start block and endblock
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2659,31 +2662,31 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes transactionHashes
 // Gets filtered list of transaction hashes from file information
 //
-// parameters:
-//   - name: look-up-hash
-//     description: restrict to transactions by the specific look up hash on write marker
-//     in: query
-//     type: string
-//   - name: name
-//     description: restrict to transactions by the specific file name on write marker
-//     in: query
-//     type: string
-//   - name: content-hash
-//     description: restrict to transactions by the specific content hash on write marker
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: look-up-hash
+//	    description: restrict to transactions by the specific look up hash on write marker
+//	    in: query
+//	    type: string
+//	  + name: name
+//	    description: restrict to transactions by the specific file name on write marker
+//	    in: query
+//	    type: string
+//	  + name: content-hash
+//	    description: restrict to transactions by the specific content hash on write marker
+//	    in: query
+//	    type: string
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -2825,19 +2828,19 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers getblobbers
 // Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity).
 //
-// parameters:
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: offset
+//	    description: offset
+//	    in: query
+//	    type: string
+//	  + name: limit
+//	    description: limit
+//	    in: query
+//	    type: string
+//	  + name: sort
+//	    description: desc or asc
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3068,12 +3071,12 @@ func (srh *StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Re
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber getBlobber
 // Get blobber information
 //
-// parameters:
-//   - name: blobber_id
-//     description: blobber for which to return information
-//     required: true
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: blobber_id
+//	    description: blobber for which to return information
+//	    required: true
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3106,22 +3109,22 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 // Get market data storage cost info between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3169,22 +3172,22 @@ func (srh *StorageRestHandler) getDataStorageCost(w http.ResponseWriter, r *http
 // Get storage data daily allocations between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3232,22 +3235,22 @@ func (srh *StorageRestHandler) getDataDailyAllocations(w http.ResponseWriter, r 
 // Get storage data average read/write price between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3295,22 +3298,22 @@ func (srh *StorageRestHandler) getAverageReadWritePrice(w http.ResponseWriter, r
 // Get market data total staked between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3358,22 +3361,22 @@ func (srh *StorageRestHandler) getTotalStaked(w http.ResponseWriter, r *http.Req
 // Get network data quality score between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3419,22 +3422,22 @@ func (srh *StorageRestHandler) getNetworkDataQuality(w http.ResponseWriter, r *h
 // Get market data zcn supply between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3482,22 +3485,22 @@ func (srh *StorageRestHandler) getMarketZCNSupply(w http.ResponseWriter, r *http
 // Get market data allocated storage between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3545,22 +3548,22 @@ func (srh *StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *htt
 // Get market data cloud growth data between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3608,22 +3611,22 @@ func (srh *StorageRestHandler) getCloudGrowthData(w http.ResponseWriter, r *http
 // Get total locked tokens historical data between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3671,22 +3674,22 @@ func (srh *StorageRestHandler) getTotalTokenLocked(w http.ResponseWriter, r *htt
 // Get historic market data capitalization between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
@@ -3733,22 +3736,23 @@ func (srh *StorageRestHandler) getDataCapitalization(w http.ResponseWriter, r *h
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-utilization data-utilization
 // Get historic market data utilization between from and to interval
 // returns array of 100 datapoints for any specified interval
-// parameters:
-//   - name: from
-//     description: from date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: to
-//     description: to date timestamp
-//     required: false
-//     in: query
-//     type: string
-//   - name: data-points
-//     description: total data points in result
-//     required: false
-//     in: query
-//     type: string
+//
+//	parameters:
+//	  + name: from
+//	    description: from date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: to
+//	    description: to date timestamp
+//	    required: false
+//	    in: query
+//	    type: string
+//	  + name: data-points
+//	    description: total data points in result
+//	    required: false
+//	    in: query
+//	    type: string
 //
 // responses:
 //
