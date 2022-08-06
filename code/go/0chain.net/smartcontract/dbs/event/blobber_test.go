@@ -136,7 +136,7 @@ func TestBlobbers(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash",
 		Type:        int(TypeSmartContract),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Tag:         int(TagAddBlobber),
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
@@ -205,7 +205,7 @@ func TestBlobbers(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
 		Type:        int(TypeSmartContract),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Tag:         int(TagOverwriteBlobber),
 		Data:        string(data),
 	}
 	eventDb.AddEvents(context.TODO(), []Event{eventOverwrite})
