@@ -207,7 +207,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 			}
 		}
 
-		if c.ThresholdByStake() > 0 && verifiersStake < uint64(c.ThresholdByStake()) {
+		if verifiersStake < uint64(c.ThresholdByStake()) {
 			logging.Logger.Info("not reached notarization - stake < threshold stake",
 				zap.Int64("mb_sr", mb.StartingRound),
 				zap.Uint64("verify stake", verifiersStake),
