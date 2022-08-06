@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -573,7 +572,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
-		return errors.New("can't get related challenge pool")
+		return fmt.Errorf("can't get related challenge pool: %v", err)
 	}
 
 	var move currency.Coin
