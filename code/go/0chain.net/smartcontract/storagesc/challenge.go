@@ -561,7 +561,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("verify_challenge_error", err.Error())
 		}
 
-		emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
+		emitUpdateChallengeResponse(challenge.ID, challenge.Responded, true, balances)
 		emitUpdateBlobberChallengeStats(challenge.BlobberID, true, balances)
 
 		err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
@@ -627,7 +627,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		blobAlloc.Stats.FailedChallenges++
 		blobAlloc.Stats.OpenChallenges--
 
-		emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
+		emitUpdateChallengeResponse(challenge.ID, challenge.Responded, false, balances)
 		emitUpdateBlobberChallengeStats(challenge.BlobberID, false, balances)
 
 		if err := allocChallenges.Save(balances, sc.ID); err != nil {

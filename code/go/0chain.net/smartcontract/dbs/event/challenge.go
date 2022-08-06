@@ -21,6 +21,7 @@ type Challenge struct {
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
 	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
+	Passed         bool             `json:"passed"`
 }
 
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {

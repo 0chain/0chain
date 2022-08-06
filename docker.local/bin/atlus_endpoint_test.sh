@@ -29,7 +29,8 @@ curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422
 echo -e "\nblobber-inactive-rounds"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-inactive-rounds?data-points=17&id='$BLOBBERID
 
-
+echo
+echo gobal endpoints
 
 echo -e "\ndata-storage-cost"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-storage-cost?data-points=17'
@@ -49,7 +50,7 @@ echo -e "\ncloud-growth"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/cloud-growth?data-points=17'
 echo -e "\ntotal-locked"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-locked?data-points=17'
-echo -e "\ndata-quality"
+echo -e "\ndata-capitalization"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-capitalization?data-points=17'
 echo -e "\ndata-utilization"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-utilization?data-points=17'

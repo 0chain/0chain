@@ -535,13 +535,13 @@ func BenchmarkRestTests(
 				Endpoint: srh.getDataDailyAllocations,
 			},
 			{
-				FuncName: "average-rw-price",
+				FuncName: "graph-average-write-price",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.getAverageReadWritePrice,
+				Endpoint: srh.getGraphAverageWritePrice,
 			},
 			{
 				FuncName: "total-staked",

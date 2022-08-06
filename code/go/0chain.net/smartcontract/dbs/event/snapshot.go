@@ -22,23 +22,26 @@ import (
 
 // swagger:model Snapshot
 type Snapshot struct {
-	Round                int64 `gorm:"primaryKey;autoIncrement:false" json:"round"`
+	Round int64 `gorm:"primaryKey;autoIncrement:false" json:"round"`
+
 	TotalMint            int64 `json:"total_mint"`
 	StorageCost          int64 //486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
 	ActiveAllocatedDelta int64 //496 SUM total amount of new allocation storage in a period (number of allocations active)
-	AverageRWPrice       int64 //494 AVG it's the price from the terms and triggered with their updates //???
-	TotalStaked          int64 //485 SUM All providers all pools
-	SuccessfulChallenges int64 //493 SUM percentage of challenges failed by a particular blobber
-	FailedChallenges     int64 //493 SUM percentage of challenges failed by a particular blobber
 	ZCNSupply            int64 //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
-	AllocatedStorage     int64 //490 SUM clients have locked up storage by purchasing allocations (new + previous + update -sub fin+cancel or reduceed)
-	MaxCapacityStorage   int64 //491 SUM all storage from blobber settings
-	StakedStorage        int64 //491 SUM staked capacity by delegates
-	UsedStorage          int64 //491 SUM this is the actual usage or data that is in the server - write markers (triggers challenge pool / the price).(bytes written used capacity)
 	TotalValueLocked     int64 //487 SUM Total value locked = Total staked ZCN * Price per ZCN (across all pools)
 	ClientLocks          int64 //487 SUM How many clients locked in (write/read + challenge)  pools
 	Capitalization       int64 //489 SUM Token price * minted
 	DataUtilization      int64 //492 SUM amount saved across all allocations
+
+	// updated from blobber snapshot aggregate table
+	AverageWritePrice    int64 //*494 AVG it's the price from the terms and triggered with their updates //???
+	TotalStaked          int64 //*485 SUM All providers all pools
+	SuccessfulChallenges int64 //*493 SUM percentage of challenges failed by a particular blobber
+	TotalChallenges      int64 //*493 SUM percentage of challenges failed by a particular blobber
+	AllocatedStorage     int64 //*490 SUM clients have locked up storage by purchasing allocations (new + previous + update -sub fin+cancel or reduceed)
+	MaxCapacityStorage   int64 //*491 SUM all storage from blobber settings
+	StakedStorage        int64 //*491 SUM staked capacity by delegates
+	UsedStorage          int64 //*491 SUM this is the actual usage or data that is in the server - write markers (triggers challenge pool / the price).(bytes written used capacity)
 }
 
 type FieldType int
@@ -83,10 +86,10 @@ func (edb *EventDb) GetDailyAllocations(from, to time.Time, dataPoints uint16) (
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) GetDataReadWritePrice(from, to time.Time, dataPoints uint16) ([]float64, error) {
+func (edb *EventDb) GetDataWritePrice(from, to time.Time, dataPoints uint16) ([]float64, error) {
 	var res []float64
 	//494 AVG it's the price from the terms and triggered with their updates
-	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "avg(average_rw_price)", dataPoints)
+	query := graphDataPointsGeneratorQuery(from.UnixNano(), to.UnixNano(), "avg(average_write_price)", dataPoints)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
@@ -103,7 +106,7 @@ func (edb *EventDb) GetNetworkQualityScores(from, to time.Time, dataPoints uint1
 	query := graphDataPointsGeneratorQuery(
 		from.UnixNano(),
 		to.UnixNano(),
-		"(((sum(successful_challenges)/(sum(failed_challenges) + sum(successful_challenges))) * 100)::INT)",
+		"( (((sum(successful_challenges)/(sum(total_challenges)+1))*100)::INT)",
 		dataPoints,
 	)
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
@@ -152,25 +155,20 @@ func (edb *EventDb) GetDataUtilization(from, to time.Time, dataPoints uint16) ([
 	return res, edb.Store.Get().Raw(query).Scan(&res).Error
 }
 
-func (edb *EventDb) updateSnapshot(e events) {
+type globalSnapshot struct {
+	Snapshot
+	totalWritePrice currency.Coin
+	blobberCount    int
+}
+
+func newGlobalSnapshot() *globalSnapshot {
+	return &globalSnapshot{}
+}
+
+func (gs *globalSnapshot) update(e []Event) {
 	if len(e) == 0 {
 		return
 	}
-	thisRound := e[0].BlockNumber
-	var current Snapshot
-	var err error
-	if thisRound > 1 {
-		current, err = edb.getSnapshot(thisRound - 1)
-		if err != nil {
-			logging.Logger.Error("getting last snapshot", zap.Int64("last round", thisRound-1), zap.Error(err))
-		}
-		current.StorageCost = 0
-		current.ActiveAllocatedDelta = 0
-		current.AverageRWPrice = 0
-		current.SuccessfulChallenges = 0
-		current.FailedChallenges = 0
-	}
-	current.Round = thisRound
 
 	for _, event := range e {
 		switch EventTag(event.Tag) {
@@ -186,8 +184,8 @@ func (edb *EventDb) updateSnapshot(e events) {
 				logging.Logger.Error("snapshot", zap.Error(err))
 				continue
 			}
-			current.TotalMint += change
-			current.ZCNSupply += change
+			gs.TotalMint += change
+			gs.ZCNSupply += change
 		case TagBurn:
 			b, ok := fromEvent[currency.Coin](event.Data)
 			if !ok {
@@ -200,7 +198,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 				logging.Logger.Error("snapshot", zap.Error(err))
 				continue
 			}
-			current.ZCNSupply -= i2
+			gs.ZCNSupply -= i2
 		case TagLockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -208,8 +206,8 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			current.TotalStaked += d.Amount
-			current.TotalValueLocked += d.Amount
+			gs.TotalStaked += d.Amount
+			gs.TotalValueLocked += d.Amount
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -217,8 +215,8 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			current.TotalStaked -= d.Amount
-			current.TotalValueLocked -= d.Amount
+			gs.TotalStaked -= d.Amount
+			gs.TotalValueLocked -= d.Amount
 		case TagLockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -226,8 +224,8 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			current.ClientLocks += d.Amount
-			current.TotalValueLocked += d.Amount
+			gs.ClientLocks += d.Amount
+			gs.TotalValueLocked += d.Amount
 		case TagUnlockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -235,8 +233,8 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			current.ClientLocks -= d.Amount
-			current.TotalValueLocked -= d.Amount
+			gs.ClientLocks -= d.Amount
+			gs.TotalValueLocked -= d.Amount
 		case TagLockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -244,8 +242,8 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			current.ClientLocks += d.Amount
-			current.TotalValueLocked += d.Amount
+			gs.ClientLocks += d.Amount
+			gs.TotalValueLocked += d.Amount
 		case TagUnlockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -253,8 +251,8 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			current.ClientLocks -= d.Amount
-			current.TotalValueLocked -= d.Amount
+			gs.ClientLocks -= d.Amount
+			gs.TotalValueLocked -= d.Amount
 		case TagToChallengePool:
 			d, ok := fromEvent[ChallengePoolLock](event.Data)
 			if !ok {
@@ -262,7 +260,7 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			current.StorageCost += d.Amount
+			gs.StorageCost += d.Amount
 		case TagUpdateChallenge:
 			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 			if !ok {
@@ -270,14 +268,13 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			var is interface{}
-			is, ok = updates.Updates["responded"]
+			var p interface{}
+			p, ok = updates.Updates["passed"]
 			if ok {
-				b := is.(bool)
-				if b {
-					current.SuccessfulChallenges++
-				} else {
-					current.FailedChallenges++
+				gs.TotalChallenges++
+				passed := p.(bool)
+				if passed {
+					gs.SuccessfulChallenges++
 				}
 			}
 		case TagAllocValueChange:
@@ -289,8 +286,8 @@ func (edb *EventDb) updateSnapshot(e events) {
 			}
 			switch updates.FieldType {
 			case Allocated:
-				current.ActiveAllocatedDelta += updates.Delta
-				current.AllocatedStorage += updates.Delta
+				gs.ActiveAllocatedDelta += updates.Delta
+				gs.AllocatedStorage += updates.Delta
 			}
 		case TagAllocBlobberValueChange:
 			updates, ok := fromEvent[AllocationBlobberValueChanged](event.Data)
@@ -301,9 +298,9 @@ func (edb *EventDb) updateSnapshot(e events) {
 			}
 			switch updates.FieldType {
 			case MaxCapacity:
-				current.MaxCapacityStorage += updates.Delta
+				gs.MaxCapacityStorage += updates.Delta
 			case Staked:
-				current.StakedStorage += updates.Delta
+				gs.StakedStorage += updates.Delta
 			}
 		case TagAddWriteMarker:
 			updates, ok := fromEvent[WriteMarker](event.Data)
@@ -312,13 +309,9 @@ func (edb *EventDb) updateSnapshot(e events) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			current.UsedStorage += updates.Size
-			current.DataUtilization = current.AllocatedStorage / current.UsedStorage
+			gs.UsedStorage += updates.Size
+			gs.DataUtilization = gs.AllocatedStorage / gs.UsedStorage
 		}
-	}
-
-	if err := edb.addSnapshot(current); err != nil {
-		logging.Logger.Error("snapshot", zap.Error(err))
 	}
 }
 
@@ -330,6 +323,24 @@ func (edb *EventDb) getSnapshot(round int64) (Snapshot, error) {
 
 func (edb *EventDb) addSnapshot(s Snapshot) error {
 	return edb.Store.Get().Create(&s).Error
+}
+
+func (edb *EventDb) GetDifference(start, end int64, roundsPerPoint int64, row, table string) ([]int64, error) {
+	if roundsPerPoint < edb.Config().BlobberAggregatePeriod {
+		return nil, fmt.Errorf("too many points %v for aggregate period %v",
+			roundsPerPoint, edb.Config().BlobberAggregatePeriod)
+	}
+	query := fmt.Sprintf(`
+		SELECT %s - LAG(%s,1, CAST(0 AS Bigint)) OVER(ORDER BY round ASC) 
+		FROM %s
+		WHERE ( round BETWEEN %v AND %v ) 
+				AND ( Mod(round, %v) < %v )
+		ORDER BY round ASC	`,
+		row, row, table, start, end, roundsPerPoint, edb.dbConfig.BlobberAggregatePeriod-1)
+
+	var deltas []int64
+	res := edb.Store.Get().Raw(query).Scan(&deltas)
+	return deltas, res.Error
 }
 
 func graphDataPointsGeneratorQuery(from, to int64, aggQuery string, dataPoints uint16) string {
