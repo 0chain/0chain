@@ -113,7 +113,7 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 
 			list := mappedTxns[txn.GetKey()]
 			for _, fromList := range list {
-				if fromList.GetKey() == current.GetKey() {
+				if fromList.ClientID == current.ClientID {
 					if current.Nonce <= fromList.Nonce {
 						past = append(past, current)
 					}
