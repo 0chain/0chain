@@ -41,6 +41,12 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	if len(payload.Signatures) == 0 {
+		msg := fmt.Sprintf("payload doesn't contain signatures: %v, %s", err, info)
+		err = common.NewError(code, msg)
+		return
+	}
+
 	// ClientID - is a client who broadcasts this transaction to mint token
 	// ToClientID - is an address of the smart contract
 	if payload.ReceivingClientID != trans.ClientID {
