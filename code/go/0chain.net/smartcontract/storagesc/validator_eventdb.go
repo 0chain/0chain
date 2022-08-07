@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool"
 
@@ -82,4 +83,16 @@ func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 
 	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, data)
 	return nil
+}
+
+func emitStakeUpdateEvent(id, wallet string, stake currency.Coin, balances cstate.StateContextI) {
+	data := dbs.DbUpdates{
+		Id: id,
+		Updates: map[string]interface{}{
+			"delegate_wallet": wallet,
+			"stake":           stake,
+		},
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, id, data)
 }

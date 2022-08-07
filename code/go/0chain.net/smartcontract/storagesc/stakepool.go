@@ -486,6 +486,8 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
 
+	emitStakeUpdateEvent(spr.BlobberID, sp.Settings.DelegateWallet, staked, balances)
+
 	return
 }
 
@@ -572,6 +574,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		},
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
+
+	emitStakeUpdateEvent(spr.BlobberID, sp.Settings.DelegateWallet, staked, balances)
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }
