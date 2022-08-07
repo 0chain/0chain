@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -1296,38 +1297,38 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 /*PutTransaction - for validation of transactions using chain level parameters */
 func PutTransaction(c Chainer, lowerLevelFunc func(ctx context.Context, entity datastore.Entity) (interface{}, error)) datastore.JSONEntityReqResponderF {
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		conf := config.Configuration().ChainConfig
 		txn, ok := entity.(*transaction.Transaction)
 		if !ok {
 			return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 		}
 
-		if c.GetChainConfig().TxnMaxPayload() > 0 {
-			if len(txn.TransactionData) > c.GetChainConfig().TxnMaxPayload() {
-				s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", c.GetChainConfig().TxnMaxPayload())
+		if conf.TxnMaxPayload() > 0 {
+			if len(txn.TransactionData) > conf.TxnMaxPayload() {
+				s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", conf.TxnMaxPayload())
 				return nil, common.NewError("txn_exceed_max_payload", s)
 			}
 		}
 
 		// Calculate and update fee
-		if err := txn.ValidateFee(c.GetChainConfig().TxnExempt(), c.GetChainConfig().MinTxnFee()); err != nil {
+		if err := txn.ValidateFee(conf.TxnExempt(), conf.MinTxnFee()); err != nil {
 			return nil, err
 		}
 		if err := txn.ValidateNonce(); err != nil {
 			return nil, err
 		}
-		/*
-			s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, c.GetChainConfig().OwnerID())
-			if !isValid(err) {
-				return nil, err
-			}
-			nonce := int64(0)
-			if s != nil {
-				nonce = s.Nonce
-			}
-			if txn.Nonce <= nonce {
-				return nil, errors.New("invalid transaction nonce")
-			}
-		*/
+		s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, conf.OwnerID())
+		if !isValid(err) {
+			return nil, err
+		}
+		nonce := int64(0)
+		if s != nil {
+			nonce = s.Nonce
+		}
+		if txn.Nonce <= nonce {
+			return nil, errors.New("invalid transaction nonce")
+		}
+
 		return lowerLevelFunc(ctx, txn) // transaction.PutTransaction
 	}
 }
