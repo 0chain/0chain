@@ -10,6 +10,10 @@ import (
 func emitAddOrOverwriteBlobber(
 	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
 ) error {
+	staked, err := sp.stake()
+	if err != nil {
+		return err
+	}
 	data := &event.Blobber{
 		BlobberID:        sn.ID,
 		BaseURL:          sn.BaseURL,
@@ -34,7 +38,7 @@ func emitAddOrOverwriteBlobber(
 		OffersTotal:  sp.TotalOffers,
 		UnstakeTotal: sp.TotalUnStake,
 		Reward:       sp.Reward,
-		TotalStake:   sp.stake(),
+		TotalStake:   staked,
 
 		Name:        sn.Information.Name,
 		WebsiteUrl:  sn.Information.WebsiteUrl,

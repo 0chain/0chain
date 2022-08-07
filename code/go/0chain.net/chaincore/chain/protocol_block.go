@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/maths"
 	"0chain.net/core/util"
 
 	"0chain.net/chaincore/block"
@@ -180,6 +181,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		mb        = c.GetMagicBlock(round)
 		num       = mb.Miners.Size()
 		threshold = c.GetNotarizationThresholdCount(num)
+		err       error
 	)
 
 	if c.ThresholdByCount() > 0 {
@@ -196,14 +198,19 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		}
 	}
 	if c.ThresholdByStake() > 0 {
-		verifiersStake := 0
+		verifiersStake := uint64(0)
 		for _, ticket := range bvt {
-			verifiersStake += c.getMiningStake(ticket.VerifierID)
+			verifiersStake, err = maths.SafeAddUInt64(verifiersStake, c.getMiningStake(ticket.VerifierID))
+			if err != nil {
+				logging.Logger.Error("reached_notarization", zap.Error(err))
+				return false
+			}
 		}
-		if verifiersStake < c.ThresholdByStake() {
+
+		if verifiersStake < uint64(c.ThresholdByStake()) {
 			logging.Logger.Info("not reached notarization - stake < threshold stake",
 				zap.Int64("mb_sr", mb.StartingRound),
-				zap.Int("verify stake", verifiersStake),
+				zap.Uint64("verify stake", verifiersStake),
 				zap.Int("threshold", c.ThresholdByStake()),
 				zap.Int("active_miners", num),
 				zap.Int("num_signatures", len(bvt)),

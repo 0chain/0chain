@@ -139,7 +139,7 @@ type Chain struct {
 
 	BlockChain *ring.Ring `json:"-"`
 
-	minersStake map[datastore.Key]int
+	minersStake map[datastore.Key]uint64
 	stakeMutex  *sync.Mutex
 
 	nodePoolScorer node.PoolScorer
@@ -492,7 +492,7 @@ func (c *Chain) Initialize() {
 	c.stateDB = stateDB
 	//c.stateDB = util.NewMemoryNodeDB()
 	c.BlockChain = ring.New(10000)
-	c.minersStake = make(map[datastore.Key]int)
+	c.minersStake = make(map[datastore.Key]uint64)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
 	c.OnBlockAdded = func(b *block.Block) {
@@ -957,7 +957,7 @@ func (c *Chain) chainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	return false, ErrInsufficientChain
 }
 
-func (c *Chain) getMiningStake(minerID datastore.Key) int {
+func (c *Chain) getMiningStake(minerID datastore.Key) uint64 {
 	return c.minersStake[minerID]
 }
 
