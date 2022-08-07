@@ -68,18 +68,14 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 	return nil
 }
 
-func (mc *Chain) createFeeTxn(b *block.Block, bState util.MerklePatriciaTrieI) *transaction.Transaction {
+func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn := transaction.Provider().(*transaction.Transaction)
 	feeTxn.ClientID = b.MinerID
-	feeTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, bState)
 	feeTxn.ToClientID = minersc.ADDRESS
 	feeTxn.CreationDate = b.CreationDate
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
 	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
 	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
-	if _, err := feeTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
-		panic(err)
-	}
 	return feeTxn
 }
 
@@ -93,48 +89,36 @@ func (mc *Chain) getCurrentSelfNonce(minerId datastore.Key, bState util.MerklePa
 	return node.Self.GetNextNonce()
 }
 
-func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block, bState util.MerklePatriciaTrieI) *transaction.Transaction {
+func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Transaction {
 	scTxn := transaction.Provider().(*transaction.Transaction)
 	scTxn.ClientID = b.MinerID
-	scTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, bState)
 	scTxn.ToClientID = storagesc.ADDRESS
 	scTxn.CreationDate = b.CreationDate
 	scTxn.TransactionType = transaction.TxnTypeSmartContract
 	scTxn.TransactionData = fmt.Sprintf(`{"name":"commit_settings_changes","input":{"round":%v}}`, b.Round)
 	scTxn.Fee = 0
-	if _, err := scTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
-		panic(err)
-	}
 	return scTxn
 }
 
-func (mc *Chain) createBlockRewardTxn(b *block.Block, bState util.MerklePatriciaTrieI) *transaction.Transaction {
+func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
 	brTxn.ClientID = b.MinerID
-	brTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, bState)
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
 	brTxn.TransactionData = fmt.Sprintf(`{"name":"blobber_block_rewards","input":{"round":%v}}`, b.Round)
 	brTxn.Fee = 0
-	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
-		panic(err)
-	}
 	return brTxn
 }
 
-func (mc *Chain) createGenerateChallengeTxn(b *block.Block, bState util.MerklePatriciaTrieI) *transaction.Transaction {
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
 	brTxn.ClientID = b.MinerID
-	brTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, bState)
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
 	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
 	brTxn.Fee = 0
-	if _, err := brTxn.Sign(node.Self.GetSignatureScheme()); err != nil {
-		panic(err)
-	}
 	return brTxn
 }
 
@@ -994,14 +978,13 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		iterInfo.eTxns = iterInfo.eTxns[:blockSize]
 	}
 
-	if mc.ChainConfig.IsFeeEnabled() {
-		err = mc.processTxn(ctx, mc.createFeeTxn(b, blockState), b, blockState, iterInfo.clients)
-		if err != nil {
-			logging.Logger.Error("generate block (payFees)", zap.Int64("round", b.Round), zap.Error(err))
-		}
-	}
-
 	for _, biTxn := range buildInTxns {
+		biTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, blockState)
+		_, err := biTxn.Sign(node.Self.GetSignatureScheme())
+		if err != nil {
+			panic(err)
+		}
+
 		err = mc.processTxn(ctx, biTxn, b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Warn("generate block - process build-in txn failed",
@@ -1096,22 +1079,22 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block, state uti
 	txns := make([]*transaction.Transaction, 0, 4)
 
 	if mc.ChainConfig.IsFeeEnabled() {
-		txns = append(txns, mc.createFeeTxn(b, state))
+		txns = append(txns, mc.createFeeTxn(b))
 	}
 
 	if config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled") {
-		txns = append(txns, mc.createGenerateChallengeTxn(b, state))
+		txns = append(txns, mc.createGenerateChallengeTxn(b))
 	}
 
 	if mc.ChainConfig.IsBlockRewardsEnabled() &&
 		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
 		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
-		txns = append(txns, mc.createBlockRewardTxn(b, state))
+		txns = append(txns, mc.createBlockRewardTxn(b))
 	}
 
 	if mc.SmartContractSettingUpdatePeriod() != 0 &&
 		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
-		txns = append(txns, mc.storageScCommitSettingChangesTx(b, state))
+		txns = append(txns, mc.storageScCommitSettingChangesTx(b))
 	}
 
 	var cost int
