@@ -51,6 +51,21 @@ func Test_FuzzyMintTest(t *testing.T) {
 	}
 }
 
+func Test_EmptySignaturesShouldFail(t *testing.T) {
+	ctx := MakeMockStateContext()
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	payload.Signatures = nil
+
+	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	_, err = contract.Mint(transaction, payload.Encode(), ctx)
+	require.Error(t, err)
+}
+
 // TBD
 func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	ctx := MakeMockStateContext()
