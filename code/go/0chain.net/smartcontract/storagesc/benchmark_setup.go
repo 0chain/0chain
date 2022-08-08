@@ -463,11 +463,11 @@ func AddMockBlobbers(
 }
 
 func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
-	var mockChallengesPassed = viper.GetUint64(sc.EventDbBlobberAggregatePeriod)
-	var mockChallengesCompleted = viper.GetUint64(sc.EventDbBlobberAggregatePeriod) + 1
+	var mockChallengesPassed = viper.GetUint64(sc.EventDbAggregatePeriod)
+	var mockChallengesCompleted = viper.GetUint64(sc.EventDbAggregatePeriod) + 1
 	const mockInactiveRounds = 17
 	var aggregates []event.BlobberAggregate
-	for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbBlobberAggregatePeriod) {
+	for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
 		aggregate := event.BlobberAggregate{
 			Round:               int64(i),
 			BlobberID:           blobber.BlobberID,
@@ -493,7 +493,7 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 
 func AddMockSnapshots(edb *event.EventDb) {
 	var snapshots []event.Snapshot
-	for i := 1; i < viper.GetInt(sc.NumBlocks); i++ {
+	for i := 1; i < viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
 		snapshot := event.Snapshot{
 			Round:                int64(i),
 			TotalMint:            int64(i + 10),

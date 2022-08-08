@@ -194,10 +194,10 @@ type DbAccess struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
 
-	MaxIdleConns           int           `json:"max_idle_conns"`
-	MaxOpenConns           int           `json:"max_open_conns"`
-	ConnMaxLifetime        time.Duration `json:"conn_max_lifetime"`
-	BlobberAggregatePeriod int64         `json:"blobber_aggregate_period"`
+	MaxIdleConns    int           `json:"max_idle_conns"`
+	MaxOpenConns    int           `json:"max_open_conns"`
+	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
+	AggregatePeriod int64         `json:"aggregate_period"`
 }
 
 // HealthCheckCycleScan -

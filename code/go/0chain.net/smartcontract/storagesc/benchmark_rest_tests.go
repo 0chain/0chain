@@ -575,7 +575,7 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
+					"data-points": "17",
 				},
 				Endpoint: srh.getAllocatedStorage,
 			},

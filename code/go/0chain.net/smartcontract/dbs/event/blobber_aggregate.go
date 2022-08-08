@@ -145,9 +145,9 @@ func (edb *EventDb) GetAggregateData(
 }
 
 func (edb *EventDb) GetDifferenceId(start, end int64, roundsPerPoint int64, row, table, bloberId string) ([]int64, error) {
-	if roundsPerPoint < edb.Config().BlobberAggregatePeriod {
+	if roundsPerPoint < edb.Config().AggregatePeriod {
 		return nil, fmt.Errorf("too many points %v for aggregate period %v",
-			roundsPerPoint, edb.Config().BlobberAggregatePeriod)
+			roundsPerPoint, edb.Config().AggregatePeriod)
 	}
 	query := fmt.Sprintf(`
 		SELECT %s - LAG(%s,1, CAST(0 AS Bigint)) OVER(ORDER BY round ASC) 
@@ -156,7 +156,7 @@ func (edb *EventDb) GetDifferenceId(start, end int64, roundsPerPoint int64, row,
 				AND ( Mod(round, %v) < %v )
 		        AND ( blobber_id = '%v' )
 		ORDER BY round ASC	`,
-		row, row, table, start, end, roundsPerPoint, edb.dbConfig.BlobberAggregatePeriod-1, bloberId)
+		row, row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1, bloberId)
 
 	var deltas []int64
 	res := edb.Store.Get().Raw(query).Scan(&deltas)

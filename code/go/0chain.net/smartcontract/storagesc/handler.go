@@ -303,7 +303,10 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 		return 0, 0, 0, common.NewErrInternal("there must be at least one interval")
 	}
 
-	if edb.Config().BlobberAggregatePeriod == 0 {
+	// make end - start an even multiple of point size
+	start = end - int64(points)*roundsPerPoint
+
+	if edb.Config().AggregatePeriod == 0 {
 		return 0, 0, 0, common.NewErrInternal("blobber aggregate period zero")
 	}
 	return start, end, roundsPerPoint, nil
