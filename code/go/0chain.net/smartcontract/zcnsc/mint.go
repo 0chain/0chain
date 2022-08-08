@@ -53,6 +53,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		msg := fmt.Sprintf("transaction made from different account who made burn,  Oririnal: %s, Current: %s",
 			payload.ReceivingClientID, trans.ClientID)
 		err = common.NewError(code, msg)
+		return
 	}
 
 	// check mint amount
