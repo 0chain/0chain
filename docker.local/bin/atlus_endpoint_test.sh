@@ -4,29 +4,29 @@ BLOBBERID=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
 echo
 echo blobber $BLOBBERID
 echo -e "\naverges"
-echo -e "\nblobber-average-write-price"
+echo -e "\ngraph-blobber-average-write-price"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-write-price?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-average-capacity"
+echo -e "\ngraph-blobber-average-capacity"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-capacity?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-average-allocated"
+echo -e "\ngraph-blobber-average-allocated"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-allocated?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-average-saved-data"
+echo -e "\ngraph-blobber-average-saved-data"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-saved-data?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-average-offers-total"
+echo -e "\ngraph-blobber-average-offers-total"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-offers-total?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-average-unstake-total"
+echo -e "\ngraph-blobber-average-unstake-total"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-unstake-total?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-average-total-stake"
+echo -e "\ngraph-blobber-average-total-stake"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-total-stake?data-points=17&id='$BLOBBERID
 
 ech -e "\ndifferences"
-echo -e "\nblobber-service-charge"
+echo -e "\ngraph-blobber-service-charge"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-service-charge?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-challenges-passed"
+echo -e "\ngraph-blobber-challenges-passed"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-passed?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-challenges-completed"
+echo -e "\ngraph-blobber-challenges-completed"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-completed?data-points=17&id='$BLOBBERID
-echo -e "\nblobber-inactive-rounds"
+echo -e "\ngraph-blobber-inactive-rounds"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-inactive-rounds?data-points=17&id='$BLOBBERID
 
 echo -e  "\ngobal endpoints"

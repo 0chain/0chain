@@ -118,8 +118,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 
 		// global historic total metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-allocated-storage", srh.graphAllocatedStorage),
-		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage),      // same as data utilisation?
-		rest.MakeEndpoint(storage+"/graph-total-locked", srh.graphTotalTokenLocked), // todo
+		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage),            // same as data utilisation?
+		rest.MakeEndpoint(storage+"/graph-total-total-locked", srh.graphTotalTokenLocked), // todo
 		// use graph-total-minted for capitalisation. exchange rate not part of 0chain
 		rest.MakeEndpoint(storage+"/graph-total-minted", srh.graphTotalMinted), // todo implement edb mint support
 
@@ -434,7 +434,7 @@ func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-service-charge blobber-service-charge
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-service-charge graph-blobber-service-charge
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
@@ -550,7 +550,7 @@ func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-saved-data graph-blobber-saved-data
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-offers-total graph-blobber-offers-total
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
@@ -3300,7 +3300,7 @@ func (srh *StorageRestHandler) graphWritePrice(w http.ResponseWriter, r *http.Re
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-graph-staked total-staked
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-staked graph-total-staked
 // Get market data total staked between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3354,7 +3354,7 @@ func (srh *StorageRestHandler) graphTotalStaked(w http.ResponseWriter, r *http.R
 
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/network-data-quality network-data-quality
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-network-data-quality graph-network-data-quality
 // Get network data quality score between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3468,7 +3468,7 @@ func (srh *StorageRestHandler) graphZCNSupply(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocated-storage allocated-storage
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-allocated-storage graph-allocated-storage
 // Get market data allocated storage between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3627,7 +3627,7 @@ func (srh *StorageRestHandler) graphCloudGrowth(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-locked graph-total-locked
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-total-locked graph-total-total-locked
 // Get total locked tokens historical data between from and to interval
 // returns array of 100 datapoints for any specified interval
 //

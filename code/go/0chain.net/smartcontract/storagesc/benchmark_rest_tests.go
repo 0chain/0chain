@@ -458,16 +458,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberUnstakeTotal,
 			},
 			{
-				FuncName: "graph-blobber-service-charge",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberServiceCharge,
-			},
-			{
 				FuncName: "graph-blobber-total-stake",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
@@ -476,6 +466,17 @@ func BenchmarkRestTests(
 					"data-points": "7",
 				},
 				Endpoint: srh.graphBlobberTotalStake,
+			},
+
+			{
+				FuncName: "graph-blobber-service-charge",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.graphBlobberServiceCharge,
 			},
 			{
 				FuncName: "graph-blobber-challenges-passed",
@@ -541,7 +542,7 @@ func BenchmarkRestTests(
 			},
 
 			{
-				FuncName: "graph-write-price\"",
+				FuncName: "graph-write-price",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
@@ -615,7 +616,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphTotalStaked,
 			},
 			{
-				FuncName: "data-network-data-quality",
+				FuncName: "graph-network-data-quality",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
