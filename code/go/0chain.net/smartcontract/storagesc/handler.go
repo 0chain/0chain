@@ -73,7 +73,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
 		rest.MakeEndpoint(storage+"/block", srh.getBlock),
 		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
-		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
@@ -85,47 +84,54 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber_ids", srh.getBlobberIdsByUrls),
 		rest.MakeEndpoint(storage+"/alloc_blobbers", srh.getAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
-		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
-		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
 
-		// historical data endpoints
-		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
+		// most recent global totals
+		rest.MakeEndpoint(storage+"/total-mint", srh.getTotalMint),
+		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
+		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
+		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
+		rest.MakeEndpoint(storage+"/total-staked", srh.getTotalStaked),
+		rest.MakeEndpoint(storage+"/total-successful-challenges", srh.getTotalSuccessfulChallenges),
+		rest.MakeEndpoint(storage+"/total-total-challenges", srh.getTotalTotalChallenges),
+		rest.MakeEndpoint(storage+"/total-allocated storage", srh.getTotalAllocatedStorage),
 
 		// per blobber historic averaged metrics for graphs
-		rest.MakeEndpoint(storage+"/blobber-average-write-price", srh.getBlobberAverageWritePrice),
-		rest.MakeEndpoint(storage+"/blobber-average-capacity", srh.getAverageCapacity),
-		rest.MakeEndpoint(storage+"/blobber-average-allocated", srh.getAveargeAllocated),
-		rest.MakeEndpoint(storage+"/blobber-average-saved-data", srh.getAveargeSavedData),
-		rest.MakeEndpoint(storage+"/blobber-average-offers-total", srh.getAverageOffersTotal),
-		rest.MakeEndpoint(storage+"/blobber-average-unstake-total", srh.getAverageUnstakeTotal),
-		rest.MakeEndpoint(storage+"/blobber-average-total-stake", srh.getAverageTotalStake),
+		rest.MakeEndpoint(storage+"/graph-blobber-write-price", srh.graphBlobberWritePrice),
+		rest.MakeEndpoint(storage+"/graph-blobber-capacity", srh.graphBlobberCapacity),
+		rest.MakeEndpoint(storage+"/graph-blobber-allocated", srh.graphBlobberAllocated),
+		rest.MakeEndpoint(storage+"/graph-blobber-saved-data", srh.graphBlobberSavedData),
+		rest.MakeEndpoint(storage+"/graph-blobber-offers-total", srh.graphBlobberOffersTotal),
+		rest.MakeEndpoint(storage+"/graph-blobber-unstake-total", srh.graphBlobberUnstakeTotal),
+		rest.MakeEndpoint(storage+"/graph-blobber-total-stake", srh.graphBlobberTotalStake),
 
 		// per blobber historic difference metric for graphs
-		rest.MakeEndpoint(storage+"/blobber-service-charge", srh.getServiceCharge),
-		rest.MakeEndpoint(storage+"/blobber-challenges-passed", srh.getChallengesPassed),
-		rest.MakeEndpoint(storage+"/blobber-challenges-completed", srh.getChallengesCompleted),
-		rest.MakeEndpoint(storage+"/blobber-inactive-rounds", srh.getBlobberInactiveRounds),
+		rest.MakeEndpoint(storage+"/graph-blobber-service-charge", srh.graphBlobberServiceCharge),
+		rest.MakeEndpoint(storage+"/graph-blobber-challenges-passed", srh.graphBlobberChallengesPassed),
+		rest.MakeEndpoint(storage+"/graph-blobber-challenges-completed", srh.graphBlobberChallengesCompleted),
+		rest.MakeEndpoint(storage+"/graph-blobber-inactive-rounds", srh.graphBlobberInactiveRounds), // todo waiting on new health check Pr
 
 		//  global historic average metrics for graphs
-		rest.MakeEndpoint(storage+"/data-storage-cost", srh.getDataStorageCost),
-		rest.MakeEndpoint(storage+"/graph-average-write-price", srh.getGraphAverageWritePrice),
-		rest.MakeEndpoint(storage+"/total-staked", srh.getTotalStaked),
-		rest.MakeEndpoint(storage+"/network-data-quality", srh.getNetworkDataQuality),
+		rest.MakeEndpoint(storage+"/graph-write-price", srh.graphWritePrice),
+		// todo graphDataStorageCost: amount moved to challenge pool. Waiting for allocation and challenge pool snapshot
+		rest.MakeEndpoint(storage+"/data-storage-cost", srh.graphDataStorageCost),
+
+		// global historic total metrics for graphs
+		rest.MakeEndpoint(storage+"/graph-allocated-storage", srh.graphAllocatedStorage),
+		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage),      // same as data utilisation?
+		rest.MakeEndpoint(storage+"/graph-total-locked", srh.graphTotalTokenLocked), // todo
+		// use graph-total-minted for capitalisation. exchange rate not part of 0chain
+		rest.MakeEndpoint(storage+"/graph-total-minted", srh.graphTotalMinted), // todo implement edb mint support
 
 		// global historic difference metrics for graphs
-		rest.MakeEndpoint(storage+"/allocated-storage", srh.getAllocatedStorage),
-
-		// global historic token metrics for graphs
-		rest.MakeEndpoint(storage+"/zcn-supply", srh.getMarketZCNSupply),
-		rest.MakeEndpoint(storage+"/cloud-growth", srh.getCloudGrowthData),
-		rest.MakeEndpoint(storage+"/total-locked", srh.getTotalTokenLocked),
-		rest.MakeEndpoint(storage+"/data-capitalization", srh.getDataCapitalization),
-		rest.MakeEndpoint(storage+"/data-utilization", srh.getDataUtilization),
+		rest.MakeEndpoint(storage+"/graph-cloud-growth", srh.graphCloudGrowth),
+		rest.MakeEndpoint(storage+"/graph-total-staked", srh.graphTotalStaked),
+		rest.MakeEndpoint(storage+"/graph-network-data-quality", srh.graphNetworkDataQuality),
+		rest.MakeEndpoint(storage+"/graph-zcn-supply", srh.graphZCNSupply), // todo implement edb mint support
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-inactive-rounds blobber-inactive-rounds
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-inactive-rounds graph-blobber-inactive-rounds
 // Gets the count of challenges passed in a time range
 // returns array of 100 datapoints for any specified interval
 //
@@ -150,7 +156,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getBlobberInactiveRounds(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberInactiveRounds(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -184,7 +190,7 @@ func (srh *StorageRestHandler) getBlobberInactiveRounds(w http.ResponseWriter, r
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges-completed blobber-challenges-completed
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-completed graph-blobber-challenges-completed
 // Gets the count of challenges passed in a time range
 // returns array of 100 datapoints for any specified interval
 //
@@ -209,7 +215,7 @@ func (srh *StorageRestHandler) getBlobberInactiveRounds(w http.ResponseWriter, r
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getChallengesCompleted(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberChallengesCompleted(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -312,7 +318,7 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 	return start, end, roundsPerPoint, nil
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges-passed blobber-challenges-passed
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-passed graph-blobber-challenges-passed
 // Gets the count of challenges passed in a time range
 // returns array of 100 datapoints for any specified interval
 //
@@ -337,7 +343,7 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getChallengesPassed(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -371,7 +377,7 @@ func (srh *StorageRestHandler) getChallengesPassed(w http.ResponseWriter, r *htt
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-average-total-stake blobber-average-total-stake
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-total-stake graph-blobber-total-stake
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
@@ -396,7 +402,7 @@ func (srh *StorageRestHandler) getChallengesPassed(w http.ResponseWriter, r *htt
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -453,7 +459,7 @@ func (srh *StorageRestHandler) getAverageTotalStake(w http.ResponseWriter, r *ht
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getServiceCharge(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberServiceCharge(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -487,7 +493,7 @@ func (srh *StorageRestHandler) getServiceCharge(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-average-unstake-total blobber-average-unstake-total
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-unstake-total graph-blobber-unstake-total
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
@@ -512,7 +518,7 @@ func (srh *StorageRestHandler) getServiceCharge(w http.ResponseWriter, r *http.R
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAverageUnstakeTotal(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -544,7 +550,7 @@ func (srh *StorageRestHandler) getAverageUnstakeTotal(w http.ResponseWriter, r *
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-average-saved-data blobber-average-saved-data
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-saved-data graph-blobber-saved-data
 // Gets the average offers total
 // returns array of 100 datapoints for any specified interval
 //
@@ -569,7 +575,7 @@ func (srh *StorageRestHandler) getAverageUnstakeTotal(w http.ResponseWriter, r *
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAverageOffersTotal(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -601,7 +607,7 @@ func (srh *StorageRestHandler) getAverageOffersTotal(w http.ResponseWriter, r *h
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-average-saved-data blobber-average-saved-data
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-saved-data graph-blobber-saved-data
 // Gets the average saved data
 // returns array of 100 datapoints for any specified interval
 //
@@ -626,7 +632,7 @@ func (srh *StorageRestHandler) getAverageOffersTotal(w http.ResponseWriter, r *h
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAveargeSavedData(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -658,7 +664,7 @@ func (srh *StorageRestHandler) getAveargeSavedData(w http.ResponseWriter, r *htt
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-average-allocated blobber-average-allocated
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-allocated graph-blobber-allocated
 // Gets the average allocated storage
 // returns array of 100 datapoints for any specified interval
 //
@@ -683,7 +689,7 @@ func (srh *StorageRestHandler) getAveargeSavedData(w http.ResponseWriter, r *htt
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -715,7 +721,7 @@ func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *htt
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-average-capacity blobber-average-capacity
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-capacity graph-blobber-capacity
 // Gets the average capacity
 // returns array of 100 datapoints for any specified interval
 //
@@ -740,7 +746,7 @@ func (srh *StorageRestHandler) getAveargeAllocated(w http.ResponseWriter, r *htt
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAverageCapacity(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -772,7 +778,7 @@ func (srh *StorageRestHandler) getAverageCapacity(w http.ResponseWriter, r *http
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-average-write-price blobber-average-write-price
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-write-price graph-blobber-write-price
 // Gets the average write price
 // returns array of 100 datapoints for any specified interval
 //
@@ -797,7 +803,7 @@ func (srh *StorageRestHandler) getAverageCapacity(w http.ResponseWriter, r *http
 //  200:[]float64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getBlobberAverageWritePrice(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphBlobberWritePrice(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
@@ -830,7 +836,7 @@ func (srh *StorageRestHandler) getBlobberAverageWritePrice(w http.ResponseWriter
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_rounds_mint_total get_rounds_mint_total
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-minted total-minted
 // Gets the total amount minted between from and to dates.
 //
 // parameters:
@@ -851,44 +857,256 @@ func (srh *StorageRestHandler) getBlobberAverageWritePrice(w http.ResponseWriter
 //      type: string
 //
 // responses:
-//  200:
+//  200: int64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getRoundsTotalMint(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) getTotalMint(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	res, err := edb.GetRoundsMintTotal(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
+	global, err := edb.GetGlobal()
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
 		return
 	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"get_rounds_mint_total": res,
-	}, nil)
+	common.Respond(w, r, global.TotalMint, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-staked total-staked
+// Gets the total amount minted between from and to dates.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200: int64
+//  400:
+//  500:
+func (srh *StorageRestHandler) getTotalStaked(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	global, err := edb.GetGlobal()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, global.TotalStaked, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-blobber-capacity total-blobber-capacity
+// Gets the total amount minted between from and to dates.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200: int64
+//  400:
+//  500:
+func (srh *StorageRestHandler) getTotalBlobberCapacity(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	global, err := edb.GetGlobal()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, global.MaxCapacityStorage, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
+// Gets the total amount minted between from and to dates.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200: int64
+//  400:
+//  500:
+func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	global, err := edb.GetGlobal()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, global.AverageWritePrice, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-successful-challenges total-successful-challenges
+// Gets the total amount minted between from and to dates.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200: int64
+//  400:
+//  500:
+func (srh *StorageRestHandler) getTotalSuccessfulChallenges(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	global, err := edb.GetGlobal()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, global.SuccessfulChallenges, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-total-challenges total-total-challenges
+// Gets the total amount minted between from and to dates.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200: int64
+//  400:
+//  500:
+func (srh *StorageRestHandler) getTotalTotalChallenges(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	global, err := edb.GetGlobal()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, global.TotalChallenges, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-allocated storage total-allocated storage
+// Gets the total amount minted between from and to dates.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200: int64
+//  400:
+//  500:
+func (srh *StorageRestHandler) getTotalAllocatedStorage(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	global, err := edb.GetGlobal()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, global.AllocatedStorage, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank blobber-rank
@@ -919,50 +1137,6 @@ func (srh *StorageRestHandler) getBlobberRank(w http.ResponseWriter, r *http.Req
 	}
 	common.Respond(w, r, rest.Int64Map{
 		"blobber-rank": rank,
-	}, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
-// Gets the total blobber capacity across all blobbers. Note that this is not staked capacity.
-//
-// responses:
-//  200: Int64Map
-//  400:
-func (srh *StorageRestHandler) getTotalBlobberCapacity(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	totalCapacity, err := edb.BlobberTotalCapacity()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
-		return
-	}
-	common.Respond(w, r, rest.Int64Map{
-		"total-blobber-capacity": totalCapacity,
-	}, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
-// Gets the average write price across all blobbers
-//
-// responses:
-//  200: Int64Map
-//  400:
-func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	averageWritePrice, err := edb.BlobberAverageWritePrice()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
-		return
-	}
-	common.Respond(w, r, rest.Int64Map{
-		"average-write-price": int64(averageWritePrice),
 	}, nil)
 }
 
@@ -1583,14 +1757,13 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	total, err := edb.TotalUsedData()
+
+	global, err := edb.GetGlobal()
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
 		return
 	}
-	common.Respond(w, r, rest.Int64Map{
-		"total-stored-data": total,
-	}, nil)
+	common.Respond(w, r, global.UsedStorage, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
@@ -3021,7 +3194,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, sn, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-storage-cost data-storage-cost
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-data-storage-cost graph-data-storage-cost
 // Get market data storage cost info between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3046,44 +3219,35 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getDataStorageCost(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) graphDataStorageCost(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	storageCosts, err := edb.GetDataStorageCosts(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting data storage costs failed, Error: "+err.Error()))
+		common.Respond(w, r, nil, err)
 		return
 	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"data": storageCosts,
-	}, nil)
+	data, err := edb.GetAverage(
+		start, end, roundsPerPoint, "storage_cost", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-average-write-price graph-average-rw-price
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-write-price graph-write-price
 // Get storage data average read/write price between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3108,44 +3272,35 @@ func (srh *StorageRestHandler) getDataStorageCost(w http.ResponseWriter, r *http
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getGraphAverageWritePrice(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) graphWritePrice(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	dailyPrices, err := edb.GetDataWritePrice(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting average data read/write price failed, Error: "+err.Error()))
+		common.Respond(w, r, nil, err)
 		return
 	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"data": dailyPrices,
-	}, nil)
+	data, err := edb.GetAverage(
+		start, end, roundsPerPoint, "average_write_price", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-staked total-staked
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-graph-staked total-staked
 // Get market data total staked between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3170,41 +3325,33 @@ func (srh *StorageRestHandler) getGraphAverageWritePrice(w http.ResponseWriter, 
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getTotalStaked(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) graphTotalStaked(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	data, err := edb.GetTotalStaked(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting total data staked failed, Error: "+err.Error()))
+		common.Respond(w, r, nil, err)
 		return
 	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"data": data,
-	}, nil)
+	data, err := edb.GetDifference(
+		start, end, roundsPerPoint, "total_staked", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
+
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/network-data-quality network-data-quality
@@ -3232,42 +3379,43 @@ func (srh *StorageRestHandler) getTotalStaked(w http.ResponseWriter, r *http.Req
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getNetworkDataQuality(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) graphNetworkDataQuality(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	scores, err := edb.GetNetworkQualityScores(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting network data quality score failed, Error: "+err.Error()))
+		common.Respond(w, r, nil, err)
 		return
 	}
-	common.Respond(w, r, scores, nil)
+	successful, err := edb.GetDifference(
+		start, end, roundsPerPoint, "successful_challenges", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+	total, err := edb.GetDifference(
+		start, end, roundsPerPoint, "total_challenges", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+	data := struct{ sucessful, total []int64 }{sucessful: successful, total: total}
+
+	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/zcn-supply zcn-supply
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-zcn-supply graph-zcn-supply
 // Get market data zcn supply between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3292,41 +3440,32 @@ func (srh *StorageRestHandler) getNetworkDataQuality(w http.ResponseWriter, r *h
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getMarketZCNSupply(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) graphZCNSupply(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	supplyRecord, err := edb.GetZCNSupply(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting network zcn supply failed, Error: "+err.Error()))
+		common.Respond(w, r, nil, err)
 		return
 	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"data": supplyRecord,
-	}, nil)
+	data, err := edb.GetDifference(
+		start, end, roundsPerPoint, "zcn_supply", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocated-storage allocated-storage
@@ -3354,7 +3493,7 @@ func (srh *StorageRestHandler) getMarketZCNSupply(w http.ResponseWriter, r *http
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphAllocatedStorage(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -3371,11 +3510,10 @@ func (srh *StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *htt
 		common.Respond(w, r, nil, err)
 		return
 	}
-	data, err := edb.GetDifference(
+	data, err := edb.GetTotal(
 		start, end, roundsPerPoint, "allocated_storage", "snapshots",
 	)
 	if err != nil {
-		logging.Logger.Info("piers getAllocatedStorage", zap.Error(err))
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
 		return
 	}
@@ -3383,7 +3521,60 @@ func (srh *StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *htt
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/cloud-growth cloud-growth
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-used-storage graph-used-storage
+// Get market data allocated storage between from and to interval
+// returns array of 100 datapoints for any specified interval
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh *StorageRestHandler) graphUsedStorage(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	data, err := edb.GetTotal(
+		start, end, roundsPerPoint, "used_storage", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-cloud-growth graph-cloud-growth
 // Get market data cloud growth data between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3408,44 +3599,35 @@ func (srh *StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *htt
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getCloudGrowthData(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) graphCloudGrowth(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	res, err := edb.GetCloudGrowthData(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting network cloud growth data failed, Error: "+err.Error()))
+		common.Respond(w, r, nil, err)
 		return
 	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"data": res,
-	}, nil)
+	data, err := edb.GetDifference(
+		start, end, roundsPerPoint, "allocated_storage", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-locked total-locked
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-locked graph-total-locked
 // Get total locked tokens historical data between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3470,44 +3652,35 @@ func (srh *StorageRestHandler) getCloudGrowthData(w http.ResponseWriter, r *http
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getTotalTokenLocked(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) graphTotalTokenLocked(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	res, err := edb.GetTotalLocked(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting total token locked data failed, Error: "+err.Error()))
+		common.Respond(w, r, nil, err)
 		return
 	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"data": res,
-	}, nil)
+	data, err := edb.GetTotal(
+		start, end, roundsPerPoint, "total_value_locked", "snapshots",
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-capitalization data-capitalization
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-minted graph-total-minted
 // Get historic market data capitalization between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3532,100 +3705,30 @@ func (srh *StorageRestHandler) getTotalTokenLocked(w http.ResponseWriter, r *htt
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) getDataCapitalization(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
-	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
+func (srh *StorageRestHandler) graphTotalMinted(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	res, err := edb.GetDataCap(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting data capitaliztion failed, Error: "+err.Error()))
-		return
-	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"data": res,
-	}, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/data-utilization data-utilization
-// Get historic market data utilization between from and to interval
-// returns array of 100 datapoints for any specified interval
-// parameters:
-//    + name: from
-//      description: from date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: to
-//      description: to date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: data-points
-//      description: total data points in result
-//      required: false
-//      in: query
-//      type: string
-//
-// responses:
-//  200:
-//  400:
-//  500:
-func (srh *StorageRestHandler) getDataUtilization(w http.ResponseWriter, r *http.Request) {
-	var (
-		fromStr       = r.URL.Query().Get("from")
-		toStr         = r.URL.Query().Get("to")
-		dataPointsStr = r.URL.Query().Get("data-points")
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
 	)
-
-	from, err := strconv.ParseInt(fromStr, 10, 64)
 	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
+		common.Respond(w, r, nil, err)
+		return
 	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
+	data, err := edb.GetTotal(
+		start, end, roundsPerPoint, "total_mint", "snapshots",
+	)
 	if err != nil {
-		to = time.Now().Unix()
-	}
-
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
 		return
 	}
 
-	res, err := edb.GetDataUtilization(time.Unix(from, 0), time.Unix(to, 0), uint16(dataPoints))
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
-		return
-	}
-	common.Respond(w, r, rest.InterfaceMap{
-		"data": res,
-	}, nil)
+	common.Respond(w, r, data, nil)
 }

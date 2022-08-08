@@ -77,7 +77,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 
-		gs.totalWritePrice += aggregate.WritePrice
+		gs.totalWritePricePeriod += aggregate.WritePrice
 
 		// update global snapshot object
 		ts, err := aggregate.TotalStake.Int64()
@@ -116,7 +116,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 	if gs.blobberCount == 0 {
 		return
 	}
-	twp, err := gs.totalWritePrice.Int64()
+	twp, err := gs.totalWritePricePeriod.Int64()
 	if err != nil {
 		logging.Logger.Error("converting write price to coin", zap.Error(err))
 		return

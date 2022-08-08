@@ -499,7 +499,7 @@ func AddMockSnapshots(edb *event.EventDb) {
 			TotalMint:            int64(i + 10),
 			StorageCost:          int64(currency.Coin(i + (1 * 1e10))),
 			ActiveAllocatedDelta: int64(i),
-			AverageWritePrice:    int64(currency.Coin(i * (0.01 * 1e10))),
+			AverageWritePrice:    int64(getMockBlobberTerms().WritePrice),
 			TotalStaked:          int64(currency.Coin(i * (0.001 * 1e10))),
 			SuccessfulChallenges: int64(i-1) / 2,
 			TotalChallenges:      int64(i - 1),

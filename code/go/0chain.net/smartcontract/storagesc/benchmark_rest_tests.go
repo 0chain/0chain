@@ -405,7 +405,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getBlobberAverageWritePrice,
+				Endpoint: srh.graphBlobberWritePrice,
 			},
 			{
 				FuncName: "blobber-average-capacity",
@@ -425,7 +425,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getAveargeAllocated,
+				Endpoint: srh.graphBlobberAllocated,
 			},
 			{
 				FuncName: "blobber-average-saved-data",
@@ -435,7 +435,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getAveargeSavedData,
+				Endpoint: srh.graphBlobberSavedData,
 			},
 			{
 				FuncName: "blobber-average-offers-total",
@@ -445,7 +445,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getAverageOffersTotal,
+				Endpoint: srh.graphBlobberOffersTotal,
 			},
 			{
 				FuncName: "blobber-average-unstake-total",
@@ -455,7 +455,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getAverageUnstakeTotal,
+				Endpoint: srh.graphBlobberUnstakeTotal,
 			},
 			{
 				FuncName: "blobber-service-charge",
@@ -465,7 +465,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getServiceCharge,
+				Endpoint: srh.graphBlobberServiceCharge,
 			},
 			{
 				FuncName: "blobber-average-total-stake",
@@ -475,7 +475,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getAverageTotalStake,
+				Endpoint: srh.graphBlobberTotalStake,
 			},
 			{
 				FuncName: "blobber-challenges-passed",
@@ -505,7 +505,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getBlobberInactiveRounds,
+				Endpoint: srh.graphBlobberInactiveRounds,
 			},
 			{
 				FuncName: "total-mint",
@@ -514,7 +514,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.getRoundsTotalMint,
+				Endpoint: srh.getTotalMint,
 			},
 			{
 				FuncName: "data-storage-cost",
@@ -539,9 +539,9 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
+					"data-points": "17",
 				},
-				Endpoint: srh.getGraphAverageWritePrice,
+				Endpoint: srh.graphWritePrice,
 			},
 			{
 				FuncName: "total-staked",
@@ -559,7 +559,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.getNetworkDataQuality,
+				Endpoint: srh.graphNetworkDataQuality,
 			},
 			{
 				FuncName: "zcn-supply",
@@ -568,7 +568,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.getMarketZCNSupply,
+				Endpoint: srh.graphZCNSupply,
 			},
 			{
 				FuncName: "allocated-storage",
@@ -577,7 +577,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "17",
 				},
-				Endpoint: srh.getAllocatedStorage,
+				Endpoint: srh.graphAllocatedStorage,
 			},
 			{
 				FuncName: "cloud-growth",
@@ -586,7 +586,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.getCloudGrowthData,
+				Endpoint: srh.graphCloudGrowth,
 			},
 			{
 				FuncName: "total-locked",
@@ -595,7 +595,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.getTotalTokenLocked,
+				Endpoint: srh.graphTotalTokenLocked,
 			},
 			{
 				FuncName: "data-capitalization",
@@ -604,7 +604,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.getDataCapitalization,
+				Endpoint: srh.graphTotalMinted,
 			},
 			{
 				FuncName: "data-utilization",
