@@ -190,6 +190,7 @@ func setUpMpt(
 	timer = time.Now()
 
 	bk := &block.Block{}
+	bk.Round = viper.GetInt64(benchmark.NumBlocks)
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 

@@ -92,7 +92,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		// historical data endpoints
 		rest.MakeEndpoint(storage+"/total-mint", srh.getRoundsTotalMint),
 
-		//rest.MakeEndpoint(storage+"/blobber-aggregate", srh.getBlobberAggregate),
+		// per blobber historic averaged metrics for graphs
 		rest.MakeEndpoint(storage+"/blobber-average-write-price", srh.getBlobberAverageWritePrice),
 		rest.MakeEndpoint(storage+"/blobber-average-capacity", srh.getAverageCapacity),
 		rest.MakeEndpoint(storage+"/blobber-average-allocated", srh.getAveargeAllocated),
@@ -101,18 +101,22 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber-average-unstake-total", srh.getAverageUnstakeTotal),
 		rest.MakeEndpoint(storage+"/blobber-average-total-stake", srh.getAverageTotalStake),
 
+		// per blobber historic difference metric for graphs
 		rest.MakeEndpoint(storage+"/blobber-service-charge", srh.getServiceCharge),
 		rest.MakeEndpoint(storage+"/blobber-challenges-passed", srh.getChallengesPassed),
 		rest.MakeEndpoint(storage+"/blobber-challenges-completed", srh.getChallengesCompleted),
 		rest.MakeEndpoint(storage+"/blobber-inactive-rounds", srh.getBlobberInactiveRounds),
 
+		//  global historic average metrics for graphs
 		rest.MakeEndpoint(storage+"/data-storage-cost", srh.getDataStorageCost),
 		rest.MakeEndpoint(storage+"/graph-average-write-price", srh.getGraphAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-staked", srh.getTotalStaked),
 		rest.MakeEndpoint(storage+"/network-data-quality", srh.getNetworkDataQuality),
 
+		// global historic difference metrics for graphs
 		rest.MakeEndpoint(storage+"/allocated-storage", srh.getAllocatedStorage),
 
+		// global historic token metrics for graphs
 		rest.MakeEndpoint(storage+"/zcn-supply", srh.getMarketZCNSupply),
 		rest.MakeEndpoint(storage+"/cloud-growth", srh.getCloudGrowthData),
 		rest.MakeEndpoint(storage+"/total-locked", srh.getTotalTokenLocked),
@@ -295,6 +299,10 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 	}
 
 	roundsPerPoint := (end - start) / int64(points)
+	if roundsPerPoint < 1 {
+		return 0, 0, 0, common.NewErrInternal("there must be at least one interval")
+	}
+
 	if edb.Config().BlobberAggregatePeriod == 0 {
 		return 0, 0, 0, common.NewErrInternal("blobber aggregate period zero")
 	}
@@ -3344,12 +3352,6 @@ func (srh *StorageRestHandler) getMarketZCNSupply(w http.ResponseWriter, r *http
 //  400:
 //  500:
 func (srh *StorageRestHandler) getAllocatedStorage(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	if len(id) == 0 {
-		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
-		return
-	}
-
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))

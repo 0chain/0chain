@@ -326,10 +326,10 @@ func (edb *EventDb) addSnapshot(s Snapshot) error {
 }
 
 func (edb *EventDb) GetDifference(start, end int64, roundsPerPoint int64, row, table string) ([]int64, error) {
-	if roundsPerPoint < edb.Config().BlobberAggregatePeriod {
-		return nil, fmt.Errorf("too many points %v for aggregate period %v",
-			roundsPerPoint, edb.Config().BlobberAggregatePeriod)
-	}
+	//if roundsPerPoint < edb.Config().BlobberAggregatePeriod {
+	//	return nil, fmt.Errorf("too many points %v for aggregate period %v",
+	//		roundsPerPoint, edb.Config().BlobberAggregatePeriod)
+	//}
 	query := fmt.Sprintf(`
 		SELECT %s - LAG(%s,1, CAST(0 AS Bigint)) OVER(ORDER BY round ASC) 
 		FROM %s
