@@ -114,7 +114,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		//  global historic average metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-write-price", srh.graphWritePrice),
 		// todo graphDataStorageCost: amount moved to challenge pool. Waiting for allocation and challenge pool snapshot
-		rest.MakeEndpoint(storage+"/data-storage-cost", srh.graphDataStorageCost),
+		rest.MakeEndpoint(storage+"/graph-data-storage-cost", srh.graphDataStorageCost),
 
 		// global historic total metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-allocated-storage", srh.graphAllocatedStorage),

@@ -398,7 +398,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.getFreeAllocationBlobbers,
 			},
 			{
-				FuncName: "blobber-average-write-price",
+				FuncName: "graph-blobber-write-price",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
@@ -408,17 +408,17 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberWritePrice,
 			},
 			{
-				FuncName: "blobber-average-capacity",
+				FuncName: "graph-blobber-capacity",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getAverageCapacity,
+				Endpoint: srh.graphBlobberCapacity,
 			},
 			{
-				FuncName: "blobber-average-allocated",
+				FuncName: "graph-blobber-allocated",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
@@ -428,7 +428,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberAllocated,
 			},
 			{
-				FuncName: "blobber-average-saved-data",
+				FuncName: "graph-blobber-saved-data",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
@@ -438,7 +438,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberSavedData,
 			},
 			{
-				FuncName: "blobber-average-offers-total",
+				FuncName: "graph-blobber-offers-total",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
@@ -448,7 +448,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberOffersTotal,
 			},
 			{
-				FuncName: "blobber-average-unstake-total",
+				FuncName: "graph-blobber-unstake-total",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
@@ -458,7 +458,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberUnstakeTotal,
 			},
 			{
-				FuncName: "blobber-service-charge",
+				FuncName: "graph-blobber-service-charge",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
@@ -468,7 +468,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberServiceCharge,
 			},
 			{
-				FuncName: "blobber-average-total-stake",
+				FuncName: "graph-blobber-total-stake",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
@@ -478,27 +478,27 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberTotalStake,
 			},
 			{
-				FuncName: "blobber-challenges-passed",
+				FuncName: "graph-blobber-challenges-passed",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getChallengesPassed,
+				Endpoint: srh.graphBlobberChallengesPassed,
 			},
 			{
-				FuncName: "blobber-challenges-completed",
+				FuncName: "graph-blobber-challenges-completed",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "7",
 				},
-				Endpoint: srh.getChallengesCompleted,
+				Endpoint: srh.graphBlobberChallengesCompleted,
 			},
 			{
-				FuncName: "blobber-inactive-rounds",
+				FuncName: "graph-blobber-inactive-rounds",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
 					"from":        "0",
@@ -509,87 +509,76 @@ func BenchmarkRestTests(
 			},
 			{
 				FuncName: "total-mint",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
 				Endpoint: srh.getTotalMint,
 			},
 			{
-				FuncName: "data-storage-cost",
+				FuncName: "total-blobber-capacity",
+				Endpoint: srh.getTotalBlobberCapacity,
+			},
+			{
+				FuncName: "average-write-price",
+				Endpoint: srh.getAverageWritePrice,
+			},
+			{
+				FuncName: "total-stored-data",
+				Endpoint: srh.getTotalData,
+			},
+			{
+				FuncName: "total-staked",
+				Endpoint: srh.getTotalStaked,
+			},
+			{
+				FuncName: "total-successful-challenges",
+				Endpoint: srh.getTotalSuccessfulChallenges,
+			},
+			{
+				FuncName: "total-total-challenges",
+				Endpoint: srh.getTotalTotalChallenges,
+			},
+			{
+				FuncName: "total-allocated-storage",
+				Endpoint: srh.getTotalAllocatedStorage,
+			},
+
+			{
+				FuncName: "graph-write-price\"",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
-				},
-				Endpoint: srh.getDataStorageCost,
-			},
-			//{
-			//	FuncName: "daily-allocations",
-			//	Params: map[string]string{
-			//		"from":        "0",
-			//		"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-			//		"data-points": "120",
-			//	},
-			//	Endpoint: srh.getDataDailyAllocations,
-			//},
-			{
-				FuncName: "graph-average-write-price",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "17",
 				},
 				Endpoint: srh.graphWritePrice,
 			},
 			{
-				FuncName: "total-staked",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.getTotalStaked,
-			},
-			{
-				FuncName: "network-data-quality",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphNetworkDataQuality,
-			},
-			{
-				FuncName: "zcn-supply",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphZCNSupply,
-			},
-			{
-				FuncName: "allocated-storage",
+				FuncName: "graph-data-storage-cost",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "17",
 				},
-				Endpoint: srh.graphAllocatedStorage,
+				Endpoint: srh.graphDataStorageCost,
 			},
+
 			{
-				FuncName: "cloud-growth",
+				FuncName: "graph-allocated-storage",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.graphCloudGrowth,
+				Endpoint: srh.graphAllocatedStorage,
 			},
 			{
-				FuncName: "total-locked",
+				FuncName: "graph-used-storag",
+				Params: map[string]string{
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "120",
+				},
+				Endpoint: srh.graphUsedStorage,
+			},
+			{
+				FuncName: "graph-total-locked",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
@@ -598,22 +587,50 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphTotalTokenLocked,
 			},
 			{
-				FuncName: "data-capitalization",
+				FuncName: "graph-total-minted",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
+					"data-points": "17",
 				},
 				Endpoint: srh.graphTotalMinted,
 			},
+
 			{
-				FuncName: "data-utilization",
+				FuncName: "graph-cloud-growth",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.getDataUtilization,
+				Endpoint: srh.graphCloudGrowth,
+			},
+			{
+				FuncName: "graph-total-staked",
+				Params: map[string]string{
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "120",
+				},
+				Endpoint: srh.graphTotalStaked,
+			},
+			{
+				FuncName: "data-network-data-quality",
+				Params: map[string]string{
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "120",
+				},
+				Endpoint: srh.graphNetworkDataQuality,
+			},
+			{
+				FuncName: "graph-zcn-supply",
+				Params: map[string]string{
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "120",
+				},
+				Endpoint: srh.graphZCNSupply,
 			},
 		},
 		ADDRESS,

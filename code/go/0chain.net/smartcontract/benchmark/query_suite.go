@@ -64,8 +64,9 @@ func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testin
 		req.URL.RawQuery = q.Encode()
 	}
 	b.StartTimer()
-	qbt.Receiver.SetQueryStateContext(balances)
-	qbt.Endpoint(rec, req)
+	//qbt.Receiver.SetQueryStateContext(balances)
+	//qbt.Endpoint(rec, req)
+	http.DefaultServeMux.ServeHTTP(rec, req)
 
 	b.StopTimer()
 	resp := rec.Result()
