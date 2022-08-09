@@ -449,17 +449,32 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 //
 //
 // parameters:
-//    + name: start_block
+//    + name: start-block
 //      description: start block
-//      required: true
+//      required: false
 //      in: query
 //      type: string
-//    + name: end_block
+//    + name: end-block
 //      description: end block
-//      required: true
+//      required: false
 //      in: query
 //      type: string
-//    + name: client_id
+//    + name: start-date 
+//      description: start date
+//      required: false
+//      in: query
+//      type: string
+//    + name: end-date 
+//      description: end date
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points 
+//      description: number of data points in response (only works for dates)
+//      required: false
+//      in: query
+//      type: string
+//    + name: client-id
 //      description: client id
 //      required: true
 //      in: query
@@ -470,30 +485,73 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 //  400:
 func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http.Request) {
 	var (
-		startBlock, _ = strconv.Atoi(r.URL.Query().Get("start_block"))
-		endBlock, _   = strconv.Atoi(r.URL.Query().Get("end_block"))
-		clientID      = r.URL.Query().Get("client_id")
+		startBlock, _    = strconv.Atoi(r.URL.Query().Get("start-block"))
+		endBlock, _      = strconv.Atoi(r.URL.Query().Get("end-block"))
+		clientID         = r.URL.Query().Get("client-id")
+		startDateString  = r.URL.Query().Get("start-date")
+		endDateString	 = r.URL.Query().Get("end-date")
+		dataPointsString = r.URL.Query().Get("data-points") 
 	)
+
+	var dataPoints int64
+	dataPoints, err := strconv.ParseInt(dataPointsString, 10, 64)
+	if err != nil {
+		dataPoints = 1
+	}
+
 
 	query := event.RewardQuery{
 		StartBlock: startBlock,
 		EndBlock:   endBlock,
 		ClientID:   clientID,
+		DataPoints: dataPoints,
 	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	collectedReward, err := edb.GetRewardClaimedTotal(query)
-	if err != nil {
-		common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
-		return
+
+
+	if startBlock > 0 && endBlock > 0 {
+		collectedReward, err := edb.GetRewardClaimedTotalBetweenBlocks(query)
+		if err != nil {
+			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+			return
+		}
+		common.Respond(w, r, map[string][]int64{
+			"collected_reward": {collectedReward},
+		}, nil)
 	}
 
-	common.Respond(w, r, map[string]int64{
-		"collected_reward": collectedReward,
-	}, nil)
+	if startDateString != "" && endDateString != "" {
+		startDate, err := strconv.ParseInt(startDateString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start_date string to a number", err.Error()))
+			return
+		}
+
+		endDate, err := strconv.ParseInt(endDateString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end_date string to a number", err.Error()))
+			return
+		}
+
+		query.StartDate = time.Unix(startDate, 0)
+		query.EndDate = time.Unix(endDate, 0)
+		
+		rewards, err := edb.GetRewardClaimedTotalBetweenDates(query)
+		if err != nil {
+			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+			return
+		}
+
+		common.Respond(w, r, map[string]interface{}{
+			"collected_reward": rewards,
+		}, nil)
+	}
+
+	common.Respond(w, r, nil, common.NewErrInternal("can't get rewards claimed"))
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count alloc_write_marker_count
