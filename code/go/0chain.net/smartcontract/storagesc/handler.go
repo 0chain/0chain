@@ -1153,7 +1153,7 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 			common.Respond(w, r, nil, err)
 			return
 		}
-		from = common.Timestamp(int64(fromI))
+		from = common.Timestamp(fromI)
 	}
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
