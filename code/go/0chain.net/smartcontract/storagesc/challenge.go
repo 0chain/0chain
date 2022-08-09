@@ -377,7 +377,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
 	var challResp ChallengeResponse
-
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewError("verify_challenge",
@@ -395,7 +394,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err = json.Unmarshal(input, &challResp); err != nil {
 		return
 	}
-
+	logging.Logger.Info("piers verify challenge", zap.String("challenge id", challResp.ID))
 	if len(challResp.ID) == 0 ||
 		len(challResp.ValidationTickets) == 0 {
 

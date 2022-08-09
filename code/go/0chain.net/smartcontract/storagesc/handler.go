@@ -118,15 +118,15 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 
 		// global historic total metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-allocated-storage", srh.graphAllocatedStorage),
-		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage),            // same as data utilisation?
-		rest.MakeEndpoint(storage+"/graph-total-total-locked", srh.graphTotalTokenLocked), // todo
+		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage),      // same as data utilisation?
+		rest.MakeEndpoint(storage+"/graph-total-locked", srh.graphTotalTokenLocked), // todo
 		// use graph-total-minted for capitalisation. exchange rate not part of 0chain
 		rest.MakeEndpoint(storage+"/graph-total-minted", srh.graphTotalMinted), // todo implement edb mint support
 
 		// global historic difference metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-cloud-growth", srh.graphCloudGrowth),
 		rest.MakeEndpoint(storage+"/graph-total-staked", srh.graphTotalStaked),
-		rest.MakeEndpoint(storage+"/graph-network-data-quality", srh.graphNetworkDataQuality),
+		rest.MakeEndpoint(storage+"/graph-data-quality", srh.graphDataQuality),
 		rest.MakeEndpoint(storage+"/graph-zcn-supply", srh.graphZCNSupply), // todo implement edb mint support
 	}
 }
@@ -3354,7 +3354,13 @@ func (srh *StorageRestHandler) graphTotalStaked(w http.ResponseWriter, r *http.R
 
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-network-data-quality graph-network-data-quality
+// swagger:model dataQuality
+type challengeResults struct {
+	Successful []int64 `json:"successful"`
+	Total      []int64 `json:"total"`
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-data-quality graph-data-quality
 // Get network data quality score between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3376,10 +3382,10 @@ func (srh *StorageRestHandler) graphTotalStaked(w http.ResponseWriter, r *http.R
 //      type: string
 //
 // responses:
-//  200:
+//  200: challengeResults
 //  400:
 //  500:
-func (srh *StorageRestHandler) graphNetworkDataQuality(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphDataQuality(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -3410,7 +3416,7 @@ func (srh *StorageRestHandler) graphNetworkDataQuality(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
 		return
 	}
-	data := struct{ sucessful, total []int64 }{sucessful: successful, total: total}
+	data := challengeResults{Successful: successful, Total: total}
 
 	common.Respond(w, r, data, nil)
 }
@@ -3437,7 +3443,7 @@ func (srh *StorageRestHandler) graphNetworkDataQuality(w http.ResponseWriter, r 
 //      type: string
 //
 // responses:
-//  200:
+//  200: []int64
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphZCNSupply(w http.ResponseWriter, r *http.Request) {
@@ -3490,7 +3496,7 @@ func (srh *StorageRestHandler) graphZCNSupply(w http.ResponseWriter, r *http.Req
 //      type: string
 //
 // responses:
-//  200:
+//  200: []int64
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphAllocatedStorage(w http.ResponseWriter, r *http.Request) {
@@ -3543,7 +3549,7 @@ func (srh *StorageRestHandler) graphAllocatedStorage(w http.ResponseWriter, r *h
 //      type: string
 //
 // responses:
-//  200:
+//  200: []int64
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphUsedStorage(w http.ResponseWriter, r *http.Request) {
@@ -3627,7 +3633,7 @@ func (srh *StorageRestHandler) graphCloudGrowth(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-total-locked graph-total-total-locked
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-locked graph-total-locked
 // Get total locked tokens historical data between from and to interval
 // returns array of 100 datapoints for any specified interval
 //

@@ -30,7 +30,7 @@ echo -e "\ngraph-blobber-inactive-rounds"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-inactive-rounds?data-points=17&id='$BLOBBERID
 
 echo -e  "\ngobal endpoints"
-echo -e "\nsingale point"
+echo -e "\nsingle point"
 echo -e "\ntotal-mint"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-mint'
 echo -e "\ntotal-blobber-capacity"
@@ -43,8 +43,8 @@ echo -e "\ntotal-successful-challenges"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-successful-challenges'
 echo -e "\ntotal-total-challenges"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-total-challenges'
-echo -e "\ntotal-allocated storage"
-curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-allocated storage'
+echo -e "\ntotal-allocated-storage"
+curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-allocated-storage'
 
 echo -e "\ngraph point"
 echo -e "\ngraph-average-write-price"
@@ -65,7 +65,7 @@ echo -e "\ngraph-cloud-growth"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-cloud-growth?data-points=17'
 echo -e "\ngraph-total-staked"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-staked?data-points=17'
-echo -e "\ngraph-network-quality"
-curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-network-quality?data-points=17'
+echo -e "\ngraph-data-quality"
+curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-data-quality?data-points=17'
 echo -e "\ngraph-zcn-supply"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-zcn-supply?data-points=17'

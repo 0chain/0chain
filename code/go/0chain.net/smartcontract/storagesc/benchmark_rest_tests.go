@@ -616,13 +616,13 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphTotalStaked,
 			},
 			{
-				FuncName: "graph-network-data-quality",
+				FuncName: "graph-data-quality",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.graphNetworkDataQuality,
+				Endpoint: srh.graphDataQuality,
 			},
 			{
 				FuncName: "graph-zcn-supply",
