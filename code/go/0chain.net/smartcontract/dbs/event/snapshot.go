@@ -23,7 +23,7 @@ type Snapshot struct {
 	Round int64 `gorm:"primaryKey;autoIncrement:false" json:"round"`
 
 	TotalMint            int64 `json:"total_mint"`
-	StorageCost          int64 //486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
+	TotalChllengePools   int64 //486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
 	ActiveAllocatedDelta int64 //496 SUM total amount of new allocation storage in a period (number of allocations active)
 	ZCNSupply            int64 //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
 	TotalValueLocked     int64 //487 SUM Total value locked = Total staked ZCN * Price per ZCN (across all pools)
@@ -146,6 +146,8 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.TotalMint += change
 			gs.ZCNSupply += change
+			logging.Logger.Info("piers snapshot update",
+				zap.Any("total mint and zcn mint", gs))
 		case TagBurn:
 			b, ok := fromEvent[currency.Coin](event.Data)
 			if !ok {
@@ -159,6 +161,8 @@ func (gs *globalSnapshot) update(e []Event) {
 				continue
 			}
 			gs.ZCNSupply -= i2
+			logging.Logger.Info("piers snapshot update",
+				zap.Any("zcn burn", gs))
 		case TagLockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -166,8 +170,9 @@ func (gs *globalSnapshot) update(e []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.TotalStaked += d.Amount
 			gs.TotalValueLocked += d.Amount
+			logging.Logger.Info("piers snapshot update",
+				zap.Any("lock stake pool", gs))
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
@@ -175,8 +180,9 @@ func (gs *globalSnapshot) update(e []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.TotalStaked -= d.Amount
 			gs.TotalValueLocked -= d.Amount
+			logging.Logger.Info("piers snapshot update",
+				zap.Any("unlock stake pool", gs))
 		case TagLockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -186,6 +192,8 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ClientLocks += d.Amount
 			gs.TotalValueLocked += d.Amount
+			logging.Logger.Info("piers snapshot update",
+				zap.Any("lock write pool", gs))
 		case TagUnlockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -195,6 +203,8 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ClientLocks -= d.Amount
 			gs.TotalValueLocked -= d.Amount
+			logging.Logger.Info("piers snapshot update",
+				zap.Any("unlock write pool", gs))
 		case TagLockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -204,6 +214,8 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ClientLocks += d.Amount
 			gs.TotalValueLocked += d.Amount
+			logging.Logger.Info("piers snapshot update",
+				zap.Any("lock read pool", gs))
 		case TagUnlockReadPool:
 			d, ok := fromEvent[ReadPoolLock](event.Data)
 			if !ok {
@@ -213,6 +225,8 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ClientLocks -= d.Amount
 			gs.TotalValueLocked -= d.Amount
+			logging.Logger.Info("piers snapshot update",
+				zap.Any("unlock write pool", gs))
 		}
 	}
 }

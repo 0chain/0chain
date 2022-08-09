@@ -150,8 +150,6 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 
 			round = e[0].BlockNumber
 			edb.updateBlobberAggregate(round, period, gs)
-			//logging.Logger.Info("piers addRoundEventsWorker",
-			//	zap.Int64("round", round), zap.Any("gs", gs))
 			gs.update(e)
 			if round%period == 0 {
 				logging.Logger.Info("piers addRoundEventWorker saving snapshot",
@@ -160,7 +158,15 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 				if err := edb.addSnapshot(gs.Snapshot); err != nil {
 					logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
 				}
-				gs = newGlobalSnapshot()
+				gs = &globalSnapshot{
+					Snapshot: Snapshot{
+						TotalMint:          gs.TotalMint,
+						ZCNSupply:          gs.ZCNSupply,
+						TotalValueLocked:   gs.TotalValueLocked,
+						ClientLocks:        gs.ClientLocks,
+						TotalChllengePools: gs.TotalChllengePools,
+					},
+				}
 			}
 		case <-ctx.Done():
 			return
