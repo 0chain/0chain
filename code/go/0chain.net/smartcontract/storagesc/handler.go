@@ -94,7 +94,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/total-staked", srh.getTotalStaked),
 		rest.MakeEndpoint(storage+"/total-successful-challenges", srh.getTotalSuccessfulChallenges),
 		rest.MakeEndpoint(storage+"/total-total-challenges", srh.getTotalTotalChallenges),
-		rest.MakeEndpoint(storage+"/total-allocated storage", srh.getTotalAllocatedStorage),
+		rest.MakeEndpoint(storage+"/total-allocated-storage", srh.getTotalAllocatedStorage),
 
 		// per blobber historic averaged metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-blobber-write-price", srh.graphBlobberWritePrice),
@@ -1070,7 +1070,7 @@ func (srh *StorageRestHandler) getTotalTotalChallenges(w http.ResponseWriter, r 
 	common.Respond(w, r, global.TotalChallenges, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-allocated storage total-allocated storage
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-allocated-storage total-allocated-storage
 // Gets the total amount minted between from and to dates.
 //
 // parameters:

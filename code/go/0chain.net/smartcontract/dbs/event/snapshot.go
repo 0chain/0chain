@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/currency"
-	"0chain.net/smartcontract/dbs"
 )
 
 //max_capacity - maybe change it max capacity in blobber config and everywhere else to be less confusing.
@@ -131,10 +130,6 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 }
 
 func (gs *globalSnapshot) update(e []Event) {
-	if len(e) == 0 {
-		return
-	}
-
 	for _, event := range e {
 		switch EventTag(event.Tag) {
 		case TagAddMint:
@@ -218,55 +213,6 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ClientLocks -= d.Amount
 			gs.TotalValueLocked -= d.Amount
-		case TagToChallengePool:
-			d, ok := fromEvent[ChallengePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			gs.StorageCost += d.Amount
-		case TagUpdateChallenge:
-			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			var p interface{}
-			p, ok = updates.Updates["passed"]
-			if ok {
-				gs.TotalChallenges++
-				passed := p.(bool)
-				if passed {
-					gs.SuccessfulChallenges++
-				}
-			}
-		case TagAllocValueChange:
-			updates, ok := fromEvent[AllocationValueChanged](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			switch updates.FieldType {
-			case Allocated:
-				gs.ActiveAllocatedDelta += updates.Delta
-				gs.AllocatedStorage += updates.Delta
-			}
-		case TagAllocBlobberValueChange:
-			updates, ok := fromEvent[AllocationBlobberValueChanged](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			switch updates.FieldType {
-			case MaxCapacity:
-				gs.MaxCapacityStorage += updates.Delta
-			case Staked:
-				gs.StakedStorage += updates.Delta
-			}
 		}
 	}
 }

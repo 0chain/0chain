@@ -47,7 +47,7 @@ echo -e "\ntotal-allocated storage"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-allocated storage'
 
 echo -e "\ngraph point"
-echo -e "\ndgraph-average-write-price"
+echo -e "\ngraph-average-write-price"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-average-write-price?data-points=17'
 echo -e "\ngraph-data-storage-cost"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-data-storage-cost?data-points=17'
