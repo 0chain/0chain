@@ -38,7 +38,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	limit common2.Pagination) ([]*Challenge, error) {
 	var chs []*Challenge
 	expiry := now - cct
-	if from < expiry {
+	if from < expiry && from > 0 {
 		from = expiry
 	}
 
