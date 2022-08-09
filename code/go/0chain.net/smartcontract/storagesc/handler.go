@@ -113,14 +113,13 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 
 		//  global historic average metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-write-price", srh.graphWritePrice),
-		rest.MakeEndpoint(storage+"/graph-total-challenge-pools", srh.graphTotalChallengePools),
+		rest.MakeEndpoint(storage+"/graph-total-challenge-pools", srh.graphTotalChallengePools), // storage cost
 
 		// global historic total metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-allocated-storage", srh.graphAllocatedStorage),
-		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage),      // same as data utilisation?
-		rest.MakeEndpoint(storage+"/graph-total-locked", srh.graphTotalTokenLocked), // todo
-		// use graph-total-minted for capitalisation. exchange rate not part of 0chain
-		rest.MakeEndpoint(storage+"/graph-total-minted", srh.graphTotalMinted), // todo implement edb mint support
+		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage), // same as data utilisation?
+		rest.MakeEndpoint(storage+"/graph-total-locked", srh.graphTotalTokenLocked),
+		rest.MakeEndpoint(storage+"/graph-total-minted", srh.graphTotalMinted), // capitalisation todo implement edb mint support
 
 		// global historic difference metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-cloud-growth", srh.graphCloudGrowth),

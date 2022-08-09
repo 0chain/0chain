@@ -3,6 +3,8 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/chaincore/state"
+
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
@@ -149,34 +151,24 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.TotalChallengePools -= cp.Amount
 		case TagAddMint:
-			u, ok := fromEvent[User](event.Data)
+			m, ok := fromEvent[state.Mint](event.Data)
 			if !ok {
-				logging.Logger.Error("snapshot",
+				logging.Logger.Error("piers snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			change, err := u.Change.Int64()
-			if err != nil {
-				logging.Logger.Error("snapshot", zap.Error(err))
-				continue
-			}
-			gs.TotalMint += change
-			gs.ZCNSupply += change
+			gs.TotalMint += int64(m.Amount)
+			gs.ZCNSupply += int64(m.Amount)
 			logging.Logger.Info("piers snapshot update TagAddMint",
 				zap.Any("total mint and zcn mint", gs))
 		case TagBurn:
-			b, ok := fromEvent[currency.Coin](event.Data)
+			m, ok := fromEvent[state.Mint](event.Data)
 			if !ok {
-				logging.Logger.Error("snapshot",
+				logging.Logger.Error("piers snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			i2, err := b.Int64()
-			if err != nil {
-				logging.Logger.Error("snapshot", zap.Error(err))
-				continue
-			}
-			gs.ZCNSupply -= i2
+			gs.ZCNSupply -= int64(m.Amount)
 			logging.Logger.Info("piers snapshot update TagBurn",
 				zap.Any("zcn burn", gs))
 		case TagLockStakePool:

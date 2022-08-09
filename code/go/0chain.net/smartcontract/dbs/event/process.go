@@ -152,8 +152,6 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 			edb.updateBlobberAggregate(round, period, gs)
 			gs.update(e)
 			if round%period == 0 {
-				logging.Logger.Info("piers addRoundEventWorker saving snapshot",
-					zap.Int64("round", round), zap.Any("gs", gs))
 				gs.Round = round
 				if err := edb.addSnapshot(gs.Snapshot); err != nil {
 					logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
