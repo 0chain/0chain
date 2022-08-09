@@ -551,13 +551,13 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphWritePrice,
 			},
 			{
-				FuncName: "graph-data-storage-cost",
+				FuncName: "graph-total-challenge-pools",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "17",
 				},
-				Endpoint: srh.graphDataStorageCost,
+				Endpoint: srh.graphTotalChallengePools,
 			},
 
 			{

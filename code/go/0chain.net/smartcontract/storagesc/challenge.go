@@ -394,7 +394,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err = json.Unmarshal(input, &challResp); err != nil {
 		return
 	}
-	logging.Logger.Info("piers verify challenge", zap.String("challenge id", challResp.ID))
+
 	if len(challResp.ID) == 0 ||
 		len(challResp.ValidationTickets) == 0 {
 

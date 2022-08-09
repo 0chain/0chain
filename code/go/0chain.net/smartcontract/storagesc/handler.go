@@ -113,8 +113,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 
 		//  global historic average metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-write-price", srh.graphWritePrice),
-		// todo graphDataStorageCost: amount moved to challenge pool. Waiting for allocation and challenge pool snapshot
-		rest.MakeEndpoint(storage+"/graph-data-storage-cost", srh.graphDataStorageCost),
+		rest.MakeEndpoint(storage+"/graph-total-challenge-pools", srh.graphTotalChallengePools),
 
 		// global historic total metrics for graphs
 		rest.MakeEndpoint(storage+"/graph-allocated-storage", srh.graphAllocatedStorage),
@@ -3194,7 +3193,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, sn, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-data-storage-cost graph-data-storage-cost
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-challenge-pools graph-total-challenge-pools
 // Get market data storage cost info between from and to interval
 // returns array of 100 datapoints for any specified interval
 //
@@ -3219,7 +3218,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) graphDataStorageCost(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphTotalChallengePools(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -3237,7 +3236,7 @@ func (srh *StorageRestHandler) graphDataStorageCost(w http.ResponseWriter, r *ht
 		return
 	}
 	data, err := edb.GetAverage(
-		start, end, roundsPerPoint, "storage_cost", "snapshots",
+		start, end, roundsPerPoint, "total_challenge_pools", "snapshots",
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))

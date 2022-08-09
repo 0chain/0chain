@@ -160,11 +160,11 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 				}
 				gs = &globalSnapshot{
 					Snapshot: Snapshot{
-						TotalMint:          gs.TotalMint,
-						ZCNSupply:          gs.ZCNSupply,
-						TotalValueLocked:   gs.TotalValueLocked,
-						ClientLocks:        gs.ClientLocks,
-						TotalChllengePools: gs.TotalChllengePools,
+						TotalMint:           gs.TotalMint,
+						ZCNSupply:           gs.ZCNSupply,
+						TotalValueLocked:    gs.TotalValueLocked,
+						ClientLocks:         gs.ClientLocks,
+						TotalChallengePools: gs.TotalChallengePools,
 					},
 				}
 			}
