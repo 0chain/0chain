@@ -153,23 +153,23 @@ func (gs *globalSnapshot) update(e []Event) {
 		case TagAddMint:
 			m, ok := fromEvent[state.Mint](event.Data)
 			if !ok {
-				logging.Logger.Error("piers snapshot",
+				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
 			gs.TotalMint += int64(m.Amount)
 			gs.ZCNSupply += int64(m.Amount)
-			logging.Logger.Info("piers snapshot update TagAddMint",
+			logging.Logger.Info("snapshot update TagAddMint",
 				zap.Any("total mint and zcn mint", gs))
 		case TagBurn:
 			m, ok := fromEvent[state.Mint](event.Data)
 			if !ok {
-				logging.Logger.Error("piers snapshot",
+				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
 			gs.ZCNSupply -= int64(m.Amount)
-			logging.Logger.Info("piers snapshot update TagBurn",
+			logging.Logger.Info("snapshot update TagBurn",
 				zap.Any("zcn burn", gs))
 		case TagLockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
