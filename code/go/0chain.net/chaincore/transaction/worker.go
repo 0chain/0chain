@@ -91,15 +91,18 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	txn := transactionEntityMetadata.Instance().(*Transaction)
 	collectionName := txn.GetCollectionName()
 
-	logging.Logger.Debug("cleaning invalid transactions")
-	mappedTxns := make(map[string][]*Transaction)
+	logging.Logger.Debug("cleaning past transactions")
+	clientMaxNonce := make(map[string]int64)
 	for _, e := range txns {
 		blockTx, ok := e.(*Transaction)
 		if !ok {
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", e))
 			continue
 		}
-		mappedTxns[blockTx.GetKey()] = append(mappedTxns[blockTx.GetKey()], blockTx)
+		nonce := clientMaxNonce[blockTx.ClientID]
+		if blockTx.Nonce > nonce {
+			clientMaxNonce[blockTx.ClientID] = blockTx.Nonce
+		}
 	}
 
 	var past []datastore.Entity
@@ -111,16 +114,10 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 				return true
 			}
 
-			list := mappedTxns[txn.GetKey()]
-			for _, fromList := range list {
-				if fromList.ClientID == current.ClientID {
-					if current.Nonce <= fromList.Nonce {
-						past = append(past, current)
-					}
-					break
-				}
+			maxNonce := clientMaxNonce[current.ClientID]
+			if current.Nonce <= maxNonce {
+				past = append(past, current)
 			}
-
 			return true
 		})
 	if err != nil {
