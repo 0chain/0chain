@@ -97,7 +97,7 @@ func (fsa *freeStorageAssigner) validate(
 	value currency.Coin,
 	balances cstate.StateContextI,
 ) error {
-	if marker.Timestamp >= now {
+	if marker.Timestamp > now {
 		return fmt.Errorf("marker timestamped in the future: %v", marker.Timestamp)
 	}
 
