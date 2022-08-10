@@ -509,8 +509,8 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberInactiveRounds,
 			},
 			{
-				FuncName: "total-mint",
-				Endpoint: srh.getTotalMint,
+				FuncName: "total-minted",
+				Endpoint: srh.getTotalMinted,
 			},
 			{
 				FuncName: "total-blobber-capacity",

@@ -87,7 +87,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
 
 		// most recent global totals
-		rest.MakeEndpoint(storage+"/total-mint", srh.getTotalMint),
+		rest.MakeEndpoint(storage+"/total-minted", srh.getTotalMinted),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
@@ -151,7 +151,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberInactiveRounds(w http.ResponseWriter, r *http.Request) {
@@ -210,7 +210,7 @@ func (srh *StorageRestHandler) graphBlobberInactiveRounds(w http.ResponseWriter,
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberChallengesCompleted(w http.ResponseWriter, r *http.Request) {
@@ -338,7 +338,7 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWriter, r *http.Request) {
@@ -397,7 +397,7 @@ func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWrite
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *http.Request) {
@@ -454,7 +454,7 @@ func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberServiceCharge(w http.ResponseWriter, r *http.Request) {
@@ -513,7 +513,7 @@ func (srh *StorageRestHandler) graphBlobberServiceCharge(w http.ResponseWriter, 
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r *http.Request) {
@@ -570,7 +570,7 @@ func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r *http.Request) {
@@ -627,7 +627,7 @@ func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r 
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *http.Request) {
@@ -662,8 +662,17 @@ func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *h
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:model float64Array
-type float64Array []float64
+// graphPoints
+//
+// A collection of points values returned from a `graph` endpoint.
+//
+// All graph endpoints take as parameters a `to` and `from` time and the `number of points` they want to be returned.
+// Ths object holds the returned value. An array, each element matching a total or average value in accenting order
+// of time. The number of array elements will always match the number of points requested in the inpute parameters.
+//
+// example for data points = 17: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2808685.714285714,5242880,5242880]
+// swagger:model graphPoints
+type graphPoints []float64
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-allocated graph-blobber-allocated
 // Gets the average allocated storage
@@ -687,7 +696,7 @@ type float64Array []float64
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *http.Request) {
@@ -744,7 +753,7 @@ func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *h
 //      type: string
 //
 // responses:
-//  200: float64Array
+//  200: graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *http.Request) {
@@ -780,8 +789,7 @@ func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *ht
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-write-price graph-blobber-write-price
-// Gets the average write price
-// returns array of 100 datapoints for any specified interval
+// Graphs the average write price.
 //
 // parameters:
 //    + name: from
@@ -801,7 +809,7 @@ func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *ht
 //      type: string
 //
 // responses:
-//  200:  float64Array
+//  200:  graphPoints
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberWritePrice(w http.ResponseWriter, r *http.Request) {
@@ -838,30 +846,14 @@ func (srh *StorageRestHandler) graphBlobberWritePrice(w http.ResponseWriter, r *
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-minted total-minted
-// Gets the total amount minted between from and to dates.
-//
-// parameters:
-//    + name: from
-//      description: from date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: to
-//      description: to date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: data-points
-//      description: total data points in result
-//      required: false
-//      in: query
-//      type: string
+// The total amount minted in smart contracts.
 //
 // responses:
 //  200: int64
 //  400:
 //  500:
-func (srh *StorageRestHandler) getTotalMint(w http.ResponseWriter, r *http.Request) {
+// Example {206}
+func (srh *StorageRestHandler) getTotalMinted(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -916,24 +908,9 @@ func (srh *StorageRestHandler) getTotalStaked(w http.ResponseWriter, r *http.Req
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-blobber-capacity total-blobber-capacity
-// Gets the total amount minted between from and to dates.
+// The total capacity of all blobbers combined.
 //
-// parameters:
-//    + name: from
-//      description: from date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: to
-//      description: to date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: data-points
-//      description: total data points in result
-//      required: false
-//      in: query
-//      type: string
+// // This will be more than both the total used storage and the total allocated storage
 //
 // responses:
 //  200: int64
@@ -958,24 +935,9 @@ func (srh *StorageRestHandler) getTotalBlobberCapacity(w http.ResponseWriter, r 
 type swaggerInt64 int64
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
-// Gets the total amount minted between from and to dates.
+// The average write price, average across all blobbers.
 //
-// parameters:
-//    + name: from
-//      description: from date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: to
-//      description: to date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: data-points
-//      description: total data points in result
-//      required: false
-//      in: query
-//      type: string
+// This is the average write price that will be used for new allocation,
 //
 // responses:
 //  200: int64
@@ -993,28 +955,11 @@ func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
 		return
 	}
-	common.Respond(w, r, swaggerInt64(global.AverageWritePrice), nil)
+	common.Respond(w, r, global.AverageWritePrice, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-successful-challenges total-successful-challenges
-// Gets the total amount minted between from and to dates.
-//
-// parameters:
-//    + name: from
-//      description: from date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: to
-//      description: to date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: data-points
-//      description: total data points in result
-//      required: false
-//      in: query
-//      type: string
+// The total number of successful challenges across all blobbers.
 //
 // responses:
 //  200: int64
@@ -1036,24 +981,7 @@ func (srh *StorageRestHandler) getTotalSuccessfulChallenges(w http.ResponseWrite
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-total-challenges total-total-challenges
-// Gets the total amount minted between from and to dates.
-//
-// parameters:
-//    + name: from
-//      description: from date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: to
-//      description: to date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: data-points
-//      description: total data points in result
-//      required: false
-//      in: query
-//      type: string
+// The total number of challenges generated for all blobbers.
 //
 // responses:
 //  200: int64
@@ -1075,24 +1003,9 @@ func (srh *StorageRestHandler) getTotalTotalChallenges(w http.ResponseWriter, r 
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-allocated-storage total-allocated-storage
-// Gets the total amount minted between from and to dates.
+// The total allocated storage across all blobbers.
 //
-// parameters:
-//    + name: from
-//      description: from date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: to
-//      description: to date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: data-points
-//      description: total data points in result
-//      required: false
-//      in: query
-//      type: string
+// This will be less then the total capacity and more than the used storage
 //
 // responses:
 //  200: int64
@@ -1743,17 +1656,12 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
+// Gets the total data currently storage used across all blobbers.
 //
-// Gets the total data stored across all blobbers.
-// Each change to files results in the blobber sending a WriteMarker to 0chain.
-// This WriteMarker has a Size filed indicated the change the data stored on the blobber.
-// Negative if data is removed.
-//
-// This endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
-//
+// This will be less then both the total capacity and the total allocated storage
 //
 // responses:
-//  200: Int64Map
+//  200: int64
 //  400:
 func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
