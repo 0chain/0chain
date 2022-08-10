@@ -116,22 +116,20 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/graph-total-challenge-pools", srh.graphTotalChallengePools), // storage cost
 
 		// global historic total metrics for graphs
-		rest.MakeEndpoint(storage+"/graph-allocated-storage", srh.graphAllocatedStorage),
-		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage), // same as data utilisation?
+		rest.MakeEndpoint(storage+"/graph-allocated-storage", srh.graphAllocatedStorage), // same as cloud growth
+		rest.MakeEndpoint(storage+"/graph-used-storage", srh.graphUsedStorage),           // same as data utilisation?
 		rest.MakeEndpoint(storage+"/graph-total-locked", srh.graphTotalTokenLocked),
-		rest.MakeEndpoint(storage+"/graph-total-minted", srh.graphTotalMinted), // capitalisation todo implement edb mint support
+		rest.MakeEndpoint(storage+"/graph-total-minted", srh.graphTotalMinted), // capitalisation
 
 		// global historic difference metrics for graphs
-		rest.MakeEndpoint(storage+"/graph-cloud-growth", srh.graphCloudGrowth),
 		rest.MakeEndpoint(storage+"/graph-total-staked", srh.graphTotalStaked),
-		rest.MakeEndpoint(storage+"/graph-data-quality", srh.graphDataQuality),
-		rest.MakeEndpoint(storage+"/graph-zcn-supply", srh.graphZCNSupply), // todo implement edb mint support
+		rest.MakeEndpoint(storage+"/graph-challenges", srh.graphChallenges),    // data quality
+		rest.MakeEndpoint(storage+"/graph-token-supply", srh.graphTokenSupply), // zcn supply
 	}
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-inactive-rounds graph-blobber-inactive-rounds
-// Gets the count of challenges passed in a time range
-// returns array of 100 datapoints for any specified interval
+// Graphs the percentage of inactive rounds during each period. This endpoint has not yet been implemented.
 //
 // parameters:
 //    + name: from
@@ -189,8 +187,15 @@ func (srh *StorageRestHandler) graphBlobberInactiveRounds(w http.ResponseWriter,
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-completed graph-blobber-challenges-completed
-// Gets the count of challenges passed in a time range
-// returns array of 100 datapoints for any specified interval
+// Graphs the total challenges created across all blobbers
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the count challenges created at that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -317,8 +322,15 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-passed graph-blobber-challenges-passed
-// Gets the count of challenges passed in a time range
-// returns array of 100 datapoints for any specified interval
+// Graphs the total challenges passed across all blobbers
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the count challenges passed by blobbers at that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -376,8 +388,17 @@ func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWrite
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-total-stake graph-blobber-total-stake
-// Gets the average offers total
-// returns array of 100 datapoints for any specified interval
+// Graphs the total amount of tokens lcoked in blobber stake pools.
+//
+// Unstaking tokens are locked into allocations now, but cannot be used for any further allocations.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the amount of tokens locked into blobber stake pools.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -433,8 +454,15 @@ func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-service-charge graph-blobber-service-charge
-// Gets the average offers total
-// returns array of 100 datapoints for any specified interval
+// Graphs the total service charge earned across all blobbrs.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the total amount of tokens earnt by blobbers at that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -492,8 +520,17 @@ func (srh *StorageRestHandler) graphBlobberServiceCharge(w http.ResponseWriter, 
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-unstake-total graph-blobber-unstake-total
-// Gets the average offers total
-// returns array of 100 datapoints for any specified interval
+// Graphs the total amount of tokens in blobber stake pools that are tagged for unstaking.
+//
+// Unstaking tokens are locked into allocations now, but cannot be used for any further allocations.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the amount of tokens taged as unstaking.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -549,8 +586,17 @@ func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-offers-total graph-blobber-offers-total
-// Gets the average offers total
-// returns array of 100 datapoints for any specified interval
+// Graphs the total amount of tokens in blobber stake pools that are locked into allocation offers.
+//
+// Tokens locked into active allocations cannot be used for new allocations.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the average stake amount locked into allocations.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3136,8 +3182,15 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-challenge-pools graph-total-challenge-pools
-// Get market data storage cost info between from and to interval
-// returns array of 100 datapoints for any specified interval
+// Graphs the change in total amount stored across all challenge pools.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the total challenge pool at that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3189,8 +3242,15 @@ func (srh *StorageRestHandler) graphTotalChallengePools(w http.ResponseWriter, r
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-write-price graph-write-price
-// Get storage data average read/write price between from and to interval
-// returns array of 100 datapoints for any specified interval
+// Graphs the average write price across all blobbers.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the average write price during that interval.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3242,8 +3302,15 @@ func (srh *StorageRestHandler) graphWritePrice(w http.ResponseWriter, r *http.Re
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-staked graph-total-staked
-// Get market data total staked between from and to interval
-// returns array of 100 datapoints for any specified interval
+// Graphs the total amount locked in blobber stake pools.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the total tokens in blobber stake pools at that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3301,9 +3368,20 @@ type challengeResults struct {
 	Total      []int64 `json:"total"`
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-data-quality graph-data-quality
-// Get network data quality score between from and to interval
-// returns array of 100 datapoints for any specified interval
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-challenges graph-challenges
+// Graphs the ratio of sucessgul challenges.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+//
+// Here we return two arrays. Once giving the total challenges generated in the interval, and another with the total challenges passed.
+// The first array is challenges passed.
+//
+// Return both arrays in one endpoint allows passed and total challenges to be compared using the same time intervals.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3326,7 +3404,7 @@ type challengeResults struct {
 //  200: challengeResults
 //  400:
 //  500:
-func (srh *StorageRestHandler) graphDataQuality(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphChallenges(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -3362,9 +3440,18 @@ func (srh *StorageRestHandler) graphDataQuality(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-zcn-supply graph-zcn-supply
-// Get market data zcn supply between from and to interval
-// returns array of 100 datapoints for any specified interval
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-minted graph-total-minted
+// Graphs the total tokens minted.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the total tokens minted at that time.
+//
+// The total tokens minted does not take account of burnt tokens. Use graph-token-supply to account for burnt tokens.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3387,7 +3474,7 @@ func (srh *StorageRestHandler) graphDataQuality(w http.ResponseWriter, r *http.R
 //  200: []int64
 //  400:
 //  500:
-func (srh *StorageRestHandler) graphZCNSupply(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphTotalMinted(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -3416,8 +3503,15 @@ func (srh *StorageRestHandler) graphZCNSupply(w http.ResponseWriter, r *http.Req
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-allocated-storage graph-allocated-storage
-// Get market data allocated storage between from and to interval
-// returns array of 100 datapoints for any specified interval
+// Graphs the change in total storage allocated across all blobbers.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the total storage across all blobbers at that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3469,8 +3563,15 @@ func (srh *StorageRestHandler) graphAllocatedStorage(w http.ResponseWriter, r *h
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-used-storage graph-used-storage
-// Get market data allocated storage between from and to interval
-// returns array of 100 datapoints for any specified interval
+// Graphs the change in total data storage currently being used across all blobbers.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the total storage used across all blobbers at that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3521,62 +3622,16 @@ func (srh *StorageRestHandler) graphUsedStorage(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-cloud-growth graph-cloud-growth
-// Get market data cloud growth data between from and to interval
-// returns array of 100 datapoints for any specified interval
-//
-// parameters:
-//    + name: from
-//      description: from date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: to
-//      description: to date timestamp
-//      required: false
-//      in: query
-//      type: string
-//    + name: data-points
-//      description: total data points in result
-//      required: false
-//      in: query
-//      type: string
-//
-// responses:
-//  200:
-//  400:
-//  500:
-func (srh *StorageRestHandler) graphCloudGrowth(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	start, end, roundsPerPoint, err := differenceParameters(
-		r.URL.Query().Get("from"),
-		r.URL.Query().Get("to"),
-		r.URL.Query().Get("data-points"),
-		edb,
-	)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-	data, err := edb.GetDifference(
-		start, end, roundsPerPoint, "allocated_storage", "snapshots",
-	)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
-		return
-	}
-
-	common.Respond(w, r, data, nil)
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-locked graph-total-locked
-// Get total locked tokens historical data between from and to interval
-// returns array of 100 datapoints for any specified interval
+// Graphs the change in total tokens locked across blobber and validator stake pools, read and write pools.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the total tokens locked in token pools at that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3627,9 +3682,18 @@ func (srh *StorageRestHandler) graphTotalTokenLocked(w http.ResponseWriter, r *h
 	common.Respond(w, r, data, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-total-minted graph-total-minted
-// Get historic market data capitalization between from and to interval
-// returns array of 100 datapoints for any specified interval
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-token supply graph-token-supply
+// Graphs the total tokens supply.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the total tokens supply at that time.
+//
+// The total tokens supply takes account of both minted and burnt tokens.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -3652,7 +3716,7 @@ func (srh *StorageRestHandler) graphTotalTokenLocked(w http.ResponseWriter, r *h
 //  200:
 //  400:
 //  500:
-func (srh *StorageRestHandler) graphTotalMinted(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) graphTokenSupply(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -3670,7 +3734,7 @@ func (srh *StorageRestHandler) graphTotalMinted(w http.ResponseWriter, r *http.R
 		return
 	}
 	data, err := edb.GetTotal(
-		start, end, roundsPerPoint, "total_mint", "snapshots",
+		start, end, roundsPerPoint, "zcn_supply", "snapshots",
 	)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
