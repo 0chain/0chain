@@ -151,7 +151,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberInactiveRounds(w http.ResponseWriter, r *http.Request) {
@@ -210,7 +210,7 @@ func (srh *StorageRestHandler) graphBlobberInactiveRounds(w http.ResponseWriter,
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberChallengesCompleted(w http.ResponseWriter, r *http.Request) {
@@ -338,7 +338,7 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWriter, r *http.Request) {
@@ -397,7 +397,7 @@ func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWrite
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *http.Request) {
@@ -454,7 +454,7 @@ func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberServiceCharge(w http.ResponseWriter, r *http.Request) {
@@ -513,7 +513,7 @@ func (srh *StorageRestHandler) graphBlobberServiceCharge(w http.ResponseWriter, 
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r *http.Request) {
@@ -570,7 +570,7 @@ func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r *http.Request) {
@@ -627,7 +627,7 @@ func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r 
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *http.Request) {
@@ -662,6 +662,9 @@ func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *h
 	common.Respond(w, r, data, nil)
 }
 
+// swagger:model float64Array
+type float64Array []float64
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-allocated graph-blobber-allocated
 // Gets the average allocated storage
 // returns array of 100 datapoints for any specified interval
@@ -684,7 +687,7 @@ func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *h
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *http.Request) {
@@ -741,7 +744,7 @@ func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *h
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200: float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *http.Request) {
@@ -798,7 +801,7 @@ func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *ht
 //      type: string
 //
 // responses:
-//  200:[]float64
+//  200:  float64Array
 //  400:
 //  500:
 func (srh *StorageRestHandler) graphBlobberWritePrice(w http.ResponseWriter, r *http.Request) {
@@ -951,6 +954,9 @@ func (srh *StorageRestHandler) getTotalBlobberCapacity(w http.ResponseWriter, r 
 	common.Respond(w, r, global.MaxCapacityStorage, nil)
 }
 
+// swagger:model int64
+type swaggerInt64 int64
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
 // Gets the total amount minted between from and to dates.
 //
@@ -987,7 +993,7 @@ func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
 		return
 	}
-	common.Respond(w, r, global.AverageWritePrice, nil)
+	common.Respond(w, r, swaggerInt64(global.AverageWritePrice), nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-successful-challenges total-successful-challenges
@@ -3352,7 +3358,7 @@ func (srh *StorageRestHandler) graphTotalStaked(w http.ResponseWriter, r *http.R
 
 }
 
-// swagger:model dataQuality
+// swagger:model challengeResults
 type challengeResults struct {
 	Successful []int64 `json:"successful"`
 	Total      []int64 `json:"total"`
