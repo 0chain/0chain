@@ -20,6 +20,7 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"can't decode request: %v", err)
 	}
+
 	if prr.ProviderType != spenum.Blobber && prr.ProviderType != spenum.Validator {
 		return "", common.NewErrorf("collect_reward_failed",
 			"invalid provider type: %s", prr.ProviderType.String())
@@ -46,10 +47,9 @@ func (ssc *StorageSmartContract) collectReward(
 	}
 
 	sp, err := ssc.getStakePool(providerID, balances)
-	//before := sp.stake()
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
-			"can't get related stake pool: %v", err)
+			"id %v can't get related stake pool: %v", providerID, err)
 	}
 
 	reward, err := sp.MintRewards(

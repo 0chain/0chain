@@ -62,11 +62,12 @@ func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContext
 	return
 }
 
-func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.StateContextI) {
+func emitUpdateChallengeResponse(chID string, responded bool, passed bool, balances cstate.StateContextI) {
 	data := &dbs.DbUpdates{
 		Id: chID,
 		Updates: map[string]interface{}{
 			"responded": responded,
+			"passed":    passed,
 		},
 	}
 

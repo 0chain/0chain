@@ -463,11 +463,11 @@ func AddMockBlobbers(
 }
 
 func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
-	var mockChallengesPassed = viper.GetUint64(sc.EventDbBlobberAggregatePeriod)
-	var mockChallengesCompleted = viper.GetUint64(sc.EventDbBlobberAggregatePeriod) + 1
+	var mockChallengesPassed = viper.GetUint64(sc.EventDbAggregatePeriod)
+	var mockChallengesCompleted = viper.GetUint64(sc.EventDbAggregatePeriod) + 1
 	const mockInactiveRounds = 17
 	var aggregates []event.BlobberAggregate
-	for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbBlobberAggregatePeriod) {
+	for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
 		aggregate := event.BlobberAggregate{
 			Round:               int64(i),
 			BlobberID:           blobber.BlobberID,
@@ -493,16 +493,16 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 
 func AddMockSnapshots(edb *event.EventDb) {
 	var snapshots []event.Snapshot
-	for i := 1; i < viper.GetInt(sc.NumBlocks); i++ {
+	for i := 1; i < viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
 		snapshot := event.Snapshot{
 			Round:                int64(i),
 			TotalMint:            int64(i + 10),
-			StorageCost:          int64(currency.Coin(i + (1 * 1e10))),
+			TotalChallengePools:  int64(currency.Coin(i + (1 * 1e10))),
 			ActiveAllocatedDelta: int64(i),
-			AverageRWPrice:       int64(currency.Coin(i * (0.01 * 1e10))),
+			AverageWritePrice:    int64(getMockBlobberTerms().WritePrice),
 			TotalStaked:          int64(currency.Coin(i * (0.001 * 1e10))),
-			SuccessfulChallenges: int64(i),
-			FailedChallenges:     0,
+			SuccessfulChallenges: int64(i-1) / 2,
+			TotalChallenges:      int64(i - 1),
 			ZCNSupply:            100000 * int64(i+10),
 			AllocatedStorage:     int64(i * 1024),
 			MaxCapacityStorage:   int64(i * 10240),
@@ -510,8 +510,6 @@ func AddMockSnapshots(edb *event.EventDb) {
 			UsedStorage:          int64(i * 256),
 			TotalValueLocked:     int64(currency.Coin(i * (0.001 * 1e10))),
 			ClientLocks:          int64(currency.Coin(i * (0.0001 * 1e10))),
-			Capitalization:       int64(i),
-			DataUtilization:      int64(i),
 		}
 		snapshots = append(snapshots, snapshot)
 	}

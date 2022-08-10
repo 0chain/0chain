@@ -580,9 +580,9 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return common.NewError("mint_amount - insert", err.Error())
 	}
 
-	if err = c.emitMintEvent(sctx, stateToUser(toClient, ts, amount)); err != nil {
-		return common.NewError("mint_amount", "could not emit event")
-	}
+	//if err = c.emitMintEvent(sctx, stateToUser(toClient, ts, amount)); err != nil {
+	//	return common.NewError("mint_amount", "could not emit event")
+	//}
 
 	return nil
 }

@@ -43,6 +43,15 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 	return approvedMinters[minter], nil
 }
 
+func isMinter(id string) bool {
+	for _, m := range approvedMinters {
+		if m == id {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 * The state context is available to the smart contract logic.
 * The smart contract logic can use
@@ -190,6 +199,35 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
+	if isMinter(t.ToClientID) {
+		if !isMinter(t.ClientID) {
+			sc.events = append(sc.events, event.Event{
+				BlockNumber: sc.block.Round,
+				TxHash:      sc.txn.Hash,
+				Type:        int(event.TypeSmartContract),
+				Tag:         int(event.TagBurn),
+				Index:       sc.txn.Hash,
+				Data:        t,
+			})
+		}
+		return nil
+	}
+	if isMinter(t.ClientID) {
+		if !isMinter(t.ClientID) {
+			sc.events = append(sc.events, event.Event{
+				BlockNumber: sc.block.Round,
+				TxHash:      sc.txn.Hash,
+				Type:        int(event.TypeSmartContract),
+				Tag:         int(event.TagAddMint),
+				Index:       sc.txn.Hash,
+				Data: state.Mint{
+					Minter:     t.ClientID,
+					ToClientID: t.ToClientID,
+					Amount:     t.Amount,
+				},
+			})
+		}
+	}
 
 	return nil
 }
@@ -208,6 +246,15 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
+
+	sc.events = append(sc.events, event.Event{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        int(event.TypeSmartContract),
+		Tag:         int(event.TagAddMint),
+		Index:       sc.txn.Hash,
+		Data:        m,
+	})
 
 	return nil
 }

@@ -190,6 +190,7 @@ func setUpMpt(
 	timer = time.Now()
 
 	bk := &block.Block{}
+	bk.Round = viper.GetInt64(benchmark.NumBlocks)
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 
@@ -506,16 +507,16 @@ func newEventsDb() *event.EventDb {
 	var eventDb *event.EventDb
 	tick := func() (*event.EventDb, error) {
 		return event.NewEventDb(config.DbAccess{
-			Enabled:                viper.GetBool(benchmark.EventDbEnabled),
-			Name:                   viper.GetString(benchmark.EventDbName),
-			User:                   viper.GetString(benchmark.EventDbUser),
-			Password:               viper.GetString(benchmark.EventDbPassword),
-			Host:                   viper.GetString(benchmark.EventDbHost),
-			Port:                   viper.GetString(benchmark.EventDbPort),
-			MaxIdleConns:           viper.GetInt(benchmark.EventDbMaxIdleConns),
-			MaxOpenConns:           viper.GetInt(benchmark.EventDbOpenConns),
-			ConnMaxLifetime:        viper.GetDuration(benchmark.EventDbConnMaxLifetime),
-			BlobberAggregatePeriod: viper.GetInt64(benchmark.EventDbBlobberAggregatePeriod),
+			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+			Name:            viper.GetString(benchmark.EventDbName),
+			User:            viper.GetString(benchmark.EventDbUser),
+			Password:        viper.GetString(benchmark.EventDbPassword),
+			Host:            viper.GetString(benchmark.EventDbHost),
+			Port:            viper.GetString(benchmark.EventDbPort),
+			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+			AggregatePeriod: viper.GetInt64(benchmark.EventDbAggregatePeriod),
 		})
 
 	}

@@ -130,6 +130,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 	logging.Logger.Info("round events worker started")
 	var round int64
+	var gs = newGlobalSnapshot()
 	for {
 		select {
 		case e := <-edb.roundEventsChan:
@@ -141,13 +142,30 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 					"events for round %v recieved after events for ruond %v", e[0].BlockNumber, round))
 				continue
 			}
-			if round != e[0].BlockNumber {
-				for r := round + 1; r <= e[0].BlockNumber; r++ {
-					edb.updateBlobberAggregate(r, period)
-				}
-				round = e[0].BlockNumber
+			if round+1 != e[0].BlockNumber {
+				logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
+					"events for round %v recieved instead", round+1, e[0].BlockNumber))
+				continue
 			}
-			edb.updateSnapshot(e)
+
+			round = e[0].BlockNumber
+			edb.updateBlobberAggregate(round, period, gs)
+			gs.update(e)
+			if round%period == 0 {
+				gs.Round = round
+				if err := edb.addSnapshot(gs.Snapshot); err != nil {
+					logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
+				}
+				gs = &globalSnapshot{
+					Snapshot: Snapshot{
+						TotalMint:           gs.TotalMint,
+						ZCNSupply:           gs.ZCNSupply,
+						TotalValueLocked:    gs.TotalValueLocked,
+						ClientLocks:         gs.ClientLocks,
+						TotalChallengePools: gs.TotalChallengePools,
+					},
+				}
+			}
 		case <-ctx.Done():
 			return
 		}
