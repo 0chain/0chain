@@ -606,8 +606,15 @@ func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r 
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-saved-data graph-blobber-saved-data
-// Gets the average saved data
-// returns array of 100 datapoints for any specified interval
+// Graphs the total amount of data stored in blobbers across the network.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the average data stored across the network during the corresponding interval.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -675,8 +682,15 @@ func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *h
 type graphPoints []float64
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-allocated graph-blobber-allocated
-// Gets the average allocated storage
-// returns array of 100 datapoints for any specified interval
+// Graphs the total amount of storage allocated to blobbers over time.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds. Each point will give the total blobber
+// capacity at the end of the corresponding interval.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -732,8 +746,15 @@ func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *h
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-capacity graph-blobber-capacity
-// Gets the average capacity
-// returns array of 100 datapoints for any specified interval
+// Graphs the total blobber capacity over time.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds. Each point will give the total blobber
+// capacity at the end of the corresponding interval.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
@@ -790,6 +811,14 @@ func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *ht
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-write-price graph-blobber-write-price
 // Graphs the average write price.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds. Each point will give the average blobber
+// write price for the corresponding interval.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
 //
 // parameters:
 //    + name: from
