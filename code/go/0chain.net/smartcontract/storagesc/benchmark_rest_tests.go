@@ -438,6 +438,16 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberSavedData,
 			},
 			{
+				FuncName: "graph-blobber-read-data",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.graphBlobberSavedData,
+			},
+			{
 				FuncName: "graph-blobber-offers-total",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
@@ -598,13 +608,13 @@ func BenchmarkRestTests(
 			},
 
 			{
-				FuncName: "graph-cloud-growth",
+				FuncName: "graph-total-minted",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.graphCloudGrowth,
+				Endpoint: srh.graphTotalMinted,
 			},
 			{
 				FuncName: "graph-total-staked",
@@ -616,7 +626,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphTotalStaked,
 			},
 			{
-				FuncName: "graph-data-quality",
+				FuncName: "graph-challenges",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
@@ -625,13 +635,13 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphChallenges,
 			},
 			{
-				FuncName: "graph-zcn-supply",
+				FuncName: "graph-token-supply",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.graphZCNSupply,
+				Endpoint: srh.graphTokenSupply,
 			},
 		},
 		ADDRESS,
