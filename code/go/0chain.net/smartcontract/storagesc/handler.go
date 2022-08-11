@@ -434,14 +434,19 @@ func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	data, err := edb.GetAggregateData(
-		from, to, points,
+		start, end, roundsPerPoint,
 		"total_stake",
 		"blobber_aggregates",
 		id,
@@ -566,14 +571,19 @@ func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	data, err := edb.GetAggregateData(
-		from, to, points,
+		start, end, roundsPerPoint,
 		"unstake_total",
 		"blobber_aggregates",
 		id,
@@ -632,14 +642,19 @@ func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r 
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	data, err := edb.GetAggregateData(
-		from, to, points,
+		start, end, roundsPerPoint,
 		"offers_total",
 		"blobber_aggregates",
 		id,
@@ -696,14 +711,19 @@ func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *h
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	data, err := edb.GetAggregateData(
-		from, to, points,
+		start, end, roundsPerPoint,
 		"saved_data",
 		"blobber_aggregates",
 		id,
@@ -760,14 +780,19 @@ func (srh *StorageRestHandler) graphBlobberReadData(w http.ResponseWriter, r *ht
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	data, err := edb.GetAggregateData(
-		from, to, points,
+		start, end, roundsPerPoint,
 		"read_data",
 		"blobber_aggregates",
 		id,
@@ -836,14 +861,19 @@ func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *h
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	data, err := edb.GetAggregateData(
-		from, to, points,
+		start, end, roundsPerPoint,
 		"allocated",
 		"blobber_aggregates",
 		id,
@@ -900,14 +930,19 @@ func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *ht
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	data, err := edb.GetAggregateData(
-		from, to, points,
+		start, end, roundsPerPoint,
 		"capacity",
 		"blobber_aggregates",
 		id,
@@ -965,14 +1000,19 @@ func (srh *StorageRestHandler) graphBlobberWritePrice(w http.ResponseWriter, r *
 		return
 	}
 
-	from, to, points := intervalParametersFromString(
+	start, end, roundsPerPoint, err := differenceParameters(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 		r.URL.Query().Get("data-points"),
+		edb,
 	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	data, err := edb.GetAggregateData(
-		from, to, points,
+		start, end, roundsPerPoint,
 		"write_price",
 		"blobber_aggregates",
 		id,

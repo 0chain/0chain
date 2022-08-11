@@ -142,12 +142,12 @@ func (edb *EventDb) GetBlobberAggregate(id string, round int64) (BlobberAggregat
 }
 
 func (edb *EventDb) GetAggregateData(
-	from, to int64, dataPoints uint16, row, table, id string,
+	from, to int64, dataPoints int64, row, table, id string,
 ) ([]int64, error) {
-	return edb.GetTotalId(from, to, int64(dataPoints), row, table, id)
+	return edb.GetTotalId(from, to, dataPoints, row, table, id)
 }
 
-func (edb *EventDb) GetTotalId(start, end int64, roundsPerPoint int64, row, table, blobberId string) ([]int64, error) {
+func (edb *EventDb) GetTotalId(start, end, roundsPerPoint int64, row, table, blobberId string) ([]int64, error) {
 	if roundsPerPoint < edb.Config().AggregatePeriod {
 		return nil, fmt.Errorf("too many points %v for aggregate period %v",
 			roundsPerPoint, edb.Config().AggregatePeriod)
