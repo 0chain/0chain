@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/logging"
+
 	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/chaincore/currency"
@@ -89,12 +92,19 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		})
 
 		terms := blobberIDTermMapping[b.BlobberID].Terms
+
+		bwF := gbSize * terms.MinLockDemand * rdtu
+		minLockDemand, err := currency.MultFloat64(terms.WritePrice, bwF)
+		if err != nil {
+			return nil, err
+		}
+
 		tempBlobberAllocation := &BlobberAllocation{
 			BlobberID:     b.BlobberID,
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
 			Size:          b.Allocated,
 			Terms:         terms,
-			MinLockDemand: currency.Coin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
+			MinLockDemand: minLockDemand,
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation
@@ -287,4 +297,45 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit c
 	}
 
 	return sas, nil
+}
+
+func (sa *StorageAllocation) ToAllocBlobberTerms() []event.AllocationBlobberTerm {
+	var terms []event.AllocationBlobberTerm
+
+	for _, blobber := range sa.BlobberAllocs {
+		terms = append(terms, event.AllocationBlobberTerm{
+			BlobberID:        blobber.BlobberID,
+			AllocationID:     blobber.AllocationID,
+			ReadPrice:        int64(blobber.Terms.ReadPrice),
+			WritePrice:       int64(blobber.Terms.WritePrice),
+			MinLockDemand:    blobber.Terms.MinLockDemand,
+			MaxOfferDuration: blobber.Terms.MaxOfferDuration,
+		})
+	}
+
+	return terms
+}
+
+func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting add or override terms event")
+
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrOverwriteAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
+}
+
+func emitUpdateAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting update terms event")
+
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
+}
+
+func emitDeleteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting delete terms event")
+
+	balances.EmitEvent(event.TypeSmartContract, event.TagDeleteAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
 }

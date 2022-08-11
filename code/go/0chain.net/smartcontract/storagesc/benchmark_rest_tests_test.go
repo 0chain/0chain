@@ -1,12 +1,13 @@
 package storagesc
 
 import (
+	"testing"
+
 	"0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/mocks"
 	"0chain.net/smartcontract/rest"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestStorageBenchmarkRestTests(t *testing.T) {
@@ -15,7 +16,7 @@ func TestStorageBenchmarkRestTests(t *testing.T) {
 	mockSigScheme.On("SetPrivateKey", mock.Anything).Return()
 	mockSigScheme.On("Sign", mock.Anything).Return("", nil)
 
-	require.EqualValues(
+	require.Less(
 		t,
 		len(GetEndpoints(rest.NewRestHandler(nil))),
 		len(BenchmarkRestTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),

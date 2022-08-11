@@ -36,6 +36,7 @@ code/go/bin
 gorocksdb/
 docker.local/sharder*
 docker.local/miner*
+docker.local/benchmark*
 *.log
 *.sublime-project
 *.sublime-workspace

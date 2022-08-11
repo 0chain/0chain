@@ -64,6 +64,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&Snapshot{},
 		&BlobberSnapshot{},
 		&BlobberAggregate{},
+		&AllocationBlobberTerm{},
 	); err != nil {
 		return err
 	}

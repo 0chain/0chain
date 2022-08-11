@@ -580,7 +580,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphAllocatedStorage,
 			},
 			{
-				FuncName: "graph-used-storag",
+				FuncName: "graph-used-storage",
 				Params: map[string]string{
 					"from":        "0",
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
@@ -597,16 +597,6 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.graphTotalTokenLocked,
 			},
-			{
-				FuncName: "graph-total-minted",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "17",
-				},
-				Endpoint: srh.graphTotalMinted,
-			},
-
 			{
 				FuncName: "graph-total-minted",
 				Params: map[string]string{
@@ -642,6 +632,21 @@ func BenchmarkRestTests(
 					"data-points": "120",
 				},
 				Endpoint: srh.graphTokenSupply,
+			},
+			{
+				FuncName: "search",
+				Params: map[string]string{
+					"query": benchmark.GetMockTransactionHash(3, 3),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "alloc-blobber-term",
+				Params: map[string]string{
+					"allocation_id": getMockAllocationId(0),
+					"blobber_id":    getMockBlobberId(0),
+				},
+				Endpoint: srh.getAllocBlobberTerms,
 			},
 		},
 		ADDRESS,

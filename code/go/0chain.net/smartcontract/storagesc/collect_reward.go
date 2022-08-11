@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
@@ -77,7 +78,13 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"can't get config: %v", err)
 	}
-	conf.Minted += reward
+
+	minted, err := currency.AddCoin(conf.Minted, reward)
+	if err != nil {
+		return "", err
+	}
+	conf.Minted = minted
+
 	if conf.Minted > conf.MaxMint {
 		return "", common.NewErrorf("collect_reward_failed",
 			"max min %v exceeded: %v", conf.MaxMint, conf.Minted)
@@ -89,13 +96,19 @@ func (ssc *StorageSmartContract) collectReward(
 	}
 
 	//TODO sort out this code, we cant simply update here for validator and for blobber at the same time, also we need write price to calculate staked capacity change
+	//staked, err := sp.stake()
+	//if err != nil {
+	//	return "", common.NewErrorf("collect_reward_failed",
+	//		"can't get stake: %v", err)
+	//}
+	//
 	//data := dbs.DbUpdates{
 	//	Id: providerID,
 	//	Updates: map[string]interface{}{
-	//		"total_stake": int64(sp.stake()),
+	//		"total_stake": int64(staked),
 	//	},
 	//}
-	//balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, providerID, data)
+	//balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
 	//balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, providerID, event.AllocationBlobberValueChanged{
 	//	FieldType:    event.Staked,
 	//	AllocationId: "",

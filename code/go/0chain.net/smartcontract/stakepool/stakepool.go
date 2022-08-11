@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chaincore/currency"
 
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -158,11 +159,15 @@ func (sp *StakePool) MintRewards(
 		}); err != nil {
 			return 0, fmt.Errorf("minting rewards: %v", err)
 		}
-		reward += dPool.Reward
+		newReward, err := currency.AddCoin(reward, dPool.Reward)
+		if err != nil {
+			return 0, err
+		}
+		reward = newReward
 		dPool.Reward = 0
 	}
 
-	var dpUpdate = newDelegatePoolUpdate(providerId, providerType)
+	var dpUpdate = newDelegatePoolUpdate(poolId, providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
 
 	if dPool.Status == spenum.Deleting {
@@ -230,7 +235,10 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	valueBalance := valueLeft
-	var stake = sp.stake()
+	stake, err := sp.stake()
+	if err != nil {
+		return err
+	}
 	if stake == 0 {
 		return fmt.Errorf("no stake")
 	}
@@ -240,7 +248,7 @@ func (sp *StakePool) DistributeRewards(
 			break
 		}
 		ratio := float64(pool.Balance) / float64(stake)
-		reward, err := currency.Float64ToCoin(float64(valueLeft) * ratio)
+		reward, err := currency.MultFloat64(valueLeft, ratio)
 		if err != nil {
 			return err
 		}
@@ -272,9 +280,13 @@ func (sp *StakePool) DistributeRewards(
 	return nil
 }
 
-func (sp *StakePool) stake() (stake currency.Coin) {
+func (sp *StakePool) stake() (stake currency.Coin, err error) {
 	for _, pool := range sp.Pools {
-		stake += pool.Balance
+		newStake, err := currency.AddCoin(stake, pool.Balance)
+		if err != nil {
+			return 0, err
+		}
+		stake = newStake
 	}
 	return
 }
@@ -310,8 +322,17 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 		return err
 	}
 	for i := range delegates {
-		delegates[i].Reward += share
-		spUpdate.DelegateRewards[delegates[i].DelegateID] += iShare
+		delegates[i].Reward, err = currency.AddCoin(delegates[i].Reward, share)
+		if err != nil {
+			return err
+		}
+
+		spUpdate.DelegateRewards[delegates[i].DelegateID], err =
+			maths.SafeAddInt64(spUpdate.DelegateRewards[delegates[i].DelegateID], iShare)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	if r > 0 {

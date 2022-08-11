@@ -274,7 +274,7 @@ func TestGetCollectionScore(t *testing.T) {
 		{
 			name: "TestGetCollectionScore_OK",
 			args: args{ts: now},
-			want: now.UnixNano() / int64(time.Millisecond),
+			want: -now.UnixNano() / int64(time.Millisecond),
 		},
 	}
 	for _, tt := range tests {
