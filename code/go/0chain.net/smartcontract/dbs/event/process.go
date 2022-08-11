@@ -230,7 +230,10 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 
 		rm.TransactionID = event.TxHash
 		rm.BlockNumber = event.BlockNumber
-		return edb.addOrOverwriteReadMarker(*rm)
+		if err := edb.addOrOverwriteReadMarker(*rm); err != nil {
+			return err
+		}
+		return edb.IncrementDataRead(rm.BlobberID, int64(rm.ReadSize))
 	case TagAddOrOverwriteUser:
 		fallthrough
 	case TagSendTransfer:

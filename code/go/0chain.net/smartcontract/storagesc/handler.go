@@ -101,6 +101,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/graph-blobber-capacity", srh.graphBlobberCapacity),
 		rest.MakeEndpoint(storage+"/graph-blobber-allocated", srh.graphBlobberAllocated),
 		rest.MakeEndpoint(storage+"/graph-blobber-saved-data", srh.graphBlobberSavedData),
+		rest.MakeEndpoint(storage+"/graph-blobber-read-data", srh.graphBlobberReadData),
 		rest.MakeEndpoint(storage+"/graph-blobber-offers-total", srh.graphBlobberOffersTotal),
 		rest.MakeEndpoint(storage+"/graph-blobber-unstake-total", srh.graphBlobberUnstakeTotal),
 		rest.MakeEndpoint(storage+"/graph-blobber-total-stake", srh.graphBlobberTotalStake),
@@ -187,12 +188,12 @@ func (srh *StorageRestHandler) graphBlobberInactiveRounds(w http.ResponseWriter,
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-completed graph-blobber-challenges-completed
-// Graphs the total challenges created across all blobbers
+// Graphs the total challenges created for the indicated blobber.
 //
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The count rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds.
-// Each point will give the count challenges created at that time.
+// Each point will give the count challenges created up to that time.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -376,7 +377,7 @@ func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWrite
 		common.Respond(w, r, nil, err)
 		return
 	}
-	data, err := edb.GetDifferenceId(
+	data, err := edb.GetTotalId(
 		start, end, roundsPerPoint, "challenges_passed", "blobber_aggregates", id,
 	)
 	if err != nil {
@@ -388,14 +389,14 @@ func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWrite
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-total-stake graph-blobber-total-stake
-// Graphs the total amount of tokens lcoked in blobber stake pools.
+// Graphs the total amount of tokens lcoked in a blobber's stake pool.
 //
 // Unstaking tokens are locked into allocations now, but cannot be used for any further allocations.
 //
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The count rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds.
-// Each point will give the amount of tokens locked into blobber stake pools.
+// Each point will give the amount of tokens locked into the blobber's stake pool.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -441,7 +442,7 @@ func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *
 
 	data, err := edb.GetAggregateData(
 		from, to, points,
-		"avg(total_stake)",
+		"total_stake",
 		"blobber_aggregates",
 		id,
 	)
@@ -454,12 +455,12 @@ func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-service-charge graph-blobber-service-charge
-// Graphs the total service charge earned across all blobbrs.
+// Graphs the total service charge earned for the indicated blobber.
 //
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The count rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds.
-// Each point will give the total amount of tokens earnt by blobbers at that time.
+// Each point will give the total service charge earnt by the blobbers up to that time.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -508,7 +509,7 @@ func (srh *StorageRestHandler) graphBlobberServiceCharge(w http.ResponseWriter, 
 		common.Respond(w, r, nil, err)
 		return
 	}
-	data, err := edb.GetDifferenceId(
+	data, err := edb.GetTotalId(
 		start, end, roundsPerPoint, "total_service_charge", "blobber_aggregates", id,
 	)
 	if err != nil {
@@ -520,14 +521,14 @@ func (srh *StorageRestHandler) graphBlobberServiceCharge(w http.ResponseWriter, 
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-unstake-total graph-blobber-unstake-total
-// Graphs the total amount of tokens in blobber stake pools that are tagged for unstaking.
+// Graphs the total amount of tokens in the blobber's stake pool that are tagged for unstaking.
 //
 // Unstaking tokens are locked into allocations now, but cannot be used for any further allocations.
 //
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds.
-// Each point will give the amount of tokens taged as unstaking.
+// Each point will give the amount of tokens taged as unstaking in the blobber's stake pool.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -573,7 +574,7 @@ func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r
 
 	data, err := edb.GetAggregateData(
 		from, to, points,
-		"avg(unstake_total)",
+		"unstake_total",
 		"blobber_aggregates",
 		id,
 	)
@@ -586,14 +587,14 @@ func (srh *StorageRestHandler) graphBlobberUnstakeTotal(w http.ResponseWriter, r
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-offers-total graph-blobber-offers-total
-// Graphs the total amount of tokens in blobber stake pools that are locked into allocation offers.
+// Graphs the total amount of tokens in blobber stake pools that are locked into allocation offers for the blobber.
 //
 // Tokens locked into active allocations cannot be used for new allocations.
 //
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds.
-// Each point will give the average stake amount locked into allocations.
+// Each point will give the average stake amount locked into allocations for the blobber.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -639,7 +640,7 @@ func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r 
 
 	data, err := edb.GetAggregateData(
 		from, to, points,
-		"avg(offers_total)",
+		"offers_total",
 		"blobber_aggregates",
 		id,
 	)
@@ -652,12 +653,12 @@ func (srh *StorageRestHandler) graphBlobberOffersTotal(w http.ResponseWriter, r 
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-saved-data graph-blobber-saved-data
-// Graphs the total amount of data stored in blobbers across the network.
+// Graphs the total amount of data stored in the indicated blobber.
 //
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds.
-// Each point will give the average data stored across the network during the corresponding interval.
+// Each point will give the total data stored in the blobber up until that time.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -703,7 +704,71 @@ func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *h
 
 	data, err := edb.GetAggregateData(
 		from, to, points,
-		"avg(saved_data)",
+		"saved_data",
+		"blobber_aggregates",
+		id,
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-saved-data graph-blobber-saved-data
+// Graphs the total amount of data stored in the indicated blobber.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the average data read upto the that time.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:  graphPoints
+//  400:
+//  500:
+func (srh *StorageRestHandler) graphBlobberReadData(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	from, to, points := intervalParametersFromString(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+	)
+
+	data, err := edb.GetAggregateData(
+		from, to, points,
+		"read_data",
 		"blobber_aggregates",
 		id,
 	)
@@ -725,15 +790,15 @@ func (srh *StorageRestHandler) graphBlobberSavedData(w http.ResponseWriter, r *h
 //
 // example for data points = 17: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2808685.714285714,5242880,5242880]
 // swagger:model graphPoints
-type graphPoints []float64
+type graphPoints []int64
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-allocated graph-blobber-allocated
-// Graphs the total amount of storage allocated to blobbers over time.
+// Graphs the total amount of storage allocated to a blobber over time.
 //
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds. Each point will give the total blobber
-// capacity at the end of the corresponding interval.
+// the average storage allocated to the blobber during the corresponding interval.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -779,7 +844,7 @@ func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *h
 
 	data, err := edb.GetAggregateData(
 		from, to, points,
-		"avg(allocated)",
+		"allocated",
 		"blobber_aggregates",
 		id,
 	)
@@ -797,7 +862,7 @@ func (srh *StorageRestHandler) graphBlobberAllocated(w http.ResponseWriter, r *h
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds. Each point will give the total blobber
-// capacity at the end of the corresponding interval.
+// capacity at the end of the corresponding interval for the blobber.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -843,7 +908,7 @@ func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *ht
 
 	data, err := edb.GetAggregateData(
 		from, to, points,
-		"avg(capacity)",
+		"capacity",
 		"blobber_aggregates",
 		id,
 	)
@@ -856,12 +921,12 @@ func (srh *StorageRestHandler) graphBlobberCapacity(w http.ResponseWriter, r *ht
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-write-price graph-blobber-write-price
-// Graphs the average write price.
+// Graphs the average write price for a blobber.
 //
 // Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
 // The number of rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
 // 0chain data is then amalgamated into `data-points` intervals of equal rounds. Each point will give the average blobber
-// write price for the corresponding interval.
+// write price for the corresponding interval for the blobber.
 //
 // The result is given in an array of values with length equal to `data-points`.
 // Array index represents intervals of increasing round number.
@@ -908,7 +973,7 @@ func (srh *StorageRestHandler) graphBlobberWritePrice(w http.ResponseWriter, r *
 
 	data, err := edb.GetAggregateData(
 		from, to, points,
-		"avg(write_price)",
+		"write_price",
 		"blobber_aggregates",
 		id,
 	)
@@ -2879,6 +2944,7 @@ type storageNodeResponse struct {
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 	TotalStake         currency.Coin `json:"total_stake"`
 	CreationRound      int64         `json:"creation_round"`
+	ReadData           int64         `json:"read_data"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
@@ -2916,6 +2982,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		TotalServiceCharge: blobber.TotalServiceCharge,
 		TotalStake:         blobber.TotalStake,
 		CreationRound:      blobber.CreationRound,
+		ReadData:           blobber.ReadData,
 	}
 }
 

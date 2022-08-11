@@ -622,7 +622,7 @@ func BenchmarkRestTests(
 					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 					"data-points": "120",
 				},
-				Endpoint: srh.graphDataQuality,
+				Endpoint: srh.graphChallenges,
 			},
 			{
 				FuncName: "graph-zcn-supply",
