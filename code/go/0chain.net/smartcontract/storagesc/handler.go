@@ -446,6 +446,10 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
+// Returns collected reward for a client_id. 
+// > Note: start-date and end-date resolves to the closest block number for those timestamps on the network. 
+//
+// > Note: Using start/end-block and start/end-date together would only return results with start/end-block
 //
 //
 // parameters:
@@ -470,7 +474,7 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 //      in: query
 //      type: string
 //    + name: data-points 
-//      description: number of data points in response (only works for dates)
+//      description: number of data points in response
 //      required: false
 //      in: query
 //      type: string
@@ -485,8 +489,8 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 //  400:
 func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http.Request) {
 	var (
-		startBlock, _    = strconv.Atoi(r.URL.Query().Get("start-block"))
-		endBlock, _      = strconv.Atoi(r.URL.Query().Get("end-block"))
+		startBlockString = r.URL.Query().Get("start-block")
+		endBlockString   = r.URL.Query().Get("end-block")
 		clientID         = r.URL.Query().Get("client-id")
 		startDateString  = r.URL.Query().Get("start-date")
 		endDateString	 = r.URL.Query().Get("end-date")
@@ -497,48 +501,73 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 	dataPoints, err := strconv.ParseInt(dataPointsString, 10, 64)
 	if err != nil {
 		dataPoints = 1
+	} else if dataPoints > 100 {
+		dataPoints = 100
 	}
 
-
 	query := event.RewardQuery{
-		StartBlock: startBlock,
-		EndBlock:   endBlock,
 		ClientID:   clientID,
 		DataPoints: dataPoints,
 	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
+	if startBlockString != "" && endBlockString != "" {
+		startBlock, err := strconv.ParseUint(startBlockString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start-block string to a number", err.Error()))
+			return
+		}
 
-	if startBlock > 0 && endBlock > 0 {
-		collectedReward, err := edb.GetRewardClaimedTotalBetweenBlocks(query)
+		endBlock, err := strconv.ParseUint(endBlockString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end-block string to a number", err.Error()))
+			return
+		}
+
+		if startBlock > endBlock {
+			common.Respond(w, r, 0, common.NewErrInternal("start-block cannot be greater than end-block"))
+			return
+		}
+
+		query.StartBlock = int(startBlock)
+		query.EndBlock = int(endBlock)
+
+		rewards, err := edb.GetRewardClaimedTotalBetweenBlocks(query)
 		if err != nil {
 			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
 			return
 		}
 		common.Respond(w, r, map[string][]int64{
-			"collected_reward": {collectedReward},
+			"collected_reward": rewards,
 		}, nil)
+		return
 	}
 
 	if startDateString != "" && endDateString != "" {
-		startDate, err := strconv.ParseInt(startDateString, 10, 64)
+		startDate, err := strconv.ParseUint(startDateString, 10, 64)
 		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start_date string to a number", err.Error()))
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start-date string to a number", err.Error()))
 			return
 		}
 
-		endDate, err := strconv.ParseInt(endDateString, 10, 64)
+		endDate, err := strconv.ParseUint(endDateString, 10, 64)
 		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end_date string to a number", err.Error()))
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end-date string to a number", err.Error()))
 			return
 		}
 
-		query.StartDate = time.Unix(startDate, 0)
-		query.EndDate = time.Unix(endDate, 0)
+		if startDate > endDate {
+			common.Respond(w, r, 0, common.NewErrInternal("start-date cannot be greater than end-date"))
+			return
+		}
+
+		query.StartDate = time.Unix(int64(startDate), 0)
+		query.EndDate = time.Unix(int64(endDate), 0)
 		
 		rewards, err := edb.GetRewardClaimedTotalBetweenDates(query)
 		if err != nil {
@@ -549,9 +578,10 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		common.Respond(w, r, map[string]interface{}{
 			"collected_reward": rewards,
 		}, nil)
+		return 
 	}
 
-	common.Respond(w, r, nil, common.NewErrInternal("can't get rewards claimed"))
+	common.Respond(w, r, nil, common.NewErrInternal("can't get collected rewards"))
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count alloc_write_marker_count
