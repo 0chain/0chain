@@ -11,6 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// stagger:model Challenges
+type Challenges []Challenge
+
 type Challenge struct {
 	gorm.Model
 	ChallengeID    string           `json:"challenge_id" gorm:"index:idx_cchallenge_id,unique"`
@@ -21,6 +24,7 @@ type Challenge struct {
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
 	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
+	RoundResponded int64            `json:"round_responded"`
 	Passed         bool             `json:"passed"`
 }
 
@@ -33,6 +37,16 @@ func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	}
 
 	return &ch, nil
+}
+
+func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challenge, error) {
+	var chs []Challenge
+	result := edb.Store.Get().
+		Model(&Challenge{}).
+		Where("blobber_id = ? AND round_responded >= ? AND round_responded < ?",
+			blobberId, start, end).
+		Find(&chs)
+	return chs, result.Error
 }
 
 func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, limit common2.Pagination) ([]*Challenge, error) {

@@ -20,7 +20,6 @@ type BlobberAggregate struct {
 	Allocated    int64         `json:"allocated"` // allocated capacity
 	SavedData    int64         `json:"saved_data"`
 	ReadData     int64         `json:"read_data"`
-	Used         int64         `json:"used"`
 	OffersTotal  currency.Coin `json:"offers_total"`
 	UnstakeTotal currency.Coin `json:"unstake_total"`
 	TotalStake   currency.Coin `json:"total_stake"`
@@ -71,13 +70,20 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
-		aggregate.Used = (old.Used + current.Used) / 2
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
 		aggregate.InactiveRounds = current.InactiveRounds
 		aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
+
+		//if aggregate.Used > 0 {
+		logging.Logger.Info("piers updateBlobberAggregate loop",
+			zap.Any("aggreagate.SavedData", aggregate.SavedData),
+			zap.Any("aggreagate.ReadData", aggregate.ReadData),
+			zap.String("id", current.BlobberID))
+
+		//}
 
 		gs.totalWritePricePeriod += aggregate.WritePrice
 
@@ -91,7 +97,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		gs.TotalChallenges += int64(aggregate.ChallengesCompleted)
 		gs.AllocatedStorage += aggregate.Allocated
 		gs.MaxCapacityStorage += aggregate.Capacity
-		gs.UsedStorage += aggregate.Used
+		gs.UsedStorage += aggregate.SavedData
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
 		ss, err := (aggregate.TotalStake * (GB / aggregate.WritePrice)).Int64()
@@ -107,6 +113,8 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
 		}
 	}
+	logging.Logger.Info("piers updateBlobberAggregate",
+		zap.Int64("UsedStorage", gs.UsedStorage))
 
 	if len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {

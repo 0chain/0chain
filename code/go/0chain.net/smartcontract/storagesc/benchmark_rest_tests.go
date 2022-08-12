@@ -398,6 +398,15 @@ func BenchmarkRestTests(
 				Endpoint: srh.getFreeAllocationBlobbers,
 			},
 			{
+				FuncName: "blobber-challenges",
+				Params: map[string]string{
+					"id":   getMockBlobberId(0),
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getBlobberChallenges,
+			},
+			{
 				FuncName: "graph-blobber-write-price",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),

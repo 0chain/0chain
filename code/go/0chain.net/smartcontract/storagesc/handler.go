@@ -69,6 +69,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/validators", srh.validators),
 		rest.MakeEndpoint(storage+"/openchallenges", srh.getOpenChallenges),
 		rest.MakeEndpoint(storage+"/getchallenge", srh.getChallenge),
+		rest.MakeEndpoint(storage+"/blobber-challenges", srh.getBlobberChallenges),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", srh.getStakePoolStat),
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
 		rest.MakeEndpoint(storage+"/block", srh.getBlock),
@@ -253,32 +254,15 @@ func (srh *StorageRestHandler) graphBlobberChallengesCompleted(w http.ResponseWr
 	common.Respond(w, r, data, nil)
 }
 
-func intervalParametersFromString(fromStr, toStr, dataPointsStr string) (int64, int64, uint16) {
-	from, err := strconv.ParseInt(fromStr, 10, 16)
-	if err != nil {
-		from = time.Now().Add(-24 * time.Hour).Unix()
-	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
-	if err != nil {
-		to = time.Now().Unix()
-	}
-	dataPoints, err := strconv.ParseUint(dataPointsStr, 10, 16)
-	if err != nil {
-		dataPoints = 100
-	}
-
-	return time.Unix(from, 0).UnixNano(), time.Unix(to, 0).UnixNano(), uint16(dataPoints)
-}
-
-func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.EventDb) (int64, int64, int64, error) {
+func roundIntervalFromTime(fromTime, toTime string, edb *event.EventDb) (int64, int64, error) {
 	var timeFrom, timeTo time.Time
-	from, err := strconv.ParseInt(fromStr, 10, 16)
+	from, err := strconv.ParseInt(fromTime, 10, 16)
 	if err != nil {
 		timeFrom = time.Now().Add(-24 * time.Hour)
 	} else {
 		timeFrom = time.Unix(from, 0)
 	}
-	to, err := strconv.ParseInt(toStr, 10, 64)
+	to, err := strconv.ParseInt(toTime, 10, 64)
 	if err != nil {
 		timeTo = time.Now()
 	} else {
@@ -286,18 +270,26 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 	}
 	start, err := edb.GetRoundFromTime(timeFrom, true)
 	if err != nil {
-		return 0, 0, 0, common.NewErrInternal(err.Error())
+		return 0, 0, common.NewErrInternal(err.Error())
 	}
 	if start <= 0 {
 		start = 1
 	}
 	end, err := edb.GetRoundFromTime(timeTo, false)
 	if err != nil {
-		return 0, 0, 0, common.NewErrInternal(err.Error())
+		return 0, 0, common.NewErrInternal(err.Error())
 	}
 
 	if end <= start {
-		return 0, 0, 0, common.NewErrBadRequest(fmt.Sprintf("to %v less than from %v", end, start))
+		return 0, 0, common.NewErrBadRequest(fmt.Sprintf("to %v less than from %v", end, start))
+	}
+	return start, end, nil
+}
+
+func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.EventDb) (int64, int64, int64, error) {
+	start, end, err := roundIntervalFromTime(fromStr, toStr, edb)
+	if err != nil {
+		return 0, 0, 0, common.NewErrBadRequest(err.Error())
 	}
 
 	points, err := strconv.ParseUint(dataPointsStr, 10, 16)
@@ -2116,6 +2108,57 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, spS, nil)
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges blobber-challenges
+// Gets challenges for a blobber by challenge id
+//
+// parameters:
+//    + name: id
+//      description: id of blobber
+//      required: true
+//      in: query
+//      type: string
+//    + name: start
+//      description: start time of interval
+//      required: true
+//      in: query
+//      type: string
+//    + name: end
+//      description: end time of interval
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Challenges
+//  400:
+//  404:
+//  500:
+func (srh *StorageRestHandler) getBlobberChallenges(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+	start, end, err := roundIntervalFromTime(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		edb,
+	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+	}
+	blobberID := r.URL.Query().Get("id")
+	if len(blobberID) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+	}
+
+	challenges, err := edb.GetChallenges(blobberID, start, end)
+	if err != nil {
+		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge"))
+	}
+
+	common.Respond(w, r, challenges, nil)
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
 // Gets challenges for a blobber by challenge id
 //
@@ -3018,6 +3061,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				LogoUrl:     blobber.LogoUrl,
 				Description: blobber.Description,
 			},
+			SavedData: blobber.SavedData,
 		},
 		TotalServiceCharge: blobber.TotalServiceCharge,
 		TotalStake:         blobber.TotalStake,

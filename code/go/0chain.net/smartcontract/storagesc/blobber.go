@@ -445,7 +445,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	)
 
 	commitRead.ReadMarker.ReadSize = sizeRead
-
+	logging.Logger.Info("piers commitBlobberRead",
+		zap.Int64("numReads", numReads),
+		zap.Any("read marker", commitRead))
 	// move tokens from read pool to blobber
 	var rp *readPool
 	if rp, err = sc.getReadPool(commitRead.ReadMarker.ClientID, balances); err != nil {
@@ -777,11 +779,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"emitting write marker event: %v", err)
-	}
+	emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
 
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {

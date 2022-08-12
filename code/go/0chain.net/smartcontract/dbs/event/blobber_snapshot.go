@@ -12,7 +12,6 @@ type BlobberSnapshot struct {
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
 	Allocated           int64         `json:"allocated"` // allocated capacity
-	Used                int64         `json:"used"`      // total of files saved on blobber
 	SavedData           int64         `json:"saved_data"`
 	ReadData            int64         `json:"read_data"`
 	OffersTotal         currency.Coin `json:"offers_total"`
@@ -54,7 +53,6 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 			WritePrice:          blobber.WritePrice,
 			Capacity:            blobber.Capacity,
 			Allocated:           blobber.Allocated,
-			Used:                blobber.Used,
 			SavedData:           blobber.SavedData,
 			ReadData:            blobber.ReadData,
 			OffersTotal:         blobber.OffersTotal,
@@ -67,5 +65,6 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 			CreationRound:       blobber.CreationRound,
 		})
 	}
+
 	return edb.Store.Get().Create(&snapshots).Error
 }

@@ -196,6 +196,7 @@ func AddMockChallenges(
 			&allocationChall[i],
 			eventDb,
 			balances,
+			i,
 		)
 		challenges = append(challenges, cs...)
 	}
@@ -319,6 +320,7 @@ func setupMockChallenge(
 	ac *AllocationChallenges,
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
+	index int,
 ) []*StorageChallenge {
 	ac.AllocationID = allocationId
 
@@ -345,10 +347,11 @@ func setupMockChallenge(
 
 	if viper.GetBool(sc.EventDbEnabled) {
 		challengeRow := event.Challenge{
-			ChallengeID:  challenge.ID,
-			CreatedAt:    balances.GetTransaction().CreationDate,
-			AllocationID: challenge.AllocationID,
-			BlobberID:    challenge.BlobberID,
+			ChallengeID:    challenge.ID,
+			CreatedAt:      balances.GetTransaction().CreationDate,
+			AllocationID:   challenge.AllocationID,
+			BlobberID:      challenge.BlobberID,
+			RoundResponded: int64(index),
 		}
 		_ = eventDb.Store.Get().Create(&challengeRow)
 	}
@@ -421,7 +424,6 @@ func AddMockBlobbers(
 				MaxOfferDuration:    blobber.Terms.MaxOfferDuration.Nanoseconds(),
 				Capacity:            blobber.Capacity,
 				Allocated:           blobber.Allocated,
-				Used:                blobber.Allocated / 2,
 				ReadData:            blobber.Allocated * 2,
 				LastHealthCheck:     int64(blobber.LastHealthCheck),
 				DelegateWallet:      blobber.StakePoolSettings.DelegateWallet,

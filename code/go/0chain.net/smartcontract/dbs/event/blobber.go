@@ -36,9 +36,8 @@ type Blobber struct {
 
 	Capacity        int64 `json:"capacity"`  // total blobber capacity
 	Allocated       int64 `json:"allocated"` // allocated capacity
-	Used            int64 `json:"used"`      // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
-	SavedData       int64 `json:"saved_data"`
+	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
 	ReadData        int64 `json:"read_data"`
 
 	// stake_pool_settings
@@ -98,13 +97,13 @@ func (edb *EventDb) IncrementDataStored(id string, read int64) error {
 	update := dbs.DbUpdates{
 		Id: id,
 		Updates: map[string]interface{}{
-			"read_data": blobber.ReadData + read,
+			"saved_data": blobber.ReadData + read,
 		},
 	}
 	return edb.updateBlobber(update)
 }
 
-func (edb *EventDb) IncrementDataRead(id string, stored int64) error {
+func (edb *EventDb) IncrementDataRead(id string, read int64) error {
 	blobber, err := edb.GetBlobber(id)
 	if err != nil {
 		return err
@@ -112,7 +111,7 @@ func (edb *EventDb) IncrementDataRead(id string, stored int64) error {
 	update := dbs.DbUpdates{
 		Id: id,
 		Updates: map[string]interface{}{
-			"used": blobber.Used + stored,
+			"read_data": blobber.ReadData + read,
 		},
 	}
 	return edb.updateBlobber(update)

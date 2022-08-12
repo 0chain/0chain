@@ -23,9 +23,6 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
 	}
 }
 
-func emitAddWriteMarker(wm *WriteMarker, balances cstate.StateContextI, t *transaction.Transaction) error {
-
+func emitAddWriteMarker(wm *WriteMarker, balances cstate.StateContextI, t *transaction.Transaction) {
 	balances.EmitEvent(event.TypeSmartContract, event.TagAddWriteMarker, t.Hash, writeMarkerToWriteMarkerTable(wm))
-
-	return nil
 }

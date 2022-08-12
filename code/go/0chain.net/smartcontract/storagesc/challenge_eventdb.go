@@ -66,8 +66,9 @@ func emitUpdateChallengeResponse(chID string, responded bool, passed bool, balan
 	data := &dbs.DbUpdates{
 		Id: chID,
 		Updates: map[string]interface{}{
-			"responded": responded,
-			"passed":    passed,
+			"responded":       responded,
+			"passed":          passed,
+			"round_responded": balances.GetBlock().Round,
 		},
 	}
 

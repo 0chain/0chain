@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BLOBBERID=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+BLOBBERID=2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
 echo
 echo blobber $BLOBBERID
 echo -e "\naverges"
