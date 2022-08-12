@@ -109,7 +109,11 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	before := make([]currency.Coin, len(blobberRewards))
 	for resp := range spChan {
 		stakePools[resp.index] = resp.sp
-		before[resp.index] = resp.sp.stake()
+		stake, err := resp.sp.stake()
+		if err != nil {
+			return err
+		}
+		before[resp.index] = stake
 	}
 
 	qualifyingBlobberIds := make([]string, len(blobberRewards))
@@ -117,7 +121,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	for i, br := range blobberRewards {
 		sp := stakePools[i]
 
-		stake := float64(sp.stake())
+		staked, err := sp.stake()
+		if err != nil {
+			return err
+		}
+
+		stake := float64(staked)
 
 		gamma := maths.GetGamma(
 			conf.BlockReward.Gamma.A,
@@ -211,19 +220,29 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}
+		staked, err := qsp.stake()
+		if err != nil {
+			return common.NewError("blobber_block_rewards_failed",
+				"getting stake pool stake: "+err.Error())
+		}
+
 		data := dbs.DbUpdates{
 			Id: qualifyingBlobberIds[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(qsp.stake()),
+				"total_stake": int64(staked),
 			},
 		}
 		balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
 		if blobberRewards[i].WritePrice > 0 {
+			stake, err := qsp.stake()
+			if err != nil {
+				return err
+			}
 			balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, qualifyingBlobberIds[i], event.AllocationBlobberValueChanged{
 				FieldType:    event.Staked,
 				AllocationId: "",
 				BlobberId:    qualifyingBlobberIds[i],
-				Delta:        int64((qsp.stake() - before[i]) / blobberRewards[i].WritePrice),
+				Delta:        int64((stake - before[i]) / blobberRewards[i].WritePrice),
 			})
 		}
 	}
@@ -242,7 +261,9 @@ func getBlockReward(
 	}
 	changeBalance := 1 - brChangeRatio
 	changePeriods := currentRound / brChangePeriod
-	return currency.Float64ToCoin(float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight)
+
+	factor := math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
+	return currency.MultFloat64(br, factor)
 }
 
 func GetCurrentRewardRound(currentRound, period int64) int64 {

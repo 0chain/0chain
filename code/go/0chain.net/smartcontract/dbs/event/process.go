@@ -74,6 +74,9 @@ const (
 	TagAllocBlobberValueChange
 	TagUpdateBlobberChallenge
 	NumberOfTags
+	TagAddOrOverwriteAllocationBlobberTerm
+	TagUpdateAllocationBlobberTerm
+	TagDeleteAllocationBlobberTerm
 )
 
 var ErrInvalidEventData = errors.New("invalid event data")
@@ -386,6 +389,25 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateBlobberChallenges(*challenge)
+		// allocation blobber term
+	case TagAddOrOverwriteAllocationBlobberTerm:
+		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrOverwriteAllocationBlobberTerms(*updates)
+	case TagUpdateAllocationBlobberTerm:
+		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateAllocationBlobberTerms(*updates)
+	case TagDeleteAllocationBlobberTerm:
+		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.deleteAllocationBlobberTerms(*updates)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

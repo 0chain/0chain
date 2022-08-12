@@ -8,6 +8,7 @@ require (
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.24.1
 	github.com/go-playground/validator/v10 v10.11.0
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gocql/gocql v1.1.0
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.8

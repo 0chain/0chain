@@ -60,7 +60,12 @@ func mockMint(
 		return
 	}
 	_ = balances.SetStateContext(&toState)
-	toState.Balance += amount
+
+	newBal, err := currency.AddCoin(toState.Balance, amount)
+	if err != nil {
+		return
+	}
+	toState.Balance = newBal
 	_, _ = clientState.Insert(util.Path(to), &toState)
 }
 
@@ -87,6 +92,11 @@ func mockTransferAmount(
 		return
 	}
 	_ = balances.SetStateContext(&toState)
-	toState.Balance += amount
+
+	newBal, err := currency.AddCoin(toState.Balance, amount)
+	if err != nil {
+		return
+	}
+	toState.Balance = newBal
 	_, _ = clientState.Insert(util.Path(to), &toState)
 }

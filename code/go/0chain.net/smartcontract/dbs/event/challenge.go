@@ -49,13 +49,17 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 	return chs, result.Error
 }
 
-func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, limit common2.Pagination) ([]*Challenge, error) {
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct common.Timestamp,
+	limit common2.Pagination) ([]*Challenge, error) {
 	var chs []*Challenge
 	expiry := now - cct
+	if from < expiry {
+		from = expiry
+	}
 
-	query := edb.Store.Get().Model(&Challenge{}).
+    query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			expiry, blobberID, false).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
+			from, blobberID, false).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "created_at"},
 		Desc:   limit.IsDescending,
 	})
