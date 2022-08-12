@@ -3111,7 +3111,6 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		TotalStake:         blobber.TotalStake,
 		CreationRound:      blobber.CreationRound,
 		ReadData:           blobber.ReadData,
-		UsedAllocation:     blobber.Used,
 	}
 }
 
