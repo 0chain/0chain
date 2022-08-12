@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"gorm.io/gorm"
@@ -31,23 +32,24 @@ type RewardQuery struct {
 
 // GetRewardClaimedTotalBetweenBlocks returns the sum of amounts
 // from rewards table  matching the given query
-func (edb *EventDb) GetRewardClaimedTotalBetweenBlocks(query RewardQuery) (int64, error) {
-	var total int64
-	reward := Reward{
-		ClientID:     query.ClientID,
-		PoolID:       query.PoolID,
-		ProviderType: query.ProviderType,
-		ProviderID:   query.ProviderID,
-	}
-	q := edb.Store.Get().Model(&Reward{}).Select("coalesce(sum(amount), 0)").Where(&reward)
+func (edb *EventDb) GetRewardClaimedTotalBetweenBlocks(query RewardQuery) ([]int64, error) {
+	var rewards []int64
 
-	if query.EndBlock > 0 {
-		q = q.Where("block_number >= ? AND block_number <= ?", query.StartBlock, query.EndBlock)
-	} else if query.StartBlock > 0 {
-		q = q.Where("block_number >= ?", query.StartBlock)
-	}
+	step := math.Ceil(float64(query.EndBlock-query.StartBlock) / float64(query.DataPoints))
+	rawQuery := fmt.Sprintf(`
+		WITH
+		ranges AS (
+			SELECT t AS r_min, t + %[3]v - 1 AS r_max
+			FROM generate_series(%[1]v, %[2]v, %[3]v) as t
+		)
+		SELECT coalesce(sum(amount), 0) as val
+		FROM ranges r
+		LEFT JOIN rewards rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%[4]v'
+		GROUP BY r.r_min
+		ORDER BY r.r_min;
+	`, query.StartBlock, query.EndBlock, step, query.ClientID)
 
-	return total, q.Scan(&total).Error
+	return rewards, edb.Store.Get().Raw(rawQuery).Scan(&rewards).Error
 }
 
 func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardQuery) ([]int64, error) {
