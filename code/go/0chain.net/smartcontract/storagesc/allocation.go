@@ -364,38 +364,47 @@ func (t *Timings) tick(name string) {
 
 func (sc *StorageSmartContract) fetchPools(inputBlobbers *StorageNodes, balances chainstate.StateContextI) ([]*blobberWithPool, error) {
 	blobbers := make([]*blobberWithPool, 0, len(inputBlobbers.Nodes))
-	pools := make(chan *blobberWithPool, len(inputBlobbers.Nodes))
-	errs := make(chan error, len(inputBlobbers.Nodes))
+	poolC := make(chan *blobberWithPool, len(inputBlobbers.Nodes))
+	errC := make(chan error, len(inputBlobbers.Nodes))
 
+	wg := sync.WaitGroup{}
 	for i, b := range inputBlobbers.Nodes {
+		wg.Add(1)
 		go func(blob *StorageNode, ind int) {
+			defer wg.Done()
 			var sp *stakePool
 			var err error
 			if sp, err = sc.getStakePool(blob.ID, balances); err != nil {
-				errs <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
+				errC <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
 				return
 			}
-			pools <- &blobberWithPool{blob, sp, ind}
+			poolC <- &blobberWithPool{blob, sp, ind}
 		}(b, i)
 	}
 
-	for {
-		if len(blobbers) == len(inputBlobbers.Nodes) {
-			//ensure ordering
-			sort.Slice(blobbers, func(i, j int) bool {
-				return blobbers[i].idx < blobbers[j].idx
-			})
+	wg.Wait()
+	close(poolC)
 
-			return blobbers, nil
-		}
-
-		select {
-		case err := <-errs:
-			return nil, err
-		case p := <-pools:
-			blobbers = append(blobbers, p)
-		}
+	select {
+	case err := <-errC:
+		return nil, err
+	default:
 	}
+
+	for p := range poolC {
+		blobbers = append(blobbers, p)
+	}
+
+	if len(blobbers) != len(inputBlobbers.Nodes) {
+		return nil, errors.New("fetched stake pools number does not match the requested ones")
+	}
+
+	//ensure ordering
+	sort.Slice(blobbers, func(i, j int) bool {
+		return blobbers[i].idx < blobbers[j].idx
+	})
+
+	return blobbers, nil
 }
 
 func (sc *StorageSmartContract) selectBlobbers(
