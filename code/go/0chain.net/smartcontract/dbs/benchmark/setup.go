@@ -70,6 +70,7 @@ func AddMockTransactions(
 					Signature:         "mock signature",
 					CreationDate:      int64(common.Now()),
 					Fee:               100,
+					Nonce:             int64(i),
 					TransactionType:   txnTypeSmartContract,
 					TransactionOutput: "mock output",
 					OutputHash:        "mock output hash",

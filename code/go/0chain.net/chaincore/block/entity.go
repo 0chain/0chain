@@ -1012,6 +1012,7 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 		Signature:         tr.Signature,
 		CreationDate:      int64(tr.CreationDate.Duration()),
 		Fee:               tr.Fee,
+		Nonce:             tr.Nonce,
 		TransactionType:   tr.TransactionType,
 		TransactionOutput: tr.TransactionOutput,
 		OutputHash:        tr.OutputHash,

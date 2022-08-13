@@ -21,6 +21,7 @@ type Transaction struct {
 	Signature         string
 	CreationDate      int64 `gorm:"index:idx_tcreation_date"`
 	Fee               currency.Coin
+	Nonce             int64
 	TransactionType   int
 	TransactionOutput string
 	OutputHash        string
