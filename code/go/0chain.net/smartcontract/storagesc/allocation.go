@@ -597,7 +597,7 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]
 				}
 				return
 			case util.ErrNodeNotFound:
-				nodeNotFoundErrC <- err
+				nodeNotFoundErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
 				return
 			default:
 				logging.Logger.Debug("can't get blobber", zap.String("blobberId", blobberId), zap.Error(err))
