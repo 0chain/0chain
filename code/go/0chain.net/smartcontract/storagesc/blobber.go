@@ -288,8 +288,8 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 }
 
 func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
-	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
-		return b.LastHealthCheck <= (now - blobberHealthTime)
+	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
+		return b.LastHealthCheck <= (now - blobberHealthTime), nil
 	})
 }
 

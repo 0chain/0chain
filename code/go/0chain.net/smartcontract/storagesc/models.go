@@ -1091,11 +1091,11 @@ func (sa *StorageAllocation) validate(now time.Time,
 	return // nil
 }
 
-type filterBlobberFunc func(blobber *StorageNode) (kick bool)
+type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
-	filtered []*StorageNode) {
+	filtered []*StorageNode, err error) {
 
 	var (
 		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
@@ -1122,7 +1122,12 @@ List:
 		}
 
 		for _, filter := range filters {
-			if filter(b) {
+			kick, err := filter(b)
+			if err != nil {
+				return nil, err
+			}
+
+			if kick {
 				continue List
 			}
 		}
@@ -1130,28 +1135,28 @@ List:
 		i++
 	}
 
-	return list[:i]
+	return list[:i], nil
 }
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
-	creationDate common.Timestamp, balances cstate.StateContextI) (
+	creationDate common.Timestamp) (
 	[]*blobberWithPool, []string) {
 
 	var (
-		errors   = make([]string, 0, len(blobbers))
+		errs     = make([]string, 0, len(blobbers))
 		filtered = make([]*blobberWithPool, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
 		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
-			errors = append(errors, err.Error())
+			errs = append(errs, err.Error())
 			continue
 		}
 		filtered = append(filtered, b)
 	}
-	return filtered, errors
+	return filtered, errs
 }
 
 // Until returns allocation expiration.

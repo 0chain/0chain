@@ -126,20 +126,29 @@ func sizeInGB(size int64) float64 {
 func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	size int64, balances chainstate.CommonStateContextI) (filter filterBlobberFunc) {
 
-	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
-		var sp, err = sc.getStakePool(b.ID, balances)
-		if err != nil {
-			return true // kick off
+	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
+		var sp *stakePool
+		sp, err = sc.getStakePool(b.ID, balances)
+		switch err {
+		case nil:
+		case util.ErrValueNotPresent:
+			return true, nil // kick off
+		default:
+			return false, err
 		}
+
 		if b.Terms.WritePrice == 0 {
-			return false // keep, ok or already filtered by bid
+			return false, nil // keep, ok or already filtered by bid
 		}
 		// clean capacity (without delegate pools want to 'unstake')
 		free, err := sp.unallocatedCapacity(b.Terms.WritePrice)
 		if err != nil {
-			return true // kick off
+			logging.Logger.Warn("could not get unallocated capacity when filtering blobbers by free space",
+				zap.String("blobber id", b.ID),
+				zap.Error(err))
+			return true, nil // kick off
 		}
-		return free < size // kick off if it hasn't enough free space
+		return free < size, nil // kick off if it hasn't enough free space
 	})
 }
 
@@ -427,12 +436,16 @@ func (sc *StorageSmartContract) selectBlobbers(
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
 	timestamp := common.Timestamp(creationDate.Unix())
-	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), timestamp,
+
+	list, err := sa.filterBlobbers(allBlobbersList.Nodes.copy(), timestamp,
 		bSize, filterHealthyBlobbers(timestamp),
 		sc.filterBlobbersByFreeSpace(timestamp, bSize, balances))
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not filter blobbers: %v", err)
+	}
 
 	if len(list) < size {
-		return nil, 0, errors.New("Not enough blobbers to honor the allocation")
+		return nil, 0, errors.New("not enough blobbers to honor the allocation")
 	}
 
 	sa.BlobberAllocs = make([]*BlobberAllocation, 0)
