@@ -656,9 +656,9 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	}
 	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
 
-	if err = c.emitUserEvent(sctx, stateToUser(fromClient, s, 0)); err != nil {
-		return nil, common.NewError("increment_nonce", "could not emit event")
-	}
+	//if err = c.emitUserEvent(sctx, stateToUser(fromClient, s, 0)); err != nil {
+	//	return nil, common.NewError("increment_nonce", "could not emit event")
+	//}
 
 	return stateToUser(fromClient, s, 0), nil
 }
