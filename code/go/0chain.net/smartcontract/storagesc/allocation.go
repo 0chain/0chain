@@ -503,8 +503,7 @@ func (sc *StorageSmartContract) validateBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
-	var list, errs = sa.validateEachBlobber(sc, blobbers, common.Timestamp(creationDate.Unix()),
-		balances)
+	var list, errs = sa.validateEachBlobber(sc, blobbers, common.Timestamp(creationDate.Unix()))
 
 	if len(list) < size {
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation: " + strings.Join(errs, ", "))
@@ -673,6 +672,7 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 			blobber, err = sc.getBlobber(blobberId, balances)
 			if err != nil {
 				errorCh <- fmt.Errorf("can't get blobber %q: %v", blobberId, err)
+				return
 			}
 			blobberCh <- blobberResp{
 				index:   index,
@@ -681,12 +681,12 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 		}(i, details.BlobberID)
 	}
 	wg.Wait()
-	close(errorCh)
 	close(blobberCh)
-	for err := range errorCh {
-		if err != nil {
-			return nil, err
-		}
+
+	select {
+	case err := <-errorCh:
+		return nil, err
+	default:
 	}
 
 	for resp := range blobberCh {
@@ -1561,10 +1561,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	sps []*stakePool,
 	balances chainstate.StateContextI,
 ) (err error) {
-	if err != nil {
-		return common.NewErrorf("fini_alloc_failed", "%v", err)
-	}
-
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
 	// passRates list above because of algorithm of the adjustChallenges

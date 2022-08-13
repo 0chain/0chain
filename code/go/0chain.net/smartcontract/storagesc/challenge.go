@@ -195,7 +195,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
-		return
+		return err
 	}
 
 	// save the pools
@@ -319,7 +319,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
-		return
+		return err
 	}
 
 	err = alloc.moveFromChallengePool(cp, move)
