@@ -15,25 +15,23 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
-)
-
-const (
-	getBlockV1Pattern = "/v1/block/get"
+	coreEndpoint "0chain.net/core/endpoint"
+	sharderEndpoint "0chain.net/sharder/endpoint"
 )
 
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
-		getBlockV1Pattern:                  common.ToJSONResponse(BlockHandler),
-		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
-		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
-		"/v1/healthcheck":                  common.ToJSONResponse(HealthcheckHandler),
-		"/v1/chain/get/stats":              common.ToJSONResponse(ChainStatsHandler),
-		"/_chain_stats":                    ChainStatsWriter,
-		"/_healthcheck":                    HealthCheckWriter,
-		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
+		coreEndpoint.GetBlock:                  common.ToJSONResponse(BlockHandler),
+		sharderEndpoint.GetMagicBlock:              common.ToJSONResponse(MagicBlockHandler),
+		sharderEndpoint.GetTransactionConfirmation: common.ToJSONResponse(TransactionConfirmationHandler),
+		sharderEndpoint.HealthCheck:                  common.ToJSONResponse(HealthcheckHandler),
+		coreEndpoint.GetChainStats:              common.ToJSONResponse(ChainStatsHandler),
+		coreEndpoint.ChainStatsFunction:                    ChainStatsWriter,
+		sharderEndpoint.HealthCheckFunction:                    HealthCheckWriter,
+		sharderEndpoint.GetSharderStats:            common.ToJSONResponse(SharderStatsHandler),
 
-		"/v1/state/nodes":        common.ToJSONResponse(chain.StateNodesHandler),
-		"/v1/block/state_change": common.ToJSONResponse(BlockStateChangeHandler),
+		sharderEndpoint.NodesState:        common.ToJSONResponse(chain.StateNodesHandler),
+		coreEndpoint.GetBlockStateChange: common.ToJSONResponse(BlockStateChangeHandler),
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))

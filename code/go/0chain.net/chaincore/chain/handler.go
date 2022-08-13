@@ -32,70 +32,68 @@ import (
 
 	"0chain.net/core/logging"
 
+	coreEndpoint "0chain.net/core/endpoint"
+	minerEndpoint "0chain.net/miner/endpoint"
 	"0chain.net/smartcontract/minersc"
-)
-
-const (
-	getBlockV1Pattern = "/v1/block/get"
 )
 
 func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
-		"/v1/chain/get": common.Recover(
+		coreEndpoint.GetChain: common.Recover(
 			common.ToJSONResponse(
 				memorystore.WithConnectionHandler(
 					GetChainHandler,
 				),
 			),
 		),
-		"/v1/chain/put": common.Recover(
+		coreEndpoint.PutChain: common.Recover(
 			datastore.ToJSONEntityReqResponse(
 				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
 				chainEntityMetadata,
 			),
 		),
-		"/v1/block/get/latest_finalized": common.UserRateLimit(
+		coreEndpoint.GetLatestFinalizedBlock: common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/get/latest_finalized_magic_block_summary": common.UserRateLimit(
+		coreEndpoint.GetLatestFinalizedMagicBlockSummary : common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
 		),
-		"/v1/block/get/latest_finalized_magic_block": common.UserRateLimit(
+		coreEndpoint.GetLatestFinalizedMagicBlock: common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockHandler(c),
 			),
 		),
-		"/v1/block/get/recent_finalized": common.UserRateLimit(
+		coreEndpoint.GetRecentFinalizedBlock: common.UserRateLimit(
 			common.ToJSONResponse(
 				RecentFinalizedBlockHandler,
 			),
 		),
-		"/v1/block/get/fee_stats": common.UserRateLimit(
+		coreEndpoint.GetBlockFeeStats: common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestBlockFeeStatsHandler,
 			),
 		),
-		"/": common.UserRateLimit(
+		coreEndpoint.Root: common.UserRateLimit(
 			HomePageAndNotFoundHandler,
 		),
-		"/_diagnostics": common.UserRateLimit(
+		coreEndpoint.Diagnostics: common.UserRateLimit(
 			DiagnosticsHomepageHandler,
 		),
-		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
+		coreEndpoint.CurrentMbNodesDiagnostics: common.UserRateLimit(
 			DiagnosticsNodesHandler,
 		),
-		"/_diagnostics/dkg_process": common.UserRateLimit(
+		coreEndpoint.DkgProcessDiagnostics: common.UserRateLimit(
 			DiagnosticsDKGHandler,
 		),
-		"/_diagnostics/round_info": common.UserRateLimit(
+		coreEndpoint.RoundInfoDiagnostics: common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
-		"/v1/transaction/put": common.UserRateLimit(
+		minerEndpoint.PutTransaction: common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
 					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
@@ -104,17 +102,17 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				transactionEntityMetadata,
 			),
 		),
-		"/_diagnostics/state_dump": common.UserRateLimit(
+		coreEndpoint.StateDumpDiagnostics: common.UserRateLimit(
 			StateDumpHandler,
 		),
-		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
+		coreEndpoint.GetLatestFinalizedTicket: common.N2NRateLimit(
 			common.ToJSONResponse(
 				LFBTicketHandler,
 			),
 		),
 	}
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		m[getBlockV1Pattern] = common.UserRateLimit(
+		m[coreEndpoint.GetBlock] = common.UserRateLimit(
 			common.ToJSONResponse(
 				GetBlockHandler,
 			),

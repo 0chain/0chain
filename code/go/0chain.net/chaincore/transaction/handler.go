@@ -10,11 +10,13 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"go.uber.org/zap"
+
+	sharderEndpoint "0chain.net/sharder/endpoint"
 )
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/transaction/get", common.UserRateLimit(common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction))))
+	http.HandleFunc(sharderEndpoint.GetTransaction, common.UserRateLimit(common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction))))
 }
 
 /*GetTransaction - given an id returns the transaction information */

@@ -15,14 +15,17 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/core/memorystore"
+
+	minerEndpoint "0chain.net/miner/endpoint"
+	coreEndpoint "0chain.net/core/endpoint"
 )
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
-	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
-	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
-	http.HandleFunc("/_diagnostics/wallet_stats", common.UserRateLimit(GetWalletStats))
-	http.HandleFunc("/v1/miner/get/stats", common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
+	http.HandleFunc(coreEndpoint.GetChainStats, common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
+	http.HandleFunc(coreEndpoint.ChainStatsFunction, common.UserRateLimit(ChainStatsWriter))
+	http.HandleFunc(coreEndpoint.WalletStatsDiagnostics, common.UserRateLimit(GetWalletStats))
+	http.HandleFunc(minerEndpoint.GetMinerStats, common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */

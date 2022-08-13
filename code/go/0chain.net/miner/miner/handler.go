@@ -14,6 +14,8 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/viper"
+
+	coreEndpoint "0chain.net/core/endpoint"
 )
 
 const updateConfigURL = "/v1/config/update"
@@ -22,8 +24,8 @@ const updateConfigAllURL = "/v1/config/update_all"
 /*SetupHandlers - setup update config related handlers */
 func SetupHandlers() {
 	if config.Development() {
-		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
-		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
+		http.HandleFunc(coreEndpoint.HashFunction, common.Recover(encryption.HashHandler))
+		http.HandleFunc(coreEndpoint.SignFunction, common.Recover(common.ToJSONResponse(encryption.SignHandler)))
 		http.HandleFunc(updateConfigURL, common.Recover(ConfigUpdateHandler))
 		http.HandleFunc(updateConfigAllURL, common.Recover(ConfigUpdateAllHandler))
 	}

@@ -28,6 +28,8 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
+
+	minerEndpoint "0chain.net/miner/endpoint"
 )
 
 const (
@@ -80,7 +82,7 @@ func (c *Chain) RegisterClient() {
 	for registered < consensus {
 		for key, miner := range miners {
 			body, err := httpclientutil.SendPostRequest(
-				miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes,
+				miner.GetN2NURLBase()+minerEndpoint.PutClient, nodeBytes,
 				"", "", nil,
 			)
 			if err != nil {
