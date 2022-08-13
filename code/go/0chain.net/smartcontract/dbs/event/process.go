@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -245,10 +246,6 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 			zap.Error(err))
 		return err
 	case TagAddOrOverwriteUser:
-		fallthrough
-	case TagSendTransfer:
-		fallthrough
-	case TagReceiveTransfer:
 		usr, ok := fromEvent[User](event.Data)
 		if !ok {
 			return ErrInvalidEventData
