@@ -85,7 +85,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		wg.Add(1)
 		go func(b BlobberRewardNode, i int) {
 			defer wg.Done()
-			if sp, err := ssc.getStakePool(b.ID, balances); err != nil {
+			if sp, err := ssc.getStakePool(spenum.Blobber, b.ID, balances); err != nil {
 				errorChan <- err
 			} else {
 				spChan <- spResp{
@@ -210,7 +210,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	for i, qsp := range stakePools {
-		if err = qsp.save(ssc.ID, qualifyingBlobberIds[i], balances); err != nil {
+		if err = qsp.save(spenum.Blobber, qualifyingBlobberIds[i], balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}

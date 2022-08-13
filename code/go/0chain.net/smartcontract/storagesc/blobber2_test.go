@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -329,7 +330,7 @@ func testCommitBlobberRead(
 			RoundCreated: stake.MintAt,
 		}
 	}
-	require.NoError(t, sPool.save(ssc.ID, blobberId, ctx))
+	require.NoError(t, sPool.save(spenum.Blobber, blobberId, ctx))
 
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {
@@ -341,7 +342,7 @@ func testCommitBlobberRead(
 
 	require.NotEqualValues(t, rPool.Balance, newRp.Balance)
 
-	newSp, err := ssc.getStakePool(blobberId, ctx)
+	newSp, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
 	confirmCommitBlobberRead(t, f, resp, newSp)
