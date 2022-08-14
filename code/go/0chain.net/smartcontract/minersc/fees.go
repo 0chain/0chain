@@ -319,10 +319,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	var mb = balances.GetBlock()
-	if mb.Round == gn.ViewChange && !msc.SetMagicBlock(gn, balances) {
-		return "", common.NewErrorf("pay_fee",
-			"can't set magic mb round=%d viewChange=%d",
-			mb.Round, gn.ViewChange)
+	if mb.Round == gn.ViewChange {
+		if err := msc.SetMagicBlock(gn, balances); err != nil {
+			return "", common.NewErrorf("pay_fee",
+				"can't set magic mb round=%d viewChange=%d, %v",
+				mb.Round, gn.ViewChange, err)
+		}
 	}
 
 	if t.ClientID != mb.MinerID {

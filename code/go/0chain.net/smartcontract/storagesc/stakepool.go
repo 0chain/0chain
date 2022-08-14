@@ -93,7 +93,11 @@ func (sp *stakePool) save(sscKey, blobberID string,
 	balances chainstate.StateContextI) (err error) {
 
 	r, err := balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
-	logging.Logger.Debug("after stake pool save", zap.String("root", r))
+	if err != nil {
+		return err
+	}
+
+	logging.Logger.Debug("after stake pool save", zap.String("root", util.ToHex([]byte(r))))
 
 	data := dbs.DbUpdates{
 		Id: blobberID,

@@ -156,11 +156,18 @@ func (sc *StorageSmartContract) updateValidatorSettings(t *transaction.Transacti
 }
 
 func (sc *StorageSmartContract) hasValidatorUrl(validatorURL string,
-	balances state.StateContextI) bool {
+	balances state.StateContextI) (bool, error) {
 	validator := new(ValidationNode)
 	validator.BaseURL = validatorURL
 	err := balances.GetTrieNode(validator.GetUrlKey(sc.ID), &datastore.NOIDField{})
-	return err == nil
+	switch err {
+	case nil:
+		return true, nil
+	case util.ErrValueNotPresent:
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 // update existing validator, or reborn a deleted one
@@ -175,7 +182,12 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 
 	if savedValidator.BaseURL != inputValidator.BaseURL {
 		//if updating url
-		if sc.hasValidatorUrl(inputValidator.BaseURL, balances) {
+		has, err := sc.hasValidatorUrl(inputValidator.BaseURL, balances)
+		if err != nil {
+			return fmt.Errorf("could not get validator of url: %s : %v", inputValidator.BaseURL, err)
+		}
+
+		if has {
 			return fmt.Errorf("invalid validator url update, already used")
 		}
 		// save url

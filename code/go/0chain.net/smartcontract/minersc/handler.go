@@ -235,7 +235,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if pool := sn.GetNodePool(poolID); pool != nil{
+	if pool := sn.GetNodePool(poolID); pool != nil {
 		common.Respond(w, r, pool, nil)
 		return
 	}
@@ -586,6 +586,7 @@ func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Reque
 	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	ts, err := edb.GetMinersTotalStake()
 	if err != nil {
@@ -609,6 +610,7 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 	active, err := edb.CountActiveMiners()
 	if err != nil {
@@ -619,6 +621,7 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 	inactive, err := edb.CountInactiveMiners()
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
+		return
 	}
 
 	common.Respond(w, r, rest.Int64Map{
@@ -790,6 +793,7 @@ func (mrh *MinerRestHandler) getGlobalSettings(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
 		}
 		common.Respond(w, r, GlobalSettings{
 			Fields: getStringMapFromViper(),

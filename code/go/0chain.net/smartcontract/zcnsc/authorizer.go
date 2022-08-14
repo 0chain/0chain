@@ -7,6 +7,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -82,10 +83,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Check existing Authorizer
 
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
-	if err == nil && authorizer != nil {
+	switch err {
+	case util.ErrValueNotPresent:
+	case nil:
 		err = fmt.Errorf("authorizer(authorizerID: %v) already exists", authorizerID)
 		Logger.Error(code, zap.Error(err))
 		return "", err
+	default:
+		return "", common.NewErrorf(code, "error checking authorizer existence: %v", err)
 	}
 
 	// Create Authorizer instance
@@ -176,8 +181,12 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 
 	// StakePool may be updated only if authorizer exists/not deleted
 
-	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
-	if err == nil && authorizer != nil {
+	_, err = GetAuthorizerNode(authorizerID, ctx)
+	switch err {
+	case util.ErrValueNotPresent:
+		return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
+	case nil:
+		// existing
 		var sp *StakePool
 		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, poolSettings, ctx)
 		if err != nil {
@@ -190,9 +199,9 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 		Logger.Info("create or update stake pool completed successfully")
 
 		return string(sp.Encode()), nil
+	default:
+		return "", common.NewErrorf(code, "error checking authorizer existence: %v", err)
 	}
-
-	return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
 }
 
 func (zcn *ZCNSmartContract) CollectRewards(

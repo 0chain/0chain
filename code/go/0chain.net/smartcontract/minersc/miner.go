@@ -16,19 +16,18 @@ import (
 )
 
 func doesMinerExist(pkey datastore.Key,
-	balances cstate.CommonStateContextI) bool {
+	balances cstate.CommonStateContextI) (bool, error) {
 
 	mn := NewMinerNode()
 	err := balances.GetTrieNode(pkey, mn)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
-				zap.String("key", pkey))
-		}
-		return false
+	switch err {
+	case nil:
+		return true, nil
+	case util.ErrValueNotPresent:
+		return false, nil
+	default:
+		return false, err
 	}
-
-	return true
 }
 
 // AddMiner Function to handle miner register
@@ -121,7 +120,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		update = true
 	}
 
-	if !doesMinerExist(newMiner.GetKey(), balances) {
+	exist, err := doesMinerExist(newMiner.GetKey(), balances)
+	if err != nil {
+		return "", common.NewErrorf("add_miner", "error checking miner existence: %v", err)
+	}
+
+	if !exist {
 		if err = newMiner.save(balances); err != nil {
 			return "", common.NewError("add_miner", err.Error())
 		}
@@ -308,6 +312,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 }
 
 //------------- local functions ---------------------
+// TODO: remove this or return error and do real checking
 func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 	msg string) {
 
