@@ -610,19 +610,19 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]
 		go func(index int, blobberId string) {
 			defer wg.Done()
 			blobber, err := getBlobber(blobberId, balances)
-			switch err {
-			case nil:
-				blobberCh <- blobberResp{
-					index:   index,
-					blobber: blobber,
+			if err != nil {
+				if err != util.ErrValueNotPresent {
+					nodeNotFoundErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
+					return
 				}
+
+				logging.Logger.Debug("could not get blobber", zap.String("blobberId", blobberId), zap.Error(err))
 				return
-			case util.ErrNodeNotFound:
-				nodeNotFoundErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
-				return
-			default:
-				logging.Logger.Debug("can't get blobber", zap.String("blobberId", blobberId), zap.Error(err))
-				return
+			}
+
+			blobberCh <- blobberResp{
+				index:   index,
+				blobber: blobber,
 			}
 		}(i, details)
 	}
