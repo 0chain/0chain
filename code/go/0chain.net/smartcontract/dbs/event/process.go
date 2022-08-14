@@ -240,10 +240,6 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 			return err
 		}
 		err := edb.IncrementDataRead(rm.BlobberID, int64(rm.ReadSize)*GB)
-		logging.Logger.Info("piers TagAddReadMarker",
-			zap.String("id", rm.BlobberID),
-			zap.Int64("read size", int64(rm.ReadSize)),
-			zap.Error(err))
 		return err
 	case TagAddOrOverwriteUser:
 		usr, ok := fromEvent[User](event.Data)

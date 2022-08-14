@@ -456,9 +456,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	)
 
 	commitRead.ReadMarker.ReadSize = sizeRead
-	logging.Logger.Info("piers commitBlobberRead",
-		zap.Int64("numReads", numReads),
-		zap.Any("read marker", commitRead))
+
 	// move tokens from read pool to blobber
 	var rp *readPool
 	if rp, err = sc.getReadPool(commitRead.ReadMarker.ClientID, balances); err != nil {

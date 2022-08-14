@@ -77,14 +77,6 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 
-		//if aggregate.Used > 0 {
-		logging.Logger.Info("piers updateBlobberAggregate loop",
-			zap.Any("aggreagate.SavedData", aggregate.SavedData),
-			zap.Any("aggreagate.ReadData", aggregate.ReadData),
-			zap.String("id", current.BlobberID))
-
-		//}
-
 		gs.totalWritePricePeriod += aggregate.WritePrice
 
 		// update global snapshot object
@@ -113,8 +105,6 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
 		}
 	}
-	logging.Logger.Info("piers updateBlobberAggregate",
-		zap.Int64("UsedStorage", gs.UsedStorage))
 
 	if len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
