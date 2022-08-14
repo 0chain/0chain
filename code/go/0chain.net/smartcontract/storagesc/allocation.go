@@ -603,7 +603,7 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]
 	}
 
 	blobberCh := make(chan blobberResp, len(ids))
-	nodeNotFoundErrC := make(chan error, len(ids))
+	stateErrC := make(chan error, len(ids))
 	var wg sync.WaitGroup
 	for i, details := range ids {
 		wg.Add(1)
@@ -612,7 +612,7 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]
 			blobber, err := getBlobber(blobberId, balances)
 			if err != nil {
 				if err != util.ErrValueNotPresent {
-					nodeNotFoundErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
+					stateErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
 					return
 				}
 
@@ -629,9 +629,9 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]
 	wg.Wait()
 	close(blobberCh)
 
-	// return if state error of 'node not found' happens
+	// return if got state error
 	select {
-	case err := <-nodeNotFoundErrC:
+	case err := <-stateErrC:
 		return nil, err
 	default:
 	}
