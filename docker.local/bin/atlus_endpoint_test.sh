@@ -1,8 +1,8 @@
 #!/bin/bash
 
-BLOBBERID=2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
+BLOBBERID=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 echo
-echo blobber $BLOBBERID
+echo blobber id: $BLOBBERID
 echo -e "\naverges"
 echo -e "\ngraph-blobber-write-price"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-write-price?data-points=17&id='$BLOBBERID
