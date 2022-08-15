@@ -390,7 +390,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
 	}
-	go bsh.UpdateFinalizedBlock(ctx, fb)
+	bsh.UpdateFinalizedBlock(ctx, fb)
 
 	fr.Finalize(fb)
 	c.BlockChain.Value = fb.GetSummary()

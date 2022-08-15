@@ -728,3 +728,10 @@ func (r *Round) setFinalizingPhase(finalized FinalizingState) {
 func (r *Round) getFinalizingState() FinalizingState {
 	return r.finalizingState
 }
+
+// Clone do light copy of round
+func (r *Round) Clone() RoundI {
+	var nr Round
+	nr = *r // nolint
+	return &nr
+}

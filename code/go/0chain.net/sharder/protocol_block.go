@@ -38,8 +38,18 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 
 /*UpdateFinalizedBlock - updates the finalized block */
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	fr := sc.GetRound(b.Round)
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.GetLatestFinalizedBlock().Round), zap.Any("current_round", sc.GetCurrentRound()))
+	fr := sc.GetRoundClone(b.Round)
+	if fr == nil {
+		fr = round.NewRound(b.Round)
+	}
+
+	fr.Finalize(b)
+	Logger.Info("update finalized block",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("round block hash", fr.GetBlockHash()),
+		zap.Any("lf_round", sc.GetLatestFinalizedBlock().Round),
+		zap.Any("current_round", sc.GetCurrentRound()))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -55,10 +65,6 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			zap.Error(err))
 	}
 
-	if fr == nil {
-		fr = round.NewRound(b.Round)
-	}
-	fr.Finalize(b)
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	err := sc.StoreTransactions(b)
@@ -98,7 +104,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
 	}
-	sc.DeleteRoundsBelow(b.Round)
+	go sc.DeleteRoundsBelow(b.Round)
 }
 
 func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error { //nolint: unused

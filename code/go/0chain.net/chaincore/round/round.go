@@ -40,4 +40,5 @@ type RoundI interface {
 	SetPhase(state Phase)
 	AddVRFShare(share *VRFShare, threshold int) bool
 	GetVRFShares() map[string]*VRFShare
+	Clone() RoundI
 }

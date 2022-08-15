@@ -993,6 +993,16 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 	return r
 }
 
+func (c *Chain) GetRoundClone(roundNumber int64) round.RoundI {
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
+	r, ok := c.rounds[roundNumber]
+	if !ok {
+		return nil
+	}
+	return r.Clone()
+}
+
 /*DeleteRound - delete a round and associated block data */
 func (c *Chain) deleteRound(ctx context.Context, r round.RoundI) {
 	c.roundsMutex.Lock()
