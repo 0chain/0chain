@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// stagger:model Challenges
+// swagger:model Challenges
 type Challenges []Challenge
 
 type Challenge struct {
