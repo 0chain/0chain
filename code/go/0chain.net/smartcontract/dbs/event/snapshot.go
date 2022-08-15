@@ -119,12 +119,6 @@ func (edb *EventDb) addSnapshot(s Snapshot) error {
 	return edb.Store.Get().Create(&s).Error
 }
 
-func (edb *EventDb) getSnapshot(round int64) (Snapshot, error) {
-	s := Snapshot{}
-	res := edb.Store.Get().Model(Snapshot{}).Where(Snapshot{Round: round}).First(&s)
-	return s, res.Error
-}
-
 func (edb *EventDb) GetGlobal() (Snapshot, error) {
 	s := Snapshot{}
 	res := edb.Store.Get().Model(Snapshot{}).Order("round desc").First(&s)

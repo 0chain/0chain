@@ -179,14 +179,6 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	return blobbers, result.Error
 }
 
-func (edb *EventDb) getBlobbersByCreationRound(round, period int64) ([]Blobber, error) {
-	var blobbers []Blobber
-	result := edb.Store.Get().
-		Raw(fmt.Sprintf("SELECT * FROM Blobbers WHERE MOD(creation_date, %d) = ?", period), round%period).
-		Scan(&blobbers)
-	return blobbers, result.Error
-}
-
 func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 	var blobberIDs []string
 	result := edb.Store.Get().Model(&Blobber{}).Select("blobber_id").Find(&blobberIDs)
