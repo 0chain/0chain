@@ -373,7 +373,7 @@ func (srh *StorageRestHandler) graphBlobberChallengesPassed(w http.ResponseWrite
 		common.Respond(w, r, nil, err)
 		return
 	}
-	data, err := edb.GetTotalId(
+	data, err := edb.GetDifferenceId(
 		start, end, roundsPerPoint, "challenges_passed", "blobber_aggregates", id,
 	)
 	if err != nil {
