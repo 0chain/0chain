@@ -4,11 +4,10 @@ go 1.18
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
-	github.com/alicebob/miniredis/v2 v2.22.0
+	github.com/alicebob/miniredis/v2 v2.23.0
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.24.1
 	github.com/go-playground/validator/v10 v10.11.0
-	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gocql/gocql v1.1.0
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.8
