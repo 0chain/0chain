@@ -1557,7 +1557,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		endBlockString   = r.URL.Query().Get("end-block")
 		clientID         = r.URL.Query().Get("client-id")
 		startDateString  = r.URL.Query().Get("start-date")
-		endDateString	 = r.URL.Query().Get("end-date")
+		endDateString    = r.URL.Query().Get("end-date")
 		dataPointsString = r.URL.Query().Get("data-points")
 	)
 
@@ -2264,7 +2264,7 @@ func (srh *StorageRestHandler) getBlobberChallenges(w http.ResponseWriter, r *ht
 	common.Respond(w, r, challenges, nil)
 }
 
- // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
 // Gets challenges for a blobber by challenge id
 //
 // parameters:
