@@ -137,21 +137,18 @@ smart_contracts:
     # allocation settings for free storage
     # these values are applied to all free allocations
     free_allocation_settings:
-      # the free payment is split between read and write pool in the ratio
-      # read_pool_fraction : (1-read_pool_fraction)
-      read_pool_fraction: 0.2
-      data_shards: 10
-      parity_shards: 5
-      size: 10000000000
+      data_shards: 2
       duration: 50h
+      parity_shards: 2
+      read_pool_fraction: 0.2
+      mint_amount: 0.5
       read_price_range:
-        min: 0.0
-        max: 0.04
+        max: 1
+        min: 0
+      size: 10000000
       write_price_range:
-        min: 0.0
-        max: 0.04
-      max_challenge_completion_time:  1m
-    # validator_reward represents part of blobbers' rewards goes to validators
+        max: 1
+        min: 0
     validator_reward: 0.025
     # blobber_slash represents blobber's stake penalty when a challenge not
     # passed

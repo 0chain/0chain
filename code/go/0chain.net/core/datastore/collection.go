@@ -23,7 +23,7 @@ type (
 func GetCollectionScore(ts time.Time) int64 {
 	// time.Now().Unix() returns amount of seconds followed by 1e9
 	// time.Now().UniqNano() returns amount of nanoseconds followed by 1e18
-	return ts.UnixNano() / int64(time.Millisecond) // the score followed by 1e12
+	return -ts.UnixNano() / int64(time.Millisecond) // the score followed by 1e12
 }
 
 // AddToCollection appends entity into the collection store.

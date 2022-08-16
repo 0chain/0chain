@@ -71,7 +71,7 @@ func newStakePool() *stakePool {
 
 // stake pool key for the storage SC and  blobber
 func stakePoolKey(scKey, blobberID string) datastore.Key {
-	return datastore.Key(scKey + ":stakepool:" + blobberID)
+	return scKey + ":stakepool:" + blobberID
 }
 
 // Encode to []byte
@@ -107,14 +107,23 @@ func (sp *stakePool) save(sscKey, blobberID string,
 }
 
 // The cleanStake() is stake amount without delegate pools want to unstake.
-func (sp *stakePool) cleanStake() (stake currency.Coin) {
-	return sp.stake() - sp.TotalUnStake
+func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
+	staked, err := sp.stake()
+	if err != nil {
+		return 0, err
+	}
+	return staked - sp.TotalUnStake, nil
 }
 
 // The stake() returns total stake size including delegate pools want to unstake.
-func (sp *stakePool) stake() (stake currency.Coin) {
+func (sp *stakePool) stake() (stake currency.Coin, err error) {
+	var newStake currency.Coin
 	for _, dp := range sp.Pools {
-		stake += dp.Balance
+		newStake, err = currency.AddCoin(stake, dp.Balance)
+		if err != nil {
+			return
+		}
+		stake = newStake
 	}
 	return
 }
@@ -138,16 +147,35 @@ func (sp *stakePool) empty(
 	// If insufficient funds in stake pool left after unlock,
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
-	if sp.stake() < sp.TotalOffers+dp.Balance {
+
+	totalBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
+	if err != nil {
+		return false, err
+	}
+
+	staked, err := sp.stake()
+	if err != nil {
+		return false, err
+	}
+	if staked < totalBalance {
 		if dp.Status != spenum.Unstaking {
-			sp.TotalUnStake += dp.Balance
+			totalUnStake, err := currency.AddCoin(sp.TotalUnStake, dp.Balance)
+			if err != nil {
+				return false, err
+			}
+			sp.TotalUnStake = totalUnStake
+
 			dp.Status = spenum.Unstaking
 		}
 		return true, nil
 	}
 
 	if dp.Status == spenum.Unstaking {
-		sp.TotalUnStake -= dp.Balance
+		totalUnstake, err := currency.MinusCoin(sp.TotalUnStake, dp.Balance)
+		if err != nil {
+			return false, err
+		}
+		sp.TotalUnStake = totalUnstake
 	}
 
 	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
@@ -163,7 +191,21 @@ func (sp *stakePool) empty(
 
 // add offer of an allocation related to blobber owns this stake pool
 func (sp *stakePool) addOffer(amount currency.Coin) error {
-	sp.TotalOffers += amount
+	newTotalOffers, err := currency.AddCoin(sp.TotalOffers, amount)
+	if err != nil {
+		return err
+	}
+	sp.TotalOffers = newTotalOffers
+	return nil
+}
+
+// add offer of an allocation related to blobber owns this stake pool
+func (sp *stakePool) reduceOffer(amount currency.Coin) error {
+	newTotalOffers, err := currency.MinusCoin(sp.TotalOffers, amount)
+	if err != nil {
+		return err
+	}
+	sp.TotalOffers = newTotalOffers
 	return nil
 }
 
@@ -191,13 +233,22 @@ func (sp *stakePool) slash(
 		slash = offer // can't move the offer left
 	}
 
+	staked, err := sp.stake()
+	if err != nil {
+		return 0, err
+	}
+
 	// offer ratio of entire stake; we are slashing only part of the offer
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
-	var ratio = float64(slash) / float64(sp.stake())
+	var ratio = float64(slash) / float64(staked)
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
 	for id, dp := range sp.Pools {
-		var dpSlash = currency.Coin(float64(dp.Balance) * ratio)
+		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
+		if err != nil {
+			return 0, err
+		}
+
 		if dpSlash == 0 {
 			continue
 		}
@@ -207,7 +258,10 @@ func (sp *stakePool) slash(
 		} else {
 			dp.Balance = balance
 		}
-		move += dpSlash
+		move, err = currency.AddCoin(move, dpSlash)
+		if err != nil {
+			return 0, err
+		}
 		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
 	}
 	// todo we should slash from stake pools not rewards. 0chain issue 1495
@@ -220,9 +274,13 @@ func (sp *stakePool) slash(
 
 // unallocated capacity of related blobber, excluding delegate pools want to
 // unstake.
-func (sp *stakePool) unallocatedCapacity(writePrice currency.Coin) (free int64) {
+func (sp *stakePool) unallocatedCapacity(writePrice currency.Coin) (free int64, err error) {
 
-	var total, offers = sp.cleanStake(), sp.TotalOffers
+	staked, err := sp.stake()
+	if err != nil {
+		return
+	}
+	var total, offers = staked, sp.TotalOffers
 	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
 		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	if total <= offers {
@@ -230,14 +288,17 @@ func (sp *stakePool) unallocatedCapacity(writePrice currency.Coin) (free int64) 
 		return
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
-	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
-		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
 	return
 }
 
 func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 
-	cleanStake, err := sp.cleanStake().Float64()
+	cleanStake, err := sp.cleanStake()
+	if err != nil {
+		return 0, err
+	}
+
+	fcleanStake, err := cleanStake.Float64()
 	if err != nil {
 		return 0, err
 	}
@@ -247,7 +308,7 @@ func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 		return 0, err
 	}
 
-	return int64((cleanStake / fWritePrice) * GB), nil
+	return int64((fcleanStake / fWritePrice) * GB), nil
 }
 
 type delegatePoolStat struct {
@@ -411,10 +472,16 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
+	staked, err := sp.stake()
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"stake pool staking error: %v", err)
+	}
+
 	data := dbs.DbUpdates{
 		Id: spr.BlobberID,
 		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
+			"total_stake": int64(staked),
 		},
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
@@ -467,10 +534,15 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
+		staked, err := sp.stake()
+		if err != nil {
+			return "", common.NewErrorf("stake_pool_unlock_failed",
+				"stake pool staking error: %v", err)
+		}
 		data := dbs.DbUpdates{
 			Id: spr.BlobberID,
 			Updates: map[string]interface{}{
-				"total_stake": int64(sp.stake()),
+				"total_stake": int64(staked),
 			},
 		}
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
@@ -487,10 +559,16 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}
+
+	staked, err := sp.stake()
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"stake pool staking error: %v", err)
+	}
 	data := dbs.DbUpdates{
 		Id: spr.BlobberID,
 		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
+			"total_stake": int64(staked),
 		},
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)

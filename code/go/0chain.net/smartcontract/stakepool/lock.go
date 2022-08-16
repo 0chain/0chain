@@ -18,12 +18,13 @@ import (
 )
 
 func CheckClientBalance(
-	t *transaction.Transaction,
+	clientId string,
+	toLock currency.Coin,
 	balances cstate.StateContextI,
 ) (err error) {
 
 	var balance currency.Coin
-	balance, err = balances.GetClientBalance(t.ClientID)
+	balance, err = balances.GetClientBalance(clientId)
 
 	if err != nil && err != util.ErrValueNotPresent {
 		return
@@ -33,7 +34,7 @@ func CheckClientBalance(
 		return errors.New("no tokens to lock")
 	}
 
-	if t.Value > balance {
+	if toLock > balance {
 		return errors.New("lock amount is greater than balance")
 	}
 
@@ -47,7 +48,7 @@ func (sp *StakePool) LockPool(
 	status spenum.PoolStatus,
 	balances cstate.StateContextI,
 ) error {
-	if err := CheckClientBalance(txn, balances); err != nil {
+	if err := CheckClientBalance(txn.ClientID, txn.Value, balances); err != nil {
 		return err
 	}
 

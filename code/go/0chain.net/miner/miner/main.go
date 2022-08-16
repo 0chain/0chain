@@ -408,6 +408,7 @@ func initEntities(workdir string, redisHost string, redisPort int, redisTxnsHost
 	state.SetupPartialState(memoryStorage)
 	state.SetupStateNodes(memoryStorage)
 	client.SetupEntity(memoryStorage)
+	client.SetupClientDB()
 
 	transaction.SetupTransactionDB(redisTxnsHost, redisTxnsPort)
 	transaction.SetupEntity(memoryStorage)

@@ -31,6 +31,11 @@ func init() {
 	cacher = cache.NewLFUCache(10 * 1024)
 }
 
+// SetupClientDB sets up client DB
+func SetupClientDB() {
+	memorystore.AddPool("clientdb", memorystore.DefaultPool)
+}
+
 //go:generate msgp -io=false -tests=false -v
 // Client - data structure that holds the client data
 type Client struct {
@@ -239,6 +244,7 @@ func (c *Client) GetBLSPublicKey() (*bls.PublicKey, error) {
 func SetupEntity(store datastore.Store) {
 	clientEntityMetadata = datastore.MetadataProvider()
 	clientEntityMetadata.Name = "client"
+	clientEntityMetadata.DB = "clientdb"
 	clientEntityMetadata.Provider = Provider
 	clientEntityMetadata.Store = store
 
