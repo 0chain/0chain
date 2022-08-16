@@ -8,7 +8,6 @@ require (
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.24.1
 	github.com/go-playground/validator/v10 v10.11.0
-	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gocql/gocql v1.1.0
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.8
@@ -39,8 +38,8 @@ require (
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
-	gorm.io/driver/postgres v1.3.7
-	gorm.io/gorm v1.23.6
+	gorm.io/driver/postgres v1.3.9
+	gorm.io/gorm v1.23.7
 )
 
 require (
