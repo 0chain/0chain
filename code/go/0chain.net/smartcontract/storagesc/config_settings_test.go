@@ -137,16 +137,15 @@ func TestUpdateSettings(t *testing.T) {
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
 
-					"free_allocation_settings.data_shards":                   "10",
-					"free_allocation_settings.parity_shards":                 "5",
-					"free_allocation_settings.size":                          "10000000000",
-					"free_allocation_settings.duration":                      "5000h",
-					"free_allocation_settings.read_price_range.min":          "0.0",
-					"free_allocation_settings.read_price_range.max":          "0.04",
-					"free_allocation_settings.write_price_range.min":         "0.0",
-					"free_allocation_settings.write_price_range.max":         "0.1",
-					"free_allocation_settings.max_challenge_completion_time": "1m",
-					"free_allocation_settings.read_pool_fraction":            "0.2",
+					"free_allocation_settings.data_shards":           "10",
+					"free_allocation_settings.parity_shards":         "5",
+					"free_allocation_settings.size":                  "10000000000",
+					"free_allocation_settings.duration":              "5000h",
+					"free_allocation_settings.read_price_range.min":  "0.0",
+					"free_allocation_settings.read_price_range.max":  "0.04",
+					"free_allocation_settings.write_price_range.min": "0.0",
+					"free_allocation_settings.write_price_range.max": "0.1",
+					"free_allocation_settings.read_pool_fraction":    "0.2",
 
 					"validator_reward":                     "0.025",
 					"blobber_slash":                        "0.1",
@@ -340,16 +339,15 @@ func TestCommitSettingChanges(t *testing.T) {
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
 
-					"free_allocation_settings.data_shards":                   "10",
-					"free_allocation_settings.parity_shards":                 "5",
-					"free_allocation_settings.size":                          "10000000000",
-					"free_allocation_settings.duration":                      "5000h",
-					"free_allocation_settings.read_price_range.min":          "0.0",
-					"free_allocation_settings.read_price_range.max":          "0.04",
-					"free_allocation_settings.write_price_range.min":         "0.0",
-					"free_allocation_settings.write_price_range.max":         "0.1",
-					"free_allocation_settings.max_challenge_completion_time": "1m",
-					"free_allocation_settings.read_pool_fraction":            "0.2",
+					"free_allocation_settings.data_shards":           "10",
+					"free_allocation_settings.parity_shards":         "5",
+					"free_allocation_settings.size":                  "10000000000",
+					"free_allocation_settings.duration":              "5000h",
+					"free_allocation_settings.read_price_range.min":  "0.0",
+					"free_allocation_settings.read_price_range.max":  "0.04",
+					"free_allocation_settings.write_price_range.min": "0.0",
+					"free_allocation_settings.write_price_range.max": "0.1",
+					"free_allocation_settings.read_pool_fraction":    "0.2",
 
 					"validator_reward":                     "0.025",
 					"blobber_slash":                        "0.1",
@@ -446,8 +444,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.FreeAllocationSettings.WritePriceRange.Min
 	case FreeAllocationWritePriceRangeMax:
 		return conf.FreeAllocationSettings.WritePriceRange.Max
-	case FreeAllocationMaxChallengeCompletionTime:
-		return conf.FreeAllocationSettings.MaxChallengeCompletionTime
 	case FreeAllocationReadPoolFraction:
 		return conf.FreeAllocationSettings.ReadPoolFraction
 

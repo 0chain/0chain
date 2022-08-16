@@ -780,7 +780,6 @@ func TestExtendAllocation(t *testing.T) {
 				&sa,
 				aBlobbers,
 				&tt.args.request,
-				false,
 				balances,
 			)
 			if tt.want.err != (err != nil) {
@@ -1093,8 +1092,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		errMsg1 = "allocation_creation_failed: " +
 			"malformed request: unexpected end of JSON input"
-		errMsg3 = "allocation_creation_failed: " +
-			"Invalid client in the transaction. No client id in transaction"
 		errMsg4 = "allocation_creation_failed: malformed request: " +
 			"invalid character '}' looking for beginning of value"
 		errMsg5 = "allocation_creation_failed: " +
@@ -1104,9 +1101,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg7 = "allocation_creation_failed: " +
 			"can't get blobber's stake pool: value not present"
 		errMsg8 = "allocation_creation_failed: " +
-			"client balance check failed: no tokens to lock"
+			"no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
-			"client balance check failed: no tokens to lock"
+			"no tokens to lock"
 	)
 
 	var (
@@ -1141,12 +1138,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		_, err = ssc.newAllocationRequest(&tx, nil, balances, nil)
 		requireErrMsg(t, err, errMsg1)
 	})
-	t.Run("No client id in transaction", func(t *testing.T) {
-		tx.ClientID = ""
-		_, err = ssc.newAllocationRequest(&tx, nil, balances, nil)
-		requireErrMsg(t, err, errMsg3)
-	})
-	// 3.
 	t.Run("invalid character", func(t *testing.T) {
 		tx.ClientID = clientID
 		_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances, nil)
@@ -1549,6 +1540,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MaxBlobbersPerAllocation = 4
 	conf.MaxReadPrice = 40
 	conf.MaxWritePrice = 400
+	conf.TimeUnit = 48 * time.Hour
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)
@@ -1855,7 +1847,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	var cp = alloc.deepCopy(t)
+	cp := &StorageAllocation{}
+	err = cp.Decode(alloc.Encode())
+	require.NoError(t, err)
 
 	// change terms
 	tp += 100
@@ -1907,13 +1901,15 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	assert.True(t, math.Abs(float64(bsize*numb-tbs)) < 100)
 	//
-	// reduce
+	// increase duration
 	//
 
-	cp = alloc.deepCopy(t)
+	cp = &StorageAllocation{}
+	err = cp.Decode(alloc.Encode())
+	require.NoError(t, err)
 
 	uar.ID = alloc.ID
-	uar.Expiration = -(alloc.Expiration / 2)
+	uar.Expiration = (alloc.Expiration)
 	uar.Size = -(alloc.Size / 2)
 
 	tp += 100
@@ -1927,7 +1923,33 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.EqualValues(t, alloc, &deco)
 
 	assert.Equal(t, alloc.Size, cp.Size/2)
-	assert.Equal(t, alloc.Expiration, cp.Expiration/2)
+	assert.Equal(t, alloc.Expiration, cp.Expiration*2)
+
+	tbs, mld = 0, 0
+	for i, detail := range alloc.BlobberAllocs {
+		if i == alloc.DataShards {
+			break
+		}
+		tbs += detail.Size
+		mld += int64(detail.MinLockDemand)
+	}
+	numb = int64(alloc.DataShards + alloc.ParityShards)
+	bsize = (alloc.Size + (numb - 1)) / numb
+	assert.True(t, math.Abs(float64(bsize*numb-tbs)) < 100)
+
+	//
+	// reduce
+	//
+
+	cp = alloc.deepCopy(t)
+
+	uar.ID = alloc.ID
+	uar.Expiration = -(alloc.Expiration / 2)
+	uar.Size = -(alloc.Size / 2)
+
+	tp += 100
+	resp, err = uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	require.Error(t, err)
 
 }
 

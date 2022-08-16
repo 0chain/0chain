@@ -56,7 +56,6 @@ const (
 	FreeAllocationReadPriceRangeMax
 	FreeAllocationWritePriceRangeMin
 	FreeAllocationWritePriceRangeMax
-	FreeAllocationMaxChallengeCompletionTime
 	FreeAllocationReadPoolFraction
 
 	ValidatorReward
@@ -158,7 +157,6 @@ var (
 		"free_allocation_settings.read_price_range.max",
 		"free_allocation_settings.write_price_range.min",
 		"free_allocation_settings.write_price_range.max",
-		"free_allocation_settings.max_challenge_completion_time",
 		"free_allocation_settings.read_pool_fraction",
 
 		"validator_reward",
@@ -255,16 +253,15 @@ var (
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
 
-		"free_allocation_settings.data_shards":                   {FreeAllocationDataShards, smartcontract.Int},
-		"free_allocation_settings.parity_shards":                 {FreeAllocationParityShards, smartcontract.Int},
-		"free_allocation_settings.size":                          {FreeAllocationSize, smartcontract.Int64},
-		"free_allocation_settings.duration":                      {FreeAllocationDuration, smartcontract.Duration},
-		"free_allocation_settings.read_price_range.min":          {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
-		"free_allocation_settings.read_price_range.max":          {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
-		"free_allocation_settings.write_price_range.min":         {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
-		"free_allocation_settings.write_price_range.max":         {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
-		"free_allocation_settings.max_challenge_completion_time": {FreeAllocationMaxChallengeCompletionTime, smartcontract.Duration},
-		"free_allocation_settings.read_pool_fraction":            {FreeAllocationReadPoolFraction, smartcontract.Float64},
+		"free_allocation_settings.data_shards":           {FreeAllocationDataShards, smartcontract.Int},
+		"free_allocation_settings.parity_shards":         {FreeAllocationParityShards, smartcontract.Int},
+		"free_allocation_settings.size":                  {FreeAllocationSize, smartcontract.Int64},
+		"free_allocation_settings.duration":              {FreeAllocationDuration, smartcontract.Duration},
+		"free_allocation_settings.read_price_range.min":  {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
+		"free_allocation_settings.read_price_range.max":  {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
+		"free_allocation_settings.write_price_range.min": {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
+		"free_allocation_settings.write_price_range.max": {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
+		"free_allocation_settings.read_pool_fraction":    {FreeAllocationReadPoolFraction, smartcontract.Float64},
 
 		"validator_reward":                     {ValidatorReward, smartcontract.Float64},
 		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
@@ -700,8 +697,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.FreeAllocationSettings.WritePriceRange.Min
 	case FreeAllocationWritePriceRangeMax:
 		return conf.FreeAllocationSettings.WritePriceRange.Max
-	case FreeAllocationMaxChallengeCompletionTime:
-		return conf.FreeAllocationSettings.MaxChallengeCompletionTime
 	case FreeAllocationReadPoolFraction:
 		return conf.FreeAllocationSettings.ReadPoolFraction
 	case ValidatorReward:

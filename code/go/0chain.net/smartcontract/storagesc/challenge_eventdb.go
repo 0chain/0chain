@@ -81,10 +81,10 @@ func emitUpdateBlobberChallengeStats(blobberId string, passed bool, balances cst
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberId, data)
 }
 
-func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
+func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
 
 	var chs []*StorageChallengeResponse
-	challenges, err := edb.GetOpenChallengesForBlobber(blobberID,
+	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from,
 		common.Timestamp(time.Now().Unix()), cct, limit)
 	if err != nil {
 		return nil, err

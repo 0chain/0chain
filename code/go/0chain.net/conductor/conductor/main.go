@@ -213,7 +213,7 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		fmt.Printf("wait for view change %v\n", r.waitViewChange)
 		return tm, true
 	case !r.waitAdd.IsZero():
-		log.Printf("wait for adding sharders (%+v) and miners (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners)
+		log.Printf("wait for adding sharders (%+v), miners (%+v) and blobbers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers)
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
 		log.Println("wait for sharder keep")
@@ -225,7 +225,7 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		log.Println("wait for no view change")
 		return tm, true
 	case r.waitCommand != nil:
-		log.Println("wait for command")
+		// log.Println("wait for command")
 		return tm, true
 	}
 

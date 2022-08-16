@@ -34,6 +34,20 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 	}
 }
 
+func Test_DifferentSenderAndReceiverMustFail(t *testing.T) {
+	ctx := MakeMockStateContext()
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	transaction, err := CreateTransaction(defaultClient+"1", "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	_, err = contract.Mint(transaction, payload.Encode(), ctx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "transaction made from different account who made burn")
+}
+
 func Test_FuzzyMintTest(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
@@ -41,7 +55,8 @@ func Test_FuzzyMintTest(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, client := range clients {
-		transaction := CreateAddAuthorizerTransaction(client, ctx)
+		transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+		require.NoError(t, err)
 
 		response, err := contract.Mint(transaction, payload.Encode(), ctx)
 
@@ -49,6 +64,21 @@ func Test_FuzzyMintTest(t *testing.T) {
 		require.NotNil(t, response)
 		require.NotEmpty(t, response)
 	}
+}
+
+func Test_EmptySignaturesShouldFail(t *testing.T) {
+	ctx := MakeMockStateContext()
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	payload.Signatures = nil
+
+	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	_, err = contract.Mint(transaction, payload.Encode(), ctx)
+	require.Error(t, err)
 }
 
 // TBD

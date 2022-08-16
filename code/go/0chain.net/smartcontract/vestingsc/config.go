@@ -111,7 +111,11 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 				return fmt.Errorf("value %v cannot be converted to currency.Coin, "+
 					"failing to set config key %s", value, key)
 			} else {
-				c.MinLock = currency.Coin(sbValue * 1e10)
+				cMinLock, err := currency.MultFloat64(1e10, sbValue)
+				if err != nil {
+					return err
+				}
+				c.MinLock = cMinLock
 			}
 		case Settings[MinDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {

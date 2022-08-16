@@ -52,6 +52,7 @@ func (edb *EventDb) overwriteDelegatePool(sp DelegatePool) error {
 func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 	var dp DelegatePool
 	result := edb.Store.Get().Model(&DelegatePool{}).Where(&DelegatePool{
+		ProviderID:   sp.ProviderID,
 		ProviderType: sp.ProviderType,
 		PoolID:       sp.PoolID,
 	}).Take(&dp)
@@ -143,6 +144,7 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 		Where(&DelegatePool{
 			ProviderType: dp.ProviderType,
 			ProviderID:   dp.ProviderID,
+			PoolID:       dp.PoolID,
 		}).
 		Updates(updates.Updates)
 	return result.Error
