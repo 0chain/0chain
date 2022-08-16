@@ -533,8 +533,6 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.StakePool.MinLockPeriod = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
-	case FreeAllocationMaxChallengeCompletionTime:
-		conf.FreeAllocationSettings.MaxChallengeCompletionTime = change
 	case HealthCheckPeriod:
 		conf.HealthCheckPeriod = change
 	default:
