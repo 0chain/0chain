@@ -68,7 +68,7 @@ func (edb *EventDb) GetDifference(start, end int64, roundsPerPoint int64, row, t
 		SELECT %s - LAG(%s,1, CAST(0 AS Bigint)) OVER(ORDER BY round ASC) 
 		FROM %s
 		WHERE ( round BETWEEN %v AND %v ) 
-				AND ( Mod(round, %v) < %v )
+				AND ( Mod(round, %v) <= %v )
 		ORDER BY round ASC	`,
 		row, row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1)
 
@@ -82,7 +82,7 @@ func (edb *EventDb) GetAverage(start, end int64, roundsPerPoint int64, row, tabl
 		SELECT ( %s + LAG(%s,1, CAST(0 AS Bigint)) OVER(ORDER BY round ASC) )/2
 		FROM %s
 		WHERE ( round BETWEEN %v AND %v ) 
-				AND ( Mod(round, %v) < %v )
+				AND ( Mod(round, %v) <= %v )
 		ORDER BY round ASC	`,
 		row, row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1)
 
@@ -96,7 +96,7 @@ func (edb *EventDb) GetTotal(start, end int64, roundsPerPoint int64, row, table 
 		SELECT %s
 		FROM %s
 		WHERE ( round BETWEEN %v AND %v ) 
-				AND ( Mod(round, %v) < %v )
+				AND ( Mod(round, %v) <= %v )
 		ORDER BY round ASC	`,
 		row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1)
 
