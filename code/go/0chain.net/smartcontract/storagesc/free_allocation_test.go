@@ -251,7 +251,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Terms: Terms{
 				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
-				MinLockDemand:    mockMinLock,
 			},
 			LastHealthCheck: now - blobberHealthTime + 1,
 		}

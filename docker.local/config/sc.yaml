@@ -180,6 +180,7 @@ smart_contracts:
     validators_per_challenge: 2
     # max delegates per stake pool allowed by SC
     max_delegates: 200
+    min_lock_demand: 1
     # max_charge allowed for blobbers; the charge is part of blobber rewards
     # goes to blobber's delegate wallets, other part goes to related stake
     # holders

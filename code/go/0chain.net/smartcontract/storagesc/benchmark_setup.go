@@ -112,7 +112,6 @@ func addMockAllocation(
 				AllocationID:     sa.ID,
 				ReadPrice:        ba.Terms.ReadPrice,
 				WritePrice:       ba.Terms.WritePrice,
-				MinLockDemand:    ba.Terms.MinLockDemand,
 				MaxOfferDuration: ba.Terms.MaxOfferDuration,
 			}
 			_ = eventDb.Store.Get().Create(&terms)
@@ -131,7 +130,6 @@ func addMockAllocation(
 				AllocationID:     b.AllocationID,
 				ReadPrice:        b.Terms.ReadPrice,
 				WritePrice:       b.Terms.WritePrice,
-				MinLockDemand:    b.Terms.MinLockDemand,
 				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}
@@ -422,7 +420,6 @@ func AddMockBlobbers(
 				Longitude:           blobber.Geolocation.Longitude,
 				ReadPrice:           blobber.Terms.ReadPrice,
 				WritePrice:          blobber.Terms.WritePrice,
-				MinLockDemand:       blobber.Terms.MinLockDemand,
 				MaxOfferDuration:    blobber.Terms.MaxOfferDuration.Nanoseconds(),
 				Capacity:            blobber.Capacity,
 				Allocated:           blobber.Allocated,
@@ -723,7 +720,6 @@ func getMockBlobberTerms() Terms {
 	return Terms{
 		ReadPrice:        currency.Coin(0.1 * 1e10),
 		WritePrice:       currency.Coin(0.1 * 1e10),
-		MinLockDemand:    0.0007,
 		MaxOfferDuration: time.Hour*50 + viper.GetDuration(sc.StorageMinOfferDuration),
 	}
 }

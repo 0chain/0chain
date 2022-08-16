@@ -70,6 +70,7 @@ const (
 	MaxChallengesPerGeneration
 	ValidatorsPerChallenge
 	MaxDelegates
+	MinLockDemand
 
 	BlockRewardBlockReward
 	BlockRewardQualifyingStake
@@ -163,6 +164,7 @@ var (
 		"max_challenges_per_generation",
 		"validators_per_challenge",
 		"max_delegates",
+		"min_lock_demand",
 
 		"block_reward.block_reward",
 		"block_reward.qualifying_stake",
@@ -260,6 +262,7 @@ var (
 		"max_challenges_per_generation":        {MaxChallengesPerGeneration, smartcontract.Int},
 		"validators_per_challenge":             {ValidatorsPerChallenge, smartcontract.Int},
 		"max_delegates":                        {MaxDelegates, smartcontract.Int},
+		"min_lock_demand":                      {MinLockDemand, smartcontract.Float64},
 
 		"block_reward.block_reward":     {BlockRewardBlockReward, smartcontract.CurrencyCoin},
 		"block_reward.qualifying_stake": {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
@@ -483,6 +486,8 @@ func (conf *Config) setFloat64(key string, change float64) error {
 			conf.BlockReward = &blockReward{}
 		}
 		conf.BlockReward.Zeta.Mu = change
+	case MinLockDemand:
+		conf.MinLockDemand = change
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
@@ -692,6 +697,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ValidatorsPerChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
+	case MinLockDemand:
+		return conf.MinLockDemand
 	case BlockRewardBlockReward:
 		return conf.BlockReward.BlockReward
 	case BlockRewardQualifyingStake:

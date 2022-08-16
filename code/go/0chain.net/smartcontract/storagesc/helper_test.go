@@ -280,7 +280,6 @@ func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
 var avgTerms = Terms{
 	ReadPrice:        1 * x10,
 	WritePrice:       5 * x10,
-	MinLockDemand:    0.1,
 	MaxOfferDuration: 1 * time.Hour,
 }
 
@@ -351,6 +350,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0      // 100 tokens per GB max allowed
 	conf.MaxDelegates = 200
+	conf.MinLockDemand = 1
 	conf.MaxChallengeCompletionTime = 5 * time.Minute
 	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "5m")
 

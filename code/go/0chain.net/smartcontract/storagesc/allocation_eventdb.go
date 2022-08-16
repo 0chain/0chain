@@ -1,15 +1,15 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/logging"
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/logging"
+
 	"0chain.net/smartcontract/dbs"
 
-	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -23,7 +23,9 @@ type StorageAllocationBlobbers struct {
 	Blobbers          []*StorageNode `json:"blobbers"`
 }
 
-func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
+func allocationTableToStorageAllocationBlobbers(
+	alloc *event.Allocation,
+	eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
 	storageNodes := make([]*StorageNode, 0)
 	blobberDetails := make([]*BlobberAllocation, 0)
 	blobberIDs := make([]string, 0)
@@ -54,7 +56,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			Terms: Terms{
 				ReadPrice:        t.ReadPrice,
 				WritePrice:       t.WritePrice,
-				MinLockDemand:    t.MinLockDemand,
 				MaxOfferDuration: t.MaxOfferDuration,
 			}}
 	}
@@ -63,10 +64,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
-
-	var dpsSze = alloc.DataShards + alloc.ParityShards
-	var gbSize = sizeInGB((alloc.Size + int64(dpsSze-1)) / int64(dpsSze))
-	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &StorageNode{
@@ -83,8 +80,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     b.DelegateWallet,
-				MinStake:           currency.Coin(b.MinStake),
-				MaxStake:           currency.Coin(b.MaxStake),
+				MinStake:           b.MinStake,
+				MaxStake:           b.MaxStake,
 				MaxNumDelegates:    b.NumDelegates,
 				ServiceChargeRatio: b.ServiceCharge,
 			},
@@ -92,18 +89,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 		terms := blobberIDTermMapping[b.BlobberID].Terms
 
-		bwF := gbSize * terms.MinLockDemand * rdtu
-		minLockDemand, err := currency.MultFloat64(terms.WritePrice, bwF)
-		if err != nil {
-			return nil, err
-		}
-
 		tempBlobberAllocation := &BlobberAllocation{
-			BlobberID:     b.BlobberID,
-			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
-			Size:          b.Allocated,
-			Terms:         terms,
-			MinLockDemand: minLockDemand,
+			BlobberID:    b.BlobberID,
+			AllocationID: blobberIDTermMapping[b.BlobberID].AllocationID,
+			Size:         b.Allocated,
+			Terms:        terms,
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation
@@ -161,7 +151,6 @@ func (sa *StorageAllocation) marshalTerms() ([]byte, error) {
 			AllocationID:     b.AllocationID,
 			ReadPrice:        b.Terms.ReadPrice,
 			WritePrice:       b.Terms.WritePrice,
-			MinLockDemand:    b.Terms.MinLockDemand,
 			MaxOfferDuration: b.Terms.MaxOfferDuration,
 		})
 	}
@@ -277,7 +266,10 @@ func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 	return nil
 }
 
-func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit common2.Pagination) ([]*StorageAllocationBlobbers, error) {
+func getClientAllocationsFromDb(
+	clientID string,
+	eventDb *event.EventDb,
+	limit common2.Pagination) ([]*StorageAllocationBlobbers, error) {
 
 	sas := make([]*StorageAllocationBlobbers, 0)
 
@@ -307,7 +299,6 @@ func (sa *StorageAllocation) ToAllocBlobberTerms() []event.AllocationBlobberTerm
 			AllocationID:     blobber.AllocationID,
 			ReadPrice:        int64(blobber.Terms.ReadPrice),
 			WritePrice:       int64(blobber.Terms.WritePrice),
-			MinLockDemand:    blobber.Terms.MinLockDemand,
 			MaxOfferDuration: blobber.Terms.MaxOfferDuration,
 		})
 	}

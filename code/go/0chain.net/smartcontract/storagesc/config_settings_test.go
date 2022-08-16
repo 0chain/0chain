@@ -469,6 +469,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.ValidatorsPerChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
+	case MinLockDemand:
+		return conf.MinLockDemand
 	case BlockRewardBlockReward:
 		return conf.BlockReward.BlockReward
 	case BlockRewardQualifyingStake:

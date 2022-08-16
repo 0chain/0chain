@@ -797,7 +797,6 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	}
 
 	// just copy from next
-	avg.MinLockDemand = next.MinLockDemand
 	avg.MaxOfferDuration = next.MaxOfferDuration
 	return
 }
@@ -855,6 +854,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	blobbers []*StorageNode,
 	req *updateAllocationRequest,
 	balances chainstate.StateContextI,
+	config *Config,
 ) (err error) {
 	var (
 		diff   = req.getBlobbersSizeDiff(alloc) // size difference
@@ -919,7 +919,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		// new blobber's min lock demand (alloc.Expiration is already updated
 		// and we can use restDurationInTimeUnits method here)
 		nbmld, err := details.Terms.minLockDemand(gbSize,
-			alloc.restDurationInTimeUnits(alloc.StartTime))
+			alloc.restDurationInTimeUnits(alloc.StartTime), config.MinLockDemand)
 		if err != nil {
 			return err
 		}
@@ -1155,7 +1155,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			if bd.Terms.ReadPrice >= blobbers[i].Terms.ReadPrice {
 				bd.Terms.ReadPrice = blobbers[i].Terms.ReadPrice
 			}
-			bd.Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
 			bd.Terms.MaxOfferDuration = blobbers[i].Terms.MaxOfferDuration
 		}
 	}
@@ -1188,11 +1187,11 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// if size or expiration increased, then we use new terms
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
-		err = sc.extendAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, alloc, blobbers, &request, balances, conf)
 	} else if request.Size != 0 || request.Expiration != 0 {
 		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances)
 	} else if len(request.AddBlobberId) > 0 {
-		err = sc.extendAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, alloc, blobbers, &request, balances, conf)
 	}
 	if err != nil {
 		return "", err

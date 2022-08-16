@@ -21,7 +21,6 @@ func emitAddOrOverwriteBlobber(
 		Longitude:        sn.Geolocation.Longitude,
 		ReadPrice:        sn.Terms.ReadPrice,
 		WritePrice:       sn.Terms.WritePrice,
-		MinLockDemand:    sn.Terms.MinLockDemand,
 		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
 
 		Capacity:        sn.Capacity,
@@ -59,7 +58,6 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"longitude":          sn.Geolocation.Longitude,
 			"read_price":         int64(sn.Terms.ReadPrice),
 			"write_price":        int64(sn.Terms.WritePrice),
-			"min_lock_demand":    sn.Terms.MinLockDemand,
 			"max_offer_duration": sn.Terms.MaxOfferDuration.Nanoseconds(),
 			"capacity":           sn.Capacity,
 			"allocated":          sn.Allocated,

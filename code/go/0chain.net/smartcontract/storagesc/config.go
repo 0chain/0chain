@@ -174,6 +174,9 @@ type Config struct {
 	// MaxDelegates per stake pool
 	MaxDelegates int `json:"max_delegates"`
 
+	//MinLockDemand is minimum amount to be blocked
+	MinLockDemand float64 `json:"min_lock_demand"`
+
 	// MaxCharge that blobber gets from rewards to its delegate_wallet.
 	MaxCharge float64 `json:"max_charge"`
 
@@ -286,6 +289,12 @@ func (sc *Config) validate() (err error) {
 	}
 	if sc.MaxDelegates < 1 {
 		return fmt.Errorf("max_delegates is too small %v", sc.MaxDelegates)
+	}
+	if sc.MinLockDemand < 0 {
+		return fmt.Errorf("min_lock_demand cannot be negative: %v", sc.MinLockDemand)
+	}
+	if sc.MinLockDemand > 1 {
+		return fmt.Errorf("min_lock_demand too large: %v", sc.MinLockDemand)
 	}
 	if sc.MaxCharge < 0 {
 		return fmt.Errorf("negative max_charge: %v", sc.MaxCharge)
@@ -486,6 +495,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 		pfx + "challenge_rate_per_mb_min")
 
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
+	conf.MinLockDemand = scc.GetFloat64(pfx + "min_lock_demand")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
 	conf.BlockReward = new(blockReward)

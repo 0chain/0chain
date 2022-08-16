@@ -759,13 +759,16 @@ func TestExtendAllocation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ssc, txn, sa, aBlobbers, balances := setup(t, tt.args)
+			config, err := ssc.getConfig(balances, false)
+			require.NoError(t, err)
 
-			err := ssc.extendAllocation(
+			err = ssc.extendAllocation(
 				txn,
 				&sa,
 				aBlobbers,
 				&tt.args.request,
 				balances,
+				config,
 			)
 			if tt.want.err != (err != nil) {
 				require.EqualValues(t, tt.want.err, err != nil)
@@ -1041,7 +1044,6 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			Terms: Terms{
 				ReadPrice:        20,
 				WritePrice:       200,
-				MinLockDemand:    0.1,
 				MaxOfferDuration: 200 * time.Second,
 			},
 			Capacity:        25 * GB, // 20 GB
@@ -1054,7 +1056,6 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			Terms: Terms{
 				ReadPrice:        25,
 				WritePrice:       250,
-				MinLockDemand:    0.05,
 				MaxOfferDuration: 250 * time.Second,
 			},
 			Capacity:        20 * GB, // 20 GB
