@@ -301,9 +301,7 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 	if err != nil {
 		points = 100
 	}
-	if points == 0 {
-		return 0, 0, 0, common.NewErrBadRequest("data points %v must be strictly positive")
-	}
+	points++
 
 	roundsPerPoint := (end - start) / int64(points)
 	if roundsPerPoint < 1 {
