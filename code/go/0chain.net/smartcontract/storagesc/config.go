@@ -125,7 +125,7 @@ type Config struct {
 	ValidatorReward float64 `json:"validator_reward"`
 	// BlobberSlash represents % (value in [0; 1] range) of blobbers' stake
 	// tokens penalized on challenge not passed.
-	BlobberSlash float64 `json:"blobber_slash"`
+	BlobberSlash      float64       `json:"blobber_slash"`
 	HealthCheckPeriod time.Duration `json:"health_check_period"`
 	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
 	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation"`

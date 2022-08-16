@@ -591,7 +591,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		endBlockString   = r.URL.Query().Get("end-block")
 		clientID         = r.URL.Query().Get("client-id")
 		startDateString  = r.URL.Query().Get("start-date")
-		endDateString	 = r.URL.Query().Get("end-date")
+		endDateString    = r.URL.Query().Get("end-date")
 		dataPointsString = r.URL.Query().Get("data-points")
 	)
 
