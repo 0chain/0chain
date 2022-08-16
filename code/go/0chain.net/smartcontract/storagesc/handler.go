@@ -107,6 +107,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/graph-blobber-offers-total", srh.graphBlobberOffersTotal),
 		rest.MakeEndpoint(storage+"/graph-blobber-unstake-total", srh.graphBlobberUnstakeTotal),
 		rest.MakeEndpoint(storage+"/graph-blobber-total-stake", srh.graphBlobberTotalStake),
+		rest.MakeEndpoint(storage+"/graph-blobber-challenges-open", srh.graphBlobberOpenCallenges),
 
 		// per blobber historic difference metric for graphs
 		rest.MakeEndpoint(storage+"/graph-blobber-service-charge", srh.graphBlobberServiceCharge),
@@ -444,6 +445,77 @@ func (srh *StorageRestHandler) graphBlobberTotalStake(w http.ResponseWriter, r *
 	data, err := edb.GetAggregateData(
 		start, end, roundsPerPoint,
 		"total_stake",
+		"blobber_aggregates",
+		id,
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting data points: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, data, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-open graph-blobber-challenges-open
+// Graphs the change in open challenges.
+//
+// Unstaking tokens are locked into allocations now, but cannot be used for any further allocations.
+//
+// Graph endpoints take a start and end time and the number `data-points` into which you wish to split the graph.
+// The count rounds for the period is determined and the graph split up into `data-points` intervals of equal number of rounds.
+// 0chain data is then amalgamated into `data-points` intervals of equal rounds.
+// Each point will give the average open challenges over that interval.
+//
+// The result is given in an array of values with length equal to `data-points`.
+// Array index represents intervals of increasing round number.
+//
+// parameters:
+//    + name: from
+//      description: from date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: to
+//      description: to date timestamp
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: total data points in result
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200:  graphPoints
+//  400:
+//  500:
+func (srh *StorageRestHandler) graphBlobberOpenCallenges(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if len(id) == 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("no blobber id"))
+		return
+	}
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	start, end, roundsPerPoint, err := differenceParameters(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+		r.URL.Query().Get("data-points"),
+		edb,
+	)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	data, err := edb.GetAggregateData(
+		start, end, roundsPerPoint,
+		"open_challenges",
 		"blobber_aggregates",
 		id,
 	)

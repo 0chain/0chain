@@ -371,6 +371,9 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
+		if err := edb.incrementOpenChallenges(chall.BlobberID); err != nil {
+			return err
+		}
 		return edb.addChallenge(chall)
 	case TagUpdateChallenge:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)

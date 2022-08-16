@@ -20,6 +20,8 @@ echo -e "\ngraph-blobber-unstake-total"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-unstake-total?data-points=17&id='$BLOBBERID
 echo -e "\ngraph-blobber-total-stake"
 curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-total-stake?data-points=17&id='$BLOBBERID
+echo -e "\ngraph-blobber-challenges-open"
+curl --location -g --request GET  'http://192.168.1.100:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/graph-blobber-challenges-open?data-points=17&id='$BLOBBERID
 
 echo -e "\ndifferences"
 echo -e "\ngraph-blobber-service-charge"

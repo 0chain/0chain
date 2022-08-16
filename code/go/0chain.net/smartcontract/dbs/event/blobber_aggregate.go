@@ -27,6 +27,7 @@ type BlobberAggregate struct {
 	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
+	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
 }
 
@@ -70,6 +71,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
+		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted

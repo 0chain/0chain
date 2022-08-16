@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
 	"gorm.io/gorm/clause"
@@ -57,6 +60,7 @@ type Blobber struct {
 
 	ChallengesPassed    uint64  `json:"challenges_passed"`
 	ChallengesCompleted uint64  `json:"challenges_completed"`
+	OpenChallenges      uint64  `json:"open_challenges"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
@@ -119,6 +123,11 @@ func (edb *EventDb) updateBlobberChallenges(challenge dbs.ChallengeResult) error
 	if err != nil {
 		return err
 	}
+	if blobber.OpenChallenges > 0 {
+		blobber.OpenChallenges--
+	} else {
+		logging.Logger.Error("resolve challenge when no open challenges", zap.String("blobber id", blobber.BlobberID))
+	}
 	blobber.ChallengesCompleted++
 	if challenge.Passed {
 		blobber.ChallengesPassed++
@@ -129,6 +138,17 @@ func (edb *EventDb) updateBlobberChallenges(challenge dbs.ChallengeResult) error
 		update.Updates["challenges_passed"] = blobber.ChallengesPassed
 	}
 	update.Updates["rank_metric"] = blobber.ChallengesPassed / blobber.ChallengesCompleted
+	return edb.updateBlobber(*update)
+}
+
+func (edb *EventDb) incrementOpenChallenges(id string) error {
+	blobber, err := edb.GetBlobber(id)
+	if err != nil {
+		return err
+	}
+	blobber.OpenChallenges++
+	update := dbs.NewDbUpdates(id)
+	update.Updates["open_challenges"] = blobber.OpenChallenges
 	return edb.updateBlobber(*update)
 }
 

@@ -500,6 +500,16 @@ func BenchmarkRestTests(
 				Endpoint: srh.graphBlobberServiceCharge,
 			},
 			{
+				FuncName: "graph-blobber-challenges-open",
+				Params: map[string]string{
+					"id":          getMockBlobberId(0),
+					"from":        "0",
+					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "7",
+				},
+				Endpoint: srh.graphBlobberOpenCallenges,
+			},
+			{
 				FuncName: "graph-blobber-challenges-passed",
 				Params: map[string]string{
 					"id":          getMockBlobberId(0),
