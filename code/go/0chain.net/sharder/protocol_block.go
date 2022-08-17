@@ -59,7 +59,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}
 	}
 	if err := sc.BlockCache.Add(b.Hash, b); err != nil {
-		Logger.Warn("update finalized block, add block to cache failed",
+		Logger.Panic("update finalized block, add block to cache failed",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Error(err))
@@ -69,11 +69,11 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	err := sc.StoreTransactions(b)
 	if err != nil {
-		Logger.Error("db store transaction failed", zap.Error(err))
+		Logger.Panic("db store transaction failed", zap.Error(err))
 	}
 	err = sc.StoreBlockSummaryFromBlock(b)
 	if err != nil {
-		Logger.Error("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		Logger.Panic("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 	}
 	self := node.GetSelfNode(ctx)
 	if b.MagicBlock != nil {
@@ -87,7 +87,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		sc.SharderStats.ShardedBlocksCount++
 		ts := time.Now()
 		if err := blockstore.GetStore().Write(b); err != nil {
-			Logger.Error("store block failed",
+			Logger.Panic("store block failed",
 				zap.Int64("round", b.Round),
 				zap.Error(err))
 		}
@@ -95,13 +95,13 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		blockSaveTimer.UpdateSince(ts)
 		p95 := blockSaveTimer.Percentile(.95)
 		if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-			Logger.Error("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+			Logger.Warn("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 		}
 	}
 	if frImpl, ok := fr.(*round.Round); ok {
 		err := sc.StoreRound(frImpl)
 		if err != nil {
-			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
+			Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
 	}
 	go sc.DeleteRoundsBelow(b.Round)
