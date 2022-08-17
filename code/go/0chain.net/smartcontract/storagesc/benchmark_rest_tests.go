@@ -585,8 +585,8 @@ func BenchmarkRestTests(
 				FuncName: "graph-total-challenge-pools",
 				Params: map[string]string{
 					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "17",
+					"to":          "1660605906", //strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"data-points": "1",
 				},
 				Endpoint: srh.graphTotalChallengePools,
 			},
