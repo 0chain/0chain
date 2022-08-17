@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/node"
@@ -44,6 +45,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 
 	fr.Finalize(b)
+	wg := sync.WaitGroup{}
 	Logger.Info("update finalized block",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
@@ -58,6 +60,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
 		}
 	}
+
 	if err := sc.BlockCache.Add(b.Hash, b); err != nil {
 		Logger.Panic("update finalized block, add block to cache failed",
 			zap.Int64("round", b.Round),
@@ -65,46 +68,73 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			zap.Error(err))
 	}
 
-	bsHistogram.Update(int64(len(b.Txns)))
-	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
-	err := sc.StoreTransactions(b)
-	if err != nil {
-		Logger.Panic("db store transaction failed", zap.Error(err))
-	}
-	err = sc.StoreBlockSummaryFromBlock(b)
-	if err != nil {
-		Logger.Panic("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-	}
 	self := node.GetSelfNode(ctx)
+	bsHistogram.Update(int64(len(b.Txns)))
+	self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := sc.StoreTransactions(b)
+		if err != nil {
+			Logger.Panic("db store transaction failed", zap.Error(err))
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := sc.StoreBlockSummaryFromBlock(b); err != nil {
+			Logger.Panic("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		}
+	}()
+
 	if b.MagicBlock != nil {
-		bs := b.GetSummary()
-		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
-		if err != nil {
-			Logger.DPanic("failed to store magic block map", zap.Any("error", err))
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			bs := b.GetSummary()
+			if err := sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap()); err != nil {
+				Logger.DPanic("failed to store magic block map", zap.Any("error", err))
+			}
+		}()
 	}
+
 	if sc.IsBlockSharder(b, self.Underlying()) {
-		sc.SharderStats.ShardedBlocksCount++
-		ts := time.Now()
-		if err := blockstore.GetStore().Write(b); err != nil {
-			Logger.Panic("store block failed",
-				zap.Int64("round", b.Round),
-				zap.Error(err))
-		}
-		duration := time.Since(ts)
-		blockSaveTimer.UpdateSince(ts)
-		p95 := blockSaveTimer.Percentile(.95)
-		if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-			Logger.Warn("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sc.SharderStats.ShardedBlocksCount++
+			ts := time.Now()
+			if err := blockstore.GetStore().Write(b); err != nil {
+				Logger.Panic("store block failed",
+					zap.Int64("round", b.Round),
+					zap.Error(err))
+			}
+
+			duration := time.Since(ts)
+			blockSaveTimer.UpdateSince(ts)
+			p95 := blockSaveTimer.Percentile(.95)
+			if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
+				Logger.Warn("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+			}
+		}()
 	}
+
 	if frImpl, ok := fr.(*round.Round); ok {
-		err := sc.StoreRound(frImpl)
-		if err != nil {
-			Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := sc.StoreRound(frImpl)
+			if err != nil {
+				Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
+			}
+		}()
 	}
 	go sc.DeleteRoundsBelow(b.Round)
+	wg.Wait()
+	Logger.Debug("update finalized blocks storage success",
+		zap.Int64("round", b.Round), zap.String("block", b.Hash))
 }
 
 func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error { //nolint: unused
