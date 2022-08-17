@@ -1,15 +1,9 @@
-name: Conductor Blobber Tests
+name: Conductor Blobber-3 Tests
 
 on:
   schedule:
     # Runs everyday at 02:00 am
     - cron: '0 2 * * * '
-  workflow_dispatch:
-    inputs:
-      view_change: 
-        description: 'Type true/false for setting view change.'
-        default: 'false'
-        required: true
 
 jobs:
   conductor_blobbers_tests: 
@@ -103,10 +97,6 @@ jobs:
       run: |
         cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
     
-    - name: 0chain configuration Patching
-      run: |
-        sed -i 's/magic_block_file: config\/b0magicBlock_4_miners_2_sharders.json/magic_block_file: config\/b0magicBlock_4_miners_1_sharder.json/' docker.local/config/0chain.yaml
-
     - name: Build 0dns
       run: | 
         cd 0dns
@@ -148,8 +138,7 @@ jobs:
     
     - name: Starting blobber Tests.
       run: |
-        cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
-        cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
+        cd 0chain && ./docker.local/bin/start.conductor.sh blobber-3
 
   upload_artifacts:
     name: UPLOAD-LOGS-AS-ARTIFACTS

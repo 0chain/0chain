@@ -872,3 +872,21 @@ func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	}
 	return nil
 }
+
+// SetServerState implements config.Executor interface.
+func (r *Runner) SetServerState(update interface{}) error {
+	err := r.server.UpdateAllStates(func(state *conductrpc.State) {
+		switch update := update.(type) {
+		case *config.BlobberList:
+			state.BlobberList = update
+		case *config.BlobberDownload:
+			state.BlobberDownload = update
+		case *config.BlobberUpload:
+			state.BlobberUpload = update
+		case *config.BlobberDelete:
+			state.BlobberDelete = update
+		}
+	})
+
+	return err
+}

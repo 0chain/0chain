@@ -555,4 +555,40 @@ func init() {
 		}
 		return ex.MakeTestCaseCheck(cfg)
 	})
+
+	register("blobber_list", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberList()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_download", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberDownload()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_upload", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberUpload()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_delete", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberDelete()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
 }
