@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -390,9 +391,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
 	}
-	bsh.UpdateFinalizedBlock(ctx, fb)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		wg.Done()
+		bsh.UpdateFinalizedBlock(ctx, fb)
+	}()
 
-	fr.Finalize(fb)
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
 
@@ -403,23 +408,28 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
-	// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
-	pfb := fb
-	for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
+	wg.Add(1)
+	go func() {
+		wg.Done()
+		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
+		pfb := fb
+		for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
 
-	}
-	if pfb == nil {
-		return
-	}
-	frb := c.GetRoundBlocks(pfb.Round)
-	var deadBlocks []*block.Block
-	for _, b := range frb {
-		if b.Hash != pfb.Hash {
-			deadBlocks = append(deadBlocks, b)
 		}
-	}
-	// Prune all the dead blocks
-	c.DeleteBlocks(deadBlocks)
+		if pfb == nil {
+			return
+		}
+		frb := c.GetRoundBlocks(pfb.Round)
+		var deadBlocks []*block.Block
+		for _, b := range frb {
+			if b.Hash != pfb.Hash {
+				deadBlocks = append(deadBlocks, b)
+			}
+		}
+		// Prune all the dead blocks
+		c.DeleteBlocks(deadBlocks)
+	}()
+	wg.Wait()
 }
 
 //IsFinalizedDeterministically - checks if a block is finalized deterministically
