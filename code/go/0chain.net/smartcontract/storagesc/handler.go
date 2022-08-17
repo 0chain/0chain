@@ -276,7 +276,7 @@ func roundIntervalFromTime(fromTime, toTime string, edb *event.EventDb) (int64, 
 	start, err := edb.GetRoundFromTime(timeFrom, true)
 	if err != nil {
 		return 0, 0, common.NewErrInternal(
-			fmt.Sprintf("Error finding round matching from time %v: %v", timeFrom, err.Error()))
+			fmt.Sprintf("failed finding round matching from time %v: %v", timeFrom, err.Error()))
 	}
 	if start <= 0 {
 		start = 1
@@ -284,7 +284,7 @@ func roundIntervalFromTime(fromTime, toTime string, edb *event.EventDb) (int64, 
 	end, err := edb.GetRoundFromTime(timeTo, false)
 	if err != nil {
 		return 0, 0, common.NewErrInternal(
-			fmt.Sprintf("Error finding round matching from time %v: %v", timeFrom, err.Error()))
+			fmt.Sprintf("failed finding round matching to time %v: %v", timeFrom, err.Error()))
 	}
 
 	if end <= start {
