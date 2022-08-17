@@ -29,6 +29,7 @@ type BlobberAggregate struct {
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
+	RankMetric          float64       `json:"rank_metric" gorm:"index"`
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapshot) {
@@ -72,6 +73,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
+		aggregate.RankMetric = current.RankMetric
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
@@ -126,11 +128,30 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 	gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
 }
 
-//query := graphDataPointsGeneratorQueryByBlobber(
-//	from, to, aggregate, dataPoints, table, id,
-//)
-//var res []float64
-//return res, edb.Store.Get().Raw(query).Scan(&res).Error
+func (edb *EventDb) getClosest(id string, round int64) (BlobberAggregate, error) {
+	var aggregate BlobberAggregate
+	res := edb.Store.Get().
+		Model(BlobberAggregate{}).
+		Where("blobber_id = ? and round <= ?", id, round).
+		Order("round desc").
+		First(&aggregate)
+	return aggregate, res.Error
+}
+
+func (edb *EventDb) GetBlobberRankByRound(blobberId string, round int64) (int64, error) {
+	aggregate, err := edb.getClosest(blobberId, round)
+	if err != nil {
+		return 0, err
+	}
+	var rank int64
+	result := edb.Store.Get().
+		Model(&BlobberAggregate{}).
+		Where("rank_metric > ? and (round between ? and ?)",
+			aggregate.RankMetric, round, round-edb.dbConfig.AggregatePeriod+1).
+		Count(&rank)
+	return rank + 1, result.Error
+}
+
 func (edb *EventDb) GetBlobberAggregate(id string, round int64) (BlobberAggregate, error) {
 	var aggregate BlobberAggregate
 	res := edb.Store.Get().

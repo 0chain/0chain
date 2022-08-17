@@ -1284,18 +1284,47 @@ func (srh *StorageRestHandler) getTotalAllocatedStorage(w http.ResponseWriter, r
 //      required: true
 //      in: query
 //      type: string
+//    + name: time
+//      description: time to get rank for, defaults to the latest round.
+//      required: false
+//      in: query
+//      type: string
 //
 // responses:
 //  200: Int64Map
 //  400:
 func (srh *StorageRestHandler) getBlobberRank(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	rank, err := edb.GetBlobberRank(id)
+
+	id := r.URL.Query().Get("id")
+	timeIn := r.URL.Query().Get("time")
+	if len(timeIn) == 0 { // current rank
+		rank, err := edb.GetBlobberRank(id)
+		if err != nil {
+			common.Respond(w, r, nil, err)
+			return
+		}
+		common.Respond(w, r, rest.Int64Map{
+			"blobber-rank": rank,
+		}, nil)
+		return
+	}
+
+	t, err := strconv.ParseInt(timeIn, 10, 64)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	round, err := edb.GetRoundFromTime(time.Unix(t, 0), true)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	rank, err := edb.GetBlobberRankByRound(id, round)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return

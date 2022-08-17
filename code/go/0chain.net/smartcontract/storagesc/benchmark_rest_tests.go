@@ -193,7 +193,8 @@ func BenchmarkRestTests(
 			{
 				FuncName: "blobber-rank",
 				Params: map[string]string{
-					"id": getMockBlobberId(3),
+					"time": "1660753917",
+					"id":   getMockBlobberId(3),
 				},
 				Endpoint: srh.getBlobberRank,
 			},
@@ -586,7 +587,7 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"from":        "0",
 					"to":          "1660605906", //strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "1",
+					"data-points": "17",
 				},
 				Endpoint: srh.graphTotalChallengePools,
 			},
