@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -73,12 +74,22 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		events := <-edb.eventsChannel
+		ts := time.Now()
 		edb.addEvents(ctx, events)
+		logging.Logger.Debug("event db save - addEvents", zap.Any("duration", time.Since(ts)))
 		for _, event := range events {
 			var err error = nil
 			switch EventType(event.Type) {
 			case TypeStats:
+				ts = time.Now()
 				err = edb.addStat(event)
+				du := time.Since(ts)
+				logging.Logger.Debug("event db save - addStat", zap.Any("duration", du),
+					zap.Error(err))
+				if du.Milliseconds() > 50 {
+					logging.Logger.Warn("event db save slow - addStat",
+						zap.Any("duration", du), zap.Any("event", event))
+				}
 			case TypeError:
 				err = edb.addError(Error{
 					TransactionID: event.TxHash,

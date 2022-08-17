@@ -354,7 +354,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	c.rebaseState(fb)
-	wg.Run("finalize block - record dead nodess", func() {
+	wg.Run("finalize block - record dead nodess", fb.Round, func() {
 		err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 		if err != nil {
 			logging.Logger.Panic("finalize block - record dead nodes failed",
@@ -376,7 +376,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestFinalizedBlock(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		wg.Run("finalize block - add events", func() {
+		wg.Run("finalize block - add events", fb.Round, func() {
 			c.GetEventDb().AddEvents(ctx, fb.Events)
 			fb.Events = nil
 		})
@@ -400,7 +400,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
-	wg.Run("finalize block - update finalized block", func() {
+	wg.Run("finalize block - update finalized block", fb.Round, func() {
 		bsh.UpdateFinalizedBlock(ctx, fb)
 	})
 
@@ -416,7 +416,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
-	wg.Run("finalize block - delete dead blocks", func() {
+	wg.Run("finalize block - delete dead blocks", fb.Round, func() {
 		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 		pfb := fb
 		for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
@@ -452,13 +452,22 @@ func newWaitGroupSync() *waitGroupSync {
 	}
 }
 
-func (wgs *waitGroupSync) Run(name string, f func()) {
+func (wgs *waitGroupSync) Run(name string, round int64, f func()) {
 	wgs.wg.Add(1)
 	ts := time.Now()
 	go func() {
 		defer wgs.wg.Done()
 		f()
-		logging.Logger.Debug("Run", zap.String("name", name), zap.Any("duration", time.Since(ts)))
+		du := time.Since(ts)
+		logging.Logger.Debug("Run", zap.String("name", name),
+			zap.Int64("round", round),
+			zap.Any("duration", du))
+
+		if du.Milliseconds() > 50 {
+			logging.Logger.Debug("Run slow on", zap.String("name", name),
+				zap.Int64("round", round),
+				zap.Any("duration", du))
+		}
 	}()
 }
 
