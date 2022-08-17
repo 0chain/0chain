@@ -44,6 +44,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		fr = round.NewRound(b.Round)
 	}
 
+	b = b.Clone()
 	fr.Finalize(b)
 	wg := sync.WaitGroup{}
 	Logger.Info("update finalized block",

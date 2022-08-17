@@ -291,6 +291,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	logging.Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
+	ts := time.Now()
 	numGenerators := c.GetGeneratorsNum()
 	if fb.RoundRank >= numGenerators || fb.RoundRank < 0 {
 		logging.Logger.Warn("finalize block - round rank is invalid or greater than num_generators",
@@ -340,24 +341,29 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
+	wg := newWaitGroupSync()
+
+	deletedNode := fb.ClientState.GetDeletes()
+
 	if err := c.SaveChanges(ctx, fb); err != nil {
-		logging.Logger.Error("finalize block save changes failed",
+		logging.Logger.Panic("finalize block save changes failed",
 			zap.Error(err),
 			zap.Int64("round", fb.Round),
 			zap.String("hash", fb.Hash))
 		return
 	}
 
-	deletedNode := fb.ClientState.GetDeletes()
 	c.rebaseState(fb)
-	err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
-	if err != nil {
-		logging.Logger.Error("finalize block - record dead nodes failed",
-			zap.Int64("round", fb.Round),
-			zap.String("block", fb.Hash),
-			zap.Error(err))
-		return
-	}
+	wg.Run("finalize block - record dead nodess", func() {
+		err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
+		if err != nil {
+			logging.Logger.Panic("finalize block - record dead nodes failed",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash),
+				zap.Error(err))
+			return
+		}
+	})
 
 	if err := c.updateFeeStats(fb); err != nil {
 		logging.Logger.Error("finalize block - update fee stats failed",
@@ -370,8 +376,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestFinalizedBlock(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		c.GetEventDb().AddEvents(ctx, fb.Events)
-		fb.Events = nil
+		wg.Run("finalize block - add events", func() {
+			c.GetEventDb().AddEvents(ctx, fb.Events)
+			fb.Events = nil
+		})
 	}
 
 	if fb.MagicBlock != nil {
@@ -391,12 +399,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
 	}
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+
+	wg.Run("finalize block - update finalized block", func() {
 		bsh.UpdateFinalizedBlock(ctx, fb)
-	}()
+	})
 
 	fr.Finalize(fb)
 
@@ -410,9 +416,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Run("finalize block - delete dead blocks", func() {
 		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 		pfb := fb
 		for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
@@ -430,10 +434,36 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 		// Prune all the dead blocks
 		c.DeleteBlocks(deadBlocks)
-	}()
+	})
+
 	wg.Wait()
 	logging.Logger.Debug("finalized block - done",
-		zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
+		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+		zap.Any("duration", time.Since(ts)))
+}
+
+type waitGroupSync struct {
+	wg *sync.WaitGroup
+}
+
+func newWaitGroupSync() *waitGroupSync {
+	return &waitGroupSync{
+		wg: &sync.WaitGroup{},
+	}
+}
+
+func (wgs *waitGroupSync) Run(name string, f func()) {
+	wgs.wg.Add(1)
+	ts := time.Now()
+	go func() {
+		defer wgs.wg.Done()
+		f()
+		logging.Logger.Debug("Run", zap.String("name", name), zap.Any("duration", time.Since(ts)))
+	}()
+}
+
+func (wgs *waitGroupSync) Wait() {
+	wgs.wg.Wait()
 }
 
 //IsFinalizedDeterministically - checks if a block is finalized deterministically
