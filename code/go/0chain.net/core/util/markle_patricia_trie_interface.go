@@ -49,6 +49,8 @@ type MerklePatriciaTrieI interface {
 	GetDeletes() []Node
 	GetChangeCount() int
 	SaveChanges(ctx context.Context, ndb NodeDB, includeDeletes bool) error
+	GetChangeCollector() ChangeCollectorI
+	SetChangeCollector(ChangeCollectorI)
 
 	// useful for syncing up
 	GetPathNodes(path Path) ([]Node, error)

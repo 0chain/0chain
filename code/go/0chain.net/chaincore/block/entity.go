@@ -753,6 +753,7 @@ func (b *Block) Clone() *Block {
 		blockState:          b.blockState,
 		isNotarized:         b.isNotarized,
 		verificationStatus:  b.verificationStatus,
+		StateChangesCount:   b.StateChangesCount,
 	}
 	if b.MagicBlock != nil {
 		clone.MagicBlock = b.MagicBlock.Clone()
@@ -768,6 +769,7 @@ func (b *Block) Clone() *Block {
 	b.stateMutex.RLock()
 	if b.ClientState != nil {
 		clone.CreateState(b.ClientState.GetNodeDB(), b.ClientStateHash)
+		//clone.ClientState.SetChangeCollector(b.ClientState.GetChangeCollector())
 	}
 	b.stateMutex.RUnlock()
 

@@ -1154,3 +1154,16 @@ func (mpt *MerklePatriciaTrie) MergeDB(ndb NodeDB, root Key) error {
 	mpt.root = root
 	return ndb.Iterate(context.TODO(), handler)
 }
+
+func (mpt *MerklePatriciaTrie) GetChangeCollector() (cc ChangeCollectorI) {
+	mpt.mutex.Lock()
+	cc = mpt.ChangeCollector.Clone()
+	mpt.mutex.Unlock()
+	return
+}
+
+func (mpt *MerklePatriciaTrie) SetChangeCollector(cc ChangeCollectorI) {
+	mpt.mutex.Lock()
+	mpt.ChangeCollector = cc
+	mpt.mutex.Unlock()
+}
