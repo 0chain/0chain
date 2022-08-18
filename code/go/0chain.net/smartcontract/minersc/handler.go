@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	sharderEndpoint "0chain.net/sharder/endpoint"
 	"errors"
 	"fmt"
 	"net/http"
@@ -35,7 +36,7 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	mrh := NewMinerRestHandler(rh)
-	miner := "/v1/screst/" + ADDRESS
+	miner := sharderEndpoint.SmartContractFunction + "/" + ADDRESS
 	return []rest.Endpoint{
 		rest.MakeEndpoint(miner+"/globalSettings", mrh.getGlobalSettings),
 		rest.MakeEndpoint(miner+"/getNodepool", mrh.getNodePool),
@@ -235,7 +236,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if pool := sn.GetNodePool(poolID); pool != nil{
+	if pool := sn.GetNodePool(poolID); pool != nil {
 		common.Respond(w, r, pool, nil)
 		return
 	}

@@ -16,6 +16,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	core_endpoint "0chain.net/core/endpoint"
 	"0chain.net/core/logging"
 )
 
@@ -35,7 +36,7 @@ func setupLFBTicketSender() {
 		CurrentRelayLength: 0,
 		Compress:           false,
 	}
-	LFBTicketSender = node.SendEntityHandler("/v1/block/get/latest_finalized_ticket", &options)
+	LFBTicketSender = node.SendEntityHandler(core_endpoint.GetLatestFinalizedTicket, &options)
 	// 2. Register LFBTicket EntityMetadata implementation.
 	datastore.RegisterEntityMetadata("lfb_ticket", new(LFBTicketEntityMetadata))
 }

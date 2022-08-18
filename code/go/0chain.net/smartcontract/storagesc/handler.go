@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	sharderEndpoint "0chain.net/sharder/endpoint"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,7 +48,7 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	srh := NewStorageRestHandler(rh)
-	storage := "/v1/screst/" + ADDRESS
+	storage := sharderEndpoint.SmartContractFunction + "/" + ADDRESS
 	return []rest.Endpoint{
 		rest.MakeEndpoint(storage+"/get_blobber_count", srh.getBlobberCount),
 		rest.MakeEndpoint(storage+"/getBlobber", srh.getBlobber),

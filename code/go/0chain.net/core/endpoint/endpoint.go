@@ -1,15 +1,14 @@
 package endpoint
 
 const (
-	Root 				       =  "/"
-	HashFunction               =  "/_hash"
+	Root                       = "/"
+	HashFunction               = "/_hash"
 	SignFunction               = "/_sign"
 	ChainStatsFunction         = "/_chain_stats"
 	SmartContractStatsFunction = "/_smart_contract_stats"
 )
 
 const (
-	ListNodes      = "/_nh/list"
 	WhoAmI         = "/_nh/whoami"
 	Status         = "/_nh/status"
 	GetPoolMembers = "/_nh/getpoolmembers"
@@ -19,7 +18,7 @@ const (
 
 const (
 	Diagnostics               = "/_diagnostics"
-	DiagnosticsInfoJson       = "/v1/diagnostics/info"
+	DiagnosticsInfoJson       = "/v1/diagnostics/get/info"
 	DiagnosticsInfo           = "/_diagnostics/info"
 	WalletStatsDiagnostics    = "/_diagnostics/wallet_stats"
 	CurrentMbNodesDiagnostics = "/_diagnostics/current_mb_nodes"
@@ -37,7 +36,7 @@ const (
 const (
 	GetConfig       = "/v1/config/get"
 	UpdateConfig    = "/v1/config/update"
-	UpdateAllConfig = "/v1/config/update"
+	UpdateAllConfig = "/v1/config/update_all"
 )
 
 const (

@@ -16,8 +16,8 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/core/memorystore"
 
-	minerEndpoint "0chain.net/miner/endpoint"
 	coreEndpoint "0chain.net/core/endpoint"
+	minerEndpoint "0chain.net/miner/endpoint"
 )
 
 /*SetupHandlers - setup miner handlers */
@@ -48,7 +48,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h3>Configuration <a href='v1/config/get'>...</a></h3>")
+	fmt.Fprintf(w, "<h3>Configuration <a href='"+coreEndpoint.GetConfig+"'>...</a></h3>")
 	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Current Status</h3>")

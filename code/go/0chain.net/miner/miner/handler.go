@@ -18,8 +18,8 @@ import (
 	coreEndpoint "0chain.net/core/endpoint"
 )
 
-const updateConfigURL = "/v1/config/update"
-const updateConfigAllURL = "/v1/config/update_all"
+const updateConfigURL = coreEndpoint.UpdateConfig
+const updateConfigAllURL = coreEndpoint.UpdateAllConfig
 
 /*SetupHandlers - setup update config related handlers */
 func SetupHandlers() {

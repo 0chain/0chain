@@ -6,12 +6,13 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	coreEndpoint "0chain.net/core/endpoint"
 	"0chain.net/core/viper"
 )
 
 /*SetupHandlers - setup config related handlers */
 func SetupHandlers() {
-	http.HandleFunc("/v1/config/get", GetConfigHandler)
+	http.HandleFunc(coreEndpoint.GetConfig, GetConfigHandler)
 }
 
 /*GetConfigHandler - display configuration */

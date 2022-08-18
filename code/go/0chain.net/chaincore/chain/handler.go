@@ -34,6 +34,7 @@ import (
 
 	coreEndpoint "0chain.net/core/endpoint"
 	minerEndpoint "0chain.net/miner/endpoint"
+	sharderEndpoint "0chain.net/sharder/endpoint"
 	"0chain.net/smartcontract/minersc"
 )
 
@@ -58,7 +59,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				LatestFinalizedBlockHandler,
 			),
 		),
-		coreEndpoint.GetLatestFinalizedMagicBlockSummary : common.UserRateLimit(
+		coreEndpoint.GetLatestFinalizedMagicBlockSummary: common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
@@ -698,40 +699,40 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr class='header'><td>Config</td><td>Stats</td><td>Info</td><td>Debug</td></tr>")
 	fmt.Fprintf(w, "<tr>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
+	fmt.Fprintf(w, "<li><a href='"+coreEndpoint.GetConfig+"'>"+coreEndpoint.GetConfig+"</a></li>")
 	selfNodeType := node.Self.Underlying().Type
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
-		fmt.Fprintf(w, "<li><a href='v1/config/update_all'>/v1/config/update_all</a></li>")
+		fmt.Fprintf(w, "<li><a href='"+coreEndpoint.UpdateConfig+"'>"+coreEndpoint.UpdateConfig+"</a></li>")
+		fmt.Fprintf(w, "<li><a href='"+coreEndpoint.UpdateAllConfig+"'>"+coreEndpoint.UpdateAllConfig+"</a></li>")
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
+	fmt.Fprintf(w, "<li><a href='"+coreEndpoint.ChainStatsFunction+"'>"+coreEndpoint.ChainStatsFunction+"</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeSharder {
-		fmt.Fprintf(w, "<li><a href='_healthcheck'>/_healthcheck</a></li>")
+		fmt.Fprintf(w, "<li><a href='"+sharderEndpoint.HealthCheckFunction+"'>"+sharderEndpoint.HealthCheckFunction+"</a></li>")
 	}
 
-	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
+	fmt.Fprintf(w, "<li><a href='"+coreEndpoint.MinerStatsDiagnostics+"'>"+coreEndpoint.MinerStatsDiagnostics+"</a>")
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
+		fmt.Fprintf(w, "<li><a href='"+coreEndpoint.WalletStatsDiagnostics+"'>"+coreEndpoint.WalletStatsDiagnostics+"</a>")
 	}
-	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
+	fmt.Fprintf(w, "<li><a href='"+coreEndpoint.SmartContractStatsFunction+"'>"+coreEndpoint.SmartContractStatsFunction+"</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
-	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
+	fmt.Fprintf(w, "<li><a href='"+coreEndpoint.DiagnosticsInfo+"'>"+coreEndpoint.DiagnosticsInfo+"</a> (with <a href='"+coreEndpoint.DiagnosticsInfo+"?ts=1'>ts</a>)</li>")
+	fmt.Fprintf(w, "<li><a href='"+coreEndpoint.DiagnosticsNodeToNodeInfo+"'>"+coreEndpoint.DiagnosticsNodeToNodeInfo+"</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner {
 		//ToDo: For sharders show who all can store the blocks
-		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
+		fmt.Fprintf(w, "<li><a href='"+coreEndpoint.RoundInfoDiagnostics+"'>"+coreEndpoint.RoundInfoDiagnostics+"</a>")
 	}
-	fmt.Fprintf(w, "<li><a href='_diagnostics/dkg_process'>/_diagnostics/dkg_process</a></li>")
+	fmt.Fprintf(w, "<li><a href='"+coreEndpoint.DkgProcessDiagnostics+"'>"+coreEndpoint.DkgProcessDiagnostics+"</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='_diagnostics/logs?detail=1'>1</a>, <a href='_diagnostics/logs?detail=2'>2</a>, <a href='_diagnostics/logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='_diagnostics/n2n_logs?detail=1'>1</a>, <a href='_diagnostics/n2n_logs?detail=2'>2</a>, <a href='_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li>/_diagnostics/mem_logs [Level <a href='_diagnostics/mem_logs?detail=1'>1</a>, <a href='_diagnostics/mem_logs?detail=2'>2</a>, <a href='_diagnostics/mem_logs?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>"+coreEndpoint.DiagnosticsLogs+" [Level <a href='"+coreEndpoint.DiagnosticsLogs+"?detail=1'>1</a>, <a href='"+coreEndpoint.DiagnosticsLogs+"?detail=2'>2</a>, <a href='"+coreEndpoint.DiagnosticsLogs+"?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>"+coreEndpoint.DiagnosticsNodeToNodeLogs+" [Level <a href='"+coreEndpoint.DiagnosticsNodeToNodeLogs+"?detail=1'>1</a>, <a href='"+coreEndpoint.DiagnosticsNodeToNodeLogs+"?detail=2'>2</a>, <a href='"+coreEndpoint.DiagnosticsNodeToNodeLogs+"?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>"+coreEndpoint.DiagnosticsMemoryLogs+" [Level <a href='"+coreEndpoint.DiagnosticsMemoryLogs+"?detail=1'>1</a>, <a href='"+coreEndpoint.DiagnosticsMemoryLogs+"?detail=2'>2</a>, <a href='"+coreEndpoint.DiagnosticsMemoryLogs+"?detail=3'>3</a>]</li>")
 	fmt.Fprintf(w, "<li><a href='debug/pprof/'>/debug/pprof/</a></li>")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")

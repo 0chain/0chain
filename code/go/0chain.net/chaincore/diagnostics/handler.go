@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
+	coreEndpoint "0chain.net/core/endpoint"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
@@ -13,15 +14,15 @@ import (
 
 /*SetupHandlers - setup diagnostics handlers */
 func SetupHandlers() {
-	http.HandleFunc("/_diagnostics/info", common.UserRateLimit(chain.InfoWriter))
-	http.HandleFunc("/v1/diagnostics/get/info", common.UserRateLimit(common.ToJSONResponse(chain.InfoHandler)))
-	http.HandleFunc("/_diagnostics/logs", common.UserRateLimit(logging.LogWriter))
-	http.HandleFunc("/_diagnostics/n2n_logs", common.UserRateLimit(logging.N2NLogWriter))
-	http.HandleFunc("/_diagnostics/mem_logs", common.UserRateLimit(logging.MemLogWriter))
+	http.HandleFunc(coreEndpoint.DiagnosticsInfo, common.UserRateLimit(chain.InfoWriter))
+	http.HandleFunc(coreEndpoint.DiagnosticsInfoJson, common.UserRateLimit(common.ToJSONResponse(chain.InfoHandler)))
+	http.HandleFunc(coreEndpoint.DiagnosticsLogs, common.UserRateLimit(logging.LogWriter))
+	http.HandleFunc(coreEndpoint.DiagnosticsNodeToNodeLogs, common.UserRateLimit(logging.N2NLogWriter))
+	http.HandleFunc(coreEndpoint.DiagnosticsMemoryLogs, common.UserRateLimit(logging.MemLogWriter))
 	sc := chain.GetServerChain()
-	http.HandleFunc("/_diagnostics/n2n/info", common.UserRateLimit(sc.N2NStatsWriter))
-	http.HandleFunc("/_diagnostics/miner_stats", common.UserRateLimit(sc.MinerStatsHandler))
-	http.HandleFunc("/_diagnostics/block_chain", common.UserRateLimit(sc.WIPBlockChainHandler))
+	http.HandleFunc(coreEndpoint.DiagnosticsNodeToNodeInfo, common.UserRateLimit(sc.N2NStatsWriter))
+	http.HandleFunc(coreEndpoint.MinerStatsDiagnostics, common.UserRateLimit(sc.MinerStatsHandler))
+	http.HandleFunc(coreEndpoint.BlockChainDiagnostics, common.UserRateLimit(sc.WIPBlockChainHandler))
 }
 
 /*GetStatistics - write the statistics of the given timer */

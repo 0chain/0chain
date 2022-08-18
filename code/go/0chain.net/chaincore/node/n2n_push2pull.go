@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	core_endpoint "0chain.net/core/endpoint"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -27,12 +28,10 @@ type pushDataCacheEntry struct {
 	EntityName string
 }
 
-var pullURL = "/v1/n2n/entity_pull/get"
-
 func getPushToPullTime(n *Node) float64 {
 	var pullRequestTime float64
 	sendTime := n.GetSmallMessageSendTime()
-	if pullRequestTimer := n.GetTimer(pullURL); pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
+	if pullRequestTimer := n.GetTimer(core_endpoint.NodeToNodeGetEntity); pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
 		pullRequestTime = pullRequestTimer.Mean()
 	} else {
 		pullRequestTime = 2 * sendTime

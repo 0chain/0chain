@@ -21,16 +21,16 @@ import (
 
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
-		coreEndpoint.GetBlock:                  common.ToJSONResponse(BlockHandler),
+		coreEndpoint.GetBlock:                      common.ToJSONResponse(BlockHandler),
 		sharderEndpoint.GetMagicBlock:              common.ToJSONResponse(MagicBlockHandler),
 		sharderEndpoint.GetTransactionConfirmation: common.ToJSONResponse(TransactionConfirmationHandler),
-		sharderEndpoint.HealthCheck:                  common.ToJSONResponse(HealthcheckHandler),
-		coreEndpoint.GetChainStats:              common.ToJSONResponse(ChainStatsHandler),
-		coreEndpoint.ChainStatsFunction:                    ChainStatsWriter,
-		sharderEndpoint.HealthCheckFunction:                    HealthCheckWriter,
+		sharderEndpoint.HealthCheck:                common.ToJSONResponse(HealthcheckHandler),
+		coreEndpoint.GetChainStats:                 common.ToJSONResponse(ChainStatsHandler),
+		coreEndpoint.ChainStatsFunction:            ChainStatsWriter,
+		sharderEndpoint.HealthCheckFunction:        HealthCheckWriter,
 		sharderEndpoint.GetSharderStats:            common.ToJSONResponse(SharderStatsHandler),
 
-		sharderEndpoint.NodesState:        common.ToJSONResponse(chain.StateNodesHandler),
+		sharderEndpoint.NodesState:       common.ToJSONResponse(chain.StateNodesHandler),
 		coreEndpoint.GetBlockStateChange: common.ToJSONResponse(BlockStateChangeHandler),
 	}
 
@@ -165,7 +165,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h3>Configuration <a href='v1/config/get'>...</a></h3>")
+	fmt.Fprintf(w, "<h3>Configuration <a href='"+coreEndpoint.GetConfig+"'>...</a></h3>")
 	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Current Status</h3>")

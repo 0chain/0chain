@@ -66,13 +66,9 @@ func SetupS2SResponders() {
 	http.HandleFunc(sharderEndpoint.SharderToSharderGetBlockSummaries, node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }
 
-const (
-	getBlockX2SV1Pattern = "/v1/_x2s/block/get"
-)
-
 func x2sRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	return map[string]func(http.ResponseWriter, *http.Request){
-		getBlockX2SV1Pattern: node.ToN2NSendEntityHandler(
+		sharderEndpoint.AnyServiceToSharderGetBlock: node.ToN2NSendEntityHandler(
 			// BlockRequestHandler - used by nodes to get missing FB by received LFB
 			// ticket from sharder sent the ticket.
 			RoundBlockRequestHandler,

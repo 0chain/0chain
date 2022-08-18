@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"0chain.net/core/common"
+	sharderEndpoint "0chain.net/sharder/endpoint"
 	"0chain.net/smartcontract"
 )
 
@@ -22,7 +23,7 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	vrh := NewVestingRestHandler(rh)
-	vesting := "/v1/screst/" + ADDRESS
+	vesting := sharderEndpoint.SmartContractFunction + "/" + ADDRESS
 	return []rest.Endpoint{
 		rest.MakeEndpoint(vesting+"/getPoolInfo", vrh.getPoolInfo),
 		rest.MakeEndpoint(vesting+"/getClientPools", vrh.getClientPools),

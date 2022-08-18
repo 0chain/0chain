@@ -14,6 +14,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	core_endpoint "0chain.net/core/endpoint"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -50,7 +51,7 @@ var pullDataRequestor EntityRequestor
 
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/
 func SetupN2NHandlers() {
-	http.HandleFunc("/v1/_n2n/entity/post", common.N2NRateLimit(ToN2NReceiveEntityHandler(SenderValidateHandler(datastore.PrintEntityHandler), nil)))
+	http.HandleFunc(core_endpoint.NodeToNodePostEntity, common.N2NRateLimit(ToN2NReceiveEntityHandler(SenderValidateHandler(datastore.PrintEntityHandler), nil)))
 	http.HandleFunc(pullURL, common.N2NRateLimit(ToN2NSendEntityHandler(PushToPullHandler)))
 	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
 	pullDataRequestor = RequestEntityHandler(pullURL, options, nil)

@@ -1,6 +1,7 @@
 package node
 
 import (
+	coreEndpoint "0chain.net/core/endpoint"
 	"context"
 	"fmt"
 	"io"
@@ -15,9 +16,9 @@ import (
 
 //SetupHandlers - setup all the handlers
 func SetupHandlers() {
-	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler))
-	http.HandleFunc("/_nh/status", common.UserRateLimit(StatusHandler))
-	http.HandleFunc("/_nh/getpoolmembers", common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
+	http.HandleFunc(coreEndpoint.WhoAmI, common.UserRateLimit(WhoAmIHandler))
+	http.HandleFunc(coreEndpoint.Status, common.UserRateLimit(StatusHandler))
+	http.HandleFunc(coreEndpoint.GetPoolMembers, common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
 }
 
 //WhoAmIHandler - who am i?

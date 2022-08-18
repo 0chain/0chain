@@ -18,14 +18,15 @@ import (
 	"0chain.net/conductor/config/cases"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
+	sharderEndpoint "0chain.net/sharder/endpoint"
 )
 
 // SetupX2SResponders setups sharders responders for miner and sharders.
 func SetupX2SResponders() {
 	handlers := x2sRespondersMap()
 
-	handlers[getBlockX2SV1Pattern] = chain.BlockStats(
-		handlers[getBlockX2SV1Pattern],
+	handlers[sharderEndpoint.AnyServiceToSharderGetBlock] = chain.BlockStats(
+		handlers[sharderEndpoint.AnyServiceToSharderGetBlock],
 		chain.BlockStatsConfigurator{
 			HashKey:      "hash",
 			SenderHeader: node.HeaderNodeID,
