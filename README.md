@@ -5,7 +5,7 @@
 [![GoDoc](https://godoc.org/github.com/0chain/0chain?status.png)](https://godoc.org/github.com/0chain/0chain)
 [![codecov](https://codecov.io/gh/0chain/0chain/branch/staging/graph/badge.svg)](https://codecov.io/gh/0chain/0chain)
 
-## Table of Contents
+##  Table of Contents
 
 - [Changelog](#changelog)
 - [Initial Setup](#initial-setup)
