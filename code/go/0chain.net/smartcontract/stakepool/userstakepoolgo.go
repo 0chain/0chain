@@ -27,6 +27,12 @@ func NewUserStakePools() (usp *UserStakePools) {
 }
 
 func (usp *UserStakePools) add(providerId, poolID datastore.Key) {
+	_, ok := usp.Pools[providerId]
+	if ok {
+		// already exist, one stake pool per user
+		return
+	}
+
 	usp.Pools[providerId] = append(usp.Pools[providerId], poolID)
 }
 
