@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -305,13 +306,20 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 	}
 	points++
 
-	roundsPerPoint := (end - start) / int64(points)
+	blockRange := end-start
+	roundsPerPoint := blockRange / int64(points)
 	if roundsPerPoint < 1 {
 		return 0, 0, 0, common.NewErrInternal("there must be at least one interval")
 	}
 
-	// make end - start an even multiple of point size
-	start = roundsPerPoint
+	// calculate nearest start so blockrange becomes nearest multiple of point size
+	n1 := int64(points) * int64(roundsPerPoint)
+	n2 := int64(points) * (roundsPerPoint + 1)
+	if math.Abs(float64(blockRange-n1)) < math.Abs(float64(blockRange-n2)) {
+		start -=  blockRange - n1
+	} else {
+		start += blockRange - n2
+	}
 
 	if edb.Config().AggregatePeriod == 0 {
 		return 0, 0, 0, common.NewErrInternal("blobber aggregate period zero")
