@@ -58,7 +58,9 @@ func (ssc *MinerSmartContract) collectReward(
 			return "", common.NewError("collect_reward_failed", err.Error())
 		}
 
-		if providerID == txn.ClientID || provider.Settings.DelegateWallet == txn.ClientID {
+		_, ok := provider.Pools[txn.ClientID]
+		if ok || providerID == txn.ClientID ||
+			provider.Settings.DelegateWallet == txn.ClientID {
 			minted, err := provider.StakePool.MintRewards(
 				txn.ClientID, providerID, prr.ProviderType, usp, balances)
 			if err != nil {
