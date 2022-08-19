@@ -351,6 +351,9 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 	blockReward, err := currency.MultFloat64(gn.BlockReward, gn.RewardRate)
+	Logger.Debug("Pay fees",
+		zap.Any("block reward", blockReward),
+		zap.Any("block fees", fees))
 
 	if err != nil {
 		return "", err

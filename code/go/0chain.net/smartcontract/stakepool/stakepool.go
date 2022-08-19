@@ -220,7 +220,8 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.Reward = sr
+		sp.Reward = sr
+		spUpdate.Reward = reward
 	}
 
 	valueLeft := value - serviceCharge
