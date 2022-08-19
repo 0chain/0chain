@@ -216,11 +216,11 @@ func (sp *StakePool) DistributeRewards(
 	}
 	if serviceCharge > 0 {
 		reward := serviceCharge
-		sp.Reward, err = currency.AddCoin(sp.Reward, reward)
+		sr, err := currency.AddCoin(sp.Reward, reward)
 		if err != nil {
 			return err
 		}
-		spUpdate.Reward = reward
+		spUpdate.Reward = sr
 	}
 
 	valueLeft := value - serviceCharge
