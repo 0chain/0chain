@@ -316,9 +316,10 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 	n1 := int64(points) * int64(roundsPerPoint)
 	n2 := int64(points) * (roundsPerPoint + 1)
 	if math.Abs(float64(blockRange-n1)) < math.Abs(float64(blockRange-n2)) {
-		start -=  blockRange - n1
+		start += blockRange - n1
 	} else {
-		start += blockRange - n2
+		end += n2 - blockRange
+		roundsPerPoint++
 	}
 
 	if edb.Config().AggregatePeriod == 0 {
