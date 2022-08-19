@@ -13,57 +13,46 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 type UserStakePools struct {
-	Pools map[string][]string `json:"pools"`
+	Pools map[string]spenum.Provider `json:"pools"` // key: provider id, value: provider type
 }
 
 func UserStakePoolsKey(p spenum.Provider, clientID datastore.Key) datastore.Key {
-	return datastore.Key(p.String() + ":stakepool:user_pools:" + clientID)
+	return p.String() + ":stakepool:user_pools:" + clientID
 }
 
-func NewUserStakePools() (usp *UserStakePools) {
-	usp = new(UserStakePools)
-	usp.Pools = make(map[datastore.Key][]datastore.Key)
-	return
+func NewUserStakePools() *UserStakePools {
+	return &UserStakePools{
+		Pools: map[string]spenum.Provider{},
+	}
 }
 
-func (usp *UserStakePools) add(providerId, poolID datastore.Key) {
+func (usp *UserStakePools) add(providerId datastore.Key, providerType spenum.Provider) {
 	_, ok := usp.Pools[providerId]
 	if ok {
 		// already exist, one stake pool per user
 		return
 	}
 
-	usp.Pools[providerId] = append(usp.Pools[providerId], poolID)
+	usp.Pools[providerId] = providerType
 }
 
-func (usp *UserStakePools) FindProvider(searchId datastore.Key) datastore.Key {
-	for providedId, provider := range usp.Pools {
-		for _, poolId := range provider {
-			if searchId == poolId {
-				return providedId
-			}
-		}
-	}
-	return ""
+func (usp *UserStakePools) FindProviderById(providerId datastore.Key) bool {
+	_, ok := usp.Pools[providerId]
+	return ok
 }
 
-func (usp *UserStakePools) Del(providerId, poolID datastore.Key) (empty bool) {
-	var (
-		list = usp.Pools[providerId]
-		i    int
-	)
-	for _, id := range list {
-		if id == poolID {
-			continue
+func (usp *UserStakePools) FindProvidersByType(providerType spenum.Provider) []datastore.Key {
+	ids := make([]datastore.Key, 0, len(usp.Pools))
+	for id, tp := range usp.Pools {
+		if tp == providerType {
+			ids = append(ids, id)
 		}
-		list[i], i = id, i+1
 	}
-	list = list[:i]
-	if len(list) == 0 {
-		delete(usp.Pools, providerId) // delete empty
-	} else {
-		usp.Pools[providerId] = list // update
-	}
+	return ids
+}
+
+func (usp *UserStakePools) Del(providerId datastore.Key) (empty bool) {
+	delete(usp.Pools, providerId)
 	return len(usp.Pools) == 0
 }
 

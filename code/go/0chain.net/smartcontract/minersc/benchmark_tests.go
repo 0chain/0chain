@@ -391,7 +391,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
-					PoolId:       miner00,
+					//PoolId:       miner00,
 					ProviderType: spenum.Miner,
 					ProviderId:   GetMockNodeId(0, spenum.Miner),
 				})

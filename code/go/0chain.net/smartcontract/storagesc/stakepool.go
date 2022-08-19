@@ -414,7 +414,7 @@ func (ssc *StorageSmartContract) getOrUpdateStakePool(
 
 type stakePoolRequest struct {
 	BlobberID string `json:"blobber_id,omitempty"`
-	PoolID    string `json:"pool_id,omitempty"`
+	//PoolID    string `json:"pool_id,omitempty"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
@@ -510,9 +510,9 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"can't get related stake pool: %v", err)
 	}
 
-	dp, ok := sp.Pools[spr.PoolID]
+	dp, ok := sp.Pools[t.ClientID]
 	if !ok {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", spr.PoolID)
+		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
 	}
 
 	// if StakeAt has valid value and lock period is less than MinLockPeriod
@@ -524,7 +524,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		}
 	}
 
-	unstake, err := sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
+	unstake, err := sp.empty(ssc.ID, t.ClientID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
@@ -553,7 +553,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockClientStakePool(t.ClientID, spenum.Blobber, spr.BlobberID, spr.PoolID, balances)
+	amount, err := sp.UnlockClientStakePool(t.ClientID, spenum.Blobber, spr.BlobberID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}

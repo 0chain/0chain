@@ -221,27 +221,29 @@ func (zcn *ZCNSmartContract) CollectRewards(
 		return "", common.NewErrorf(code, "can't get related user stake pools: %v", err)
 	}
 
-	providerId := usp.FindProvider(prr.PoolId)
-	if len(providerId) == 0 {
-		return "", common.NewErrorf(code, "user %v does not own stake pool %v", tran.ClientID, prr.PoolId)
+	providers := usp.FindProvidersByType(prr.ProviderType)
+	if len(providers) == 0 {
+		return "", common.NewErrorf(code, "user %v does not own stake pool", tran.ClientID)
 	}
 
-	sp, err := zcn.getStakePool(providerId, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
-	}
+	for _, providerId := range providers {
+		sp, err := zcn.getStakePool(providerId, ctx)
+		if err != nil {
+			return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
+		}
 
-	_, err = sp.MintRewards(tran.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "error emptying account, %v", err)
+		_, err = sp.MintRewards(tran.ClientID, providerId, prr.ProviderType, usp, ctx)
+		if err != nil {
+			return "", common.NewErrorf(code, "error emptying account, %v", err)
+		}
+
+		if err := sp.save(zcn.ID, providerId, ctx); err != nil {
+			return "", common.NewErrorf(code, "error saving stake pool, %v", err)
+		}
 	}
 
 	if err := usp.Save(spenum.Authorizer, tran.ClientID, ctx); err != nil {
 		return "", common.NewErrorf(code, "error saving user stake pool, %v", err)
-	}
-
-	if err := sp.save(zcn.ID, providerId, ctx); err != nil {
-		return "", common.NewErrorf(code, "error saving stake pool, %v", err)
 	}
 
 	return "", nil

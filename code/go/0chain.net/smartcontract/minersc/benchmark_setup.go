@@ -14,7 +14,6 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
 	"github.com/rcrowley/go-metrics"
@@ -169,14 +168,10 @@ func AddUserNodesForNode(
 	var numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 	for j := 0; j < numDelegates; j++ {
 		delegate := (nodeIndex + j) % len(nodes)
-		un := stakepool.UserStakePools{
-			Pools: make(map[datastore.Key][]datastore.Key),
-		}
-		un.Pools[nodes[nodeIndex]] = append(
-			un.Pools[nodes[nodeIndex]],
-			getMinerDelegatePoolId(nodeIndex, delegate, nodeType),
-		)
-		_, _ = balances.InsertTrieNode(stakepool.UserStakePoolsKey(nodeType, clients[delegate]), &un)
+		un := stakepool.NewUserStakePools()
+		un.Pools[nodes[nodeIndex]] = nodeType
+
+		_, _ = balances.InsertTrieNode(stakepool.UserStakePoolsKey(nodeType, clients[delegate]), un)
 	}
 }
 

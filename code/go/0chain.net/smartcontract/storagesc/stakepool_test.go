@@ -148,7 +148,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	require.NoError(t, err)
 	var spr = &stakePoolRequest{
 		BlobberID: blobberId,
-		PoolID:    "paula",
+		//PoolID:    "paula",
 	}
 	input, err := json.Marshal(spr)
 	require.NoError(t, err)
@@ -191,10 +191,12 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 		require.EqualValues(t, f.now, txPool.RoundCreated)
 	}
 
-	pools, ok := newUsp.Pools[blobberId]
+	pt, ok := newUsp.Pools[blobberId]
 	require.True(t, ok)
-	require.Len(t, pools, 1)
-	require.EqualValues(t, transactionHash, pools[0])
+	//require.Len(t, pools, 1)
+	require.Equal(t, pt, spenum.Blobber)
+
+	//require.EqualValues(t, transactionHash, pools[0])
 
 	var respObj = &splResponse{}
 	require.NoError(t, json.Unmarshal([]byte(resp), respObj))

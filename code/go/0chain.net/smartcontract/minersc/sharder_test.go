@@ -15,7 +15,6 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 	. "0chain.net/smartcontract/minersc"
 	"github.com/stretchr/testify/mock"
@@ -67,8 +66,8 @@ func TestDeleteSharder(t *testing.T) {
 				Amount:     dp.Balance,
 			}).Return(nil).Once()
 
-			var un stakepool.UserStakePools
-			un.Pools = map[datastore.Key][]datastore.Key{mn.ID: {id}}
+			un := stakepool.NewUserStakePools()
+			un.Pools[mn.ID] = spenum.Sharder
 			balances.On("GetTrieNode", stakepool.UserStakePoolsKey(spenum.Sharder, id),
 				mock.MatchedBy(func(n *stakepool.UserStakePools) bool {
 					return true
