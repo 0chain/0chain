@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
 
@@ -58,10 +59,11 @@ const (
 	TagAddChallenge
 	TagUpdateChallenge
 	TagUpdateBlobberChallenge
-	NumberOfTags
 	TagAddOrOverwriteAllocationBlobberTerm
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
+	TagProviderHealthCheck
+	NumberOfTags
 )
 
 var ErrInvalidEventData = errors.New("invalid event data")
@@ -323,6 +325,15 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteAllocationBlobberTerms(*updates)
+	case TagProviderHealthCheck:
+		provider, ok := fromEvent[dbs.HealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		if provider.ProviderType == spenum.Validator {
+			return errors.New("validator health checks not implemented yet")
+		}
+		return edb.healthCheck(*provider, event.BlockNumber)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

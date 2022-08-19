@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/benchmark"
 
@@ -206,6 +208,14 @@ func BenchmarkRestTests(
 					"blobber_id": getMockBlobberId(0),
 				},
 				Endpoint: srh.getBlobber,
+			},
+			{
+				FuncName: "time-inactive",
+				Params: map[string]string{
+					"id":   getMockBlobberId(0),
+					"type": spenum.Blobber.String(),
+				},
+				Endpoint: srh.getTimeInactive,
 			},
 			{
 				FuncName: "blobber-status",

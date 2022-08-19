@@ -23,7 +23,7 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 		}
 	}
 
-	dps, err := edb.GetDelegatePools(spu.ProviderId, spu.ProviderType)
+	dps, err := edb.GetDelegatePools(spu.ProviderId, int(spu.ProviderType))
 	if err != nil {
 		return err
 	}

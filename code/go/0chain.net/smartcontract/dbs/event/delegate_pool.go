@@ -68,7 +68,7 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 
 func (edb *EventDb) updateReward(reward int64, dp DelegatePool) (err error) {
 
-	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
+	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, spenum.Provider(dp.ProviderType))
 
 	if dp.ProviderType == int(spenum.Blobber) && reward < 0 {
 		dpu.Updates["total_penalty"], err = currency.MinusInt64(dp.TotalPenalty, reward)
@@ -126,7 +126,7 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType int) ([]DelegatePo
 func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 	var dp = DelegatePool{
 		ProviderID:   updates.ProviderId,
-		ProviderType: updates.ProviderType,
+		ProviderType: int(updates.ProviderType),
 		PoolID:       updates.PoolId,
 	}
 	exists, err := dp.exists(edb)

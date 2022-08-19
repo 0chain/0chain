@@ -56,6 +56,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),
 		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes), //todo limit sorting
 		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
+		rest.MakeEndpoint(storage+"/time-inactive", srh.getTimeInactive),
 		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
 		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
 		rest.MakeEndpoint(storage+"/transaction-hashes", srh.getTransactionHashesByFilter),
@@ -2469,6 +2470,60 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 
 	sn := blobberTableToStorageNode(*blobber)
 	common.Respond(w, r, sn, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/time-inactive time-inactive
+// the time the provider has spent inactive. This is incremented when the time since the last health check exceeds the
+// health check period setting
+//
+// returned is the downtime and lifetime.
+//
+// parameters:
+//    + name: blobber_id
+//      description: blobber for which to return information
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Int64Map
+//  400:
+//  500:
+func (srh StorageRestHandler) getTimeInactive(w http.ResponseWriter, r *http.Request) {
+	pType, ok := spenum.Provders[r.URL.Query().Get("type")]
+	if !ok {
+		pType = spenum.Blobber
+	}
+
+	var blobberID = r.URL.Query().Get("id")
+	if blobberID == "" {
+		err := common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
+		common.Respond(w, r, nil, err)
+		return
+	}
+	sCtx := srh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+	}
+
+	var conf *Config
+	var err error
+	if conf, err = getConfig(sCtx); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
+		return
+	}
+	downTime, lifetime, err := edb.ProviderDownTime(blobberID, pType, sCtx.Now(), conf.HealthCheckPeriod)
+	if err != nil {
+		err := common.NewErrInternal("missing blobber: " + blobberID)
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, rest.Int64Map{
+		"downtime": int64(downTime),
+		"lifetime": int64(lifetime),
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms

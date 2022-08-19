@@ -1,6 +1,13 @@
 package dbs
 
-import "0chain.net/chaincore/currency"
+import (
+	"time"
+
+	"0chain.net/core/common"
+
+	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/stakepool/spenum"
+)
 
 type DbUpdates struct {
 	Id      string                 `json:"id"`
@@ -14,25 +21,25 @@ func NewDbUpdates(id string) *DbUpdates {
 	}
 }
 
-type StakePoolId struct {
-	ProviderId   string `json:"provider_id"`
-	ProviderType int    `json:"provider_type"`
+type Provider struct {
+	ProviderId   string          `json:"provider_id"`
+	ProviderType spenum.Provider `json:"provider_type"`
 }
 
 type StakePoolReward struct {
-	StakePoolId
+	Provider
 	Reward          currency.Coin    `json:"reward"`
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 }
 
 type StakePoolUpdate struct {
-	StakePoolId
+	Provider
 	Updates         map[string]interface{} `json:"updates"`
 	DelegateUpdates map[string]map[string]interface{}
 }
 
 type DelegatePoolId struct {
-	StakePoolId
+	Provider
 	PoolId string `json:"pool_id"`
 }
 
@@ -41,7 +48,7 @@ type DelegatePoolUpdate struct {
 	Updates map[string]interface{} `json:"updates"`
 }
 
-func NewDelegatePoolUpdate(pool, provider string, pType int) *DelegatePoolUpdate {
+func NewDelegatePoolUpdate(pool, provider string, pType spenum.Provider) *DelegatePoolUpdate {
 	var dpu DelegatePoolUpdate
 	dpu.PoolId = pool
 	dpu.ProviderId = provider
@@ -51,13 +58,13 @@ func NewDelegatePoolUpdate(pool, provider string, pType int) *DelegatePoolUpdate
 }
 
 type SpBalance struct {
-	StakePoolId
+	Provider
 	Balance         int64            `json:"sp_reward"`
 	DelegateBalance map[string]int64 `json:"delegate_reward"`
 }
 
 type SpReward struct {
-	StakePoolId
+	Provider
 	SpReward       int64            `json:"sp_reward"`
 	DelegateReward map[string]int64 `json:"delegate_reward"`
 }
@@ -65,4 +72,11 @@ type SpReward struct {
 type ChallengeResult struct {
 	BlobberId string `json:"blobberId"`
 	Passed    bool   `json:"passed"`
+}
+
+type HealthCheck struct {
+	Provider
+	LastHealthCheck   common.Timestamp `json:"last_heath_check"`
+	Now               common.Timestamp `json:"now"`
+	HealthCheckPeriod time.Duration    `json:"healch_check_period"`
 }

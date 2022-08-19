@@ -4,6 +4,9 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 func (ssc *StorageSmartContract) blobberHealthCheck(
@@ -27,6 +30,25 @@ func (ssc *StorageSmartContract) blobberHealthCheck(
 		return "", common.NewError("blobber_health_check_failed",
 			"can't save blobber: "+err.Error())
 	}
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		return "", common.NewError("blobber_health_check_failed",
+			"can't get configs"+err.Error())
+	}
+	balances.EmitEvent(
+		event.TypeStats,
+		event.TagProviderHealthCheck,
+		blobber.ID,
+		dbs.HealthCheck{
+			Provider: dbs.Provider{
+				ProviderId:   blobber.ID,
+				ProviderType: spenum.Blobber,
+			},
+			Now:               t.CreationDate,
+			LastHealthCheck:   blobber.LastHealthCheck,
+			HealthCheckPeriod: conf.HealthCheckPeriod,
+		})
 
 	return string(blobber.Encode()), nil
 }

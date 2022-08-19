@@ -13,6 +13,13 @@ const (
 )
 
 var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
+var Provders = map[string]Provider{
+	"miner":      Miner,
+	"sharder":    Sharder,
+	"blobber":    Blobber,
+	"validator":  Validator,
+	"authorizer": Authorizer,
+}
 
 func (p Provider) String() string {
 	return providerString[p]
