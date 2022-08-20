@@ -2,6 +2,8 @@ package event
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"0chain.net/smartcontract/common"
 	"golang.org/x/net/context"
@@ -152,4 +154,17 @@ func (edb *EventDb) Drop() error {
 	}
 
 	return nil
+}
+
+func placeholders(n int, typeCast ...string) string {
+	params := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		if len(typeCast) > 0 {
+			params = append(params, fmt.Sprintf("?::%s", typeCast[0]))
+		} else {
+			params = append(params, "?")
+		}
+	}
+
+	return strings.Join(params, ", ")
 }

@@ -23,21 +23,32 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 		}
 	}
 
-	dps, err := edb.GetDelegatePools(spu.ProviderId, spu.ProviderType)
-	if err != nil {
-		return err
-	}
+	var (
+		penalties = make([]rewardInfo, 0, len(spu.DelegateRewards))
+		rewards   = make([]rewardInfo, 0, len(spu.DelegateRewards))
+	)
 
-	for _, dp := range dps {
-		if reward, ok := spu.DelegateRewards[dp.PoolID]; ok {
-			err := edb.updateReward(reward, dp)
-			if err != nil {
-				return err
-			}
+	for pool, reward := range spu.DelegateRewards {
+		// TODO: only blobbers have penalty?
+		if reward < 0 && spu.ProviderType == int(spenum.Blobber) {
+			penalties = append(penalties, rewardInfo{pool: pool, value: -reward})
+		} else {
+			rewards = append(rewards, rewardInfo{pool: pool, value: reward})
 		}
 	}
 
-	return nil
+	if len(penalties) > 0 {
+		if err := edb.bulkUpdatePenalty(spu.ProviderId, spu.ProviderType, penalties); err != nil {
+			return err
+		}
+	}
+
+	return edb.bulkUpdateRewards(spu.ProviderId, spu.ProviderType, rewards)
+}
+
+type rewardInfo struct {
+	pool  string
+	value int64
 }
 
 func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
