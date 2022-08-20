@@ -26,6 +26,10 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 		}
 	}
 
+	if len(spu.DelegateRewards) == 0 {
+		return nil
+	}
+
 	ts := time.Now()
 
 	defer func() {
@@ -54,7 +58,11 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 		}
 	}
 
-	return edb.bulkUpdateRewards(spu.ProviderId, spu.ProviderType, rewards)
+	if len(rewards) > 0 {
+		return edb.bulkUpdateRewards(spu.ProviderId, spu.ProviderType, rewards)
+	}
+
+	return nil
 }
 
 type rewardInfo struct {
