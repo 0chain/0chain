@@ -10,7 +10,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
-func (edb *EventDb) healthCheck(check dbs.HealthCheck, round int64) error {
+func (edb *EventDb) healthCheck(check dbs.HealthCheck) error {
 	updates := dbs.NewDbUpdates(check.ProviderId)
 
 	updates.Updates["last_health_check"] = check.Now

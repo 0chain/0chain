@@ -333,7 +333,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if provider.ProviderType == spenum.Validator {
 			return errors.New("validator health checks not implemented yet")
 		}
-		return edb.healthCheck(*provider, event.BlockNumber)
+		return edb.healthCheck(*provider)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

@@ -20,7 +20,7 @@ func (ssc *StorageSmartContract) blobberHealthCheck(
 		return "", common.NewError("blobber_health_check_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
-
+	lastHealthCheck := blobber.LastHealthCheck
 	blobber.HealthCheck(t.CreationDate)
 
 	if err = emitUpdateBlobber(blobber, balances); err != nil {
@@ -46,7 +46,7 @@ func (ssc *StorageSmartContract) blobberHealthCheck(
 				ProviderType: spenum.Blobber,
 			},
 			Now:               t.CreationDate,
-			LastHealthCheck:   blobber.LastHealthCheck,
+			LastHealthCheck:   lastHealthCheck,
 			HealthCheckPeriod: conf.HealthCheckPeriod,
 		})
 
