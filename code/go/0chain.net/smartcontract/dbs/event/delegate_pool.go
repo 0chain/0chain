@@ -92,7 +92,6 @@ func (edb *EventDb) updateReward(reward int64, dp DelegatePool) (err error) {
 }
 
 func (edb *EventDb) bulkUpdateRewards(providerID string, providerType int, rewards []rewardInfo) error {
-	vs := makeBulkRewardsValues(providerID, providerType, rewards)
 	n := len(rewards)
 	sql := fmt.Sprintf(`
 	UPDATE delegate_pools
@@ -108,7 +107,7 @@ func (edb *EventDb) bulkUpdateRewards(providerID string, providerType int, rewar
 	WHERE (delegate_pools.provider_id = data_table.provider_id)
 		AND (delegate_pools.provider_type = data_table.provider_type)
 		AND (delegate_pools.pool_id = data_table.pool_id)
-		AND (delegate_pools.status != 'deleted')`,
+		AND (delegate_pools.status != ?)`,
 		placeholders(n),
 		placeholders(n, "integer"),
 		placeholders(n),
@@ -116,6 +115,7 @@ func (edb *EventDb) bulkUpdateRewards(providerID string, providerType int, rewar
 		placeholders(n, "integer"),
 	)
 
+	vs := append(makeBulkRewardsValues(providerID, providerType, rewards), spenum.Deleted)
 	return edb.Store.Get().Exec(sql, vs...).Error
 }
 
@@ -137,13 +137,13 @@ func makeBulkRewardsValues(providerID string, providerType int, rewardInfos []re
 		totalRewards[i] = r.value
 	}
 
-	return append(append(append(append(providerIDs, providerTypes...), pools...), rewards...), totalRewards)
+	return append(append(append(append(providerIDs, providerTypes...), pools...), rewards...), totalRewards...)
 }
 
 func (edb *EventDb) bulkUpdatePenalty(providerID string, providerType int, penalties []rewardInfo) error {
 	var (
 		n  = len(penalties)
-		vs = makeBulkPenaltyValues(providerID, providerType, penalties)
+		vs = append(makeBulkPenaltyValues(providerID, providerType, penalties), spenum.Deleted)
 	)
 
 	sql := fmt.Sprintf(`
@@ -159,7 +159,7 @@ func (edb *EventDb) bulkUpdatePenalty(providerID string, providerType int, penal
 	WHERE (delegate_pools.provider_id = data_table.provider_id)
 		AND (delegate_pools.provider_type = data_table.provider_type)
 		AND (delegate_pools.pool_id = data_table.pool_id)
-		AND (delegate_pools.status != 'deleted')`,
+		AND (delegate_pools.status != ?)`,
 		placeholders(n),
 		placeholders(n, "integer"),
 		placeholders(n),
