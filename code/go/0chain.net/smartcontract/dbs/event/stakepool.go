@@ -2,8 +2,11 @@ package event
 
 import (
 	"fmt"
+	"time"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -22,6 +25,14 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 			return err
 		}
 	}
+
+	ts := time.Now()
+
+	defer func() {
+		logging.Logger.Debug("event db - update reward",
+			zap.Any("duration", time.Since(ts)),
+			zap.Int("update items", len(spu.DelegateRewards)))
+	}()
 
 	var (
 		penalties = make([]rewardInfo, 0, len(spu.DelegateRewards))
