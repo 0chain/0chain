@@ -1,6 +1,7 @@
 package node
 
 import (
+	coreEndpoint "0chain.net/core/endpoint"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -326,7 +327,7 @@ func (n *Node) GetN2NURLBase() string {
 
 /*GetStatusURL - get the end point where to ping for the status */
 func (n *Node) GetStatusURL() string {
-	return fmt.Sprintf("%v/_nh/status", n.GetN2NURLBase())
+	return fmt.Sprintf("%v" + coreEndpoint.Status, n.GetN2NURLBase())
 }
 
 /*GetNodeType - as a string */
