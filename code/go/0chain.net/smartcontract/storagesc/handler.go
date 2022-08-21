@@ -90,6 +90,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
 		rest.MakeEndpoint(storage+"/search", srh.getSearchHandler),
+		rest.MakeEndpoint(storage+"/alloc-blobber-term", srh.getAllocBlobberTerms),
 	}
 }
 
@@ -445,20 +446,39 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
+// Returns collected reward for a client_id. 
+// > Note: start-date and end-date resolves to the closest block number for those timestamps on the network. 
+//
+// > Note: Using start/end-block and start/end-date together would only return results with start/end-block
 //
 //
 // parameters:
-//    + name: start_block
+//    + name: start-block
 //      description: start block
-//      required: true
+//      required: false
 //      in: query
 //      type: string
-//    + name: end_block
+//    + name: end-block
 //      description: end block
-//      required: true
+//      required: false
 //      in: query
 //      type: string
-//    + name: client_id
+//    + name: start-date 
+//      description: start date
+//      required: false
+//      in: query
+//      type: string
+//    + name: end-date 
+//      description: end date
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points 
+//      description: number of data points in response
+//      required: false
+//      in: query
+//      type: string
+//    + name: client-id
 //      description: client id
 //      required: true
 //      in: query
@@ -469,30 +489,99 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 //  400:
 func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http.Request) {
 	var (
-		startBlock, _ = strconv.Atoi(r.URL.Query().Get("start_block"))
-		endBlock, _   = strconv.Atoi(r.URL.Query().Get("end_block"))
-		clientID      = r.URL.Query().Get("client_id")
+		startBlockString = r.URL.Query().Get("start-block")
+		endBlockString   = r.URL.Query().Get("end-block")
+		clientID         = r.URL.Query().Get("client-id")
+		startDateString  = r.URL.Query().Get("start-date")
+		endDateString	 = r.URL.Query().Get("end-date")
+		dataPointsString = r.URL.Query().Get("data-points") 
 	)
 
-	query := event.RewardQuery{
-		StartBlock: startBlock,
-		EndBlock:   endBlock,
-		ClientID:   clientID,
+	var dataPoints int64
+	dataPoints, err := strconv.ParseInt(dataPointsString, 10, 64)
+	if err != nil {
+		dataPoints = 1
+	} else if dataPoints > 100 {
+		dataPoints = 100
 	}
+
+	query := event.RewardQuery{
+		ClientID:   clientID,
+		DataPoints: dataPoints,
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	collectedReward, err := edb.GetRewardClaimedTotal(query)
-	if err != nil {
-		common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+
+	if startBlockString != "" && endBlockString != "" {
+		startBlock, err := strconv.ParseUint(startBlockString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start-block string to a number", err.Error()))
+			return
+		}
+
+		endBlock, err := strconv.ParseUint(endBlockString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end-block string to a number", err.Error()))
+			return
+		}
+
+		if startBlock > endBlock {
+			common.Respond(w, r, 0, common.NewErrInternal("start-block cannot be greater than end-block"))
+			return
+		}
+
+		query.StartBlock = int(startBlock)
+		query.EndBlock = int(endBlock)
+
+		rewards, err := edb.GetRewardClaimedTotalBetweenBlocks(query)
+		if err != nil {
+			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+			return
+		}
+		common.Respond(w, r, map[string][]int64{
+			"collected_reward": rewards,
+		}, nil)
 		return
 	}
 
-	common.Respond(w, r, map[string]int64{
-		"collected_reward": collectedReward,
-	}, nil)
+	if startDateString != "" && endDateString != "" {
+		startDate, err := strconv.ParseUint(startDateString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start-date string to a number", err.Error()))
+			return
+		}
+
+		endDate, err := strconv.ParseUint(endDateString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end-date string to a number", err.Error()))
+			return
+		}
+
+		if startDate > endDate {
+			common.Respond(w, r, 0, common.NewErrInternal("start-date cannot be greater than end-date"))
+			return
+		}
+
+		query.StartDate = time.Unix(int64(startDate), 0)
+		query.EndDate = time.Unix(int64(endDate), 0)
+		
+		rewards, err := edb.GetRewardClaimedTotalBetweenDates(query)
+		if err != nil {
+			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+			return
+		}
+
+		common.Respond(w, r, map[string]interface{}{
+			"collected_reward": rewards,
+		}, nil)
+		return 
+	}
+
+	common.Respond(w, r, nil, common.NewErrInternal("can't get collected rewards"))
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count alloc_write_marker_count
@@ -1141,8 +1230,19 @@ type ChallengesResponse struct {
 //  500:
 func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.Request) {
 	var (
-		blobberID = r.URL.Query().Get("blobber")
+		blobberID  = r.URL.Query().Get("blobber")
+		fromString = r.URL.Query().Get("from")
+		from       common.Timestamp
 	)
+
+	if fromString != "" {
+		fromI, err := strconv.Atoi(fromString)
+		if err != nil {
+			common.Respond(w, r, nil, err)
+			return
+		}
+		from = common.Timestamp(fromI)
+	}
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
@@ -1160,7 +1260,7 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(getMaxChallengeCompletionTime().Seconds()), limit, sctx.GetEventDB())
+	challenges, err := getOpenChallengesForBlobber(blobberID, from, common.Timestamp(getMaxChallengeCompletionTime().Seconds()), limit, sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
@@ -2256,6 +2356,64 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 
 	sn := blobberTableToStorageNode(*blobber)
 	common.Respond(w, r, sn, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms
+// Gets statistic for all locked tokens of a stake pool
+//
+// parameters:
+//    + name: allocation_id
+//      description: id of allocation
+//      required: false
+//      in: query
+//      type: string
+//    + name: blobber_id
+//      description: id of blobber
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Terms
+//  400:
+//  500:
+func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		common.Respond(w, r, nil, common.NewErrBadRequest("GET method only"))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	blobberID := r.URL.Query().Get("blobber_id")
+	allocationID := r.URL.Query().Get("allocation_id")
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	var resp interface{}
+	if allocationID == "" || blobberID == "" {
+		resp, err = edb.GetAllocationBlobberTerms(allocationID, blobberID, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("error finding terms: "+err.Error()))
+			return
+		}
+	} else {
+		resp, err = edb.GetAllocationBlobberTerm(allocationID, blobberID)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("error finding term: "+err.Error()))
+			return
+		}
+
+	}
+
+	common.Respond(w, r, resp, nil)
 }
 
 // swagger:model readMarkersCount

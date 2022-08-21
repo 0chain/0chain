@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"strconv"
+	"time"
 
 	"0chain.net/core/encryption"
 
@@ -297,9 +298,11 @@ func BenchmarkRestTests(
 			{
 				FuncName: "collected_reward",
 				Params: map[string]string{
-					"start_block": "1",
-					"end_block":   "100",
-					"client_id":   data.Clients[1],
+					"start-block": "1",
+					"end-block":   "100",
+					"start-date":  "0",
+					"end-date":    strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"client-id":   data.Clients[1],
 				},
 				Endpoint: srh.getCollectedReward,
 			},
@@ -394,6 +397,14 @@ func BenchmarkRestTests(
 					"query": benchmark.GetMockTransactionHash(3, 3),
 				},
 				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "alloc-blobber-term",
+				Params: map[string]string{
+					"allocation_id": getMockAllocationId(0),
+					"blobber_id":    getMockBlobberId(0),
+				},
+				Endpoint: srh.getAllocBlobberTerms,
 			},
 		},
 		ADDRESS,

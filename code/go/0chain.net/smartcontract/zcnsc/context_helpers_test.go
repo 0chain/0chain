@@ -25,6 +25,10 @@ const (
 	startTime = common.Timestamp(100)
 )
 
+var (
+	_ cstate.StateContextI = (*mocks.StateContextI)(nil)
+)
+
 type mockStateContext struct {
 	*mocks.StateContextI
 	userNodes    map[string]*UserNode
