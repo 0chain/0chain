@@ -11,10 +11,8 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -347,7 +345,6 @@ type FetchedNotarizedBlockHandler interface {
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
 // The Chainer represents Chain.
 type Chainer interface {
-	// GetChainConfig() config.ChainConfig
 	// LFB tickets work
 	SubLFBTicket() (sub chan *LFBTicket)
 	UnsubLFBTicket(sub chan *LFBTicket)
@@ -363,7 +360,6 @@ type Chainer interface {
 	GetLatestFinalizedMagicBlockRound(rn int64) *block.Block
 	GetRound(roundNumber int64) round.RoundI
 	GetLatestFinalizedBlock() *block.Block
-	GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error)
 	IsRoundGenerator(r round.RoundI, nd *node.Node) bool
 }
 

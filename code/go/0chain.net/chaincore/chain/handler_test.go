@@ -3,9 +3,7 @@ package chain
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"crypto/rand"
-	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,8 +14,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/currency"
-	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
@@ -273,6 +269,7 @@ func TestRoundInfoHandler(t *testing.T) {
 
 }
 
+/*
 func TestPutTransaction(t *testing.T) {
 	tt := []struct {
 		name      string
@@ -311,5 +308,5 @@ func TestPutTransaction(t *testing.T) {
 			require.Equal(t, tc.expectErr, err)
 		})
 	}
-
 }
+*/

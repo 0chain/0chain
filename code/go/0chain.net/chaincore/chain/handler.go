@@ -99,7 +99,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/v1/transaction/put": common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
-					memorystore.WithConnectionEntityJSONHandler(PutTransaction(c, transaction.PutTransaction), transactionEntityMetadata),
+					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
 					transaction.TransactionEntityChannel,
 				),
 				transactionEntityMetadata,
@@ -1295,42 +1295,40 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 }
 
 /*PutTransaction - for validation of transactions using chain level parameters */
-func PutTransaction(c Chainer, lowerLevelFunc func(ctx context.Context, entity datastore.Entity) (interface{}, error)) datastore.JSONEntityReqResponderF {
-	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		conf := config.Configuration().ChainConfig
-		txn, ok := entity.(*transaction.Transaction)
-		if !ok {
-			return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
-		}
-
-		if conf.TxnMaxPayload() > 0 {
-			if len(txn.TransactionData) > conf.TxnMaxPayload() {
-				s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", conf.TxnMaxPayload())
-				return nil, common.NewError("txn_exceed_max_payload", s)
-			}
-		}
-
-		// Calculate and update fee
-		if err := txn.ValidateFee(conf.TxnExempt(), conf.MinTxnFee()); err != nil {
-			return nil, err
-		}
-		if err := txn.ValidateNonce(); err != nil {
-			return nil, err
-		}
-		s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, conf.OwnerID())
-		if !isValid(err) {
-			return nil, err
-		}
-		nonce := int64(0)
-		if s != nil {
-			nonce = s.Nonce
-		}
-		if txn.Nonce <= nonce {
-			return nil, errors.New("invalid transaction nonce")
-		}
-
-		return lowerLevelFunc(ctx, txn) // transaction.PutTransaction
+func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	txn, ok := entity.(*transaction.Transaction)
+	if !ok {
+		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
+
+	sc := GetServerChain()
+	if sc.TxnMaxPayload() > 0 {
+		if len(txn.TransactionData) > sc.TxnMaxPayload() {
+			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload())
+			return nil, common.NewError("txn_exceed_max_payload", s)
+		}
+	}
+
+	// Calculate and update fee
+	if err := txn.ValidateFee(sc.ChainConfig.TxnExempt(), sc.ChainConfig.MinTxnFee()); err != nil {
+		return nil, err
+	}
+	if err := txn.ValidateNonce(); err != nil {
+		return nil, err
+	}
+	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, sc.OwnerID())
+	if !isValid(err) {
+		return nil, err
+	}
+	nonce := int64(0)
+	if s != nil {
+		nonce = s.Nonce
+	}
+	if txn.Nonce <= nonce {
+		return nil, errors.New("invalid transaction nonce")
+	}
+
+	return transaction.PutTransaction(ctx, txn)
 }
 
 //RoundInfoHandler collects and writes information about current round
