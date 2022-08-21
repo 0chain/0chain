@@ -297,23 +297,27 @@ func (rs *randomSelector) Size(state state.StateContextI) (int, error) {
 func (rs *randomSelector) Save(balances state.StateContextI) error {
 	var numPartitions = 0
 	for i, partition := range rs.Partitions {
-		if partition != nil && partition.changed() {
-			if partition.length() > 0 {
-				err := partition.save(balances)
-				if err != nil {
+		if partition == nil {
+			continue
+		}
+		if partition.length() == 0 {
+			_, err := balances.DeleteTrieNode(rs.partitionKey(i))
+			if err != nil {
+				if err != util.ErrValueNotPresent {
 					return err
 				}
-				numPartitions++
-			} else {
-				_, err := balances.DeleteTrieNode(rs.partitionKey(i))
-				if err != nil {
-					if err != util.ErrValueNotPresent {
-						return err
-					}
-				}
+			}
+			continue
+		}
+		if partition.changed() {
+			err := partition.save(balances)
+			if err != nil {
+				return err
 			}
 		}
+		numPartitions++
 	}
+
 	rs.NumPartitions = numPartitions
 
 	_, err := balances.InsertTrieNode(rs.Name, rs)
