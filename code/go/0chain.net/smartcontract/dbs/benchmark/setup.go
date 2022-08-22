@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
@@ -125,7 +123,6 @@ func AddMockUsers(
 	clients []string,
 	eventDb *event.EventDb,
 ) {
-	log.Println("added mock users start")
 	if !viper.GetBool(benchmark.EventDbEnabled) {
 		return
 	}
@@ -136,7 +133,6 @@ func AddMockUsers(
 		}
 		_ = eventDb.Store.Get().Create(&user)
 	}
-	log.Println("added mock users end")
 }
 
 func GetMockBlockHash(blockNumber int64) string {
