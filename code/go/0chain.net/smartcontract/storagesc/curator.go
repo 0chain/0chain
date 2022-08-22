@@ -124,7 +124,7 @@ func (sc *StorageSmartContract) addCurator(
 	return "", nil
 }
 
-func (sa StorageAllocation) isCurator(id string) bool {
+func (sa *StorageAllocation) isCurator(id string) bool {
 	for _, curator := range sa.Curators {
 		if curator == id {
 			return true

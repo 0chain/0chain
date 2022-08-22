@@ -742,6 +742,7 @@ func BenchmarkTests(
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
+					"cancellation_charge":            "0.2",
 
 					"free_allocation_settings.data_shards":           "10",
 					"free_allocation_settings.parity_shards":         "5",
