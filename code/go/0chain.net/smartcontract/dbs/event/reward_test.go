@@ -56,26 +56,26 @@ func TestRewardEvents(t *testing.T) {
 		StartBlock: 0,
 		EndBlock:   900,
 	}
-	claimedReward, err := eventDb.GetRewardClaimedTotal(rewardQuery)
+	claimedReward, err := eventDb.GetRewardClaimedTotalBetweenBlocks(rewardQuery)
 	require.NoError(t, err, "Error while getting sum of rewards")
-	require.Equal(t, int64(1500), claimedReward, "Not all rewards were calculated")
+	require.Equal(t, int64(1000), claimedReward, "Not all rewards were calculated")
 
 	rewardQuery.ClientID = "new_wallet_id"
-	claimedReward, err = eventDb.GetRewardClaimedTotal(rewardQuery)
+	claimedReward, err = eventDb.GetRewardClaimedTotalBetweenBlocks(rewardQuery)
 	require.NoError(t, err, "Error while getting sum of rewards")
 	require.Equal(t, int64(500), claimedReward, "Specific reward was not calculated")
 
 	rewardQuery.StartBlock = 0
 	rewardQuery.EndBlock = 350
-	claimedReward, err = eventDb.GetRewardClaimedTotal(rewardQuery)
+	claimedReward, err = eventDb.GetRewardClaimedTotalBetweenBlocks(rewardQuery)
 	require.NoError(t, err, "Error while getting sum of rewards")
 	require.Equal(t, int64(500), claimedReward, "Specific reward was not calculated")
 
 	rewardQuery.ClientID = ""
 	rewardQuery.StartBlock = 350
-	claimedReward, err = eventDb.GetRewardClaimedTotal(rewardQuery)
+	claimedReward, err = eventDb.GetRewardClaimedTotalBetweenBlocks(rewardQuery)
 	require.NoError(t, err, "Error while getting sum of rewards")
-	require.Equal(t, int64(1000), claimedReward, "Specific reward was not calculated")
+	require.Equal(t, int64(0), claimedReward, "Specific reward was not calculated")
 
 	rewardQuery = RewardQuery{
 		ClientID: "another_wallet_id",
@@ -104,7 +104,7 @@ func removeReward(edb *EventDb, query RewardQuery) error {
 		ProviderType: query.ProviderType,
 		ProviderID:   query.ProviderID,
 	}
-	q := edb.Store.Get().Model(&Reward{}).Where(&reward)
+	q := edb.Store.Get().Model(&Reward{}).Where(&RewardQuery{ClientID: query.ClientID})
 
 	if query.EndBlock > 0 {
 		q = q.Where("block_number >= ? AND block_number <= ?", query.StartBlock, query.EndBlock)
