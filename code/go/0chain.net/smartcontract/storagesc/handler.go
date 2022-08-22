@@ -446,8 +446,8 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
-// Returns collected reward for a client_id. 
-// > Note: start-date and end-date resolves to the closest block number for those timestamps on the network. 
+// Returns collected reward for a client_id.
+// > Note: start-date and end-date resolves to the closest block number for those timestamps on the network.
 //
 // > Note: Using start/end-block and start/end-date together would only return results with start/end-block
 //
@@ -463,17 +463,17 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 //      required: false
 //      in: query
 //      type: string
-//    + name: start-date 
+//    + name: start-date
 //      description: start date
 //      required: false
 //      in: query
 //      type: string
-//    + name: end-date 
+//    + name: end-date
 //      description: end date
 //      required: false
 //      in: query
 //      type: string
-//    + name: data-points 
+//    + name: data-points
 //      description: number of data points in response
 //      required: false
 //      in: query
@@ -493,8 +493,8 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		endBlockString   = r.URL.Query().Get("end-block")
 		clientID         = r.URL.Query().Get("client-id")
 		startDateString  = r.URL.Query().Get("start-date")
-		endDateString	 = r.URL.Query().Get("end-date")
-		dataPointsString = r.URL.Query().Get("data-points") 
+		endDateString    = r.URL.Query().Get("end-date")
+		dataPointsString = r.URL.Query().Get("data-points")
 	)
 
 	var dataPoints int64
@@ -568,7 +568,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 
 		query.StartDate = time.Unix(int64(startDate), 0)
 		query.EndDate = time.Unix(int64(endDate), 0)
-		
+
 		rewards, err := edb.GetRewardClaimedTotalBetweenDates(query)
 		if err != nil {
 			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
@@ -578,7 +578,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		common.Respond(w, r, map[string]interface{}{
 			"collected_reward": rewards,
 		}, nil)
-		return 
+		return
 	}
 
 	common.Respond(w, r, nil, common.NewErrInternal("can't get collected rewards"))
@@ -2070,12 +2070,6 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				MaxStake:           blobber.MaxStake,
 				MaxNumDelegates:    blobber.NumDelegates,
 				ServiceChargeRatio: blobber.ServiceCharge,
-			},
-			Information: Info{
-				Name:        blobber.Name,
-				WebsiteUrl:  blobber.WebsiteUrl,
-				LogoUrl:     blobber.LogoUrl,
-				Description: blobber.Description,
 			},
 		},
 		TotalServiceCharge: blobber.TotalServiceCharge,
