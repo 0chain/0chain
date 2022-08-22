@@ -80,7 +80,7 @@ func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 }
 
 func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
-	n, err := getGlobalNode(balances)
+	n, err := GetGlobalNode(balances)
 	if err != nil {
 		return math.MaxInt32, err
 	}
@@ -117,7 +117,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances cstate.StateContextI) (
 	string, error) {
 
-	gn, err := getGlobalNode(balances)
+	gn, err := GetGlobalNode(balances)
 	if err != nil {
 		return "", common.NewError("failed_to_get_global_node", err.Error())
 	}
@@ -132,7 +132,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	return scFunc(t, input, gn, balances)
 }
 
-func getGlobalNode(
+func GetGlobalNode(
 	balances cstate.CommonStateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)

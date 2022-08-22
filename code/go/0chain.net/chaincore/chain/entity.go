@@ -570,6 +570,12 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(state)
 
+	_, err := minersc.GetGlobalNode(state)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB getGlobalNode failed", zap.Error(err))
+		panic(err)
+	}
+
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
 	}
