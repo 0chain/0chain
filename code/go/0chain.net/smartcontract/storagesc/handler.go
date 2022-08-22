@@ -55,9 +55,11 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),
 		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes), //todo limit sorting
 		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
+
 		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
 		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
 		rest.MakeEndpoint(storage+"/transaction-hashes", srh.getTransactionHashesByFilter),
+
 		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
 		rest.MakeEndpoint(storage+"/errors", srh.getErrors),
 		rest.MakeEndpoint(storage+"/allocations", srh.getAllocations),
@@ -306,7 +308,7 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 	}
 	points++
 
-	blockRange := end-start
+	blockRange := end - start
 	roundsPerPoint := blockRange / int64(points)
 	if roundsPerPoint < 1 {
 		return 0, 0, 0, common.NewErrInternal("there must be at least one interval")
