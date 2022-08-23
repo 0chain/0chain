@@ -307,28 +307,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	mld, err := sa.restMinLockDemand()
-	if err != nil {
-		return "", common.NewError("allocation_creation_failed", "error in calculating min lock demand: "+err.Error())
-	}
-	if sa.WritePool < mld {
-		logging.Logger.Error("new_allocation_request_failed: writepool balance less than min lock demand",
-			zap.String("txn", txn.Hash),
-			zap.Any("writepool", sa.WritePool),
-			zap.Any("mld", mld))
-		return "", common.NewError("allocation_creation_failed",
-			fmt.Sprintf("not enough tokens to honor the min lock demand"+" (%d < %d)", txn.Value, mld))
-	}
-	cost, err := sa.cost()
-	if err != nil {
+	if err := sa.checkFunding(conf.CancellationCharge); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
-
-	if sa.WritePool < cost {
-		return "", common.NewError("allocation_creation_failed",
-			fmt.Sprintf("not enough tokens to honor the cancellation charge"+" (%d < %d)", txn.Value, cost))
-	}
-
 	m.tick("create_write_pool")
 
 	if err = sc.createChallengePool(txn, sa, balances); err != nil {
@@ -976,21 +957,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 	}
 
-	// is it about size increasing? if so, we should make sure the write
-	// pool has enough tokens
-	if diff > 0 {
-		if mldLeft, err := alloc.restMinLockDemand(); mldLeft > 0 {
-			if err != nil {
-				return common.NewErrorf("allocation_extending_failed",
-					"can't get min lock demand: %v", err)
-			}
-			if alloc.WritePool < mldLeft {
-				return common.NewError("allocation_extending_failed",
-					"not enough tokens in write pool to extend allocation")
-			}
-		}
-	}
-
 	// add more tokens to related challenge pool, or move some tokens back
 	var remainingDuration = alloc.Expiration - txn.CreationDate
 	err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, txn.CreationDate, balances)
@@ -1198,13 +1164,17 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
 		err = sc.extendAllocation(t, alloc, blobbers, &request, balances)
-	} else if request.Size != 0 || request.Expiration != 0 {
+	} else if request.Size < 0 || request.Expiration < 0 {
 		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances)
 	} else if len(request.AddBlobberId) > 0 {
 		err = sc.extendAllocation(t, alloc, blobbers, &request, balances)
 	}
 	if err != nil {
 		return "", err
+	}
+
+	if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
+		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
 	if request.SetImmutable {

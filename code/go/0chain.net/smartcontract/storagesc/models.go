@@ -876,6 +876,35 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
+func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
+	cost, err := sa.cost()
+	if err != nil {
+		return err
+	}
+	if sa.WritePool < cost {
+		return fmt.Errorf("not enough tokens to cover the allocatin cost"+" (%d < %d)", sa.WritePool, cost)
+	}
+
+	cc, err := currency.Float64ToCoin(cancellationFraction)
+	if err != nil {
+		return err
+	}
+	cancellationCharge, err := currency.MultCoin(cost, cc)
+	if err != nil {
+		return err
+	}
+	mld, err := sa.restMinLockDemand()
+	if err != nil {
+		return err
+	}
+	if sa.WritePool < cost*cancellationCharge+mld {
+		return fmt.Errorf("not enough tokens to honor the cancellation charge plus min lock demand"+" (%d < %d + %d)",
+			cancellationCharge, cost, mld)
+	}
+
+	return nil
+}
+
 func (sa *StorageAllocation) bSize() int64 {
 	return int64(math.Ceil(float64(sa.Size) / float64(sa.DataShards)))
 }
