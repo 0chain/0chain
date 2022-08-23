@@ -295,7 +295,7 @@ func (r *Round) GetVRFOutput() string {
 
 // AddNotarizedBlock - this will be concurrent as notarization is recognized by
 // verifying as well as notarization message from others.
-func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
+func (r *Round) AddNotarizedBlock(b *block.Block) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -305,12 +305,12 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	for i, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
 			if blk != b {
-				blk.MergeVerificationTickets(b.GetVerificationTickets())
+				b.MergeVerificationTickets(blk.GetVerificationTickets())
 			}
 			logging.Logger.Debug("add notarized block - block already exist, merge tickets",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			return blk, false
+			return
 		}
 		if blk.RoundRank == b.RoundRank {
 			found = i
@@ -341,7 +341,6 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	})
 	r.notarizedBlocks = rnb
 	logging.Logger.Debug("reached notarization", zap.Int64("round", b.Round))
-	return b, true
 }
 
 // UpdateNotarizedBlock updates the notarized block in the round
@@ -369,23 +368,24 @@ func (r *Round) GetNotarizedBlocks() []*block.Block {
 }
 
 /*AddProposedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
-func (r *Round) AddProposedBlock(b *block.Block) (*block.Block, bool) {
+func (r *Round) AddProposedBlock(b *block.Block) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	return r.addProposedBlock(b)
+	r.addProposedBlock(b)
 }
 
-func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
-	for _, blk := range r.proposedBlocks {
+func (r *Round) addProposedBlock(b *block.Block) {
+	for i, blk := range r.proposedBlocks {
 		if blk.Hash == b.Hash {
-			return blk, false
+			r.proposedBlocks[i] = b
+			return
 		}
 	}
 	r.proposedBlocks = append(r.proposedBlocks, b)
 	sort.SliceStable(r.proposedBlocks, func(i, j int) bool {
 		return r.proposedBlocks[i].RoundRank < r.proposedBlocks[j].RoundRank
 	})
-	return b, true
+	return
 }
 
 /*GetProposedBlocks - return all the blocks that have been proposed for this round */

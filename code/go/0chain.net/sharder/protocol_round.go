@@ -22,7 +22,7 @@ var ErrNoPreviousBlock = errors.New("previous block does not exist")
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	b *block.Block) error {
 
-	b, _ = r.AddNotarizedBlock(b)
+	r.AddNotarizedBlock(b)
 
 	if sc.BlocksToSharder == chain.FINALIZED {
 		nb := r.GetNotarizedBlocks()

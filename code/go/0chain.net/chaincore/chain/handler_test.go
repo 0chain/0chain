@@ -202,9 +202,7 @@ func generateProposedBlockToRound(t *testing.T, r *round.Round, n *node.Node) {
 		b.TxnsMap = make(map[string]bool)
 		b.TxnsMap[txn.Hash] = true
 		b.HashBlock()
-		if _, added := r.AddProposedBlock(b); added {
-			break
-		}
+		r.AddProposedBlock(b)
 	}
 }
 
