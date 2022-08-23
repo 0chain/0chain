@@ -66,31 +66,6 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 	return true, nil
 }
 
-func (edb *EventDb) updateReward(reward int64, dp DelegatePool) (err error) {
-
-	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
-
-	if dp.ProviderType == int(spenum.Blobber) && reward < 0 {
-		dpu.Updates["total_penalty"], err = currency.MinusInt64(dp.TotalPenalty, reward)
-		if err != nil {
-			return err
-		}
-	} else {
-		dpu.Updates["reward"], err = currency.AddInt64(dp.Reward, reward)
-		if err != nil {
-			return err
-		}
-		dpu.Updates["total_reward"], err = currency.AddInt64(dp.TotalReward, reward)
-		if err != nil {
-			return err
-		}
-	}
-	if err := edb.updateDelegatePool(*dpu); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (edb *EventDb) bulkUpdateRewards(providerID string, providerType int, rewards []rewardInfo) error {
 	n := len(rewards)
 	sql := fmt.Sprintf(`
