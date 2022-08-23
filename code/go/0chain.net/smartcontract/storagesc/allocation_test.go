@@ -750,7 +750,7 @@ func TestExtendAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "allocation_extending_failed: not enough tokens in write pool to extend allocation",
+				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficent funds 1000000000 in write pool to pay 4527262515",
 			},
 		},
 	}
@@ -1347,9 +1347,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
 		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
-		balances.balances[clientID] = 1100
+		balances.balances[clientID] = 1100 + 4500
 
-		tx.Value = 400
+		tx.Value = 4500
 		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
 

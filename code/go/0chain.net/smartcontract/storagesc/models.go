@@ -863,12 +863,12 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 
 func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	var cost currency.Coin
-	for _, d := range sa.BlobberAllocs {
-		coinSize, err := currency.Int64ToCoin(d.Size)
+	for _, ba := range sa.BlobberAllocs {
+		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 		if err != nil {
 			return 0, err
 		}
-		cost += coinSize * d.Terms.WritePrice
+		cost += c
 	}
 	return cost, nil
 }
