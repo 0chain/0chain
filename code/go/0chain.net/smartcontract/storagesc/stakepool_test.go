@@ -191,10 +191,9 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 		require.EqualValues(t, f.now, txPool.RoundCreated)
 	}
 
-	pt, ok := newUsp.Pools[blobberId]
+	_, ok := newUsp.Find(blobberId)
 	require.True(t, ok)
 	//require.Len(t, pools, 1)
-	require.Equal(t, pt, spenum.Blobber)
 
 	//require.EqualValues(t, transactionHash, pools[0])
 

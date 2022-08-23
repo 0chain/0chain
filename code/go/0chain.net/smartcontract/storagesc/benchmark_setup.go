@@ -552,11 +552,7 @@ func GetMockBlobberStakePools(
 			if usps[clientIndex] == nil {
 				usps[clientIndex] = stakepool.NewUserStakePools()
 			}
-			usps[clientIndex].Pools[bId] = spenum.Blobber
-			//	append(
-			//	usps[clientIndex].Pools[bId],
-			//	id,
-			//)
+			usps[clientIndex].Providers = append(usps[clientIndex].Providers, bId)
 
 			if viper.GetBool(sc.EventDbEnabled) {
 				dp := event.DelegatePool{

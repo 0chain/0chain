@@ -221,7 +221,7 @@ func (zcn *ZCNSmartContract) CollectRewards(
 		return "", common.NewErrorf(code, "can't get related user stake pools: %v", err)
 	}
 
-	providers := usp.FindProvidersByType(prr.ProviderType)
+	providers := usp.Providers
 	if len(providers) == 0 {
 		return "", common.NewErrorf(code, "user %v does not own stake pool", tran.ClientID)
 	}

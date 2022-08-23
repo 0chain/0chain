@@ -39,7 +39,7 @@ func (sp *StakePool) UnlockPool(
 	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
-	if ok := usp.FindProviderById(providerId); !ok {
+	if _, ok := usp.Find(providerId); !ok {
 		return 0, fmt.Errorf("user %v does not own stake pool for %v", clientID, providerId)
 	}
 

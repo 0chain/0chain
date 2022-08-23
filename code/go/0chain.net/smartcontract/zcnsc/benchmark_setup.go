@@ -105,10 +105,7 @@ func addMockStakePools(clients []string, ctx cstate.StateContextI) {
 				usps[j] = stakepool.NewUserStakePools()
 			}
 
-			usps[j].Pools[clients[i]] = spenum.Authorizer
-			//	usps[j].Pools[clients[j]],
-			//	did,
-			//)
+			usps[j].Providers = append(usps[j].Providers, clients[i])
 		}
 		sp.Reward = 11
 		sp.Minter = cstate.MinterZcn

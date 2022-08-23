@@ -38,7 +38,7 @@ func (ssc *MinerSmartContract) collectReward(
 
 	var providers []string
 	if len(prr.ProviderId) == 0 {
-		providers = usp.FindProvidersByType(prr.ProviderType)
+		providers = usp.Providers
 	} else {
 		providers = []string{prr.ProviderId}
 	}

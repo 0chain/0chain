@@ -67,7 +67,7 @@ func TestDeleteSharder(t *testing.T) {
 			}).Return(nil).Once()
 
 			un := stakepool.NewUserStakePools()
-			un.Pools[mn.ID] = spenum.Sharder
+			un.Providers = []string{mn.ID}
 			balances.On("GetTrieNode", stakepool.UserStakePoolsKey(spenum.Sharder, id),
 				mock.MatchedBy(func(n *stakepool.UserStakePools) bool {
 					return true

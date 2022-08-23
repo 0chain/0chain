@@ -68,7 +68,7 @@ func TestDeleteMiner(t *testing.T) {
 			}).Return(nil).Once()
 
 			un := stakepool.NewUserStakePools()
-			un.Pools[mn.ID] = spenum.Miner
+			un.Providers = []string{mn.ID}
 			balances.On("GetTrieNode", stakepool.UserStakePoolsKey(spenum.Miner, id), mock.MatchedBy(func(n *stakepool.UserStakePools) bool {
 				return true
 			})).Return(nil).Once()

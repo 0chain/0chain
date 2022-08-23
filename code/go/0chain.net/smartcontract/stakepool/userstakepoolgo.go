@@ -13,7 +13,7 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 type UserStakePools struct {
-	Pools map[string]spenum.Provider `json:"pools"` // key: provider id, value: provider type
+	Providers []string `json:"providers"` // provider ids
 }
 
 func UserStakePoolsKey(p spenum.Provider, clientID datastore.Key) datastore.Key {
@@ -21,39 +21,41 @@ func UserStakePoolsKey(p spenum.Provider, clientID datastore.Key) datastore.Key 
 }
 
 func NewUserStakePools() *UserStakePools {
-	return &UserStakePools{
-		Pools: map[string]spenum.Provider{},
-	}
+	return &UserStakePools{}
 }
 
-func (usp *UserStakePools) add(providerId datastore.Key, providerType spenum.Provider) {
-	_, ok := usp.Pools[providerId]
-	if ok {
-		// already exist, one stake pool per user
+func (usp *UserStakePools) Add(providerID datastore.Key) {
+	if _, exist := usp.Find(providerID); exist {
 		return
 	}
 
-	usp.Pools[providerId] = providerType
+	usp.Providers = append(usp.Providers, providerID)
 }
 
-func (usp *UserStakePools) FindProviderById(providerId datastore.Key) bool {
-	_, ok := usp.Pools[providerId]
-	return ok
-}
-
-func (usp *UserStakePools) FindProvidersByType(providerType spenum.Provider) []datastore.Key {
-	ids := make([]datastore.Key, 0, len(usp.Pools))
-	for id, tp := range usp.Pools {
-		if tp == providerType {
-			ids = append(ids, id)
+func (usp *UserStakePools) Find(providerID datastore.Key) (int, bool) {
+	for i, p := range usp.Providers {
+		if p == providerID {
+			return i, true
 		}
 	}
-	return ids
+	return -1, false
 }
 
-func (usp *UserStakePools) Del(providerId datastore.Key) (empty bool) {
-	delete(usp.Pools, providerId)
-	return len(usp.Pools) == 0
+func (usp *UserStakePools) Del(providerID datastore.Key) (empty bool) {
+	i, ok := usp.Find(providerID)
+	if !ok {
+		return len(usp.Providers) == 0
+	}
+
+	l := len(usp.Providers)
+	if i == l-1 {
+		usp.Providers = usp.Providers[:l-1]
+		return len(usp.Providers) == 0
+	}
+
+	usp.Providers[i] = usp.Providers[l-1]
+	usp.Providers = usp.Providers[:l-1]
+	return len(usp.Providers) == 0
 }
 
 func (usp *UserStakePools) Encode() []byte {
@@ -78,7 +80,7 @@ func (usp *UserStakePools) Save(
 	return
 }
 
-// GetUserStakePool of given client
+// GetUserStakePools of given client and provider type
 func GetUserStakePools(
 	p spenum.Provider,
 	clientID datastore.Key,

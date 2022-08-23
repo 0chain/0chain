@@ -169,7 +169,7 @@ func AddUserNodesForNode(
 	for j := 0; j < numDelegates; j++ {
 		delegate := (nodeIndex + j) % len(nodes)
 		un := stakepool.NewUserStakePools()
-		un.Pools[nodes[nodeIndex]] = nodeType
+		un.Providers = []string{nodes[nodeIndex]}
 
 		_, _ = balances.InsertTrieNode(stakepool.UserStakePoolsKey(nodeType, clients[delegate]), un)
 	}

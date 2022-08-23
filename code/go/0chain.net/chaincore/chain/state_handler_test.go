@@ -20,7 +20,6 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
@@ -562,9 +561,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			name: "Minersc_/getUserPools_Fail_Retrieving_Miners_Node_400",
 			chain: func() *chain.Chain {
 				un := stakepool.UserStakePools{
-					Pools: map[datastore.Key][]datastore.Key{
-						"key": {},
-					},
+					Providers: []string{"key"},
 				}
 				blob, err := un.MarshalMsg(nil)
 				if err != nil {
@@ -609,9 +606,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				minerID := "miner id"
 
 				un := stakepool.UserStakePools{
-					Pools: map[datastore.Key][]datastore.Key{
-						minerID: {},
-					},
+					Providers: []string{minerID},
 				}
 				blob, err := un.MarshalMsg(nil)
 				if err != nil {
@@ -1355,9 +1350,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}
 
 				sp := &stakepool.UserStakePools{
-					Pools: map[datastore.Key][]datastore.Key{
-						"key": {"key"},
-					},
+					Providers: []string{"key"},
 				}
 				blob, err = sp.MarshalMsg(nil)
 				if err != nil {
