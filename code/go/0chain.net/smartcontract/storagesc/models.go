@@ -455,10 +455,6 @@ type BlobberAllocation struct {
 	Returned currency.Coin `json:"returned"`
 	// ChallengeReward of the blobber.
 	ChallengeReward currency.Coin `json:"challenge_reward"`
-	// FinalReward is number of tokens moved to the blobber on finalization.
-	// It can be greater than zero, if user didn't spent the min lock demand
-	// during the allocation.
-	FinalReward currency.Coin `json:"final_reward"`
 
 	// ChallengePoolIntegralValue represents integral price * size * dt for this
 	// blobber. Since, a user can upload and delete file, and a challenge
@@ -789,6 +785,7 @@ func (sa *StorageAllocation) moveToChallengePool(
 	} else {
 		sa.WritePool = writePool
 	}
+
 	return nil
 }
 
@@ -876,20 +873,20 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
-func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
+func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (currency.Coin, error) {
 	cost, err := sa.cost()
 	if err != nil {
-		return err
+		return 0, err
 	}
-	if sa.WritePool < cost {
-		return fmt.Errorf("not enough tokens to cover the allocatin cost"+" (%d < %d)", sa.WritePool, cost)
-	}
-
 	cc, err := currency.Float64ToCoin(cancellationFraction)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	cancellationCharge, err := currency.MultCoin(cost, cc)
+	return currency.MultCoin(cost, cc)
+}
+
+func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
+	cancellationCharge, err := sa.cancellationCharge(cancellationFraction)
 	if err != nil {
 		return err
 	}
@@ -897,9 +894,9 @@ func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
 	if err != nil {
 		return err
 	}
-	if sa.WritePool < cost*cancellationCharge+mld {
+	if sa.WritePool < cancellationCharge+mld {
 		return fmt.Errorf("not enough tokens to honor the cancellation charge plus min lock demand"+" (%d < %d + %d)",
-			cancellationCharge, cost, mld)
+			sa.WritePool, cancellationCharge, mld)
 	}
 
 	return nil

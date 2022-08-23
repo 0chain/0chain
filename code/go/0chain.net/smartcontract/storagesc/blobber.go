@@ -694,6 +694,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
+	if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"insufficient funds: %v", err)
+	}
+
 	// the first time the allocation is added  to the blobber, created related resources
 	if blobAlloc.Stats.UsedSize == 0 {
 		err = removeAllocationFromBlobber(sc, blobAlloc, alloc.ID, balances)

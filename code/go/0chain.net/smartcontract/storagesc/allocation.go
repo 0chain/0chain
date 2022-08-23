@@ -307,6 +307,15 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
+	cost, err := sa.cost()
+	if err != nil {
+		return "", err
+	}
+	if sa.WritePool < cost {
+		return "", common.NewError("allocation_creation_failed",
+			fmt.Sprintf("not enough tokens to cover the allocatin cost"+" (%d < %d)", sa.WritePool, cost))
+	}
+
 	if err := sa.checkFunding(conf.CancellationCharge); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
@@ -1536,10 +1545,6 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
-			d.FinalReward, err = currency.AddCoin(d.FinalReward, delta)
-			if err != nil {
-				return err
-			}
 		}
 	}
 
@@ -1582,10 +1587,6 @@ func (sc *StorageSmartContract) finishAllocation(
 			d.Spent, err = currency.AddCoin(d.Spent, reward)
 			if err != nil {
 				return fmt.Errorf("blobber alloc spent: %v", err)
-			}
-			d.FinalReward, err = currency.AddCoin(d.FinalReward, reward)
-			if err != nil {
-				return fmt.Errorf("blobber alloc final reward: %v", err)
 			}
 			passPayments, err = currency.AddCoin(passPayments, reward)
 			if err != nil {
@@ -1644,6 +1645,33 @@ func (sc *StorageSmartContract) finishAllocation(
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"moving challenge pool rest back to write pool: "+err.Error())
+		}
+	}
+
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return common.NewErrorf("allocation_creation_failed",
+			"can't get config: %v", err)
+	}
+
+	cancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
+	if err != nil {
+		return common.NewErrorf("allocation_creation_failed", err.Error())
+	}
+	if alloc.WritePool < cancellationCharge {
+		cancellationCharge = alloc.WritePool
+		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
+	}
+	reward, _, err := currency.DistributeCoin(cancellationCharge, int64(len(alloc.BlobberAllocs)))
+	if err != nil {
+		return common.NewErrorf("allocation_creation_failed", err.Error())
+	}
+
+	for i, ba := range alloc.BlobberAllocs {
+		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, balances)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"paying cancellation charge to stake pool of "+ba.BlobberID+": "+err.Error())
 		}
 	}
 
