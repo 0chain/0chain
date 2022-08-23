@@ -878,8 +878,7 @@ func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (c
 	if err != nil {
 		return 0, err
 	}
-	floatCharge := float64(cost) * cancellationFraction
-	return currency.Float64ToCoin(floatCharge)
+	return currency.MultFloat64(cost, cancellationFraction)
 }
 
 func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
