@@ -1560,9 +1560,9 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	require.NoError(t, sp1.save(ssc.ID, "b1", balances))
 	require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
-	balances.(*testBalances).balances[clientID] = 1100
+	balances.(*testBalances).balances[clientID] = 1100 + 4500
 
-	tx.Value = 400
+	tx.Value = 4500
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 	require.NoError(t, err)
 }
