@@ -459,10 +459,6 @@ func (wgs *waitGroupSync) Run(name string, round int64, f func()) {
 		defer wgs.wg.Done()
 		f()
 		du := time.Since(ts)
-		logging.Logger.Debug("Run", zap.String("name", name),
-			zap.Int64("round", round),
-			zap.Any("duration", du))
-
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("Run slow on", zap.String("name", name),
 				zap.Int64("round", round),

@@ -76,7 +76,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		events := <-edb.eventsChannel
 		ts := time.Now()
 		edb.addEvents(ctx, events)
-		logging.Logger.Debug("event db save - addEvents", zap.Any("duration", time.Since(ts)))
 		for _, event := range events {
 			var err error = nil
 			switch EventType(event.Type) {
@@ -84,8 +83,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				ts = time.Now()
 				err = edb.addStat(event)
 				du := time.Since(ts)
-				logging.Logger.Debug("event db save - addStat", zap.Any("duration", du),
-					zap.Error(err))
 				if du.Milliseconds() > 50 {
 					logging.Logger.Warn("event db save slow - addStat",
 						zap.Any("duration", du), zap.Any("event", event))
