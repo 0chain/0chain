@@ -1169,7 +1169,7 @@ List:
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
-	creationDate common.Timestamp, balances cstate.StateContextI) (
+	creationDate common.Timestamp) (
 	[]*blobberWithPool, []string) {
 
 	var (

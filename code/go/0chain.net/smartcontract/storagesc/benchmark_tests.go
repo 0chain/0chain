@@ -198,7 +198,6 @@ func BenchmarkTests(
 				}(),
 			},
 			input: func() []byte {
-
 				bytes, _ := (&newAllocationRequest{
 					DataShards:      len(blobbers) / 2,
 					ParityShards:    len(blobbers) / 2,

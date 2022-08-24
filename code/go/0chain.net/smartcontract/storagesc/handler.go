@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
 
+	ccsc "0chain.net/chaincore/smartcontract"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/transaction"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -446,8 +450,8 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
-// Returns collected reward for a client_id. 
-// > Note: start-date and end-date resolves to the closest block number for those timestamps on the network. 
+// Returns collected reward for a client_id.
+// > Note: start-date and end-date resolves to the closest block number for those timestamps on the network.
 //
 // > Note: Using start/end-block and start/end-date together would only return results with start/end-block
 //
@@ -463,17 +467,17 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 //      required: false
 //      in: query
 //      type: string
-//    + name: start-date 
+//    + name: start-date
 //      description: start date
 //      required: false
 //      in: query
 //      type: string
-//    + name: end-date 
+//    + name: end-date
 //      description: end date
 //      required: false
 //      in: query
 //      type: string
-//    + name: data-points 
+//    + name: data-points
 //      description: number of data points in response
 //      required: false
 //      in: query
@@ -493,8 +497,8 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		endBlockString   = r.URL.Query().Get("end-block")
 		clientID         = r.URL.Query().Get("client-id")
 		startDateString  = r.URL.Query().Get("start-date")
-		endDateString	 = r.URL.Query().Get("end-date")
-		dataPointsString = r.URL.Query().Get("data-points") 
+		endDateString    = r.URL.Query().Get("end-date")
+		dataPointsString = r.URL.Query().Get("data-points")
 	)
 
 	var dataPoints int64
@@ -568,7 +572,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 
 		query.StartDate = time.Unix(int64(startDate), 0)
 		query.EndDate = time.Unix(int64(endDate), 0)
-		
+
 		rewards, err := edb.GetRewardClaimedTotalBetweenDates(query)
 		if err != nil {
 			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
@@ -578,7 +582,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		common.Respond(w, r, map[string]interface{}{
 			"collected_reward": rewards,
 		}, nil)
-		return 
+		return
 	}
 
 	common.Respond(w, r, nil, common.NewErrInternal("can't get collected rewards"))
@@ -1545,9 +1549,14 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock allocation_min_lock
-// Calculates the cost of a new allocation request. Todo redo with changes to new allocation request smart contract
+// Calculates the cost of a new allocation request.
 //
 // parameters:
+//    + name: allocation_data
+//      description: json marshall of new allocation request input data
+//      in: query
+//      type: string
+//      required: true
 //
 // responses:
 //  200: Int64Map
@@ -1555,8 +1564,6 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 //  500:
 func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *http.Request) {
 	var err error
-	creationDate := time.Now()
-
 	allocData := r.URL.Query().Get("allocation_data")
 	var req newAllocationRequest
 	if err = req.decode([]byte(allocData)); err != nil {
@@ -1570,48 +1577,52 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := getBlobbersForRequest(req, edb, balances, common2.Pagination{})
+
+	var ssc = StorageSmartContract{SmartContract: sci.NewSC(ADDRESS)}
+	ssc.setSC(ssc.SmartContract, &ccsc.BCContext{})
+	conf, err := getConfig(balances)
 	if err != nil {
-		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	sa := req.storageAllocation()
-	var gbSize = sizeInGB(sa.bSize())
-	var minLockDemand currency.Coin
 
-	ids := append(req.Blobbers, blobbers...)
-	uniqueMap := make(map[string]struct{})
-	for _, id := range ids {
-		uniqueMap[id] = struct{}{}
+	sa, _, err := ssc.setupNewAllocation(
+		Timings{timings: nil, start: time.Now()},
+		&transaction.Transaction{
+			CreationDate: balances.Now(),
+		},
+		[]byte(allocData),
+		conf,
+		balances,
+	)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
 	}
-	unique := make([]string, 0, len(ids))
-	for id := range uniqueMap {
-		unique = append(unique, id)
+	cost, err := sa.cost()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
 	}
-	if len(unique) > req.ParityShards+req.DataShards {
-		unique = unique[:req.ParityShards+req.DataShards]
+	cost64, err := cost.Float64()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	mld, err := sa.restMinLockDemand()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	mld64, err := mld.Float64()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
 	}
 
-	nodes := getBlobbers(unique, balances)
-	for _, b := range nodes.Nodes {
-		bMinLockDemand, err := b.Terms.minLockDemand(gbSize,
-			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
-		if err != nil {
-			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
-			return
-		}
-		minLockDemand, err = currency.AddCoin(minLockDemand, bMinLockDemand)
-		if err != nil {
-			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
-			return
-		}
-	}
-
-	var response = map[string]interface{}{
-		"min_lock_demand": minLockDemand,
-	}
-
-	common.Respond(w, r, response, nil)
+	common.Respond(w, r, map[string]interface{}{
+		"min_lock_demand": math.Max(cost64, mld64+cost64*conf.CancellationCharge),
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations allocations

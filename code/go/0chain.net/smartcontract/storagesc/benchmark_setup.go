@@ -724,7 +724,7 @@ func getMockBlobberTerms() Terms {
 		ReadPrice:        currency.Coin(0.1 * 1e10),
 		WritePrice:       currency.Coin(0.1 * 1e10),
 		MinLockDemand:    0.0007,
-		MaxOfferDuration: time.Hour*50 + viper.GetDuration(sc.StorageMinOfferDuration),
+		MaxOfferDuration: time.Hour * 744,
 	}
 }
 
