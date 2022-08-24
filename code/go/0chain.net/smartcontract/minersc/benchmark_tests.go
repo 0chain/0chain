@@ -95,7 +95,6 @@ func BenchmarkTests(
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	msc.setSC(msc.SmartContract, &smartcontract.BCContext{})
-	miner00 := getMinerDelegatePoolId(0, 0, spenum.Miner)
 	var tests = []BenchTest{
 		{
 			name:     "miner.add_miner",
@@ -334,7 +333,6 @@ func BenchmarkTests(
 			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, spenum.Miner),
-				PoolID:  miner00,
 			}).Encode(),
 		},
 		{
@@ -346,7 +344,6 @@ func BenchmarkTests(
 			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, spenum.Miner),
-				PoolID:  miner00,
 			}).Encode(),
 		},
 		{

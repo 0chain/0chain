@@ -767,7 +767,6 @@ type delegatePoolStat struct {
 
 type deletePool struct {
 	MinerID string `json:"id"`
-	PoolID  string `json:"pool_id"`
 }
 
 func (dp *deletePool) Encode() []byte {

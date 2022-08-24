@@ -85,7 +85,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 			"error getting miner node: %v", err)
 	}
 
-	pool, ok := mn.Pools[dp.PoolID]
+	pool, ok := mn.Pools[t.ClientID]
 	if !ok {
 		return "", common.NewError("delegate_pool_del",
 			"pool does not exist for deletion")
