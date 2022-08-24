@@ -171,6 +171,8 @@ func TestBlockGeneration(t *testing.T) {
 	mc, stopAndClean := setupMinerChain()
 	defer stopAndClean()
 
+	chain.NewChainFromConfig()
+
 	gb := SetupGenesisBlock()
 	mc.AddGenesisBlock(gb)
 
