@@ -189,21 +189,19 @@ func makeTestNode() (*node.Node, error) {
 }
 
 func generateProposedBlockToRound(t *testing.T, r *round.Round, n *node.Node) {
-	for {
-		b := block.NewBlock("", r.Number)
-		b.MinerID = n.Client.ID
-		randomData := make([]byte, 10)
-		read, err := rand.Reader.Read(randomData)
-		require.NoError(t, err)
-		require.Equal(t, read, len(randomData))
-		txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(randomData)}}
-		b.Txns = append(b.Txns, &txn)
-		b.AddTransaction(&txn)
-		b.TxnsMap = make(map[string]bool)
-		b.TxnsMap[txn.Hash] = true
-		b.HashBlock()
-		r.AddProposedBlock(b)
-	}
+	b := block.NewBlock("", r.Number)
+	b.MinerID = n.Client.ID
+	randomData := make([]byte, 10)
+	read, err := rand.Reader.Read(randomData)
+	require.NoError(t, err)
+	require.Equal(t, read, len(randomData))
+	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(randomData)}}
+	b.Txns = append(b.Txns, &txn)
+	b.AddTransaction(&txn)
+	b.TxnsMap = make(map[string]bool)
+	b.TxnsMap[txn.Hash] = true
+	b.HashBlock()
+	r.AddProposedBlock(b)
 }
 
 func TestRoundInfoHandler(t *testing.T) {
