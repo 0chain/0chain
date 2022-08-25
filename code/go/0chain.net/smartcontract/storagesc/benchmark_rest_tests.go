@@ -156,7 +156,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.getAllocations,
 			},
 			{
-				FuncName: "allocation_min_lock",
+				FuncName: "allocation-min-lock",
 				Params: map[string]string{
 					"allocation_data": func() string {
 						var blobbers []string
@@ -173,8 +173,6 @@ func BenchmarkRestTests(
 							ParityShards:    len(blobbers) / 2,
 							Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
 							Expiration:      5*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
-							Owner:           data.Clients[0],
-							OwnerPublicKey:  data.PublicKeys[0],
 							Blobbers:        blobbers,
 							ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 							WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
@@ -316,7 +314,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.getCollectedReward,
 			},
 			{
-				FuncName: "alloc_blobbers",
+				FuncName: "alloc-blobbers",
 				Params: map[string]string{
 					"allocation_data": func() string {
 						//now := common.Timestamp(time.Now().Unix())
@@ -325,9 +323,6 @@ func BenchmarkRestTests(
 							ParityShards:    viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							Size:            100 * viper.GetInt64(bk.StorageMinAllocSize),
 							Expiration:      2 * common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
-							Owner:           data.Clients[0],
-							OwnerPublicKey:  data.PublicKeys[0],
-							Blobbers:        []string{},
 							ReadPriceRange:  PriceRange{0, maxReadPrice},
 							WritePriceRange: PriceRange{0, maxWritePrice},
 						}).encode()
@@ -354,7 +349,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlobberIdsByUrls,
 			},
 			{
-				FuncName: "free_alloc_blobbers",
+				FuncName: "free-alloc-blobbers",
 				Params: map[string]string{
 					"free_allocation_data": func() string {
 						var request = struct {

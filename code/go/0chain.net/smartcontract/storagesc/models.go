@@ -1114,14 +1114,6 @@ func (sa *StorageAllocation) validate(now time.Time,
 		return errors.New("invalid number of data shards")
 	}
 
-	if sa.OwnerPublicKey == "" {
-		return errors.New("missing owner public key")
-	}
-
-	if sa.Owner == "" {
-		return errors.New("missing owner id")
-	}
-
 	return // nil
 }
 

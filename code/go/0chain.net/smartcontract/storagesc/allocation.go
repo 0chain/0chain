@@ -181,8 +181,29 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	timings map[string]time.Duration,
 ) (resp string, err error) {
 	m := Timings{timings: timings, start: time.Now()}
+	var request newAllocationRequest
+	if err = request.decode(input); err != nil {
+		logging.Logger.Error("new_allocation_request_failed: error decoding input",
+			zap.String("txn", txn.Hash),
+			zap.Error(err))
+		return "", common.NewErrorf("allocation_creation_failed",
+			"malformed request: %v", err)
+	}
 
-	sa, blobberNodes, err := sc.setupNewAllocation(m, txn, input, conf, balances)
+	// todo If sa.Owner = "", there is both code to return an error or set owner to txn.ClientId. Find out which we should do.
+	//if request.Owner == "" {
+	//	request.Owner = txn.ClientID
+	//	request.OwnerPublicKey = txn.PublicKey
+	//}
+	if request.OwnerPublicKey == "" {
+		return "", errors.New("missing owner public key")
+	}
+	if request.Owner == "" {
+		return "", errors.New("missing owner id")
+	}
+
+	sa, blobberNodes, err := sc.setupNewAllocation(request, m, txn, conf, balances)
+
 	for _, b := range blobberNodes {
 		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
 		if err != nil {
@@ -253,23 +274,13 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 }
 
 func (sc *StorageSmartContract) setupNewAllocation(
+	request newAllocationRequest,
 	m Timings,
 	txn *transaction.Transaction,
-	input []byte,
 	conf *Config,
 	balances chainstate.CommonStateContextI,
 ) (*StorageAllocation, []*blobberWithPool, error) {
 	var err error
-	var request newAllocationRequest
-	logging.Logger.Debug("new_allocation_request", zap.String("request", string(input)))
-	if err = request.decode(input); err != nil {
-		logging.Logger.Error("new_allocation_request_failed: error decoding input",
-			zap.String("txn", txn.Hash),
-			zap.Error(err))
-		return nil, nil, common.NewErrorf("allocation_creation_failed",
-			"malformed request: %v", err)
-	}
-
 	m.tick("decode")
 	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {
 		logging.Logger.Error("new_allocation_request_failed: input blobbers less than requirement",
@@ -302,11 +313,6 @@ func (sc *StorageSmartContract) setupNewAllocation(
 			"Not enough provided blobbers found in mpt")
 	}
 
-	if request.Owner == "" {
-		request.Owner = txn.ClientID
-		request.OwnerPublicKey = txn.PublicKey
-	}
-
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	blobbers, err := sc.fetchPools(inputBlobbers, balances)
@@ -319,7 +325,7 @@ func (sc *StorageSmartContract) setupNewAllocation(
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
 
-	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(txn.CreationDate), sa, balances, blobbers)
+	blobberNodes, bSize, err := sc.validateBlobbers(common.ToTime(txn.CreationDate), sa, balances, blobbers, conf)
 	if err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error validating blobbers",
 			zap.String("txn", txn.Hash),
@@ -476,13 +482,9 @@ func (sc *StorageSmartContract) validateBlobbers(
 	sa *StorageAllocation,
 	balances chainstate.CommonStateContextI,
 	blobbers []*blobberWithPool,
+	conf *Config,
 ) ([]*blobberWithPool, int64, error) {
 	var err error
-	var conf *Config
-	if conf, err = getConfig(balances); err != nil {
-		return nil, 0, fmt.Errorf("can't get config: %v", err)
-	}
-
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
 
 	if err = sa.validate(creationDate, conf); err != nil {
