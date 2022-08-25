@@ -151,11 +151,11 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 					"events for round %v recieved after events for ruond %v", e[0].BlockNumber, round))
 				continue
 			}
-			if round+1 != e[0].BlockNumber {
-				logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
-					"events for round %v recieved instead", round+1, e[0].BlockNumber))
-				continue
-			}
+			//if round+1 != e[0].BlockNumber {
+			//	logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
+			//		"events for round %v recieved instead", round+1, e[0].BlockNumber))
+			//	continue
+			//}
 
 			round = e[0].BlockNumber
 			edb.updateBlobberAggregate(round, period, gs)
