@@ -13,6 +13,7 @@ type Transaction struct {
 	gorm.Model
 	Hash              string `gorm:"uniqueIndex:idx_thash"`
 	BlockHash         string `gorm:"index:idx_tblock_hash"`
+	BlockRound        int64  `gorm:"index:idx_tblock_round"`
 	Version           string
 	ClientId          string `gorm:"index:idx_tclient_id"`
 	ToClientId        string `gorm:"index:idx_tto_client_id"`

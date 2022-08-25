@@ -628,7 +628,7 @@ func (b *Block) GetReceiptsMerkleTree() *util.MerkleTree {
 	return &mt
 }
 
-//GetTransaction - get the transaction from the block
+// GetTransaction - get the transaction from the block
 func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 	for _, txn := range b.Txns {
 		if txn.GetKey() == hash {
@@ -638,14 +638,14 @@ func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 	return nil
 }
 
-//SetBlockNotarized - set the block as notarized
+// SetBlockNotarized - set the block as notarized
 func (b *Block) SetBlockNotarized() {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
 	b.isNotarized = true
 }
 
-//IsBlockNotarized - is block notarized?
+// IsBlockNotarized - is block notarized?
 func (b *Block) IsBlockNotarized() bool {
 	b.ticketsMutex.RLock()
 	defer b.ticketsMutex.RUnlock()
@@ -905,7 +905,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			Type:        int(event.TypeSmartContract),
 			Tag:         int(event.TagAddTransaction),
 			Index:       txn.Hash,
-			Data:        transactionNodeToEventTransaction(txn, b.Hash),
+			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),
 		})
 
 		events, err := c.UpdateState(ctx, b, bState, txn)
@@ -1000,9 +1000,10 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	return nil
 }
 
-func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string) event.Transaction {
+func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string, blockRound int64) event.Transaction {
 	return event.Transaction{
 		Hash:              tr.Hash,
+		BlockRound:        blockRound,
 		BlockHash:         blockHash,
 		Version:           tr.Version,
 		ClientId:          tr.ClientID,

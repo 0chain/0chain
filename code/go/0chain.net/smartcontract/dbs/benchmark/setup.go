@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"

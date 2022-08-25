@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,11 +53,13 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/get_blobber_count", srh.getBlobberCount),
 		rest.MakeEndpoint(storage+"/getBlobber", srh.getBlobber),
 		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),
+		rest.MakeEndpoint(storage+"/blobbers-by-rank", srh.getBlobbersByRank),
 		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes), //todo limit sorting
 		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
 		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
 		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
 		rest.MakeEndpoint(storage+"/transaction-hashes", srh.getTransactionHashesByFilter),
+
 		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
 		rest.MakeEndpoint(storage+"/errors", srh.getErrors),
 		rest.MakeEndpoint(storage+"/allocations", srh.getAllocations),
@@ -305,13 +308,21 @@ func differenceParameters(fromStr, toStr, dataPointsStr string, edb *event.Event
 	}
 	points++
 
-	roundsPerPoint := (end - start) / int64(points)
+	blockRange := end - start
+	roundsPerPoint := blockRange / int64(points)
 	if roundsPerPoint < 1 {
 		return 0, 0, 0, common.NewErrInternal("there must be at least one interval")
 	}
 
-	// make end - start an even multiple of point size
-	start = roundsPerPoint
+	// calculate nearest start so blockrange becomes nearest multiple of point size
+	n1 := int64(points) * int64(roundsPerPoint)
+	n2 := int64(points) * (roundsPerPoint + 1)
+	if math.Abs(float64(blockRange-n1)) < math.Abs(float64(blockRange-n2)) {
+		start += blockRange - n1
+	} else {
+		end += n2 - blockRange
+		roundsPerPoint++
+	}
 
 	if edb.Config().AggregatePeriod == 0 {
 		return 0, 0, 0, common.NewErrInternal("blobber aggregate period zero")
@@ -3364,6 +3375,47 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		sns.Nodes = append(sns.Nodes, sn)
 	}
 	common.Respond(w, r, sns, nil)
+}
+
+// getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank blobbers-by-rank
+// Gets list of all blobbers ordered by rank
+//
+// parameters:
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
+// responses:
+//  200: storageNodeResponse
+//  500:
+func (srh *StorageRestHandler) getBlobbersByRank(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobbers, err := edb.GetBlobbersByRank(limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, blobbers, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation blobbers-by-geolocation

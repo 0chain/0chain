@@ -372,7 +372,7 @@ func AddMockBlobbers(
 
 	partition, err := getActivePassedBlobberRewardsPartitions(balances, viper.GetInt64(sc.StorageBlockRewardTriggerPeriod))
 	if err != nil {
-		panic(err)
+		log.Fatal("getting active passed blobber rewards partition", err)
 	}
 
 	var sscId = StorageSmartContract{
@@ -406,11 +406,11 @@ func AddMockBlobbers(
 		rtvBlobbers = append(rtvBlobbers, blobber)
 		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
 		if err != nil {
-			panic(err)
+			log.Fatal("insert blobber into mpt", err)
 		}
 		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sscId), &datastore.NOIDField{})
 		if err != nil {
-			panic(err)
+			log.Fatal("insert blobber url into mpt", err)
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
@@ -437,7 +437,7 @@ func AddMockBlobbers(
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
-				panic(err)
+				log.Fatal("covert currency", err)
 			}
 			_ = eventDb.Store.Get().Create(&blobberDb)
 			addMockBlobberSnapshots(blobberDb, eventDb)
@@ -454,13 +454,13 @@ func AddMockBlobbers(
 					DataRead:          float64(i) * 0.1,
 				})
 			if err != nil {
-				panic(err)
+				log.Fatal("add partition", err)
 			}
 		}
 	}
 	err = partition.Save(balances)
 	if err != nil {
-		panic(err)
+		log.Fatal("save partition", err)
 	}
 	return rtvBlobbers
 }
@@ -519,7 +519,7 @@ func AddMockSnapshots(edb *event.EventDb) {
 	}
 	res := edb.Store.Get().Create(&snapshots)
 	if res.Error != nil {
-		log.Fatal(res.Error)
+		log.Fatal("mock snapshot failed on create edb row", res.Error)
 	}
 }
 
