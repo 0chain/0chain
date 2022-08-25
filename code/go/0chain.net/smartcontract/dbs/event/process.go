@@ -136,8 +136,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 	logging.Logger.Info("round events worker started")
 	var round int64
-	global, _ := edb.GetGlobal()
-	round = global.Round
 
 	var gs = newGlobalSnapshot()
 	for {
@@ -146,16 +144,25 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 			if len(e) == 0 {
 				continue
 			}
+			//init round with event's if not ran far away
+			if round == 0 {
+				global, _ := edb.GetGlobal()
+				round = global.Round
+				//if good start (not missed period)
+				if global.Round+period > e[0].BlockNumber {
+					round = e[0].BlockNumber - 1
+				}
+			}
 			if round > e[0].BlockNumber {
 				logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
 					"events for round %v recieved after events for ruond %v", e[0].BlockNumber, round))
 				continue
 			}
-			//if round+1 != e[0].BlockNumber {
-			//	logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
-			//		"events for round %v recieved instead", round+1, e[0].BlockNumber))
-			//	continue
-			//}
+			if round+1 != e[0].BlockNumber {
+				logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
+					"events for round %v recieved instead", round+1, e[0].BlockNumber))
+				continue
+			}
 
 			round = e[0].BlockNumber
 			edb.updateBlobberAggregate(round, period, gs)
