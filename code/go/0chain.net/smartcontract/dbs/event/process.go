@@ -136,6 +136,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 	logging.Logger.Info("round events worker started")
 	var round int64
+	global, _ := edb.GetGlobal()
+	round = global.Round
+
 	var gs = newGlobalSnapshot()
 	for {
 		select {
