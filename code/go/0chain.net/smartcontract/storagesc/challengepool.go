@@ -68,7 +68,7 @@ func (cp *challengePool) save(sscKey, allocationID string,
 	balances cstate.StateContextI) (err error) {
 
 	r, err := balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
-	logging.Logger.Debug("after save challenge pool", zap.String("root", r))
+	logging.Logger.Debug("after save challenge pool", zap.String("root", util.ToHex([]byte(r))))
 
 	return
 }

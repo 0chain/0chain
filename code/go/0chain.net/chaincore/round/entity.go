@@ -305,6 +305,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) {
 	for i, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
 			if blk != b {
+				blk.MergeVerificationTickets(b.GetVerificationTickets())
 				b.MergeVerificationTickets(blk.GetVerificationTickets())
 			}
 			logging.Logger.Debug("add notarized block - block already exist, merge tickets",
