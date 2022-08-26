@@ -769,7 +769,6 @@ func (b *Block) Clone() *Block {
 	b.stateMutex.RLock()
 	if b.ClientState != nil {
 		clone.CreateState(b.ClientState.GetNodeDB(), b.ClientStateHash)
-		//clone.ClientState.SetChangeCollector(b.ClientState.GetChangeCollector())
 	}
 	b.stateMutex.RUnlock()
 

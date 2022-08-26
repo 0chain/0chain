@@ -33,9 +33,12 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 	ts := time.Now()
 
 	defer func() {
-		logging.Logger.Debug("event db - update reward",
-			zap.Any("duration", time.Since(ts)),
-			zap.Int("update items", len(spu.DelegateRewards)))
+		du := time.Since(ts)
+		if du > 50*time.Millisecond {
+			logging.Logger.Debug("event db - update reward slow",
+				zap.Any("duration", du),
+				zap.Int("update items", len(spu.DelegateRewards)))
+		}
 	}()
 
 	var (
