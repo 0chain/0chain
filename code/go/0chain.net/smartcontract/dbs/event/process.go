@@ -74,13 +74,12 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		events := <-edb.eventsChannel
-		ts := time.Now()
 		edb.addEvents(ctx, events)
 		for _, event := range events {
 			var err error = nil
 			switch EventType(event.Type) {
 			case TypeStats:
-				ts = time.Now()
+				ts := time.Now()
 				err = edb.addStat(event)
 				du := time.Since(ts)
 				if du.Milliseconds() > 50 {
