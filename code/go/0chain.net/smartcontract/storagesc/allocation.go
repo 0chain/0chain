@@ -190,19 +190,15 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"malformed request: %v", err)
 	}
 
-	// todo If sa.Owner = "", there is both code to return an error or set owner to txn.ClientId. Find out which we should do.
-	//if request.Owner == "" {
-	//	request.Owner = txn.ClientID
-	//	request.OwnerPublicKey = txn.PublicKey
-	//}
-	if request.OwnerPublicKey == "" {
-		return "", errors.New("missing owner public key")
-	}
 	if request.Owner == "" {
-		return "", errors.New("missing owner id")
+		request.Owner = txn.ClientID
+		request.OwnerPublicKey = txn.PublicKey
 	}
 
 	sa, blobberNodes, err := sc.setupNewAllocation(request, m, txn, conf, balances)
+	if err != nil {
+		return "", err
+	}
 
 	for _, b := range blobberNodes {
 		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b.StorageNode)
