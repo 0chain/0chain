@@ -49,17 +49,6 @@ func TestStorageAllocation_validate(t *testing.T) {
 	alloc.Expiration = 150 + toSeconds(48*time.Hour)
 	alloc.DataShards = 0
 	requireErrMsg(t, alloc.validate(now, &conf), errMsg5)
-
-	alloc.DataShards = 1
-	alloc.OwnerPublicKey = ""
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg6)
-
-	alloc.OwnerPublicKey = "pk_hex"
-	alloc.Owner = ""
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg7)
-
-	alloc.Owner = "client_hex"
-	assert.NoError(t, alloc.validate(now, &conf))
 }
 
 func TestStorageAllocation_filterBlobbers(t *testing.T) {
