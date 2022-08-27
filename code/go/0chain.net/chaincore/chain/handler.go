@@ -49,12 +49,6 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 			),
 		),
-		"/v1/chain/put": common.Recover(
-			datastore.ToJSONEntityReqResponse(
-				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
-				chainEntityMetadata,
-			),
-		),
 		"/v1/block/get/latest_finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
