@@ -88,8 +88,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/alloc_write_marker_count", srh.getWriteMarkerCount),
 		rest.MakeEndpoint(storage+"/collected_reward", srh.getCollectedReward),
 		rest.MakeEndpoint(storage+"/blobber_ids", srh.getBlobberIdsByUrls),
-		rest.MakeEndpoint(storage+"/alloc-blobbers", srh.getAllocationBlobbers),
-		rest.MakeEndpoint(storage+"/free-alloc-blobbers", srh.getFreeAllocationBlobbers),
+		rest.MakeEndpoint(storage+"/alloc_blobbers", srh.getAllocationBlobbers),
+		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
 		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
@@ -335,7 +335,7 @@ func (nar *allocationBlobbersRequest) decode(b []byte) error {
 	return json.Unmarshal(b, nar)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobbers alloc-blobbers
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers alloc_blobbers
 // returns list of all blobbers alive that match the allocation request.
 //
 // parameters:
