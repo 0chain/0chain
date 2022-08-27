@@ -426,6 +426,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related stake pool: %v", err)
 	}
 
+	details.Stats.NumReads++
+	alloc.Stats.NumReads++
+
 	resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
 		commitRead.ReadMarker.BlobberID, sp, value, balances)
 	if err != nil {
@@ -511,6 +514,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("saving read marker", err.Error())
 	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	err = emitAddOrOverwriteReadMarker(commitRead.ReadMarker, balances, t)
 	if err != nil {
