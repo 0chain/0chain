@@ -42,13 +42,13 @@ const (
 func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
-		"/v1/chain/get": common.Recover(
-			common.ToJSONResponse(
-				memorystore.WithConnectionHandler(
-					GetChainHandler,
-				),
-			),
-		),
+		// "/v1/chain/get": common.Recover(
+		// 	common.ToJSONResponse(
+		// 		memorystore.WithConnectionHandler(
+		// 			GetChainHandler,
+		// 		),
+		// 	),
+		// ),
 		"/v1/chain/put": common.Recover(
 			datastore.ToJSONEntityReqResponse(
 				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),

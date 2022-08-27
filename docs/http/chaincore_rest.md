@@ -9,7 +9,7 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/chain/get | GetChainHandler |
+<!-- | /v1/chain/get | GetChainHandler | -->
 | /v1/chain/put | PutChainHandler |
 | /v1/block/get | GetBlockHandler |
 | /v1/block/get/latest_finalized | LatestFinalizedBlockHandler |

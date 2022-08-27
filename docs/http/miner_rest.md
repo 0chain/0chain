@@ -9,7 +9,7 @@ File: 0Chain/code/go/0chain.net/miner/handler.go
 
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
-| /v1/chain/get/stats | ChainStatsHandler |
+<!-- | /v1/chain/get/stats | ChainStatsHandler | -->
 | /_chain_stats | ChainStatsWriter |
 | /_diagnostics/wallet_stats | GetWalletStats |
 | /v1/miner/get/stats | MinerStatsHandler |
