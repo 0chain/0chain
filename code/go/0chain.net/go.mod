@@ -10,7 +10,7 @@ require (
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/gocql/gocql v1.1.0
 	github.com/golang/snappy v0.0.4
-	github.com/gomodule/redigo v1.8.8
+	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef
