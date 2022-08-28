@@ -134,7 +134,7 @@ func (c *Client) callAddMiner(t *testing.T, msc *MinerSmartContract,
 		input = c.addNodeRequest(t, delegateWallet)
 		gn    *GlobalNode
 	)
-	gn, err = GetGlobalNode(balances)
+	gn, err = getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
 	return msc.AddMiner(tx, input, gn, balances)
 }
@@ -149,7 +149,7 @@ func (c *Client) callAddSharder(t *testing.T, msc *MinerSmartContract,
 		input = c.addNodeRequest(t, delegateWallet)
 		gn    *GlobalNode
 	)
-	gn, err = GetGlobalNode(balances)
+	gn, err = getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
 	return msc.AddSharder(tx, input, gn, balances)
 }
@@ -192,7 +192,7 @@ func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
 		input = c.addToDelegatePoolRequest(t, nodeID)
 		gn    *GlobalNode
 	)
-	gn, err = GetGlobalNode(balances)
+	gn, err = getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
 	return msc.addToDelegatePool(tx, input, gn, balances)
 }
@@ -272,7 +272,7 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 func setRounds(t *testing.T, _ *MinerSmartContract, last, vc int64,
 	balances cstate.StateContextI) {
 
-	var gn, err = GetGlobalNode(balances)
+	var gn, err = getGlobalNode(balances)
 	require.NoError(t, err, "getting global node")
 	gn.LastRound = last
 	gn.ViewChange = vc
@@ -303,7 +303,7 @@ func (msc *MinerSmartContract) configHandler(
 	_ url.Values,
 	balances cstate.StateContextI,
 ) (interface{}, error) {
-	gn, err := GetGlobalNode(balances)
+	gn, err := getGlobalNode(balances)
 	if err != nil {
 		return nil, common.NewErrInternal(err.Error())
 	}

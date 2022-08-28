@@ -80,7 +80,7 @@ func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 }
 
 func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
-	n, err := GetGlobalNode(balances)
+	n, err := getGlobalNode(balances)
 	if err != nil {
 		return math.MaxInt32, err
 	}
@@ -117,7 +117,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances cstate.StateContextI) (
 	string, error) {
 
-	gn, err := GetGlobalNode(balances)
+	gn, err := getGlobalNode(balances)
 	if err != nil {
 		return "", common.NewError("failed_to_get_global_node", err.Error())
 	}
@@ -132,7 +132,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	return scFunc(t, input, gn, balances)
 }
 
-func GetGlobalNode(
+func getGlobalNode(
 	balances cstate.CommonStateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
@@ -152,4 +152,25 @@ func GetGlobalNode(
 	}
 
 	return gn, nil
+}
+
+func ReadConfig(
+	balances cstate.CommonStateContextI,
+) (err error) {
+	gn := new(GlobalNode)
+	err = balances.GetTrieNode(GlobalNodeKey, gn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return err
+		}
+		err = gn.readConfig()
+		if err != nil {
+			return fmt.Errorf("error reading config: %v", err)
+		}
+		if err := gn.validate(); err != nil {
+			return fmt.Errorf("validating global node: %v", err)
+		}
+		return nil
+	}
+	return nil
 }

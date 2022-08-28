@@ -570,7 +570,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(state)
 
-	_, err := minersc.GetGlobalNode(state)
+	err := minersc.ReadConfig(state)
 	if err != nil {
 		logging.Logger.Error("chain.stateDB getGlobalNode failed", zap.Error(err))
 		panic(err)

@@ -73,7 +73,7 @@ func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) er
 	}
 	b.StartTimer()
 
-	gn, err := GetGlobalNode(balances)
+	gn, err := getGlobalNode(balances)
 	if err != nil {
 		panic(err)
 	}

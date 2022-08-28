@@ -194,7 +194,7 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) {
-	gn, err := GetGlobalNode(mrh.GetQueryStateContext())
+	gn, err := getGlobalNode(mrh.GetQueryStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
