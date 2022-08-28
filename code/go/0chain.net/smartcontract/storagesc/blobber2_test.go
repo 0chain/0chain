@@ -290,6 +290,7 @@ func testCommitBlobberRead(
 				Terms: Terms{
 					ReadPrice: zcnToBalance(blobberYaml.readPrice),
 				},
+				Stats: &StorageAllocationStats{},
 			},
 		},
 		Owner: client.id,
