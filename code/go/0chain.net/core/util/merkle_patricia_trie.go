@@ -141,6 +141,10 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value MPTSerializable) (Key, er
 		return mpt.Delete(path)
 	}
 
+	if len(eval) > MPTMaxAllowableNodeSize {
+		return nil, errors.New("node exceeds maximum permissible size")
+	}
+
 	valueCopy := &SecureSerializableValue{eval}
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()

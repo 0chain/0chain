@@ -91,12 +91,13 @@ func GetPruneStats(ctx context.Context) *PruneStats {
 }
 
 const (
-	PruneStateStart     = "started"
-	PruneStateUpdate    = "updating"
-	PruneStateSynch     = "synching"
-	PruneStateDelete    = "deleting"
-	PruneStateCommplete = "completed"
-	PruneStateAbandoned = "abandoned"
+	PruneStateStart         = "started"
+	PruneStateUpdate        = "updating"
+	PruneStateSynch         = "synching"
+	PruneStateDelete        = "deleting"
+	PruneStateCommplete     = "completed"
+	PruneStateAbandoned     = "abandoned"
+	MPTMaxAllowableNodeSize = 1000000 // 1 MB
 )
 
 /*PruneStats - gathers statistics while pruning */
