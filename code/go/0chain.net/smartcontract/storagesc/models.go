@@ -899,7 +899,11 @@ func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
 }
 
 func (sa *StorageAllocation) bSize() int64 {
-	return int64(math.Ceil(float64(sa.Size) / float64(sa.DataShards)))
+	return bSize(sa.Size, sa.DataShards)
+}
+
+func bSize(size int64, dataShards int) int64 {
+	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
 func (sa *StorageAllocation) removeBlobber(

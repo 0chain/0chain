@@ -393,7 +393,6 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 }
 
 func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination) ([]string, error) {
-	var sa = StorageAllocation{}
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -401,9 +400,6 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 	}
 
 	var creationDate = balances.Now()
-	//sa.TimeUnit = conf.TimeUnit // keep the initial time unit
-
-	// number of blobbers required
 	var numberOfBlobbers = request.DataShards + request.ParityShards
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
 		return nil, common.NewErrorf("allocation_creation_failed",
@@ -412,10 +408,10 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 
 	if request.DataShards <= 0 || request.ParityShards < 0 {
 		return nil, common.NewErrorf("allocation_creation_failed",
-			"invalid data shards:%v or parity shards:%v", sa.DataShards, sa.ParityShards)
+			"invalid data shards:%v or parity shards:%v", request.DataShards, request.ParityShards)
 	}
-	// size of allocation for a blobber
-	var allocationSize = int64(math.Ceil(float64(request.Size) / float64(request.DataShards)))
+
+	var allocationSize = bSize(request.Size, request.DataShards)
 
 	dur := common.ToTime(request.Expiration).Sub(common.ToTime(creationDate))
 	allocation := event.AllocationQuery{
