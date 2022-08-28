@@ -1315,21 +1315,21 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 	for _, ba := range alloc.BlobberAllocs {
 		if ba.Stats == nil {
 			ba.Stats = new(StorageAllocationStats)
-		}
-		ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
-		ba.Stats.OpenChallenges = 0
-		ba.Stats.TotalChallenges = ba.Stats.FailedChallenges + ba.Stats.SuccessChallenges
-		if ba.Stats.TotalChallenges == 0 {
 			passRates = append(passRates, 1.0)
 			continue
 		}
+		ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
+		ba.Stats.OpenChallenges = 0
+		if ba.Stats.TotalChallenges == 0 {
+			return nil, errors.New("empty total challenges")
+		}
+
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 		succesful += ba.Stats.SuccessChallenges
 		failed += ba.Stats.FailedChallenges
 	}
 	alloc.Stats.SuccessChallenges = succesful
 	alloc.Stats.FailedChallenges = failed
-	alloc.Stats.TotalChallenges = alloc.Stats.FailedChallenges + alloc.Stats.FailedChallenges
 	alloc.Stats.OpenChallenges = 0
 	return passRates, nil
 }
@@ -1360,9 +1360,6 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			//if c.Responded || c.AllocationID != alloc.ID {
-			//	continue // already accepted, already rewarded/penalized
-			//}
 			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime())
 			if expire < now {
 				ba.Stats.FailedChallenges++
@@ -1379,8 +1376,8 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 
 	for _, ba := range alloc.BlobberAllocs {
 
+		ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
 		ba.Stats.OpenChallenges = 0
-		ba.Stats.TotalChallenges = ba.Stats.SuccessChallenges + ba.Stats.FailedChallenges
 		if ba.Stats.TotalChallenges == 0 {
 			passRates = append(passRates, 1.0)
 			continue
@@ -1394,7 +1391,6 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 
 	alloc.Stats.SuccessChallenges = successful
 	alloc.Stats.FailedChallenges = failed
-	alloc.Stats.TotalChallenges = alloc.Stats.SuccessChallenges + alloc.Stats.FailedChallenges
 	alloc.Stats.OpenChallenges = 0
 	return passRates, nil
 }
