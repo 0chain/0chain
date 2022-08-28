@@ -66,9 +66,9 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-func (edb *EventDb) addEvents(ctx context.Context, events []Event) {
-	if edb.Store != nil && len(events) > 0 {
-		edb.Store.Get().WithContext(ctx).Create(&events)
+func (edb *EventDb) addEvents(ctx context.Context, events blockEvents) {
+	if edb.Store != nil && len(events.events) > 0 {
+		edb.Store.Get().WithContext(ctx).Create(&events.events)
 	}
 }
 

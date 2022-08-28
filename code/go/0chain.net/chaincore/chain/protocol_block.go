@@ -6,17 +6,16 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/maths"
 	"0chain.net/core/util"
-
-	"0chain.net/chaincore/block"
-	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -225,15 +224,18 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 	return true
 }
 
-/*UpdateNodeState - based on the incoming valid blocks, update the nodes that notarized the block to be active
- Useful to increase the speed of node status discovery which increases the reliablity of the network
+/*
+UpdateNodeState - based on the incoming valid blocks, update the nodes that notarized the block to be active
+
+	Useful to increase the speed of node status discovery which increases the reliablity of the network
+
 Simple 3 miner scenario :
 
-1) a discovered b & c.
-2) b discovered a.
-3) b and c are yet to discover each other
-4) a generated a block and sent it to b & c, got it notarized and next round started
-5) c is the generator who generated the block. He will only send it to a as b is not discovered to be active.
+ 1. a discovered b & c.
+ 2. b discovered a.
+ 3. b and c are yet to discover each other
+ 4. a generated a block and sent it to b & c, got it notarized and next round started
+ 5. c is the generator who generated the block. He will only send it to a as b is not discovered to be active.
     But if the prior block has b's signature (may or may not, but if it did), c can discover b is active before generating the block and so will send it to b
 */
 func (c *Chain) UpdateNodeState(b *block.Block) {
@@ -377,7 +379,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() {
-			c.GetEventDb().AddEvents(ctx, fb.Events)
+			c.GetEventDb().AddEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
 			fb.Events = nil
 		})
 	}
@@ -471,7 +473,7 @@ func (wgs *waitGroupSync) Wait() {
 	wgs.wg.Wait()
 }
 
-//IsFinalizedDeterministically - checks if a block is finalized deterministically
+// IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	//TODO: The threshold count should happen w.r.t the view of the block
 	mb := c.GetMagicBlock(b.Round)
@@ -770,7 +772,7 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 	return pb
 }
 
-//Note: this is expected to work only for small forks
+// Note: this is expected to work only for small forks
 func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.Block) *block.Block {
 	if b1 == nil || b2 == nil {
 		return nil
