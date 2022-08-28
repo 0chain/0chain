@@ -116,7 +116,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Events emission
 	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent())
 
-	return string(input), nil
+	return string(authorizer.Encode()), nil
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
