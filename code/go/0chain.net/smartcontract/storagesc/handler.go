@@ -2062,8 +2062,8 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 	common.Respond(w, r, transaction, nil)
 }
 
-// swagger:model storageNodesResponse
-type storageNodesResponse struct {
+// swagger:model storageNodesPlusStake
+type storageNodesPlusStake struct {
 	Nodes []storageNodePlusStake
 }
 
@@ -2152,7 +2152,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	sns := storageNodesResponse{
+	sns := storageNodesPlusStake{
 		Nodes: make([]storageNodePlusStake, 0, len(blobbers)),
 	}
 
@@ -2364,7 +2364,7 @@ func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Req
 //      type: string
 //
 // responses:
-//  200: storageNodesResponse
+//  200: storageNodesPlusStake
 //  400:
 //  500:
 func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request) {
