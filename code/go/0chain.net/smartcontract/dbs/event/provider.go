@@ -12,7 +12,6 @@ import (
 
 func (edb *EventDb) healthCheck(check dbs.HealthCheck) error {
 	updates := dbs.NewDbUpdates(check.ProviderId)
-
 	updates.Updates["last_health_check"] = check.Now
 	timeSinceLastHeathCheck := check.Now - check.LastHealthCheck
 	if timeSinceLastHeathCheck.Duration() > check.HealthCheckPeriod {
