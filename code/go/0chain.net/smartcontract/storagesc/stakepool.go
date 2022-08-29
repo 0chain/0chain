@@ -272,17 +272,7 @@ func (sp *stakePool) slash(
 	return
 }
 
-// unallocated capacity of related blobber, excluding delegate pools want to
-// unstake.
-func (sp *stakePool) unallocatedCapacity(writePrice currency.Coin) (free int64, err error) {
-
-	staked, err := sp.stake()
-	if err != nil {
-		return
-	}
-	var total, offers = staked, sp.TotalOffers
-	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
-		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
+func unallocatedCapacity(writePrice, total, offers currency.Coin) (free int64, err error) {
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater than the clean stake
 		return

@@ -817,7 +817,7 @@ func (sa *StorageAllocation) moveFromChallengePool(
 
 func (sa *StorageAllocation) validateAllocationBlobber(
 	blobber *StorageNode,
-	sp *stakePool,
+	total, offers currency.Coin,
 	now common.Timestamp,
 ) error {
 	bSize := sa.bSize()
@@ -848,7 +848,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 		return fmt.Errorf("blobber %s failed health check", blobber.ID)
 	}
 
-	unallocCapacity, err := sp.unallocatedCapacity(blobber.Terms.WritePrice)
+	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, total, offers)
 	if err != nil {
 		return fmt.Errorf("failed to get unallocated capacity: %v", err)
 	}
@@ -1003,7 +1003,11 @@ func (sa *StorageAllocation) changeBlobbers(
 	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
-	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {
+	staked, err := sp.stake()
+	if err != nil {
+		return nil, err
+	}
+	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now); err != nil {
 		return nil, err
 	}
 
@@ -1164,22 +1168,22 @@ List:
 }
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
-func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
-	creationDate common.Timestamp) (
-	[]*blobberWithPool, []string) {
-
+func (sa *StorageAllocation) validateEachBlobber(
+	blobbers []storageNodePlusStake,
+	creationDate common.Timestamp,
+) ([]*StorageNode, []string) {
 	var (
 		errors   = make([]string, 0, len(blobbers))
-		filtered = make([]*blobberWithPool, 0, len(blobbers))
+		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
-		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate)
+		err := sa.validateAllocationBlobber(&b.StorageNode, b.TotalStake, b.TotalOffers, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errors = append(errors, err.Error())
 			continue
 		}
-		filtered = append(filtered, b)
+		filtered = append(filtered, &b.StorageNode)
 	}
 	return filtered, errors
 }

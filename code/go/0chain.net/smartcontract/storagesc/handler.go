@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	ccsc "0chain.net/chaincore/smartcontract"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
@@ -1583,8 +1581,6 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		return
 	}
 
-	var ssc = StorageSmartContract{SmartContract: sci.NewSC(ADDRESS)}
-	ssc.setSC(ssc.SmartContract, &ccsc.BCContext{})
 	conf, err := getConfig(balances)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
@@ -1595,8 +1591,21 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
-	sa, _, err := ssc.setupNewAllocation(
+
+	blobbers, err := edb.GetBlobbersFromIDs(request.Blobbers)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	var sns []storageNodePlusStake
+	for _, b := range blobbers {
+		sn := blobberTableToStorageNode(b)
+		sns = append(sns, sn)
+	}
+
+	sa, _, err := setupNewAllocation(
 		request,
+		sns,
 		Timings{timings: nil, start: time.Now()},
 		&transaction.Transaction{
 			CreationDate: balances.Now(),
@@ -2055,19 +2064,20 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 
 // swagger:model storageNodesResponse
 type storageNodesResponse struct {
-	Nodes []storageNodeResponse
+	Nodes []storageNodePlusStake
 }
 
 // StorageNode represents Blobber configurations.
-type storageNodeResponse struct {
+type storageNodePlusStake struct {
 	StorageNode
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 	TotalStake         currency.Coin `json:"total_stake"`
 	UsedAllocation     int64         `json:"used_allocation"`
+	TotalOffers        currency.Coin `json:"total_offers"`
 }
 
-func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
-	return storageNodeResponse{
+func blobberTableToStorageNode(blobber event.Blobber) storageNodePlusStake {
+	return storageNodePlusStake{
 		StorageNode: StorageNode{
 			ID:      blobber.BlobberID,
 			BaseURL: blobber.BaseURL,
@@ -2101,6 +2111,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		TotalServiceCharge: blobber.TotalServiceCharge,
 		TotalStake:         blobber.TotalStake,
 		UsedAllocation:     blobber.Used,
+		TotalOffers:        blobber.OffersTotal,
 	}
 }
 
@@ -2121,7 +2132,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 //      in: query
 //      type: string
 // responses:
-//  200: storageNodeResponse
+//  200: storageNodePlusStake
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2142,7 +2153,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	}
 
 	sns := storageNodesResponse{
-		Nodes: make([]storageNodeResponse, 0, len(blobbers)),
+		Nodes: make([]storageNodePlusStake, 0, len(blobbers)),
 	}
 
 	for _, blobber := range blobbers {
