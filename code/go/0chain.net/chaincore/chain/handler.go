@@ -48,12 +48,6 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 			),
 		),
-		coreEndpoint.PutChain: common.Recover(
-			datastore.ToJSONEntityReqResponse(
-				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
-				chainEntityMetadata,
-			),
-		),
 		coreEndpoint.GetLatestFinalizedBlock: common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,

@@ -58,7 +58,6 @@ const (
 const (
 	GetChain      = "/v1/chain/get"
 	GetChainStats = "/v1/chain/get/stats"
-	PutChain      = "/v1/chain/put"
 )
 
 const (
