@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -146,12 +147,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 		BlobberAllocs: []*BlobberAllocation{},
 		Owner:         ownerId,
 		Expiration:    now,
-		Stats: &StorageAllocationStats{
-			OpenChallenges: 3,
-		},
-		Size:      4560,
-		UsedSize:  456,
-		WritePool: 77777,
+		Stats:         &StorageAllocationStats{},
+		Size:          4560,
+		UsedSize:      456,
+		WritePool:     77777,
 	}
 	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
@@ -174,17 +173,22 @@ func TestCancelAllocationRequest(t *testing.T) {
 		})
 		stake = stake / 10
 		if i < allocation.DataShards+allocation.ParityShards {
-			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
+			ba := &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
 				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
-					UsedSize:          blobberUsedSize,
-					OpenChallenges:    int64(i + 1),
-					SuccessChallenges: int64(i),
+					UsedSize:        blobberUsedSize,
+					OpenChallenges:  int64(i + 1),
+					TotalChallenges: int64(i + 1),
 				},
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
-			})
+			}
+
+			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
+			allocation.Stats.OpenChallenges += ba.Stats.OpenChallenges
+			allocation.Stats.TotalChallenges += ba.Stats.TotalChallenges
+
 			challenges = append(challenges, []common.Timestamp{})
 			for j := 0; j < int(allocation.BlobberAllocs[i].Stats.OpenChallenges); j++ {
 				var expires = now - common.Timestamp(float64(j)*float64(blobberYaml.challengeCompletionTime)/3.0)
@@ -292,15 +296,15 @@ func TestFinalizeAllocation(t *testing.T) {
 				BlobberID: nextBlobber.ID,
 				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
-					UsedSize:          blobberUsedSize,
-					OpenChallenges:    int64(i + 1),
-					SuccessChallenges: int64(i),
-					TotalChallenges:   int64(i + 1 + i), // add open challenges and success challenges
+					UsedSize:        blobberUsedSize,
+					OpenChallenges:  int64(i + 1),
+					TotalChallenges: int64(i + 1), // add open challenges and success challenges
 				},
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
 			}
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
+			allocation.Stats.OpenChallenges += ba.Stats.OpenChallenges
 			allocation.Stats.TotalChallenges += ba.Stats.TotalChallenges
 		}
 	}
@@ -356,16 +360,16 @@ func testCancelAllocation(
 	)
 
 	require.True(t, len(challenges) <= len(blobbers))
+
+	ac := AllocationChallenges{
+		AllocationID: sAllocation.ID,
+	}
+
 	for i, blobberChallenges := range challenges {
-
 		blobberID := strconv.Itoa(i)
-
-		var ac = AllocationChallenges{
-			AllocationID: sAllocation.ID,
-		}
 		for _, created := range blobberChallenges {
 			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
-				//AllocationID: sAllocation.ID,
+				ID:        fmt.Sprintf("%s:%s:%v", sAllocation.ID, blobberID, created),
 				BlobberID: blobberID,
 				CreatedAt: created,
 			})
@@ -469,7 +473,7 @@ func confirmFinalizeAllocation(
 
 	for i, sp := range sps {
 		serviceCharge := f.blobberServiceCharge(i) + f.minLockServiceCharge(i)
-		require.InDelta(t, serviceCharge, int64(sp.Reward), errDelta)
+		require.Equal(t, serviceCharge, int64(sp.Reward))
 		for poolId, dp := range sp.Pools {
 			wSplit := strings.Split(poolId, " ")
 			dId, err := strconv.Atoi(wSplit[2])

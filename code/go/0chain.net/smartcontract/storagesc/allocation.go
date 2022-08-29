@@ -1344,7 +1344,6 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		alloc.Stats = &StorageAllocationStats{}
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberAllocs))
-	var failed, successful int64 = 0, 0
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	switch err {
@@ -1368,6 +1367,8 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 				ba.Stats.SuccessChallenges++
 				alloc.Stats.SuccessChallenges++
 			}
+			ba.Stats.OpenChallenges--
+			alloc.Stats.OpenChallenges--
 		}
 
 	default:
@@ -1375,9 +1376,15 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	}
 
 	for _, ba := range alloc.BlobberAllocs {
+		if ba.Stats.OpenChallenges > 0 {
+			logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
 
-		ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
-		ba.Stats.OpenChallenges = 0
+			ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
+			alloc.Stats.FailedChallenges += ba.Stats.OpenChallenges
+
+			ba.Stats.OpenChallenges = 0
+		}
+
 		if ba.Stats.TotalChallenges == 0 {
 			passRates = append(passRates, 1.0)
 			continue
@@ -1385,12 +1392,8 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		// success rate for the blobber allocation
 		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
-		successful += ba.Stats.SuccessChallenges
-		failed += ba.Stats.FailedChallenges
 	}
 
-	alloc.Stats.SuccessChallenges = successful
-	alloc.Stats.FailedChallenges = failed
 	alloc.Stats.OpenChallenges = 0
 	return passRates, nil
 }
