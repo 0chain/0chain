@@ -11,6 +11,8 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	sharderEndpoint "0chain.net/sharder/endpoint"
 )
 
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
@@ -18,10 +20,10 @@ func SetupM2SReceivers() {
 	sc := GetSharderChain()
 	options := &node.ReceiveOptions{}
 	options.MessageFilter = sc
-	http.HandleFunc("/v1/_m2s/block/finalized", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(FinalizedBlockHandler(sc), options)))
-	http.HandleFunc("/v1/_m2s/block/notarized", common.N2NRateLimit(node.RejectDuplicateNotarizedBlockHandler(
+	http.HandleFunc(sharderEndpoint.MinerToSharderGetFinalizedBlock, common.N2NRateLimit(node.ToN2NReceiveEntityHandler(FinalizedBlockHandler(sc), options)))
+	http.HandleFunc(sharderEndpoint.MinerToSharderGetNotarisedBlock, common.N2NRateLimit(node.RejectDuplicateNotarizedBlockHandler(
 		sc, node.ToN2NReceiveEntityHandler(NotarizedBlockHandler(sc), options))))
-	http.HandleFunc("/v1/_m2s/block/notarized/kick", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockKickHandler(sc), nil)))
+	http.HandleFunc(sharderEndpoint.MinerToSharderKickNotarisedBlock, common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockKickHandler(sc), nil)))
 }
 
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
@@ -49,7 +51,7 @@ func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 
 /*SetupM2SResponders - setup handlers for all the requests from the miner */
 func SetupM2SResponders(sc Chainer) {
-	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", common.N2NRateLimit(
+	http.HandleFunc(sharderEndpoint.MinerToSharderGetLatestFinalizedBlock, common.N2NRateLimit(
 		node.ToS2MSendEntityHandler(LatestFinalizedBlockHandler(sc))))
 }
 

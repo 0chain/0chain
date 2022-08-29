@@ -25,8 +25,11 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	coreEndpoint "0chain.net/core/endpoint"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	minerEndpoint "0chain.net/miner/endpoint"
+	sharderEndpoint "0chain.net/sharder/endpoint"
 	"go.uber.org/zap"
 )
 
@@ -37,16 +40,13 @@ import (
 //SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
 
-const clientBalanceURL = "v1/client/get/balance?client_id="
-const txnSubmitURL = "v1/transaction/put"
-const txnVerifyURL = "v1/transaction/get/confirmation?hash="
-const specificMagicBlockURL = "v1/block/magic/get?magic_block_number="
-const scRestAPIURL = "v1/screst/"
-const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
-const finalizeBlockURL = "v1/block/get/latest_finalized"
-
-//RegisterClient path to RegisterClient
-const RegisterClient = "/v1/client/put"
+const clientBalanceURL = minerEndpoint.GetClientBalance + "?client_id="
+const txnSubmitURL = minerEndpoint.PutTransaction
+const txnVerifyURL = sharderEndpoint.GetTransactionConfirmation + "?hash="
+const specificMagicBlockURL = sharderEndpoint.GetMagicBlock + "?magic_block_number="
+const scRestAPIURL = sharderEndpoint.SmartContractFunction
+const magicBlockURL = coreEndpoint.GetLatestFinalizedMagicBlock
+const finalizeBlockURL = coreEndpoint.GetLatestFinalizedBlock
 
 var httpClient *http.Client
 
@@ -143,7 +143,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 //SendTransaction send a transaction
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	for _, u := range urls {
-		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
+		txnURL := fmt.Sprintf("%v%v", u, txnSubmitURL)
 		go func(url string) {
 			if _, err := sendTransactionToURL(url, txn, ID, pkey, nil); err != nil {
 				logging.Logger.Error("send transaction failed",
@@ -167,7 +167,7 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 
 	// currently transaction information an be obtained only from sharders
 	for _, sharder := range urls {
-		urlString := fmt.Sprintf("%v/%v%v", sharder, txnVerifyURL, txnHash)
+		urlString := fmt.Sprintf("%v%v%v", sharder, txnVerifyURL, txnHash)
 		response, err := httpClient.Get(urlString)
 		if err != nil {
 			logging.N2n.Error("get transaction status -- failed", zap.Any("error", err))
@@ -298,7 +298,7 @@ func MakeClientStateRequest(ctx context.Context, clientID string, urls []string,
 	var errString string
 
 	for _, sharder := range urls {
-		u := fmt.Sprintf("%v/%v%v", sharder, clientBalanceURL, clientID)
+		u := fmt.Sprintf("%v%v%v", sharder, clientBalanceURL, clientID)
 
 		logging.N2n.Info("Running GetClientBalance on", zap.String("url", u))
 
@@ -387,7 +387,7 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 		wg.Add(1)
 		go func(sharderURL string) {
 			defer wg.Done()
-			urlString := fmt.Sprintf("%v/%v%v%v", sharderURL, scRestAPIURL, scAddress, relativePath)
+			urlString := fmt.Sprintf("%v%v%v%v", sharderURL, scRestAPIURL, scAddress, relativePath)
 			logging.N2n.Info("Running SCRestAPI on", zap.String("urlString", urlString))
 			urlObj, _ := url.Parse(urlString)
 			q := urlObj.Query()
@@ -511,7 +511,7 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 		} else {
 			blockUrl = finalizeBlockURL
 		}
-		response, err := httpClient.Get(fmt.Sprintf("%v/%v", sharder, blockUrl))
+		response, err := httpClient.Get(fmt.Sprintf("%v%v", sharder, blockUrl))
 		if err != nil {
 			logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
@@ -628,7 +628,7 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 				default:
 				}
 			}
-		}(fmt.Sprintf("%v/%v%v", sharder, specificMagicBlockURL, number))
+		}(fmt.Sprintf("%v%v%v", sharder, specificMagicBlockURL, number))
 	}
 
 	go func() {
@@ -661,7 +661,7 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 	receivedBlock.MagicBlock = block.NewMagicBlock()
 
 	for _, sharder := range urls {
-		u := fmt.Sprintf("%v/%v%v", sharder, specificMagicBlockURL, strconv.FormatInt(magicBlockNumber, 10))
+		u := fmt.Sprintf("%v%v%v", sharder, specificMagicBlockURL, strconv.FormatInt(magicBlockNumber, 10))
 
 		retried := 0
 		var response *http.Response

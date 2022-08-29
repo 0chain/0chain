@@ -19,6 +19,8 @@ import (
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
+
+	minerEndpoint "0chain.net/miner/endpoint"
 )
 
 const (
@@ -179,7 +181,7 @@ func registerMPTWallet(w mptwallet.Wallet) {
 	}
 
 	for _, ip := range members.Miners {
-		body, err := httpclientutil.SendPostRequest(ip+httpclientutil.RegisterClient, data, "", "", nil)
+		body, err := httpclientutil.SendPostRequest(ip+minerEndpoint.PutClient, data, "", "", nil)
 		if err != nil {
 			Logger.Fatal("HTTP POST error", zap.Error(err), zap.Any("body", body))
 		}

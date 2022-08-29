@@ -18,6 +18,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
+
+	sharderEndpoint "0chain.net/sharder/endpoint"
 )
 
 var (
@@ -38,39 +40,35 @@ func SetupS2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundEntityMetadata := datastore.GetEntityMetadata("round")
 
-	RoundRequestor = node.RequestEntityHandler("/v1/_s2s/round/get", options, roundEntityMetadata)
+	RoundRequestor = node.RequestEntityHandler(sharderEndpoint.SharderToSharderGetRound, options, roundEntityMetadata)
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
-	BlockRequestor = node.RequestEntityHandler("/v1/_s2s/block/get", options, blockEntityMetadata)
+	BlockRequestor = node.RequestEntityHandler(sharderEndpoint.SharderToSharderGetBlock, options, blockEntityMetadata)
 
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
-	BlockSummaryRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummary/get", options, blockSummaryEntityMetadata)
+	BlockSummaryRequestor = node.RequestEntityHandler(sharderEndpoint.SharderToSharderGetBlockSummary, options, blockSummaryEntityMetadata)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundSummariesEntityMetadata := datastore.GetEntityMetadata("round_summaries")
-	RoundSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/roundsummaries/get", options, roundSummariesEntityMetadata)
+	RoundSummariesRequestor = node.RequestEntityHandler(sharderEndpoint.SharderToSharderGetRoundSummaries, options, roundSummariesEntityMetadata)
 
 	blockSummariesEntityMetadata := datastore.GetEntityMetadata("block_summaries")
-	BlockSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummaries/get", options, blockSummariesEntityMetadata)
+	BlockSummariesRequestor = node.RequestEntityHandler(sharderEndpoint.SharderToSharderGetBlockSummaries, options, blockSummariesEntityMetadata)
 }
 
 // SetupS2SResponders -
 func SetupS2SResponders() {
-	http.HandleFunc("/v1/_s2s/latest_round/get", node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
-	http.HandleFunc("/v1/_s2s/round/get", node.ToN2NSendEntityHandler(RoundRequestHandler))
-	http.HandleFunc("/v1/_s2s/roundsummaries/get", node.ToN2NSendEntityHandler(RoundSummariesHandler))
-	http.HandleFunc("/v1/_s2s/block/get", node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
-	http.HandleFunc("/v1/_s2s/blocksummary/get", node.ToN2NSendEntityHandler(BlockSummaryRequestHandler))
-	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
+	http.HandleFunc(sharderEndpoint.SharderToSharderGetLatestRound, node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
+	http.HandleFunc(sharderEndpoint.SharderToSharderGetRound, node.ToN2NSendEntityHandler(RoundRequestHandler))
+	http.HandleFunc(sharderEndpoint.SharderToSharderGetRoundSummaries, node.ToN2NSendEntityHandler(RoundSummariesHandler))
+	http.HandleFunc(sharderEndpoint.SharderToSharderGetBlock, node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
+	http.HandleFunc(sharderEndpoint.SharderToSharderGetBlockSummary, node.ToN2NSendEntityHandler(BlockSummaryRequestHandler))
+	http.HandleFunc(sharderEndpoint.SharderToSharderGetBlockSummaries, node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }
-
-const (
-	getBlockX2SV1Pattern = "/v1/_x2s/block/get"
-)
 
 func x2sRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	return map[string]func(http.ResponseWriter, *http.Request){
-		getBlockX2SV1Pattern: node.ToN2NSendEntityHandler(
+		sharderEndpoint.AnyServiceToSharderGetBlock: node.ToN2NSendEntityHandler(
 			// BlockRequestHandler - used by nodes to get missing FB by received LFB
 			// ticket from sharder sent the ticket.
 			RoundBlockRequestHandler,
