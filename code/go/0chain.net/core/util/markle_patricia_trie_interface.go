@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+// MPTMaxAllowableNodeSize - Maximum allowable size of MPT node
+const (
+	MPTMaxAllowableNodeSize = 1000000 // 1 MB
+)
+
 //ErrIteratingChildNodes - indicates an error iterting the child nodes
 var (
 	ErrIteratingChildNodes = errors.New("Error iterating child nodes")
@@ -91,13 +96,12 @@ func GetPruneStats(ctx context.Context) *PruneStats {
 }
 
 const (
-	PruneStateStart         = "started"
-	PruneStateUpdate        = "updating"
-	PruneStateSynch         = "synching"
-	PruneStateDelete        = "deleting"
-	PruneStateCommplete     = "completed"
-	PruneStateAbandoned     = "abandoned"
-	MPTMaxAllowableNodeSize = 1000000 // 1 MB
+	PruneStateStart     = "started"
+	PruneStateUpdate    = "updating"
+	PruneStateSynch     = "synching"
+	PruneStateDelete    = "deleting"
+	PruneStateCommplete = "completed"
+	PruneStateAbandoned = "abandoned"
 )
 
 /*PruneStats - gathers statistics while pruning */
