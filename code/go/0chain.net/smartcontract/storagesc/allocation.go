@@ -228,7 +228,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		})
 	}
 
-	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn, conf, balances)
+	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn, conf)
 	if err != nil {
 		return "", err
 	}
@@ -316,7 +316,6 @@ func setupNewAllocation(
 	m Timings,
 	txn *transaction.Transaction,
 	conf *Config,
-	balances chainstate.CommonStateContextI,
 ) (*StorageAllocation, []*StorageNode, error) {
 	var err error
 	m.tick("decode")
@@ -345,7 +344,7 @@ func setupNewAllocation(
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
 
-	blobberNodes, bSize, err := validateBlobbers(common.ToTime(txn.CreationDate), sa, balances, blobbers, conf)
+	blobberNodes, bSize, err := validateBlobbers(common.ToTime(txn.CreationDate), sa, blobbers, conf)
 	if err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error validating blobbers",
 			zap.String("txn", txn.Hash),
@@ -552,7 +551,6 @@ func (_ *StorageSmartContract) getBlobbers(
 func validateBlobbers(
 	creationDate time.Time,
 	sa *StorageAllocation,
-	balances chainstate.CommonStateContextI,
 	blobbers []storageNodeResponse,
 	conf *Config,
 ) ([]*StorageNode, int64, error) {
