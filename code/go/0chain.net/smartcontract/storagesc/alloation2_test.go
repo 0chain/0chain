@@ -288,17 +288,20 @@ func TestFinalizeAllocation(t *testing.T) {
 		})
 		stake = stake / 10
 		if i < allocation.DataShards+allocation.ParityShards {
-			allocation.BlobberAllocs = append(allocation.BlobberAllocs, &BlobberAllocation{
+			ba := &BlobberAllocation{
 				BlobberID: nextBlobber.ID,
 				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:          blobberUsedSize,
 					OpenChallenges:    int64(i + 1),
 					SuccessChallenges: int64(i),
+					TotalChallenges:   int64(i + 1 + i), // add open challenges and success challenges
 				},
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
-			})
+			}
+			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
+			allocation.Stats.TotalChallenges += ba.Stats.TotalChallenges
 		}
 	}
 	var challengePoolBalance = int64(700000)
