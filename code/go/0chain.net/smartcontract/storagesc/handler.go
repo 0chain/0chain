@@ -1597,7 +1597,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	var sns []storageNodePlusStake
+	var sns []storageNodeResponse
 	for _, b := range blobbers {
 		sn := blobberTableToStorageNode(b)
 		sns = append(sns, sn)
@@ -2062,14 +2062,14 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 	common.Respond(w, r, transaction, nil)
 }
 
-// swagger:model storageNodesPlusStake
-type storageNodesPlusStake struct {
-	Nodes []storageNodePlusStake
+// swagger:model storageNodesResponse
+type storageNodesResponse struct {
+	Nodes []storageNodeResponse
 }
 
 // StorageNode represents Blobber configurations.
-// swagger:model storageNodePlusStake
-type storageNodePlusStake struct {
+// swagger:model storageNodeResponse
+type storageNodeResponse struct {
 	StorageNode
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 	TotalStake         currency.Coin `json:"total_stake"`
@@ -2077,8 +2077,8 @@ type storageNodePlusStake struct {
 	TotalOffers        currency.Coin `json:"total_offers"`
 }
 
-func blobberTableToStorageNode(blobber event.Blobber) storageNodePlusStake {
-	return storageNodePlusStake{
+func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
+	return storageNodeResponse{
 		StorageNode: StorageNode{
 			ID:      blobber.BlobberID,
 			BaseURL: blobber.BaseURL,
@@ -2133,7 +2133,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodePlusStake {
 //      in: query
 //      type: string
 // responses:
-//  200: storageNodesPlusStake
+//  200: storageNodesResponse
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2153,8 +2153,8 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	sns := storageNodesPlusStake{
-		Nodes: make([]storageNodePlusStake, 0, len(blobbers)),
+	sns := storageNodesResponse{
+		Nodes: make([]storageNodeResponse, 0, len(blobbers)),
 	}
 
 	for _, blobber := range blobbers {
@@ -2365,7 +2365,7 @@ func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Req
 //      type: string
 //
 // responses:
-//  200: storageNodePlusStake
+//  200: storageNodeResponse
 //  400:
 //  500:
 func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request) {
