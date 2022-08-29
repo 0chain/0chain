@@ -1073,14 +1073,14 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		errMsg1 = "allocation_creation_failed: " +
 			"malformed request: unexpected end of JSON input"
+		errMsg2 = "allocation_creation_failed: " + "invalid number of data shards"
 		errMsg4 = "allocation_creation_failed: malformed request: " +
 			"invalid character '}' looking for beginning of value"
 		errMsg5 = "allocation_creation_failed: " +
 			"invalid request: invalid read_price range"
 		errMsg6 = "allocation_creation_failed: " +
-			"Blobbers provided are not enough to honour the allocation"
-		errMsg7 = "allocation_creation_failed: " +
-			"can't get blobber's stake pool: value not present"
+			"blobbers provided are not enough to honour the allocation"
+		errMsg7 = "allocation_creation_failed: " + "missing blobber's stake pool"
 		errMsg8 = "allocation_creation_failed: " +
 			"no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
@@ -1126,12 +1126,11 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 
 	// 4.
-	t.Run("invalid read_price range", func(t *testing.T) {
+	t.Run("empty request", func(t *testing.T) {
 		var nar newAllocationRequest
-		nar.ReadPriceRange = PriceRange{20, 10}
 
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
-		requireErrMsg(t, err, errMsg5)
+		requireErrMsg(t, err, errMsg2)
 	})
 
 	t.Run("Blobbers provided are not enough to honour the allocation", func(t *testing.T) {
@@ -1349,7 +1348,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		balances.balances[clientID] = 1100 + 4500
 
-		tx.Value = 4500
+		tx.Value = 5000
 		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
 
@@ -1377,6 +1376,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		ab = append(ab, loaded0)
 		ab = append(ab, loaded1)
 		require.NoError(t, err)
+		for i, sbn := range sb.Nodes {
+			assert.EqualValues(t, *sbn, *ab[i])
+		}
 		assert.EqualValues(t, sb.Nodes, ab)
 		// independent saved blobbers
 		var blob1, blob2 *StorageNode

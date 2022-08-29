@@ -104,6 +104,34 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	return
 }
 
+func (nar *newAllocationRequest) validate(now time.Time, conf *Config) error {
+	if nar.DataShards <= 0 {
+		return errors.New("invalid number of data shards")
+	}
+
+	if len(nar.Blobbers) < (nar.DataShards + nar.ParityShards) {
+		return errors.New("blobbers provided are not enough to honour the allocation")
+	}
+
+	if !nar.ReadPriceRange.isValid() {
+		return errors.New("invalid read_price range")
+	}
+
+	if !nar.WritePriceRange.isValid() {
+		return errors.New("invalid write_price range")
+	}
+
+	if nar.Size < conf.MinAllocSize {
+		return errors.New("insufficient allocation size")
+	}
+
+	dur := common.ToTime(nar.Expiration).Sub(now)
+	if dur < conf.MinAllocDuration {
+		return errors.New("insufficient allocation duration")
+	}
+	return nil
+}
+
 func (nar *newAllocationRequest) decode(b []byte) error {
 	return json.Unmarshal(b, nar)
 }
@@ -195,6 +223,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
+	if err := request.validate(common.ToTime(txn.CreationDate), conf); err != nil {
+		return "", common.NewErrorf("allocation_creation_failed", err.Error())
+	}
 
 	if request.Owner == "" {
 		request.Owner = txn.ClientID
@@ -209,11 +240,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			zap.Int("data shards", request.DataShards),
 			zap.Int("parity_shards", request.ParityShards))
 		return "", common.NewErrorf("allocation_creation_failed",
-			"Not enough provided blobbers found in mpt")
+			"Blobbers provided are not enough to honour the allocation")
 	}
 	spMap := getStakePoolsByIDs(request.Blobbers, balances)
 	if len(spMap) != len(inputBlobbers) {
-		return "", common.NewErrorf("allocation_creation_failed", "cannot find stake pools for blobers")
+		return "", common.NewErrorf("allocation_creation_failed", "missing blobber's stake pool")
 	}
 	var sns []storageNodeResponse
 	for i := 0; i < len(inputBlobbers); i++ {
@@ -554,12 +585,7 @@ func validateBlobbers(
 	blobbers []storageNodeResponse,
 	conf *Config,
 ) ([]*StorageNode, int64, error) {
-	var err error
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
-
-	if err = sa.validate(creationDate, conf); err != nil {
-		return nil, 0, fmt.Errorf("invalid request: %v", err)
-	}
 
 	// number of blobbers required
 	var size = sa.DataShards + sa.ParityShards

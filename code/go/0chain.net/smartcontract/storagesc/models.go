@@ -1101,30 +1101,6 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error)
 	return
 }
 
-func (sa *StorageAllocation) validate(now time.Time,
-	conf *Config) (err error) {
-
-	if !sa.ReadPriceRange.isValid() {
-		return errors.New("invalid read_price range")
-	}
-	if !sa.WritePriceRange.isValid() {
-		return errors.New("invalid write_price range")
-	}
-	if sa.Size < conf.MinAllocSize {
-		return errors.New("insufficient allocation size")
-	}
-	dur := common.ToTime(sa.Expiration).Sub(now)
-	if dur < conf.MinAllocDuration {
-		return errors.New("insufficient allocation duration")
-	}
-
-	if sa.DataShards <= 0 {
-		return errors.New("invalid number of data shards")
-	}
-
-	return // nil
-}
-
 type filterBlobberFunc func(blobber *StorageNode) (kick bool)
 
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,

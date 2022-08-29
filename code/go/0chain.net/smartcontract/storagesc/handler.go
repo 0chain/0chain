@@ -1591,6 +1591,10 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
+	if err := request.validate(common.ToTime(balances.Now()), conf); err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
 
 	blobbers, err := edb.GetBlobbersFromIDs(request.Blobbers)
 	if err != nil {
