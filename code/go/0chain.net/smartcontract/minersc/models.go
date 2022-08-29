@@ -110,7 +110,6 @@ func NewSimpleNodes() SimpleNodes {
 }
 
 // not thread safe
-// swagger:model SimpleNodes
 type SimpleNodes map[string]*SimpleNode
 
 // Pooler represents a pool interface
