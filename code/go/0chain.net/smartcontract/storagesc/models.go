@@ -1169,7 +1169,7 @@ List:
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(
-	blobbers []storageNodePlusStake,
+	blobbers []storageNodeResponse,
 	creationDate common.Timestamp,
 ) ([]*StorageNode, []string) {
 	var (

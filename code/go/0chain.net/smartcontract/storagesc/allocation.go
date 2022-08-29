@@ -215,13 +215,13 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if len(spMap) != len(inputBlobbers) {
 		return "", common.NewErrorf("allocation_creation_failed", "cannot find stake pools for blobers")
 	}
-	var sns []storageNodePlusStake
+	var sns []storageNodeResponse
 	for i := 0; i < len(inputBlobbers); i++ {
 		stake, err := spMap[inputBlobbers[i].ID].stake()
 		if err != nil {
 			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber: "+inputBlobbers[i].ID)
 		}
-		sns = append(sns, storageNodePlusStake{
+		sns = append(sns, storageNodeResponse{
 			StorageNode: *inputBlobbers[i],
 			TotalOffers: spMap[inputBlobbers[i].ID].TotalOffers,
 			TotalStake:  stake,
@@ -312,7 +312,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 func setupNewAllocation(
 	request newAllocationRequest,
-	blobbers []storageNodePlusStake,
+	blobbers []storageNodeResponse,
 	m Timings,
 	txn *transaction.Transaction,
 	conf *Config,
@@ -390,10 +390,10 @@ func (t *Timings) tick(name string) {
 	t.timings[name] = time.Since(t.start)
 }
 
-func (sc *StorageSmartContract) fetchStorageNodePlusStake(blobberIds []string, balances chainstate.CommonStateContextI) ([]storageNodePlusStake, error) {
+func (sc *StorageSmartContract) fetchStorageNodePlusStake(blobberIds []string, balances chainstate.CommonStateContextI) ([]storageNodeResponse, error) {
 	type indexedBlobber struct {
 		index   int
-		blobber storageNodePlusStake
+		blobber storageNodeResponse
 	}
 	blobbers := make([]indexedBlobber, 0, len(blobberIds))
 	pools := make(chan indexedBlobber, len(blobberIds))
@@ -417,7 +417,7 @@ func (sc *StorageSmartContract) fetchStorageNodePlusStake(blobberIds []string, b
 				errs <- err
 				return
 			}
-			sns := storageNodePlusStake{
+			sns := storageNodeResponse{
 				StorageNode: *blobber,
 				TotalStake:  stake,
 				TotalOffers: sp.TotalOffers,
@@ -432,7 +432,7 @@ func (sc *StorageSmartContract) fetchStorageNodePlusStake(blobberIds []string, b
 			sort.Slice(blobbers, func(i, j int) bool {
 				return blobbers[i].index < blobbers[j].index
 			})
-			retBlobbers := make([]storageNodePlusStake, 0, len(blobberIds))
+			retBlobbers := make([]storageNodeResponse, 0, len(blobberIds))
 			for _, b := range blobbers {
 				retBlobbers = append(retBlobbers, b.blobber)
 			}
@@ -553,7 +553,7 @@ func validateBlobbers(
 	creationDate time.Time,
 	sa *StorageAllocation,
 	balances chainstate.CommonStateContextI,
-	blobbers []storageNodePlusStake,
+	blobbers []storageNodeResponse,
 	conf *Config,
 ) ([]*StorageNode, int64, error) {
 	var err error
