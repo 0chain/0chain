@@ -2068,6 +2068,7 @@ type storageNodesPlusStake struct {
 }
 
 // StorageNode represents Blobber configurations.
+// swagger:model storageNodePlusStake
 type storageNodePlusStake struct {
 	StorageNode
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
@@ -2132,7 +2133,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodePlusStake {
 //      in: query
 //      type: string
 // responses:
-//  200: storageNodePlusStake
+//  200: storageNodesPlusStake
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2364,7 +2365,7 @@ func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Req
 //      type: string
 //
 // responses:
-//  200: storageNodesPlusStake
+//  200: storageNodePlusStake
 //  400:
 //  500:
 func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request) {
