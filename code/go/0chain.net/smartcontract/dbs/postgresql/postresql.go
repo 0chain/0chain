@@ -54,6 +54,7 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 				Logger:                 logger.Default.LogMode(logger.Silent),
 				SkipDefaultTransaction: true,
 				PrepareStmt:            true,
+				CreateBatchSize:        50,
 			})
 
 		if err == nil { // tcp host/port are ready

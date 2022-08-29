@@ -67,8 +67,66 @@ const (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) {
-	edb.eventsChannel <- blockEvents{events: events, round: round, block: block, blockSize: blockSize}
+func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) error {
+	ts := time.Now()
+	es, err := preprocessEvents(round, block, events)
+	if err != nil {
+		return err
+	}
+
+	pdu := time.Since(ts)
+
+	select {
+	case edb.eventsChannel <- blockEvents{events: es, round: round, block: block, blockSize: blockSize}:
+	case <-ctx.Done():
+		logging.Logger.Warn("add events - context done", zap.Error(ctx.Err()))
+	}
+
+	du := time.Since(ts)
+	if du.Milliseconds() > 200 {
+		logging.Logger.Warn("EventDb - add events slow", zap.Any("duration", du),
+			zap.Any("preprocess events duration", pdu),
+			zap.Int64("round", round),
+			zap.String("block", block),
+			zap.Int("blockSize", blockSize))
+	}
+
+	return nil
+}
+
+// get and merge users add/update events
+func preprocessEvents(round int64, block string, events []Event) ([]Event, error) {
+	usersMap := make(map[string]User, len(events))
+	others := make([]Event, 0, len(events))
+
+	// separate user events from others and merge.
+	for _, e := range events {
+		if e.Type == int(TypeStats) && e.Tag == int(TagAddOrOverwriteUser) {
+			usr, ok := fromEvent[User](e.Data)
+			if !ok {
+				return nil, ErrInvalidEventData
+			}
+
+			usersMap[usr.UserID] = *usr
+		} else {
+			others = append(others, e)
+		}
+	}
+
+	users := make([]User, 0, len(usersMap))
+	for _, u := range usersMap {
+		users = append(users, u)
+	}
+
+	usersEvent := Event{
+		BlockNumber: round,
+		Type:        int(TypeStats),
+		Tag:         int(TagAddOrOverwriteUser),
+		Index:       block,
+		Data:        users,
+	}
+
+	return append([]Event{usersEvent}, others...), nil
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
@@ -180,11 +238,11 @@ func (edb *EventDb) addStat(event Event) error {
 		rm.BlockNumber = event.BlockNumber
 		return edb.addOrOverwriteReadMarker(*rm)
 	case TagAddOrOverwriteUser:
-		usr, ok := fromEvent[User](event.Data)
+		users, ok := fromEvent[[]User](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteUser(*usr)
+		return edb.upsertUsers(*users)
 	case TagAddTransaction:
 		transaction, ok := fromEvent[Transaction](event.Data)
 

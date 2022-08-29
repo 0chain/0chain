@@ -2,10 +2,14 @@ package event
 
 import (
 	"fmt"
+	"time"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type User struct {
@@ -41,17 +45,17 @@ func (edb *EventDb) overwriteUser(u User) error {
 		}).Error
 }
 
-func (edb *EventDb) addOrOverwriteUser(u User) error {
-	exists, err := u.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteUser(u)
-	}
-
-	result := edb.Store.Get().Create(&u)
-	return result.Error
+// update or create users
+func (edb *EventDb) upsertUsers(users []User) error {
+	ts := time.Now()
+	defer func() {
+		logging.Logger.Debug("event db - upsert users ", zap.Any("duration", time.Since(ts)),
+			zap.Int("num", len(users)))
+	}()
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce"}),
+	}).Create(&users).Error
 }
 
 func (edb *EventDb) GetUserFromId(userId string) (User, error) {

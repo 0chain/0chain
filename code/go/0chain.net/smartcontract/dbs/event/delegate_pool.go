@@ -84,10 +84,10 @@ func (edb *EventDb) bulkUpdateRewards(providerID string, providerType int, rewar
 		AND (delegate_pools.pool_id = data_table.pool_id)
 		AND (delegate_pools.status != ?)`,
 		placeholders(n),
-		placeholders(n, "integer"),
+		placeholdersInteger(n),
 		placeholders(n),
-		placeholders(n, "integer"),
-		placeholders(n, "integer"),
+		placeholdersInteger(n),
+		placeholdersInteger(n),
 	)
 
 	vs := append(makeBulkRewardsValues(providerID, providerType, rewards), spenum.Deleted)
@@ -136,9 +136,9 @@ func (edb *EventDb) bulkUpdatePenalty(providerID string, providerType int, penal
 		AND (delegate_pools.pool_id = data_table.pool_id)
 		AND (delegate_pools.status != ?)`,
 		placeholders(n),
-		placeholders(n, "integer"),
+		placeholdersInteger(n),
 		placeholders(n),
-		placeholders(n, "integer"),
+		placeholdersInteger(n),
 	)
 
 	return edb.Store.Get().Exec(sql, vs...).Error

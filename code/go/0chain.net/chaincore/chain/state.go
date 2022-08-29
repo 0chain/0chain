@@ -30,7 +30,7 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-//SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
+// SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
 var SmartContractExecutionTimer metrics.Timer
 
 func init() {
@@ -80,7 +80,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	return b.ComputeState(ctx, c)
 }
 
-//SaveChanges - persist the state changes
+// SaveChanges - persist the state changes
 func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	if !b.IsStateComputed() {
 		err := errors.New("block state not computed")
@@ -109,7 +109,7 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	}
 }
 
-//ExecuteSmartContract - executes the smart contract for the transaction
+// ExecuteSmartContract - executes the smart contract for the transaction
 func (c *Chain) ExecuteSmartContract(
 	ctx context.Context,
 	t *transaction.Transaction,
@@ -201,7 +201,8 @@ func (c *Chain) NewStateContext(
 	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (events []event.Event, err error) {
+func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction) (events []event.Event, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
@@ -471,6 +472,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return nil, err
 	}
+
 	if fs.Balance < amount {
 		logging.Logger.Error("transfer amount - insufficient balance",
 			zap.Any("balance", fs.Balance),
@@ -569,6 +571,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return nil, common.NewError("mint_amount - get state", err.Error())
 	}
+
 	if err := sctx.SetStateContext(ts); err != nil {
 		logging.Logger.Error("transfer amount - set state context failed",
 			zap.String("txn hash", ts.TxnHash),
@@ -633,6 +636,7 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	if !isValid(err) {
 		return nil, err
 	}
+
 	if s == nil {
 		s = &state.State{}
 	}
@@ -670,9 +674,11 @@ func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID stri
 	return s, nil
 }
 
-/*GetState - Get the state of a client w.r.t a block. Note, don't call this from within state computation logic
+/*
+GetState - Get the state of a client w.r.t a block. Note, don't call this from within state computation logic
 since block.GetStateValue uses a RLock on the StateMutex. This API is for someone reading the state from outside
-the protocol without already holding a lock on StateMutex */
+the protocol without already holding a lock on StateMutex
+*/
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
