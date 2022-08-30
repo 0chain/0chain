@@ -162,9 +162,6 @@ func setupMinerChain() (*Chain, func()) {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	clean := setupSelf()
-	defer clean()
-
 	cleanSelf := SetUpSingleSelf()
 	defer cleanSelf()
 
