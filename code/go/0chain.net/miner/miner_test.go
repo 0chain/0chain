@@ -162,7 +162,7 @@ func setupMinerChain() (*Chain, func()) {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	setupTempRocksDBDir()
+	// setupTempRocksDBDir()
 	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
 	transaction.SetupEntity(memorystore.GetStorageProvider())
