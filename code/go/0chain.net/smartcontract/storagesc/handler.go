@@ -1612,6 +1612,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		Timings{timings: nil, start: common.ToTime(balances.Now())},
 		balances.Now(),
 		conf,
+		"",
 	)
 
 	if err != nil {

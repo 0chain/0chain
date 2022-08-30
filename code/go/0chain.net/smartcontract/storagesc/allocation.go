@@ -259,9 +259,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		})
 	}
 
-	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn.CreationDate, conf)
-	sa.ID = txn.Hash
-	sa.Tx = txn.Hash
+	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn.CreationDate, conf, txn.Hash)
 	if err != nil {
 		return "", err
 	}
@@ -349,6 +347,7 @@ func setupNewAllocation(
 	m Timings,
 	now common.Timestamp,
 	conf *Config,
+	allocId string,
 ) (*StorageAllocation, []*StorageNode, error) {
 	var err error
 	m.tick("decode")
@@ -374,6 +373,8 @@ func setupNewAllocation(
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
+	sa.ID = allocId
+	sa.Tx = allocId
 
 	blobberNodes, bSize, err := validateBlobbers(common.ToTime(now), sa, blobbers, conf)
 	if err != nil {
