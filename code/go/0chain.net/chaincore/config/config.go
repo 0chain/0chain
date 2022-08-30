@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -117,7 +118,9 @@ func SetupSmartContractConfig(workdir string) {
 	}
 
 	if err := SmartContractConfig.ReadConfigFile(file); err != nil {
-		panic(fmt.Errorf("fatal error config file: %s", err))
+		pwd, _ := os.Getwd()
+
+		panic(fmt.Errorf("fatal error config file: %s; %s", err, pwd))
 	}
 }
 
