@@ -1585,6 +1585,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
+
 	var request newAllocationRequest
 	if err = request.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
