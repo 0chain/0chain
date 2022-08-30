@@ -1321,6 +1321,10 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 		ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
 		ba.Stats.OpenChallenges = 0
 		if ba.Stats.TotalChallenges == 0 {
+			logging.Logger.Warn("empty total challenges on finalizedPassRates",
+				zap.Any("OpenChallenges", ba.Stats.OpenChallenges),
+				zap.Any("FailedChallenges", ba.Stats.FailedChallenges),
+				zap.Any("SuccessChallenges", ba.Stats.SuccessChallenges))
 			return nil, errors.New("empty total challenges")
 		}
 
