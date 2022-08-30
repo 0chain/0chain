@@ -235,11 +235,17 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if pool := sn.GetNodePool(poolID); pool != nil{
+	if pool := sn.GetNodePool(poolID); pool != nil {
 		common.Respond(w, r, pool, nil)
 		return
 	}
 	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
+}
+
+// swagger:model nodeStat
+type nodeStat struct {
+	MinerNode
+	Round int64 `json:"round"`
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat nodeStat
@@ -253,7 +259,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 //      required: true
 //
 // responses:
-//  200: MinerNode
+//  200: nodeStat
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
@@ -264,13 +270,15 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
 		return
 	}
-	edb := mrh.GetQueryStateContext().GetEventDB()
+	sCtx := mrh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 	if miner, err := edb.GetMiner(id); err == nil {
-		common.Respond(w, r, minerTableToMinerNode(miner), nil)
+		common.Respond(w, r, nodeStat{
+			minerTableToMinerNode(miner), sCtx.GetBlock().Round}, nil)
 		return
 	}
 	sharder, err := edb.GetSharder(id)
@@ -278,7 +286,8 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("miner/sharder not found"))
 		return
 	}
-	common.Respond(w, r, sharderTableToSharderNode(sharder), nil)
+	common.Respond(w, r, nodeStat{sharderTableToSharderNode(sharder),
+		sCtx.GetBlock().Round}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
