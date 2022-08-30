@@ -630,7 +630,7 @@ type StorageAllocation struct {
 	// ID is unique allocation ID that is equal to hash of transaction with
 	// which the allocation has created.
 	ID string `json:"id"`
-	// Tx keeps hash with which the allocation has created or updated.
+	// Tx keeps hash with which the allocation has created or updated. todo do we need this field?
 	Tx string `json:"tx"`
 
 	DataShards        int                     `json:"data_shards"`

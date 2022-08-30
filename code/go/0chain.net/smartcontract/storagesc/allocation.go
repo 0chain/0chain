@@ -214,7 +214,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	balances chainstate.StateContextI,
 	timings map[string]time.Duration,
 ) (resp string, err error) {
-	m := Timings{timings: timings, start: time.Now()}
+	m := Timings{timings: timings, start: time.Now()} // todo time.Now(): why are we using non deterministic data?
 	var request newAllocationRequest
 	if err = request.decode(input); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error decoding input",
@@ -259,7 +259,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		})
 	}
 
-	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn, conf)
+	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn.CreationDate, conf)
+	sa.ID = txn.Hash
+	sa.Tx = txn.Hash
 	if err != nil {
 		return "", err
 	}
@@ -345,14 +347,13 @@ func setupNewAllocation(
 	request newAllocationRequest,
 	blobbers []*storageNodeResponse,
 	m Timings,
-	txn *transaction.Transaction,
+	now common.Timestamp,
 	conf *Config,
 ) (*StorageAllocation, []*StorageNode, error) {
 	var err error
 	m.tick("decode")
 	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {
 		logging.Logger.Error("new_allocation_request_failed: input blobbers less than requirement",
-			zap.String("txn", txn.Hash),
 			zap.Int("request blobbers", len(request.Blobbers)),
 			zap.Int("data shards", request.DataShards),
 			zap.Int("parity_shards", request.ParityShards))
@@ -363,22 +364,20 @@ func setupNewAllocation(
 	//if more than limit blobbers sent, just cut them
 	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
 		logging.Logger.Error("new_allocation_request_failed: request blobbers more than max_blobbers_per_allocation",
-			zap.String("txn", txn.Hash),
 			zap.Int("requested blobbers", len(request.Blobbers)),
 			zap.Int("max blobbers per allocation", conf.MaxBlobbersPerAllocation))
 		logging.Logger.Info("Too many blobbers selected, max available", zap.Int("max_blobber_size", conf.MaxBlobbersPerAllocation))
 		request.Blobbers = request.Blobbers[:conf.MaxBlobbersPerAllocation]
 	}
 
-	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers))
+	logging.Logger.Debug("new_allocation_request", zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
 
-	blobberNodes, bSize, err := validateBlobbers(common.ToTime(txn.CreationDate), sa, blobbers, conf)
+	blobberNodes, bSize, err := validateBlobbers(common.ToTime(now), sa, blobbers, conf)
 	if err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error validating blobbers",
-			zap.String("txn", txn.Hash),
 			zap.Error(err))
 		return nil, nil, common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
@@ -389,10 +388,9 @@ func setupNewAllocation(
 	logging.Logger.Debug("new_allocation_request", zap.Int64("size", bSize), zap.Strings("blobbers", bi))
 	m.tick("validate_blobbers")
 
-	sa.ID = txn.Hash
 	sa.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(blobberNodes))
 	for _, b := range blobberNodes {
-		balloc, err := newBlobberAllocation(bSize, sa, b, txn.CreationDate)
+		balloc, err := newBlobberAllocation(bSize, sa, b, now)
 		if err != nil {
 			return nil, nil, common.NewErrorf("allocation_creation_failed",
 				"can't create blobber allocation: %v", err)
@@ -403,8 +401,7 @@ func setupNewAllocation(
 	}
 	m.tick("add_offer")
 
-	sa.StartTime = txn.CreationDate
-	sa.Tx = txn.Hash
+	sa.StartTime = now
 	return sa, blobberNodes, nil
 }
 

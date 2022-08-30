@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/transaction"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -1611,11 +1610,10 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		request,
 		sns,
 		Timings{timings: nil, start: time.Now()},
-		&transaction.Transaction{
-			CreationDate: balances.Now(),
-		},
+		balances.Now(),
 		conf,
 	)
+
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
