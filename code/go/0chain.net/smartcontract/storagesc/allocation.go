@@ -246,14 +246,14 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if len(spMap) != len(inputBlobbers) {
 		return "", common.NewErrorf("allocation_creation_failed", "missing blobber's stake pool")
 	}
-	var sns []storageNodeResponse
+	var sns []*storageNodeResponse
 	for i := 0; i < len(inputBlobbers); i++ {
 		stake, err := spMap[inputBlobbers[i].ID].stake()
 		if err != nil {
 			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber: "+inputBlobbers[i].ID)
 		}
-		sns = append(sns, storageNodeResponse{
-			StorageNode: *inputBlobbers[i],
+		sns = append(sns, &storageNodeResponse{
+			StorageNode: inputBlobbers[i],
 			TotalOffers: spMap[inputBlobbers[i].ID].TotalOffers,
 			TotalStake:  stake,
 		})
@@ -343,7 +343,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 func setupNewAllocation(
 	request newAllocationRequest,
-	blobbers []storageNodeResponse,
+	blobbers []*storageNodeResponse,
 	m Timings,
 	txn *transaction.Transaction,
 	conf *Config,
@@ -448,7 +448,7 @@ func (sc *StorageSmartContract) fetchStorageNodePlusStake(blobberIds []string, b
 				return
 			}
 			sns := storageNodeResponse{
-				StorageNode: *blobber,
+				StorageNode: blobber,
 				TotalStake:  stake,
 				TotalOffers: sp.TotalOffers,
 			}
@@ -582,7 +582,7 @@ func (_ *StorageSmartContract) getBlobbers(
 func validateBlobbers(
 	creationDate time.Time,
 	sa *StorageAllocation,
-	blobbers []storageNodeResponse,
+	blobbers []*storageNodeResponse,
 	conf *Config,
 ) ([]*StorageNode, int64, error) {
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit

@@ -1601,10 +1601,10 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	var sns []storageNodeResponse
+	var sns []*storageNodeResponse
 	for _, b := range blobbers {
 		sn := blobberTableToStorageNode(b)
-		sns = append(sns, sn)
+		sns = append(sns, &sn)
 	}
 
 	sa, _, err := setupNewAllocation(
@@ -2073,7 +2073,7 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 // swagger:model storageNodeResponse
 type storageNodeResponse struct {
-	StorageNode
+	*StorageNode
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 	TotalStake         currency.Coin `json:"total_stake"`
 	UsedAllocation     int64         `json:"used_allocation"`
@@ -2082,7 +2082,7 @@ type storageNodeResponse struct {
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
-		StorageNode: StorageNode{
+		StorageNode: &StorageNode{
 			ID:      blobber.BlobberID,
 			BaseURL: blobber.BaseURL,
 			Geolocation: StorageNodeGeolocation{

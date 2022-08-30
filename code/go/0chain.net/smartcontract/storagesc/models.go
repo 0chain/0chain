@@ -1145,7 +1145,7 @@ List:
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(
-	blobbers []storageNodeResponse,
+	blobbers []*storageNodeResponse,
 	creationDate common.Timestamp,
 ) ([]*StorageNode, []string) {
 	var (
@@ -1153,13 +1153,13 @@ func (sa *StorageAllocation) validateEachBlobber(
 		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
-		err := sa.validateAllocationBlobber(&b.StorageNode, b.TotalStake, b.TotalOffers, creationDate)
+		err := sa.validateAllocationBlobber(b.StorageNode, b.TotalStake, b.TotalOffers, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errors = append(errors, err.Error())
 			continue
 		}
-		filtered = append(filtered, &b.StorageNode)
+		filtered = append(filtered, b.StorageNode)
 	}
 	return filtered, errors
 }
