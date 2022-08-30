@@ -1609,7 +1609,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 	sa, _, err := setupNewAllocation(
 		request,
 		sns,
-		Timings{timings: nil, start: time.Now()},
+		Timings{timings: nil, start: common.ToTime(balances.Now())},
 		balances.Now(),
 		conf,
 	)
