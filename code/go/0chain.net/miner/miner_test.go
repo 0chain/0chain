@@ -162,16 +162,12 @@ func setupMinerChain() (*Chain, func()) {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	// setupTempRocksDBDir()
-	common.SetupRootContext(node.GetNodeContext())
-	config.SetServerChainID(config.GetMainChainID())
-	transaction.SetupEntity(memorystore.GetStorageProvider())
-	client.SetupEntity(memorystore.GetStorageProvider())
-	chain.SetupEntity(memorystore.GetStorageProvider(), "")
-	memorystore.AddPool("clientdb", memorystore.DefaultPool)
-
 	clean := SetUpSingleSelf()
 	defer clean()
+
+	client.SetupEntity(memorystore.GetStorageProvider())
+	memorystore.AddPool("clientdb", memorystore.DefaultPool)
+
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)
