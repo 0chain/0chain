@@ -162,10 +162,9 @@ func setupMinerChain() (*Chain, func()) {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	clean := SetUpSingleSelf()
+	clean := setupSelf()
 	defer clean()
 
-	client.SetupEntity(memorystore.GetStorageProvider())
 	memorystore.AddPool("clientdb", memorystore.DefaultPool)
 
 	ctx := common.GetRootContext()
