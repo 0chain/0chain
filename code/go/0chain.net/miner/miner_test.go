@@ -172,6 +172,7 @@ func TestBlockGeneration(t *testing.T) {
 	defer stopAndClean()
 
 	config.SetupSmartContractConfig("../")
+	client.SetupClientDB()
 
 	gb := SetupGenesisBlock()
 	mc.AddGenesisBlock(gb)
