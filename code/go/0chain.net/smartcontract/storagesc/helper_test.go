@@ -393,10 +393,12 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	return
 }
 
-func genChall(t testing.TB, ssc *StorageSmartContract,
-	blobberID string, now int64, prevID, challID string, seed int64,
-	valids *partitions.Partitions, allocID string, blobber *StorageNode,
-	allocRoot string, balances chainState.StateContextI) {
+func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string, seed int64,
+	valids *partitions.Partitions, allocID string,
+	blobber *StorageNode, balances chainState.StateContextI) {
+
+	alloc, err := ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
 
 	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -426,6 +428,21 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	require.NoError(t, err)
 
 	_, err = balances.InsertTrieNode(storChall.GetKey(ssc.ID), storChall)
+	require.NoError(t, err)
+
+	ba, ok := alloc.BlobberAllocsMap[blobber.ID]
+	if !ok {
+		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, common.Timestamp(now))
+		require.NoError(t, err)
+	}
+
+	ba.Stats.OpenChallenges++
+	ba.Stats.TotalChallenges++
+
+	alloc.Stats.OpenChallenges++
+	alloc.Stats.TotalChallenges++
+
+	err = alloc.save(balances, ssc.ID)
 	require.NoError(t, err)
 	return
 }
