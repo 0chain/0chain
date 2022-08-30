@@ -165,6 +165,9 @@ func TestBlockGeneration(t *testing.T) {
 	clean := setupSelf()
 	defer clean()
 
+	cleanSelf := SetUpSingleSelf()
+	defer cleanSelf()
+
 	memorystore.AddPool("clientdb", memorystore.DefaultPool)
 
 	ctx := common.GetRootContext()
