@@ -162,10 +162,8 @@ func setupMinerChain() (*Chain, func()) {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	cleanSelf := SetUpSingleSelf()
-	defer cleanSelf()
-
-	memorystore.AddPool("clientdb", memorystore.DefaultPool)
+	clean := SetUpSingleSelf()
+	defer clean()
 
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
@@ -513,6 +511,18 @@ func setupSelf() func() { //nolint
 	memorystore.InitDefaultPool(s.Host(), p)
 
 	memorystore.AddPool("txndb", &redis.Pool{
+		MaxIdle:   80,
+		MaxActive: 1000, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", s.Addr())
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	})
+
+	memorystore.AddPool("clientdb", &redis.Pool{
 		MaxIdle:   80,
 		MaxActive: 1000, // max number of connections
 		Dial: func() (redis.Conn, error) {
