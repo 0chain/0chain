@@ -62,6 +62,7 @@ const (
 	TagAddOrOverwriteAllocationBlobberTerm
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
+	TagAddOrUpdateChallengePool
 )
 
 var ErrInvalidEventData = errors.New("invalid event data")
@@ -323,6 +324,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteAllocationBlobberTerms(*updates)
+		// challenge pool
+	case TagAddOrUpdateChallengePool:
+		updates, ok := fromEvent[ChallengePool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateChallengePool(*updates)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

@@ -588,7 +588,7 @@ func setupChallengeMocks(
 			},
 		},
 	}
-	require.NoError(t, cPool.save(ssc.ID, allocation.ID, ctx))
+	require.NoError(t, cPool.save(ssc.ID, allocation, ctx))
 
 	var sp = newStakePool()
 	sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge

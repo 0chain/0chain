@@ -528,7 +528,7 @@ func setupMocksFinishAllocation(
 			},
 		},
 	}
-	require.NoError(t, cPool.save(ssc.ID, sAllocation.ID, ctx))
+	require.NoError(t, cPool.save(ssc.ID, &sAllocation, ctx))
 
 	require.EqualValues(t, len(blobbers), len(bStakes))
 	for i, blobber := range blobbers {

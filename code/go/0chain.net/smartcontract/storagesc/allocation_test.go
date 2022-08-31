@@ -672,7 +672,10 @@ func TestExtendAllocation(t *testing.T) {
 					"EmitEvent",
 					event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
 				).Return().Maybe()
-
+				balances.On(
+					"EmitEvent",
+					event.TypeStats, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
+				).Return().Maybe()
 			}
 		}
 
