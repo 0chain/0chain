@@ -164,7 +164,6 @@ func setupMinerChain() (*Chain, func()) {
 func TestBlockGeneration(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
-
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)
@@ -172,7 +171,7 @@ func TestBlockGeneration(t *testing.T) {
 	mc, stopAndClean := setupMinerChain()
 	defer stopAndClean()
 
-	config.SetupSmartContractConfig("../")
+	config.SetupSmartContractConfig("")
 
 	gb := SetupGenesisBlock()
 	mc.AddGenesisBlock(gb)
