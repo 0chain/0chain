@@ -276,6 +276,12 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
+
+	if sCtx.GetBlock() == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("cannot get latest finalised block"))
+		return
+	}
+
 	if miner, err := edb.GetMiner(id); err == nil {
 		common.Respond(w, r, nodeStat{
 			minerTableToMinerNode(miner), sCtx.GetBlock().Round}, nil)
