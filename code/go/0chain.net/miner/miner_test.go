@@ -423,6 +423,18 @@ func SetUpSingleSelf() func() {
 		},
 	})
 
+	memorystore.AddPool("clientdb", &redis.Pool{
+		MaxIdle:   80,
+		MaxActive: 1000, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", s.Addr())
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	})
+
 	m := make(map[datastore.Key]encryption.SignatureScheme)
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
 	s1 := encryption.NewED25519Scheme()
@@ -511,18 +523,6 @@ func setupSelf() func() { //nolint
 	memorystore.InitDefaultPool(s.Host(), p)
 
 	memorystore.AddPool("txndb", &redis.Pool{
-		MaxIdle:   80,
-		MaxActive: 1000, // max number of connections
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", s.Addr())
-			if err != nil {
-				panic(err.Error())
-			}
-			return c, err
-		},
-	})
-
-	memorystore.AddPool("clientdb", &redis.Pool{
 		MaxIdle:   80,
 		MaxActive: 1000, // max number of connections
 		Dial: func() (redis.Conn, error) {
