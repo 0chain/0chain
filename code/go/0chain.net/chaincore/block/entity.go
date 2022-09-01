@@ -905,7 +905,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			Type:        int(event.TypeStats),
 			Tag:         int(event.TagAddTransaction),
 			Index:       txn.Hash,
-			Data:        transactionNodeToEventTransaction(txn, b.Hash),
+			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),
 		})
 
 		events, err := c.UpdateState(ctx, b, bState, txn)
@@ -1000,10 +1000,11 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	return nil
 }
 
-func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string) event.Transaction {
+func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string, round int64) event.Transaction {
 	return event.Transaction{
 		Hash:              tr.Hash,
 		BlockHash:         blockHash,
+		Round:             round,
 		Version:           tr.Version,
 		ClientId:          tr.ClientID,
 		ToClientId:        tr.ToClientID,
