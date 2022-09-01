@@ -1,6 +1,6 @@
 package state
 
-import "0chain.net/core/util"
+import "github.com/0chain/common/core/util"
 
 //DeserializerI - transforms one serializable value (an abstract) to another (a concrete value)
 type DeserializerI interface {

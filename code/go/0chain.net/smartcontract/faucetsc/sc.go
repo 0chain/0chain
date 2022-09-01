@@ -17,8 +17,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	sc "0chain.net/smartcontract"
+	"github.com/0chain/common/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )

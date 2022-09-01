@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 

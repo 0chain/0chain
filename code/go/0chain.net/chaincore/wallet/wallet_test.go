@@ -23,7 +23,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 var randTime = time.Now().UnixNano()

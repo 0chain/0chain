@@ -6,7 +6,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )

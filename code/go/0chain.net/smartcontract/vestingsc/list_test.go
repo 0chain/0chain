@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
