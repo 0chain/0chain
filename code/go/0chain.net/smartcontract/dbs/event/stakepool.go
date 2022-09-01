@@ -6,9 +6,9 @@ import (
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/stakepool/spenum"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
 
 	"0chain.net/smartcontract/dbs"
 )
@@ -19,18 +19,24 @@ type providerAggregateStats struct {
 }
 
 func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
+	ts := time.Now()
 	if spu.Reward != 0 {
 		err := edb.rewardProvider(spu)
 		if err != nil {
 			return err
+		}
+		rpdu := time.Since(ts)
+		if rpdu.Milliseconds() > 50 {
+			logging.Logger.Debug("event db - reward provider",
+				zap.Any("duration", rpdu),
+				zap.Int("provider type", spu.ProviderType),
+				zap.String("provider id", spu.ProviderId))
 		}
 	}
 
 	if len(spu.DelegateRewards) == 0 {
 		return nil
 	}
-
-	ts := time.Now()
 
 	defer func() {
 		du := time.Since(ts)
@@ -78,67 +84,49 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
 		return nil
 	}
 
-	update := dbs.NewDbUpdates(spu.ProviderId)
-
 	switch spenum.Provider(spu.ProviderType) {
 	case spenum.Blobber:
-		blobber, err := edb.blobberAggregateStats(spu.ProviderId)
-		if err != nil {
-			return err
-		}
-		update.Updates["reward"], err = currency.AddCoin(blobber.Reward, spu.Reward)
-		if err != nil {
-			return err
-		}
-		update.Updates["total_service_charge"], err = currency.AddCoin(blobber.TotalServiceCharge, spu.Reward)
-		if err != nil {
-			return err
-		}
-		return edb.updateBlobber(*update)
+		return edb.addBlobberRewards(spu.ProviderId, spu.Reward)
 	case spenum.Validator:
-		validator, err := edb.validatorAggregateStats(spu.ProviderId)
-		if err != nil {
-			return err
-		}
-		update.Updates["rewards"], err = currency.AddCoin(validator.Rewards, spu.Reward)
-		if err != nil {
-			return err
-		}
-		update.Updates["total_reward"], err = currency.AddCoin(validator.TotalReward, spu.Reward)
-		if err != nil {
-			return err
-		}
-		return edb.updateValidator(*update)
+		return edb.addValidatorRewards(spu.ProviderId, spu.Reward)
 	case spenum.Miner:
-		miner, err := edb.minerAggregateStats(spu.ProviderId)
-		if err != nil {
-			return err
-		}
-		update.Updates["rewards"], err = currency.AddCoin(miner.Rewards, spu.Reward)
-		if err != nil {
-			return err
-		}
-		update.Updates["total_reward"], err = currency.AddCoin(miner.TotalReward, spu.Reward)
-		if err != nil {
-			return err
-		}
-		return edb.updateMiner(*update)
+		return edb.addMinerRewards(spu.ProviderId, spu.Reward)
 	case spenum.Sharder:
-		sharder, err := edb.sharderAggregateStats(spu.ProviderId)
-		if err != nil {
-			return err
-		}
-		update.Updates["rewards"], err = currency.AddCoin(sharder.Rewards, spu.Reward)
-		if err != nil {
-			return err
-		}
-		update.Updates["total_reward"], err = currency.AddCoin(sharder.TotalReward, spu.Reward)
-		if err != nil {
-			return err
-		}
-		return edb.updateSharder(*update)
+		return edb.addSharderRewards(spu.ProviderId, spu.Reward)
 	default:
 		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
 	}
 
+}
+
+func (edb *EventDb) addBlobberRewards(blobberID string, reward currency.Coin) error {
+	vs := map[string]interface{}{
+		"reward":               gorm.Expr("reward + ?", reward),
+		"total_service_charge": gorm.Expr("total_service_charge + ?", reward),
+	}
+	return edb.Store.Get().Model(&Blobber{BlobberID: blobberID}).Updates(vs).Error
+}
+
+func (edb *EventDb) addValidatorRewards(validatorID string, reward currency.Coin) error {
+	vs := map[string]interface{}{
+		"rewards":      gorm.Expr("rewards + ?", reward),
+		"total_reward": gorm.Expr("total_reward + ?", reward),
+	}
+	return edb.Store.Get().Model(&Validator{ValidatorID: validatorID}).Updates(vs).Error
+}
+
+func (edb *EventDb) addMinerRewards(minerID string, reward currency.Coin) error {
+	vs := map[string]interface{}{
+		"rewards":      gorm.Expr("rewards + ?", reward),
+		"total_reward": gorm.Expr("total_reward + ?", reward),
+	}
+	return edb.Store.Get().Model(&Miner{MinerID: minerID}).Updates(vs).Error
+}
+
+func (edb *EventDb) addSharderRewards(sharderID string, reward currency.Coin) error {
+	vs := map[string]interface{}{
+		"rewards":      gorm.Expr("rewards + ?", reward),
+		"total_reward": gorm.Expr("total_reward + ?", reward),
+	}
+	return edb.Store.Get().Model(&Sharder{SharderID: sharderID}).Updates(vs).Error
 }

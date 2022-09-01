@@ -197,10 +197,10 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				if du.Milliseconds() > 50 {
 					logging.Logger.Warn("event db save slow - addStat",
 						zap.Any("duration", du),
+						zap.Int("event tag", event.Tag),
 						zap.Int64("round", es.round),
 						zap.String("block", es.block),
 						zap.Int("block size", es.blockSize),
-						zap.Any("event", event),
 					)
 				}
 			case TypeError:
