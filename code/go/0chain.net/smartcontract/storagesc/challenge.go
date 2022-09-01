@@ -10,7 +10,6 @@ import (
 
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -239,18 +238,15 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 		if err = sp.save(ssc.ID, validators[i], balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
-		staked, err := sp.stake()
-		if err != nil {
-			return fmt.Errorf("can't get stake: %v", err)
-		}
-		data := dbs.DbUpdates{
-			Id: validators[i],
-			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
-			},
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, validators[i], data)
 
+		// TODO: add code below back after validators staking are supported
+		//staked, err := sp.stake()
+		//if err != nil {
+		//	return fmt.Errorf("can't get stake: %v", err)
+		//}
+		//vid := validators[i]
+		//tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
+		//balances.EmitEvent(event.TypeStats, tag, vid, data)
 	}
 	return
 }

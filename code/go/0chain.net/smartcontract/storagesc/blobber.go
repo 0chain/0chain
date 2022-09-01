@@ -11,7 +11,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
@@ -152,13 +151,8 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake: %v", err)
 	}
 
-	data := dbs.DbUpdates{
-		Id: blobber.ID,
-		Updates: map[string]interface{}{
-			"total_stake": int64(staked),
-		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobber.ID, data)
+	tag, data := event.NewUpdateBlobberTotalStakeEvent(blobber.ID, staked)
+	balances.EmitEvent(event.TypeStats, tag, blobber.ID, data)
 
 	return
 }
@@ -781,9 +775,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 }
 
 // blobberAddAllocation add allocation to blobber and create related partitions if needed
-// - add allocation to blobber allocations partitions
-// - add blobber to challenge ready partitions if the allocation is the first one and
-// 	 update blobber partitions locations
+//   - add allocation to blobber allocations partitions
+//   - add blobber to challenge ready partitions if the allocation is the first one and
+//     update blobber partitions locations
 func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transaction,
 	blobAlloc *BlobberAllocation, blobUsedCapacity uint64, balances cstate.StateContextI) error {
 	logging.Logger.Info("commit_connection, add allocation to blobber",
@@ -892,13 +886,9 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("getting stake: %v", err)
 	}
-	data := dbs.DbUpdates{
-		Id: t.ClientID,
-		Updates: map[string]interface{}{
-			"total_stake": int64(staked),
-		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, data)
+
+	tag, data := event.NewUpdateBlobberTotalStakeEvent(t.ClientID, staked)
+	balances.EmitEvent(event.TypeStats, tag, t.ClientID, data)
 
 	// update the list
 	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {

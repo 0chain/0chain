@@ -14,7 +14,6 @@ import (
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
@@ -1656,13 +1655,8 @@ func (sc *StorageSmartContract) finishAllocation(
 				"getting stake of "+d.BlobberID+": "+err.Error())
 		}
 
-		data := dbs.DbUpdates{
-			Id: d.BlobberID,
-			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
-			},
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, d.BlobberID, data)
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(d.BlobberID, staked)
+		balances.EmitEvent(event.TypeStats, tag, d.BlobberID, data)
 
 		// update the blobber
 		b.Allocated -= d.Size

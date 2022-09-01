@@ -29,11 +29,13 @@ const (
 	TagNone EventTag = iota
 	TagAddOrOverwriteBlobber
 	TagUpdateBlobber
+	TagUpdateBlobberTotalStake
+	TagUpdateBlobberTotalOffers
 	TagDeleteBlobber
 	TagAddAuthorizer
 	TagUpdateAuthorizer
 	TagDeleteAuthorizer
-	TagAddTransaction
+	TagAddTransactions
 	TagAddOrOverwriteUser
 	TagAddWriteMarker
 	TagAddBlock
@@ -94,21 +96,64 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, 
 	return nil
 }
 
+type preprocessEventFunc func([]Event) ([]Event, error)
+
 // get and merge users add/update events
+func (edb *EventDb) preprocessEvents(round int64, block string, events []Event) ([]Event, error) {
+	for _, preProcess := range edb.eventsPreprocessors {
+		var err error
+		events, err = preProcess(events)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return events, nil
+}
+
 func preprocessEvents(round int64, block string, events []Event) ([]Event, error) {
-	usersMap := make(map[string]User, len(events))
-	others := make([]Event, 0, len(events))
+	var (
+		usersMap                 = make(map[string]User, len(events))
+		txns                     = make([]Transaction, 0, len(events))
+		updateBlobberTotalStakes = make([]Blobber, 0, len(events))
+		updateBlobberTotalOffers = make([]Blobber, 0, len(events))
+
+		others = make([]Event, 0, len(events))
+	)
 
 	// separate user events from others and merge.
 	for _, e := range events {
-		if e.Type == int(TypeStats) && e.Tag == int(TagAddOrOverwriteUser) {
+		if e.Type != int(TypeStats) {
+			continue
+		}
+
+		switch EventTag(e.Tag) {
+		case TagAddOrOverwriteUser:
 			usr, ok := fromEvent[User](e.Data)
 			if !ok {
 				return nil, ErrInvalidEventData
 			}
 
 			usersMap[usr.UserID] = *usr
-		} else {
+		case TagAddTransactions:
+			txn, ok := fromEvent[Transaction](e.Data)
+			if !ok {
+				return nil, ErrInvalidEventData
+			}
+			txns = append(txns, *txn)
+		case TagUpdateBlobberTotalStake:
+			bts, ok := fromEvent[Blobber](e.Data)
+			if !ok {
+				return nil, ErrInvalidEventData
+			}
+			updateBlobberTotalStakes = append(updateBlobberTotalStakes, *bts)
+		case TagUpdateBlobberTotalOffers:
+			bto, ok := fromEvent[Blobber](e.Data)
+			if !ok {
+				return nil, ErrInvalidEventData
+			}
+			updateBlobberTotalOffers = append(updateBlobberTotalOffers, *bto)
+		default:
 			others = append(others, e)
 		}
 	}
@@ -126,7 +171,15 @@ func preprocessEvents(round int64, block string, events []Event) ([]Event, error
 		Data:        users,
 	}
 
-	return append([]Event{usersEvent}, others...), nil
+	txnsEvent := Event{
+		BlockNumber: round,
+		Type:        int(TypeStats),
+		Tag:         int(TagAddTransactions),
+		Index:       block,
+		Data:        txns,
+	}
+
+	return append([]Event{usersEvent, txnsEvent}, others...), nil
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
@@ -169,7 +222,14 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			}
 		}
 		due := time.Since(tse)
-		if due.Milliseconds() > 500 {
+		logging.Logger.Debug("event db save",
+			zap.Any("duration", due),
+			zap.Int("events number", len(es.events)),
+			zap.Int64("round", es.round),
+			zap.String("block", es.block),
+			zap.Int("block size", es.blockSize))
+
+		if due.Milliseconds() > 200 {
 			logging.Logger.Warn("event db work slow",
 				zap.Any("duration", due),
 				zap.Int("events number", len(es.events)),
@@ -195,6 +255,20 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateBlobber(*updates)
+	case TagUpdateBlobberTotalStake:
+		bs, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateBlobbersTotalStakes(*bs)
+	case TagUpdateBlobberTotalOffers:
+		bs, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateBlobbersTotalOffers(*bs)
 	case TagDeleteBlobber:
 		blobberID, ok := fromEvent[string](event.Data)
 
@@ -243,13 +317,12 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.upsertUsers(*users)
-	case TagAddTransaction:
-		transaction, ok := fromEvent[Transaction](event.Data)
-
+	case TagAddTransactions:
+		txns, ok := fromEvent[[]Transaction](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addTransaction(*transaction)
+		return edb.addTransactions(*txns)
 	case TagAddBlock:
 		block, ok := fromEvent[Block](event.Data)
 		if !ok {

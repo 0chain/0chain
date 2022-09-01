@@ -128,7 +128,7 @@ func insertMultipleReadMarker(t *testing.T, eventDb *EventDb) {
 		}
 		for i := 0; i < 10; i++ {
 			transactionHash := fmt.Sprintf("transactionHash %v %v", i, j)
-			err = eventDb.addTransaction(Transaction{Hash: transactionHash})
+			err = eventDb.addTransactions([]Transaction{{Hash: transactionHash}})
 			if !assert.NoError(t, err, "Error while writing blobber marker") {
 				return
 			}

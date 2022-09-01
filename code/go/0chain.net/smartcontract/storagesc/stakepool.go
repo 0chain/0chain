@@ -12,7 +12,6 @@ import (
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -99,13 +98,8 @@ func (sp *stakePool) save(sscKey, blobberID string,
 
 	logging.Logger.Debug("after stake pool save", zap.String("root", util.ToHex([]byte(r))))
 
-	data := dbs.DbUpdates{
-		Id: blobberID,
-		Updates: map[string]interface{}{
-			"offers_total": int64(sp.TotalOffers),
-		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, blobberID, data)
+	tag, data := event.NewUpdateBlobberTotalOffersEvent(blobberID, sp.TotalOffers)
+	balances.EmitEvent(event.TypeStats, tag, blobberID, data)
 
 	return
 }
@@ -482,13 +476,8 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"stake pool staking error: %v", err)
 	}
 
-	data := dbs.DbUpdates{
-		Id: spr.BlobberID,
-		Updates: map[string]interface{}{
-			"total_stake": int64(staked),
-		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
+	tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.BlobberID, staked)
+	balances.EmitEvent(event.TypeStats, tag, spr.BlobberID, data)
 
 	return
 }
@@ -543,13 +532,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"stake pool staking error: %v", err)
 		}
-		data := dbs.DbUpdates{
-			Id: spr.BlobberID,
-			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
-			},
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.BlobberID, staked)
+		balances.EmitEvent(event.TypeStats, tag, spr.BlobberID, data)
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
@@ -569,13 +553,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)
 	}
-	data := dbs.DbUpdates{
-		Id: spr.BlobberID,
-		Updates: map[string]interface{}{
-			"total_stake": int64(staked),
-		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, spr.BlobberID, data)
+	tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.BlobberID, staked)
+	balances.EmitEvent(event.TypeStats, tag, spr.BlobberID, data)
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }

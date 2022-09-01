@@ -134,7 +134,7 @@ func TestGetWriteMarkers(t *testing.T) {
 	if !assert.NoError(t, err, "Error while writing blobber marker") {
 		return
 	}
-	err = eventDb.addTransaction(Transaction{Hash: "something"})
+	err = eventDb.addTransactions([]Transaction{{Hash: "something"}})
 	if !assert.NoError(t, err, "Error while writing blobber marker") {
 		return
 	}
@@ -196,7 +196,7 @@ func TestGetWriteMarkers(t *testing.T) {
 func addWriterMarkers(t *testing.T, eventDb *EventDb, blobberID string) {
 	for i := 0; i < 10; i++ {
 		transactionID := fmt.Sprintf("transactionHash_%d", i)
-		err := eventDb.addTransaction(Transaction{Hash: transactionID})
+		err := eventDb.addTransactions([]Transaction{{Hash: transactionID}})
 		if !assert.NoError(t, err, "Error while writing blobber marker") {
 			return
 		}

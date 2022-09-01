@@ -31,9 +31,8 @@ type Transaction struct {
 	WriteMarker []WriteMarker `gorm:"foreignKey:TransactionID;references:Hash"`
 }
 
-func (edb *EventDb) addTransaction(transaction Transaction) error {
-	res := edb.Store.Get().Create(&transaction)
-	return res.Error
+func (edb *EventDb) addTransactions(txns []Transaction) error {
+	return edb.Store.Get().Create(&txns).Error
 }
 
 // GetTransactionByHash finds the transaction record by hash

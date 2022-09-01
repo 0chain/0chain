@@ -335,3 +335,31 @@ func (bl *Blobber) exists(edb *EventDb) (bool, error) {
 
 	return true, nil
 }
+
+func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateBlobberTotalStake, Blobber{
+		BlobberID:  ID,
+		TotalStake: totalStake,
+	}
+}
+
+func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateBlobberTotalOffers, Blobber{
+		BlobberID:   ID,
+		OffersTotal: totalOffers,
+	}
+}
+
+func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
+	}).Create(&blobbers).Error
+}
+
+func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"offers_total"}),
+	}).Create(&blobbers).Error
+}

@@ -15,7 +15,6 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/maths"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
@@ -223,13 +222,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				"getting stake pool stake: "+err.Error())
 		}
 
-		data := dbs.DbUpdates{
-			Id: qualifyingBlobberIds[i],
-			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
-			},
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
+		bid := qualifyingBlobberIds[i]
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(bid, staked)
+		balances.EmitEvent(event.TypeStats, tag, bid, data)
 
 	}
 
