@@ -104,7 +104,7 @@ func (edb *EventDb) addBlobberRewards(blobberID string, reward currency.Coin) er
 		"reward":               gorm.Expr("reward + ?", reward),
 		"total_service_charge": gorm.Expr("total_service_charge + ?", reward),
 	}
-	return edb.Store.Get().Model(&Blobber{BlobberID: blobberID}).Updates(vs).Error
+	return edb.Store.Get().Model(&Blobber{}).Where(&Blobber{BlobberID: blobberID}).Updates(vs).Error
 }
 
 func (edb *EventDb) addValidatorRewards(validatorID string, reward currency.Coin) error {
@@ -112,7 +112,7 @@ func (edb *EventDb) addValidatorRewards(validatorID string, reward currency.Coin
 		"rewards":      gorm.Expr("rewards + ?", reward),
 		"total_reward": gorm.Expr("total_reward + ?", reward),
 	}
-	return edb.Store.Get().Model(&Validator{ValidatorID: validatorID}).Updates(vs).Error
+	return edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).Updates(vs).Error
 }
 
 func (edb *EventDb) addMinerRewards(minerID string, reward currency.Coin) error {
@@ -120,7 +120,7 @@ func (edb *EventDb) addMinerRewards(minerID string, reward currency.Coin) error 
 		"rewards":      gorm.Expr("rewards + ?", reward),
 		"total_reward": gorm.Expr("total_reward + ?", reward),
 	}
-	return edb.Store.Get().Model(&Miner{MinerID: minerID}).Updates(vs).Error
+	return edb.Store.Get().Model(&Miner{}).Where(&Miner{MinerID: minerID}).Updates(vs).Error
 }
 
 func (edb *EventDb) addSharderRewards(sharderID string, reward currency.Coin) error {
@@ -128,5 +128,5 @@ func (edb *EventDb) addSharderRewards(sharderID string, reward currency.Coin) er
 		"rewards":      gorm.Expr("rewards + ?", reward),
 		"total_reward": gorm.Expr("total_reward + ?", reward),
 	}
-	return edb.Store.Get().Model(&Sharder{SharderID: sharderID}).Updates(vs).Error
+	return edb.Store.Get().Model(&Sharder{}).Where(&Sharder{SharderID: sharderID}).Updates(vs).Error
 }

@@ -222,7 +222,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			}
 		}
 		due := time.Since(tse)
-		logging.Logger.Debug("event db save",
+		logging.Logger.Debug("event db process",
 			zap.Any("duration", due),
 			zap.Int("events number", len(es.events)),
 			zap.Int64("round", es.round),
