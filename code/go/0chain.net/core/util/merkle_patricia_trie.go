@@ -1,6 +1,7 @@
 package util
 
 import (
+	"0chain.net/core/common"
 	"bytes"
 	"context"
 	"encoding/hex"
@@ -142,7 +143,10 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value MPTSerializable) (Key, er
 	}
 
 	if len(eval) > MPTMaxAllowableNodeSize {
-		return nil, errors.New("node exceeds maximum permissible size")
+		msg := fmt.Sprintf("node exceeds maximum permissible size, path: %s", string(path))
+		err = common.NewError("failed to insert node", msg)
+		Logger.Error("node size limit exceeded", zap.Error(err))
+		return nil, err
 	}
 
 	valueCopy := &SecureSerializableValue{eval}
