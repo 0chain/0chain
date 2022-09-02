@@ -421,7 +421,7 @@ func initHandlers(c chain.Chainer) {
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()
-	chain.SetupHandlers(c)
+	chain.SetupSharderHandlers(c)
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()
