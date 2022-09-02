@@ -837,6 +837,9 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 		case *cases.MissingLFBTickets:
 			state.MissingLFBTicket = cfg
 
+		case *cases.CheckChallengeIsValid:
+			state.CheckChallengeIsValid = cfg
+
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())
 		}
@@ -885,6 +888,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.BlobberUpload = update
 		case *config.BlobberDelete:
 			state.BlobberDelete = update
+		case *config.AdversarialValidator:
+			state.AdversarialValidator = update
 		}
 	})
 

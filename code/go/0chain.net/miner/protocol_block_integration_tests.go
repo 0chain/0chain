@@ -5,10 +5,13 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"math/rand"
+	"strings"
 
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -20,6 +23,7 @@ import (
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
+	"0chain.net/smartcontract/storagesc"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -78,13 +82,59 @@ func hasDST(pb, b []*transaction.Transaction) (has bool) {
 	return false // has not
 }
 
+type ChallengeResponseTxData struct {
+	Name  string                      "json:'name'"
+	Input storagesc.ChallengeResponse "json:'input'"
+}
+
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.updateFinalizedBlock(ctx, b)
 
-	if mc.isTestingOnUpdateFinalizedBlock(b.Round) {
+	addResultIfAdversarialValidatorTest(b)
+
+	if isTestingOnUpdateFinalizedBlock(b.Round) {
 		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
+		}
+	}
+}
+
+func addResultIfAdversarialValidatorTest(b *block.Block) {
+	s := crpc.Client().State()
+
+	if s.AdversarialValidator == nil || !s.IsMonitor {
+		return
+	}
+
+	for _, tx := range b.Txns {
+		var txParsed map[string]interface{}
+		err := json.Unmarshal([]byte(tx.TransactionData), &txParsed)
+		if err != nil {
+			return
+		}
+
+		var transactionData ChallengeResponseTxData
+		json.Unmarshal([]byte(tx.TransactionData), &transactionData)
+
+		if (s.AdversarialValidator.DenialOfService || s.AdversarialValidator.FailValidChallenge) && tx.TransactionOutput == "challenge passed by blobber" {
+			if len(transactionData.Input.ValidationTickets) > 2 {
+				for _, vt := range transactionData.Input.ValidationTickets {
+					if (vt != nil && vt.ValidatorID == s.AdversarialValidator.ID) || (s.AdversarialValidator.DenialOfService && vt == nil) {
+						input, _ := json.Marshal(transactionData.Input)
+						crpc.Client().AddTestCaseResult(input)
+						return
+					}
+				}
+			}
+		} else if s.AdversarialValidator.PassAllChallenges && strings.Contains(tx.TransactionOutput, "challenge_penalty_error") {
+			for _, vt := range transactionData.Input.ValidationTickets {
+				if vt.ValidatorID == s.AdversarialValidator.ID {
+					input, _ := json.Marshal(transactionData.Input)
+					crpc.Client().AddTestCaseResult(input)
+					return
+				}
+			}
 		}
 	}
 }

@@ -424,6 +424,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		zap.Duration("delay", time.Since(common.ToTime(challenge.Created))))
 
 	for _, vn := range challResp.ValidationTickets {
+		if vn == nil {
+			continue
+		}
+
 		if _, ok := challenge.ValidatorIDMap[vn.ValidatorID]; !ok {
 			return "", common.NewError("verify_challenge",
 				"found invalid validator id in validation ticket")
@@ -486,6 +490,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 				continue
 			}
 			success++
+		} else {
+			failure++
 		}
 	}
 
@@ -917,7 +923,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 					BaseURL: randValidator.Url,
 				})
 		}
-		if len(selectedValidators) >= alloc.DataShards {
+		if len(selectedValidators) > alloc.DataShards {
 			break
 		}
 	}
@@ -1023,6 +1029,8 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 			"Error in adding challenge: %v", err)
 	}
 
+	afterAddChallenge(result.challInfo.ID, result.challInfo.ValidatorIDs)
+
 	return nil
 }
 
@@ -1085,6 +1093,8 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	//balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
+
+	beforeEmitAddChallenge(challInfo)
 
 	emitAddChallenge(challInfo, len(expiredIDs), balances)
 	return nil

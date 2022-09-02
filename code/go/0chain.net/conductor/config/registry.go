@@ -548,6 +548,15 @@ func init() {
 		return ex.ConfigureTestCase(cfg)
 	})
 
+	register("configure_check_challenge_is_valid_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := cases.NewCheckChallengeIsValid()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {
@@ -585,6 +594,15 @@ func init() {
 
 	register("blobber_delete", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := NewBlobberDelete()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("adversarial_validator", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewAdversarialValidator()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
