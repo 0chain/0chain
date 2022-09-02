@@ -12,7 +12,7 @@ import (
 
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"

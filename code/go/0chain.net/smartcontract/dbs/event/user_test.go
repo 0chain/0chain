@@ -1,14 +1,15 @@
 package event
 
 import (
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
-	"0chain.net/core/logging"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"os"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/logging"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func init() {

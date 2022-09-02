@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	common2 "0chain.net/smartcontract/common"

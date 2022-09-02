@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func init() {

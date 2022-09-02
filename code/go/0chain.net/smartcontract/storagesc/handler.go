@@ -14,9 +14,9 @@ import (
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/logging"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"

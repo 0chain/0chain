@@ -10,10 +10,10 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 

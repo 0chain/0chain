@@ -17,7 +17,7 @@ import (
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )

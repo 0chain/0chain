@@ -6,7 +6,7 @@ import (
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 )
