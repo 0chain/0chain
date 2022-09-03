@@ -39,8 +39,8 @@ const (
 	getBlockV1Pattern = "/v1/block/get"
 )
 
-func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
-	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+// chainhandlersMap returns routes of associated with chain
+func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/chain/get": common.Recover(
 			common.ToJSONResponse(
@@ -49,6 +49,14 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 			),
 		),
+	}
+	return m
+}
+
+func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	m := map[string]func(http.ResponseWriter, *http.Request){
+
 		"/v1/block/get/latest_finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
