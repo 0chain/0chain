@@ -18,7 +18,7 @@ import (
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	cfg "0chain.net/conductor/config/cases"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {

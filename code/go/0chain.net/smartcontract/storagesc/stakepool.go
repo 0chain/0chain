@@ -9,7 +9,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs"
@@ -24,7 +24,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 //msgp:ignore unlockResponse stakePoolStat stakePoolRequest delegatePoolStat rewardsStat

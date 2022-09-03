@@ -17,8 +17,8 @@ import (
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
+	. "github.com/0chain/common/core/logging"
 )
 
 const (

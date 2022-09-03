@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
 	"0chain.net/core/mocks"
 	. "0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/mock"
 )
 

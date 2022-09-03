@@ -43,6 +43,7 @@ require (
 )
 
 require (
+	github.com/0chain/common v0.0.0-20220901051056-be0589623583 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect

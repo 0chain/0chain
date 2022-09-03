@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
 

@@ -22,7 +22,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func init() {
