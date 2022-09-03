@@ -46,8 +46,8 @@ type Blobber struct {
 
 	OffersTotal        currency.Coin `json:"offers_total"`
 	UnstakeTotal       currency.Coin `json:"unstake_total"`
-	Reward             currency.Coin `json:"reward"`
-	TotalServiceCharge currency.Coin `json:"total_service_charge"`
+	Reward             currency.Coin `json:"rewards"`
+	TotalServiceCharge currency.Coin `json:"total_reward"`
 	TotalStake         currency.Coin `json:"total_stake"`
 
 	Name        string `json:"name" gorm:"name"`

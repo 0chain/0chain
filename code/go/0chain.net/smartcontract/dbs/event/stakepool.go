@@ -27,7 +27,7 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 		}
 		rpdu := time.Since(ts)
 		if rpdu.Milliseconds() > 50 {
-			logging.Logger.Debug("event db - reward provider",
+			logging.Logger.Debug("event db - reward provider slow",
 				zap.Any("duration", rpdu),
 				zap.Int("provider type", spu.ProviderType),
 				zap.String("provider id", spu.ProviderId))
@@ -84,49 +84,24 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
 		return nil
 	}
 
+	var provider interface{}
 	switch spenum.Provider(spu.ProviderType) {
 	case spenum.Blobber:
-		return edb.addBlobberRewards(spu.ProviderId, spu.Reward)
+		provider = &Blobber{BlobberID: spu.ProviderId}
 	case spenum.Validator:
-		return edb.addValidatorRewards(spu.ProviderId, spu.Reward)
+		provider = &Validator{ValidatorID: spu.ProviderId}
 	case spenum.Miner:
-		return edb.addMinerRewards(spu.ProviderId, spu.Reward)
+		provider = &Miner{MinerID: spu.ProviderId}
 	case spenum.Sharder:
-		return edb.addSharderRewards(spu.ProviderId, spu.Reward)
+		provider = &Sharder{SharderID: spu.ProviderId}
 	default:
 		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
 	}
 
-}
-
-func (edb *EventDb) addBlobberRewards(blobberID string, reward currency.Coin) error {
 	vs := map[string]interface{}{
-		"reward":               gorm.Expr("reward + ?", reward),
-		"total_service_charge": gorm.Expr("total_service_charge + ?", reward),
+		"rewards":      gorm.Expr("rewards + ?", spu.Reward),
+		"total_reward": gorm.Expr("total_reward + ?", spu.Reward),
 	}
-	return edb.Store.Get().Model(&Blobber{}).Where(&Blobber{BlobberID: blobberID}).Updates(vs).Error
-}
 
-func (edb *EventDb) addValidatorRewards(validatorID string, reward currency.Coin) error {
-	vs := map[string]interface{}{
-		"rewards":      gorm.Expr("rewards + ?", reward),
-		"total_reward": gorm.Expr("total_reward + ?", reward),
-	}
-	return edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).Updates(vs).Error
-}
-
-func (edb *EventDb) addMinerRewards(minerID string, reward currency.Coin) error {
-	vs := map[string]interface{}{
-		"rewards":      gorm.Expr("rewards + ?", reward),
-		"total_reward": gorm.Expr("total_reward + ?", reward),
-	}
-	return edb.Store.Get().Model(&Miner{}).Where(&Miner{MinerID: minerID}).Updates(vs).Error
-}
-
-func (edb *EventDb) addSharderRewards(sharderID string, reward currency.Coin) error {
-	vs := map[string]interface{}{
-		"rewards":      gorm.Expr("rewards + ?", reward),
-		"total_reward": gorm.Expr("total_reward + ?", reward),
-	}
-	return edb.Store.Get().Model(&Sharder{}).Where(&Sharder{SharderID: sharderID}).Updates(vs).Error
+	return edb.Store.Get().Model(provider).Where(provider).Updates(vs).Error
 }
