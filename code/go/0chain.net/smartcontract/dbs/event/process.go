@@ -96,90 +96,51 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, 
 	return nil
 }
 
-type preprocessEventFunc func([]Event) ([]Event, error)
-
-// get and merge users add/update events
-func (edb *EventDb) preprocessEvents(round int64, block string, events []Event) ([]Event, error) {
-	for _, preProcess := range edb.eventsPreprocessors {
-		var err error
-		events, err = preProcess(events)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return events, nil
-}
-
 func preprocessEvents(round int64, block string, events []Event) ([]Event, error) {
 	var (
-		usersMap                 = make(map[string]User, len(events))
-		txns                     = make([]Transaction, 0, len(events))
-		updateBlobberTotalStakes = make([]Blobber, 0, len(events))
-		updateBlobberTotalOffers = make([]Blobber, 0, len(events))
+		mergers = []eventsMerger{
+			newUserEventsMerger(),
+			newTransactionsEventsMerger(),
+			newBlobberTotalStakesEventsMerger(),
+			newBlobberTotalOffersEventsMerger(),
+		}
 
 		others = make([]Event, 0, len(events))
 	)
 
-	// separate user events from others and merge.
 	for _, e := range events {
 		if e.Type != int(TypeStats) {
 			continue
 		}
 
-		switch EventTag(e.Tag) {
-		case TagAddOrOverwriteUser:
-			usr, ok := fromEvent[User](e.Data)
-			if !ok {
-				return nil, ErrInvalidEventData
+		var matched bool
+		for _, em := range mergers {
+			if em.filter(e) {
+				matched = true
+				break
 			}
+		}
 
-			usersMap[usr.UserID] = *usr
-		case TagAddTransactions:
-			txn, ok := fromEvent[Transaction](e.Data)
-			if !ok {
-				return nil, ErrInvalidEventData
-			}
-			txns = append(txns, *txn)
-		case TagUpdateBlobberTotalStake:
-			bts, ok := fromEvent[Blobber](e.Data)
-			if !ok {
-				return nil, ErrInvalidEventData
-			}
-			updateBlobberTotalStakes = append(updateBlobberTotalStakes, *bts)
-		case TagUpdateBlobberTotalOffers:
-			bto, ok := fromEvent[Blobber](e.Data)
-			if !ok {
-				return nil, ErrInvalidEventData
-			}
-			updateBlobberTotalOffers = append(updateBlobberTotalOffers, *bto)
-		default:
-			others = append(others, e)
+		if matched {
+			continue
+		}
+
+		others = append(others, e)
+	}
+
+	mergedEvents := make([]Event, 0, len(mergers))
+	for _, em := range mergers {
+		e, err := em.merge(round, block)
+		if err != nil {
+			return nil, err
+		}
+
+		if e != nil {
+			mergedEvents = append(mergedEvents, *e)
 		}
 	}
 
-	users := make([]User, 0, len(usersMap))
-	for _, u := range usersMap {
-		users = append(users, u)
-	}
-
-	usersEvent := Event{
-		BlockNumber: round,
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteUser),
-		Index:       block,
-		Data:        users,
-	}
-
-	txnsEvent := Event{
-		BlockNumber: round,
-		Type:        int(TypeStats),
-		Tag:         int(TagAddTransactions),
-		Index:       block,
-		Data:        txns,
-	}
-
-	return append([]Event{usersEvent, txnsEvent}, others...), nil
+	return append(mergedEvents, others...), nil
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {

@@ -30,8 +30,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
-	eventsChannel       chan blockEvents
-	eventsPreprocessors []preprocessEventFunc
+	eventsChannel chan blockEvents
 }
 
 type blockEvents struct {
