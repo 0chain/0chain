@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/util"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -334,6 +335,28 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 	authorizer, err := GetAuthorizerNode(in.ID, ctx)
 	if err != nil {
 		return "", common.NewError(code, err.Error())
+	}
+
+	sp, err := zcn.getStakePool(in.ID, ctx)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			msg := fmt.Sprintf("update not allowed due to missing stakepool details for (authorizerID: %v), err: %v", authorizer.ID, err)
+			err = common.NewError(code, msg)
+			Logger.Error("updating settings", zap.Error(err))
+			return "", err
+		}
+		msg := fmt.Sprintf("unexpected error for (authorizerID: %v), err: %v", authorizer.ID, err)
+		err = common.NewError(code, msg)
+		Logger.Error("updating settings", zap.Error(err))
+		return "", err
+	}
+
+	// Do not allow update authorizer in absence of delegate wallet
+	if sp.Settings.DelegateWallet == "" {
+		msg := fmt.Sprintf("missing delegate wallet id for (authorizerID: %v)", authorizer.ID)
+		err = common.NewError(code, msg)
+		Logger.Error("updating settings", zap.Error(err))
+		return "", err
 	}
 
 	err = authorizer.UpdateConfig(in.Config)
