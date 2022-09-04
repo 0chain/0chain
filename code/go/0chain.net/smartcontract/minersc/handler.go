@@ -235,7 +235,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if pool := sn.GetNodePool(poolID); pool != nil{
+	if pool := sn.GetNodePool(poolID); pool != nil {
 		common.Respond(w, r, pool, nil)
 		return
 	}
