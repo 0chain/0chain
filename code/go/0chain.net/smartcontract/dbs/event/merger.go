@@ -1,5 +1,9 @@
 package event
 
+import (
+	"0chain.net/smartcontract/dbs"
+)
+
 type eventMergeMiddleware func([]Event) ([]Event, error)
 
 type eventsMerger interface {
@@ -80,12 +84,12 @@ func withUniqueEventOverwrite() eventMergeMiddleware {
 	}
 }
 
-// addEventsValueFunc add a and b
-type addEventsValueFunc[T any] func(a, b *T) (*T, error)
+// mergeEventsFunc merge a and b, data will be merged to a and returned.
+type mergeEventsFunc[T any] func(a, b *T) (*T, error)
 
-// withUniqueEventAdded merge events that has the same index and add up the
+// withEventMerge merge events that has the same index and add up the
 // event value by calling the addFunc function.
-func withUniqueEventAdded[T any](addFunc addEventsValueFunc[T]) eventMergeMiddleware {
+func withEventMerge[T any](mergeFunc mergeEventsFunc[T]) eventMergeMiddleware {
 	return func(events []Event) ([]Event, error) {
 		eMap := make(map[string]*Event, len(events))
 		for i, e := range events {
@@ -108,7 +112,7 @@ func withUniqueEventAdded[T any](addFunc addEventsValueFunc[T]) eventMergeMiddle
 			}
 
 			// new event data after adding
-			newData, err := addFunc(eeData, eData)
+			newData, err := mergeFunc(eeData, eData)
 			if err != nil {
 				return nil, err
 			}
@@ -141,16 +145,52 @@ func newBlobberTotalOffersEventsMerger() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberTotalOffers, withBlobberTotalOffersAdded())
 }
 
+func newStakePoolRewardEventsMerger() *eventsMergerImpl[dbs.StakePoolReward] {
+	return newEventsMerger[dbs.StakePoolReward](TagStakePoolReward, withProviderRewardsPenaltiesAdded())
+}
+
 func withBlobberTotalStakesAdded() eventMergeMiddleware {
-	return withUniqueEventAdded(func(a, b *Blobber) (*Blobber, error) {
+	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
 		a.TotalStake += b.TotalStake
 		return a, nil
 	})
 }
 
 func withBlobberTotalOffersAdded() eventMergeMiddleware {
-	return withUniqueEventAdded(func(a, b *Blobber) (*Blobber, error) {
+	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
 		a.OffersTotal += b.OffersTotal
+		return a, nil
+	})
+}
+
+// withProviderRewardsPenaltiesAdded is an event merger middleware that merge two
+// StakePoolRewards
+func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *dbs.StakePoolReward) (*dbs.StakePoolReward, error) {
+		a.Reward += b.Reward
+
+		// merge delegate pool rewards
+		for k, v := range b.DelegateRewards {
+			_, ok := a.DelegateRewards[k]
+			if !ok {
+				a.DelegateRewards[k] = v
+				continue
+			}
+
+			a.DelegateRewards[k] += v
+		}
+
+		// merge delegate pool penalties
+		for k, v := range b.DelegatePenalties {
+			_, ok := a.DelegatePenalties[k]
+			if !ok {
+				a.DelegatePenalties[k] = v
+				continue
+			}
+
+			a.DelegatePenalties[k] += v
+		}
+
 		return a, nil
 	})
 }

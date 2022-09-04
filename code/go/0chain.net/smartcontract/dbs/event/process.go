@@ -61,10 +61,10 @@ const (
 	TagAddChallenge
 	TagUpdateChallenge
 	TagUpdateBlobberChallenge
-	NumberOfTags
 	TagAddOrOverwriteAllocationBlobberTerm
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
+	NumberOfTags
 )
 
 var ErrInvalidEventData = errors.New("invalid event data")
@@ -103,6 +103,7 @@ func preprocessEvents(round int64, block string, events []Event) ([]Event, error
 			newTransactionsEventsMerger(),
 			newBlobberTotalStakesEventsMerger(),
 			newBlobberTotalOffersEventsMerger(),
+			newStakePoolRewardEventsMerger(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -177,7 +178,8 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 					zap.Int64("round", es.round),
 					zap.String("block", es.block),
 					zap.Int("block size", es.blockSize),
-					zap.Any("event", event),
+					zap.Any("event type", event.Type),
+					zap.Any("event tag", event.Tag),
 					zap.Error(err),
 				)
 			}
@@ -379,11 +381,11 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.updateDelegatePool(*spUpdate)
 	case TagStakePoolReward:
-		spu, ok := fromEvent[dbs.StakePoolReward](event.Data)
+		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.rewardUpdate(*spu)
+		return edb.rewardUpdate(*spus)
 	case TagAddAllocation:
 		alloc, ok := fromEvent[Allocation](event.Data)
 		if !ok {

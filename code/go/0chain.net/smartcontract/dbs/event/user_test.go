@@ -9,6 +9,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 	"0chain.net/core/logging"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -204,4 +205,68 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 		require.Equal(t, users[i-5].TxnHash, u.TxnHash)
 		require.Equal(t, users[i-5].Round, u.Round)
 	}
+}
+
+func TestAddAndUpdateStakePoolRewards(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, closeDB := prepareEventDB(t)
+	defer closeDB()
+
+	// create new users
+	miners := make([]Miner, 10)
+	for i := 0; i < 10; i++ {
+		miners[i] = Miner{
+			MinerID:     fmt.Sprintf("m_%v", i),
+			Rewards:     currency.Coin((i + 1) * 10),
+			TotalReward: currency.Coin((i + 1) * 1000),
+		}
+	}
+
+	err := rewardProvider(eventDb, "miner_id", "miners", miners)
+	require.NoError(t, err)
+}
+
+func TestUpdateStakePoolDelegateRewards(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, closeDB := prepareEventDB(t)
+	defer closeDB()
+
+	// create new users
+	var miners []DelegatePool
+	for i := 0; i < 10; i++ {
+		miners = append(miners, DelegatePool{
+			ProviderID:   fmt.Sprintf("pd_%v", i),
+			ProviderType: int(spenum.Miner),
+			DelegateID:   fmt.Sprintf("p_%v", i),
+			PoolID:       fmt.Sprintf("p_%v", i),
+			Reward:       currency.Coin((i + 1) * 10),
+			TotalReward:  currency.Coin((i + 1) * 1000),
+		})
+	}
+
+	err := rewardProviderDelegates(eventDb, miners)
+	require.NoError(t, err)
+}
+
+func TestUpdateStakePoolDelegatePenalties(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, closeDB := prepareEventDB(t)
+	defer closeDB()
+
+	// create new users
+	var miners []DelegatePool
+	for i := 0; i < 10; i++ {
+		miners = append(miners, DelegatePool{
+			ProviderID:   fmt.Sprintf("pd_%v", i),
+			ProviderType: int(spenum.Miner),
+			DelegateID:   fmt.Sprintf("p_%v", i),
+			PoolID:       fmt.Sprintf("p_%v", i),
+			Reward:       currency.Coin((i + 1) * 10),
+			TotalReward:  currency.Coin((i + 1) * 1000),
+			TotalPenalty: currency.Coin((i + 1) * 1000),
+		})
+	}
+
+	err := penaltyProviderDelegates(eventDb, miners)
+	require.NoError(t, err)
 }

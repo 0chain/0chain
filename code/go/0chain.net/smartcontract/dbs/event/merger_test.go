@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/require"
 )
 
@@ -409,5 +410,280 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 				require.EqualValues(t, exp, b)
 			}
 		})
+	}
+}
+
+func TestMergeStakePoolRewardsEvents(t *testing.T) {
+	type expect struct {
+		poolRewards map[string]dbs.StakePoolReward
+		others      []Event
+	}
+
+	tt := []struct {
+		name      string
+		events    []Event
+		round     int64
+		blockHash string
+		expect    expect
+	}{
+		{
+			name:   "no stake pool reward",
+			events: []Event{},
+			expect: expect{
+				poolRewards: map[string]dbs.StakePoolReward{},
+			},
+		},
+		{
+			name: "one stake pool reward",
+			events: []Event{
+				makeStakePoolRewardEvent(
+					"b_1",
+					100,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+			},
+			expect: expect{
+				poolRewards: map[string]dbs.StakePoolReward{
+					"b_1": {
+						StakePoolId: dbs.StakePoolId{ProviderId: "b_1"},
+						Reward:      100,
+						DelegateRewards: map[string]int64{
+							"bp_1": 10,
+							"bp_2": 20,
+						},
+						DelegatePenalties: map[string]int64{
+							"bp_1": 10,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "two different stake pool reward",
+			events: []Event{
+				makeStakePoolRewardEvent(
+					"b_1",
+					100,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+				makeStakePoolRewardEvent(
+					"b_2",
+					200,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+			},
+			expect: expect{
+				poolRewards: map[string]dbs.StakePoolReward{
+					"b_1": {
+						StakePoolId: dbs.StakePoolId{ProviderId: "b_1"},
+						Reward:      100,
+						DelegateRewards: map[string]int64{
+							"bp_1": 10,
+							"bp_2": 20,
+						},
+						DelegatePenalties: map[string]int64{
+							"bp_1": 10,
+						},
+					},
+					"b_2": {
+						StakePoolId: dbs.StakePoolId{ProviderId: "b_2"},
+						Reward:      200,
+						DelegateRewards: map[string]int64{
+							"bp_1": 10,
+							"bp_2": 20,
+						},
+						DelegatePenalties: map[string]int64{
+							"bp_1": 10,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "two with ame stake pool reward index",
+			events: []Event{
+				makeStakePoolRewardEvent(
+					"b_1",
+					100,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+				makeStakePoolRewardEvent(
+					"b_1",
+					200,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+			},
+			expect: expect{
+				poolRewards: map[string]dbs.StakePoolReward{
+					"b_1": {
+						StakePoolId: dbs.StakePoolId{ProviderId: "b_1"},
+						Reward:      300,
+						DelegateRewards: map[string]int64{
+							"bp_1": 20,
+							"bp_2": 40,
+						},
+						DelegatePenalties: map[string]int64{
+							"bp_1": 20,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "partly with same index",
+			events: []Event{
+				makeStakePoolRewardEvent(
+					"b_1",
+					100,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+				makeStakePoolRewardEvent(
+					"b_2",
+					100,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+				makeStakePoolRewardEvent(
+					"b_3",
+					100,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+				makeStakePoolRewardEvent(
+					"b_1",
+					100,
+					map[string]int64{
+						"bp_1": 10,
+						"bp_2": 20,
+					},
+					map[string]int64{
+						"bp_1": 10,
+					}),
+			},
+			expect: expect{
+				poolRewards: map[string]dbs.StakePoolReward{
+					"b_1": {
+						StakePoolId: dbs.StakePoolId{ProviderId: "b_1"},
+						Reward:      200,
+						DelegateRewards: map[string]int64{
+							"bp_1": 20,
+							"bp_2": 40,
+						},
+						DelegatePenalties: map[string]int64{
+							"bp_1": 20,
+						},
+					},
+					"b_2": {
+						StakePoolId: dbs.StakePoolId{ProviderId: "b_2"},
+						Reward:      100,
+						DelegateRewards: map[string]int64{
+							"bp_1": 10,
+							"bp_2": 20,
+						},
+						DelegatePenalties: map[string]int64{
+							"bp_1": 10,
+						},
+					},
+					"b_3": {
+						StakePoolId: dbs.StakePoolId{ProviderId: "b_3"},
+						Reward:      100,
+						DelegateRewards: map[string]int64{
+							"bp_1": 10,
+							"bp_2": 20,
+						},
+						DelegatePenalties: map[string]int64{
+							"bp_1": 10,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			em := newStakePoolRewardEventsMerger()
+			others := make([]Event, 0, len(tc.events))
+			for _, e := range tc.events {
+				if em.filter(e) {
+					continue
+				}
+
+				others = append(others, e)
+			}
+
+			mergedEvent, err := em.merge(tc.round, tc.blockHash)
+			require.NoError(t, err)
+
+			if mergedEvent == nil {
+				return
+			}
+
+			poolRewards, ok := fromEvent[[]dbs.StakePoolReward](mergedEvent.Data)
+			require.True(t, ok)
+
+			require.Equal(t, len(tc.expect.poolRewards), len(*poolRewards))
+
+			for _, pr := range *poolRewards {
+				exp, ok := tc.expect.poolRewards[pr.ProviderId]
+				require.True(t, ok)
+				require.EqualValues(t, exp, pr)
+			}
+		})
+	}
+}
+
+func makeStakePoolRewardEvent(id string, reward currency.Coin,
+	delegateRewards map[string]int64, delegatePenalties map[string]int64) Event {
+	return Event{
+		Type:  int(TypeStats),
+		Tag:   int(TagStakePoolReward),
+		Index: id,
+		Data: dbs.StakePoolReward{
+			StakePoolId: dbs.StakePoolId{
+				ProviderId: id,
+			},
+			Reward:            reward,
+			DelegateRewards:   delegateRewards,
+			DelegatePenalties: delegatePenalties,
+		},
 	}
 }

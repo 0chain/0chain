@@ -16,6 +16,7 @@ func NewStakePoolReward(pId string, pType spenum.Provider) *StakePoolReward {
 	spu.ProviderId = pId
 	spu.ProviderType = int(pType)
 	spu.DelegateRewards = make(map[string]int64)
+	spu.DelegatePenalties = make(map[string]int64)
 	return &spu
 }
 
