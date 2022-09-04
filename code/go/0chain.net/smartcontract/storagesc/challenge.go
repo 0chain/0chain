@@ -246,10 +246,10 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 		data := dbs.DbUpdates{
 			Id: validators[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
+				"stake": int64(staked),
 			},
 		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, validators[i], data)
+		balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, validators[i], data)
 
 	}
 	return
