@@ -27,7 +27,7 @@ const (
 
 const (
 	TagNone EventTag = iota
-	TagAddBlobber
+	//TagAddBlobber
 	TagAddOrOverwriteBlobber
 	TagUpdateBlobber
 	TagUpdateBlobberTotalStake
@@ -103,7 +103,7 @@ func preprocessEvents(round int64, block string, events []Event) ([]Event, error
 			newUserEventsMerger(),
 			newAddProviderEventsMerger[Miner](TagAddMiner),
 			newAddProviderEventsMerger[Sharder](TagAddSharder),
-			newAddProviderEventsMerger[Blobber](TagAddBlobber),
+			//newAddProviderEventsMerger[Blobber](TagAddBlobber),
 			newAddProviderEventsMerger[Validator](TagAddValidator),
 			newTransactionsEventsMerger(),
 			newBlobberTotalStakesEventsMerger(),
@@ -211,12 +211,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
 	// blobber
-	case TagAddBlobber:
-		blobbers, ok := fromEvent[[]Blobber](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addBlobbers(*blobbers)
+	//case TagAddBlobber:
+	//	blobbers, ok := fromEvent[[]Blobber](event.Data)
+	//	if !ok {
+	//		return ErrInvalidEventData
+	//	}
+	//	return edb.addBlobbers(*blobbers)
 	case TagAddOrOverwriteBlobber:
 		blobber, ok := fromEvent[Blobber](event.Data)
 		if !ok {

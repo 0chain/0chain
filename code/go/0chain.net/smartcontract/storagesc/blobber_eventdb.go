@@ -88,7 +88,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		LogoUrl:     sn.Information.LogoUrl,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
 	return nil
 }
 

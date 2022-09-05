@@ -313,10 +313,10 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 		}).Error
 }
 
-func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
-	logging.Logger.Debug("event db  - add blobbers", zap.Any("blobbers", blobbers))
-	return edb.Store.Get().Create(&blobbers).Error
-}
+//func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
+//	logging.Logger.Debug("event db  - add blobbers", zap.Any("blobbers", blobbers))
+//	return edb.Store.Get().Create(&blobbers).Error
+//}
 
 func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
 	exists, err := blobber.exists(edb)
