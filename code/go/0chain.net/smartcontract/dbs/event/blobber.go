@@ -318,16 +318,11 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 //	return edb.Store.Get().Create(&blobbers).Error
 //}
 
-func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
-	exists, err := blobber.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteBlobber(blobber)
-	}
-
-	return edb.Store.Get().Create(&blobber).Error
+func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "blobber_id"}, {Name: "base_url"}},
+		UpdateAll: true,
+	}).Create(&blobbers).Error
 }
 
 func (bl *Blobber) exists(edb *EventDb) (bool, error) {

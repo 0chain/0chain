@@ -103,7 +103,7 @@ func preprocessEvents(round int64, block string, events []Event) ([]Event, error
 			newUserEventsMerger(),
 			newAddProviderEventsMerger[Miner](TagAddMiner),
 			newAddProviderEventsMerger[Sharder](TagAddSharder),
-			//newAddProviderEventsMerger[Blobber](TagAddBlobber),
+			newAddProviderEventsMerger[Blobber](TagAddOrOverwriteBlobber),
 			newAddProviderEventsMerger[Validator](TagAddValidator),
 			newTransactionsEventsMerger(),
 			newBlobberTotalStakesEventsMerger(),
@@ -218,11 +218,11 @@ func (edb *EventDb) addStat(event Event) error {
 	//	}
 	//	return edb.addBlobbers(*blobbers)
 	case TagAddOrOverwriteBlobber:
-		blobber, ok := fromEvent[Blobber](event.Data)
+		blobbers, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteBlobber(*blobber)
+		return edb.addOrOverwriteBlobber(*blobbers)
 	case TagUpdateBlobber:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
