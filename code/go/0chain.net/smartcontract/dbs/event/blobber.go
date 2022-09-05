@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	common2 "0chain.net/smartcontract/common"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
@@ -312,6 +314,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 }
 
 func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
+	logging.Logger.Debug("event db  - add blobbers", zap.Any("blobbers", blobbers))
 	return edb.Store.Get().Create(&blobbers).Error
 }
 
