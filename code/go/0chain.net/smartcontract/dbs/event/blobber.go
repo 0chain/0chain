@@ -344,6 +344,7 @@ func (bl *Blobber) exists(edb *EventDb) (bool, error) {
 }
 
 func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	logging.Logger.Warn("event db - emit blobber total stake", zap.String("id", ID))
 	return TagUpdateBlobberTotalStake, Blobber{
 		BlobberID:  ID,
 		TotalStake: totalStake,
@@ -351,6 +352,7 @@ func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 }
 
 func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag EventTag, data interface{}) {
+	logging.Logger.Warn("event db - emit blobber total offers", zap.String("id", ID))
 	return TagUpdateBlobberTotalOffers, Blobber{
 		BlobberID:   ID,
 		OffersTotal: totalOffers,
