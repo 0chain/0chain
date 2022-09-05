@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/logging"
 	common2 "0chain.net/smartcontract/common"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -171,7 +173,21 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 
 func (edb *EventDb) addMiner(miner Miner) error {
 
+	exists, err := miner.exists(edb)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return fmt.Errorf("miner already exists, id: %s", miner.MinerID)
+	}
+
 	result := edb.Store.Get().Create(&miner)
+	if result.Error != nil {
+		logging.Logger.Error("event db - add miner failed",
+			zap.Error(result.Error),
+			zap.Any("miner", miner))
+	}
 
 	return result.Error
 }

@@ -36,8 +36,8 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 		blobberRewards   = make([]Blobber, 0, len(spus))
 		validatorRewards = make([]Validator, 0, len(spus))
 
-		delegateRewards   = make([]DelegatePool, len(spus))
-		delegatePenalties = make([]DelegatePool, len(spus))
+		delegateRewards   = make([]DelegatePool, 0, len(spus))
+		delegatePenalties = make([]DelegatePool, 0, len(spus))
 	)
 
 	for i, sp := range spus {
