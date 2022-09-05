@@ -104,6 +104,25 @@ func (sp *stakePool) save(sscKey, blobberID string,
 	return
 }
 
+// workaround for save validator to MPT
+// TODO: refactor save() method above
+func (sp *stakePool) saveValidator(sscKey, validatorID string,
+	balances chainstate.StateContextI) (err error) {
+
+	r, err := balances.InsertTrieNode(stakePoolKey(sscKey, validatorID), sp)
+	if err != nil {
+		return err
+	}
+
+	logging.Logger.Debug("after stake pool save", zap.String("root", util.ToHex([]byte(r))))
+
+	// TODO: do it when validator stake pool is added
+	//tag, data := event.NewUpdateBlobberTotalOffersEvent(validatorID, sp.TotalOffers)
+	//balances.EmitEvent(event.TypeStats, tag, blobberID, data)
+
+	return
+}
+
 // The cleanStake() is stake amount without delegate pools want to unstake.
 func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
 	staked, err := sp.stake()

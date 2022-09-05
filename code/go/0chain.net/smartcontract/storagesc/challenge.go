@@ -235,7 +235,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 	sps []*stakePool, balances cstate.StateContextI) (err error) {
 
 	for i, sp := range sps {
-		if err = sp.save(ssc.ID, validators[i], balances); err != nil {
+		if err = sp.saveValidator(ssc.ID, validators[i], balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 

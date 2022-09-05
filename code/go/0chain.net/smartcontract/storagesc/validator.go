@@ -72,7 +72,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
 	}
-	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
+	if err = sp.saveValidator(sc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
@@ -231,7 +231,7 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 	}
 
 	// save stake pool
-	if err = sp.save(sc.ID, inputValidator.ID, balances); err != nil {
+	if err = sp.saveValidator(sc.ID, inputValidator.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
