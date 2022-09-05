@@ -50,6 +50,48 @@ func emitAddOrOverwriteBlobber(
 	return nil
 }
 
+func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
+	staked, err := sp.stake()
+	if err != nil {
+		return err
+	}
+
+	data := &event.Blobber{
+		BlobberID:        sn.ID,
+		BaseURL:          sn.BaseURL,
+		Latitude:         sn.Geolocation.Latitude,
+		Longitude:        sn.Geolocation.Longitude,
+		ReadPrice:        sn.Terms.ReadPrice,
+		WritePrice:       sn.Terms.WritePrice,
+		MinLockDemand:    sn.Terms.MinLockDemand,
+		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
+
+		Capacity:        sn.Capacity,
+		Allocated:       sn.Allocated,
+		SavedData:       sn.SavedData,
+		LastHealthCheck: int64(sn.LastHealthCheck),
+
+		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+		MinStake:       sn.StakePoolSettings.MinStake,
+		MaxStake:       sn.StakePoolSettings.MaxStake,
+		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
+		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+
+		OffersTotal:  sp.TotalOffers,
+		UnstakeTotal: sp.TotalUnStake,
+		Reward:       sp.Reward,
+		TotalStake:   staked,
+
+		Name:        sn.Information.Name,
+		WebsiteUrl:  sn.Information.WebsiteUrl,
+		Description: sn.Information.Description,
+		LogoUrl:     sn.Information.LogoUrl,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)
+	return nil
+}
+
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	data := &dbs.DbUpdates{
 		Id: sn.ID,

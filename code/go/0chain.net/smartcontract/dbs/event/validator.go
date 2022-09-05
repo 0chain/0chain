@@ -50,8 +50,8 @@ func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
 	return validators, result.Error
 }
 
-func (edb *EventDb) addValidator(vn Validator) error {
-	result := edb.Store.Get().Create(&vn)
+func (edb *EventDb) addValidators(vns []Validator) error {
+	result := edb.Store.Get().Create(&vns)
 	return result.Error
 }
 
@@ -59,7 +59,7 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 	var validators []Validator
 	result := edb.Store.Get().Model(&Validator{}).Offset(pg.Offset).Limit(pg.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
-		Desc: pg.IsDescending,
+		Desc:   pg.IsDescending,
 	}).Find(&validators)
 
 	return validators, result.Error

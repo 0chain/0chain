@@ -171,22 +171,12 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 	return miners, result.Error
 }
 
-func (edb *EventDb) addMiner(miner Miner) error {
-
-	exists, err := miner.exists(edb)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		return fmt.Errorf("miner already exists, id: %s", miner.MinerID)
-	}
-
-	result := edb.Store.Get().Create(&miner)
+func (edb *EventDb) addMiners(miners []Miner) error {
+	result := edb.Store.Get().Create(&miners)
 	if result.Error != nil {
 		logging.Logger.Error("event db - add miner failed",
 			zap.Error(result.Error),
-			zap.Any("miner", miner))
+			zap.Any("miner", miners))
 	}
 
 	return result.Error
@@ -233,7 +223,7 @@ func (edb *EventDb) addOrOverwriteMiner(miner Miner) error {
 		return edb.overwriteMiner(miner)
 	}
 
-	err = edb.addMiner(miner)
+	err = edb.addMiners([]Miner{miner})
 
 	return err
 }

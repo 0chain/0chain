@@ -891,7 +891,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	balances.EmitEvent(event.TypeStats, tag, t.ClientID, data)
 
 	// update the list
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+	if err := emitAddBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 

@@ -112,9 +112,9 @@ func (edb *EventDb) GetShardersTotalStake() (int64, error) {
 	return count, err
 }
 
-func (edb *EventDb) addSharder(sharder Sharder) error {
+func (edb *EventDb) addSharders(sharders []Sharder) error {
 
-	result := edb.Store.Get().Create(&sharder)
+	result := edb.Store.Get().Create(&sharders)
 
 	return result.Error
 }
@@ -174,9 +174,7 @@ func (edb *EventDb) addOrOverwriteSharder(sharder Sharder) error {
 		return edb.overwriteSharder(sharder)
 	}
 
-	err = edb.addSharder(sharder)
-
-	return err
+	return edb.addSharders([]Sharder{sharder})
 }
 
 func (sh *Sharder) exists(edb *EventDb) (bool, error) {

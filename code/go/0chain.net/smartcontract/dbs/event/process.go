@@ -27,6 +27,7 @@ const (
 
 const (
 	TagNone EventTag = iota
+	TagAddBlobber
 	TagAddOrOverwriteBlobber
 	TagUpdateBlobber
 	TagUpdateBlobberTotalStake
@@ -100,6 +101,10 @@ func preprocessEvents(round int64, block string, events []Event) ([]Event, error
 	var (
 		mergers = []eventsMerger{
 			newUserEventsMerger(),
+			newAddProviderEventsMerger[Miner](TagAddMiner),
+			newAddProviderEventsMerger[Sharder](TagAddSharder),
+			newAddProviderEventsMerger[Blobber](TagAddBlobber),
+			newAddProviderEventsMerger[Validator](TagAddValidator),
 			newTransactionsEventsMerger(),
 			newBlobberTotalStakesEventsMerger(),
 			newBlobberTotalOffersEventsMerger(),
@@ -206,6 +211,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
 	// blobber
+	case TagAddBlobber:
+		blobbers, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addBlobbers(*blobbers)
 	case TagAddOrOverwriteBlobber:
 		blobber, ok := fromEvent[Blobber](event.Data)
 		if !ok {
@@ -293,11 +304,11 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addBlock(*block)
 	case TagAddValidator:
-		vn, ok := fromEvent[Validator](event.Data)
+		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addValidator(*vn)
+		return edb.addValidators(*vns)
 	case TagUpdateValidator:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -305,12 +316,11 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.updateValidator(*updates)
 	case TagAddMiner:
-		miner, ok := fromEvent[Miner](event.Data)
-
+		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addMiner(*miner)
+		return edb.addMiners(*miners)
 	case TagAddOrOverwriteMiner:
 		miner, ok := fromEvent[Miner](event.Data)
 		if !ok {
@@ -330,11 +340,11 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.deleteMiner(*minerID)
 	case TagAddSharder:
-		sharder, ok := fromEvent[Sharder](event.Data)
+		sharders, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addSharder(*sharder)
+		return edb.addSharders(*sharders)
 	case TagAddOrOverwriteSharder:
 		sharder, ok := fromEvent[Sharder](event.Data)
 		if !ok {
