@@ -34,11 +34,11 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	}
 
 	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
-		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
+		return "", common.NewError("update_sharder_settings", "block round is in cooldown period")
 	}
 
 	if sn.Delete {
-		return "", common.NewError("update_settings", "can't update settings of sharder being deleted")
+		return "", common.NewError("update_sharder_settings", "can't update settings of sharder being deleted")
 	}
 	if sn.Settings.DelegateWallet != t.ClientID {
 		return "", common.NewError("update_sharder_settings", "access denied")
