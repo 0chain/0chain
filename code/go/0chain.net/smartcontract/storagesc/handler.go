@@ -894,6 +894,12 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 	}, nil)
 }
 
+// swagger:model fullBlock
+type fullBlock struct {
+	event.Block
+	Transactions []event.Transaction `json:"transactions"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
 // Gets block information for all blocks. Todo: We need to add a filter to this.
 //
@@ -917,13 +923,24 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 //      type: string
 //
 // responses:
-//  200: []Block
+//  200: []fullBlock
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
+
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
+		return
+	}
+	start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
+		return
+	}
+	end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
 		return
 	}
 
@@ -932,12 +949,27 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	block, err := edb.GetBlocks(limit)
+	blocks, err := edb.GetBlocks(start, end, limit)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
 		return
 	}
-	common.Respond(w, r, &block, nil)
+
+	if r.URL.Query().Get("content") != "full" {
+		common.Respond(w, r, blocks, nil)
+		return
+	}
+	var fullBlocks []fullBlock
+	txs, err := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
+	var txnIndex int
+	for i, b := range blocks {
+		fBlock := fullBlock{Block: blocks[i]}
+		for ; txnIndex < len(txs) && txs[txnIndex].Round == b.Round; txnIndex++ {
+			fBlock.Transactions = append(fBlock.Transactions, txs[txnIndex])
+		}
+		fullBlocks = append(fullBlocks, fBlock)
+	}
+	common.Respond(w, r, fullBlocks, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block block
@@ -1890,12 +1922,12 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 
 	if startBlockNum != "" && endBlockNum != "" {
-		startBlockNumInt, err := strconv.Atoi(startBlockNum)
+		startBlockNumInt, err := strconv.ParseInt(r.URL.Query().Get("block-start"), 10, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
 			return
 		}
-		endBlockNumInt, err := strconv.Atoi(endBlockNum)
+		endBlockNumInt, err := strconv.ParseInt(r.URL.Query().Get("block-end"), 10, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("end_block_number is not valid"))
 			return

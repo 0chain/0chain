@@ -61,12 +61,16 @@ func (edb *EventDb) GetBlocksByRound(round string) (Block, error) {
 	return block, res.Error
 }
 
-func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
+func (edb *EventDb) GetBlocks(start, end int64, limit common.Pagination) ([]Block, error) {
 	var blocks []Block
-	res := edb.Store.Get().Table("blocks").Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "round"},
-		Desc:   limit.IsDescending,
-	}).Find(&blocks)
+	res := edb.Store.Get().Table("blocks").
+		Where("round >= ? AND round < ?", start, end).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "round"},
+			Desc:   limit.IsDescending,
+		}).Find(&blocks)
 	return blocks, res.Error
 }
 
