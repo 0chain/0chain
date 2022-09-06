@@ -101,10 +101,10 @@ func preprocessEvents(round int64, block string, events []Event) ([]Event, error
 	var (
 		mergers = []eventsMerger{
 			newUserEventsMerger(),
-			newAddProviderEventsMerger[Miner](TagAddMiner),
-			newAddProviderEventsMerger[Sharder](TagAddSharder),
+			newAddProviderEventsMerger[Miner](TagAddMiner, withUniqueEventOverwrite()),
+			newAddProviderEventsMerger[Sharder](TagAddSharder, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Blobber](TagAddOrOverwriteBlobber),
-			newAddProviderEventsMerger[Validator](TagAddValidator),
+			newAddProviderEventsMerger[Validator](TagAddValidator, withUniqueEventOverwrite()),
 			newTransactionsEventsMerger(),
 			newBlobberTotalStakesEventsMerger(),
 			newBlobberTotalOffersEventsMerger(),

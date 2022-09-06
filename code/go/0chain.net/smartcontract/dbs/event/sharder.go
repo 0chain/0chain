@@ -113,10 +113,7 @@ func (edb *EventDb) GetShardersTotalStake() (int64, error) {
 }
 
 func (edb *EventDb) addSharders(sharders []Sharder) error {
-
-	result := edb.Store.Get().Create(&sharders)
-
-	return result.Error
+	return edb.Store.Get().Create(&sharders).Error
 }
 
 func (edb *EventDb) sharderAggregateStats(id string) (*providerAggregateStats, error) {
