@@ -185,6 +185,40 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
 	return nil
 }
 
+func (mp *MintPayload) countValidSignatures(state cstate.StateContextI) int {
+	count := 0
+	toSign := mp.GetStringToSign()
+
+	for _, v := range mp.Signatures {
+		authorizerID := v.ID
+		if authorizerID == "" {
+			continue
+		}
+
+		node, err := GetAuthorizerNode(authorizerID, state)
+		if err != nil {
+			continue
+		}
+		if node.PublicKey == "" {
+			continue
+		}
+
+		signatureScheme := state.GetSignatureScheme()
+		err = signatureScheme.SetPublicKey(node.PublicKey)
+		if err != nil {
+			continue
+		}
+
+		ok, err := signatureScheme.Verify(v.Signature, toSign)
+		if !ok || err != nil {
+			continue
+		}
+		count++
+	}
+
+	return count
+}
+
 // ---- BurnPayloadResponse ----------
 
 type BurnPayloadResponse struct {

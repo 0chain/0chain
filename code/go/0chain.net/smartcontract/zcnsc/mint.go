@@ -45,14 +45,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	numAuth, err := sc.(*storagesc.StorageSmartContract).GetStat("stat: number of authorizers")
-	if err != nil {
-		msg := fmt.Sprintf("failed to get number of authorizers error: %v, %s", err, info)
-		err = common.NewError(code, msg)
-		return
-	}
-
-	if len(payload.Signatures) < int(gn.PercentAuthorizers)*int(numAuth) {
+	if len(payload.Signatures) == 0 {
 		msg := fmt.Sprintf("payload doesn't contain signatures: %v, %s", err, info)
 		err = common.NewError(code, msg)
 		return
@@ -97,11 +90,20 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// verify signatures of authorizers
-	err = payload.verifySignatures(ctx)
+	numAuth, err := sc.(*storagesc.StorageSmartContract).GetStat("stat: number of authorizers")
 	if err != nil {
-		msg := fmt.Sprintf("failed to verify signatures with error: %v, %s", err, info)
+		msg := fmt.Sprintf("failed to get number of authorizers error: %v, %s", err, info)
 		err = common.NewError(code, msg)
+		return
+	}
+
+	// verify signatures of authorizers
+	count := payload.countValidSignatures(ctx)
+	if count < int(gn.PercentAuthorizers)*int(numAuth) {
+		err = common.NewError(
+			code,
+			"not enough valid signatures for minting",
+		)
 		return
 	}
 
