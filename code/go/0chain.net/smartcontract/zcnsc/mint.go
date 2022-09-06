@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -27,6 +28,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		)
 	)
 
+	sc := smartcontract.GetSmartContract(trans.ToClientID)
+
 	gn, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node error: %v, %s", err, info)
@@ -41,7 +44,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	if len(payload.Signatures) == 0 {
+	if len(payload.Signatures) < int(gn.PercentAuthorizers)*sc.(*StorageSmartContract).SmartContractExecutionStats["stat: number of blobbers"].Count() {
+
 		msg := fmt.Sprintf("payload doesn't contain signatures: %v, %s", err, info)
 		err = common.NewError(code, msg)
 		return

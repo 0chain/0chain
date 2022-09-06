@@ -128,13 +128,14 @@ func (ssc *StorageSmartContract) GetAddress() string {
 // stat not belongs to SC function calls
 
 const (
-	statAddValidator       = "stat: add validator"
-	statUpdateValidator    = "stat: update validator"
-	statNumberOfValidators = "stat: number of validators"
-	statNumberOfBlobbers   = "stat: number of blobbers"
-	statAddBlobber         = "stat: add blobber"
-	statUpdateBlobber      = "stat: update blobber"
-	statRemoveBlobber      = "stat: remove blobber"
+	statAddValidator        = "stat: add validator"
+	statUpdateValidator     = "stat: update validator"
+	statNumberOfValidators  = "stat: number of validators"
+	statNumberOfBlobbers    = "stat: number of blobbers"
+	statNumberOfAuthorizers = "stat: number of authorizers"
+	statAddBlobber          = "stat: add blobber"
+	statUpdateBlobber       = "stat: update blobber"
+	statRemoveBlobber       = "stat: remove blobber"
 )
 
 func (ssc *StorageSmartContract) statIncr(name string) {
