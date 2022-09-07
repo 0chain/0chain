@@ -1038,7 +1038,7 @@ func Test_sizeInGB(t *testing.T) {
 func newTestAllBlobbers() (all *StorageNodes) {
 	all = new(StorageNodes)
 	all.Nodes = []*StorageNode{
-		&StorageNode{
+		{
 			ID:      "b1",
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
@@ -1051,7 +1051,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			Allocated:       5 * GB,  //  5 GB
 			LastHealthCheck: 0,
 		},
-		&StorageNode{
+		{
 			ID:      "b2",
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
@@ -1406,7 +1406,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		// details
 		var details = []*BlobberAllocation{
-			&BlobberAllocation{
+			{
 				BlobberID:     "b1",
 				AllocationID:  txHash,
 				Size:          10 * GB,
@@ -1415,7 +1415,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 				MinLockDemand: 166, // (wp * (size/GB) * mld) / time_unit
 				Spent:         0,
 			},
-			&BlobberAllocation{
+			{
 				BlobberID:     "b2",
 				AllocationID:  txHash,
 				Size:          10 * GB,
@@ -1475,7 +1475,7 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 	assert.Error(t, uar.validate(&conf, &alloc))
 
 	// 4. ok
-	alloc.BlobberAllocs = []*BlobberAllocation{&BlobberAllocation{}}
+	alloc.BlobberAllocs = []*BlobberAllocation{{}}
 	assert.NoError(t, uar.validate(&conf, &alloc))
 }
 

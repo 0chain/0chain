@@ -134,8 +134,8 @@ func Test_vestingPool(t *testing.T) {
 	assert.Equal(t, vp.StartTime, inf.StartTime)
 	assert.Equal(t, vp.ExpireAt, inf.ExpireAt)
 	assert.EqualValues(t, []*destInfo{
-		&destInfo{ID: "one", Wanted: 10, Earned: 5, Vested: 0, Last: 10},
-		&destInfo{ID: "two", Wanted: 20, Earned: 10, Vested: 0, Last: 10},
+		{ID: "one", Wanted: 10, Earned: 5, Vested: 0, Last: 10},
+		{ID: "two", Wanted: 20, Earned: 10, Vested: 0, Last: 10},
 	}, inf.Destinations) // TODO
 	assert.Equal(t, currency.Coin(40), inf.Balance)
 	assert.Equal(t, currency.Coin(10), inf.Left)
