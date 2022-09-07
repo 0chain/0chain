@@ -43,11 +43,11 @@ const (
 	TagAddValidator
 	TagUpdateValidator
 	TagAddReadMarker
-	TagAddMiner
+	//TagAddMiner
 	TagAddOrOverwriteMiner
 	TagUpdateMiner
 	TagDeleteMiner
-	TagAddSharder
+	//TagAddSharder
 	TagAddOrOverwriteSharder
 	TagUpdateSharder
 	TagDeleteSharder
@@ -72,7 +72,7 @@ var ErrInvalidEventData = errors.New("invalid event data")
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) error {
 	ts := time.Now()
-	es, err := preprocessEvents(round, block, events)
+	es, err := mergeEvents(round, block, events)
 	if err != nil {
 		return err
 	}
@@ -97,12 +97,12 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, 
 	return nil
 }
 
-func preprocessEvents(round int64, block string, events []Event) ([]Event, error) {
+func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	var (
 		mergers = []eventsMerger{
 			newUserEventsMerger(),
-			newAddProviderEventsMerger[Miner](TagAddMiner, withUniqueEventOverwrite()),
-			newAddProviderEventsMerger[Sharder](TagAddSharder, withUniqueEventOverwrite()),
+			newAddProviderEventsMerger[Miner](TagAddOrOverwriteMiner, withUniqueEventOverwrite()),
+			newAddProviderEventsMerger[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Blobber](TagAddOrOverwriteBlobber, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Validator](TagAddValidator, withUniqueEventOverwrite()),
 			newTransactionsEventsMerger(),
@@ -315,18 +315,18 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateValidator(*updates)
-	case TagAddMiner:
+	//case TagAddMiner:
+	//	miners, ok := fromEvent[[]Miner](event.Data)
+	//	if !ok {
+	//		return ErrInvalidEventData
+	//	}
+	//	return edb.addMiners(*miners)
+	case TagAddOrOverwriteMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addMiners(*miners)
-	case TagAddOrOverwriteMiner:
-		miner, ok := fromEvent[Miner](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addOrOverwriteMiner(*miner)
+		return edb.addOrOverwriteMiner(*miners)
 	case TagUpdateMiner:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -339,19 +339,19 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteMiner(*minerID)
-	case TagAddSharder:
+	//case TagAddSharder:
+	//	sharders, ok := fromEvent[[]Sharder](event.Data)
+	//	if !ok {
+	//		return ErrInvalidEventData
+	//	}
+	//	return edb.addSharders(*sharders)
+	case TagAddOrOverwriteSharder:
 		sharders, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addSharders(*sharders)
-	case TagAddOrOverwriteSharder:
-		sharder, ok := fromEvent[Sharder](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
 
-		return edb.addOrOverwriteSharder(*sharder)
+		return edb.addOrOverwriteSharders(*sharders)
 	case TagUpdateSharder:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {

@@ -76,14 +76,14 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	}
 }
 
-func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
-
-	logging.Logger.Info("emitting add miner event")
-
-	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
-
-	return nil
-}
+//func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
+//
+//	logging.Logger.Info("emitting add miner event")
+//
+//	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
+//
+//	return nil
+//}
 
 func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
 

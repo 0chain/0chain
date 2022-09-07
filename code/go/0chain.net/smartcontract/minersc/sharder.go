@@ -148,10 +148,8 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder", "saving sharder: %v", err)
 	}
 
-	err = emitAddSharder(newSharder, balances)
-	if err != nil {
-		return "", common.NewErrorf("add_sharder", "saving sharder(event): %v", err)
-	}
+	//err = emitAddSharder(newSharder, balances)
+	emitAddOrOverwriteSharder(newSharder, balances)
 
 	// save all sharders list
 	if err = updateAllShardersList(balances, allSharders); err != nil {
@@ -231,7 +229,7 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 	return err
 }
 
-//------------- local functions ---------------------
+// ------------- local functions ---------------------
 func verifyAllShardersState(balances cstate.StateContextI, msg string) {
 	shardersList, err := getAllShardersList(balances)
 	if err != nil {

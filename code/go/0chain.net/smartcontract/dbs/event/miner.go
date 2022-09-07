@@ -213,19 +213,11 @@ func (edb *EventDb) overwriteMiner(miner Miner) error {
 	return result.Error
 }
 
-func (edb *EventDb) addOrOverwriteMiner(miner Miner) error {
-
-	exists, err := miner.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteMiner(miner)
-	}
-
-	err = edb.addMiners([]Miner{miner})
-
-	return err
+func (edb *EventDb) addOrOverwriteMiner(miners []Miner) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "miner_id"}},
+		UpdateAll: true,
+	}).Create(&miners).Error
 }
 
 func (mn *Miner) exists(edb *EventDb) (bool, error) {

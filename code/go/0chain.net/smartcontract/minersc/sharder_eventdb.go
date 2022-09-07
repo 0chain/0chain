@@ -80,13 +80,13 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 	}
 }
 
-func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) error {
-
-	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
-
-	logging.Logger.Warn("emit sharder - add sharder", zap.String("id", sn.ID))
-	return nil
-}
+//func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) error {
+//
+//	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
+//
+//	logging.Logger.Warn("emit sharder - add sharder", zap.String("id", sn.ID))
+//	return nil
+//}
 
 func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) error {
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sn.ID, sharderNodeToSharderTable(sn))

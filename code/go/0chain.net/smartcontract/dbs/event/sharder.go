@@ -161,17 +161,11 @@ func (edb *EventDb) overwriteSharder(sharder Sharder) error {
 	return result.Error
 }
 
-func (edb *EventDb) addOrOverwriteSharder(sharder Sharder) error {
-
-	exists, err := sharder.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteSharder(sharder)
-	}
-
-	return edb.addSharders([]Sharder{sharder})
+func (edb *EventDb) addOrOverwriteSharders(sharders []Sharder) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "sharder_id"}},
+		UpdateAll: true,
+	}).Create(&sharders).Error
 }
 
 func (sh *Sharder) exists(edb *EventDb) (bool, error) {
