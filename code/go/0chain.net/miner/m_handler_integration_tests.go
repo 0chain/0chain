@@ -19,7 +19,7 @@ import (
 	"0chain.net/conductor/config/cases"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 // SetupX2MResponders - setup responders.

@@ -15,8 +15,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -290,9 +290,11 @@ func testCommitBlobberRead(
 				Terms: Terms{
 					ReadPrice: zcnToBalance(blobberYaml.readPrice),
 				},
+				Stats: &StorageAllocationStats{},
 			},
 		},
 		Owner: client.id,
+		Stats: &StorageAllocationStats{},
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
 	require.NoError(t, err)

@@ -19,8 +19,8 @@ import (
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/benchmark"
+	"github.com/0chain/common/core/util"
 )
 
 type benchmarkResults struct {

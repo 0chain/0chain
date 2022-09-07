@@ -1,9 +1,10 @@
+//go:build integration_tests
 // +build integration_tests
 
 package main
 
 import (
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 
 	crpc "0chain.net/conductor/conductrpc" // integration tests
 )

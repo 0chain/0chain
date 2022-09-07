@@ -11,7 +11,7 @@ import (
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/stretchr/testify/assert"

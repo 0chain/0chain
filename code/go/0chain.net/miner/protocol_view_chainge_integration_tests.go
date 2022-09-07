@@ -16,7 +16,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc" // integration tests

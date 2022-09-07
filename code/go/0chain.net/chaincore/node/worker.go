@@ -11,8 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/core/viper"
+	"github.com/0chain/common/core/logging"
 )
 
 const (

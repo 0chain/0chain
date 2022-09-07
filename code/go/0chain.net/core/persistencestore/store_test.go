@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

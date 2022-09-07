@@ -1,17 +1,18 @@
 package faucetsc
 
 import (
-	"0chain.net/smartcontract/rest"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/rest"
+
 	"0chain.net/chaincore/chain/state"
 
 	"0chain.net/core/common"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract"
+	"github.com/0chain/common/core/util"
 )
 
 const (
