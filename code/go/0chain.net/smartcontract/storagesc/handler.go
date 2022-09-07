@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	common2 "0chain.net/smartcontract/common"
@@ -2165,23 +2166,37 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	}
 
 	logging.Logger.Debug("handler - get blobbers")
-	blobbers, err := edb.GetBlobbers(limit)
-	if err != nil {
-		logging.Logger.Error("handler - get blobbers failed", zap.Error(err))
-		err := common.NewErrInternal("cannot get blobber list" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	bc := make(chan []event.Blobber)
+	go func() {
+		defer wg.Done()
+		blobbers, err := edb.GetBlobbers(limit)
+		if err != nil {
+			logging.Logger.Error("handler - get blobbers failed", zap.Error(err))
+			err := common.NewErrInternal("cannot get blobber list" + err.Error())
+			common.Respond(w, r, nil, err)
+			return
+		}
+		bc <- blobbers
+	}()
+
+	select {
+	case bs := <-bc:
+		sns := storageNodesResponse{
+			Nodes: make([]storageNodeResponse, 0, len(bs)),
+		}
+
+		for _, blobber := range bs {
+			sn := blobberTableToStorageNode(blobber)
+			sns.Nodes = append(sns.Nodes, sn)
+		}
+		common.Respond(w, r, sns, nil)
+	case <-time.After(time.Second):
+		logging.Logger.Error("handler - get blobbers timed out", zap.Any("limit", limit))
+		common.Respond(w, r, nil, common.NewErrInternal("timeout getting blobbers"))
 	}
 
-	sns := storageNodesResponse{
-		Nodes: make([]storageNodeResponse, 0, len(blobbers)),
-	}
-
-	for _, blobber := range blobbers {
-		sn := blobberTableToStorageNode(blobber)
-		sns.Nodes = append(sns.Nodes, sn)
-	}
-	common.Respond(w, r, sns, nil)
 }
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank blobbers-by-rank
