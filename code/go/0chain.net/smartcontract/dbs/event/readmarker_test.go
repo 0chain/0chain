@@ -122,7 +122,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 func insertMultipleReadMarker(t *testing.T, eventDb *EventDb) {
 	for j := 0; j < 10; j++ {
 		blobberID := fmt.Sprintf("blobberID %v", j)
-		err := eventDb.addOrOverwriteBlobber(Blobber{BlobberID: blobberID})
+		err := eventDb.addOrOverwriteBlobber([]Blobber{Blobber{BlobberID: blobberID}})
 		if !assert.NoError(t, err, "Error while writing blobber marker") {
 			return
 		}

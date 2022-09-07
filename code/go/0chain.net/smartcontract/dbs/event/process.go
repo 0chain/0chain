@@ -103,7 +103,7 @@ func preprocessEvents(round int64, block string, events []Event) ([]Event, error
 			newUserEventsMerger(),
 			newAddProviderEventsMerger[Miner](TagAddMiner, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Sharder](TagAddSharder, withUniqueEventOverwrite()),
-			newAddProviderEventsMerger[Blobber](TagAddOrOverwriteBlobber),
+			newAddProviderEventsMerger[Blobber](TagAddOrOverwriteBlobber, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Validator](TagAddValidator, withUniqueEventOverwrite()),
 			newTransactionsEventsMerger(),
 			newBlobberTotalStakesEventsMerger(),
