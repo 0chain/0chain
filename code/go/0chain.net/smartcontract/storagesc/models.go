@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -962,7 +963,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
+	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
 	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {

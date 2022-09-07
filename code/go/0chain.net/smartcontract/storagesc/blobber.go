@@ -106,7 +106,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	// update stake pool settings
 	var sp *stakePool
-	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
@@ -130,7 +130,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// save stake pool
-	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {
+	if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
@@ -250,7 +250,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(updatedBlobber.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(spenum.Blobber, updatedBlobber.ID, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"can't get related stake pool: "+err.Error())
 	}
@@ -420,7 +420,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	var sp *stakePool
-	sp, err = sc.getStakePool(commitRead.ReadMarker.BlobberID, balances)
+	sp, err = sc.getStakePool(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related stake pool: %v", err)
@@ -485,7 +485,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	// save pools
-	err = sp.save(sc.ID, commitRead.ReadMarker.BlobberID, balances)
+	err = sp.save(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't save stake pool: %v", err)
@@ -865,13 +865,13 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.getOrUpdateStakePool(conf, blobber.ID, spenum.Blobber,
+	sp, err = sc.getOrCreateStakePool(conf, spenum.Blobber, blobber.ID,
 		blobber.StakePoolSettings, balances)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
 	}
 
-	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 

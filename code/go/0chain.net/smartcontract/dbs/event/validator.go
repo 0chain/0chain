@@ -80,9 +80,13 @@ func (edb *EventDb) validatorAggregateStats(id string) (*providerAggregateStats,
 }
 
 func (edb *EventDb) updateValidator(updates dbs.DbUpdates) error {
-	result := edb.Store.Get().
+	delegateWallet := ""
+	if updates.Updates["delegate_wallet"] != nil {
+		delegateWallet = updates.Updates["delegate_wallet"].(string)
+	}
+
+	return edb.Store.Get().
 		Model(&Validator{}).
-		Where(&Validator{ValidatorID: updates.Id}).
-		Updates(updates.Updates)
-	return result.Error
+		Where(&Validator{ValidatorID: updates.Id, DelegateWallet: delegateWallet}).
+		Updates(updates.Updates).Error
 }

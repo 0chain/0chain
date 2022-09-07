@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -320,13 +321,13 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
-				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID),
+				"GetTrieNode", stakePoolKey(spenum.Blobber, blobber.ID),
 				mockSetValue(newStakePool())).Return(nil).Once()
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
 			).Return("", nil).Once()
 			balances.On(
-				"InsertTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
+				"InsertTrieNode", stakePoolKey(spenum.Blobber, blobber.ID), mock.Anything,
 			).Return("", nil).Once()
 			balances.On(
 				"GetTrieNode", "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"+blobber.ID,
