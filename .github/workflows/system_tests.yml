@@ -31,8 +31,8 @@ on:
         description: '0box branch to deploy'
         default: 'staging'
         required: true
-       zblock_branch:
-        description: '0block branch to deploy'
+       gosdk_branch:
+        description: 'gosdk branch to deploy'
         default: 'staging'
         required: true
        test_file_filter:
@@ -52,10 +52,11 @@ jobs:
       sharder_branch: ${{ github.ref_name }}
       zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
       zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
+      gosdk_branch: ${{ github.event.inputs.gosdk_branch }}
       blobber_branch: ${{ github.event.inputs.blobber_branch }}
       validator_branch: ${{ github.event.inputs.validator_branch }}
       zbox_branch: ${{ github.event.inputs.zbox_branch }}
-      zblock_branch: ${{ github.event.inputs.zblock_branch }}
+      zblock_branch: staging
       authorizer_branch: ${{ github.event.inputs.authorizer_branch }}
       explorer_branch: master
       test_file_filter: ${{ github.event.inputs.test_file_filter }}
