@@ -2168,7 +2168,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	logging.Logger.Debug("handler - get blobbers")
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	bc := make(chan []event.Blobber)
+	bc := make(chan []event.Blobber, 1)
 	go func() {
 		defer wg.Done()
 		blobbers, err := edb.GetBlobbers(limit)
@@ -2183,6 +2183,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 
 	select {
 	case bs := <-bc:
+		logging.Logger.Debug("handler - get blobbers success", zap.Any("blobbers", bs))
 		sns := storageNodesResponse{
 			Nodes: make([]storageNodeResponse, 0, len(bs)),
 		}
@@ -2192,6 +2193,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 			sns.Nodes = append(sns.Nodes, sn)
 		}
 		common.Respond(w, r, sns, nil)
+		logging.Logger.Debug("handler - get blobbers success response", zap.Any("blobbers", sns))
 	case <-time.After(time.Second):
 		logging.Logger.Error("handler - get blobbers timed out", zap.Any("limit", limit))
 		common.Respond(w, r, nil, common.NewErrInternal("timeout getting blobbers"))
