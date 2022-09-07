@@ -7,7 +7,8 @@ import (
 	"math"
 	"net/url"
 
-	"github.com/0chain/common/core/logging"
+	"0chain.net/core/logging"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/smartcontract"

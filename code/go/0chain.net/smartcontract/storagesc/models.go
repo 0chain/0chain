@@ -8,13 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/core/logging"
+	"0chain.net/core/util"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/threshold/bls"
 
-	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
@@ -26,7 +28,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"github.com/0chain/common/core/util"
 )
 
 const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
