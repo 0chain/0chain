@@ -61,7 +61,7 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 				blobberRewards = append(blobberRewards,
 					Blobber{
 						BlobberID:          sp.ProviderId,
-						Reward:             sp.Reward,
+						Rewards:            sp.Reward,
 						TotalServiceCharge: sp.Reward,
 					})
 			case spenum.Validator:

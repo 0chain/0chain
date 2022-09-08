@@ -1107,7 +1107,7 @@ func spStats(
 		MaxNumDelegates:    blobber.NumDelegates,
 		ServiceChargeRatio: blobber.ServiceCharge,
 	}
-	stat.Rewards = blobber.Reward
+	stat.Rewards = blobber.Rewards
 	for _, dp := range delegatePools {
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,

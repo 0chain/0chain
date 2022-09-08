@@ -48,8 +48,8 @@ type Blobber struct {
 
 	OffersTotal        currency.Coin `json:"offers_total"`
 	UnstakeTotal       currency.Coin `json:"unstake_total"`
-	Reward             currency.Coin `json:"rewards"`
-	TotalServiceCharge currency.Coin `json:"total_reward" gorm:"total_reward"`
+	Rewards            currency.Coin `json:"rewards"`
+	TotalServiceCharge currency.Coin `json:"total_reward" gorm:"column:total_reward"`
 	TotalStake         currency.Coin `json:"total_stake"`
 
 	Name        string `json:"name" gorm:"name"`
@@ -303,7 +303,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"service_charge":     blobber.ServiceCharge,
 			"offers_total":       blobber.OffersTotal,
 			"unstake_total":      blobber.UnstakeTotal,
-			"reward":             blobber.Reward,
+			"rewards":            blobber.Rewards,
 			"total_reward":       blobber.TotalServiceCharge,
 			"saved_data":         blobber.SavedData,
 			"name":               blobber.Name,
