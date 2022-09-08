@@ -319,6 +319,7 @@ func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
 }
 
 func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
+	logging.Logger.Debug("event db - handler blobber, add or overwrite blobbers")
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}, {Name: "base_url"}},
 		UpdateAll: true,
@@ -355,6 +356,7 @@ func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag
 }
 
 func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
+	logging.Logger.Debug("event db - handler blobber, update total stakes")
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
@@ -362,6 +364,7 @@ func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
 }
 
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
+	logging.Logger.Debug("event db - handler blobber, update total offers")
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"offers_total"}),

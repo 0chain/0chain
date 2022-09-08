@@ -468,6 +468,8 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
+		logging.Logger.Debug("emit blobber - can't get take pool",
+			zap.Error(err), zap.String("blobber id", spr.BlobberID))
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}

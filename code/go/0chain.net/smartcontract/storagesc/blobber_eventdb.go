@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -47,6 +48,7 @@ func emitAddOrOverwriteBlobber(
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
+	logging.Logger.Warn("emit blobber - emitAddOrOverwriteBlobber")
 	return nil
 }
 
@@ -89,6 +91,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
+	logging.Logger.Warn("emit blobber - addBlobber")
 	return nil
 }
 
