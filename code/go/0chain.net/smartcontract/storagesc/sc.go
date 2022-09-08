@@ -127,21 +127,6 @@ func (ssc *StorageSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (ssc *StorageSmartContract) GetStat(name string) (int64, error) {
-	var (
-		metric interface{}
-		count  metrics.Counter
-		ok     bool
-	)
-	if metric, ok = ssc.SmartContractExecutionStats[name]; !ok {
-		return 0, fmt.Errorf("stat not found")
-	}
-	if count, ok = metric.(metrics.Counter); !ok {
-		return 0, fmt.Errorf("stat type incorrect")
-	}
-	return count.Count(), nil
-}
-
 // stat not belongs to SC function calls
 
 const (

@@ -8,7 +8,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/storagesc"
 	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -94,12 +93,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	numAuth, err := sc.(*storagesc.StorageSmartContract).GetStat("stat: number of authorizers")
-	if err != nil {
-		msg := fmt.Sprintf("failed to get number of authorizers error: %v, %s", err, info)
-		err = common.NewError(code, msg)
-		return
-	}
+	numAuth := 0 // TODO: get number of auths
 
 	// verify signatures of authorizers
 	count := payload.countValidSignatures(ctx)
