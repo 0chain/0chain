@@ -47,7 +47,6 @@ func emitAddOrOverwriteBlobber(
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
-	//balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
 	return nil
 }
 

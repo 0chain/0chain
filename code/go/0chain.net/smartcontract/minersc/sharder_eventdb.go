@@ -1,14 +1,12 @@
 package minersc
 
 import (
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/stakepool"
-	"go.uber.org/zap"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
 )
 
 func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
@@ -90,8 +88,6 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 
 func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) error {
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sn.ID, sharderNodeToSharderTable(sn))
-
-	logging.Logger.Warn("emit sharder - add or overwrite", zap.String("id", sn.ID))
 	return nil
 }
 

@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"0chain.net/core/logging"
 )
 
 /*ReqRespHandlerf - a type for the default hanlder signature */
@@ -70,15 +68,9 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 			w.Header().Set("Content-Encoding", "gzip")
 			gzw := gzip.NewWriter(w)
 			defer gzw.Close()
-			if strings.Contains(r.RequestURI, "getBlobbers") {
-				logging.Logger.Debug("handler - get blobbers, common response")
-			}
 			if err := json.NewEncoder(gzw).Encode(data); err != nil {
 				Error500(w, "json encode failed")
 				return
-			}
-			if strings.Contains(r.RequestURI, "getBlobbers") {
-				logging.Logger.Debug("handler - get blobbers, common response end")
 			}
 		}
 		return
