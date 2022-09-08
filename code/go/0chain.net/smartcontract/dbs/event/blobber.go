@@ -20,8 +20,8 @@ import (
 
 type Blobber struct {
 	gorm.Model
-	BlobberID string `json:"id" gorm:"uniqueIndex;uniqueIndex:bb"`
-	BaseURL   string `json:"url" gorm:"uniqueIndex;uniqueIndex:bb"`
+	BlobberID string `json:"id" gorm:"uniqueIndex"`
+	BaseURL   string `json:"url" gorm:"uniqueIndex"`
 
 	// geolocation
 	Latitude  float64 `json:"latitude"`
@@ -321,7 +321,7 @@ func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
 func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
 	logging.Logger.Debug("event db - handler blobber, add or overwrite blobbers")
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "blobber_id"}, {Name: "base_url"}},
+		Columns:   []clause.Column{{Name: "blobber_id"}},
 		UpdateAll: true,
 	}).Create(&blobbers).Error
 }

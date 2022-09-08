@@ -8,9 +8,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func emitAddOrOverwriteBlobber(
-	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
-) error {
+func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
