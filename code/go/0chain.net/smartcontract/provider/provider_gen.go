@@ -17,12 +17,12 @@ func (z *Provider) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "LastHealthCheck")
 		return
 	}
-	// string "IsShutDown"
-	o = append(o, 0xaa, 0x49, 0x73, 0x53, 0x68, 0x75, 0x74, 0x44, 0x6f, 0x77, 0x6e)
-	o = msgp.AppendBool(o, z.IsShutDown)
-	// string "IsKilled"
-	o = append(o, 0xa8, 0x49, 0x73, 0x4b, 0x69, 0x6c, 0x6c, 0x65, 0x64)
-	o = msgp.AppendBool(o, z.IsKilled)
+	// string "HasBeenShutDown"
+	o = append(o, 0xaf, 0x48, 0x61, 0x73, 0x42, 0x65, 0x65, 0x6e, 0x53, 0x68, 0x75, 0x74, 0x44, 0x6f, 0x77, 0x6e)
+	o = msgp.AppendBool(o, z.HasBeenShutDown)
+	// string "HasBeenKilled"
+	o = append(o, 0xad, 0x48, 0x61, 0x73, 0x42, 0x65, 0x65, 0x6e, 0x4b, 0x69, 0x6c, 0x6c, 0x65, 0x64)
+	o = msgp.AppendBool(o, z.HasBeenKilled)
 	return
 }
 
@@ -50,16 +50,16 @@ func (z *Provider) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "LastHealthCheck")
 				return
 			}
-		case "IsShutDown":
-			z.IsShutDown, bts, err = msgp.ReadBoolBytes(bts)
+		case "HasBeenShutDown":
+			z.HasBeenShutDown, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "IsShutDown")
+				err = msgp.WrapError(err, "HasBeenShutDown")
 				return
 			}
-		case "IsKilled":
-			z.IsKilled, bts, err = msgp.ReadBoolBytes(bts)
+		case "HasBeenKilled":
+			z.HasBeenKilled, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "IsKilled")
+				err = msgp.WrapError(err, "HasBeenKilled")
 				return
 			}
 		default:
@@ -76,7 +76,7 @@ func (z *Provider) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Provider) Msgsize() (s int) {
-	s = 1 + 16 + z.LastHealthCheck.Msgsize() + 11 + msgp.BoolSize + 9 + msgp.BoolSize
+	s = 1 + 16 + z.LastHealthCheck.Msgsize() + 16 + msgp.BoolSize + 14 + msgp.BoolSize
 	return
 }
 

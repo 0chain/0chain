@@ -22,8 +22,8 @@ type Validator struct {
 
 	//provider
 	LastHealthCheck int64 `json:"last_health_check"`
-	IsKilled        bool  `json:"is_killed,omitempty"`
-	IsShutDown      bool  `json:"is_shut_down,omitempty"`
+	IsKilled        bool  `json:"is_killed,omitempty" gorm:"index"`
+	IsShutDown      bool  `json:"is_shut_down,omitempty" gorm:"index"`
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`

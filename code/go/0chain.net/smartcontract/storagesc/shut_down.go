@@ -26,7 +26,10 @@ func (ssc *StorageSmartContract) shutDownBlobber(
 		return "", common.NewError("shut_down_blobber_failed",
 			"access denied, allowed for delegate_wallet owner only")
 	}
-
+	if blobber.IsShutDown() {
+		return "", common.NewError("kill_blobber_failed",
+			"blobber already shut down")
+	}
 	blobber.ShutDown()
 	if err := emitUpdateBlobber(blobber, balances); err != nil {
 		return "", common.NewError("shut_down_blobber_failed", err.Error())

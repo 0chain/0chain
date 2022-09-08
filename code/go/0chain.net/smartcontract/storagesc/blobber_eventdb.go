@@ -28,8 +28,8 @@ func emitAddOrOverwriteBlobber(
 		Allocated:       sn.Allocated,
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
-		IsShutDown:      sn.IsShutDown,
-		IsKilled:        sn.IsKilled,
+		IsShutDown:      sn.IsShutDown(),
+		IsKilled:        sn.IsKilled(),
 
 		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 		MinStake:       sn.StakePoolSettings.MinStake,

@@ -393,7 +393,7 @@ func (sc *StorageSmartContract) verifyChallenge(
 		return "", common.NewError("verify_challenge",
 			"can't get blobber"+err.Error())
 	}
-	if blobber.IsKilled {
+	if blobber.IsKilled() {
 		return "", common.NewError("verify_challenge",
 			"blobber had been killed")
 	}

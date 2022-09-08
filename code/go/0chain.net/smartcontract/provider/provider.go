@@ -32,23 +32,25 @@ type StatusInfo struct {
 }
 
 type ProviderI interface {
-	Status(now common.Timestamp) Status
-	HealthCheck(now common.Timestamp) error
-	ShutDown() error
-	Kill() error
+	Status(common.Timestamp, common.Timestamp) (Status, string)
+	HealthCheck(common.Timestamp)
+	ShutDown()
+	Kill()
+	IsKilled() bool
+	IsShutDown() bool
 }
 
 type Provider struct {
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
-	IsShutDown      bool             `json:"is_shut_down"`
-	IsKilled        bool             `json:"is_killed"`
+	HasBeenShutDown bool             `json:"is_shut_down"`
+	HasBeenKilled   bool             `json:"is_killed"`
 }
 
 func (p *Provider) Status(now, healthCheckPeriod common.Timestamp) (Status, string) {
-	if p.IsKilled {
+	if p.IsKilled() {
 		return Killed, Killed.String()
 	}
-	if p.IsShutDown {
+	if p.IsShutDown() {
 		return ShutDown, ShutDown.String()
 	}
 	if p.LastHealthCheck < (now - healthCheckPeriod) {
@@ -57,14 +59,22 @@ func (p *Provider) Status(now, healthCheckPeriod common.Timestamp) (Status, stri
 	return Active, ""
 }
 
+func (p *Provider) IsShutDown() bool {
+	return p.HasBeenShutDown
+}
+
+func (p *Provider) IsKilled() bool {
+	return p.HasBeenKilled
+}
+
 func (p *Provider) HealthCheck(now common.Timestamp) {
 	p.LastHealthCheck = now
 }
 
 func (p *Provider) ShutDown() {
-	p.IsShutDown = true
+	p.HasBeenShutDown = true
 }
 
 func (p *Provider) Kill() {
-	p.IsKilled = true
+	p.HasBeenKilled = true
 }

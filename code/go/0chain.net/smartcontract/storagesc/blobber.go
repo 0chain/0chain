@@ -374,7 +374,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"error fetching blobber object")
 	}
 
-	if blobber.IsKilled {
+	if blobber.IsKilled() {
 		return "", common.NewError("commit_blobber_read",
 			"blobber had been killed")
 	}
@@ -631,7 +631,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber")
 	}
 
-	if blobber.IsKilled {
+	if blobber.IsKilled() {
 		return "", common.NewError("commit_connection_failed",
 			"blobber had been killed")
 	}

@@ -1582,7 +1582,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewErrorf("fini_alloc_failed",
 				"blobber %s and %s don't match", b.ID, d.BlobberID)
 		}
-		if b.IsKilled {
+		if b.IsKilled() {
 			err = removeAllocationFromBlobber(sc, d, alloc.ID, balances)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",

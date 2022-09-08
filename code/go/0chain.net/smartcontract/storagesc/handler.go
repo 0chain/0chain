@@ -104,8 +104,8 @@ func validatorTableToValidatorNode(val event.Validator) ValidationNode {
 	return ValidationNode{
 		Provider: provider.Provider{
 			LastHealthCheck: common.Timestamp(val.LastHealthCheck),
-			IsShutDown:      val.IsShutDown,
-			IsKilled:        val.IsKilled,
+			HasBeenShutDown: val.IsShutDown,
+			HasBeenKilled:   val.IsKilled,
 		},
 		ID:      val.ValidatorID,
 		BaseURL: val.BaseUrl,
@@ -2158,8 +2158,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: StorageNode{
 			Provider: provider.Provider{
-				IsKilled:        blobber.IsKilled,
-				IsShutDown:      blobber.IsShutDown,
+				HasBeenKilled:   blobber.IsKilled,
+				HasBeenShutDown: blobber.IsShutDown,
 				LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
 			},
 			ID:      blobber.BlobberID,

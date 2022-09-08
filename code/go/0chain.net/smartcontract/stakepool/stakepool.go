@@ -350,6 +350,7 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 	return nil
 }
 
+// slash stake pools funds, if a provider is killed
 func (sp *StakePool) SlashFraction(
 	fraction float64,
 	providerId string,

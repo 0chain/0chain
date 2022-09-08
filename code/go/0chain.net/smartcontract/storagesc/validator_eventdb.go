@@ -15,8 +15,8 @@ func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
 		Provider: provider.Provider{
 			LastHealthCheck: common.Timestamp(v.LastHealthCheck),
-			IsKilled:        v.IsKilled,
-			IsShutDown:      v.IsShutDown,
+			HasBeenKilled:   v.IsKilled,
+			HasBeenShutDown: v.IsShutDown,
 		},
 		ID:        v.ValidatorID,
 		BaseURL:   v.BaseUrl,
@@ -74,8 +74,8 @@ func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 		NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
 		LastHealthCheck: int64(vn.LastHealthCheck),
-		IsShutDown:      vn.IsShutDown,
-		IsKilled:        vn.IsKilled,
+		IsShutDown:      vn.IsShutDown(),
+		IsKilled:        vn.IsKilled(),
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, data)
