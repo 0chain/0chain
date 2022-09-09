@@ -752,6 +752,10 @@ func getMockBlobberStakePoolId(blobber, stake int) string {
 	return encryption.Hash(getMockBlobberId(blobber) + "pool" + strconv.Itoa(stake))
 }
 
+func getMockValidatorStakePoolId(blobber, stake int) string {
+	return encryption.Hash(getMockValidatorId(blobber) + "pool" + strconv.Itoa(stake))
+}
+
 func getMockBlobberId(index int) string {
 	return encryption.Hash("mockBlobber_" + strconv.Itoa(index))
 }

@@ -47,7 +47,7 @@ func kill(
 	}
 
 	var sp *stakePool
-	if sp, err = getStakePool(req.ID, balances); err != nil {
+	if sp, err = getProviderStakePool(req.ID, pType, balances); err != nil {
 		return common.NewError(errCode, "can't get related stake pool: "+err.Error())
 	}
 
@@ -68,13 +68,13 @@ func kill(
 	if err := sp.SlashFraction(
 		conf.StakePool.KillSlash,
 		req.ID,
-		spenum.Validator,
+		pType,
 		balances,
 	); err != nil {
 		return common.NewError(errCode, "can't slash validator: "+err.Error())
 	}
 
-	if err = sp.save(ADDRESS, req.ID, balances); err != nil {
+	if err = sp.save(spenum.Validator, req.ID, balances); err != nil {
 		return common.NewError(errCode, fmt.Sprintf("saving stake pool: %v", err))
 	}
 

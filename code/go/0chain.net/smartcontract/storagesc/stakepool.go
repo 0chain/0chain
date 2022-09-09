@@ -101,7 +101,7 @@ func (sp *stakePool) save(providerType spenum.Provider, providerID string,
 
 func (sp *stakePool) emitSaveEvent(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) {
 	data := dbs.DbUpdates{
-		Id: providerID,
+		Id:      providerID,
 		Updates: map[string]interface{}{},
 	}
 	switch providerType {
@@ -125,7 +125,7 @@ func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
 	return staked - sp.TotalUnStake, nil
 }
 
-func (sp *stakePool) stakeByProvider(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) error{
+func (sp *stakePool) stakeByProvider(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
@@ -148,10 +148,10 @@ func (sp *stakePool) stake() (stake currency.Coin, err error) {
 	return
 }
 
-func (sp *stakePool) emitStakeEvent(providerType spenum.Provider, providerID string,staked currency.Coin, balances chainstate.StateContextI)  {
+func (sp *stakePool) emitStakeEvent(providerType spenum.Provider, providerID string, staked currency.Coin, balances chainstate.StateContextI) {
 	logging.Logger.Info("emitting stake event")
 	data := dbs.DbUpdates{
-		Id: providerID,
+		Id:      providerID,
 		Updates: map[string]interface{}{},
 	}
 	switch providerType {
@@ -400,6 +400,20 @@ func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, prov
 	return sp, nil
 }
 
+func getProviderStakePool(
+	id datastore.Key,
+	pType spenum.Provider,
+	balances chainstate.CommonStateContextI,
+) (sp *stakePool, err error) {
+	sp = newStakePool()
+	err = balances.GetTrieNode(stakePoolKey(pType, id), sp)
+	if err != nil {
+		return nil, err
+	}
+
+	return sp, nil
+}
+
 func getStakePool(
 	blobberID datastore.Key, balances chainstate.CommonStateContextI,
 ) (sp *stakePool, err error) {
@@ -447,8 +461,8 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 
 type stakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
-	ProviderID   string       `json:"provider_id,omitempty"`
-	PoolID       string       `json:"pool_id,omitempty"`
+	ProviderID   string          `json:"provider_id,omitempty"`
+	PoolID       string          `json:"pool_id,omitempty"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {

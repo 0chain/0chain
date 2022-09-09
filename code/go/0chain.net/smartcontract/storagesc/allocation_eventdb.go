@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/transaction"
-	"github.com/0chain/common/core/logging"
-	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/provider"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
