@@ -102,7 +102,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 
 func validatorTableToValidatorNode(val event.Validator) ValidationNode {
 	return ValidationNode{
-		Provider: provider.Provider{
+		Provider: &provider.Provider{
 			LastHealthCheck: common.Timestamp(val.LastHealthCheck),
 			HasBeenShutDown: val.IsShutDown,
 			HasBeenKilled:   val.IsKilled,
@@ -2157,7 +2157,7 @@ type storageNodeResponse struct {
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: StorageNode{
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
 				HasBeenKilled:   blobber.IsKilled,
 				HasBeenShutDown: blobber.IsShutDown,
 				LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),

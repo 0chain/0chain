@@ -198,7 +198,13 @@ type ValidationNode struct {
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
-	PartitionPosition int                `json:"partition_position"`
+	PartitionPosition int                `json:"p
+artition_position"`
+}
+
+func (vn *ValidationNode) Save(balances cstate.StateContextI) error {
+	_, err := balances.InsertTrieNode(vn.GetKey(ADDRESS), vn)
+	return err
 }
 
 func (sn *ValidationNode) ValidatorStatus(now common.Timestamp, conf *Config) (provider.Status, string) {
@@ -357,6 +363,11 @@ type StorageNode struct {
 	LastRewardPartition RewardPartitionLocation `json:"last_reward_partition"`
 	RewardPartition     RewardPartitionLocation `json:"reward_partition"`
 	Information         Info                    `json:"info"`
+}
+
+func (sn *StorageNode) Save(balances cstate.StateContextI) error {
+	_, err := balances.InsertTrieNode(sn.GetKey(ADDRESS), sn)
+	return err
 }
 
 func (sn *StorageNode) BlobberStatus(now common.Timestamp, conf *Config) (provider.Status, string) {

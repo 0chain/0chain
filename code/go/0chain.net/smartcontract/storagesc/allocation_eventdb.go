@@ -72,7 +72,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &StorageNode{
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
 				LastHealthCheck: common.Timestamp(b.LastHealthCheck),
 			},
 			ID:      b.BlobberID,

@@ -60,7 +60,7 @@ func kill(
 		return common.NewError(errCode, "already killed")
 	}
 	p.Kill()
-	if err := provider.Save(p, balances); err != nil {
+	if err := p.Save(balances); err != nil {
 		return common.NewError(errCode, "cannot save: "+err.Error())
 	}
 
