@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -104,12 +103,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 			fmt.Sprintf(
 				"nonce given (%v) for receiving client (%s) has alredy been minted for Node.ID: '%s', %s",
 				payload.Nonce, payload.ReceivingClientID, un.ID, info))
-		return
-	}
-
-	sc := smartcontract.GetSmartContract(trans.ToClientID)
-	if sc == nil {
-		err = common.NewError(code, fmt.Sprintf("smart contract not found, %s", info))
 		return
 	}
 
