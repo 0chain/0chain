@@ -152,7 +152,7 @@ func (srh *StorageRestHandler) getValidatorStatus(w http.ResponseWriter, r *http
 		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
 		return
 	}
-	status.Status, status.Reason = sn.Status(sctx.Now(), conf)
+	status.Status, status.Reason = sn.ValidatorStatus(sctx.Now(), conf)
 
 	common.Respond(w, r, status, nil)
 }
@@ -190,7 +190,7 @@ func (srh *StorageRestHandler) getBlobberStatus(w http.ResponseWriter, r *http.R
 		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
 		return
 	}
-	status.Status, status.Reason = sn.Status(sctx.Now(), conf)
+	status.Status, status.Reason = sn.BlobberStatus(sctx.Now(), conf)
 
 	common.Respond(w, r, status, nil)
 }
@@ -2532,7 +2532,7 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 //  400:
 //  500:
 func (srh StorageRestHandler) getTimeInactive(w http.ResponseWriter, r *http.Request) {
-	pType, ok := spenum.Provders[r.URL.Query().Get("type")]
+	pType, ok := spenum.Providers[r.URL.Query().Get("type")]
 	if !ok {
 		pType = spenum.Blobber
 	}

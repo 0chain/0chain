@@ -13,7 +13,7 @@ import (
 
 func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
-		Provider: provider.Provider{
+		Provider: &provider.Provider{
 			LastHealthCheck: common.Timestamp(v.LastHealthCheck),
 			HasBeenKilled:   v.IsKilled,
 			HasBeenShutDown: v.IsShutDown,

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -23,7 +25,7 @@ func (pr *providerRequest) decode(p []byte) error {
 func kill(
 	t *transaction.Transaction,
 	input []byte,
-	providerSpecific func(providerRequest, *stakePool, *Config) error,
+	providerSpecific func(providerRequest, *stakePool, *Config) (provider.ProviderI, error),
 	pType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
@@ -49,8 +51,17 @@ func kill(
 		return common.NewError(errCode, "can't get related stake pool: "+err.Error())
 	}
 
-	if err := providerSpecific(req, sp, conf); err != nil {
+	p, err := providerSpecific(req, sp, conf)
+	if err != nil {
 		return err
+	}
+
+	if p.IsKilled() {
+		return common.NewError(errCode, "already killed")
+	}
+	p.Kill()
+	if err := provider.Save(p, balances); err != nil {
+		return common.NewError(errCode, "cannot save: "+err.Error())
 	}
 
 	sp.IsDead = true
@@ -76,33 +87,24 @@ func (ssc *StorageSmartContract) killBlobber(
 	balances cstate.StateContextI,
 ) (string, error) {
 	return "", kill(t, input,
-		func(req providerRequest, sp *stakePool, conf *Config) error {
+		func(req providerRequest, sp *stakePool, conf *Config) (provider.ProviderI, error) {
 			var err error
 			var blobber *StorageNode
 			if blobber, err = ssc.getBlobber(req.ID, balances); err != nil {
-				return common.NewError("kill_blobber_failed",
+				return nil, common.NewError("kill_blobber_failed",
 					"can't get the blobber "+t.ClientID+": "+err.Error())
-			}
-
-			if blobber.IsKilled() {
-				return common.NewError("kill_blobber_failed",
-					"blobber already killed")
-			}
-			blobber.Kill()
-			if _, err := balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
-				return common.NewError("kill_blobber_failed", "can't save blobber: "+err.Error())
 			}
 
 			// remove killed blobber from list of blobbers to receive rewards
 			if blobber.LastRewardPartition.valid() {
 				activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 				if err != nil {
-					return common.NewError("kill_blobber_failed",
+					return nil, common.NewError("kill_blobber_failed",
 						"cannot get all blobbers list: "+err.Error())
 				}
 				err = activePassedBlobberRewardPart.RemoveItem(balances, blobber.LastRewardPartition.Index, blobber.ID)
 				if err != nil {
-					return common.NewError("kill_blobber_failed",
+					return nil, common.NewError("kill_blobber_failed",
 						"cannot remove blobber from active passed rewards partition: "+err.Error())
 				}
 			}
@@ -110,25 +112,21 @@ func (ssc *StorageSmartContract) killBlobber(
 			if blobber.RewardPartition.valid() {
 				parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 				if err != nil {
-					return common.NewErrorf("commit_connection_failed",
+					return nil, common.NewErrorf("commit_connection_failed",
 						"cannot fetch ongoing partition: %v", err)
 				}
 				err = parts.RemoveItem(balances, blobber.RewardPartition.Index, blobber.ID)
 				if err != nil {
-					return common.NewError("kill_blobber_failed",
+					return nil, common.NewError("kill_blobber_failed",
 						"cannot remove blobber from ongoing passed rewards partition: "+err.Error())
 				}
 			}
 
-			if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
-				return common.NewError("kill_blobber_failed",
-					"can't save blobber: "+err.Error())
-			}
 			if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
-				return common.NewError("kill_blobber_failed",
+				return nil, common.NewError("kill_blobber_failed",
 					"emitting event: "+err.Error())
 			}
-			return nil
+			return nil, nil
 		},
 		spenum.Blobber,
 		balances,
@@ -141,41 +139,31 @@ func (ssc *StorageSmartContract) killValidator(
 	balances cstate.StateContextI,
 ) (string, error) {
 	return "", kill(t, input,
-		func(req providerRequest, _ *stakePool, _ *Config) error {
+		func(req providerRequest, _ *stakePool, _ *Config) (provider.ProviderI, error) {
 			var err error
 			var validator = &ValidationNode{
 				ID: req.ID,
 			}
 
 			if err = balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
-				return common.NewError("kill_validator_failed",
+				return nil, common.NewError("kill_validator_failed",
 					"can't get the blobber "+t.ClientID+": "+err.Error())
 			}
-			if validator.IsKilled() {
-				return common.NewError("kill_blobber_failed",
-					"validator already killed")
-			}
-			validator.Kill()
 			err = validator.emitUpdate(balances)
 			if err != nil {
-				return common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
+				return nil, common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
 			}
 
 			validatorPartitions, err := getValidatorsList(balances)
 			if err != nil {
-				return common.NewError("kill_validator_failed",
+				return nil, common.NewError("kill_validator_failed",
 					"failed to get validator list."+err.Error())
 			}
 			if err := validatorPartitions.RemoveItem(balances, validator.PartitionPosition, validator.ID); err != nil {
-				return common.NewError("kill_validator_failed",
+				return nil, common.NewError("kill_validator_failed",
 					"failed to remove validator."+err.Error())
 			}
-
-			if _, err = balances.InsertTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
-				return common.NewError("kill_validator_failed",
-					"can't save blobber: "+err.Error())
-			}
-			return nil
+			return validator, nil
 		},
 		spenum.Validator,
 		balances,

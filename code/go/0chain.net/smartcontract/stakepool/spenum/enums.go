@@ -1,11 +1,14 @@
 package spenum
 
+import "strconv"
+
 //go:generate msgp -v -io=false -tests=false
 
 type Provider int
 
 const (
-	Miner Provider = iota + 1
+	Unknown Provider = iota
+	Miner
 	Sharder
 	Blobber
 	Validator
@@ -13,7 +16,7 @@ const (
 )
 
 var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
-var Provders = map[string]Provider{
+var Providers = map[string]Provider{
 	"miner":      Miner,
 	"sharder":    Sharder,
 	"blobber":    Blobber,
@@ -22,6 +25,9 @@ var Provders = map[string]Provider{
 }
 
 func (p Provider) String() string {
+	if int(p) >= len(providerString) {
+		return "invalid: " + strconv.Itoa(int(p))
+	}
 	return providerString[p]
 }
 

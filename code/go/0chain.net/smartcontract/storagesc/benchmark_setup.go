@@ -393,7 +393,7 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
 		blobber := &StorageNode{
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
 				LastHealthCheck: balances.GetTransaction().CreationDate,
 			},
 			ID:      id,

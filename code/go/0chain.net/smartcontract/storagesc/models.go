@@ -193,7 +193,7 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 }
 
 type ValidationNode struct {
-	provider.Provider
+	*provider.Provider
 	ID                string             `json:"id"`
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
@@ -201,7 +201,7 @@ type ValidationNode struct {
 	PartitionPosition int                `json:"partition_position"`
 }
 
-func (sn *ValidationNode) Status(now common.Timestamp, conf *Config) (provider.Status, string) {
+func (sn *ValidationNode) ValidatorStatus(now common.Timestamp, conf *Config) (provider.Status, string) {
 	return sn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
 }
 
@@ -341,7 +341,7 @@ type Info struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	provider.Provider
+	*provider.Provider
 	ID                      string                 `json:"id"`
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
@@ -359,7 +359,7 @@ type StorageNode struct {
 	Information         Info                    `json:"info"`
 }
 
-func (sn *StorageNode) Status(now common.Timestamp, conf *Config) (provider.Status, string) {
+func (sn *StorageNode) BlobberStatus(now common.Timestamp, conf *Config) (provider.Status, string) {
 	status, reason := sn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
 	if status == provider.Killed || status == provider.ShutDown {
 		return status, reason
@@ -864,7 +864,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	bSize := sa.bSize()
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 
-	if status, reason := blobber.Status(now, conf); status != provider.Active {
+	if status, reason := blobber.BlobberStatus(now, conf); status != provider.Active {
 		return fmt.Errorf("blobber status %s is not active: %v", status.String(), reason)
 	}
 
