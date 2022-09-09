@@ -109,7 +109,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	var numAuth item
 	err = ctx.GetTrieNode(storagesc.ALL_AUTHORIZERS_KEY, &numAuth)
 	if err != nil {
-		err = common.NewError(code, fmt.Sprintf("failed to get number of authorizers, %s", info))
+		err = common.NewError(code, fmt.Sprintf("failed to get number of authorizers: %s; %s", err.Error(), info))
 		return
 	}
 
