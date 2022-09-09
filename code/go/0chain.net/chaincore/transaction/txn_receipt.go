@@ -1,6 +1,6 @@
 package transaction
 
-import "0chain.net/core/util"
+import "github.com/0chain/common/core/util"
 
 //TxnReceipt - a transaction receipt is a processed transaction that contains the output
 type TxnReceipt struct {

@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/state"
 

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -v

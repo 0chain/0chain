@@ -9,7 +9,7 @@ import (
 
 	"github.com/0chain/gorocksdb"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 

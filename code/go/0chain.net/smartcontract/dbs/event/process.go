@@ -11,7 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 type (
@@ -63,6 +63,7 @@ const (
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
 	TagProviderHealthCheck
+	TagAddOrUpdateChallengePool
 	NumberOfTags
 )
 
@@ -334,6 +335,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return errors.New("validator health checks not implemented yet")
 		}
 		return edb.healthCheck(*provider)
+		// challenge pool
+	case TagAddOrUpdateChallengePool:
+		updates, ok := fromEvent[ChallengePool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateChallengePool(*updates)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

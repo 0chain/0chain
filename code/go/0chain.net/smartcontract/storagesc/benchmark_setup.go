@@ -602,19 +602,34 @@ func GetMockValidatorStakePools(
 	clients []string,
 	balances cstate.StateContextI,
 ) {
-	// todo Implement once we have separated blobber and validator stake pools
+	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
+		bId := getMockValidatorId(i)
+		sp := &stakePool{
+			StakePool: stakepool.StakePool{
+				Pools:    make(map[string]*stakepool.DelegatePool),
+				Reward:   0,
+				Settings: getMockStakePoolSettings(bId),
+			},
+		}
+		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
+			id := getMockValidatorStakePoolId(i, j)
+			sp.Pools[id] = &stakepool.DelegatePool{}
+			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
+			err := sp.save(spenum.Validator, getMockValidatorId(i), balances)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 }
 
 func SaveMockStakePools(
 	sps []*stakePool,
 	balances cstate.StateContextI,
 ) {
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
 	for i, sp := range sps {
 		bId := getMockBlobberId(i)
-		err := sp.save(sscId, bId, balances)
+		err := sp.save(spenum.Blobber, bId, balances)
 		if err != nil {
 			panic(err)
 		}

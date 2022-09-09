@@ -13,7 +13,7 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func (c *Chain) FinalizeRound(r round.RoundI) {

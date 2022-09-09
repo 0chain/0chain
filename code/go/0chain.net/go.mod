@@ -8,7 +8,6 @@ require (
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.24.1
 	github.com/go-playground/validator/v10 v10.11.0
-	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gocql/gocql v1.1.0
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.8
@@ -43,15 +42,14 @@ require (
 	gorm.io/gorm v1.23.6
 )
 
+require github.com/0chain/common v0.0.5
+
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
-	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
-	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-ini/ini v1.66.4 // indirect
 	github.com/go-openapi/analysis v0.21.2 // indirect

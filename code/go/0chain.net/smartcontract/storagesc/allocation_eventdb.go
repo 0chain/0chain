@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"0chain.net/smartcontract/provider"
-
 	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/chaincore/currency"

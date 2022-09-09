@@ -10,8 +10,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -283,7 +283,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	}
 
 	if mn.Delete {
-		return "", common.NewError("update_settings", "can't update settings of miner being deleted")
+		return "", common.NewError("update_miner_settings", "can't update settings of miner being deleted")
 	}
 
 	if mn.Settings.DelegateWallet != t.ClientID {
