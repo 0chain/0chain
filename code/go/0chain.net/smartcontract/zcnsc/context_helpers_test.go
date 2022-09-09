@@ -3,6 +3,7 @@ package zcnsc_test
 // StateContextI implementation
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -15,10 +16,29 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/storagesc"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 )
+
+type item struct {
+	Field int `json:"field"`
+}
+
+// MarshalMsg implements util.MPTSerializable
+func (i *item) MarshalMsg([]byte) ([]byte, error) {
+	var b, err = json.Marshal(i)
+	if err != nil {
+		panic(err)
+	}
+	return b, err
+}
+
+// UnmarshalMsg implements util.MPTSerializable
+func (i *item) UnmarshalMsg(p []byte) ([]byte, error) {
+	return p, json.Unmarshal(p, i)
+}
 
 const (
 	txHash    = "tx hash"
@@ -256,6 +276,16 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 		Scheme: scheme,
 		Node:   node,
 	}
+
+	var numAuth item
+	err := ctx.GetTrieNode(storagesc.ALL_AUTHORIZERS_KEY, &numAuth)
+	if err != nil {
+		numAuth.Field = 0
+	}
+
+	numAuth.Field++
+
+	_, err = ctx.InsertTrieNode(storagesc.ALL_AUTHORIZERS_KEY, &numAuth)
 
 	return ctx.authorizers[node.GetKey()]
 }
