@@ -126,7 +126,7 @@ func updateAuthorizerCount(ctx cstate.StateContextI) (err error) {
 	var numAuth item
 	err = ctx.GetTrieNode(storagesc.ALL_AUTHORIZERS_KEY, &numAuth)
 	if err != nil {
-		return
+		numAuth.Field = 0
 	}
 
 	numAuth.Field++
