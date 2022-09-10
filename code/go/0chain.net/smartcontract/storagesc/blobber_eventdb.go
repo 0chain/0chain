@@ -36,7 +36,6 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 
 		OffersTotal:  sp.TotalOffers,
 		UnstakeTotal: sp.TotalUnStake,
-		Rewards:      event.ProviderRewards{Rewards: sp.Reward},
 		TotalStake:   staked,
 
 		Name:        sn.Information.Name,
@@ -79,8 +78,12 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 
 		OffersTotal:  sp.TotalOffers,
 		UnstakeTotal: sp.TotalUnStake,
-		Rewards:      event.ProviderRewards{Rewards: sp.Reward},
-		TotalStake:   staked,
+		Rewards: event.ProviderRewards{
+			ProviderID:   sn.ID,
+			Rewards:      sp.Reward,
+			TotalRewards: sp.Reward,
+		},
+		TotalStake: staked,
 
 		Name:        sn.Information.Name,
 		WebsiteUrl:  sn.Information.WebsiteUrl,
@@ -88,7 +91,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		LogoUrl:     sn.Information.LogoUrl,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)
 	logging.Logger.Warn("emit blobber - addBlobber")
 	return nil
 }

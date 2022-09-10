@@ -20,10 +20,7 @@ type providerAggregateStats struct {
 }
 
 type providerRewardsDelegates struct {
-	minerRewards     []Miner
-	sharderRewards   []Sharder
-	blobberRewards   []Blobber
-	validatorRewards []Validator
+	rewards []ProviderRewards
 
 	delegateRewards   []DelegatePool
 	delegatePenalties []DelegatePool
@@ -31,57 +28,18 @@ type providerRewardsDelegates struct {
 
 func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
 	var (
-		minerRewards     = make([]Miner, 0, len(spus))
-		sharderRewards   = make([]Sharder, 0, len(spus))
-		blobberRewards   = make([]Blobber, 0, len(spus))
-		validatorRewards = make([]Validator, 0, len(spus))
-
+		rewards           = make([]ProviderRewards, 0, len(spus))
 		delegateRewards   = make([]DelegatePool, 0, len(spus))
 		delegatePenalties = make([]DelegatePool, 0, len(spus))
 	)
 
 	for i, sp := range spus {
 		if sp.Reward != 0 {
-			switch spenum.Provider(sp.ProviderType) {
-			case spenum.Miner:
-				minerRewards = append(minerRewards,
-					Miner{
-						MinerID: sp.ProviderId,
-						Rewards: ProviderRewards{
-							Rewards:      sp.Reward,
-							TotalRewards: sp.Reward,
-						},
-					})
-			case spenum.Sharder:
-				sharderRewards = append(sharderRewards,
-					Sharder{
-						SharderID: sp.ProviderId,
-						Rewards: ProviderRewards{
-							Rewards:      sp.Reward,
-							TotalRewards: sp.Reward,
-						},
-					})
-			case spenum.Blobber:
-				blobberRewards = append(blobberRewards,
-					Blobber{
-						BlobberID: sp.ProviderId,
-						Rewards: ProviderRewards{
-							Rewards:      sp.Reward,
-							TotalRewards: sp.Reward,
-						},
-					})
-			case spenum.Validator:
-				validatorRewards = append(validatorRewards,
-					Validator{
-						ValidatorID: sp.ProviderId,
-						Rewards: ProviderRewards{
-							Rewards:      sp.Reward,
-							TotalRewards: sp.Reward,
-						},
-					})
-			default:
-				return nil, fmt.Errorf("unsupported provider type: %d", sp.ProviderType)
-			}
+			rewards = append(rewards, ProviderRewards{
+				ProviderID:   sp.ProviderId,
+				Rewards:      sp.Reward,
+				TotalRewards: sp.Reward,
+			})
 		}
 
 		for k, v := range spus[i].DelegateRewards {
@@ -105,11 +63,7 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	}
 
 	return &providerRewardsDelegates{
-		minerRewards:     minerRewards,
-		sharderRewards:   sharderRewards,
-		blobberRewards:   blobberRewards,
-		validatorRewards: validatorRewards,
-
+		rewards:           rewards,
 		delegateRewards:   delegateRewards,
 		delegatePenalties: delegatePenalties,
 	}, nil
@@ -128,9 +82,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
 
 	defer func() {
 		du := time.Since(ts)
-		n := len(rewards.sharderRewards) + len(rewards.minerRewards) +
-			len(rewards.blobberRewards) + len(rewards.validatorRewards) +
-			len(rewards.delegateRewards) + len(rewards.delegatePenalties)
+		n := len(rewards.rewards) + len(rewards.delegateRewards) + len(rewards.delegatePenalties)
 		if du > 50*time.Millisecond {
 			logging.Logger.Debug("event db - update reward slow",
 				zap.Any("duration", du),
@@ -138,33 +90,15 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
 		}
 	}()
 
-	if len(rewards.minerRewards) > 0 {
-		if err := rewardProvider(edb, "miners", "miner_id", rewards.minerRewards); err != nil {
-			return fmt.Errorf("could not update miner rewards: %v", err)
-		}
-	}
-
-	if len(rewards.sharderRewards) > 0 {
-		if err := rewardProvider(edb, "sharders", "sharder_id", rewards.sharderRewards); err != nil {
-			return fmt.Errorf("could not update sharder rewards: %v", err)
-		}
-	}
-
-	if len(rewards.blobberRewards) > 0 {
-		if err := rewardProvider(edb, "blobbers", "blobber_id", rewards.blobberRewards); err != nil {
-			return fmt.Errorf("could not update blobber rewards: %v", err)
-		}
-	}
-
-	if len(rewards.validatorRewards) > 0 {
-		if err := rewardProvider(edb, "validators", "validator_id", rewards.validatorRewards); err != nil {
-			return fmt.Errorf("could not update validator rewards: %v", err)
+	if len(rewards.rewards) > 0 {
+		if err := edb.rewardProviders(rewards.rewards); err != nil {
+			return fmt.Errorf("could not rewards providers: %v", err)
 		}
 	}
 
 	rpdu := time.Since(ts)
 	if rpdu.Milliseconds() > 50 {
-		logging.Logger.Debug("event db - reward provider slow", zap.Any("duration", rpdu))
+		logging.Logger.Debug("event db - reward providers slow", zap.Any("duration", rpdu))
 	}
 
 	if len(rewards.delegateRewards) > 0 {
@@ -192,6 +126,18 @@ func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T)
 		Columns:   []clause.Column{{Name: index}},
 		DoUpdates: clause.Assignments(vs),
 	}).Create(&providers).Error
+}
+
+func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
+	vs := map[string]interface{}{
+		"rewards":       gorm.Expr(fmt.Sprintf("provider_rewards.rewards + excluded.rewards")),
+		"total_rewards": gorm.Expr(fmt.Sprintf("provider_rewards.total_rewards + excluded.total_rewards")),
+	}
+
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "provider_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(rewards).Error
 }
 
 func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {

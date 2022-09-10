@@ -151,6 +151,9 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake: %v", err)
 	}
 
+	// TODO: emit update provider reward event?
+	//emitUpdateProviderRewards(blobber, sp.Reward, balances)
+
 	tag, data := event.NewUpdateBlobberTotalStakeEvent(blobber.ID, staked)
 	balances.EmitEvent(event.TypeStats, tag, blobber.ID, data)
 

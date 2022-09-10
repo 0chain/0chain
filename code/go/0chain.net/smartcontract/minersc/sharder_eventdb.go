@@ -71,10 +71,14 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		MinStake:          sn.Settings.MinStake,
 		MaxStake:          sn.Settings.MaxStake,
 		LastHealthCheck:   sn.LastHealthCheck,
-		Rewards:           event.ProviderRewards{Rewards: sn.Reward},
-		Active:            sn.Status == node.NodeStatusActive,
-		Longitude:         sn.Geolocation.Longitude,
-		Latitude:          sn.Geolocation.Latitude,
+		Rewards: event.ProviderRewards{
+			ProviderID:   sn.ID,
+			Rewards:      sn.Reward,
+			TotalRewards: sn.Reward,
+		},
+		Active:    sn.Status == node.NodeStatusActive,
+		Longitude: sn.Geolocation.Longitude,
+		Latitude:  sn.Geolocation.Latitude,
 	}
 }
 

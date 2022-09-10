@@ -69,10 +69,14 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		MinStake:          mn.Settings.MinStake,
 		MaxStake:          mn.Settings.MaxStake,
 		LastHealthCheck:   mn.LastHealthCheck,
-		Rewards:           event.ProviderRewards{Rewards: mn.Reward},
-		Active:            mn.Status == node.NodeStatusActive,
-		Longitude:         mn.Geolocation.Longitude,
-		Latitude:          mn.Geolocation.Latitude,
+		Rewards: event.ProviderRewards{
+			ProviderID:   mn.ID,
+			Rewards:      mn.Reward,
+			TotalRewards: mn.Reward,
+		},
+		Active:    mn.Status == node.NodeStatusActive,
+		Longitude: mn.Geolocation.Longitude,
+		Latitude:  mn.Geolocation.Latitude,
 	}
 }
 

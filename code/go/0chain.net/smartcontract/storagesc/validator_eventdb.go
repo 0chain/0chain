@@ -78,6 +78,7 @@ func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 		MaxStake:       vn.StakePoolSettings.MaxStake,
 		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+		Rewards:        event.ProviderRewards{ProviderID: vn.ID},
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, data)
