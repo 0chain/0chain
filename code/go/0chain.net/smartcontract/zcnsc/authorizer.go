@@ -307,7 +307,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
-	_ *transaction.Transaction,
+	t *transaction.Transaction,
 	input []byte,
 	ctx cstate.StateContextI,
 ) (string, error) {
@@ -341,6 +341,18 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 	authorizer, err := GetAuthorizerNode(in.ID, ctx)
 	if err != nil {
 		return "", common.NewError(code, err.Error())
+	}
+
+	var sp *StakePool
+	if sp, err = zcn.getStakePool(in.ID, ctx); err != nil {
+		return "", common.NewErrorf(code, "error occurred while getting stake pool: %v", err)
+
+	}
+
+	if err := smartcontractinterface.AuthorizeWithDelegate(code, func() bool {
+		return sp.Settings.DelegateWallet == t.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	err = authorizer.UpdateConfig(in.Config)
