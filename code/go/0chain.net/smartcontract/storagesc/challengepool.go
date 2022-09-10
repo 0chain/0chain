@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/tokenpool"
@@ -9,8 +12,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"fmt"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
@@ -84,7 +85,7 @@ func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllo
 		Finalized:    alloc.Finalized,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrUpdateChallengePool, "", data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrUpdateChallengePool, "", data)
 
 	return
 }

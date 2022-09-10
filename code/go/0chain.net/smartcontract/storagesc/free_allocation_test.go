@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -424,7 +425,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On(
 			"EmitEvent",
-			event.TypeStats, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
+			event.TypeSmartContract, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(

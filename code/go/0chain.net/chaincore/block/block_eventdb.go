@@ -3,9 +3,9 @@ package block
 import (
 	"fmt"
 
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 )
