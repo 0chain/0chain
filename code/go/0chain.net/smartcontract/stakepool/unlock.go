@@ -23,6 +23,7 @@ func (sp *StakePool) UnlockClientStakePool(
 	if err != nil {
 		return 0, fmt.Errorf("can't get user pools list: %v", err)
 	}
+
 	return sp.UnlockPool(
 		clientID,
 		providerType,

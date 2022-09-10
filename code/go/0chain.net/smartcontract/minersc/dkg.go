@@ -7,14 +7,13 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -223,9 +222,8 @@ func GetPhaseNode(statectx cstate.CommonStateContextI) (
 }
 
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
-	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
+	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction, isViewChange bool) error {
 
-	isViewChange := config.Configuration().ChainConfig.IsViewChangeEnabled()
 	// move phase condition
 	var movePhase = isViewChange &&
 		pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]

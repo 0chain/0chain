@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
+	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -34,14 +34,29 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 	}
 }
 
+func Test_DifferentSenderAndReceiverMustFail(t *testing.T) {
+	ctx := MakeMockStateContext()
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	transaction, err := CreateTransaction(defaultClient+"1", "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	_, err = contract.Mint(transaction, payload.Encode(), ctx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "transaction made from different account who made burn")
+}
+
 func Test_FuzzyMintTest(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
-	payload, err := CreateMintPayload(ctx, defaultAuthorizer)
+	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 
 	for _, client := range clients {
-		transaction := CreateAddAuthorizerTransaction(client, ctx)
+		transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+		require.NoError(t, err)
 
 		response, err := contract.Mint(transaction, payload.Encode(), ctx)
 
@@ -49,6 +64,21 @@ func Test_FuzzyMintTest(t *testing.T) {
 		require.NotNil(t, response)
 		require.NotEmpty(t, response)
 	}
+}
+
+func Test_EmptySignaturesShouldFail(t *testing.T) {
+	ctx := MakeMockStateContext()
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	payload.Signatures = nil
+
+	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	_, err = contract.Mint(transaction, payload.Encode(), ctx)
+	require.Error(t, err)
 }
 
 // TBD
@@ -64,7 +94,6 @@ func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
-	node.Nonce = payload.Nonce - 1
 	require.NoError(t, node.Save(ctx))
 
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)

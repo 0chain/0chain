@@ -59,7 +59,7 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 	var validators []Validator
 	result := edb.Store.Get().Model(&Validator{}).Offset(pg.Offset).Limit(pg.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
-		Desc: pg.IsDescending,
+		Desc:   pg.IsDescending,
 	}).Find(&validators)
 
 	return validators, result.Error
@@ -80,9 +80,13 @@ func (edb *EventDb) validatorAggregateStats(id string) (*providerAggregateStats,
 }
 
 func (edb *EventDb) updateValidator(updates dbs.DbUpdates) error {
-	result := edb.Store.Get().
+	delegateWallet := ""
+	if updates.Updates["delegate_wallet"] != nil {
+		delegateWallet = updates.Updates["delegate_wallet"].(string)
+	}
+
+	return edb.Store.Get().
 		Model(&Validator{}).
-		Where(&Validator{ValidatorID: updates.Id}).
-		Updates(updates.Updates)
-	return result.Error
+		Where(&Validator{ValidatorID: updates.Id, DelegateWallet: delegateWallet}).
+		Updates(updates.Updates).Error
 }

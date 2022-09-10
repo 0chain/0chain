@@ -18,8 +18,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract"
+	"github.com/0chain/common/core/util"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
@@ -111,7 +111,11 @@ func (c *config) update(changes *smartcontract.StringMap) error {
 				return fmt.Errorf("value %v cannot be converted to currency.Coin, "+
 					"failing to set config key %s", value, key)
 			} else {
-				c.MinLock = currency.Coin(sbValue * 1e10)
+				cMinLock, err := currency.MultFloat64(1e10, sbValue)
+				if err != nil {
+					return err
+				}
+				c.MinLock = cMinLock
 			}
 		case Settings[MinDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {

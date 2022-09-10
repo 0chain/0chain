@@ -23,11 +23,11 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 const (
@@ -183,14 +183,20 @@ func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.No
 	return false
 }
 
-func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transaction) bool {
+// ConfirmTransaction adding a new parameter timeout as we're not sure what all it can break
+// without making a lot of changes, to fix a confirmTransaction in SetupSC a new param timeout is added
+// if value 0 is passed it'll work like earlier, but anything apart from 0 will result in setting that as timeout
+func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transaction, timeoutSec int64) bool {
+	if timeoutSec == 0 {
+		timeoutSec = transaction.TXN_TIME_TOLERANCE
+	}
 	var (
 		active = c.IsActiveInChain()
 		mb     = c.GetCurrentMagicBlock()
 
 		found, pastTime bool
 		urls            []string
-		cctx, cancel    = context.WithTimeout(ctx, time.Duration(transaction.TXN_TIME_TOLERANCE)*time.Second)
+		cctx, cancel    = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	)
 
 	defer cancel()
@@ -276,8 +282,10 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	txn.PublicKey = selfNode.PublicKey
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
-	logging.Logger.Debug("Register nodes to", zap.Strings("urls", minerUrls))
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+	logging.Logger.Debug("Register nodes to",
+		zap.Strings("urls", minerUrls),
+		zap.String("id", mn.ID))
+	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
 
@@ -306,7 +314,7 @@ func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 
 	txn.PublicKey = selfNode.PublicKey
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
-	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
 

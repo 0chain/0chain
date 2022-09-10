@@ -14,15 +14,19 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	. "0chain.net/smartcontract/zcnsc"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 )
 
 const (
 	txHash    = "tx hash"
 	startTime = common.Timestamp(100)
+)
+
+var (
+	_ cstate.StateContextI = (*mocks.StateContextI)(nil)
 )
 
 type mockStateContext struct {
@@ -64,7 +68,7 @@ func MakeMockStateContext() *mockStateContext {
 
 	ctx.userNodes = make(map[string]*UserNode)
 	for _, client := range clients {
-		userNode := createUserNode(client, int64(0))
+		userNode := createUserNode(client)
 		ctx.userNodes[userNode.GetKey()] = userNode
 	}
 

@@ -10,7 +10,7 @@ import (
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -20,18 +20,18 @@ func scConfigKey(scKey string) datastore.Key {
 }
 
 type freeAllocationSettings struct {
-	DataShards                 int           `json:"data_shards"`
-	ParityShards               int           `json:"parity_shards"`
-	Size                       int64         `json:"size"`
-	Duration                   time.Duration `json:"duration"`
-	ReadPriceRange             PriceRange    `json:"read_price_range"`
-	WritePriceRange            PriceRange    `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
-	ReadPoolFraction           float64       `json:"read_pool_fraction"`
+	DataShards       int           `json:"data_shards"`
+	ParityShards     int           `json:"parity_shards"`
+	Size             int64         `json:"size"`
+	Duration         time.Duration `json:"duration"`
+	ReadPriceRange   PriceRange    `json:"read_price_range"`
+	WritePriceRange  PriceRange    `json:"write_price_range"`
+	ReadPoolFraction float64       `json:"read_pool_fraction"`
 }
 
 type stakePoolConfig struct {
-	MinLock currency.Coin `json:"min_lock"`
+	MinLock       currency.Coin `json:"min_lock"`
+	MinLockPeriod time.Duration `json:"min_lock_period"`
 }
 
 type readPoolConfig struct {
@@ -39,9 +39,7 @@ type readPoolConfig struct {
 }
 
 type writePoolConfig struct {
-	MinLock       currency.Coin `json:"min_lock"`
-	MinLockPeriod time.Duration `json:"min_lock_period"`
-	MaxLockPeriod time.Duration `json:"max_lock_period"`
+	MinLock currency.Coin `json:"min_lock"`
 }
 
 type blockReward struct {
@@ -69,7 +67,7 @@ type blockRewardZeta struct {
 	Mu float64 `json:"mu"`
 }
 
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) error {
 	total := sharderRatio + minerRatio + bRatio
 	if total == 0 {
 		br.SharderWeight = 0
@@ -81,6 +79,15 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio floa
 		br.BlobberWeight = bRatio / total
 	}
 
+	totalWeight := br.SharderWeight + br.MinerWeight + br.BlobberWeight
+	switch totalWeight {
+	case 0:
+	case 1:
+		return nil
+	default:
+		return fmt.Errorf("total weight is not 1: %v", totalWeight)
+	}
+	return nil
 }
 
 // Config represents SC configurations ('storagesc:' from sc.yaml).
@@ -108,7 +115,7 @@ type Config struct {
 	// ReadPool related configurations.
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
-	WritePool *writePoolConfig `json:"writepool"`
+	WritePool *writePoolConfig `json:"write_pool"`
 	// StakePool related configurations.
 	StakePool *stakePoolConfig `json:"stakepool"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
@@ -246,10 +253,6 @@ func (sc *Config) validate() (err error) {
 	if !sc.FreeAllocationSettings.WritePriceRange.isValid() {
 		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
 			sc.FreeAllocationSettings.WritePriceRange)
-	}
-	if sc.FreeAllocationSettings.MaxChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
-			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
 	}
 	if sc.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < sc.FreeAllocationSettings.ReadPoolFraction {
 		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
@@ -414,10 +417,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
-	conf.WritePool.MinLockPeriod = scc.GetDuration(
-		pfx + "writepool.min_lock_period")
-	conf.WritePool.MaxLockPeriod = scc.GetDuration(
-		pfx + "writepool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "stakepool.min_lock"))
@@ -425,22 +424,51 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 
-	conf.MaxTotalFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
-	conf.MaxIndividualFreeAllocation = currency.Coin(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
+	conf.MaxTotalFreeAllocation, err = currency.MultFloat64(1e10, scc.GetFloat64(pfx+"max_total_free_allocation"))
+	if err != nil {
+		return nil, err
+	}
+
+	conf.MaxIndividualFreeAllocation, err = currency.MultFloat64(1e10, scc.GetFloat64(pfx+"max_individual_free_allocation"))
+	if err != nil {
+		return nil, err
+	}
+
 	fas := pfx + "free_allocation_settings."
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
 	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
 	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
+
+	readPriceRangeMin, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"read_price_range.min"))
+	if err != nil {
+		return nil, err
+	}
+
+	readPriceRangeMax, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"read_price_range.max"))
+	if err != nil {
+		return nil, err
+	}
+
 	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
-		Min: currency.Coin(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
-		Max: currency.Coin(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
+		Min: readPriceRangeMin,
+		Max: readPriceRangeMax,
 	}
+
+	writePriceRangeMin, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"write_price_range.min"))
+	if err != nil {
+		return nil, err
+	}
+
+	writePriceRangeMax, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"write_price_range.max"))
+	if err != nil {
+		return nil, err
+	}
+
 	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
-		Min: currency.Coin(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
-		Max: currency.Coin(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
+		Min: writePriceRangeMin,
+		Max: writePriceRangeMax,
 	}
-	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
 
 	// allocation cancellation
@@ -472,11 +500,14 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
-	conf.BlockReward.setWeightsFromRatio(
+	err = conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
 	)
+	if err != nil {
+		return nil, err
+	}
 	conf.BlockReward.Gamma.Alpha = scc.GetFloat64(pfx + "block_reward.gamma.alpha")
 	conf.BlockReward.Gamma.A = scc.GetFloat64(pfx + "block_reward.gamma.a")
 	conf.BlockReward.Gamma.B = scc.GetFloat64(pfx + "block_reward.gamma.b")
@@ -523,18 +554,6 @@ func (ssc *StorageSmartContract) getConfig(
 	default:
 		return nil, err
 	}
-}
-
-// getWritePoolConfig
-func (ssc *StorageSmartContract) getWritePoolConfig(
-	balances chainState.StateContextI, setup bool) (
-	conf *writePoolConfig, err error) {
-
-	var scconf *Config
-	if scconf, err = ssc.getConfig(balances, setup); err != nil {
-		return
-	}
-	return scconf.WritePool, nil
 }
 
 // getReadPoolConfig

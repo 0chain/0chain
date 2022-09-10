@@ -10,10 +10,12 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/maths"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -179,6 +181,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		mb        = c.GetMagicBlock(round)
 		num       = mb.Miners.Size()
 		threshold = c.GetNotarizationThresholdCount(num)
+		err       error
 	)
 
 	if c.ThresholdByCount() > 0 {
@@ -195,14 +198,19 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		}
 	}
 	if c.ThresholdByStake() > 0 {
-		verifiersStake := 0
+		verifiersStake := uint64(0)
 		for _, ticket := range bvt {
-			verifiersStake += c.getMiningStake(ticket.VerifierID)
+			verifiersStake, err = maths.SafeAddUInt64(verifiersStake, c.getMiningStake(ticket.VerifierID))
+			if err != nil {
+				logging.Logger.Error("reached_notarization", zap.Error(err))
+				return false
+			}
 		}
-		if verifiersStake < c.ThresholdByStake() {
+
+		if verifiersStake < uint64(c.ThresholdByStake()) {
 			logging.Logger.Info("not reached notarization - stake < threshold stake",
 				zap.Int64("mb_sr", mb.StartingRound),
-				zap.Int("verify stake", verifiersStake),
+				zap.Uint64("verify stake", verifiersStake),
 				zap.Int("threshold", c.ThresholdByStake()),
 				zap.Int("active_miners", num),
 				zap.Int("num_signatures", len(bvt)),
@@ -341,17 +349,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	deletedNode := fb.ClientState.GetDeletes()
 	c.rebaseState(fb)
-	deadNodesCount, err := c.stateDB.RecordDeadNodes(deletedNode)
+	err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 	if err != nil {
 		logging.Logger.Error("finalize block - record dead nodes failed",
 			zap.Int64("round", fb.Round),
 			zap.String("block", fb.Hash),
 			zap.Error(err))
 		return
-	}
-
-	if deadNodesCount >= c.MaxDeadNodesCount() {
-		go c.StartPruneClientState()
 	}
 
 	if err := c.updateFeeStats(fb); err != nil {
@@ -762,7 +766,7 @@ func (c *Chain) updateFeeStats(fb *block.Block) error {
 			return err
 		}
 	}
-	meanFees, _, err := currency.DivideCoin(totalFees, int64(len(fb.Txns)))
+	meanFees, _, err := currency.DistributeCoin(totalFees, int64(len(fb.Txns)))
 	if err != nil {
 		return err
 	}

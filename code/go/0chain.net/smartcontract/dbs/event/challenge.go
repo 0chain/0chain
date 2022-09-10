@@ -3,6 +3,9 @@ package event
 import (
 	"fmt"
 
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm/clause"
@@ -34,13 +37,21 @@ func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	return &ch, nil
 }
 
-func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, now, cct common.Timestamp, limit common2.Pagination) ([]*Challenge, error) {
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct common.Timestamp,
+	limit common2.Pagination) ([]*Challenge, error) {
 	var chs []*Challenge
 	expiry := now - cct
+	if from < expiry {
+		from = expiry
+	}
+
+	logging.Logger.Info("fetching openchallenges",
+		zap.Any("now", now),
+		zap.Any("cct", cct))
 
 	query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			expiry, blobberID, false).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
+			from, blobberID, false).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "created_at"},
 		Desc:   limit.IsDescending,
 	})

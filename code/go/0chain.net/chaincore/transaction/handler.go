@@ -7,8 +7,8 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 

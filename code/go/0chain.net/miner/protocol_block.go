@@ -22,10 +22,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
@@ -591,7 +591,31 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	for _, txn := range b.Txns {
 		txns = append(txns, txn)
 	}
+
+	tii := newTxnIterInfo(mc.BlockSize())
+	invalidTxns := tii.checkForInvalidTxns(b.Txns)
+
 	transaction.RemoveFromPool(ctx, txns)
+
+	if len(invalidTxns) > 0 {
+		transaction.RemoveFromPool(ctx, invalidTxns)
+	}
+}
+
+func (tii *TxnIterInfo) checkForInvalidTxns(txns []*transaction.Transaction) []datastore.Entity {
+	invalidTxns := []datastore.Entity{}
+	pastTxns := tii.pastTxns
+
+	for _, txn := range txns {
+		for i := 0; i < len(pastTxns); i++ {
+			pastTxn := pastTxns[i].(*transaction.Transaction)
+			if txn.ClientID == pastTxn.ClientID && txn.Nonce >= pastTxn.Nonce {
+
+				invalidTxns = append(invalidTxns, pastTxns[i])
+			}
+		}
+	}
+	return invalidTxns
 }
 
 /*FinalizeBlock - finalize the transactions in the block */

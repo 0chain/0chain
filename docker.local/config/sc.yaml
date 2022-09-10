@@ -116,8 +116,6 @@ smart_contracts:
     # users' write pool related configurations
     writepool:
       min_lock: 0.1 # tokens
-      min_lock_period: 2m
-      max_lock_period: 8760h
     # stake pool configurations
     stakepool:
       # minimal lock for a delegate pool
@@ -126,6 +124,8 @@ smart_contracts:
       interest_rate: 0.0
       # interest_interval is interval to pay interests for a stake
       interest_interval: 1m
+      # min_lock_period is min lock period. Default lock period is 3 years worth of blocks.
+      min_lock_period: 36m
     # following settings are for free storage rewards
     #
     # largest value you can have for the total allowed free storage
@@ -137,21 +137,18 @@ smart_contracts:
     # allocation settings for free storage
     # these values are applied to all free allocations
     free_allocation_settings:
-      # the free payment is split between read and write pool in the ratio
-      # read_pool_fraction : (1-read_pool_fraction)
-      read_pool_fraction: 0.2
-      data_shards: 10
-      parity_shards: 5
-      size: 10000000000
+      data_shards: 2
       duration: 50h
+      parity_shards: 2
+      read_pool_fraction: 0.2
+      mint_amount: 0.5
       read_price_range:
-        min: 0.0
-        max: 0.04
+        max: 1
+        min: 0
+      size: 10000000
       write_price_range:
-        min: 0.0
-        max: 0.04
-      max_challenge_completion_time:  1m
-    # validator_reward represents part of blobbers' rewards goes to validators
+        max: 1
+        min: 0
     validator_reward: 0.025
     # blobber_slash represents blobber's stake penalty when a challenge not
     # passed
@@ -160,7 +157,6 @@ smart_contracts:
     max_read_price: 100.0
     max_write_price: 100.0
     # min_write_price: 0.1
-
     max_blobbers_per_allocation: 40
     # allocation cancellation
     #

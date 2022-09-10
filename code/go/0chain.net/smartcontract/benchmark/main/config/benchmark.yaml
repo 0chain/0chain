@@ -27,10 +27,16 @@ simulation:
 options:
   verbose: true
   test_suites:
+    - "storage"
     - "storage_rest"
+    - "miner"
     - "miner_rest"
+    - "faucet"
     - "faucet_rest"
+    - "vesting"
     - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
     - "zcnscbridge_rest"
   omitted_tests:
   save_path: ./saved_data # do not add a load_path key, this is read from command line options
@@ -95,7 +101,7 @@ smart_contracts:
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
-    max_individual_free_allocation: 170
+    max_individual_free_allocation: 1700
     max_challenges_per_generation: 1
     max_blobbers_per_allocation: 40
     validators_per_challenge: 2
@@ -103,23 +109,22 @@ smart_contracts:
       min_lock: 0.3
     writepool:
       min_lock: 0.1
-      min_lock_period: 2m
-      max_lock_period: 11000h
     stakepool:
       min_lock: 0.1
     free_allocation_settings:
       data_shards: 2
-      parity_shards: 2
-      size: 10000000
       duration: 50h
-      read_price_range:
-        min: 0.0
-        max: 2.0
-      write_price_range:
-        min: 0.0
-        max: 2.0
       max_challenge_completion_time: 1m
+      parity_shards: 2
       read_pool_fraction: 0.2
+      mint_amount: 0.5
+      read_price_range:
+        max: 1
+        min: 0
+      size: 10000000
+      write_price_range:
+        max: 1
+        min: 0
     max_mint: 1500000.0
     challenge_enabled: true
     block_reward:

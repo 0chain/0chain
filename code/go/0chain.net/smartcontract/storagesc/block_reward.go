@@ -12,11 +12,11 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -85,7 +85,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		wg.Add(1)
 		go func(b BlobberRewardNode, i int) {
 			defer wg.Done()
-			if sp, err := ssc.getStakePool(b.ID, balances); err != nil {
+			if sp, err := ssc.getStakePool(spenum.Blobber, b.ID, balances); err != nil {
 				errorChan <- err
 			} else {
 				spChan <- spResp{
@@ -115,7 +115,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	for i, br := range blobberRewards {
 		sp := stakePools[i]
 
-		stake := float64(sp.stake())
+		staked, err := sp.stake()
+		if err != nil {
+			return err
+		}
+
+		stake := float64(staked)
 
 		gamma := maths.GetGamma(
 			conf.BlockReward.Gamma.A,
@@ -181,7 +186,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	if rewardBal > 0 {
-		rShare, rl, err := currency.DivideCoin(rewardBal, int64(len(stakePools)))
+		rShare, rl, err := currency.DistributeCoin(rewardBal, int64(len(stakePools)))
 		if err != nil {
 			return err
 		}
@@ -205,14 +210,20 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	for i, qsp := range stakePools {
-		if err = qsp.save(ssc.ID, qualifyingBlobberIds[i], balances); err != nil {
+		if err = qsp.save(spenum.Blobber, qualifyingBlobberIds[i], balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}
+		staked, err := qsp.stake()
+		if err != nil {
+			return common.NewError("blobber_block_rewards_failed",
+				"getting stake pool stake: "+err.Error())
+		}
+
 		data := dbs.DbUpdates{
 			Id: qualifyingBlobberIds[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(qsp.stake()),
+				"total_stake": int64(staked),
 			},
 		}
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
@@ -232,8 +243,10 @@ func getBlockReward(
 		return 0, fmt.Errorf("unexpected block reward change ratio: %f", brChangeRatio)
 	}
 	changeBalance := 1 - brChangeRatio
-	changePeriods := currentRound % brChangePeriod
-	return currency.Float64ToCoin(float64(br) * math.Pow(changeBalance, float64(changePeriods)) * blobberWeight)
+	changePeriods := currentRound / brChangePeriod
+
+	factor := math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
+	return currency.MultFloat64(br, factor)
 }
 
 func GetCurrentRewardRound(currentRound, period int64) int64 {

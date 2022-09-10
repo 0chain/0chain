@@ -16,8 +16,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -v -io=false -tests=false -unexported
@@ -39,8 +39,9 @@ type ZCNSConfig struct {
 }
 
 type GlobalNode struct {
-	ID          string `json:"id"`
-	*ZCNSConfig `json:"zcnsc_config"`
+	*ZCNSConfig     `json:"zcnsc_config"`
+	ID              string         `json:"id"`
+	WZCNNonceMinted map[int64]bool `json:"user_nonce_minted"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
@@ -342,14 +343,13 @@ func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 // ----- UserNode ------------------
 
 type UserNode struct {
-	ID    string `json:"id"`
-	Nonce int64  `json:"nonce"`
+	ID        string `json:"id"`
+	BurnNonce int64  `json:"burn_nonce"`
 }
 
-func NewUserNode(id string, nonce int64) *UserNode {
+func NewUserNode(id string) *UserNode {
 	return &UserNode{
-		ID:    id,
-		Nonce: nonce,
+		ID: id,
 	}
 }
 

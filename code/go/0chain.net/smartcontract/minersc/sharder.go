@@ -6,9 +6,9 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -34,11 +34,11 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	}
 
 	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
-		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
+		return "", common.NewError("update_sharder_settings", "block round is in cooldown period")
 	}
 
 	if sn.Delete {
-		return "", common.NewError("update_settings", "can't update settings of sharder being deleted")
+		return "", common.NewError("update_sharder_settings", "can't update settings of sharder being deleted")
 	}
 	if sn.Settings.DelegateWallet != t.ClientID {
 		return "", common.NewError("update_sharder_settings", "access denied")
@@ -127,6 +127,7 @@ func (msc *MinerSmartContract) AddSharder(
 	if err == nil {
 		// and found in all
 		if allSharders.FindNodeById(newSharder.ID) != nil {
+			logging.Logger.Info("add_sharder: found node by id")
 			return string(newSharder.Encode()), nil
 		}
 		// otherwise the sharder has saved by block sharders reward

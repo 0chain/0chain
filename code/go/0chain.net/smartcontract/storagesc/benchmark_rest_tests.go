@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"strconv"
+	"time"
+
 	"0chain.net/core/encryption"
 
 	"0chain.net/smartcontract/dbs/benchmark"
@@ -97,11 +100,13 @@ func BenchmarkRestTests(
 				Endpoint: srh.getErrors,
 			},
 			{
-				FuncName: "get_block_by_hash",
+				FuncName: "get_block",
 				Params: map[string]string{
 					"block_hash": benchmark.GetMockBlockHash(1),
+					"date":       strconv.FormatInt(int64(data.Now.Duration()), 10),
+					"round":      "1",
 				},
-				Endpoint: srh.getBlockByHash,
+				Endpoint: srh.getBlock,
 			},
 			{
 				FuncName: "total-saved-data",
@@ -178,6 +183,13 @@ func BenchmarkRestTests(
 				Endpoint: srh.getOpenChallenges,
 			},
 			{
+				FuncName: "blobber-rank",
+				Params: map[string]string{
+					"id": getMockBlobberId(3),
+				},
+				Endpoint: srh.getBlobberRank,
+			},
+			{
 				FuncName: "getchallenge",
 				Params: map[string]string{
 					"blobber":   getMockBlobberId(0),
@@ -188,6 +200,10 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getblobbers",
 				Endpoint: srh.getBlobbers,
+			},
+			{
+				FuncName: "blobbers-by-rank",
+				Endpoint: srh.getBlobbersByRank,
 			},
 			{
 				FuncName: "getBlobber",
@@ -202,15 +218,6 @@ func BenchmarkRestTests(
 					"client_id": data.Clients[0],
 				},
 				Endpoint: srh.getReadPoolStat,
-			},
-			{
-				FuncName: "getReadPoolAllocBlobberStat",
-				Params: map[string]string{
-					"client_id":     data.Clients[0],
-					"allocation_id": getMockAllocationId(0),
-					"blobber_id":    getMockBlobberId(0),
-				},
-				Endpoint: srh.getReadPoolAllocBlobberStat,
 			},
 			{
 				FuncName: "writemarkers",
@@ -228,22 +235,6 @@ func BenchmarkRestTests(
 					"filename":      "",
 				},
 				Endpoint: srh.getWriteMarkers,
-			},
-			{
-				FuncName: "getWritePoolStat",
-				Params: map[string]string{
-					"client_id": data.Clients[0],
-				},
-				Endpoint: srh.getWritePoolStat,
-			},
-			{
-				FuncName: "getWritePoolAllocBlobberStat",
-				Params: map[string]string{
-					"client_id":     data.Clients[0],
-					"allocation_id": getMockAllocationId(0),
-					"blobber_id":    getMockBlobberId(0),
-				},
-				Endpoint: srh.getWritePoolAllocBlobberStat,
 			},
 			{
 				FuncName: "getStakePoolStat",
@@ -311,9 +302,11 @@ func BenchmarkRestTests(
 			{
 				FuncName: "collected_reward",
 				Params: map[string]string{
-					"start_block": "1",
-					"end_block":   "100",
-					"client_id":   data.Clients[1],
+					"start-block": "1",
+					"end-block":   "100",
+					"start-date":  "0",
+					"end-date":    strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+					"client-id":   data.Clients[1],
 				},
 				Endpoint: srh.getCollectedReward,
 			},
@@ -401,6 +394,21 @@ func BenchmarkRestTests(
 					}(),
 				},
 				Endpoint: srh.getFreeAllocationBlobbers,
+			},
+			{
+				FuncName: "getSearchHandler",
+				Params: map[string]string{
+					"query": benchmark.GetMockTransactionHash(3, 3),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "alloc-blobber-term",
+				Params: map[string]string{
+					"allocation_id": getMockAllocationId(0),
+					"blobber_id":    getMockBlobberId(0),
+				},
+				Endpoint: srh.getAllocBlobberTerms,
 			},
 		},
 		ADDRESS,

@@ -39,9 +39,9 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
+	"github.com/0chain/common/core/util"
 	"github.com/spf13/viper"
 )
 
@@ -188,7 +188,6 @@ func setUpMpt(
 	log.Println("funded faucet\t", time.Since(timer))
 
 	timer = time.Now()
-	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 
 	bk := &block.Block{}
 	magicBlock := &block.MagicBlock{}
@@ -282,6 +281,11 @@ func setUpMpt(
 	ebk.AddMockTransactions(clients, eventDb)
 	log.Println("added mock transaction\t", time.Since(timer))
 
+	// used as foreign key in readmarkers
+	timer = time.Now()
+	storagesc.AddMockAllocations(clients, publicKeys, eventDb, balances)
+	log.Println("added allocations\t", time.Since(timer))
+
 	timer = time.Now()
 	stakePools := storagesc.GetMockBlobberStakePools(clients, eventDb, balances)
 	log.Println("created blobber stake pools\t", time.Since(timer))
@@ -293,13 +297,6 @@ func setUpMpt(
 		storagesc.GetMockValidatorStakePools(clients, balances)
 		log.Println("added validator stake pools\t", time.Since(timer))
 	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		storagesc.AddMockAllocations(clients, publicKeys, eventDb, balances)
-		log.Println("added allocations\t", time.Since(timer))
-	}()
 
 	wg.Add(1)
 	go func() {
@@ -307,22 +304,6 @@ func setUpMpt(
 		timer := time.Now()
 		storagesc.AddMockReadPools(clients, balances)
 		log.Println("added allocation read pools\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		storagesc.AddMockWritePools(clients, balances)
-		log.Println("added allocation write pools\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		storagesc.AddMockFundedPools(clients, balances)
-		log.Println("added allocation funded pools\t", time.Since(timer))
 	}()
 
 	wg.Add(1)
@@ -339,13 +320,6 @@ func setUpMpt(
 		timer := time.Now()
 		storagesc.AddMockChallenges(blobbers, eventDb, balances)
 		log.Println("added challenges\t", time.Since(timer))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		storagesc.AddMockClientAllocation(clients, balances)
-		log.Println("added client allocations\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {

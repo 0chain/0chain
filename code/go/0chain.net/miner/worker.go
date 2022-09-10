@@ -10,9 +10,9 @@ import (
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"
@@ -235,7 +235,7 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 			mb := mc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
 			go func() {
-				if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls); err != nil {
+				if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
 					logging.Logger.Warn("miner health check -  send smart contract failed",
 						zap.Int("urls len", len(minerUrls)),
 						zap.Error(err))

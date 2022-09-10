@@ -7,7 +7,7 @@ import (
 	"math"
 	"net/url"
 
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"github.com/rcrowley/go-metrics"
 

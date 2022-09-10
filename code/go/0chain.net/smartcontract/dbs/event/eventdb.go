@@ -40,8 +40,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&Event{},
 		&Blobber{},
 		&User{},
-		&WriteMarker{},
 		&Transaction{},
+		&WriteMarker{},
 		&Validator{},
 		&ReadMarker{},
 		&Block{},
@@ -55,6 +55,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&Reward{},
 		&Authorizer{},
 		&Challenge{},
+		&AllocationBlobberTerm{},
+		ChallengePool{},
 	); err != nil {
 		return err
 	}

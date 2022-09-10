@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 type (
@@ -57,7 +57,12 @@ const (
 	TagAddReward
 	TagAddChallenge
 	TagUpdateChallenge
+	TagUpdateBlobberChallenge
 	NumberOfTags
+	TagAddOrOverwriteAllocationBlobberTerm
+	TagUpdateAllocationBlobberTerm
+	TagDeleteAllocationBlobberTerm
+	TagAddOrUpdateChallengePool
 )
 
 var ErrInvalidEventData = errors.New("invalid event data")
@@ -294,6 +299,38 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateChallenge(*updates)
+	case TagUpdateBlobberChallenge:
+		challenge, ok := fromEvent[dbs.ChallengeResult](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateBlobberChallenges(*challenge)
+		// allocation blobber term
+	case TagAddOrOverwriteAllocationBlobberTerm:
+		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrOverwriteAllocationBlobberTerms(*updates)
+	case TagUpdateAllocationBlobberTerm:
+		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateAllocationBlobberTerms(*updates)
+	case TagDeleteAllocationBlobberTerm:
+		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.deleteAllocationBlobberTerms(*updates)
+		// challenge pool
+	case TagAddOrUpdateChallengePool:
+		updates, ok := fromEvent[ChallengePool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateChallengePool(*updates)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

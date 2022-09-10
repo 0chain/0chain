@@ -14,7 +14,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 type mockStateContext struct {
@@ -52,14 +52,15 @@ func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }
 
-func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, interface{}) {}
-func (sc *mockStateContext) EmitError(error)                                                {}
-func (sc *mockStateContext) GetEvents() []event.Event                                       { return nil }
-func (tb *mockStateContext) GetEventDB() *event.EventDb                                     { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                      {}
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)          { return "", nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock                   { return nil }
-func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                          { return nil }
+func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, interface{}, ...cstate.Appender) {
+}
+func (sc *mockStateContext) EmitError(error)                                       {}
+func (sc *mockStateContext) GetEvents() []event.Event                              { return nil }
+func (tb *mockStateContext) GetEventDB() *event.EventDb                            { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             {}
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock          { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                 { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, error) {
 	return sc.clientBalance, nil
 }

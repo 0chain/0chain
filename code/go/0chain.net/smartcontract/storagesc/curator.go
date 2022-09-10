@@ -8,8 +8,8 @@ import (
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
 )
 
 type curatorInput struct {
@@ -74,7 +74,7 @@ func (sc *StorageSmartContract) removeCurator(
 		logging.Logger.Error("error while emitting remove curator event", zap.Error(err))
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	return "", nil
 }
 
@@ -119,7 +119,7 @@ func (sc *StorageSmartContract) addCurator(
 		logging.Logger.Error("error while emitting add curator event", zap.Error(err))
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates(balances))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return "", nil
 }

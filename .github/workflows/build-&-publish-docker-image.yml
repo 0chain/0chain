@@ -149,17 +149,16 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: "Set PR status as pending"
-        uses: niteoweb/pull_request_status_action@v1.0.0
+        uses: 0chain/actions/set-pr-status@master
         if: steps.findPr.outputs.number
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
           description: "System tests running with default config..."
           state: "pending"
           repository: ${{ github.repository }}
-          context: "0Chain System Tests"
+          status_name: "0Chain System Tests"
           target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          github_token: ${{ github.token }}
 
       - name: "Setup"
         run: |
@@ -190,7 +189,6 @@ jobs:
           zblock_image: staging
           zdns_image: staging
           explorer_image: latest
-          zproxy_image: staging
           zsearch_image: staging
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
@@ -208,16 +206,16 @@ jobs:
           archive_results: true
           run_flaky_tests: false
           retry_failures: true
+          DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
-        uses: niteoweb/pull_request_status_action@v1.0.0
+        uses: 0chain/actions/set-pr-status@master
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
           description: "System tests with default config"
           state: ${{ job.status }}
           repository: ${{ github.repository }}
-          context: "0Chain System Tests"
+          status_name: "0Chain System Tests"
           target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          github_token: ${{ github.token }}

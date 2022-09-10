@@ -13,8 +13,8 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
-	"0chain.net/core/util"
+	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -406,16 +406,10 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			} else {
 				timer = time.NewTimer(tick)
 			}
-		case <-c.pruneClientStateC:
-			timer.Reset(0)
 		case <-ctx.Done():
 			return
 		}
 	}
-}
-
-func (c *Chain) StartPruneClientState() {
-	c.pruneClientStateC <- struct{}{}
 }
 
 // SyncLFBStateWorker is a worker for syncing state of latest finalized round block.

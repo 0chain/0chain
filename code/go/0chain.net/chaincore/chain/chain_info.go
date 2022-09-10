@@ -6,7 +6,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/metric"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 /*Info - a struct to capture the chain info at runtime */

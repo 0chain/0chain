@@ -1,17 +1,18 @@
 package vestingsc
 
 import (
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"context"
 	"encoding/json"
 	"net/url"
 	"sort"
 
+	sci "0chain.net/chaincore/smartcontractinterface"
+
 	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v

@@ -14,8 +14,9 @@ import (
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/logging"
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -23,7 +24,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract"
@@ -51,6 +52,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/get_blobber_count", srh.getBlobberCount),
 		rest.MakeEndpoint(storage+"/getBlobber", srh.getBlobber),
 		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),
+		rest.MakeEndpoint(storage+"/blobbers-by-rank", srh.getBlobbersByRank),
 		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes), //todo limit sorting
 		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
 		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
@@ -71,14 +73,11 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getchallenge", srh.getChallenge),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", srh.getStakePoolStat),
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
-		rest.MakeEndpoint(storage+"/get_block_by_hash", srh.getBlockByHash),
+		rest.MakeEndpoint(storage+"/block", srh.getBlock),
 		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
 		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
-		rest.MakeEndpoint(storage+"/getReadPoolAllocBlobberStat", srh.getReadPoolAllocBlobberStat),
-		rest.MakeEndpoint(storage+"/getWritePoolStat", srh.getWritePoolStat),
-		rest.MakeEndpoint(storage+"/getWritePoolAllocBlobberStat", srh.getWritePoolAllocBlobberStat),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
 		rest.MakeEndpoint(storage+"/alloc_written_size", srh.getWrittenAmount),
 		rest.MakeEndpoint(storage+"/alloc-written-size-per-period", srh.getWrittenAmountPerPeriod),
@@ -90,7 +89,41 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
 		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
+		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
+		rest.MakeEndpoint(storage+"/search", srh.getSearchHandler),
+		rest.MakeEndpoint(storage+"/alloc-blobber-term", srh.getAllocBlobberTerms),
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank blobber-rank
+// Gets the rank of a blobber.
+//   challenges passed / total challenges
+//
+// parameters:
+//    + name: id
+//      description: id of blobber
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Int64Map
+//  400:
+func (srh *StorageRestHandler) getBlobberRank(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	rank, err := edb.GetBlobberRank(id)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"blobber-rank": rank,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
@@ -370,8 +403,9 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	}
 	// size of allocation for a blobber
 	var allocationSize = sa.bSize()
+
 	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
-	blobberIDs, err := edb.GetBlobbersFromParams(event.AllocationQuery{
+	allocation := event.AllocationQuery{
 		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
 			Min int64
@@ -387,12 +421,20 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 			Min: int64(request.WritePriceRange.Min),
 			Max: int64(request.WritePriceRange.Max),
 		},
-		Size:              int(request.Size),
-		AllocationSize:    allocationSize,
-		PreferredBlobbers: request.Blobbers,
-		NumberOfBlobbers:  numberOfBlobbers,
-	}, limit, balances.Now())
+		AllocationSize:     allocationSize,
+		AllocationSizeInGB: sizeInGB(sa.bSize()),
+		PreferredBlobbers:  request.Blobbers,
+		NumberOfDataShards: sa.DataShards,
+	}
 
+	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
+		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
+		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
+		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Float64("AllocationSizeInGB", allocation.AllocationSizeInGB),
+		zap.Int64("last_health_check", int64(balances.Now())),
+	)
+
+	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now())
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
@@ -405,20 +447,39 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward collected_reward
+// Returns collected reward for a client_id.
+// > Note: start-date and end-date resolves to the closest block number for those timestamps on the network.
+//
+// > Note: Using start/end-block and start/end-date together would only return results with start/end-block
 //
 //
 // parameters:
-//    + name: start_block
+//    + name: start-block
 //      description: start block
-//      required: true
+//      required: false
 //      in: query
 //      type: string
-//    + name: end_block
+//    + name: end-block
 //      description: end block
-//      required: true
+//      required: false
 //      in: query
 //      type: string
-//    + name: client_id
+//    + name: start-date
+//      description: start date
+//      required: false
+//      in: query
+//      type: string
+//    + name: end-date
+//      description: end date
+//      required: false
+//      in: query
+//      type: string
+//    + name: data-points
+//      description: number of data points in response
+//      required: false
+//      in: query
+//      type: string
+//    + name: client-id
 //      description: client id
 //      required: true
 //      in: query
@@ -429,30 +490,99 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 //  400:
 func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http.Request) {
 	var (
-		startBlock, _ = strconv.Atoi(r.URL.Query().Get("start_block"))
-		endBlock, _   = strconv.Atoi(r.URL.Query().Get("end_block"))
-		clientID      = r.URL.Query().Get("client_id")
+		startBlockString = r.URL.Query().Get("start-block")
+		endBlockString   = r.URL.Query().Get("end-block")
+		clientID         = r.URL.Query().Get("client-id")
+		startDateString  = r.URL.Query().Get("start-date")
+		endDateString    = r.URL.Query().Get("end-date")
+		dataPointsString = r.URL.Query().Get("data-points")
 	)
 
-	query := event.RewardQuery{
-		StartBlock: startBlock,
-		EndBlock:   endBlock,
-		ClientID:   clientID,
+	var dataPoints int64
+	dataPoints, err := strconv.ParseInt(dataPointsString, 10, 64)
+	if err != nil {
+		dataPoints = 1
+	} else if dataPoints > 100 {
+		dataPoints = 100
 	}
+
+	query := event.RewardQuery{
+		ClientID:   clientID,
+		DataPoints: dataPoints,
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	collectedReward, err := edb.GetRewardClaimedTotal(query)
-	if err != nil {
-		common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+
+	if startBlockString != "" && endBlockString != "" {
+		startBlock, err := strconv.ParseUint(startBlockString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start-block string to a number", err.Error()))
+			return
+		}
+
+		endBlock, err := strconv.ParseUint(endBlockString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end-block string to a number", err.Error()))
+			return
+		}
+
+		if startBlock > endBlock {
+			common.Respond(w, r, 0, common.NewErrInternal("start-block cannot be greater than end-block"))
+			return
+		}
+
+		query.StartBlock = int(startBlock)
+		query.EndBlock = int(endBlock)
+
+		rewards, err := edb.GetRewardClaimedTotalBetweenBlocks(query)
+		if err != nil {
+			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+			return
+		}
+		common.Respond(w, r, map[string][]int64{
+			"collected_reward": rewards,
+		}, nil)
 		return
 	}
 
-	common.Respond(w, r, map[string]int64{
-		"collected_reward": collectedReward,
-	}, nil)
+	if startDateString != "" && endDateString != "" {
+		startDate, err := strconv.ParseUint(startDateString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start-date string to a number", err.Error()))
+			return
+		}
+
+		endDate, err := strconv.ParseUint(endDateString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end-date string to a number", err.Error()))
+			return
+		}
+
+		if startDate > endDate {
+			common.Respond(w, r, 0, common.NewErrInternal("start-date cannot be greater than end-date"))
+			return
+		}
+
+		query.StartDate = time.Unix(int64(startDate), 0)
+		query.EndDate = time.Unix(int64(endDate), 0)
+
+		rewards, err := edb.GetRewardClaimedTotalBetweenDates(query)
+		if err != nil {
+			common.Respond(w, r, 0, common.NewErrInternal("can't get rewards claimed", err.Error()))
+			return
+		}
+
+		common.Respond(w, r, map[string]interface{}{
+			"collected_reward": rewards,
+		}, nil)
+		return
+	}
+
+	common.Respond(w, r, nil, common.NewErrInternal("can't get collected rewards"))
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count alloc_write_marker_count
@@ -643,10 +773,6 @@ func (srh *StorageRestHandler) getWrittenAmountPerPeriod(w http.ResponseWriter, 
 func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
-		alloc        = &StorageAllocation{
-			ID: allocationID,
-		}
-		cp = &challengePool{}
 	)
 
 	if allocationID == "" {
@@ -654,115 +780,19 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
-	sctx := srh.GetQueryStateContext()
-	if err := sctx.GetTrieNode(alloc.GetKey(ADDRESS), alloc); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	if err := sctx.GetTrieNode(challengePoolKey(ADDRESS, allocationID), cp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge pool"))
-		return
+	cp, err := edb.GetChallengePool(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 	}
 
-	common.Respond(w, r, cp.stat(alloc), nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolAllocBlobberStat getWritePoolAllocBlobberStat
-// Gets statistic for all locked tokens of the indicated read pools
-//
-// parameters:
-//    + name: client_id
-//      description: client for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: allocation_id
-//      description: allocation for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//    + name: blobber_id
-//      description: blobber for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
-//
-// responses:
-//  200: []untilStat
-//  400:
-func (srh *StorageRestHandler) getWritePoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
-	var (
-		clientID  = r.URL.Query().Get("client_id")
-		allocID   = r.URL.Query().Get("allocation_id")
-		blobberID = r.URL.Query().Get("blobber_id")
-		wp        = &writePool{}
-	)
-
-	if err := srh.GetQueryStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
-		return
-	}
-
-	var (
-		cut  = wp.blobberCut(allocID, blobberID, common.Now())
-		stat []untilStat
-	)
-
-	for _, ap := range cut {
-		var bp, ok = ap.Blobbers.get(blobberID)
-		if !ok {
-			continue
-		}
-		stat = append(stat, untilStat{
-			PoolID:   ap.ID,
-			Balance:  bp.Balance,
-			ExpireAt: ap.ExpireAt,
-		})
-	}
-
-	common.Respond(w, r, &stat, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWritePoolStat getWritePoolStat
-// Gets  statistic for all locked tokens of the write pool
-//
-// parameters:
-//    + name: client_id
-//      description: client for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//
-// responses:
-//  200: allocationPoolsStat
-//  400:
-func (srh *StorageRestHandler) getWritePoolStat(w http.ResponseWriter, r *http.Request) {
-	var wp = &writePool{}
-	clientID := r.URL.Query().Get("client_id")
-	if err := srh.GetQueryStateContext().GetTrieNode(writePoolKey(ADDRESS, clientID), wp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get write pool"))
-		return
-	}
-
-	common.Respond(w, r, wp.stat(common.Now()), nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolAllocBlobberStat getReadPoolAllocBlobberStat
-// Gets statistic locked tokens of the indicated read pools. This now a shortcut to readpool stats.
-//
-// parameters:
-//    + name: client_id
-//      description: client for which to get read pools statistics
-//      required: true
-//      in: query
-//      type: string
-//
-// responses:
-//  200: []untilStat
-//  400:
-func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter, r *http.Request) {
-	srh.getReadPoolStat(w, r)
+	common.Respond(w, r, toChallengePoolStat(cp), nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat
@@ -776,7 +806,7 @@ func (srh *StorageRestHandler) getReadPoolAllocBlobberStat(w http.ResponseWriter
 //      type: string
 //
 // responses:
-//  200: allocationPoolsStat
+//  200: readPool
 //  400:
 func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Request) {
 	rp := readPool{}
@@ -907,13 +937,23 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, &block, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_block_by_hash get_block_by_hash
-// Gets block information from block hash
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block block
+// Gets block information
 //
 // parameters:
 //    + name: block_hash
 //      description: block hash
-//      required: true
+//      required: false
+//      in: query
+//      type: string
+//    + name: date
+//      description: block created closest to the date (epoch timestamp in nanoseconds)
+//      required: false
+//      in: query
+//      type: string
+//    + name: round
+//      description: block round
+//      required: false
 //      in: query
 //      type: string
 //
@@ -921,23 +961,59 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 //  200: Block
 //  400:
 //  500:
-func (srh *StorageRestHandler) getBlockByHash(w http.ResponseWriter, r *http.Request) {
-	hash := r.URL.Query().Get("block_hash")
-	if len(hash) == 0 {
-		common.Respond(w, r, nil, common.NewErrBadRequest("annot find valid block hash: "+hash))
-		return
-	}
+func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) {
+	var (
+		hash        = r.URL.Query().Get("block_hash")
+		date        = r.URL.Query().Get("date")
+		roundString = r.URL.Query().Get("round")
+	)
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
-	block, err := edb.GetBlocksByHash(hash)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+
+	if hash != "" {
+		block, err := edb.GetBlockByHash(hash)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error getting block "+err.Error()))
+			return
+		}
+
+		common.Respond(w, r, &block, nil)
 		return
 	}
 
-	common.Respond(w, r, &block, nil)
+	if date != "" {
+		block, err := edb.GetBlockByDate(date)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error getting block "+err.Error()))
+			return
+		}
+
+		common.Respond(w, r, &block, nil)
+		return
+	}
+
+	if roundString != "" {
+		round, err := strconv.ParseUint(roundString, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error parsing parameter string "+err.Error()))
+			return
+		}
+
+		block, err := edb.GetBlockByRound(int64(round))
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error getting block "+err.Error()))
+			return
+		}
+
+		common.Respond(w, r, &block, nil)
+		return
+	}
+
+	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
+	return
 }
 
 // swagger:model userPoolStat
@@ -1028,7 +1104,11 @@ func spStats(
 
 		dpStats.TotalReward = dp.TotalReward
 
-		stat.Balance += dpStats.Balance
+		newBal, err := currency.AddCoin(stat.Balance, dpStats.Balance)
+		if err != nil {
+			return nil, err
+		}
+		stat.Balance = newBal
 		stat.Delegate = append(stat.Delegate, dpStats)
 	}
 	return stat, nil
@@ -1148,8 +1228,19 @@ type ChallengesResponse struct {
 //  500:
 func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.Request) {
 	var (
-		blobberID = r.URL.Query().Get("blobber")
+		blobberID  = r.URL.Query().Get("blobber")
+		fromString = r.URL.Query().Get("from")
+		from       common.Timestamp
 	)
+
+	if fromString != "" {
+		fromI, err := strconv.Atoi(fromString)
+		if err != nil {
+			common.Respond(w, r, nil, err)
+			return
+		}
+		from = common.Timestamp(fromI)
+	}
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
@@ -1167,7 +1258,7 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, common.Timestamp(getMaxChallengeCompletionTime().Seconds()), limit, sctx.GetEventDB())
+	challenges, err := getOpenChallengesForBlobber(blobberID, from, common.Timestamp(getMaxChallengeCompletionTime().Seconds()), limit, sctx.GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
@@ -1501,8 +1592,17 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 
 	nodes := getBlobbers(unique, balances)
 	for _, b := range nodes.Nodes {
-		minLockDemand += b.Terms.minLockDemand(gbSize,
+		bMinLockDemand, err := b.Terms.minLockDemand(gbSize,
 			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
+		if err != nil {
+			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
+			return
+		}
+		minLockDemand, err = currency.AddCoin(minLockDemand, bMinLockDemand)
+		if err != nil {
+			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
+			return
+		}
 	}
 
 	var response = map[string]interface{}{
@@ -1564,7 +1664,7 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 // Gets allocation object
 //
 // parameters:
-//    + name: transaction_hash
+//    + name: allocation
 //      description: offset
 //      required: true
 //      in: query
@@ -1583,11 +1683,17 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 	}
 	allocation, err := edb.GetAllocation(allocationID)
 	if err != nil {
+		logging.Logger.Error("unable to fetch allocation",
+			zap.String("allocation", allocationID),
+			zap.Error(err))
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
 	}
 	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
+		logging.Logger.Error("unable to create allocation response",
+			zap.String("allocation", allocationID),
+			zap.Error(err))
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't convert to storageAllocationBlobbers"))
 		return
 	}
@@ -1761,7 +1867,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 
 	if toClientID != "" {
-		rtv, err := edb.GetTransactionByToClientId(clientID, limit)
+		rtv, err := edb.GetTransactionByToClientId(toClientID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1806,8 +1912,12 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
-	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
-
+	rtv, err := edb.GetTransactions(limit)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	common.Respond(w, r, rtv, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes transactionHashes
@@ -1929,7 +2039,9 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 type storageNodeResponse struct {
 	StorageNode
-	TotalStake currency.Coin `json:"total_stake"`
+	TotalServiceCharge currency.Coin `json:"total_service_charge"`
+	TotalStake         currency.Coin `json:"total_stake"`
+	UsedAllocation     int64         `json:"used_allocation"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
@@ -1964,7 +2076,9 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				Description: blobber.Description,
 			},
 		},
-		TotalStake: blobber.TotalStake,
+		TotalServiceCharge: blobber.TotalServiceCharge,
+		TotalStake:         blobber.TotalStake,
+		UsedAllocation:     blobber.Used,
 	}
 }
 
@@ -2014,6 +2128,47 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		sns.Nodes = append(sns.Nodes, sn)
 	}
 	common.Respond(w, r, sns, nil)
+}
+
+// getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank blobbers-by-rank
+// Gets list of all blobbers ordered by rank
+//
+// parameters:
+//    + name: offset
+//      description: offset
+//      in: query
+//      type: string
+//    + name: limit
+//      description: limit
+//      in: query
+//      type: string
+//    + name: sort
+//      description: desc or asc
+//      in: query
+//      type: string
+// responses:
+//  200: storageNodeResponse
+//  500:
+func (srh *StorageRestHandler) getBlobbersByRank(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobbers, err := edb.GetBlobbersByRank(limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, blobbers, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation blobbers-by-geolocation
@@ -2164,7 +2319,19 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 			common.Respond(w, r, nil, err)
 			return
 		}
-		total += int64(sp.stake())
+		staked, err := sp.stake()
+		if err != nil {
+			err := common.NewErrInternal("cannot get stake" + err.Error())
+			common.Respond(w, r, nil, err)
+			return
+		}
+
+		total, err = maths.SafeAddInt64(total, int64(staked))
+		if err != nil {
+			err := common.NewErrInternal("cannot get total stake" + err.Error())
+			common.Respond(w, r, nil, err)
+			return
+		}
 	}
 	common.Respond(w, r, rest.Int64Map{
 		"total": total,
@@ -2230,7 +2397,168 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, sn, nil)
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms
+// Gets statistic for all locked tokens of a stake pool
+//
+// parameters:
+//    + name: allocation_id
+//      description: id of allocation
+//      required: false
+//      in: query
+//      type: string
+//    + name: blobber_id
+//      description: id of blobber
+//      required: false
+//      in: query
+//      type: string
+//
+// responses:
+//  200: Terms
+//  400:
+//  500:
+func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		common.Respond(w, r, nil, common.NewErrBadRequest("GET method only"))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	blobberID := r.URL.Query().Get("blobber_id")
+	allocationID := r.URL.Query().Get("allocation_id")
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	var resp interface{}
+	if allocationID == "" || blobberID == "" {
+		resp, err = edb.GetAllocationBlobberTerms(allocationID, blobberID, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("error finding terms: "+err.Error()))
+			return
+		}
+	} else {
+		resp, err = edb.GetAllocationBlobberTerm(allocationID, blobberID)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("error finding term: "+err.Error()))
+			return
+		}
+
+	}
+
+	common.Respond(w, r, resp, nil)
+}
+
 // swagger:model readMarkersCount
 type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
+}
+
+/*getSearchHandler - Get result based on query*/
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search search
+// Generic search endpoint
+//
+// parameters:
+//    + name: searchString
+//      description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address
+//      required: true
+//      in: query
+//      type: string
+//
+// responses:
+//  200:
+//  400:
+//  500:
+func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Request) {
+	var (
+		query = r.URL.Query().Get("searchString")
+	)
+
+	if len(query) == 0 {
+		common.Respond(w, r, nil, common.NewErrInternal("searchString param required"))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	queryType, err := edb.GetGenericSearchType(query)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	switch queryType {
+	case "TransactionHash":
+		txn, err := edb.GetTransactionByHash(query)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, txn, nil)
+		return
+	case "BlockHash":
+		blk, err := edb.GetBlockByHash(query)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, blk, nil)
+		return
+	case "UserId":
+		usr, err := edb.GetUserFromId(query)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, usr, nil)
+		return
+	case "BlockRound":
+		blk, err := edb.GetBlocksByRound(query)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, blk, nil)
+		return
+	case "ContentHash":
+		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{ContentHash: query}, "", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, wm, nil)
+		return
+	case "FileName":
+		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{Name: query}, "", limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		common.Respond(w, r, wm, nil)
+		return
+	}
+
+	common.Respond(w, r, nil, common.NewErrInternal("Request failed, searchString isn't a (wallet address)/(block hash)/(txn hash)/(round num)/(content hash)/(file name)"))
 }

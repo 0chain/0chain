@@ -14,8 +14,8 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
 
 	"go.uber.org/zap"
 )
@@ -174,7 +174,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		minerUrls)
+		minerUrls, mb.Sharders.N2NURLs())
 	return
 }
 
@@ -232,7 +232,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	tx.ToClientID = minersc.ADDRESS
 
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		mb.Miners.N2NURLs())
+		mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	return
 }
 

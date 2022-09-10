@@ -30,10 +30,10 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 // notifySyncLFRStateTimeout is the maximum time allowed for sending a notification
@@ -139,7 +139,7 @@ type Chain struct {
 
 	BlockChain *ring.Ring `json:"-"`
 
-	minersStake map[datastore.Key]int
+	minersStake map[datastore.Key]uint64
 	stakeMutex  *sync.Mutex
 
 	nodePoolScorer node.PoolScorer
@@ -167,8 +167,6 @@ type Chain struct {
 	magicBlockSaver              MagicBlockSaver
 
 	pruneStats *util.PruneStats
-	// channel to trigger client state prune process
-	pruneClientStateC chan struct{}
 
 	configInfoDB string
 
@@ -462,7 +460,6 @@ func Provider() datastore.Entity {
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
 	c.syncLFBStateC = make(chan *block.BlockSummary)
 	c.syncLFBStateNowC = make(chan struct{})
-	c.pruneClientStateC = make(chan struct{}, 1)
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 
@@ -491,7 +488,7 @@ func (c *Chain) Initialize() {
 	c.stateDB = stateDB
 	//c.stateDB = util.NewMemoryNodeDB()
 	c.BlockChain = ring.New(10000)
-	c.minersStake = make(map[datastore.Key]int)
+	c.minersStake = make(map[datastore.Key]uint64)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
 	c.OnBlockAdded = func(b *block.Block) {
@@ -956,7 +953,7 @@ func (c *Chain) chainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	return false, ErrInsufficientChain
 }
 
-func (c *Chain) getMiningStake(minerID datastore.Key) int {
+func (c *Chain) getMiningStake(minerID datastore.Key) uint64 {
 	return c.minersStake[minerID]
 }
 
@@ -1265,7 +1262,7 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 
 		if err == util.ErrNodeNotFound {
 			// get state from network
-			logging.Logger.Info("init block state by synching block state from network")
+			logging.Logger.Info("init block state by syncing block state from network")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			doneC := make(chan struct{})
@@ -1758,9 +1755,4 @@ func (c *Chain) BlockTicketsVerifyWithLock(ctx context.Context, blockHash string
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-}
-
-// MaxDeadNodesCount represents the max allowed dead nodes number in state db
-func (c *Chain) MaxDeadNodesCount() int {
-	return 10000
 }

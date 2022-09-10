@@ -149,8 +149,12 @@ func (mp *MintPayload) GetStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *MintPayload) verifySignatures(state cstate.StateContextI) (err error) {
+func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
 	toSign := mp.GetStringToSign()
+	if len(mp.Signatures) == 0 {
+		return errors.New("signatures not found")
+	}
+
 	for _, v := range mp.Signatures {
 		authorizerID := v.ID
 		if authorizerID == "" {
@@ -178,7 +182,7 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) (err error) 
 		}
 	}
 
-	return
+	return nil
 }
 
 // ---- BurnPayloadResponse ----------
@@ -203,7 +207,6 @@ func (bp *BurnPayloadResponse) Decode(input []byte) error {
 // ------ BurnPayload ----------------
 
 type BurnPayload struct {
-	Nonce           int64  `json:"nonce"`
 	EthereumAddress string `json:"ethereum_address"`
 }
 

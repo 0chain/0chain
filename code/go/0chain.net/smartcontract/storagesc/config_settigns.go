@@ -12,7 +12,7 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract"
@@ -39,12 +39,10 @@ const (
 	MinBlobberCapacity
 
 	ReadPoolMinLock
-
 	WritePoolMinLock
-	WritePoolMinLockPeriod
-	WritePoolMaxLockPeriod
 
 	StakePoolMinLock
+	StakePoolMinLockPeriod
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
@@ -57,7 +55,6 @@ const (
 	FreeAllocationReadPriceRangeMax
 	FreeAllocationWritePriceRangeMin
 	FreeAllocationWritePriceRangeMax
-	FreeAllocationMaxChallengeCompletionTime
 	FreeAllocationReadPoolFraction
 
 	ValidatorReward
@@ -136,12 +133,9 @@ var (
 		"min_blobber_capacity",
 
 		"readpool.min_lock",
-
 		"writepool.min_lock",
-		"writepool.min_lock_period",
-		"writepool.max_lock_period",
-
 		"stakepool.min_lock",
+		"stakepool.min_lock_period",
 
 		"max_total_free_allocation",
 		"max_individual_free_allocation",
@@ -154,7 +148,6 @@ var (
 		"free_allocation_settings.read_price_range.max",
 		"free_allocation_settings.write_price_range.min",
 		"free_allocation_settings.write_price_range.max",
-		"free_allocation_settings.max_challenge_completion_time",
 		"free_allocation_settings.read_pool_fraction",
 
 		"validator_reward",
@@ -235,27 +228,24 @@ var (
 		"max_challenge_completion_time": {MaxChallengeCompletionTime, smartcontract.Duration},
 		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
 		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
-		"readpool.min_lock":             {ReadPoolMinLock, smartcontract.CurrencyCoin},
 
+		"readpool.min_lock":         {ReadPoolMinLock, smartcontract.CurrencyCoin},
 		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
-		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
-		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
-
-		"stakepool.min_lock": {StakePoolMinLock, smartcontract.CurrencyCoin},
+		"stakepool.min_lock":        {StakePoolMinLock, smartcontract.CurrencyCoin},
+		"stakepool.min_lock_period": {StakePoolMinLockPeriod, smartcontract.Duration},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
 
-		"free_allocation_settings.data_shards":                   {FreeAllocationDataShards, smartcontract.Int},
-		"free_allocation_settings.parity_shards":                 {FreeAllocationParityShards, smartcontract.Int},
-		"free_allocation_settings.size":                          {FreeAllocationSize, smartcontract.Int64},
-		"free_allocation_settings.duration":                      {FreeAllocationDuration, smartcontract.Duration},
-		"free_allocation_settings.read_price_range.min":          {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
-		"free_allocation_settings.read_price_range.max":          {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
-		"free_allocation_settings.write_price_range.min":         {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
-		"free_allocation_settings.write_price_range.max":         {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
-		"free_allocation_settings.max_challenge_completion_time": {FreeAllocationMaxChallengeCompletionTime, smartcontract.Duration},
-		"free_allocation_settings.read_pool_fraction":            {FreeAllocationReadPoolFraction, smartcontract.Float64},
+		"free_allocation_settings.data_shards":           {FreeAllocationDataShards, smartcontract.Int},
+		"free_allocation_settings.parity_shards":         {FreeAllocationParityShards, smartcontract.Int},
+		"free_allocation_settings.size":                  {FreeAllocationSize, smartcontract.Int64},
+		"free_allocation_settings.duration":              {FreeAllocationDuration, smartcontract.Duration},
+		"free_allocation_settings.read_price_range.min":  {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
+		"free_allocation_settings.read_price_range.max":  {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
+		"free_allocation_settings.write_price_range.min": {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
+		"free_allocation_settings.write_price_range.max": {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
+		"free_allocation_settings.read_pool_fraction":    {FreeAllocationReadPoolFraction, smartcontract.Float64},
 
 		"validator_reward":                     {ValidatorReward, smartcontract.Float64},
 		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
@@ -509,20 +499,13 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.MaxChallengeCompletionTime = change
 	case MinOfferDuration:
 		conf.MinOfferDuration = change
-	case WritePoolMinLockPeriod:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+	case StakePoolMinLockPeriod:
+		if conf.StakePool == nil {
+			conf.StakePool = &stakePoolConfig{}
 		}
-		conf.WritePool.MinLockPeriod = change
-	case WritePoolMaxLockPeriod:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
-		}
-		conf.WritePool.MaxLockPeriod = change
+		conf.StakePool.MinLockPeriod = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
-	case FreeAllocationMaxChallengeCompletionTime:
-		conf.FreeAllocationSettings.MaxChallengeCompletionTime = change
 	default:
 		return fmt.Errorf("key: %v not implemented as duration", key)
 	}
@@ -657,12 +640,10 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ReadPool.MinLock
 	case WritePoolMinLock:
 		return conf.WritePool.MinLock
-	case WritePoolMinLockPeriod:
-		return conf.WritePool.MinLockPeriod
-	case WritePoolMaxLockPeriod:
-		return conf.WritePool.MaxLockPeriod
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
+	case StakePoolMinLockPeriod:
+		return conf.StakePool.MinLockPeriod
 	case MaxTotalFreeAllocation:
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
@@ -683,8 +664,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.FreeAllocationSettings.WritePriceRange.Min
 	case FreeAllocationWritePriceRangeMax:
 		return conf.FreeAllocationSettings.WritePriceRange.Max
-	case FreeAllocationMaxChallengeCompletionTime:
-		return conf.FreeAllocationSettings.MaxChallengeCompletionTime
 	case FreeAllocationReadPoolFraction:
 		return conf.FreeAllocationSettings.ReadPoolFraction
 	case ValidatorReward:
