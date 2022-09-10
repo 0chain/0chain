@@ -46,11 +46,9 @@ type Blobber struct {
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
 
-	OffersTotal        currency.Coin `json:"offers_total"`
-	UnstakeTotal       currency.Coin `json:"unstake_total"`
-	Rewards            currency.Coin `json:"rewards"`
-	TotalServiceCharge currency.Coin `json:"total_reward" gorm:"column:total_reward"`
-	TotalStake         currency.Coin `json:"total_stake"`
+	OffersTotal  currency.Coin `json:"offers_total"`
+	UnstakeTotal currency.Coin `json:"unstake_total"`
+	TotalStake   currency.Coin `json:"total_stake"`
 
 	Name        string `json:"name" gorm:"name"`
 	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
@@ -60,6 +58,8 @@ type Blobber struct {
 	ChallengesPassed    uint64  `json:"challenges_passed"`
 	ChallengesCompleted uint64  `json:"challenges_completed"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+
+	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:BlobberID;references:ProviderID"`
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
@@ -71,14 +71,11 @@ type BlobberPriceRange struct {
 	Max null.Int `json:"max"`
 }
 
-type blobberAggregateStats struct {
-	Reward             currency.Coin `json:"reward"`
-	TotalServiceCharge currency.Coin `json:"total_service_charge"`
-}
-
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
-	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).First(&blobber).Error
+	err := edb.Store.Get().
+		Preload("Rewards").
+		Model(&Blobber{}).Where("blobber_id = ?", id).First(&blobber).Error
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving blobber %v, error %v", id, err)
 	}
@@ -144,16 +141,6 @@ func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
 		Find(&average).Error
 }
 
-func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, error) {
-	var blobber blobberAggregateStats
-	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).First(&blobber).Error
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving blobber %v, error %v", id, err)
-	}
-
-	return &blobber, nil
-}
-
 func (edb *EventDb) TotalUsedData() (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&Blobber{}).
@@ -163,7 +150,9 @@ func (edb *EventDb) TotalUsedData() (int64, error) {
 
 func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
-	result := edb.Store.Get().Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+	result := edb.Store.Get().
+		Preload("Rewards").
+		Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
 	}).Find(&blobbers)
@@ -211,8 +200,8 @@ func (edb *EventDb) GeBlobberByLatLong(
 
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 	var blobbers []Blobber
-	result := edb.Store.Get().Model(&Blobber{}).Order("id").Where("blobber_id IN ?", ids).Find(&blobbers)
-
+	result := edb.Store.Get().Preload("Rewards").
+		Model(&Blobber{}).Order("id").Where("blobber_id IN ?", ids).Find(&blobbers)
 	return blobbers, result.Error
 }
 
@@ -304,7 +293,6 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"offers_total":       blobber.OffersTotal,
 			"unstake_total":      blobber.UnstakeTotal,
 			"rewards":            blobber.Rewards,
-			"total_reward":       blobber.TotalServiceCharge,
 			"saved_data":         blobber.SavedData,
 			"name":               blobber.Name,
 			"website_url":        blobber.WebsiteUrl,

@@ -33,12 +33,12 @@ type Sharder struct {
 	MinStake          currency.Coin
 	MaxStake          currency.Coin
 	LastHealthCheck   common.Timestamp
-	Rewards           currency.Coin
-	TotalReward       currency.Coin
 	Fees              currency.Coin
 	Active            bool
 	Longitude         float64
 	Latitude          float64
+
+	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:SharderID;references:ProviderID"`
 }
 
 // swagger:model SharderGeolocation
@@ -49,10 +49,9 @@ type SharderGeolocation struct {
 }
 
 func (edb *EventDb) GetSharder(id string) (Sharder, error) {
-
 	var sharder Sharder
-
 	return sharder, edb.Store.Get().
+		Preload("Rewards").
 		Model(&Sharder{}).
 		Where(&Sharder{SharderID: id}).
 		First(&sharder).Error
@@ -63,6 +62,7 @@ func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
 	var sharders []Sharder
 
 	result := edb.Store.Get().
+		Preload("Rewards").
 		Model(&Sharder{}).
 		Where(query).
 		Find(&sharders)
@@ -75,6 +75,7 @@ func (edb *EventDb) GetSharders() ([]Sharder, error) {
 	var sharders []Sharder
 
 	result := edb.Store.Get().
+		Preload("Rewards").
 		Model(&Sharder{}).
 		Find(&sharders)
 
@@ -116,19 +117,19 @@ func (edb *EventDb) addSharders(sharders []Sharder) error {
 	return edb.Store.Get().Create(&sharders).Error
 }
 
-func (edb *EventDb) sharderAggregateStats(id string) (*providerAggregateStats, error) {
-	var sharder providerAggregateStats
-	result := edb.Store.Get().
-		Model(&Sharder{}).
-		Where(&Sharder{SharderID: id}).
-		First(&sharder)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving sharder %v, error %v",
-			id, result.Error)
-	}
-
-	return &sharder, nil
-}
+//func (edb *EventDb) sharderAggregateStats(id string) (*providerAggregateStats, error) {
+//	var sharder providerAggregateStats
+//	result := edb.Store.Get().
+//		Model(&Sharder{}).
+//		Where(&Sharder{SharderID: id}).
+//		First(&sharder)
+//	if result.Error != nil {
+//		return nil, fmt.Errorf("error retrieving sharder %v, error %v",
+//			id, result.Error)
+//	}
+//
+//	return &sharder, nil
+//}
 
 func (edb *EventDb) overwriteSharder(sharder Sharder) error {
 
@@ -214,19 +215,27 @@ type SharderQuery struct {
 
 func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, p common2.Pagination) ([]Sharder, error) {
 	var sharders []Sharder
-	query := edb.Get().Model(&Sharder{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "created_at"},
-		Desc:   p.IsDescending,
-	})
+	query := edb.Get().
+		Preload("Rewards").
+		Model(&Sharder{}).
+		Where(&filter).Offset(p.Offset).Limit(p.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "created_at"},
+			Desc:   p.IsDescending,
+		})
 	return sharders, query.Scan(&sharders).Error
 }
 
 func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagination) ([]SharderGeolocation, error) {
 	var sharderLocations []SharderGeolocation
-	query := edb.Get().Model(&Sharder{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "created_at"},
-		Desc:   p.IsDescending,
-	})
+	query := edb.Get().
+		Preload("Rewards").
+		Model(&Sharder{}).
+		Where(&filter).Offset(p.Offset).Limit(p.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "created_at"},
+			Desc:   p.IsDescending,
+		})
 
 	result := query.Scan(&sharderLocations)
 

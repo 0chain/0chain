@@ -46,30 +46,38 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 			case spenum.Miner:
 				minerRewards = append(minerRewards,
 					Miner{
-						MinerID:     sp.ProviderId,
-						Rewards:     sp.Reward,
-						TotalReward: sp.Reward,
+						MinerID: sp.ProviderId,
+						Rewards: ProviderRewards{
+							Rewards:      sp.Reward,
+							TotalRewards: sp.Reward,
+						},
 					})
 			case spenum.Sharder:
 				sharderRewards = append(sharderRewards,
 					Sharder{
-						SharderID:   sp.ProviderId,
-						Rewards:     sp.Reward,
-						TotalReward: sp.Reward,
+						SharderID: sp.ProviderId,
+						Rewards: ProviderRewards{
+							Rewards:      sp.Reward,
+							TotalRewards: sp.Reward,
+						},
 					})
 			case spenum.Blobber:
 				blobberRewards = append(blobberRewards,
 					Blobber{
-						BlobberID:          sp.ProviderId,
-						Rewards:            sp.Reward,
-						TotalServiceCharge: sp.Reward,
+						BlobberID: sp.ProviderId,
+						Rewards: ProviderRewards{
+							Rewards:      sp.Reward,
+							TotalRewards: sp.Reward,
+						},
 					})
 			case spenum.Validator:
 				validatorRewards = append(validatorRewards,
 					Validator{
 						ValidatorID: sp.ProviderId,
-						Rewards:     int64(sp.Reward),
-						TotalReward: int64(sp.Reward),
+						Rewards: ProviderRewards{
+							Rewards:      sp.Reward,
+							TotalRewards: sp.Reward,
+						},
 					})
 			default:
 				return nil, fmt.Errorf("unsupported provider type: %d", sp.ProviderType)
@@ -120,10 +128,13 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
 
 	defer func() {
 		du := time.Since(ts)
+		n := len(rewards.sharderRewards) + len(rewards.minerRewards) +
+			len(rewards.blobberRewards) + len(rewards.validatorRewards) +
+			len(rewards.delegateRewards) + len(rewards.delegatePenalties)
 		if du > 50*time.Millisecond {
 			logging.Logger.Debug("event db - update reward slow",
 				zap.Any("duration", du),
-				zap.Int("update items", len(rewards.delegateRewards)+len(rewards.delegatePenalties)))
+				zap.Int("update items", n))
 		}
 	}()
 

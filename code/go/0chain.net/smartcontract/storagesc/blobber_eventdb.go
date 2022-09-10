@@ -36,7 +36,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 
 		OffersTotal:  sp.TotalOffers,
 		UnstakeTotal: sp.TotalUnStake,
-		Rewards:      sp.Reward,
+		Rewards:      event.ProviderRewards{Rewards: sp.Reward},
 		TotalStake:   staked,
 
 		Name:        sn.Information.Name,
@@ -79,7 +79,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 
 		OffersTotal:  sp.TotalOffers,
 		UnstakeTotal: sp.TotalUnStake,
-		Rewards:      sp.Reward,
+		Rewards:      event.ProviderRewards{Rewards: sp.Reward},
 		TotalStake:   staked,
 
 		Name:        sn.Information.Name,

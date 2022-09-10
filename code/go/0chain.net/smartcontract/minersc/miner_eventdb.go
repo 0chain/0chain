@@ -38,7 +38,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 	return MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
-			Reward: edbMiner.Rewards,
+			Reward: edbMiner.Rewards.Rewards,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbMiner.DelegateWallet,
 				ServiceChargeRatio: edbMiner.ServiceCharge,
@@ -69,7 +69,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		MinStake:          mn.Settings.MinStake,
 		MaxStake:          mn.Settings.MaxStake,
 		LastHealthCheck:   mn.LastHealthCheck,
-		Rewards:           mn.Reward,
+		Rewards:           event.ProviderRewards{Rewards: mn.Reward},
 		Active:            mn.Status == node.NodeStatusActive,
 		Longitude:         mn.Geolocation.Longitude,
 		Latitude:          mn.Geolocation.Latitude,

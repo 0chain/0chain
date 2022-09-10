@@ -27,7 +27,6 @@ const (
 
 const (
 	TagNone EventTag = iota
-	//TagAddBlobber
 	TagAddOrOverwriteBlobber
 	TagUpdateBlobber
 	TagUpdateBlobberTotalStake
@@ -43,11 +42,9 @@ const (
 	TagAddValidator
 	TagUpdateValidator
 	TagAddReadMarker
-	//TagAddMiner
 	TagAddOrOverwriteMiner
 	TagUpdateMiner
 	TagDeleteMiner
-	//TagAddSharder
 	TagAddOrOverwriteSharder
 	TagUpdateSharder
 	TagDeleteSharder

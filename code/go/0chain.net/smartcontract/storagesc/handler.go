@@ -1107,7 +1107,7 @@ func spStats(
 		MaxNumDelegates:    blobber.NumDelegates,
 		ServiceChargeRatio: blobber.ServiceCharge,
 	}
-	stat.Rewards = blobber.Rewards
+	stat.Rewards = blobber.Rewards.Rewards
 	for _, dp := range delegatePools {
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,
@@ -1326,10 +1326,42 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	common.Respond(w, r, validator, nil)
+	common.Respond(w, r, newValidatorNodeResponse(validator), nil)
 }
 
-// validators swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators validators
+type validatorNodeResponse struct {
+	ValidatorID string `json:"validator_id"`
+	BaseUrl     string `json:"url"`
+	Stake       int64  `json:"stake"`
+	PublicKey   string `json:"public_key"`
+
+	// StakePoolSettings
+	DelegateWallet string        `json:"delegate_wallet"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
+	NumDelegates   int           `json:"num_delegates"`
+	ServiceCharge  float64       `json:"service_charge"`
+
+	Rewards     currency.Coin `json:"rewards"`
+	TotalReward currency.Coin `json:"total_reward"`
+}
+
+func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
+	return &validatorNodeResponse{
+		ValidatorID:    v.ValidatorID,
+		BaseUrl:        v.BaseUrl,
+		Stake:          v.Stake,
+		PublicKey:      v.PublicKey,
+		DelegateWallet: v.DelegateWallet,
+		MinStake:       v.MinStake,
+		MaxStake:       v.MaxStake,
+		NumDelegates:   v.NumDelegates,
+		ServiceCharge:  v.ServiceCharge,
+		Rewards:        v.Rewards.Rewards,
+		TotalReward:    v.Rewards.TotalRewards,
+	}
+}
+
 // Gets list of all validators alive (e.g. excluding blobbers with zero capacity).
 //
 // responses:
@@ -1351,7 +1383,12 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	common.Respond(w, r, validators, nil)
+	vns := make([]*validatorNodeResponse, len(validators))
+	for i, v := range validators {
+		vns[i] = newValidatorNodeResponse(v)
+	}
+
+	common.Respond(w, r, vns, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers
@@ -2124,7 +2161,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				Description: blobber.Description,
 			},
 		},
-		TotalServiceCharge: blobber.TotalServiceCharge,
+		TotalServiceCharge: blobber.Rewards.TotalRewards,
 		TotalStake:         blobber.TotalStake,
 		UsedAllocation:     blobber.Used,
 	}

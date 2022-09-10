@@ -34,12 +34,11 @@ type Miner struct {
 	MinStake          currency.Coin
 	MaxStake          currency.Coin
 	LastHealthCheck   common.Timestamp
-	Rewards           currency.Coin
-	TotalReward       currency.Coin
 	Fees              currency.Coin
 	Active            bool
 	Longitude         float64
 	Latitude          float64
+	Rewards           ProviderRewards `json:"rewards" gorm:"foreignKey:MinerID;references:ProviderID"`
 }
 
 // swagger:model MinerGeolocation
@@ -53,24 +52,25 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 
 	var miner Miner
 	return miner, edb.Store.Get().
+		Preload("Rewards").
 		Model(&Miner{}).
 		Where(&Miner{MinerID: id}).
 		First(&miner).Error
 }
 
-func (edb *EventDb) minerAggregateStats(id string) (*providerAggregateStats, error) {
-	var miner providerAggregateStats
-	result := edb.Store.Get().
-		Model(&Miner{}).
-		Where(&Miner{MinerID: id}).
-		First(&miner)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving miner %v, error %v",
-			id, result.Error)
-	}
-
-	return &miner, nil
-}
+//func (edb *EventDb) minerAggregateStats(id string) (*providerAggregateStats, error) {
+//	var miner providerAggregateStats
+//	result := edb.Store.Get().
+//		Model(&Miner{}).
+//		Where(&Miner{MinerID: id}).
+//		First(&miner)
+//	if result.Error != nil {
+//		return nil, fmt.Errorf("error retrieving miner %v, error %v",
+//			id, result.Error)
+//	}
+//
+//	return &miner, nil
+//}
 
 type MinerQuery struct {
 	gorm.Model
@@ -99,10 +99,14 @@ type MinerQuery struct {
 
 func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p common2.Pagination) ([]Miner, error) {
 	var miners []Miner
-	query := edb.Get().Model(&Miner{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "created_at"},
-		Desc:   p.IsDescending,
-	})
+	query := edb.Get().
+		Preload("Rewards").
+		Model(&Miner{}).
+		Where(&filter).Offset(p.Offset).Limit(p.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "created_at"},
+			Desc:   p.IsDescending,
+		})
 	return miners, query.Scan(&miners).Error
 }
 
@@ -122,6 +126,7 @@ func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
 	var miners []Miner
 
 	result := edb.Store.Get().
+		Preload("Rewards").
 		Model(&Miner{}).
 		Where(query).
 		Find(&miners)
@@ -165,6 +170,7 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 	var miners []Miner
 
 	result := edb.Store.Get().
+		Preload("Rewards").
 		Model(&Miner{}).
 		Find(&miners)
 
