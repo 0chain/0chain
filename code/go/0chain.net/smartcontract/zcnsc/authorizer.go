@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
@@ -9,7 +10,6 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	. "github.com/0chain/common/core/logging"
-	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -261,25 +261,15 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// Mark StakePool as Deleted but not delete it
-	sp, err := zcn.getStakePool(authorizerID, ctx)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-			msg := fmt.Sprintf("delete not allowed due to missing stakepool details for (authorizerID: %v), err: %v", authorizerID, err)
-			err = common.NewError(errorCode, msg)
-			Logger.Error("updating settings", zap.Error(err))
-			return "", err
-		}
-		msg := fmt.Sprintf("unexpected error for (authorizerID: %v), err: %v", authorizerID, err)
-		err = common.NewError(errorCode, msg)
-		Logger.Error("updating settings", zap.Error(err))
-		return "", err
+	var sp *StakePool
+	if sp, err = zcn.getStakePool(authorizerID, ctx); err != nil {
+		return "", common.NewErrorf(errorCode, "error occurred while getting stake pool: %v", err)
+
 	}
 
-	// Do not allow authorizer update in case of mismatch
-	if sp.Settings.DelegateWallet != tran.ClientID {
-		msg := fmt.Sprintf("delete not allowed due to mismatched delegate wallet id for (authorizerID: %v)", authorizerID)
-		err = common.NewError(errorCode, msg)
-		Logger.Error("delete authorizer", zap.Error(err))
+	if err := smartcontractinterface.AuthorizeWithDelegate(errorCode, func() bool {
+		return sp.Settings.DelegateWallet == tran.ClientID
+	}); err != nil {
 		return "", err
 	}
 
