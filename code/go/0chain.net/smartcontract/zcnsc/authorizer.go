@@ -1,15 +1,15 @@
 package zcnsc
 
 import (
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"fmt"
 	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -238,26 +238,12 @@ func (zcn *ZCNSmartContract) CollectRewards(
 	return "", nil
 }
 
-func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, input []byte, ctx cstate.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {
 	var (
 		authorizerID = tran.ClientID
 		errorCode    = "failed to delete authorizer"
 		err          error
 	)
-
-	params := DeleteAuthorizerPayload{}
-	err = params.Decode(input)
-	if err != nil {
-		err = common.NewError(errorCode, "failed to decode DeleteAuthorizerPayload")
-		Logger.Error("payload decoding error", zap.Error(err))
-		return "", err
-	}
-
-	if params.ID != tran.ClientID {
-		err = common.NewError(errorCode, "delete Authorizer is not allowed")
-		Logger.Error("delete authorizer", zap.Error(err))
-		return "", err
-	}
 
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
 	if err != nil {
@@ -275,11 +261,28 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 	}
 
 	// Mark StakePool as Deleted but not delete it
-
 	sp, err := zcn.getStakePool(authorizerID, ctx)
 	if err != nil {
-		return "", common.NewError(errorCode, "failed to get stake pool: "+err.Error())
+		if err == util.ErrValueNotPresent {
+			msg := fmt.Sprintf("delete not allowed due to missing stakepool details for (authorizerID: %v), err: %v", authorizerID, err)
+			err = common.NewError(errorCode, msg)
+			Logger.Error("updating settings", zap.Error(err))
+			return "", err
+		}
+		msg := fmt.Sprintf("unexpected error for (authorizerID: %v), err: %v", authorizerID, err)
+		err = common.NewError(errorCode, msg)
+		Logger.Error("updating settings", zap.Error(err))
+		return "", err
 	}
+
+	// Do not allow authorizer update in case of mismatch
+	if sp.Settings.DelegateWallet != tran.ClientID {
+		msg := fmt.Sprintf("delete not allowed due to mismatched delegate wallet id for (authorizerID: %v)", authorizerID)
+		err = common.NewError(errorCode, msg)
+		Logger.Error("delete authorizer", zap.Error(err))
+		return "", err
+	}
+
 	for _, v := range sp.Pools {
 		v.Status = spenum.Deleted
 	}
