@@ -301,7 +301,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
-	_ *transaction.Transaction,
+	t *transaction.Transaction,
 	input []byte,
 	ctx cstate.StateContextI,
 ) (string, error) {
@@ -351,9 +351,9 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		return "", err
 	}
 
-	// Do not allow update authorizer in absence of delegate wallet
-	if sp.Settings.DelegateWallet == "" {
-		msg := fmt.Sprintf("missing delegate wallet id for (authorizerID: %v)", authorizer.ID)
+	// Do not allow authorizer update in case of mismatch
+	if sp.Settings.DelegateWallet != t.ClientID {
+		msg := fmt.Sprintf("mismatched delegate wallet id for (authorizerID: %v)", authorizer.ID)
 		err = common.NewError(code, msg)
 		Logger.Error("updating settings", zap.Error(err))
 		return "", err
