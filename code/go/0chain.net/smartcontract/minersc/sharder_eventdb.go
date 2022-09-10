@@ -117,7 +117,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"last_health_check":   sn.LastHealthCheck,
 			"longitude":           sn.SimpleNode.Geolocation.Longitude,
 			"latitude":            sn.SimpleNode.Geolocation.Latitude,
-			"rewards":             sn.Reward,
 		},
 	}
 

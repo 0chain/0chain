@@ -122,7 +122,6 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"last_health_check":   mn.LastHealthCheck,
 			"longitude":           mn.SimpleNode.Geolocation.Longitude,
 			"latitude":            mn.SimpleNode.Geolocation.Latitude,
-			"rewards":             mn.Reward,
 		},
 	}
 
