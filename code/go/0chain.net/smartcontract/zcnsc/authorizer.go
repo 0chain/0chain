@@ -1,15 +1,14 @@
 package zcnsc
 
 import (
-	"fmt"
-	"github.com/0chain/common/core/util"
-
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"fmt"
 	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
@@ -337,25 +336,15 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		return "", common.NewError(code, err.Error())
 	}
 
-	sp, err := zcn.getStakePool(in.ID, ctx)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-			msg := fmt.Sprintf("update not allowed due to missing stakepool details for (authorizerID: %v), err: %v", authorizer.ID, err)
-			err = common.NewError(code, msg)
-			Logger.Error("updating settings", zap.Error(err))
-			return "", err
-		}
-		msg := fmt.Sprintf("unexpected error for (authorizerID: %v), err: %v", authorizer.ID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("updating settings", zap.Error(err))
-		return "", err
+	var sp *StakePool
+	if sp, err = zcn.getStakePool(in.ID, ctx); err != nil {
+		return "", common.NewErrorf(code, "error occurred while getting stake pool: %v", err)
+
 	}
 
-	// Do not allow authorizer update in case of mismatch
-	if sp.Settings.DelegateWallet != t.ClientID {
-		msg := fmt.Sprintf("mismatched delegate wallet id for (authorizerID: %v)", authorizer.ID)
-		err = common.NewError(code, msg)
-		Logger.Error("updating settings", zap.Error(err))
+	if err := smartcontractinterface.AuthorizeWithDelegate(code, func() bool {
+		return sp.Settings.DelegateWallet == t.ClientID
+	}); err != nil {
 		return "", err
 	}
 
