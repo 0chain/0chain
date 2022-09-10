@@ -1,14 +1,14 @@
 package zcnsc
 
 import (
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"fmt"
 	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
@@ -261,11 +261,18 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// Mark StakePool as Deleted but not delete it
+	var sp *StakePool
+	if sp, err = zcn.getStakePool(authorizerID, ctx); err != nil {
+		return "", common.NewErrorf(errorCode, "error occurred while getting stake pool: %v", err)
 
-	sp, err := zcn.getStakePool(authorizerID, ctx)
-	if err != nil {
-		return "", common.NewError(errorCode, "failed to get stake pool: "+err.Error())
 	}
+
+	if err := smartcontractinterface.AuthorizeWithDelegate(errorCode, func() bool {
+		return sp.Settings.DelegateWallet == tran.ClientID
+	}); err != nil {
+		return "", err
+	}
+
 	for _, v := range sp.Pools {
 		v.Status = spenum.Deleted
 	}
