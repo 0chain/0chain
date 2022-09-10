@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -19,8 +20,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -382,7 +383,7 @@ func testCancelAllocation(
 	require.NoError(t, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
-		sp, err := ssc.getStakePool(blobber.ID, ctx)
+		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
@@ -429,7 +430,7 @@ func testFinalizeAllocation(
 	require.NoError(t, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
-		sp, err := ssc.getStakePool(blobber.ID, ctx)
+		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
@@ -528,7 +529,7 @@ func setupMocksFinishAllocation(
 			},
 		},
 	}
-	require.NoError(t, cPool.save(ssc.ID, sAllocation.ID, ctx))
+	require.NoError(t, cPool.save(ssc.ID, &sAllocation, ctx))
 
 	require.EqualValues(t, len(blobbers), len(bStakes))
 	for i, blobber := range blobbers {
@@ -545,7 +546,7 @@ func setupMocksFinishAllocation(
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 		}
 		sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
-		require.NoError(t, sp.save(ssc.ID, blobber.ID, ctx))
+		require.NoError(t, sp.save(spenum.Blobber, blobber.ID, ctx))
 
 		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 		require.NoError(t, err)
@@ -765,7 +766,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		var stakePool = newStakePool()
 		stakePool.Pools["paula"] = &stakepool.DelegatePool{}
 		stakePool.Pools["paula"].Balance = currency.Coin(stakes[i])
-		require.NoError(t, stakePool.save(ssc.ID, blobber.ID, ctx))
+		require.NoError(t, stakePool.save(spenum.Blobber, blobber.ID, ctx))
 	}
 
 	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
@@ -798,7 +799,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	var newStakePools = []*stakePool{}
 	for _, blobber := range individualBlobbers {
-		var sp, err = ssc.getStakePool(blobber.ID, ctx)
+		var sp, err = ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
 		require.NoError(t, err)
 		newStakePools = append(newStakePools, sp)
 	}

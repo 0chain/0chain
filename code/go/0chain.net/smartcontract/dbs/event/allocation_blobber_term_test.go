@@ -1,16 +1,17 @@
 package event
 
 import (
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	common2 "0chain.net/smartcontract/common"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/currency"
+	"0chain.net/core/encryption"
+	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/logging"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -50,7 +51,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 			ChallengeCompletionTime: 41 * time.Minute,
 		},
 		{
-			AllocationID:             encryption.Hash("mockAllocation_" + strconv.Itoa(0)),
+			AllocationID:            encryption.Hash("mockAllocation_" + strconv.Itoa(0)),
 			BlobberID:               encryption.Hash("mockBlobber_" + strconv.Itoa(1)),
 			ReadPrice:               int64(currency.Coin(41)),
 			WritePrice:              int64(currency.Coin(43)),

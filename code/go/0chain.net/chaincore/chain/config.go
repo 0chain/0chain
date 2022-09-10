@@ -7,8 +7,8 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/core/logging"
 	"0chain.net/core/viper"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/minersc"

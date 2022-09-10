@@ -11,3 +11,11 @@ func AuthorizeWithOwner(funcName string, hasAccess func() bool) error {
 	}
 	return nil
 }
+
+func AuthorizeWithDelegate(funcName string, hasAccess func() bool) error {
+	if !hasAccess() {
+		return common.NewError(funcName,
+			"unauthorized access - only managing wallet can access")
+	}
+	return nil
+}

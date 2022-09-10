@@ -12,8 +12,8 @@ import (
 	"0chain.net/core/encryption"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
+	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )

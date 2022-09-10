@@ -8,22 +8,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator { //nolint
-	return &event.Validator{
-		ValidatorID: vn.ID,
-		BaseUrl:     vn.BaseURL,
-		PublicKey:   vn.PublicKey,
-		// TO-DO: Update stake in eventDB
-		Stake: 0,
-
-		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-		MinStake:       vn.StakePoolSettings.MinStake,
-		MaxStake:       vn.StakePoolSettings.MaxStake,
-		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
-	}
-}
-
 func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
 		ID:        v.ValidatorID,

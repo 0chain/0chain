@@ -17,7 +17,6 @@ import (
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
 	"0chain.net/chaincore/node"
-	"0chain.net/core/logging"
 	bk "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/faucetsc"
@@ -25,6 +24,7 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
+	"github.com/0chain/common/core/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

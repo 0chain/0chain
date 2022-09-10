@@ -10,8 +10,8 @@ import (
 
 	"0chain.net/chaincore/smartcontractinterface"
 
-	"0chain.net/core/util"
 	"0chain.net/smartcontract"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/transaction"
 

@@ -14,9 +14,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	. "0chain.net/smartcontract/zcnsc"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 )
 

@@ -3,11 +3,11 @@ package block
 import (
 	"fmt"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/util"
 )
 
 func blockToBlockEvent(block *Block) *event.Block {

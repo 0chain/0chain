@@ -47,7 +47,7 @@ func (ssc *StorageSmartContract) collectReward(
 			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
 	}
 
-	sp, err := ssc.getStakePool(providerID, balances)
+	sp, err := ssc.getStakePool(prr.ProviderType, providerID, balances)
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
 			"id %v can't get related stake pool: %v", providerID, err)
@@ -65,7 +65,7 @@ func (ssc *StorageSmartContract) collectReward(
 			"error saving user stake pool, %v", err)
 	}
 
-	if err := sp.save(ssc.ID, providerID, balances); err != nil {
+	if err := sp.save(spenum.Blobber, providerID, balances); err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
 			"error saving stake pool, %v", err)
 	}
