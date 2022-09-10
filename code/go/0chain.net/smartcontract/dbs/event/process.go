@@ -153,10 +153,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		es := <-edb.eventsChannel
 		edb.addEvents(ctx, es)
 		tse := time.Now()
+		tags := make([]int, 0, len(es.events))
 		for _, event := range es.events {
 			var err error = nil
 			switch EventType(event.Type) {
 			case TypeStats:
+				tags = append(tags, event.Tag)
 				ts := time.Now()
 				err = edb.addStat(event)
 				du := time.Since(ts)
@@ -192,6 +194,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		logging.Logger.Debug("event db process",
 			zap.Any("duration", due),
 			zap.Int("events number", len(es.events)),
+			zap.Ints("tags", tags),
 			zap.Int64("round", es.round),
 			zap.String("block", es.block),
 			zap.Int("block size", es.blockSize))
@@ -200,6 +203,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			logging.Logger.Warn("event db work slow",
 				zap.Any("duration", due),
 				zap.Int("events number", len(es.events)),
+				zap.Ints("tags", tags),
 				zap.Int64("round", es.round),
 				zap.String("block", es.block),
 				zap.Int("block size", es.blockSize))
