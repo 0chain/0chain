@@ -125,7 +125,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
-	if err := emitAddBlobber(blobber, sp, balances); err != nil {
+	if err := blobber.EmitUpdate(sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 
@@ -279,7 +279,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"saving blobber: "+err.Error())
 	}
 
-	if err := emitUpdateBlobber(blobber, balances); err != nil {
+	if err := blobber.EmitUpdate(sp, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"emitting update blobber: "+err.Error())
 	}
@@ -846,7 +846,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	blobber.LastHealthCheck = t.CreationDate // set to now
 
-	// create stake pool
+	// create stake pool, there are not yet any stakeholders
 	var sp *stakePool
 	sp, err = sc.getOrCreateStakePool(conf, spenum.Blobber, blobber.ID,
 		blobber.StakePoolSettings, balances)
@@ -857,23 +857,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
-
-	staked, err := sp.stake()
-	if err != nil {
-		return fmt.Errorf("getting stake: %v", err)
-	}
-	data := dbs.DbUpdates{
-		Id: t.ClientID,
-		Updates: map[string]interface{}{
-			"total_stake": int64(staked),
-		},
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, data)
-
-	// update the list
-	if err := emitAddBlobber(blobber, sp, balances); err != nil {
-		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
-	}
+	blobber.EmitAdd(balances)
 
 	// update statistic
 	sc.statIncr(statAddBlobber)

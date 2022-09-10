@@ -389,20 +389,14 @@ type stakePoolStat struct {
 //
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
+func (_ *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
 	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
-	sp = newStakePool()
-	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
-	if err != nil {
-		return nil, err
-	}
-
-	return sp, nil
+	return getProviderStakePool(providerType, providerID, balances)
 }
 
 func getProviderStakePool(
-	id datastore.Key,
 	pType spenum.Provider,
+	id datastore.Key,
 	balances chainstate.CommonStateContextI,
 ) (sp *stakePool, err error) {
 	sp = newStakePool()

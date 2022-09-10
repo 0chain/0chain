@@ -23,9 +23,9 @@ func (pr *providerRequest) decode(p []byte) error {
 }
 
 func kill(
-	t *transaction.Transaction,
 	input []byte,
-	providerSpecific func(providerRequest, *stakePool, *Config) (provider.ProviderI, error),
+	clientID string,
+	providerSpecific func(providerRequest, *Config) (provider.ProviderI, error),
 	pType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
@@ -36,7 +36,7 @@ func kill(
 		return common.NewError(errCode, "can't get config: "+err.Error())
 	}
 	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
-		return conf.OwnerId == t.ClientID
+		return conf.OwnerId == clientID
 	}); err != nil {
 		return err
 	}
@@ -47,11 +47,11 @@ func kill(
 	}
 
 	var sp *stakePool
-	if sp, err = getProviderStakePool(req.ID, pType, balances); err != nil {
+	if sp, err = getProviderStakePool(pType, req.ID, balances); err != nil {
 		return common.NewError(errCode, "can't get related stake pool: "+err.Error())
 	}
 
-	p, err := providerSpecific(req, sp, conf)
+	p, err := providerSpecific(req, conf)
 	if err != nil {
 		return err
 	}
@@ -77,8 +77,9 @@ func kill(
 	if err = sp.save(spenum.Validator, req.ID, balances); err != nil {
 		return common.NewError(errCode, fmt.Sprintf("saving stake pool: %v", err))
 	}
-	if err := p.EmitUpdate(&sp.StakePool, balances); err != nil {
-		return common.NewError(errCode, "emitting provider: "+err.Error())
+
+	if err := emitUpdateProvider(p, sp, balances); err != nil {
+		return common.NewError(errCode, fmt.Sprintf("emitting event: %v", err))
 	}
 
 	return nil
@@ -89,13 +90,15 @@ func (ssc *StorageSmartContract) killBlobber(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	return "", kill(t, input,
-		func(req providerRequest, sp *stakePool, conf *Config) (provider.ProviderI, error) {
+	return "", kill(
+		input,
+		t.ClientID,
+		func(req providerRequest, conf *Config) (provider.ProviderI, error) {
 			var err error
 			var blobber *StorageNode
 			if blobber, err = ssc.getBlobber(req.ID, balances); err != nil {
 				return nil, common.NewError("kill_blobber_failed",
-					"can't get the blobber "+t.ClientID+": "+err.Error())
+					"can't get the blobber "+req.ID+": "+err.Error())
 			}
 
 			// remove killed blobber from list of blobbers to receive rewards
@@ -115,7 +118,7 @@ func (ssc *StorageSmartContract) killBlobber(
 			if blobber.RewardPartition.valid() {
 				parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 				if err != nil {
-					return nil, common.NewErrorf("commit_connection_failed",
+					return nil, common.NewErrorf("kill_blobber_failed",
 						"cannot fetch ongoing partition: %v", err)
 				}
 				err = parts.RemoveItem(balances, blobber.RewardPartition.Index, blobber.ID)
@@ -124,8 +127,7 @@ func (ssc *StorageSmartContract) killBlobber(
 						"cannot remove blobber from ongoing passed rewards partition: "+err.Error())
 				}
 			}
-
-			return nil, nil
+			return blobber, nil
 		},
 		spenum.Blobber,
 		balances,
@@ -137,8 +139,10 @@ func (ssc *StorageSmartContract) killValidator(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	return "", kill(t, input,
-		func(req providerRequest, _ *stakePool, _ *Config) (provider.ProviderI, error) {
+	return "", kill(
+		input,
+		t.ClientID,
+		func(req providerRequest, _ *Config) (provider.ProviderI, error) {
 			var err error
 			var validator = &ValidationNode{
 				ID: req.ID,
@@ -146,7 +150,7 @@ func (ssc *StorageSmartContract) killValidator(
 
 			if err = balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
 				return nil, common.NewError("kill_validator_failed",
-					"can't get the blobber "+t.ClientID+": "+err.Error())
+					"can't get the blobber "+req.ID+": "+err.Error())
 			}
 
 			validatorPartitions, err := getValidatorsList(balances)

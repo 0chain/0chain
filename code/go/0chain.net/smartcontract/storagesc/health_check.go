@@ -23,7 +23,7 @@ func (ssc *StorageSmartContract) blobberHealthCheck(
 	lastHealthCheck := blobber.LastHealthCheck
 	blobber.HealthCheck(t.CreationDate)
 
-	if err = emitUpdateBlobber(blobber, balances); err != nil {
+	if err = blobber.EmitUpdate(nil, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed", err.Error())
 	}
 	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
@@ -68,7 +68,7 @@ func (ssc *StorageSmartContract) validatorHealthCheck(
 
 	validator.HealthCheck(t.CreationDate)
 
-	err := validator.EmitUpdate(balances)
+	err := validator.EmitUpdate(nil, balances)
 	if err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
 	}

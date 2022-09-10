@@ -1,62 +1,42 @@
 package storagesc
 
 import (
-	"errors"
+	"fmt"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+
+	"0chain.net/smartcontract/provider"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool"
-
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func (sn *StorageNode) EmitUpdate(sp *stakepool.StakePool, balances cstate.StateContextI) error {
-	staked, err := sp.stake()
-	if err != nil {
-		return err
+func providerType(p provider.ProviderI) spenum.Provider {
+	switch p.(type) {
+	case *ValidationNode:
+		return spenum.Validator
+	case *StorageNode:
+		return spenum.Blobber
+	default:
+		return spenum.Unknown
 	}
-	data := &event.Blobber{
-		BlobberID:        sn.ID,
-		BaseURL:          sn.BaseURL,
-		Latitude:         sn.Geolocation.Latitude,
-		Longitude:        sn.Geolocation.Longitude,
-		ReadPrice:        sn.Terms.ReadPrice,
-		WritePrice:       sn.Terms.WritePrice,
-		MinLockDemand:    sn.Terms.MinLockDemand,
-		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
-
-		Capacity:        sn.Capacity,
-		Allocated:       sn.Allocated,
-		SavedData:       sn.SavedData,
-		LastHealthCheck: int64(sn.LastHealthCheck),
-		IsShutDown:      sn.IsShutDown(),
-		IsKilled:        sn.IsKilled(),
-
-		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
-		MinStake:       sn.StakePoolSettings.MinStake,
-		MaxStake:       sn.StakePoolSettings.MaxStake,
-		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
-		Reward:         sp.Reward,
-		TotalStake:     staked,
-
-		Name:        sn.Information.Name,
-		WebsiteUrl:  sn.Information.WebsiteUrl,
-		Description: sn.Information.Description,
-		LogoUrl:     sn.Information.LogoUrl,
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
-	return nil
 }
 
-func emitAddBlobber(
-	sn *StorageNode, sp *stakePool, balances cstate.StateContextI,
-) error {
-	if sn == nil {
-		return errors.New("emitting a nil blobber")
+func emitUpdateProvider(p provider.ProviderI, sp *stakePool, balances cstate.StateContextI) error {
+	switch pType := p.(type) {
+	case *ValidationNode:
+		validator := p.(*ValidationNode)
+		return validator.EmitUpdate(&sp.StakePool, balances)
+	case *StorageNode:
+		blobber := p.(*StorageNode)
+		return blobber.EmitUpdate(sp, balances)
+	default:
+		return fmt.Errorf("unreconised provider type %v", pType)
 	}
+}
 
+func (sn *StorageNode) EmitAdd(balances cstate.StateContextI) {
 	data := &event.Blobber{
 		BlobberID:        sn.ID,
 		BaseURL:          sn.BaseURL,
@@ -85,22 +65,10 @@ func emitAddBlobber(
 		Description: sn.Information.Description,
 		LogoUrl:     sn.Information.LogoUrl,
 	}
-	if sp != nil {
-		stake, err := sp.stake()
-		if err != nil {
-			return err
-		}
-		data.OffersTotal = sp.TotalOffers
-		data.UnstakeTotal = sp.TotalUnStake
-		data.TotalStake = stake
-		data.Reward = sp.Reward
-	}
-
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
-	return nil
 }
 
-func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
+func (sn *StorageNode) EmitUpdate(sp *stakePool, balances cstate.StateContextI) error {
 	data := &dbs.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
@@ -124,7 +92,16 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 			"saved_data":         sn.SavedData,
 		},
 	}
-
+	if sp != nil {
+		stake, err := sp.stake()
+		if err != nil {
+			return err
+		}
+		data.Updates["offers_total"] = sp.TotalOffers
+		data.Updates["unstake_total"] = sp.TotalUnStake
+		data.Updates["stake"] = stake
+		data.Updates["reward"] = sp.Reward
+	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
 	return nil
 }

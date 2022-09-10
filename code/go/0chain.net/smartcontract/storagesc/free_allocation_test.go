@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/provider"
 
@@ -256,7 +257,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 				MinLockDemand:    mockMinLock,
 			},
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
 				LastHealthCheck: now - blobberHealthTime + 1,
 			},
 		}
@@ -609,7 +610,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
 				LastHealthCheck: now - blobberHealthTime + 1,
 			},
 		}
