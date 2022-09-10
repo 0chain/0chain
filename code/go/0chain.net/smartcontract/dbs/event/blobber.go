@@ -90,7 +90,7 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	return &blobber, nil
 }
 
-func (edb *EventDb) IncrementDataStored(id string, read int64) error {
+func (edb *EventDb) IncrementDataSaved(id string, saved int64) error {
 	blobber, err := edb.GetBlobber(id)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (edb *EventDb) IncrementDataStored(id string, read int64) error {
 	update := dbs.DbUpdates{
 		Id: id,
 		Updates: map[string]interface{}{
-			"saved_data": blobber.ReadData + read,
+			"saved_data": blobber.SavedData + saved,
 		},
 	}
 	return edb.updateBlobber(update)

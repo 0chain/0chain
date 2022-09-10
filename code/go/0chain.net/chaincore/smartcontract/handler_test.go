@@ -272,7 +272,7 @@ func TestExecuteWithStats(t *testing.T) {
 				balances: stateContextIMock,
 				t:        &transaction.Transaction{},
 			},
-			want:    "{\"from\":\"\",\"to\":\"\",\"amount\":0,\"type\":0}",
+			want:    "{\"from\":\"\",\"to\":\"\",\"amount\":0}",
 			wantErr: false,
 		},
 	}

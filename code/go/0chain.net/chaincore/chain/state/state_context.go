@@ -218,7 +218,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return nil
 	}
 	if isMinter(t.ClientID) {
-		if !isMinter(t.ClientID) {
+		if !isMinter(t.ToClientID) {
 			sc.events = append(sc.events, event.Event{
 				BlockNumber: sc.block.Round,
 				TxHash:      sc.txn.Hash,

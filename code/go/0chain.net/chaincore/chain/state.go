@@ -611,9 +611,6 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return nil, common.NewError("mint_amount - insert", err.Error())
 	}
-	//if err = c.emitMintEvent(sctx, stateToUser(toClient, ts, amount)); err != nil {
-	//	return common.NewError("mint_amount", "could not emit event")
-	//}
 
 	return stateToUser(toClient, ts, amount), nil
 }
@@ -655,10 +652,6 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 		return nil, err
 	}
 	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
-
-	//if err = c.emitUserEvent(sctx, stateToUser(fromClient, s, 0)); err != nil {
-	//	return nil, common.NewError("increment_nonce", "could not emit event")
-	//}
 
 	return stateToUser(fromClient, s, 0), nil
 }

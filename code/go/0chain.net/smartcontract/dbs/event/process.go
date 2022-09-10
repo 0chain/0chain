@@ -238,7 +238,7 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 		if err := edb.addWriteMarker(*wm); err != nil {
 			return err
 		}
-		return edb.IncrementDataStored(wm.BlobberID, wm.Size)
+		return edb.IncrementDataSaved(wm.BlobberID, wm.Size)
 	case TagAddReadMarker:
 		rm, ok := fromEvent[ReadMarker](event.Data)
 		if !ok {

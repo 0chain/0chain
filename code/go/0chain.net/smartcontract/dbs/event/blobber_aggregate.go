@@ -29,7 +29,7 @@ type BlobberAggregate struct {
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
-	RankMetric          float64       `json:"rank_metric" gorm:"index"`
+	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapshot) {
