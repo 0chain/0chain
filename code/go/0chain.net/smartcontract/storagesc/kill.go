@@ -77,6 +77,9 @@ func kill(
 	if err = sp.save(spenum.Validator, req.ID, balances); err != nil {
 		return common.NewError(errCode, fmt.Sprintf("saving stake pool: %v", err))
 	}
+	if err := p.EmitUpdate(&sp.StakePool, balances); err != nil {
+		return common.NewError(errCode, "emitting provider: "+err.Error())
+	}
 
 	return nil
 }
@@ -122,10 +125,6 @@ func (ssc *StorageSmartContract) killBlobber(
 				}
 			}
 
-			if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
-				return nil, common.NewError("kill_blobber_failed",
-					"emitting event: "+err.Error())
-			}
 			return nil, nil
 		},
 		spenum.Blobber,
@@ -148,10 +147,6 @@ func (ssc *StorageSmartContract) killValidator(
 			if err = balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
 				return nil, common.NewError("kill_validator_failed",
 					"can't get the blobber "+t.ClientID+": "+err.Error())
-			}
-			err = validator.emitUpdate(balances)
-			if err != nil {
-				return nil, common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
 			}
 
 			validatorPartitions, err := getValidatorsList(balances)

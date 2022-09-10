@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 )
@@ -41,7 +43,9 @@ type ProviderI interface {
 	IsKilled() bool
 	IsShutDown() bool
 	Id() string
-	Save(i state.StateContextI) error
+	Save(state.StateContextI) error
+	EmitAdd(state.StateContextI)
+	EmitUpdate(*stakepool.StakePool, state.StateContextI) error
 }
 
 type Provider struct {

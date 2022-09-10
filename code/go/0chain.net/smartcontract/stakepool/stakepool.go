@@ -240,7 +240,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	valueBalance := valueLeft
-	stake, err := sp.stake()
+	stake, err := sp.Stake()
 	if err != nil {
 		return err
 	}
@@ -285,15 +285,16 @@ func (sp *StakePool) DistributeRewards(
 	return nil
 }
 
-func (sp *StakePool) stake() (stake currency.Coin, err error) {
+func (sp *StakePool) Stake() (currency.Coin, error) {
+	var stake currency.Coin
+	var err error
 	for _, pool := range sp.Pools {
-		newStake, err := currency.AddCoin(stake, pool.Balance)
+		stake, err = currency.AddCoin(stake, pool.Balance)
 		if err != nil {
 			return 0, err
 		}
-		stake = newStake
 	}
-	return
+	return stake, nil
 }
 
 func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *StakePoolReward) error {

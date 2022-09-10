@@ -77,7 +77,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			"saving stake pool error: "+err.Error())
 	}
 
-	if err = newValidator.emitAdd(balances); err != nil {
+	if err = newValidator.EmitAdd(balances); err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
 	}
 

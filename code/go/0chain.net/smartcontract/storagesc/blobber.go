@@ -125,7 +125,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+	if err := emitAddBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 
@@ -871,7 +871,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, t.ClientID, data)
 
 	// update the list
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+	if err := emitAddBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 

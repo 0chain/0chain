@@ -44,7 +44,7 @@ func getValidators(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode
 	return vNodes, nil
 }
 
-func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
+func (vn *ValidationNode) EmitUpdate(sp *stakepool.StakePool, balances cstate.StateContextI) error {
 	data := &dbs.DbUpdates{
 		Id: vn.ID,
 		Updates: map[string]interface{}{
@@ -59,12 +59,19 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 			"is_shut_down":      vn.IsShutDown,
 		},
 	}
+	if sp != nil {
+		stake, err := sp.Stake()
+		if err != nil {
+			return err
+		}
+		data.Updates["stake"] = stake
+	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
 	return nil
 }
 
-func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
+func (vn *ValidationNode) EmitAdd(balances cstate.StateContextI) {
 	data := &event.Validator{
 		ValidatorID:     vn.ID,
 		BaseUrl:         vn.BaseURL,
@@ -79,5 +86,4 @@ func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, data)
-	return nil
 }

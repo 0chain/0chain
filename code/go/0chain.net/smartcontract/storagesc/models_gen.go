@@ -4,6 +4,7 @@ package storagesc
 
 import (
 	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/provider"
 	"github.com/tinylib/msgp/msgp"
 )
 
@@ -1821,10 +1822,14 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// map header, size 15
 	// string "Provider"
 	o = append(o, 0x8f, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
-	o, err = z.Provider.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Provider")
-		return
+	if z.Provider == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o, err = z.Provider.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "Provider")
+			return
+		}
 	}
 	// string "ID"
 	o = append(o, 0xa2, 0x49, 0x44)
@@ -1934,10 +1939,21 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "Provider":
-			bts, err = z.Provider.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Provider")
-				return
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.Provider = nil
+			} else {
+				if z.Provider == nil {
+					z.Provider = new(provider.Provider)
+				}
+				bts, err = z.Provider.UnmarshalMsg(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Provider")
+					return
+				}
 			}
 		case "ID":
 			z.ID, bts, err = msgp.ReadStringBytes(bts)
@@ -2136,7 +2152,13 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 9 + z.Provider.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 20 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.LastRewardPartition.Timestamp.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize() + 12 + z.Information.Msgsize()
+	s = 1 + 9
+	if z.Provider == nil {
+		s += msgp.NilSize
+	} else {
+		s += z.Provider.Msgsize()
+	}
+	s += 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 20 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.LastRewardPartition.Timestamp.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize() + 12 + z.Information.Msgsize()
 	return
 }
 
@@ -2350,10 +2372,14 @@ func (z *ValidationNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// map header, size 5
 	// string "Provider"
 	o = append(o, 0x85, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
-	o, err = z.Provider.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Provider")
-		return
+	if z.Provider == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o, err = z.Provider.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "Provider")
+			return
+		}
 	}
 	// string "ID"
 	o = append(o, 0xa2, 0x49, 0x44)
@@ -2393,10 +2419,21 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 		}
 		switch msgp.UnsafeString(field) {
 		case "Provider":
-			bts, err = z.Provider.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Provider")
-				return
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.Provider = nil
+			} else {
+				if z.Provider == nil {
+					z.Provider = new(provider.Provider)
+				}
+				bts, err = z.Provider.UnmarshalMsg(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Provider")
+					return
+				}
 			}
 		case "ID":
 			z.ID, bts, err = msgp.ReadStringBytes(bts)
@@ -2436,7 +2473,13 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *ValidationNode) Msgsize() (s int) {
-	s = 1 + 9 + z.Provider.Msgsize() + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 18 + z.StakePoolSettings.Msgsize() + 18 + msgp.IntSize
+	s = 1 + 9
+	if z.Provider == nil {
+		s += msgp.NilSize
+	} else {
+		s += z.Provider.Msgsize()
+	}
+	s += 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 18 + z.StakePoolSettings.Msgsize() + 18 + msgp.IntSize
 	return
 }
 

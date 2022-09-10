@@ -68,7 +68,7 @@ func (ssc *StorageSmartContract) validatorHealthCheck(
 
 	validator.HealthCheck(t.CreationDate)
 
-	err := validator.emitUpdate(balances)
+	err := validator.EmitUpdate(balances)
 	if err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
 	}

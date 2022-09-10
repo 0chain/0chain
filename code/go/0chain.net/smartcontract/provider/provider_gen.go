@@ -9,9 +9,12 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Provider) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 4
+	// string "ID"
+	o = append(o, 0x84, 0xa2, 0x49, 0x44)
+	o = msgp.AppendString(o, z.ID)
 	// string "LastHealthCheck"
-	o = append(o, 0x83, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
+	o = append(o, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
 	o, err = z.LastHealthCheck.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "LastHealthCheck")
@@ -44,6 +47,12 @@ func (z *Provider) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
+		case "ID":
+			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ID")
+				return
+			}
 		case "LastHealthCheck":
 			bts, err = z.LastHealthCheck.UnmarshalMsg(bts)
 			if err != nil {
@@ -76,7 +85,7 @@ func (z *Provider) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Provider) Msgsize() (s int) {
-	s = 1 + 16 + z.LastHealthCheck.Msgsize() + 16 + msgp.BoolSize + 14 + msgp.BoolSize
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 16 + z.LastHealthCheck.Msgsize() + 16 + msgp.BoolSize + 14 + msgp.BoolSize
 	return
 }
 
