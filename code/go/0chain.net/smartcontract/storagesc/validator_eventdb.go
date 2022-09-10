@@ -17,8 +17,8 @@ func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 			LastHealthCheck: common.Timestamp(v.LastHealthCheck),
 			HasBeenKilled:   v.IsKilled,
 			HasBeenShutDown: v.IsShutDown,
+			ID:              v.ValidatorID,
 		},
-		ID:        v.ValidatorID,
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
 		StakePoolSettings: stakepool.Settings{

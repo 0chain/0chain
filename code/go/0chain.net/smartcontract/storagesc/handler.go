@@ -106,8 +106,8 @@ func validatorTableToValidatorNode(val event.Validator) ValidationNode {
 			LastHealthCheck: common.Timestamp(val.LastHealthCheck),
 			HasBeenShutDown: val.IsShutDown,
 			HasBeenKilled:   val.IsKilled,
+			ID:              val.ValidatorID,
 		},
-		ID:      val.ValidatorID,
 		BaseURL: val.BaseUrl,
 		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:     val.DelegateWallet,
@@ -2158,8 +2158,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				HasBeenKilled:   blobber.IsKilled,
 				HasBeenShutDown: blobber.IsShutDown,
 				LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+				ID:              blobber.BlobberID,
 			},
-			ID:      blobber.BlobberID,
 			BaseURL: blobber.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  blobber.Latitude,

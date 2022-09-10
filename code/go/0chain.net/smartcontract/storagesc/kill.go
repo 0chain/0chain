@@ -144,10 +144,7 @@ func (ssc *StorageSmartContract) killValidator(
 		t.ClientID,
 		func(req providerRequest, _ *Config) (provider.ProviderI, error) {
 			var err error
-			var validator = &ValidationNode{
-				ID: req.ID,
-			}
-
+			var validator = newValidatorNode(req.ID)
 			if err = balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
 				return nil, common.NewError("kill_validator_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())

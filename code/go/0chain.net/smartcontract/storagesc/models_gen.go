@@ -1819,9 +1819,9 @@ func (z *StorageChallenge) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 15
+	// map header, size 14
 	// string "Provider"
-	o = append(o, 0x8f, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o = append(o, 0x8e, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
 	if z.Provider == nil {
 		o = msgp.AppendNil(o)
 	} else {
@@ -1831,9 +1831,6 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
-	// string "ID"
-	o = append(o, 0xa2, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ID)
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
 	o = msgp.AppendString(o, z.BaseURL)
@@ -1954,12 +1951,6 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					err = msgp.WrapError(err, "Provider")
 					return
 				}
-			}
-		case "ID":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ID")
-				return
 			}
 		case "BaseURL":
 			z.BaseURL, bts, err = msgp.ReadStringBytes(bts)
@@ -2158,7 +2149,7 @@ func (z *StorageNode) Msgsize() (s int) {
 	} else {
 		s += z.Provider.Msgsize()
 	}
-	s += 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 20 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.LastRewardPartition.Timestamp.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize() + 12 + z.Information.Msgsize()
+	s += 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 20 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.LastRewardPartition.Timestamp.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize() + 12 + z.Information.Msgsize()
 	return
 }
 
@@ -2369,9 +2360,9 @@ func (z *Terms) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *ValidationNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 5
+	// map header, size 4
 	// string "Provider"
-	o = append(o, 0x85, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o = append(o, 0x84, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
 	if z.Provider == nil {
 		o = msgp.AppendNil(o)
 	} else {
@@ -2381,9 +2372,6 @@ func (z *ValidationNode) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
-	// string "ID"
-	o = append(o, 0xa2, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ID)
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
 	o = msgp.AppendString(o, z.BaseURL)
@@ -2435,12 +2423,6 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
-		case "ID":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ID")
-				return
-			}
 		case "BaseURL":
 			z.BaseURL, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -2479,7 +2461,7 @@ func (z *ValidationNode) Msgsize() (s int) {
 	} else {
 		s += z.Provider.Msgsize()
 	}
-	s += 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 18 + z.StakePoolSettings.Msgsize() + 18 + msgp.IntSize
+	s += 8 + msgp.StringPrefixSize + len(z.BaseURL) + 18 + z.StakePoolSettings.Msgsize() + 18 + msgp.IntSize
 	return
 }
 

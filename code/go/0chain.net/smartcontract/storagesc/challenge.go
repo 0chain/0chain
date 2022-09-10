@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/dbs"
@@ -874,7 +876,9 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if randValidator.Id != blobberID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
-					ID:      randValidator.Id,
+					Provider: &provider.Provider{
+						ID: randValidator.Id,
+					},
 					BaseURL: randValidator.Url,
 				})
 		}

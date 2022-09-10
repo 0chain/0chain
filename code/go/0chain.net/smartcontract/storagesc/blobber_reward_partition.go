@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/currency"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -39,7 +41,9 @@ func BlobberRewardKey(round int64) datastore.Key {
 
 func passedCallback(id string, data []byte, toPartition, _ int, sCtx c_state.StateContextI) error {
 	replace := &StorageNode{
-		ID: id,
+		Provider: &provider.Provider{
+			ID: id,
+		},
 	}
 	if err := sCtx.GetTrieNode(replace.GetKey(ADDRESS), replace); err != nil {
 		return err
@@ -64,7 +68,9 @@ func getActivePassedBlobberRewardsPartitions(balances c_state.StateContextI, per
 
 func ongoingCallback(id string, data []byte, toPartition, _ int, sCtx c_state.StateContextI) error {
 	replace := &StorageNode{
-		ID: id,
+		Provider: &provider.Provider{
+			ID: id,
+		},
 	}
 	if err := sCtx.GetTrieNode(replace.GetKey(ADDRESS), replace); err != nil {
 		return err

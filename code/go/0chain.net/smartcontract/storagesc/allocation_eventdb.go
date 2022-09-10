@@ -73,8 +73,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		storageNodes = append(storageNodes, &StorageNode{
 			Provider: &provider.Provider{
 				LastHealthCheck: common.Timestamp(b.LastHealthCheck),
+				ID:              b.BlobberID,
 			},
-			ID:      b.BlobberID,
 			BaseURL: b.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  b.Latitude,

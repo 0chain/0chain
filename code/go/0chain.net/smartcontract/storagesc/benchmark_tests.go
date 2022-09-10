@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/currency"
 
 	sc "0chain.net/smartcontract"
@@ -399,7 +401,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
-					ID:                encryption.Hash("my_new_blobber"),
+					Provider: &provider.Provider{
+						ID: encryption.Hash("my_new_blobber"),
+					},
 					BaseURL:           "my_new_blobber.com",
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
@@ -421,7 +425,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					ID:                encryption.Hash("my_new_validator"),
+					Provider: &provider.Provider{
+						ID: encryption.Hash("my_new_validator"),
+					},
 					BaseURL:           "my_new_validator.com",
 					StakePoolSettings: getMockStakePoolSettings(data.Clients[0]),
 				})
@@ -467,7 +473,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
-					ID:                getMockBlobberId(0),
+					Provider: &provider.Provider{
+						ID: getMockBlobberId(0),
+					},
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
 					StakePoolSettings: getMockStakePoolSettings(data.Clients[0]),
@@ -488,7 +496,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					ID:                getMockValidatorId(0),
+					Provider: &provider.Provider{
+						ID: getMockValidatorId(0),
+					},
 					BaseURL:           getMockValidatorUrl(0),
 					StakePoolSettings: getMockStakePoolSettings(data.Clients[0]),
 				})

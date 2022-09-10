@@ -73,9 +73,7 @@ func (ssc *StorageSmartContract) shutDownValidator(
 	return "", shutdown(
 		input,
 		func(req providerRequest) (provider.ProviderI, error) {
-			var validator = &ValidationNode{
-				ID: req.ID,
-			}
+			var validator = newValidatorNode(req.ID)
 			if err := balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
 				return nil, errors.New("can't get the validator " + t.ClientID + ": " + err.Error())
 			}

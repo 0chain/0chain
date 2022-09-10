@@ -394,9 +394,10 @@ func AddMockBlobbers(
 		const mockUsedData = 1000
 		blobber := &StorageNode{
 			Provider: &provider.Provider{
+				ID:              id,
 				LastHealthCheck: balances.GetTransaction().CreationDate,
 			},
-			ID:      id,
+
 			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
@@ -495,7 +496,7 @@ func AddMockValidators(
 		id := getMockValidatorId(i)
 		url := getMockValidatorUrl(i)
 		validator := &ValidationNode{
-			ID:                id,
+			Provider:          &provider.Provider{ID: id},
 			BaseURL:           url,
 			PublicKey:         publicKeys[i%len(publicKeys)],
 			StakePoolSettings: getMockStakePoolSettings(clients[i]),

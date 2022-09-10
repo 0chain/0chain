@@ -28,9 +28,7 @@ func (vn *ValidationPartitionNode) GetID() string {
 }
 
 func validatorCallback(id string, data []byte, toPartition, _ int, sCtx state.StateContextI) error {
-	replace := &ValidationNode{
-		ID: id,
-	}
+	replace := newValidatorNode(id)
 	if err := sCtx.GetTrieNode(replace.GetKey(ADDRESS), replace); err != nil {
 		return err
 	}

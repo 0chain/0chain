@@ -58,9 +58,7 @@ func (ssc *StorageSmartContract) validatorHealthCheck(
 	_ []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	var validator = &ValidationNode{
-		ID: t.ClientID,
-	}
+	var validator = newValidatorNode(t.ClientID)
 	if err := balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())

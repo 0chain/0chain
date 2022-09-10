@@ -1,12 +1,13 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	"math/rand"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
@@ -150,8 +151,7 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
-	blobber := new(StorageNode)
-	blobber.ID = c.id
+	blobber := newStorageNode(c.id)
 	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 	require.NoError(t, err)
 	var input = c.addValidatorRequest(t)

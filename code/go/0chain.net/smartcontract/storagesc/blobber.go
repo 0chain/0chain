@@ -25,8 +25,7 @@ func getBlobber(
 	blobberID string,
 	balances cstate.CommonStateContextI,
 ) (*StorageNode, error) {
-	blobber := new(StorageNode)
-	blobber.ID = blobberID
+	blobber := newStorageNode(blobberID)
 	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
 	if err != nil {
 		return nil, err
@@ -43,7 +42,7 @@ func (_ *StorageSmartContract) getBlobber(
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	balances cstate.StateContextI) bool {
-	blobber := new(StorageNode)
+	blobber := newStorageNode("")
 	blobber.BaseURL = blobberURL
 	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 	return err == nil

@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"strings"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/provider"
 
@@ -195,12 +196,16 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 
 type ValidationNode struct {
 	*provider.Provider
-	ID                string             `json:"id"`
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
-	PartitionPosition int                `json:"p
-artition_position"`
+	PartitionPosition int                `json:"partition_position"`
+}
+
+func newValidatorNode(id string) *ValidationNode {
+	return &ValidationNode{
+		Provider: &provider.Provider{ID: id},
+	}
 }
 
 func (vn *ValidationNode) Save(balances cstate.StateContextI) error {
@@ -349,7 +354,6 @@ type Info struct {
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
 	*provider.Provider
-	ID                      string                 `json:"id"`
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
@@ -364,6 +368,14 @@ type StorageNode struct {
 	LastRewardPartition RewardPartitionLocation `json:"last_reward_partition"`
 	RewardPartition     RewardPartitionLocation `json:"reward_partition"`
 	Information         Info                    `json:"info"`
+}
+
+func newStorageNode(id string) *StorageNode {
+	return &StorageNode{
+		Provider: &provider.Provider{
+			ID: id,
+		},
+	}
 }
 
 func (sn *StorageNode) Save(balances cstate.StateContextI) error {
