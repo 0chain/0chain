@@ -137,6 +137,14 @@ func newTransactionsEventsMerger() *eventsMergerImpl[Transaction] {
 	return newEventsMerger[Transaction](TagAddTransactions)
 }
 
+func mergeAddWriteMarkerEvents() *eventsMergerImpl[WriteMarker] {
+	return newEventsMerger[WriteMarker](TagAddWriteMarker)
+}
+
+func mergeAddReadMarkerEvents() *eventsMergerImpl[ReadMarker] {
+	return newEventsMerger[ReadMarker](TagAddReadMarker)
+}
+
 func newAllocationsEventsMerger() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagAddAllocation)
 }
@@ -188,6 +196,7 @@ func withBlobberTotalOffersAdded() eventMergeMiddleware {
 func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 	return withEventMerge(func(a, b *dbs.StakePoolReward) (*dbs.StakePoolReward, error) {
 		a.Reward += b.Reward
+		a.Desc = append(a.Desc, b.Desc...)
 
 		// merge delegate pool rewards
 		for k, v := range b.DelegateRewards {

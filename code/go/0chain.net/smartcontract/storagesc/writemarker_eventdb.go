@@ -7,7 +7,7 @@ import (
 )
 
 // TransactionID and BlockNumber is added at the time of emitting event
-func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
+func writeMarkerToWriteMarkerTable(wm *WriteMarker, txnHash string) *event.WriteMarker {
 	return &event.WriteMarker{
 		ClientID:               wm.ClientID,
 		BlobberID:              wm.BlobberID,
@@ -20,12 +20,13 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
 		LookupHash:             wm.LookupHash,
 		Name:                   wm.Name,
 		ContentHash:            wm.ContentHash,
+		TransactionID:          txnHash,
 	}
 }
 
 func emitAddWriteMarker(wm *WriteMarker, balances cstate.StateContextI, t *transaction.Transaction) error {
 
-	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker, t.Hash, writeMarkerToWriteMarkerTable(wm))
+	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker, t.Hash, writeMarkerToWriteMarkerTable(wm, t.Hash))
 
 	return nil
 }

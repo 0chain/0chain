@@ -36,15 +36,15 @@ const (
 	TagAddAuthorizer
 	TagUpdateAuthorizer
 	TagDeleteAuthorizer
-	TagAddTransactions
+	TagAddTransactions // 10
 	TagAddOrOverwriteUser
 	TagAddWriteMarker
-	TagAddBlock
+	TagAddBlock // 13
 	TagAddValidator
 	TagUpdateValidator
 	TagAddReadMarker
 	TagAddOrOverwriteMiner
-	TagUpdateMiner
+	TagUpdateMiner // 18
 	TagDeleteMiner
 	TagAddOrOverwriteSharder
 	TagUpdateSharder
@@ -52,12 +52,12 @@ const (
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagAddOrOverwriteDelegatePool
-	TagStakePoolReward
+	TagStakePoolReward // 26
 	TagUpdateDelegatePool
 	TagAddAllocation
 	TagUpdateAllocation // 29
 	TagAddReward
-	TagAddChallenge
+	TagAddChallenge           // 31
 	TagUpdateChallenge        // 32
 	TagUpdateBlobberChallenge //33
 	TagAddOrOverwriteAllocationBlobberTerm
@@ -116,6 +116,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			newStakePoolRewardEventsMerger(),
 
 			newTransactionsEventsMerger(),
+			mergeAddWriteMarkerEvents(),
+			mergeAddReadMarkerEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -276,26 +278,30 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.DeleteAuthorizer(id)
 	case TagAddWriteMarker:
-		wm, ok := fromEvent[WriteMarker](event.Data)
+		wms, ok := fromEvent[[]WriteMarker](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		wm.TransactionID = event.TxHash
-		wm.BlockNumber = event.BlockNumber
-		if err := edb.addWriteMarker(*wm); err != nil {
+		for i := range *wms {
+			(*wms)[i].BlockNumber = event.BlockNumber
+		}
+
+		if err := edb.addWriteMarkers(*wms); err != nil {
 			return err
 		}
-		return edb.IncrementDataStored(wm.BlobberID, wm.Size)
+		return nil
 	case TagAddReadMarker:
-		rm, ok := fromEvent[ReadMarker](event.Data)
+		rms, ok := fromEvent[[]ReadMarker](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		rm.TransactionID = event.TxHash
-		rm.BlockNumber = event.BlockNumber
-		return edb.addOrOverwriteReadMarker(*rm)
+		for i := range *rms {
+			(*rms)[i].BlockNumber = event.BlockNumber
+		}
+
+		return edb.addOrOverwriteReadMarker(*rms)
 	case TagAddOrOverwriteUser:
 		users, ok := fromEvent[[]User](event.Data)
 		if !ok {

@@ -33,6 +33,16 @@ type WriteMarker struct {
 	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
+func (w *WriteMarker) AfterCreate(tx *gorm.DB) error {
+	vs := map[string]interface{}{
+		"used": gorm.Expr("blobbers.used + excluded.used"),
+	}
+	return tx.Model(&Blobber{}).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "blobber_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(&Blobber{BlobberID: w.BlobberID, Used: w.Size}).Error
+}
+
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
 	var wm WriteMarker
 
@@ -99,8 +109,8 @@ func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filena
 	return wms, result.Error
 }
 
-func (edb *EventDb) addWriteMarker(wm WriteMarker) error {
-	return edb.Store.Get().Create(&wm).Error
+func (edb *EventDb) addWriteMarkers(wms []WriteMarker) error {
+	return edb.Store.Get().Create(&wms).Error
 }
 
 func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString string, limit common.Pagination) ([]interface{}, error) {
