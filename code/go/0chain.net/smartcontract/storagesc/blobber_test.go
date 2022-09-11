@@ -170,7 +170,7 @@ func Test_flow_reward(t *testing.T) {
 		err    error
 	)
 
-	setConfig(t, balances)
+	conf := setConfig(t, balances)
 
 	tp += 100
 	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
@@ -355,7 +355,7 @@ func Test_flow_reward(t *testing.T) {
 
 		var moved = int64(sizeInGB(cc.WriteMarker.Size) *
 			float64(avgTerms.WritePrice) *
-			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp))
+			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit))
 
 		require.EqualValues(t, moved, cp.Balance)
 

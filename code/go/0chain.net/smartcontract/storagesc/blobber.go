@@ -528,7 +528,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 // commitMoveTokens moves tokens on connection commit (on write marker),
 // if data written (size > 0) -- from write pool to challenge pool, otherwise
 // (delete write marker) from challenge back to write pool
-func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
+func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (err error) {
 
@@ -544,7 +544,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	var move currency.Coin
 	if size > 0 {
 		move, err = details.upload(size, wmTime,
-			alloc.restDurationInTimeUnits(wmTime))
+			alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
@@ -566,7 +566,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		}
 		details.Spent = spent
 	} else {
-		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
+		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
 		err = alloc.moveFromChallengePool(cp, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
@@ -692,7 +692,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, blobAlloc,
+	err = sc.commitMoveTokens(conf, alloc, commitConnection.WriteMarker.Size, blobAlloc,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
