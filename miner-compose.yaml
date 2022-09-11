@@ -51,8 +51,8 @@ services:
     networks:
       default:
       testnet0:
-        ipv4_address: 198.18.0.7${MINER}
-    command: ./bin/miner  --deployment_mode 0 --keys_file config${CONFIG_SUBPATH}/b0mnode${MINER}_keys.txt --dkg_file config${CONFIG_SUBPATH}/b0mnode${MINER}_${DKG_AFFIX}dkg.json ${CLI_ARGS}
+        ipv4_address: 198.18.0.71
+    command: ./bin/miner  --deployment_mode 0 --keys_file config/b0mnode1_keys.txt --dkg_file config/b0mnode1_dkg.json
 
   nginx:
     image: nginx:latest
@@ -61,13 +61,20 @@ services:
       - ./docker.local/nginx/default.conf:/etc/nginx/conf.d/default.conf
     ports:
       - 7071:80
+    depends_on:
+      - miner
 
 networks:
   default:
     driver: bridge
   testnet0:
-    external: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 198.18.0.0/15
+          gateway: 198.18.0.255
 
 volumes:
   data:
   config:
+

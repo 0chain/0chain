@@ -1,5 +1,10 @@
 #!/bin/sh
 
+mkdir -p docker.local/miner/data/redis/state
+mkdir -p docker.local/miner/data/redis/transactions
+mkdir -p docker.local/miner/data/rocksdb
+mkdir -p docker.local/miner/log
+
 mkdir -p docker.local/benchmarks
 for i in $(seq 1 8)
 do
