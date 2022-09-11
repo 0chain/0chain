@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/smartcontract/common"
-	"0chain.net/smartcontract/dbs"
-
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/common"
 	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
@@ -117,13 +115,47 @@ func (edb EventDb) GetActiveAllocsBlobberCount() (int64, error) {
 	return count, nil
 }
 
-func (edb *EventDb) updateAllocation(updates *dbs.DbUpdates) error {
-	return edb.Store.Get().
-		Model(&Allocation{}).
-		Where(&Allocation{AllocationID: updates.Id}).
-		Updates(updates.Updates).Error
+func (edb *EventDb) addAllocations(allocs []Allocation) error {
+	return edb.Store.Get().Create(&allocs).Error
 }
 
-func (edb *EventDb) addAllocation(alloc *Allocation) error {
-	return edb.Store.Get().Create(&alloc).Error
+func (edb *EventDb) updateAllocations(allocs []Allocation) error {
+	updateColumns := []string{
+		"allocation_name",
+		"transaction_id",
+		"data_shards",
+		"parity_shards",
+		"size",
+		"expiration",
+		"terms",
+		"owner",
+		"owner_public_key",
+		"is_immutable",
+		"read_price_min",
+		"read_price_max",
+		"write_price_min",
+		"write_price_max",
+		"challenge_completion_time",
+		"start_time",
+		"finalized",
+		"cancelled",
+		"used_size",
+		"moved_to_challenge",
+		"moved_back",
+		"moved_to_validators",
+		"time_unit",
+		"write_pool",
+		"num_writes",
+		"num_reads",
+		"total_challenges",
+		"open_challenges",
+		"successful_challenges",
+		"failed_challenges",
+		"latest_closed_challenge_txn",
+	}
+
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		DoUpdates: clause.AssignmentColumns(updateColumns),
+	}).Create(&allocs).Error
 }

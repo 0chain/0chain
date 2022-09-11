@@ -55,16 +55,18 @@ const (
 	TagStakePoolReward
 	TagUpdateDelegatePool
 	TagAddAllocation
-	TagUpdateAllocation
+	TagUpdateAllocation // 29
 	TagAddReward
 	TagAddChallenge
-	TagUpdateChallenge
-	TagUpdateBlobberChallenge
+	TagUpdateChallenge        // 32
+	TagUpdateBlobberChallenge //33
 	TagAddOrOverwriteAllocationBlobberTerm
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
 	NumberOfTags
 )
+
+// 29 32 33
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
@@ -104,10 +106,16 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			newAddProviderEventsMerger[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Blobber](TagAddOrOverwriteBlobber, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Validator](TagAddValidator, withUniqueEventOverwrite()),
-			newTransactionsEventsMerger(),
+			newAllocationsEventsMerger(),
+			newUpdateAllocationsEventsMerger(),
+			newUpdateChallengesEventsMerger(),
+			newUpdateBlobberChallengesMerger(),
+
 			newBlobberTotalStakesEventsMerger(),
 			newBlobberTotalOffersEventsMerger(),
 			newStakePoolRewardEventsMerger(),
+
+			newTransactionsEventsMerger(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -400,17 +408,17 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.rewardUpdate(*spus)
 	case TagAddAllocation:
-		alloc, ok := fromEvent[Allocation](event.Data)
+		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addAllocation(alloc)
+		return edb.addAllocations(*allocs)
 	case TagUpdateAllocation:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateAllocation(updates)
+		return edb.updateAllocations(*allocs)
 	case TagAddReward:
 		reward, ok := fromEvent[Reward](event.Data)
 		if !ok {
@@ -424,17 +432,17 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addChallenge(chall)
 	case TagUpdateChallenge:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		chs, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateChallenge(*updates)
+		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
-		challenge, ok := fromEvent[dbs.ChallengeResult](event.Data)
+		bcs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobberChallenges(*challenge)
+		return edb.updateBlobberChallenges(*bcs)
 		// allocation blobber term
 	case TagAddOrOverwriteAllocationBlobberTerm:
 		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)

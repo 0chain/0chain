@@ -1,13 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/logging"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
@@ -220,50 +219,49 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	return alloc, nil
 }
 
-func (sa *StorageAllocation) buildDbUpdates() *dbs.DbUpdates {
+func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 
 	termsByte, _ := sa.marshalTerms() //err always is nil
 
-	dbUpdates := &dbs.DbUpdates{
-		Id: sa.ID,
-		Updates: map[string]interface{}{
-			"allocation_name":           sa.Name,
-			"transaction_id":            sa.Tx,
-			"data_shards":               sa.DataShards,
-			"parity_shards":             sa.ParityShards,
-			"size":                      sa.Size,
-			"expiration":                int64(sa.Expiration),
-			"terms":                     string(termsByte),
-			"owner":                     sa.Owner,
-			"owner_public_key":          sa.OwnerPublicKey,
-			"is_immutable":              sa.IsImmutable,
-			"read_price_min":            sa.ReadPriceRange.Min,
-			"read_price_max":            sa.ReadPriceRange.Max,
-			"write_price_min":           sa.WritePriceRange.Min,
-			"write_price_max":           sa.WritePriceRange.Max,
-			"challenge_completion_time": int64(sa.ChallengeCompletionTime),
-			"start_time":                int64(sa.StartTime),
-			"finalized":                 sa.Finalized,
-			"cancelled":                 sa.Canceled,
-			"used_size":                 sa.UsedSize,
-			"moved_to_challenge":        sa.MovedToChallenge,
-			"moved_back":                sa.MovedBack,
-			"moved_to_validators":       sa.MovedToValidators,
-			"time_unit":                 int64(sa.TimeUnit),
-			"write_pool":                sa.WritePool,
-		},
+	eAlloc := event.Allocation{
+		AllocationID:            sa.ID,
+		AllocationName:          sa.Name,
+		TransactionID:           sa.Tx,
+		DataShards:              sa.DataShards,
+		ParityShards:            sa.ParityShards,
+		Size:                    sa.Size,
+		Expiration:              int64(sa.Expiration),
+		Terms:                   string(termsByte),
+		Owner:                   sa.Owner,
+		OwnerPublicKey:          sa.OwnerPublicKey,
+		IsImmutable:             sa.IsImmutable,
+		ReadPriceMin:            sa.ReadPriceRange.Min,
+		ReadPriceMax:            sa.ReadPriceRange.Max,
+		WritePriceMin:           sa.WritePriceRange.Min,
+		WritePriceMax:           sa.WritePriceRange.Max,
+		ChallengeCompletionTime: int64(sa.ChallengeCompletionTime),
+		StartTime:               int64(sa.StartTime),
+		Finalized:               sa.Finalized,
+		Cancelled:               sa.Canceled,
+		UsedSize:                sa.UsedSize,
+		MovedToChallenge:        sa.MovedToChallenge,
+		MovedBack:               sa.MovedBack,
+		MovedToValidators:       sa.MovedToValidators,
+		TimeUnit:                int64(sa.TimeUnit),
+		WritePool:               sa.WritePool,
 	}
 
 	if sa.Stats != nil {
-		dbUpdates.Updates["num_writes"] = sa.Stats.NumWrites
-		dbUpdates.Updates["num_reads"] = sa.Stats.NumReads
-		dbUpdates.Updates["total_challenges"] = sa.Stats.TotalChallenges
-		dbUpdates.Updates["open_challenges"] = sa.Stats.OpenChallenges
-		dbUpdates.Updates["successful_challenges"] = sa.Stats.SuccessChallenges
-		dbUpdates.Updates["failed_challenges"] = sa.Stats.FailedChallenges
-		dbUpdates.Updates["latest_closed_challenge_txn"] = sa.Stats.LastestClosedChallengeTxn
+		eAlloc.NumWrites = sa.Stats.NumWrites
+		eAlloc.NumReads = sa.Stats.NumReads
+		eAlloc.TotalChallenges = sa.Stats.TotalChallenges
+		eAlloc.OpenChallenges = sa.Stats.OpenChallenges
+		eAlloc.SuccessfulChallenges = sa.Stats.SuccessChallenges
+		eAlloc.FailedChallenges = sa.Stats.FailedChallenges
+		eAlloc.LatestClosedChallengeTxn = sa.Stats.LastestClosedChallengeTxn
 	}
-	return dbUpdates
+
+	return eAlloc
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {

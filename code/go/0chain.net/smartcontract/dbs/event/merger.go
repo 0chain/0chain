@@ -137,6 +137,22 @@ func newTransactionsEventsMerger() *eventsMergerImpl[Transaction] {
 	return newEventsMerger[Transaction](TagAddTransactions)
 }
 
+func newAllocationsEventsMerger() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagAddAllocation)
+}
+
+func newUpdateAllocationsEventsMerger() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagUpdateAllocation, withUniqueEventOverwrite())
+}
+
+func newUpdateChallengesEventsMerger() *eventsMergerImpl[Challenge] {
+	return newEventsMerger[Challenge](TagUpdateChallenge, withUniqueEventOverwrite())
+}
+
+func newUpdateBlobberChallengesMerger() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withBlobberChallengesStatsAdded())
+}
+
 func newBlobberTotalStakesEventsMerger() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withBlobberTotalStakesAdded())
 }
@@ -195,6 +211,14 @@ func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 			a.DelegatePenalties[k] += v
 		}
 
+		return a, nil
+	})
+}
+
+func withBlobberChallengesStatsAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
+		a.ChallengesCompleted += b.ChallengesCompleted
+		a.ChallengesPassed += b.ChallengesPassed
 		return a, nil
 	})
 }

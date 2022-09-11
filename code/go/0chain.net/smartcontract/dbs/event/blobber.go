@@ -96,22 +96,18 @@ func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
 	return edb.updateBlobber(update)
 }
 
-func (edb *EventDb) updateBlobberChallenges(challenge dbs.ChallengeResult) error {
-	blobber, err := edb.GetBlobber(challenge.BlobberId)
-	if err != nil {
-		return err
+func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
+
+	vs := map[string]interface{}{
+		"challenges_completed": gorm.Expr("blobbers.challenges_completed + excluded.challenges_completed"),
+		"challenges_passed":    gorm.Expr("blobbers.challenges_passed + excluded.challenges_passed"),
+		"rank_metric":          gorm.Expr("((blobbers.challenges_passed + excluded.challenges_passed)::FLOAT / (blobbers.challenges_completed + excluded.challenges_completed)::FLOAT)::DECIMAL(10,3)"),
 	}
-	blobber.ChallengesCompleted++
-	if challenge.Passed {
-		blobber.ChallengesPassed++
-	}
-	update := dbs.NewDbUpdates(challenge.BlobberId)
-	update.Updates["challenges_completed"] = blobber.ChallengesCompleted
-	if challenge.Passed {
-		update.Updates["challenges_passed"] = blobber.ChallengesPassed
-	}
-	update.Updates["rank_metric"] = blobber.ChallengesPassed / blobber.ChallengesCompleted
-	return edb.updateBlobber(*update)
+
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "blobber_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(&blobbers).Error
 }
 
 func (edb *EventDb) GetBlobberRank(blobberId string) (int64, error) {

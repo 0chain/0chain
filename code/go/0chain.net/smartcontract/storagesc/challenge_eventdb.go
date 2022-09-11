@@ -8,8 +8,6 @@ import (
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
 
-	"0chain.net/smartcontract/dbs"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 )
@@ -63,22 +61,23 @@ func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContext
 }
 
 func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.StateContextI) {
-	data := &dbs.DbUpdates{
-		Id: chID,
-		Updates: map[string]interface{}{
-			"responded": responded,
-		},
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, data)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, event.Challenge{
+		ChallengeID: chID,
+		Responded:   responded,
+	})
 }
 
 func emitUpdateBlobberChallengeStats(blobberId string, passed bool, balances cstate.StateContextI) {
-	data := dbs.ChallengeResult{
-		BlobberId: blobberId,
-		Passed:    passed,
+	b := event.Blobber{
+		BlobberID:           blobberId,
+		ChallengesCompleted: 1, // incremental value,
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberId, data)
+
+	if passed {
+		b.ChallengesPassed = 1 // incremental value
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberId, b)
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {

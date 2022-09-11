@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 
 	common2 "0chain.net/smartcontract/common"
-	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -84,10 +83,9 @@ func (edb *EventDb) addChallenge(ch *Challenge) error {
 	return result.Error
 }
 
-func (edb *EventDb) updateChallenge(updates dbs.DbUpdates) error {
-	result := edb.Store.Get().
-		Model(&Challenge{}).
-		Where(&Challenge{ChallengeID: updates.Id}).
-		Updates(updates.Updates)
-	return result.Error
+func (edb *EventDb) updateChallenges(chs []Challenge) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "challenge_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"responded"}),
+	}).Create(chs).Error
 }
