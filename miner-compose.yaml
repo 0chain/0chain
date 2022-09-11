@@ -1,0 +1,73 @@
+version: '3'
+services:
+  redis:
+    image: "redis:alpine"
+    volumes:
+      - ./docker.local/config:/0chain/config
+      - ./docker.local/miner/data:/0chain/data
+    networks:
+      default:
+    sysctls:
+      net.core.somaxconn: '511'
+    command: redis-server /0chain/config/redis/state.redis.conf
+
+  redis_txns:
+    image: "redis:alpine"
+    volumes:
+      - ./docker.local/config:/0chain/config
+      - ./docker.local/miner/data:/0chain/data
+    networks:
+      default:
+    sysctls:
+      net.core.somaxconn: '511'
+    command: redis-server /0chain/config/redis/transactions.redis.conf
+
+  miner:
+    image: "0chaindev/miner:latest"
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.25'
+    #       memory: 250M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 100M
+    environment:
+      - DOCKER=true
+      - REDIS_HOST=redis
+      - REDIS_TXNS=redis_txns
+    depends_on:
+     - redis
+     - redis_txns
+    links:
+      - redis:redis
+      - redis_txns:redis_txns
+    volumes:
+      - ./docker.local/config:/0chain/config
+      - ./docker.local/miner/data:/0chain/data
+      - ./docker.local/miner/log:/0chain/log
+    # ports:
+    #   - "707${MINER}:707${MINER}"
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.7${MINER}
+    command: ./bin/miner  --deployment_mode 0 --keys_file config${CONFIG_SUBPATH}/b0mnode${MINER}_keys.txt --dkg_file config${CONFIG_SUBPATH}/b0mnode${MINER}_${DKG_AFFIX}dkg.json ${CLI_ARGS}
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./docker.local/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker.local/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 7071:80
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true
+
+volumes:
+  data:
+  config:
