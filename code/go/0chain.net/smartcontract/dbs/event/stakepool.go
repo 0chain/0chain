@@ -24,6 +24,7 @@ type providerRewardsDelegates struct {
 
 	delegateRewards   []DelegatePool
 	delegatePenalties []DelegatePool
+	desc              [][]string
 }
 
 func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
@@ -31,9 +32,11 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 		rewards           = make([]ProviderRewards, 0, len(spus))
 		delegateRewards   = make([]DelegatePool, 0, len(spus))
 		delegatePenalties = make([]DelegatePool, 0, len(spus))
+		descs             = make([][]string, 0, len(spus))
 	)
 
 	for i, sp := range spus {
+		descs = append(descs, sp.Desc)
 		if sp.Reward != 0 {
 			rewards = append(rewards, ProviderRewards{
 				ProviderID:   sp.ProviderId,
@@ -66,6 +69,7 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 		rewards:           rewards,
 		delegateRewards:   delegateRewards,
 		delegatePenalties: delegatePenalties,
+		desc:              descs,
 	}, nil
 }
 
@@ -86,7 +90,8 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
 		if du > 50*time.Millisecond {
 			logging.Logger.Debug("event db - update reward slow",
 				zap.Any("duration", du),
-				zap.Int("update items", n))
+				zap.Int("update items", n),
+				zap.Any("desc", rewards.desc))
 		}
 	}()
 
