@@ -57,8 +57,8 @@ services:
   nginx:
     image: nginx:latest
     volumes:
-      - ./docker.local/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./docker.local/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker.local/nginx/miner/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker.local/nginx/miner/default.conf:/etc/nginx/conf.d/default.conf
     ports:
       - 7071:80
     depends_on:

@@ -5,6 +5,15 @@ mkdir -p docker.local/miner/data/redis/transactions
 mkdir -p docker.local/miner/data/rocksdb
 mkdir -p docker.local/miner/log
 
+# sharder
+mkdir -p docker.local/sharder/data/blocks
+mkdir -p docker.local/sharder/data/rocksdb
+mkdir -p docker.local/sharder/data/cassandra
+mkdir -p docker.local/sharder/config/cassandra
+cp config/cassandra/* docker.local/sharder/config/cassandra/.
+mkdir -p docker.local/sharder/log
+mkdir -p docker.local/sharder/data/postgresql
+
 mkdir -p docker.local/benchmarks
 for i in $(seq 1 8)
 do

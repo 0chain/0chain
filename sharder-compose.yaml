@@ -1,0 +1,98 @@
+version: '3'
+services:
+  cassandra:
+    image: cassandra:3.11.4
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 1500M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 100M
+    networks:
+      default:
+    #ports:
+    #- "9042:9042"
+    volumes:
+    - ./docker.local/sharder/data/cassandra:/var/lib/cassandra/data
+
+  cassandra-init:
+    image: cassandra:latest
+    volumes:
+      - ./bin:/0chain/bin
+      - ./sql:/0chain/sql
+    command: ./0chain/bin/cassandra-init.sh
+    links:
+      - cassandra:cassandra
+    restart: on-failure
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ./docker.local/sharder/data/postgresql:/var/lib/postgresql/data
+      - ./docker.local/sql_script/:/docker-entrypoint-initdb.d/
+    networks:
+      default:
+
+  sharder:
+    image: "sharder"
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 500M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 100M
+    environment:
+      - DOCKER=true
+      - CASSANDRA_CLUSTER=cassandra
+    depends_on:
+      - cassandra-init
+      - postgres
+    links:
+      - cassandra-init:cassandra-init
+      - cassandra:cassandra
+    volumes:
+      - ./docker.local/config:/0chain/config
+      - ./docker.local/sharder/log:/0chain/log
+      - ./docker.local/sharder/data:/0chain/data
+    # ports:
+    #   - "7170:717${SHARDER}"
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.80
+    command: ./bin/sharder --deployment_mode 0 --keys_file config/b0snode1_keys.txt --minio_file config/minio_config.txt
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./docker.local/nginx/sharder/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker.local/nginx/sharder/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 7170:80
+    links:
+      - sharder:sharder
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 198.18.0.0/15
+          gateway: 198.18.0.255
+
+volumes:
+  data:
+  config:
+  bin:
+
