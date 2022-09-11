@@ -205,8 +205,8 @@ func GetFunctionNames(address string) []string {
 		return []string{}
 	}
 	var names []string
-	for _, endepoint := range endpoints {
-		names = append(names, endepoint.URI)
+	for _, endpoint := range endpoints {
+		names = append(names, endpoint.URI)
 	}
 	return names
 }
@@ -227,7 +227,9 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 
 	sort.Strings(names)
 	for _, funcName := range names {
-		friendlyName := strings.TrimLeft(funcName, "/")
+		// friendlyName := strings.TrimLeft(funcName, "/")
+		paths := strings.Split(funcName, "/")
+		friendlyName := "/" + paths[len(paths)-1]
 		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+funcName, "/v1/screst/*"+funcName+"*")
 	}
 	fmt.Fprintf(w, "</table>")
