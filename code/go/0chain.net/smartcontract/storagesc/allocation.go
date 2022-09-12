@@ -12,17 +12,16 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
-
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
 )
 
 // getAllocation by ID
@@ -282,7 +281,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("ading offer: %v", err)
 		}
 
-		if err = spMap[b.ID].save(sc.ID, b.ID, balances); err != nil {
+		if err = spMap[b.ID].save(spenum.Blobber, b.ID, balances); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error saving blobber pool",
 				zap.String("txn", txn.Hash),
 				zap.String("blobber", b.ID),
@@ -391,7 +390,7 @@ func setupNewAllocation(
 
 	sa.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(blobberNodes))
 	for _, b := range blobberNodes {
-		balloc, err := newBlobberAllocation(bSize, sa, b, now)
+		balloc, err := newBlobberAllocation(bSize, sa, b, now, conf.TimeUnit)
 		if err != nil {
 			return nil, nil, common.NewErrorf("allocation_creation_failed",
 				"can't create blobber allocation: %v", err)
@@ -435,7 +434,7 @@ func (sc *StorageSmartContract) fetchStorageNodePlusStake(blobberIds []string, b
 				errs <- err
 				return
 			}
-			sp, err := sc.getStakePool(id, balances)
+			sp, err := sc.getStakePool(spenum.Blobber, id, balances)
 			if err != nil {
 				errs <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
 				return

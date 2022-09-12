@@ -7,12 +7,11 @@ import (
 	"math"
 	"net/url"
 
-	"0chain.net/core/logging"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/smartcontract"
 
+	"github.com/0chain/common/core/logging"
 	"github.com/rcrowley/go-metrics"
 
 	chainstate "0chain.net/chaincore/chain/state"
