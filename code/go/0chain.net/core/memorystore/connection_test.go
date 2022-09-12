@@ -480,8 +480,8 @@ func TestClose(t *testing.T) {
 
 	cMap := connections{
 		cons: map[common.ContextKey]*Conn{
-			getConnectionCtxKey(dbid):        &Conn{Conn: DefaultPool.Get(), Pool: DefaultPool},
-			getConnectionCtxKey(anotherDbid): &Conn{Conn: anotherConn, Pool: anotherPool},
+			getConnectionCtxKey(dbid):        {Conn: DefaultPool.Get(), Pool: DefaultPool},
+			getConnectionCtxKey(anotherDbid): {Conn: anotherConn, Pool: anotherPool},
 		},
 		mutex: &sync.RWMutex{},
 	}

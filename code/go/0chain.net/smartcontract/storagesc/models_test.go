@@ -63,10 +63,10 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	)
 
 	list = []*StorageNode{
-		&StorageNode{Terms: Terms{
+		{Terms: Terms{
 			MaxOfferDuration: 8 * time.Second,
 		}},
-		&StorageNode{Terms: Terms{
+		{Terms: Terms{
 			MaxOfferDuration: 6 * time.Second,
 		}},
 	}

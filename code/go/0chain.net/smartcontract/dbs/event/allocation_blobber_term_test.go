@@ -51,7 +51,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 			ChallengeCompletionTime: 41 * time.Minute,
 		},
 		{
-			AllocationID:             encryption.Hash("mockAllocation_" + strconv.Itoa(0)),
+			AllocationID:            encryption.Hash("mockAllocation_" + strconv.Itoa(0)),
 			BlobberID:               encryption.Hash("mockBlobber_" + strconv.Itoa(1)),
 			ReadPrice:               int64(currency.Coin(41)),
 			WritePrice:              int64(currency.Coin(43)),
