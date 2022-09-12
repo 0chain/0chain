@@ -241,7 +241,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed",
 			"Blobbers provided are not enough to honour the allocation")
 	}
-	spMap := getStakePoolsByIDs(request.Blobbers, balances)
+	spMap, err := getStakePoolsByIDs(request.Blobbers, balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: ", err.Error())
+	}
 	if len(spMap) != len(inputBlobbers) {
 		return "", common.NewErrorf("allocation_creation_failed", "missing blobber's stake pool")
 	}
@@ -722,13 +725,14 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) []*
 	return filtered
 }
 
-func getStakePoolsByIDs(ids []string, balances chainstate.CommonStateContextI) map[string]*stakePool {
+func getStakePoolsByIDs(ids []string, balances chainstate.CommonStateContextI) (map[string]*stakePool, error) {
 	type spResp struct {
 		blobberId string
 		sp        *stakePool
 	}
 
 	stakePoolCh := make(chan spResp, len(ids))
+	errorChan := make(chan error, len(ids))
 	var wg sync.WaitGroup
 	for i, details := range ids {
 		wg.Add(1)
@@ -736,24 +740,29 @@ func getStakePoolsByIDs(ids []string, balances chainstate.CommonStateContextI) m
 			defer wg.Done()
 			sp, err := getStakePool(blobberId, balances)
 			if err != nil || sp == nil {
-				logging.Logger.Debug("can't get blobber", zap.String("blobberId", blobberId), zap.Error(err))
-				return
-			}
-			stakePoolCh <- spResp{
-				blobberId: blobberId,
-				sp:        sp,
+				errorChan <- err
+			} else {
+				stakePoolCh <- spResp{
+					blobberId: blobberId,
+					sp:        sp,
+				}
 			}
 		}(i, details)
 	}
 	wg.Wait()
+	close(errorChan)
 	close(stakePoolCh)
-
+	for err := range errorChan {
+		if err != nil {
+			return nil, err
+		}
+	}
 	//ensure original ordering
 	stakePoolMap := make(map[string]*stakePool, len(ids))
 	for resp := range stakePoolCh {
 		stakePoolMap[resp.blobberId] = resp.sp
 	}
-	return stakePoolMap
+	return stakePoolMap, nil
 }
 
 // getAllocationBlobbers loads blobbers of an allocation from store
