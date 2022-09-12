@@ -26,12 +26,12 @@ const (
 )
 
 const (
-	TagNone EventTag = iota
-	TagAddBlobber
-	TagAddOrOverwriteBlobber
-	TagUpdateBlobber
-	TagUpdateBlobberTotalStake
-	TagUpdateBlobberTotalOffers
+	TagNone                     EventTag = iota
+	TagAddBlobber                        // 1
+	TagAddOrOverwriteBlobber             // 2
+	TagUpdateBlobber                     // 3
+	TagUpdateBlobberTotalStake           // 4
+	TagUpdateBlobberTotalOffers          // 5
 	TagDeleteBlobber
 	TagAddAuthorizer
 	TagUpdateAuthorizer
@@ -57,10 +57,10 @@ const (
 	TagAddAllocation
 	TagUpdateAllocation // 29
 	TagAddReward
-	TagAddChallenge           // 31
-	TagUpdateChallenge        // 32
-	TagUpdateBlobberChallenge //33
-	TagAddOrOverwriteAllocationBlobberTerm
+	TagAddChallenge                        // 31
+	TagUpdateChallenge                     // 32
+	TagUpdateBlobberChallenge              //33
+	TagAddOrOverwriteAllocationBlobberTerm // 34
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
 	NumberOfTags
