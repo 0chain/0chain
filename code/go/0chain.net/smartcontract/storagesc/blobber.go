@@ -132,30 +132,24 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			stakedCapacity, blobber.Capacity)
 	}
 
+	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	if err != nil {
+		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
+	}
+
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
 	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
 	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
-
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
-		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
-	}
 
 	// save stake pool
 	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	staked, err := sp.stake()
-	if err != nil {
-		return fmt.Errorf("can't get stake: %v", err)
+	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
-
-	// TODO: emit update provider reward event?
-	//emitUpdateProviderRewards(blobber, sp.Reward, balances)
-
-	tag, data := event.NewUpdateBlobberTotalStakeEvent(blobber.ID, staked)
-	balances.EmitEvent(event.TypeStats, tag, blobber.ID, data)
 
 	return
 }
@@ -281,18 +275,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	blobber.Terms = updatedBlobber.Terms
 	blobber.Capacity = updatedBlobber.Capacity
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
-
-	// save blobber
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
-	if err != nil {
-		return "", common.NewError("update_blobber_settings_failed",
-			"saving blobber: "+err.Error())
-	}
-
-	if err := emitUpdateBlobber(blobber, balances); err != nil {
-		return "", common.NewError("update_blobber_settings_failed",
-			"emitting update blobber: "+err.Error())
-	}
 
 	return string(blobber.Encode()), nil
 }
