@@ -2,8 +2,11 @@ package event
 
 import (
 	"fmt"
+	"time"
 
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/common"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -35,12 +38,13 @@ type WriteMarker struct {
 
 func (w *WriteMarker) AfterCreate(tx *gorm.DB) error {
 	vs := map[string]interface{}{
-		"used": gorm.Expr("blobbers.used + excluded.used"),
+		"used":       gorm.Expr("blobbers.used + excluded.used"),
+		"saved_data": gorm.Expr("blobbers.saved_data + excluded.saved_data"),
 	}
 	return tx.Model(&Blobber{}).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.Assignments(vs),
-	}).Create(&Blobber{BlobberID: w.BlobberID, Used: w.Size}).Error
+	}).Create(&Blobber{BlobberID: w.BlobberID, Used: w.Size, SavedData: w.Size}).Error
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
@@ -110,6 +114,15 @@ func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filena
 }
 
 func (edb *EventDb) addWriteMarkers(wms []WriteMarker) error {
+	ts := time.Now()
+	defer func() {
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Debug("event db - add write markers slow",
+				zap.Any("duration", du),
+				zap.Int("num", len(wms)))
+		}
+	}()
 	return edb.Store.Get().Create(&wms).Error
 }
 
