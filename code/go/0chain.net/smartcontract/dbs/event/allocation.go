@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/common"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
@@ -120,6 +122,7 @@ func (edb *EventDb) addAllocations(allocs []Allocation) error {
 }
 
 func (edb *EventDb) updateAllocations(allocs []Allocation) error {
+	ts := time.Now()
 	updateColumns := []string{
 		"allocation_name",
 		"transaction_id",
@@ -153,6 +156,15 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"failed_challenges",
 		"latest_closed_challenge_txn",
 	}
+
+	defer func() {
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Debug("event db - update allocation slow",
+				zap.Duration("duration", du),
+				zap.Int("num", len(allocs)))
+		}
+	}()
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "allocation_id"}},

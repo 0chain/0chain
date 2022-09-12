@@ -38,7 +38,7 @@ const (
 	TagDeleteAuthorizer
 	TagAddTransactions // 10
 	TagAddOrOverwriteUser
-	TagAddWriteMarker
+	TagAddWriteMarker         // 12
 	TagAddBlock               // 13
 	TagAddOrOverwiteValidator // 14
 	TagUpdateValidator
@@ -52,14 +52,14 @@ const (
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagAddOrOverwriteDelegatePool
-	TagStakePoolReward // 26
-	TagUpdateDelegatePool
-	TagAddAllocation
-	TagUpdateAllocation // 29
-	TagAddReward
+	TagStakePoolReward                     // 26
+	TagUpdateDelegatePool                  // 27
+	TagAddAllocation                       // 28
+	TagUpdateAllocation                    // 29
+	TagAddReward                           // 30
 	TagAddChallenge                        // 31
 	TagUpdateChallenge                     // 32
-	TagUpdateBlobberChallenge              //33
+	TagUpdateBlobberChallenge              // 33
 	TagAddOrOverwriteAllocationBlobberTerm // 34
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
@@ -100,22 +100,23 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, 
 func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	var (
 		mergers = []eventsMerger{
-			newUserEventsMerger(),
-			newAddProviderEventsMerger[Miner](TagAddOrOverwriteMiner, withUniqueEventOverwrite()),
-			newAddProviderEventsMerger[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
-			newAddProviderEventsMerger[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
-			newAddProviderEventsMerger[Blobber](TagAddOrOverwriteBlobber, withUniqueEventOverwrite()),
-			newAddProviderEventsMerger[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
-			newAllocationsEventsMerger(),
-			newUpdateAllocationsEventsMerger(),
-			newUpdateChallengesEventsMerger(),
-			newUpdateBlobberChallengesMerger(),
+			mergeAddUsersEvents(),
+			mergeAddProviderEvents[Miner](TagAddOrOverwriteMiner, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Blobber](TagAddOrOverwriteBlobber, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
+			mergeAddAllocationEvents(),
+			mergeUpdateAllocationEvents(),
+			mergeUpdateChallengesEvents(),
+			mergeUpdateBlobberChallengesEvents(),
 
-			newBlobberTotalStakesEventsMerger(),
-			newBlobberTotalOffersEventsMerger(),
-			newStakePoolRewardEventsMerger(),
+			mergeUpdateBlobbersEvents(),
+			mergeUpdateBlobberTotalStakesEvents(),
+			mergeUpdateBlobberTotalOffersEvents(),
+			mergeStakePoolRewardsEvents(),
 
-			newTransactionsEventsMerger(),
+			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
 			mergeAddReadMarkerEvents(),
 		}
@@ -237,11 +238,11 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addOrOverwriteBlobber(*blobbers)
 	case TagUpdateBlobber:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		blobbers, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobber(*updates)
+		return edb.updateBlobbers(*blobbers)
 	case TagUpdateBlobberTotalStake:
 		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
