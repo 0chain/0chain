@@ -39,8 +39,8 @@ const (
 	TagAddTransactions // 10
 	TagAddOrOverwriteUser
 	TagAddWriteMarker
-	TagAddBlock // 13
-	TagAddValidator
+	TagAddBlock               // 13
+	TagAddOrOverwiteValidator // 14
 	TagUpdateValidator
 	TagAddReadMarker
 	TagAddOrOverwriteMiner
@@ -105,7 +105,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			newAddProviderEventsMerger[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			newAddProviderEventsMerger[Blobber](TagAddOrOverwriteBlobber, withUniqueEventOverwrite()),
-			newAddProviderEventsMerger[Validator](TagAddValidator, withUniqueEventOverwrite()),
+			newAddProviderEventsMerger[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
 			newAllocationsEventsMerger(),
 			newUpdateAllocationsEventsMerger(),
 			newUpdateChallengesEventsMerger(),
@@ -320,12 +320,12 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.addBlock(*block)
-	case TagAddValidator:
+	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addValidators(*vns)
+		return edb.addOrOverwriteValidators(*vns)
 	case TagUpdateValidator:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {

@@ -52,9 +52,11 @@ func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
 	return validators, result.Error
 }
 
-func (edb *EventDb) addValidators(vns []Validator) error {
-	result := edb.Store.Get().Create(&vns)
-	return result.Error
+func (edb *EventDb) addOrOverwriteValidators(vns []Validator) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "validator_id"}},
+		UpdateAll: true,
+	}).Create(&vns).Error
 }
 
 func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
