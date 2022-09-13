@@ -24,7 +24,7 @@ type Challenge struct {
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
 	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
-	RoundResponded int64            `json:"round_responded"`
+	RoundResponded int64            `json:"round_responded" gorm:"index"`
 	Passed         bool             `json:"passed"`
 }
 
