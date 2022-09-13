@@ -77,10 +77,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	// Validating StakePoolSettings against GlobalNode settings
+	// transaction type can only be executed by sc owner
+	if err := smartcontractinterface.AuthorizeWithOwner("register-authorizer", func() bool {
+		return globalNode.ZCNSConfig.OwnerId == tran.ClientID
+	}); err != nil {
+		return "", err
+	}
 
 	// Check existing Authorizer
-
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
 	if err == nil && authorizer != nil {
 		err = fmt.Errorf("authorizer(authorizerID: %v) already exists", authorizerID)
