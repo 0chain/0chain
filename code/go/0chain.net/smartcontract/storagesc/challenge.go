@@ -115,8 +115,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var (
-		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime)
-		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime)
+		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
@@ -308,8 +308,8 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	var (
-		rdtu = alloc.restDurationInTimeUnits(prev)
-		dtu  = alloc.durationInTimeUnits(tp - prev)
+		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp - prev, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
