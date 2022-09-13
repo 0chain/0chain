@@ -65,8 +65,11 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", common.NewError(code, "authorizer's delegate_wallet not set")
 	}
 
-	if authorizerID != params.StakePoolSettings.DelegateWallet {
-		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
+	// transaction type can only be executed by sc owner
+	if err := smartcontractinterface.AuthorizeWithDelegate("register-authorizer", func() bool {
+		return authorizerID == params.StakePoolSettings.DelegateWallet
+	}); err != nil {
+		return "", err
 	}
 
 	globalNode, err := GetGlobalNode(ctx)
