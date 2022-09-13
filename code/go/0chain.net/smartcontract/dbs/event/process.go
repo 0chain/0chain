@@ -36,8 +36,8 @@ const (
 	TagAddAuthorizer
 	TagUpdateAuthorizer
 	TagDeleteAuthorizer
-	TagAddTransactions // 10
-	TagAddOrOverwriteUser
+	TagAddTransactions        // 10
+	TagAddOrOverwriteUser     // 11
 	TagAddWriteMarker         // 12
 	TagAddBlock               // 13
 	TagAddOrOverwiteValidator // 14

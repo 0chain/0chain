@@ -517,15 +517,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 // (delete write marker) from challenge back to write pool
 func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
-	balances cstate.StateContextI) (err error) {
-
+	balances cstate.StateContextI) (currency.Coin, error) {
 	if size == 0 {
-		return // zero size write marker -- no tokens movements
+		return 0, nil // zero size write marker -- no tokens movements
 	}
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
-		return fmt.Errorf("can't get related challenge pool: %v", err)
+		return 0, fmt.Errorf("can't get related challenge pool: %v", err)
 	}
 
 	var move currency.Coin
@@ -533,50 +532,49 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		move, err = details.upload(size, wmTime,
 			alloc.restDurationInTimeUnits(wmTime))
 		if err != nil {
-			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
+			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 
 		err = alloc.moveToChallengePool(cp, move)
 		if err != nil {
-			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
+			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 
 		movedToChallenge, err := currency.AddCoin(alloc.MovedToChallenge, move)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		alloc.MovedToChallenge = movedToChallenge
 
 		spent, err := currency.AddCoin(details.Spent, move)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		details.Spent = spent
 	} else {
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
 		err = alloc.moveFromChallengePool(cp, move)
 		if err != nil {
-			return fmt.Errorf("can't move tokens to write pool: %v", err)
+			return 0, fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
 		movedBack, err := currency.AddCoin(alloc.MovedBack, move)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		alloc.MovedBack = movedBack
 
 		returned, err := currency.AddCoin(details.Returned, move)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		details.Returned = returned
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
-		return fmt.Errorf("can't save challenge pool: %v", err)
+		return 0, fmt.Errorf("can't save challenge pool: %v", err)
 	}
 
-	return
+	return move, nil
 }
 
 func (sc *StorageSmartContract) commitBlobberConnection(
@@ -679,7 +677,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, blobAlloc,
+	movedTokens, err := sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, blobAlloc,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
@@ -743,13 +741,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-
-	err = emitAddWriteMarker(commitConnection.WriteMarker, balances, t)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"emitting write marker event: %v", err)
-	}
+	emitAddWriteMarker(t, commitConnection.WriteMarker, movedTokens, balances)
 
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {
