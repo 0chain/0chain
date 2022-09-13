@@ -243,16 +243,16 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	spMap, err := getStakePoolsByIDs(request.Blobbers, balances)
 	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: ", err.Error())
+		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
 	}
 	if len(spMap) != len(inputBlobbers) {
-		return "", common.NewErrorf("allocation_creation_failed", "missing blobber's stake pool")
+		return "", common.NewErrorf("allocation_creation_failed", "missing blobber's stake pool: %v", err)
 	}
 	var sns []*storageNodeResponse
 	for i := 0; i < len(inputBlobbers); i++ {
 		stake, err := spMap[inputBlobbers[i].ID].stake()
 		if err != nil {
-			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber: "+inputBlobbers[i].ID)
+			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber %s: %v", inputBlobbers[i].ID, err)
 		}
 		sns = append(sns, &storageNodeResponse{
 			StorageNode: inputBlobbers[i],

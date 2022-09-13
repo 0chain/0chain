@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -710,7 +711,7 @@ func TestExtendAllocation(t *testing.T) {
 		want want
 	}{
 		{
-			name: "ok_multiple_users",
+			name: "ok_funded",
 			args: args{
 				request: updateAllocationRequest{
 					ID:           mockAllocationId,
@@ -725,7 +726,7 @@ func TestExtendAllocation(t *testing.T) {
 			},
 		},
 		{
-			name: "ok_multiple_write_pools",
+			name: "ok_unfounded",
 			args: args{
 				request: updateAllocationRequest{
 					ID:           mockAllocationId,
@@ -735,27 +736,12 @@ func TestExtendAllocation(t *testing.T) {
 					SetImmutable: false,
 				},
 				expiration: mockExpiration,
-				value:      0.1e10,
-				poolFunds:  7,
-			},
-		},
-		{
-			name: "ok_multiple_users",
-			args: args{
-				request: updateAllocationRequest{
-					ID:           mockAllocationId,
-					OwnerID:      mockOwner,
-					Size:         zcnToInt64(31),
-					Expiration:   7000,
-					SetImmutable: false,
-				},
-				expiration: mockExpiration,
-				value:      0.1e10,
+				value:      0.0,
 				poolFunds:  0.0,
 			},
 			want: want{
 				err:    true,
-				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficent funds 1000000000 in write pool to pay 4527262515",
+				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 6287864",
 			},
 		},
 	}
@@ -1088,7 +1074,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"invalid request: invalid read_price range"
 		errMsg6 = "allocation_creation_failed: " +
 			"blobbers provided are not enough to honour the allocation"
-		errMsg7 = "allocation_creation_failed: " + "missing blobber's stake pool"
+		errMsg7 = "allocation_creation_failed: " + "getting stake pools: value not present"
 		errMsg8 = "allocation_creation_failed: " +
 			"no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
