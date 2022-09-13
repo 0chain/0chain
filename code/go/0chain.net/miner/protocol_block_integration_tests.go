@@ -19,7 +19,7 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (

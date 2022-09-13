@@ -14,9 +14,9 @@ import (
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/logging"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -24,7 +24,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract"
@@ -773,10 +773,6 @@ func (srh *StorageRestHandler) getWrittenAmountPerPeriod(w http.ResponseWriter, 
 func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
-		alloc        = &StorageAllocation{
-			ID: allocationID,
-		}
-		cp = &challengePool{}
 	)
 
 	if allocationID == "" {
@@ -784,18 +780,19 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
-	sctx := srh.GetQueryStateContext()
-	if err := sctx.GetTrieNode(alloc.GetKey(ADDRESS), alloc); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	if err := sctx.GetTrieNode(challengePoolKey(ADDRESS, allocationID), cp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge pool"))
-		return
+	cp, err := edb.GetChallengePool(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 	}
 
-	common.Respond(w, r, cp.stat(alloc), nil)
+	common.Respond(w, r, toChallengePoolStat(cp), nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat
@@ -1608,6 +1605,14 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
 		return
 	}
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("error fetching config"))
+		return
+	}
+	// pr review note: since sa does not contain timeunit,
+	// hence minlock demand was broken, using timeunit from config should fix that
 	sa := req.storageAllocation()
 	var gbSize = sizeInGB(sa.bSize())
 	var minLockDemand currency.Coin
@@ -1628,7 +1633,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 	nodes := getBlobbers(unique, balances)
 	for _, b := range nodes.Nodes {
 		bMinLockDemand, err := b.Terms.minLockDemand(gbSize,
-			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
+			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix()), conf.TimeUnit))
 		if err != nil {
 			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
 			return

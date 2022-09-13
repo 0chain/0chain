@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 func TestGroupSharesOrSigns_Get(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func init() {

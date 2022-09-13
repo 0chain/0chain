@@ -44,4 +44,14 @@ generate_mock "../benchmark/mocks"
 cd $BASEDIR/code/go/0chain.net || exit
 go generate -run="mockery" ./...
 
+
+echo "generating mocks from common repo"
+version=$(grep "github.com/0chain/common" $BASEDIR/code/go/0chain.net/go.mod | awk '{print $3}') # get the version from go.mod
+OCHAIN_COMMON_VERSION=${version##*-}
+mkdir temp
+git clone --depth 1 --branch $OCHAIN_COMMON_VERSION https://github.com/0chain/common.git $BASEDIR/temp
+cd $BASEDIR/temp
+generate_mock "$BASEDIR/code/go/0chain.net/core/mocks"
+cd $BASEDIR
+rm -rf temp
 echo "Mocks files are generated."

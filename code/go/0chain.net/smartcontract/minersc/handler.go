@@ -16,8 +16,8 @@ import (
 	"github.com/guregu/null"
 
 	"0chain.net/core/common"
-	"0chain.net/core/util"
 	sc "0chain.net/smartcontract"
+	"github.com/0chain/common/core/util"
 )
 
 type MinerRestHandler struct {
