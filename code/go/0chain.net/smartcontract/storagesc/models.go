@@ -775,7 +775,7 @@ func (sa *StorageAllocation) moveToChallengePool(
 		return errors.New("invalid challenge pool")
 	}
 	if value > sa.WritePool {
-		return fmt.Errorf("insufficent funds %v in write pool to pay %v", sa.WritePool, value)
+		return fmt.Errorf("insufficient funds %v in write pool to pay %v", sa.WritePool, value)
 	}
 
 	if balance, err := currency.AddCoin(cp.Balance, value); err != nil {
@@ -843,7 +843,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	}
 	// filter by blobber's capacity left
 	if blobber.Capacity-blobber.Allocated < bSize {
-		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
+		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
 			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
 	}
 
@@ -857,7 +857,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	}
 
 	if blobber.Terms.WritePrice > 0 && unallocCapacity < bSize {
-		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
+		return fmt.Errorf("blobber %v staked capacity %v is insufficient, wanted %v",
 			blobber.ID, unallocCapacity, bSize)
 	}
 
