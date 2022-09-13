@@ -3,6 +3,7 @@ package zcnsc
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -107,7 +108,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	var numAuth item
-	err = ctx.GetTrieNode(storagesc.ALL_AUTHORIZERS_KEY, &numAuth)
+	err = ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 	if err != nil {
 		err = common.NewError(code, fmt.Sprintf("failed to get number of authorizers: %s; %s", err.Error(), info))
 		return
@@ -115,7 +116,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 
 	// verify signatures of authorizers
 	count := payload.countValidSignatures(ctx)
-	if count < int(gn.PercentAuthorizers)*numAuth.Field {
+	if count < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth.Field))) {
 		err = common.NewError(
 			code,
 			"not enough valid signatures for minting",
