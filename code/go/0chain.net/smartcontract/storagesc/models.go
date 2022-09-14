@@ -10,7 +10,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/gosdk/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
