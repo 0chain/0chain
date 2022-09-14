@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 func makeTestState() *State {
@@ -210,6 +210,7 @@ func TestState_Decode(t *testing.T) {
 				Balance:      tt.fields.Balance,
 				Nonce:        tt.fields.Nonce,
 			}
+
 			if err := s.Decode(tt.args.data); (err != nil) != tt.wantErr {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}

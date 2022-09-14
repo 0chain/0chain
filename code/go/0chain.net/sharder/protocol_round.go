@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -21,7 +22,7 @@ var ErrNoPreviousBlock = errors.New("previous block does not exist")
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	b *block.Block) error {
 
-	_, _ = r.AddNotarizedBlock(b)
+	b, _ = r.AddNotarizedBlock(b)
 
 	if sc.BlocksToSharder == chain.FINALIZED {
 		nb := r.GetNotarizedBlocks()
@@ -38,7 +39,8 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	}
 
 	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
-		return errors.New("previous block state is not computed")
+		return fmt.Errorf("previous block state is not computed, round: %d, hash: %s, ptr: %p, state status: %d",
+			pb.Round, pb.Hash, pb, pb.GetStateStatus())
 	}
 
 	errC := make(chan error)

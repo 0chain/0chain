@@ -5,7 +5,7 @@
 # Then execute `choco install make` command in shell, now you will be able to use `make` on Windows.
 
 
-ifeq ($(OS),Windows_NT) 
+ifeq ($(OS),Windows_NT)
     detected_OS := Windows
 		detected_ARCH := x86_64
 else
@@ -24,7 +24,7 @@ pre-push: go-mod check-commit
 .PHONY: check-commit go-get run-test
 check-commit: go-get run-test
 
-.PHONY: install-mockery mockery
+.PHONY: install-mockery mockery install-msgp msgp build-mocks swagger
 
 go-mod:
 	@echo "Prepare Go mod files..."
@@ -51,7 +51,7 @@ install-mockery:
 	&& cp ./tmp/mockery/mockery $(GOPATH)/bin/ \
 	&& rm -rf ./tmp
 
-build-mocks: 
+build-mocks:
 	./generate_mocks.sh
 
 install-msgp:

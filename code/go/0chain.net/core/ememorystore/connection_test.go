@@ -196,7 +196,7 @@ func TestGetTransaction(t *testing.T) {
 
 				t := db.TransactionBegin(wo, to, nil)
 
-				return &Connection{Conn: t, ReadOptions: ro, WriteOptions: wo, TransactionOptions: to}
+				return &Connection{Conn: t, ReadOptions: ro, WriteOptions: wo, TransactionOptions: to, shouldRollback: true}
 			}(),
 		},
 	}
@@ -245,7 +245,7 @@ func TestGetEntityConnection(t *testing.T) {
 
 				t := db.TransactionBegin(wo, to, nil)
 
-				return &Connection{Conn: t, ReadOptions: ro, WriteOptions: wo, TransactionOptions: to}
+				return &Connection{Conn: t, ReadOptions: ro, WriteOptions: wo, TransactionOptions: to, shouldRollback: true}
 			}(),
 		},
 		{

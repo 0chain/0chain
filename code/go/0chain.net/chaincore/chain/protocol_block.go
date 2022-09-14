@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/currency"
-
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/dbs/event"
-
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/maths"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -82,8 +81,7 @@ func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) err
 		return err
 	}
 
-	_, _, err := c.createRoundIfNotExist(ctx, b)
-	return err
+	return nil
 }
 
 // VerifyNotarization - verify that the notarization is correct.
@@ -183,6 +181,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		mb        = c.GetMagicBlock(round)
 		num       = mb.Miners.Size()
 		threshold = c.GetNotarizationThresholdCount(num)
+		err       error
 	)
 
 	if c.ThresholdByCount() > 0 {
@@ -199,14 +198,19 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		}
 	}
 	if c.ThresholdByStake() > 0 {
-		verifiersStake := 0
+		verifiersStake := uint64(0)
 		for _, ticket := range bvt {
-			verifiersStake += c.getMiningStake(ticket.VerifierID)
+			verifiersStake, err = maths.SafeAddUInt64(verifiersStake, c.getMiningStake(ticket.VerifierID))
+			if err != nil {
+				logging.Logger.Error("reached_notarization", zap.Error(err))
+				return false
+			}
 		}
-		if verifiersStake < c.ThresholdByStake() {
+
+		if verifiersStake < uint64(c.ThresholdByStake()) {
 			logging.Logger.Info("not reached notarization - stake < threshold stake",
 				zap.Int64("mb_sr", mb.StartingRound),
-				zap.Int("verify stake", verifiersStake),
+				zap.Uint64("verify stake", verifiersStake),
 				zap.Int("threshold", c.ThresholdByStake()),
 				zap.Int("active_miners", num),
 				zap.Int("num_signatures", len(bvt)),
@@ -342,7 +346,18 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.String("hash", fb.Hash))
 		return
 	}
+
+	deletedNode := fb.ClientState.GetDeletes()
 	c.rebaseState(fb)
+	err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
+	if err != nil {
+		logging.Logger.Error("finalize block - record dead nodes failed",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash),
+			zap.Error(err))
+		return
+	}
+
 	if err := c.updateFeeStats(fb); err != nil {
 		logging.Logger.Error("finalize block - update fee stats failed",
 			zap.Int64("round", fb.Round),
@@ -354,9 +369,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestFinalizedBlock(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		go func(events []event.Event) {
-			c.GetEventDb().AddEvents(ctx, events)
-		}(fb.Events)
+		c.GetEventDb().AddEvents(ctx, fb.Events)
 		fb.Events = nil
 	}
 
@@ -753,7 +766,7 @@ func (c *Chain) updateFeeStats(fb *block.Block) error {
 			return err
 		}
 	}
-	meanFees, _, err := currency.DivideCoin(totalFees, int64(len(fb.Txns)))
+	meanFees, _, err := currency.DistributeCoin(totalFees, int64(len(fb.Txns)))
 	if err != nil {
 		return err
 	}

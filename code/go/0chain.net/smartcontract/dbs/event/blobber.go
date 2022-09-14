@@ -7,8 +7,6 @@ import (
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
@@ -57,6 +55,10 @@ type Blobber struct {
 	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
 	Description string `json:"description" gorm:"description"`
 
+	ChallengesPassed    uint64  `json:"challenges_passed"`
+	ChallengesCompleted uint64  `json:"challenges_completed"`
+	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
@@ -93,6 +95,37 @@ func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
 		},
 	}
 	return edb.updateBlobber(update)
+}
+
+func (edb *EventDb) updateBlobberChallenges(challenge dbs.ChallengeResult) error {
+	blobber, err := edb.GetBlobber(challenge.BlobberId)
+	if err != nil {
+		return err
+	}
+	blobber.ChallengesCompleted++
+	if challenge.Passed {
+		blobber.ChallengesPassed++
+	}
+	update := dbs.NewDbUpdates(challenge.BlobberId)
+	update.Updates["challenges_completed"] = blobber.ChallengesCompleted
+	if challenge.Passed {
+		update.Updates["challenges_passed"] = blobber.ChallengesPassed
+	}
+	update.Updates["rank_metric"] = blobber.ChallengesPassed / blobber.ChallengesCompleted
+	return edb.updateBlobber(*update)
+}
+
+func (edb *EventDb) GetBlobberRank(blobberId string) (int64, error) {
+	blobber, err := edb.GetBlobber(blobberId)
+	if err != nil {
+		return 0, err
+	}
+	var rank int64
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where("rank_metric > ?", blobber.RankMetric).
+		Count(&rank)
+	return rank + 1, result.Error
 }
 
 func (edb *EventDb) BlobberTotalCapacity() (int64, error) {
@@ -134,6 +167,21 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	}).Find(&blobbers)
 
 	return blobbers, result.Error
+}
+
+func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error) {
+	var blobberIDs []string
+
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Select("blobber_id").
+		Offset(limit.Offset).Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "rank_metric"},
+			Desc:   true,
+		}).Find(&blobberIDs)
+
+	return blobberIDs, result.Error
 }
 
 func (edb *EventDb) GetAllBlobberId() ([]string, error) {
@@ -201,10 +249,10 @@ type AllocationQuery struct {
 		Min int64
 		Max int64
 	}
-	Size              int
-	AllocationSize    int64
-	PreferredBlobbers []string
-	NumberOfBlobbers  int
+	AllocationSize     int64
+	AllocationSizeInGB float64
+	PreferredBlobbers  []string
+	NumberOfDataShards int
 }
 
 func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination) ([]string, error) {
@@ -224,20 +272,12 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix())
-	dbStore = dbStore.Where("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers))
+	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
 	})
 	var blobberIDs []string
-
-	logging.Logger.Debug("request params", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
-		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
-		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
-		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Int64("last_health_check", common.ToTime(now).Add(-time.Hour).Unix()),
-		zap.Int64("(total_stake - offers_total) > ?/write_price", allocation.AllocationSize/int64(allocation.NumberOfBlobbers)),
-	)
-
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
 }
 

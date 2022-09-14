@@ -7,7 +7,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -41,6 +41,21 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	if len(payload.Signatures) == 0 {
+		msg := fmt.Sprintf("payload doesn't contain signatures: %v, %s", err, info)
+		err = common.NewError(code, msg)
+		return
+	}
+
+	// ClientID - is a client who broadcasts this transaction to mint token
+	// ToClientID - is an address of the smart contract
+	if payload.ReceivingClientID != trans.ClientID {
+		msg := fmt.Sprintf("transaction made from different account who made burn,  Oririnal: %s, Current: %s",
+			payload.ReceivingClientID, trans.ClientID)
+		err = common.NewError(code, msg)
+		return
+	}
+
 	// check mint amount
 	if payload.Amount < gn.MinMintAmount {
 		msg := fmt.Sprintf(
@@ -61,12 +76,13 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	if un.Nonce+1 != payload.Nonce {
+	_, exists := gn.WZCNNonceMinted[payload.Nonce]
+	if exists { // global nonce from ETH SC has already been minted
 		err = common.NewError(
 			code,
 			fmt.Sprintf(
-				"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
-				payload.Nonce, payload.ReceivingClientID, un.Nonce, un.ID, info))
+				"nonce given (%v) for receiving client (%s) has alredy been minted for Node.ID: '%s', %s",
+				payload.Nonce, payload.ReceivingClientID, un.ID, info))
 		return
 	}
 
@@ -78,8 +94,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// increase the nonce
-	un.Nonce++
+	// record the global nonce from solidity smart contract
+	gn.WZCNNonceMinted[payload.Nonce] = true
 
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
@@ -93,9 +109,9 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// Save the user node
-	err = un.Save(ctx)
+	err = gn.Save(ctx)
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, save MPR operation, %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
 		return
 	}
 

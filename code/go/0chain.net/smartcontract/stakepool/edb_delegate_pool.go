@@ -1,8 +1,6 @@
 package stakepool
 
 import (
-	"encoding/json"
-
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -12,8 +10,9 @@ import (
 
 type DelegatePoolUpdate dbs.DelegatePoolUpdate
 
-func newDelegatePoolUpdate(pId string, pType spenum.Provider) *DelegatePoolUpdate {
+func newDelegatePoolUpdate(poolID, pId string, pType spenum.Provider) *DelegatePoolUpdate {
 	var spu DelegatePoolUpdate
+	spu.PoolId = poolID
 	spu.ProviderId = pId
 	spu.ProviderType = int(pType)
 	spu.Updates = make(map[string]interface{})
@@ -25,7 +24,7 @@ func (dp DelegatePool) emitNew(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
-	data, err := json.Marshal(&event.DelegatePool{
+	data := &event.DelegatePool{
 		Balance:      dp.Balance,
 		PoolID:       poolId,
 		ProviderType: int(providerType),
@@ -34,15 +33,13 @@ func (dp DelegatePool) emitNew(
 
 		Status:       int(dp.Status),
 		RoundCreated: balances.GetBlock().Round,
-	})
-	if err != nil {
-		return err
 	}
+
 	balances.EmitEvent(
 		event.TypeStats,
 		event.TagAddOrOverwriteDelegatePool,
 		providerId,
-		string(data),
+		data,
 	)
 	return nil
 }
@@ -50,15 +47,19 @@ func (dp DelegatePool) emitNew(
 func (dpu DelegatePoolUpdate) emitUpdate(
 	balances cstate.StateContextI,
 ) error {
-	data, err := json.Marshal(&dpu)
-	if err != nil {
-		return err
-	}
+
 	balances.EmitEvent(
 		event.TypeStats,
 		event.TagUpdateDelegatePool,
 		dpu.PoolId,
-		string(data),
+		delegatePoolUpdateToDbsDelegatePoolUpdate(dpu),
 	)
 	return nil
+}
+
+func delegatePoolUpdateToDbsDelegatePoolUpdate(dpu DelegatePoolUpdate) dbs.DelegatePoolUpdate {
+	return dbs.DelegatePoolUpdate{
+		DelegatePoolId: dpu.DelegatePoolId,
+		Updates:        dpu.Updates,
+	}
 }

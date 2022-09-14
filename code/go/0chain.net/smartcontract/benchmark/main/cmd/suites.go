@@ -1,6 +1,11 @@
 package cmd
 
 import (
+	"fmt"
+	"sync"
+	"testing"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -11,15 +16,11 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-	"fmt"
-	"sync"
-	"testing"
-	"time"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/benchmark"
+	"github.com/0chain/common/core/util"
 )
 
 type benchmarkResults struct {

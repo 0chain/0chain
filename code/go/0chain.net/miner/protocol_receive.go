@@ -9,7 +9,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -551,7 +551,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 		return
 	}
 
-	//TODO remove it, we do exactly the same logic in VerifyBlockNotarization->
 	var b = mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(mr, b) {
 		finish(false)

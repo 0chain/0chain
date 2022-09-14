@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"math/rand"
 	"os"
 	"strconv"
@@ -10,9 +11,9 @@ import (
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,7 +61,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				dp.DelegateID = dID
 				sp.Pools[dID] = dp
 			}
-			_, err = balances.InsertTrieNode(stakePoolKey(sc.ID, bID), sp)
+			_, err = balances.InsertTrieNode(stakePoolKey(spenum.Blobber, bID), sp)
 			require.NoError(t, err)
 		}
 		err = allBR.Save(balances)
@@ -72,7 +73,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
-			sp, err := ssc.getStakePool(bID, balances)
+			sp, err := ssc.getStakePool(spenum.Blobber, bID, balances)
 			require.NoError(t, err)
 
 			require.EqualValues(t, r.blobberRewards[i], sp.Reward)
@@ -152,6 +153,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 	pdb, _ := util.NewPNodeDB(dir, dir+"/log")
 
 	clean := func() {
+		pdb.Flush()
 		pdb.Close()
 		_ = os.RemoveAll(dir)
 	}
@@ -267,6 +269,7 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 	pdb, _ := util.NewPNodeDB(dir, dir+"/log")
 
 	clean := func() {
+		pdb.Flush()
 		pdb.Close()
 		_ = os.RemoveAll(dir)
 	}

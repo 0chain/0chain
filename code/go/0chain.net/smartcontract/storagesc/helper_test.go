@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
+	"0chain.net/chaincore/threshold/bls"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -16,9 +18,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
 	"go.uber.org/zap"
 
@@ -68,7 +70,9 @@ func newClient(balance currency.Coin, balances chainState.StateContextI) (
 	client.scheme = scheme
 
 	client.pk = scheme.GetPublicKey()
-	client.id = encryption.Hash(client.pk)
+	pub := bls.PublicKey{}
+	pub.DeserializeHexStr(client.pk)
+	client.id = encryption.Hash(pub.Serialize())
 
 	balances.(*testBalances).balances[client.id] = balance
 	return
@@ -102,8 +106,11 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 }
 
 func (c *Client) stakeLockRequest(t testing.TB) []byte {
-	var spr stakePoolRequest
-	spr.BlobberID = c.id
+	spr := stakePoolRequest{
+		ProviderType: spenum.Blobber,
+		ProviderID:   c.id,
+	}
+
 	return mustEncode(t, &spr)
 }
 
@@ -300,7 +307,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.OwnerPublicKey = client.pk
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
-	nar.Size = 2 * GB // 2 GB
+	nar.Size = 1 * GB // 2 GB
 
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
@@ -361,9 +368,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		MinLock: 10,
 	}
 	conf.WritePool = &writePoolConfig{
-		MinLock:       10,
-		MinLockPeriod: 5 * time.Second,
-		MaxLockPeriod: 20 * time.Minute,
+		MinLock: 10,
 	}
 
 	conf.StakePool = &stakePoolConfig{

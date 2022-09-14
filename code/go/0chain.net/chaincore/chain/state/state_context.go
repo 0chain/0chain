@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/core/common"
 
 	"0chain.net/chaincore/currency"
@@ -14,8 +17,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/util"
 )
 
 //msgp:ignore StateContext, TimedQueryStateContext
@@ -71,6 +74,8 @@ type TimedQueryStateContextI interface {
 	Now() common.Timestamp
 }
 
+type Appender func(events []event.Event, current event.Event) []event.Event
+
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
@@ -94,7 +99,7 @@ type StateContextI interface {
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
-	EmitEvent(event.EventType, event.EventTag, string, string)
+	EmitEvent(event.EventType, event.EventTag, string, interface{}, ...Appender)
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 }
@@ -190,6 +195,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
+
 	return nil
 }
 
@@ -207,6 +213,7 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
+
 	return nil
 }
 
@@ -224,7 +231,7 @@ func (sc *StateContext) GetTransfers() []*state.Transfer {
 	return sc.transfers
 }
 
-//GetTransfers - get all the transfers
+//GetSignedTransfers - get all the signed transfers
 func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
 	return sc.signedTransfers
 }
@@ -234,17 +241,28 @@ func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
 }
 
-func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
+func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...Appender) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
-	sc.events = append(sc.events, event.Event{
+	if index == "" {
+		logging.Logger.Error("error emitting event: empty index",
+			zap.Any("event_type", eventType),
+			zap.Any("tag", tag),
+			zap.Any("data", data))
+	}
+	e := event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
 		Type:        int(eventType),
 		Tag:         int(tag),
 		Index:       index,
 		Data:        data,
-	})
+	}
+	if len(appenders) != 0 {
+		sc.events = appenders[0](sc.events, e)
+	} else {
+		sc.events = append(sc.events, e)
+	}
 }
 
 func (sc *StateContext) EmitError(err error) {
@@ -331,7 +349,7 @@ func (sc *StateContext) GetClientBalance(clientID string) (currency.Coin, error)
 	return s.Balance, nil
 }
 
-//GetClientBalance - get the balance of the client
+//GetClientNonce - get the nonce of the client
 func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {

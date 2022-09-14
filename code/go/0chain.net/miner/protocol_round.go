@@ -22,9 +22,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -143,7 +143,9 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 	}
 
 	if round+1 <= tk.Round+int64(ahead) {
-		logging.Logger.Debug("[wait not ahead] [2] not ahead, can move on")
+		logging.Logger.Debug("[wait not ahead] [2] not ahead, can move on",
+			zap.Int64("round", round),
+			zap.Int64("lfb tk round", tk.Round))
 		return true // not ahead, can move on
 	}
 

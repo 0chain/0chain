@@ -8,7 +8,7 @@ import (
 	"time"
 
 	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -61,7 +61,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 					return
 				}
 
-				if txn != nil && c.ConfirmTransaction(ctx, txn) {
+				if txn != nil && c.ConfirmTransaction(ctx, txn, 0) {
 					logging.Logger.Debug("Register node transaction confirmed")
 					return
 				}

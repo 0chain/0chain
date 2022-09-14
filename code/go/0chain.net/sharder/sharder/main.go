@@ -32,14 +32,14 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
+	"github.com/0chain/common/core/logging"
+	. "github.com/0chain/common/core/logging"
 )
 
 func main() {
@@ -169,12 +169,6 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	// start sharding from the LFB stored
-	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
-		Logger.Error("load latest blocks from store: " + err.Error())
-		return
-	}
-
 	var mb = sc.GetLatestMagicBlock()
 	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, path, description, err := readNonGenesisHostAndPort(keysFile)
@@ -193,7 +187,7 @@ func main() {
 			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
 		}
 	}
-	if node.NodeType(selfNode.Type) != node.NodeTypeSharder {
+	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
 	}
 
@@ -241,6 +235,14 @@ func main() {
 	initN2NHandlers(sc)
 	initWorkers(ctx)
 
+	// start sharding from the LFB stored
+	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
+		Logger.Error("load latest blocks from store: " + err.Error())
+		return
+	}
+
+	sharder.SetupWorkers(ctx)
+
 	startBlocksInfoLogs(sc)
 
 	if err := sc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
@@ -258,6 +260,7 @@ func main() {
 
 	go sc.RegisterClient()
 	if sc.ChainConfig.IsFeeEnabled() {
+		logging.Logger.Info("setting up sharder(sc)")
 		go sc.SetupSC(ctx)
 	}
 
@@ -368,7 +371,7 @@ func initHandlers(c chain.Chainer) {
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()
-	chain.SetupHandlers(c)
+	chain.SetupSharderHandlers(c)
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()
@@ -424,5 +427,4 @@ func initN2NHandlers(c *sharder.Chain) {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	sharder.SetupWorkers(ctx)
 }

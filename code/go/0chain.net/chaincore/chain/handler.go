@@ -28,9 +28,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/minersc"
 )
@@ -39,8 +39,8 @@ const (
 	getBlockV1Pattern = "/v1/block/get"
 )
 
-func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
-	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+// chainhandlersMap returns routes of associated with chain
+func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/chain/get": common.Recover(
 			common.ToJSONResponse(
@@ -49,12 +49,14 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 			),
 		),
-		"/v1/chain/put": common.Recover(
-			datastore.ToJSONEntityReqResponse(
-				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
-				chainEntityMetadata,
-			),
-		),
+	}
+	return m
+}
+
+func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	m := map[string]func(http.ResponseWriter, *http.Request){
+
 		"/v1/block/get/latest_finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
@@ -127,7 +129,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 /*setupHandlers sets up the necessary API end points */
 func setupHandlers(handlersMap map[string]func(http.ResponseWriter, *http.Request)) {
 	for pattern, handler := range handlersMap {
-		http.HandleFunc(pattern, handler)
+		http.HandleFunc(pattern, common.WithCORS(handler))
 	}
 }
 
@@ -1297,7 +1299,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*transaction.Transaction)
 	if !ok {
-		return nil, fmt.Errorf("invalid request %T", entity)
+		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
 	sc := GetServerChain()
@@ -1314,11 +1316,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	if err := txn.ValidateNonce(); err != nil {
 		return nil, err
-	}
-
-	// save validated transactions to cache for miners only
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		return transaction.PutTransaction(ctx, txn)
 	}
 
 	return transaction.PutTransaction(ctx, txn)

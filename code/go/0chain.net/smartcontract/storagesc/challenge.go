@@ -22,8 +22,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
 	"go.uber.org/zap"
 )
@@ -115,14 +115,14 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var (
-		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime)
-		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime)
+		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
-	validatorsReward, err = currency.Float64ToCoin(conf.ValidatorReward * float64(move))
+	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	// for a case of a partial verification
-	blobberReward, err := currency.Float64ToCoin(float64(move) * partial) // blobber (partial) reward
+	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
 	if err != nil {
 		return err
 	}
@@ -142,26 +142,26 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	if back > 0 {
-		// move back to write pool
-		var wp *writePool
-		if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-			return fmt.Errorf("can't get allocation's write pool: %v", err)
-		}
-		var until = alloc.Until()
-		err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, back)
+		err = alloc.moveFromChallengePool(cp, back)
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
-		alloc.MovedBack += back
-		blobAlloc.Returned += back
-		// save write pool
-		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-			return fmt.Errorf("can't save allocation's write pool: %v", err)
+		newMoved, err := currency.AddCoin(alloc.MovedBack, back)
+		if err != nil {
+			return err
 		}
+		alloc.MovedBack = newMoved
+
+		newReturned, err := currency.AddCoin(blobAlloc.Returned, back)
+		if err != nil {
+			return err
+		}
+		blobAlloc.Returned = newReturned
+
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
+	if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
@@ -170,7 +170,11 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
-	blobAlloc.ChallengeReward += blobberReward
+	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
+	if err != nil {
+		return err
+	}
+	blobAlloc.ChallengeReward = newChallengeReward
 
 	// validators' stake pools
 	var vsps []*stakePool
@@ -182,7 +186,12 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += currency.Coin(validatorsReward)
+
+	moveToValidators, err := currency.AddCoin(alloc.MovedToValidators, validatorsReward)
+	if err != nil {
+		return err
+	}
+	alloc.MovedToValidators = moveToValidators
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
@@ -190,12 +199,16 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	// save the pools
-	if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
+	if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't save sake pool: %v", err)
 	}
 
-	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
+	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
+	}
+
+	if err = alloc.saveUpdatedAllocation(nil, balances); err != nil {
+		return fmt.Errorf("can't save allocation: %v", err)
 	}
 
 	return
@@ -209,7 +222,7 @@ func (ssc *StorageSmartContract) validatorsStakePools(
 	sps = make([]*stakePool, 0, len(validators))
 	for _, id := range validators {
 		var sp *stakePool
-		if sp, err = ssc.getStakePool(id, balances); err != nil {
+		if sp, err = ssc.getStakePool(spenum.Validator, id, balances); err != nil {
 			return nil, fmt.Errorf("can't get validator %s stake pool: %v",
 				id, err)
 		}
@@ -223,16 +236,20 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 	sps []*stakePool, balances cstate.StateContextI) (err error) {
 
 	for i, sp := range sps {
-		if err = sp.save(ssc.ID, validators[i], balances); err != nil {
+		if err = sp.save(spenum.Validator, validators[i], balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
-		data, _ := json.Marshal(dbs.DbUpdates{
+		staked, err := sp.stake()
+		if err != nil {
+			return fmt.Errorf("can't get stake: %v", err)
+		}
+		data := dbs.DbUpdates{
 			Id: validators[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(sp.stake()),
+				"stake": int64(staked),
 			},
-		})
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, validators[i], string(data))
+		}
+		balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, validators[i], data)
 
 	}
 	return
@@ -266,19 +283,14 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return fmt.Errorf("can't get allocation's write pool: %v", err)
-	}
-
 	var (
-		rdtu = alloc.restDurationInTimeUnits(prev)
-		dtu  = alloc.durationInTimeUnits(tp - prev)
+		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp - prev, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
 	// part of the tokens goes to related validators
-	validatorsReward, err := currency.Float64ToCoin(conf.ValidatorReward * float64(move))
+	validatorsReward, err := currency.MultFloat64(move, conf.ValidatorReward)
 	if err != nil {
 		return err
 	}
@@ -298,23 +310,36 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += validatorsReward
+
+	moveToValidators, err := currency.AddCoin(alloc.MovedToValidators, validatorsReward)
+	if err != nil {
+		return err
+	}
+	alloc.MovedToValidators = moveToValidators
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
 		return
 	}
 
-	// move back to write pool
-	var until = alloc.Until()
-	err = cp.moveToWritePool(alloc, blobAlloc.BlobberID, until, wp, move)
+	err = alloc.moveFromChallengePool(cp, move)
 	if err != nil {
-		return fmt.Errorf("moving failed challenge to write pool: %v", err)
+		return fmt.Errorf("moving challenge pool rest back to write pool: %v", err)
 	}
-	alloc.MovedBack += move
-	blobAlloc.Returned += move
 
-	slash, err := currency.Float64ToCoin(conf.BlobberSlash * float64(move))
+	moveBack, err := currency.AddCoin(alloc.MovedBack, move)
+	if err != nil {
+		return err
+	}
+	alloc.MovedBack = moveBack
+
+	blobReturned, err := currency.AddCoin(blobAlloc.Returned, move)
+	if err != nil {
+		return err
+	}
+	blobAlloc.Returned = blobReturned
+
+	slash, err := currency.MultFloat64(move, conf.BlobberSlash)
 	if err != nil {
 		return err
 	}
@@ -325,31 +350,35 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 		// load stake pool
 		var sp *stakePool
-		if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
+		if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
 		var move currency.Coin
-		move, err = sp.slash(alloc, blobAlloc.BlobberID, until, wp, blobAlloc.Offer(), slash, balances)
+		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
 
-		sp.TotalOffers -= move    // subtract the offer stake
-		blobAlloc.Penalty += move // penalty statistic
+		sp.TotalOffers -= move                                    // subtract the offer stake
+		penalty, err := currency.AddCoin(blobAlloc.Penalty, move) // penalty statistic
+		if err != nil {
+			return err
+		}
+		blobAlloc.Penalty = penalty
 
 		// save stake pool
-		if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
+		if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
 
-	// save pools
-	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return fmt.Errorf("can't save allocation's write pool: %v", err)
+	if err = alloc.saveUpdatedAllocation(nil, balances); err != nil {
+		return common.NewError("fini_alloc_failed",
+			"saving allocation pools: "+err.Error())
 	}
 
-	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
+	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
 
@@ -391,6 +420,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf("verify_challenge", "could not find challenge, %v", err)
 	}
+
+	logging.Logger.Info("time_taken: receive challenge response",
+		zap.String("challenge_id", challenge.ID),
+		zap.Duration("delay", time.Since(common.ToTime(challenge.Created))))
 
 	for _, vn := range challResp.ValidationTickets {
 		if _, ok := challenge.ValidatorIDMap[vn.ValidatorID]; !ok {
@@ -498,7 +531,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 					SuccessChallenges: 0,
 					WritePrice:        blobber.Terms.WritePrice,
 					ReadPrice:         blobber.Terms.ReadPrice,
-					TotalData:         sizeInGB(blobber.BytesWritten),
+					TotalData:         sizeInGB(blobber.SavedData),
 					DataRead:          dataRead,
 				})
 			if err != nil {
@@ -544,10 +577,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("verify_challenge_error", err.Error())
 		}
 
-		err = emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
-		if err != nil {
-			return "", common.NewError("verify_challenge_error", err.Error())
-		}
+		emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
+		emitUpdateBlobberChallengeStats(challenge.BlobberID, true, balances)
 
 		err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
 		if err != nil {
@@ -581,16 +612,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
-		if err := alloc.Save(balances, sc.ID); err != nil {
+		if err := alloc.save(balances, sc.ID); err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		updates, err := alloc.marshalUpdates(balances)
-		if err != nil {
-			return "", common.NewErrorf("verify_challenge",
-				"saving allocation in db: %v", err)
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 		if success < threshold {
 			return "challenge passed partially by blobber", nil
@@ -617,10 +643,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		blobAlloc.Stats.FailedChallenges++
 		blobAlloc.Stats.OpenChallenges--
 
-		err = emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
-		if err != nil {
-			return "", common.NewError("verify_challenge_error", err.Error())
-		}
+		emitUpdateChallengeResponse(challenge.ID, challenge.Responded, balances)
+		emitUpdateBlobberChallengeStats(challenge.BlobberID, false, balances)
 
 		if err := allocChallenges.Save(balances, sc.ID); err != nil {
 			return "", common.NewError("challenge_penalty_error", err.Error())
@@ -640,12 +664,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
 
-		updates, err := alloc.marshalUpdates(balances)
-		if err != nil {
-			return "", common.NewErrorf("challenge_reward_error",
-				"saving allocation in db: %v", err)
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
+		balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 		if pass && !fresh {
 			return "late challenge (failed)", nil
 		}
@@ -716,7 +735,7 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 		const maxBlobbersSelect = 5
 
 		var challengeBlobber ChallengeReadyBlobber
-		var maxUsedCap uint64
+		var maxWeight uint64
 
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
@@ -729,8 +748,8 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 		}
 
 		for _, bc := range blobbersSelected {
-			if bc.UsedCapacity > maxUsedCap {
-				maxUsedCap = bc.UsedCapacity
+			if bc.Weight > maxWeight {
+				maxWeight = bc.Weight
 				challengeBlobber = bc
 			}
 		}
@@ -816,7 +835,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil, err
 			}
 		}
-		err = alloc.Save(balances, sc.ID)
+		err = alloc.save(balances, sc.ID)
 		if err != nil {
 			return nil, common.NewErrorf("populate_challenge",
 				"error saving expired allocation: %v", err)
@@ -1016,22 +1035,14 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobAlloc.Stats.OpenChallenges++
 	blobAlloc.Stats.TotalChallenges++
 
-	if err := alloc.Save(balances, sc.ID); err != nil {
+	if err := alloc.save(balances, sc.ID); err != nil {
 		return common.NewErrorf("add_challenge",
 			"error storing allocation: %v", err)
 	}
-	updates, err := alloc.marshalUpdates(balances)
-	if err != nil {
-		return common.NewErrorf("add_challenge",
-			"saving allocation in db: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, string(updates))
 
-	err = emitAddChallenge(challInfo, balances)
-	if err != nil {
-		return common.NewError("add_challenge",
-			"error adding challenge to db: "+err.Error())
-	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+
+	emitAddChallenge(challInfo, balances)
 
 	return nil
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/herumi/bls/ffi/go/bls"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func init() {

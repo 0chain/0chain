@@ -59,7 +59,6 @@ jobs:
       authorizer_branch: ${{ github.event.inputs.authorizer_branch }}
       explorer_branch: master
       test_file_filter: ${{ github.event.inputs.test_file_filter }}
-      zproxy_branch: staging
       zsearch_branch: staging
       zdns_branch: staging
       skip_tests: ${{ github.event.inputs.skip_tests }}
@@ -74,3 +73,4 @@ jobs:
       DEV7KC: ${{ secrets.DEV7KC }}
       DEV8KC: ${{ secrets.DEV8KC }}
       DEV9KC: ${{ secrets.DEV9KC }}
+      DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

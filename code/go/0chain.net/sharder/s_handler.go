@@ -17,7 +17,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 )
 
 var (
@@ -111,11 +111,15 @@ func elapsedHandler(handler func(http.ResponseWriter, *http.Request)) func(w htt
 		start := time.Now()
 		handler(lrw, r)
 
-		Logger.Debug("API",
-			zap.Int("status", lrw.statusCode),
-			zap.String("method", r.Method),
-			zap.String("url", r.URL.Path),
-			zap.Any("time", time.Since(start)))
+		if lrw.statusCode != http.StatusTooManyRequests {
+			N2n.Debug("API",
+				zap.String("src", r.RemoteAddr),
+				zap.Int("status", lrw.statusCode),
+				zap.String("method", r.Method),
+				zap.String("url", r.URL.Path),
+				zap.Duration("time", time.Since(start)),
+				zap.String("rsp", lrw.response.String()))
+		}
 	}
 }
 

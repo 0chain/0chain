@@ -15,8 +15,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +41,7 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, er
 	return 0, nil
 }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
-func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
+func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appender ...cstate.Appender) {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		Type:        int(eventType),

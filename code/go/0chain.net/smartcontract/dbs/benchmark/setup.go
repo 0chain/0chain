@@ -98,7 +98,7 @@ func AddMockBlocks(
 			block := event.Block{
 				Hash:                  GetMockBlockHash(block_number),
 				Version:               "mock version",
-				CreationDate:          int64(common.Now()),
+				CreationDate:          int64(common.Now().Duration()),
 				Round:                 block_number,
 				MinerID:               miners[int(block_number)%len(miners)],
 				RoundRandomSeed:       block_number,
@@ -116,6 +116,22 @@ func AddMockBlocks(
 			}
 			_ = eventDb.Store.Get().Create(&block)
 		}
+	}
+}
+
+func AddMockUsers(
+	clients []string,
+	eventDb *event.EventDb,
+) {
+	if !viper.GetBool(benchmark.EventDbEnabled) {
+		return
+	}
+	for _, client := range clients {
+		user := event.User{
+			UserID:  client,
+			Balance: 100,
+		}
+		_ = eventDb.Store.Get().Create(&user)
 	}
 }
 

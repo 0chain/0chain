@@ -1,9 +1,7 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -58,33 +56,35 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	}, nil
 }
 
-func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) error {
-	data, err := json.Marshal(storageChallengeToChallengeTable(ch))
-	if err != nil {
-		return fmt.Errorf("marshalling challenge: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, string(data))
-	return nil
+func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) {
+
+	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch))
+	return
 }
 
-func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.StateContextI) error {
-	data, err := json.Marshal(&dbs.DbUpdates{
+func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.StateContextI) {
+	data := &dbs.DbUpdates{
 		Id: chID,
 		Updates: map[string]interface{}{
 			"responded": responded,
 		},
-	})
-	if err != nil {
-		return fmt.Errorf("marshalling update: %v", err)
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, string(data))
-	return nil
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, data)
 }
 
-func getOpenChallengesForBlobber(blobberID string, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
+func emitUpdateBlobberChallengeStats(blobberId string, passed bool, balances cstate.StateContextI) {
+	data := dbs.ChallengeResult{
+		BlobberId: blobberId,
+		Passed:    passed,
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberId, data)
+}
+
+func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
 
 	var chs []*StorageChallengeResponse
-	challenges, err := edb.GetOpenChallengesForBlobber(blobberID,
+	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from,
 		common.Timestamp(time.Now().Unix()), cct, limit)
 	if err != nil {
 		return nil, err

@@ -31,13 +31,21 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		"/_chain_stats":                    ChainStatsWriter,
 		"/_healthcheck":                    HealthCheckWriter,
 		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
+
+		"/v1/state/nodes":        common.ToJSONResponse(chain.StateNodesHandler),
+		"/v1/block/state_change": common.ToJSONResponse(BlockStateChangeHandler),
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))
 	for pattern, handler := range reqRespHandlers {
-		handlers[pattern] = common.UserRateLimit(handler)
+		handlers[pattern] = common.WithCORS(common.UserRateLimit(handler))
 	}
 	return handlers
+}
+
+func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	c := chain.GetServerChain()
+	return c.BlockStateChangeHandler(ctx, r)
 }
 
 type ChainInfo struct {

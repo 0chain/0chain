@@ -1,31 +1,12 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 )
-
-func writeMarkerToValidationNode(vn *ValidationNode) *event.Validator { //nolint
-	return &event.Validator{
-		ValidatorID: vn.ID,
-		BaseUrl:     vn.BaseURL,
-		PublicKey:   vn.PublicKey,
-		// TO-DO: Update stake in eventDB
-		Stake: 0,
-
-		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-		MinStake:       vn.StakePoolSettings.MinStake,
-		MaxStake:       vn.StakePoolSettings.MaxStake,
-		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
-	}
-}
 
 func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
@@ -56,7 +37,7 @@ func getValidators(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode
 }
 
 func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
-	data, err := json.Marshal(&dbs.DbUpdates{
+	data := &dbs.DbUpdates{
 		Id: vn.ID,
 		Updates: map[string]interface{}{
 			"base_url":        vn.BaseURL,
@@ -66,16 +47,14 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 			"num_delegates":   vn.StakePoolSettings.MaxNumDelegates,
 			"service_charge":  vn.StakePoolSettings.ServiceChargeRatio,
 		},
-	})
-	if err != nil {
-		return fmt.Errorf("marshalling update: %v", err)
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, string(data))
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
 	return nil
 }
 
 func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
-	data, err := json.Marshal(&event.Validator{
+	data := &event.Validator{
 		ValidatorID:    vn.ID,
 		BaseUrl:        vn.BaseURL,
 		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
@@ -83,10 +62,8 @@ func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 		MaxStake:       vn.StakePoolSettings.MaxStake,
 		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
-	})
-	if err != nil {
-		return fmt.Errorf("marshalling validator: %v", err)
 	}
-	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, string(data))
+
+	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, data)
 	return nil
 }

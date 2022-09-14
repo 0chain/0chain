@@ -13,8 +13,8 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
-	"0chain.net/core/util"
+	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -389,7 +389,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 /*PruneClientStateWorker - a worker that prunes the client state */
 func (c *Chain) PruneClientStateWorker(ctx context.Context) {
-	tick := time.Duration(c.PruneStateBelowCount()) * time.Second
+	tick := 30 * time.Second
 	timer := time.NewTimer(time.Second)
 	Logger.Debug("PruneClientStateWorker start")
 	defer func() {
@@ -397,13 +397,17 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 	}()
 
 	for {
-		<-timer.C
-		Logger.Debug("Do prune client state worker")
-		c.pruneClientState(ctx)
-		if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
-			timer = time.NewTimer(time.Second)
-		} else {
-			timer = time.NewTimer(tick)
+		select {
+		case <-timer.C:
+			Logger.Debug("Do prune client state worker")
+			c.pruneClientState(ctx)
+			if c.pruneStats == nil {
+				timer = time.NewTimer(time.Second)
+			} else {
+				timer = time.NewTimer(tick)
+			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }

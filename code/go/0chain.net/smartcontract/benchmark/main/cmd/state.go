@@ -5,8 +5,8 @@ import (
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/util"
 )
 
 func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI) {
@@ -60,7 +60,12 @@ func mockMint(
 		return
 	}
 	_ = balances.SetStateContext(&toState)
-	toState.Balance += amount
+
+	newBal, err := currency.AddCoin(toState.Balance, amount)
+	if err != nil {
+		return
+	}
+	toState.Balance = newBal
 	_, _ = clientState.Insert(util.Path(to), &toState)
 }
 
@@ -87,6 +92,11 @@ func mockTransferAmount(
 		return
 	}
 	_ = balances.SetStateContext(&toState)
-	toState.Balance += amount
+
+	newBal, err := currency.AddCoin(toState.Balance, amount)
+	if err != nil {
+		return
+	}
+	toState.Balance = newBal
 	_, _ = clientState.Insert(util.Path(to), &toState)
 }

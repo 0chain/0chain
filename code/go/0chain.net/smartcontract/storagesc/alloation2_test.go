@@ -1,7 +1,9 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,12 +14,14 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -146,8 +150,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 		Stats: &StorageAllocationStats{
 			OpenChallenges: 3,
 		},
-		Size:     4560,
-		UsedSize: 456,
+		Size:      4560,
+		UsedSize:  456,
+		WritePool: 77777,
 	}
 	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
@@ -193,12 +198,11 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var thisExpires = common.Timestamp(222)
 
 	var blobberOffer = int64(123000)
-	var wpBalance currency.Coin = 777777
-	var otherWritePools = 0
+	allocation.WritePool = currency.Coin(777777)
 
 	t.Run("cancel allocation", func(t *testing.T) {
 		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
-			otherWritePools, challengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
+			challengePoolBalance, challenges, blobberOffer, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -207,7 +211,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		allocationNotOwner.Owner = "someone else"
 
 		err := testCancelAllocation(t, allocationNotOwner, *blobbers, blobberStakePools, scYaml,
-			otherWritePools, challengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
+			challengePoolBalance, challenges, blobberOffer, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
 		require.True(t, strings.Contains(err.Error(), ErrNotOwner))
@@ -218,7 +222,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		allocationExpired.Expiration = now - 1
 
 		err := testCancelAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml,
-			otherWritePools, challengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
+			challengePoolBalance, challenges, blobberOffer, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
 		require.True(t, strings.Contains(err.Error(), ErrExpired))
@@ -302,12 +306,10 @@ func TestFinalizeAllocation(t *testing.T) {
 	var thisExpires = common.Timestamp(222)
 
 	var blobberOffer = int64(123000)
-	var wpBalance currency.Coin = 777777
-	var otherWritePools = 4
+	allocation.WritePool = currency.Coin(777777)
 
 	t.Run("finalize allocation", func(t *testing.T) {
-		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
-			otherWritePools, challengePoolBalance, blobberOffer, wpBalance, thisExpires, now)
+		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml, challengePoolBalance, blobberOffer, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -316,7 +318,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		allocationExpired.Expiration = now - toSeconds(allocation.ChallengeCompletionTime) + 1
 
 		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml,
-			otherWritePools, challengePoolBalance, blobberOffer, wpBalance, thisExpires, now)
+			challengePoolBalance, blobberOffer, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrFinalizedFailed))
 		require.True(t, strings.Contains(err.Error(), ErrFinalizedTooSoon))
@@ -329,11 +331,9 @@ func testCancelAllocation(
 	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
 	scYaml Config,
-	otherWritePools int,
 	challengePoolBalance int64,
 	challenges [][]common.Timestamp,
 	blobberOffer int64,
-	wpBalance currency.Coin,
 	thisExpires, now common.Timestamp,
 ) error {
 	var f = formulaeFinalizeAllocation{
@@ -349,8 +349,8 @@ func testCancelAllocation(
 	f.setCancelPassRates()
 
 	var ssc, txn, input, ctx = setupMocksFinishAllocation(
-		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
-		currency.Coin(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
+		t, sAllocation, blobbers, bStakes, scYaml,
+		currency.Coin(challengePoolBalance), now,
 	)
 
 	require.True(t, len(challenges) <= len(blobbers))
@@ -378,25 +378,17 @@ func testCancelAllocation(
 	}
 	require.EqualValues(t, "canceled", resp)
 
-	var newScYaml = &Config{}
-	newScYaml, err = ssc.getConfig(ctx, false)
-
 	require.NoError(t, err)
 	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
 	require.NoError(t, err)
-	newWp, err := ssc.getWritePool(sAllocation.Owner, ctx)
-	require.NoError(t, err)
-	var newAlloc *StorageAllocation
-	newAlloc, err = ssc.getAllocation(sAllocation.ID, ctx)
-	require.NoError(t, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
-		sp, err := ssc.getStakePool(blobber.ID, ctx)
+		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
 
-	confirmFinalizeAllocation(t, f, *newScYaml, *newCp, *newWp, *newAlloc, wpBalance, sps, ctx)
+	confirmFinalizeAllocation(t, f, *newCp, sps)
 	return nil
 }
 
@@ -406,10 +398,8 @@ func testFinalizeAllocation(
 	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
 	scYaml Config,
-	otherWritePools int,
 	challengePoolBalance int64,
 	blobberOffer int64,
-	wpBalance currency.Coin,
 	thisExpires, now common.Timestamp,
 ) error {
 
@@ -425,8 +415,8 @@ func testFinalizeAllocation(
 	f.setFinilizationPassRates()
 
 	var ssc, txn, input, ctx = setupMocksFinishAllocation(
-		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
-		currency.Coin(challengePoolBalance), blobberOffer, wpBalance, thisExpires, now,
+		t, sAllocation, blobbers, bStakes, scYaml,
+		currency.Coin(challengePoolBalance), now,
 	)
 
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
@@ -434,39 +424,26 @@ func testFinalizeAllocation(
 		return err
 	}
 	require.EqualValues(t, "finalized", resp)
-
-	var newScYaml = &Config{}
-	newScYaml, err = ssc.getConfig(ctx, false)
-
 	require.NoError(t, err)
 	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
 	require.NoError(t, err)
-	newWp, err := ssc.getWritePool(sAllocation.Owner, ctx)
-	require.NoError(t, err)
-	var newAlloc *StorageAllocation
-	newAlloc, err = ssc.getAllocation(sAllocation.ID, ctx)
 	require.NoError(t, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
-		sp, err := ssc.getStakePool(blobber.ID, ctx)
+		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
 
-	confirmFinalizeAllocation(t, f, *newScYaml, *newCp, *newWp, *newAlloc, wpBalance, sps, ctx)
+	confirmFinalizeAllocation(t, f, *newCp, sps)
 	return nil
 }
 
 func confirmFinalizeAllocation(
 	t *testing.T,
 	f formulaeFinalizeAllocation,
-	scYaml Config,
 	challengePool challengePool,
-	allocationWritePool writePool,
-	allocation StorageAllocation,
-	wpStartBalance currency.Coin,
 	sps []*stakePool,
-	ctx cstate.StateContextI,
 ) {
 	require.EqualValues(t, 0, challengePool.Balance)
 
@@ -508,11 +485,8 @@ func setupMocksFinishAllocation(
 	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
 	scYaml Config,
-	otherWritePools int,
 	challengePoolBalance currency.Coin,
-	blobberOffer int64,
-	wpBalance currency.Coin,
-	thisExpires, now common.Timestamp,
+	now common.Timestamp,
 ) (*StorageSmartContract, *transaction.Transaction, []byte, cstate.StateContextI) {
 	var err error
 	var txn = &transaction.Transaction{
@@ -544,7 +518,6 @@ func setupMocksFinishAllocation(
 		},
 	}
 
-	sAllocation.WritePoolOwners = []string{sAllocation.Owner}
 	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
 	require.NoError(t, err)
 
@@ -556,45 +529,7 @@ func setupMocksFinishAllocation(
 			},
 		},
 	}
-	require.NoError(t, cPool.save(ssc.ID, sAllocation.ID, ctx))
-
-	var wPool = writePool{
-		Pools: allocationPools{},
-	}
-	var newPool = &allocationPool{}
-	newPool.ID = "first_mock_write_pool"
-	newPool.Balance = currency.Coin(wpBalance)
-	newPool.AllocationID = sAllocation.ID
-	newPool.Blobbers = blobberPools{}
-	newPool.ExpireAt = now
-	for i := 0; i < len(sAllocation.BlobberAllocs); i++ {
-		newPool.Blobbers.add(&blobberPool{
-			BlobberID: blobbers[i].ID,
-			Balance:   currency.Coin(1),
-		})
-	}
-
-	awp := &allocationWritePools{
-		ownerId:    0,
-		ids:        []string{sAllocation.Owner},
-		writePools: []*writePool{&wPool},
-	}
-	awp.allocationPools.add(newPool)
-
-	wPool.Pools.add(newPool)
-	for i := 0; i < otherWritePools; i++ {
-		var id = strconv.Itoa(i)
-		var newPool = &allocationPool{}
-		newPool.ID = "mock_write_pool_" + id
-		newPool.AllocationID = allocationId + " " + id
-		wPool.Pools.add(newPool)
-		awp.allocationPools.add(newPool)
-	}
-	require.NoError(t, wPool.save(ssc.ID, sAllocation.Owner, ctx))
-	require.NoError(t, awp.saveWritePools(ssc.ID, ctx))
-
-	var blobberList = new(StorageNodes)
-	blobberList.Nodes = blobbers
+	require.NoError(t, cPool.save(ssc.ID, &sAllocation, ctx))
 
 	require.EqualValues(t, len(blobbers), len(bStakes))
 	for i, blobber := range blobbers {
@@ -611,7 +546,7 @@ func setupMocksFinishAllocation(
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 		}
 		sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
-		require.NoError(t, sp.save(ssc.ID, blobber.ID, ctx))
+		require.NoError(t, sp.save(spenum.Blobber, blobber.ID, ctx))
 
 		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 		require.NoError(t, err)
@@ -773,7 +708,10 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	val, err := currency.Int64ToCoin(request.Size)
 	require.NoError(t, err)
-
+	wp, err := currency.ParseZCN(blobberYaml.writePrice)
+	require.NoError(t, err)
+	val, err = currency.MultCoin(val, wp)
+	require.NoError(t, err)
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: transactionHash,
@@ -783,6 +721,23 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		ToClientID:   storageScId,
 		CreationDate: creationDate,
 	}
+	access := config.DbAccess{
+		Enabled:         true,
+		Name:            "events_db",
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, err := event.NewEventDb(access)
+	if err != nil {
+		return
+	}
+	defer eventDb.Close()
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
 			nil,
@@ -793,9 +748,9 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 			nil,
 			nil,
 			nil,
-			nil,
+			eventDb,
 		),
-		clientBalance: zcnToBalance(3),
+		clientBalance: txn.Value,
 		store:         make(map[string]util.MPTSerializable),
 	}
 	var ssc = &StorageSmartContract{
@@ -811,11 +766,8 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		var stakePool = newStakePool()
 		stakePool.Pools["paula"] = &stakepool.DelegatePool{}
 		stakePool.Pools["paula"].Balance = currency.Coin(stakes[i])
-		require.NoError(t, stakePool.save(ssc.ID, blobber.ID, ctx))
+		require.NoError(t, stakePool.save(spenum.Blobber, blobber.ID, ctx))
 	}
-
-	var wPool = writePool{}
-	require.NoError(t, wPool.save(ssc.ID, clientId, ctx))
 
 	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
 	require.NoError(t, err)
@@ -847,15 +799,12 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	var newStakePools = []*stakePool{}
 	for _, blobber := range individualBlobbers {
-		var sp, err = ssc.getStakePool(blobber.ID, ctx)
+		var sp, err = ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
 		require.NoError(t, err)
 		newStakePools = append(newStakePools, sp)
 	}
-	var wp *writePool
-	wp, err = ssc.getWritePool(clientId, ctx)
-	require.NoError(t, err)
 
-	confirmTestNewAllocation(t, f, individualBlobbers, newStakePools, *wp, ctx)
+	confirmTestNewAllocation(t, f, individualBlobbers, txn, ctx)
 
 	return nil
 }
@@ -910,26 +859,13 @@ func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string
 }
 
 func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
-	blobbers SortedBlobbers, stakes []*stakePool, wp writePool, ctx cstate.StateContextI,
+	blobbers SortedBlobbers, txn *transaction.Transaction, ctx cstate.StateContextI,
 ) {
 	var transfers = ctx.GetTransfers()
 	require.Len(t, transfers, 1)
 	require.EqualValues(t, clientId, transfers[0].ClientID)
 	require.EqualValues(t, storageScId, transfers[0].ToClientID)
-	require.EqualValues(t, f.request.Size, transfers[0].Amount)
-
-	require.Len(t, wp.Pools, 1)
-	require.EqualValues(t, transactionHash, wp.Pools[0].ID)
-	require.EqualValues(t, transactionHash, wp.Pools[0].AllocationID)
-	require.EqualValues(t, f.request.Size, wp.Pools[0].Balance)
-	require.Len(t, wp.Pools[0].Blobbers, f.blobbersUsed())
-	var blobbersUsed []string
-	for _, blobber := range wp.Pools[0].Blobbers {
-		blobbersUsed = append(blobbersUsed, blobber.BlobberID)
-	}
-	for _, blobber := range wp.Pools[0].Blobbers {
-		require.EqualValues(t, f.blobberEarnt(t, blobber.BlobberID, blobbersUsed), blobber.Balance)
-	}
+	require.EqualValues(t, txn.Value, transfers[0].Amount)
 
 	var countUsedBlobbers = 0
 	for _, blobber := range blobbers {

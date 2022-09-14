@@ -1,19 +1,18 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"fmt"
-
-	"0chain.net/chaincore/currency"
-
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"encoding/json"
+	"fmt"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -64,55 +63,29 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 }
 
 // save the challenge pool
-func (cp *challengePool) save(sscKey, allocationID string,
-	balances cstate.StateContextI) (err error) {
-
-	r, err := balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
+func (cp *challengePool) save(sscKey string, alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
+	cpKey := challengePoolKey(sscKey, alloc.ID)
+	r, err := balances.InsertTrieNode(cpKey, cp)
 	logging.Logger.Debug("after save challenge pool", zap.String("root", r))
+
+	//emit challenge pool event
+	emitChallengePoolEvent(cpKey, cp.GetBalance(), alloc, balances)
 
 	return
 }
 
-// moveToWritePool moves tokens back to write pool on data deleted
-func (cp *challengePool) moveToWritePool(
-	alloc *StorageAllocation,
-	blobID string,
-	until common.Timestamp,
-	wp *writePool,
-	value currency.Coin,
-) (err error) {
-
-	if value == 0 {
-		return // nothing to move
+func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllocation, balances cstate.StateContextI) {
+	data := event.ChallengePool{
+		ID:           id,
+		AllocationID: alloc.ID,
+		Balance:      int64(balance),
+		StartTime:    int64(alloc.StartTime),
+		Expiration:   int64(alloc.Expiration),
+		Finalized:    alloc.Finalized,
 	}
 
-	if cp.Balance < value {
-		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
-			cp.ID, cp.Balance, value)
-	}
+	balances.EmitEvent(event.TypeStats, event.TagAddOrUpdateChallengePool, "", data)
 
-	var ap = wp.allocPool(alloc.ID, until)
-	if ap == nil {
-		ap = new(allocationPool)
-		ap.AllocationID = alloc.ID
-		ap.ExpireAt = 0
-		alloc.addWritePoolOwner(alloc.Owner)
-		wp.Pools.add(ap)
-	}
-
-	// move
-	if blobID != "" {
-		var bp, ok = ap.Blobbers.get(blobID)
-		if !ok {
-			ap.Blobbers.add(&blobberPool{
-				BlobberID: blobID,
-				Balance:   value,
-			})
-		} else {
-			bp.Balance += value
-		}
-	}
-	_, _, err = cp.TransferTo(ap, value, nil)
 	return
 }
 
@@ -129,7 +102,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 		return fmt.Errorf("not enough tokens in challenge pool: %v < %v", cp.Balance, reward)
 	}
 
-	oneReward, bal, err := currency.DivideCoin(reward, int64(len(validators)))
+	oneReward, bal, err := currency.DistributeCoin(reward, int64(len(validators)))
 	if err != nil {
 		return err
 	}
@@ -155,18 +128,16 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	return nil
 }
 
-func (cp *challengePool) stat(alloc *StorageAllocation) (
-	stat *challengePoolStat) {
+func toChallengePoolStat(cp *event.ChallengePool) *challengePoolStat {
+	stat := challengePoolStat{
+		ID:         cp.ID,
+		Balance:    currency.Coin(cp.Balance),
+		StartTime:  common.Timestamp(cp.StartTime),
+		Expiration: common.Timestamp(cp.Expiration),
+		Finalized:  cp.Finalized,
+	}
 
-	stat = new(challengePoolStat)
-
-	stat.ID = cp.ID
-	stat.Balance = cp.Balance
-	stat.StartTime = alloc.StartTime
-	stat.Expiration = alloc.Until()
-	stat.Finalized = alloc.Finalized
-
-	return
+	return &stat
 }
 
 // swagger:model challengePoolStat
@@ -225,7 +196,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	// don't lock anything here
 
 	// save the challenge pool
-	if err = cp.save(ssc.ID, alloc.ID, balances); err != nil {
+	if err = cp.save(ssc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
 

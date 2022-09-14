@@ -12,7 +12,7 @@ import (
 	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 

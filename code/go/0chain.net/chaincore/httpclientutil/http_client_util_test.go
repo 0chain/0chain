@@ -23,9 +23,9 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/mocks"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 func init() {
@@ -583,7 +583,7 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 				tt.args.urls = append(tt.args.urls, URL)
 			}
 
-			got, err := MakeClientBalanceRequest(tt.args.clientID, tt.args.urls, tt.args.consensus)
+			got, err := MakeClientBalanceRequest(context.TODO(), tt.args.clientID, tt.args.urls, tt.args.consensus)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MakeClientBalanceRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1148,7 +1148,7 @@ func TestSendSmartContractTxn(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if err := SendSmartContractTxn(tt.args.txn, tt.args.address, tt.args.value, tt.args.fee, tt.args.scData, tt.args.minerUrls); (err != nil) != tt.wantErr {
+			if err := SendSmartContractTxn(tt.args.txn, tt.args.address, tt.args.value, tt.args.fee, tt.args.scData, tt.args.minerUrls, tt.args.minerUrls); (err != nil) != tt.wantErr {
 				t.Errorf("SendSmartContractTxn() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, nonce+2, node.Self.GetNextNonce())

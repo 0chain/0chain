@@ -18,7 +18,7 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 var DELTA = 200 * time.Millisecond
@@ -126,8 +126,8 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 	return fb
 }
 
-/*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
-that extend from a single block in that round. */
+// FinalizeRoundImpl - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
+// that extend from a single block in that round.
 func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if r.IsFinalized() {
 		return // round already finalized
@@ -136,10 +136,8 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if !r.SetFinalizing() {
 		logging.Logger.Debug("finalize_round: already finalizing",
 			zap.Int64("round", r.GetRoundNumber()))
-		if node.Self.Type == node.NodeTypeSharder {
-			return
-		}
 	}
+
 	if r.GetHeaviestNotarizedBlock() == nil {
 		logging.Logger.Error("finalize round: no notarized blocks",
 			zap.Int64("round", r.GetRoundNumber()))
@@ -351,12 +349,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				frchain[len(frchain)-1-idx] = fb
 			}
 
-			_, _, err := c.createRoundIfNotExist(ctx, fb)
-			if err != nil {
-				logging.Logger.Error("create round for finalize block failed",
-					zap.Int64("round", fb.Round),
-					zap.String("hash", fb.Hash))
-			}
+			//_, _ = c.createRoundIfNotExist(ctx, fb)
 
 			logging.Logger.Info("finalize round",
 				zap.Int64("round", fb.Round),
@@ -389,11 +382,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 							zap.Error(err))
 						return
 					}
-					logging.Logger.Info("finalize round - finalize block success",
-						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash))
 
 					du := time.Since(ts)
+					logging.Logger.Info("finalize round - finalize block success",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.Duration("duration", du))
+
 					if du > 3*time.Second {
 						logging.Logger.Debug("finalize round slow",
 							zap.Int64("round", roundNumber),
@@ -462,10 +457,10 @@ type finalizeBlockWithReply struct {
 	resultC chan error
 }
 
-func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block, error) {
+func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block) {
 	if r := c.GetRound(b.Round); r != nil {
-		_, r = c.AddNotarizedBlockToRound(r, b)
-		return r, b, nil
+		b, r = c.AddNotarizedBlockToRound(r, b)
+		return r, b
 	}
 
 	// create the round if it does not exist
@@ -474,7 +469,7 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 
 	// Add the round if chain does not have it
 	r = c.AddRound(r)
-	return r, b, nil
+	return r, b
 }
 
 // GetHeaviestNotarizedBlock - get a notarized block for a round.

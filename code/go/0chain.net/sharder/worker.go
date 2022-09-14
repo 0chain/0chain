@@ -19,7 +19,7 @@ import (
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 const minerScSharderHealthCheck = "sharder_health_check"
@@ -85,6 +85,20 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				cr = lfb.Round
 			}
 
+			if lfb.Round+aheadN <= cr {
+				logging.Logger.Debug("process block, synced to lfb+ahead, start to force finalize rounds",
+					zap.Int64("current round", cr),
+					zap.Int64("lfb", lfb.Round),
+					zap.Int64("lfb+ahead", lfb.Round+aheadN))
+
+				for rn := lfb.Round + 1; rn <= cr; rn++ {
+					if r := sc.GetRound(rn); r != nil {
+						sc.FinalizeRound(sc.GetRound(rn))
+					}
+				}
+				continue
+			}
+
 			endRound = lfbTk.Round + aheadN
 
 			if endRound <= cr {
@@ -115,6 +129,13 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			cr := sc.GetCurrentRound()
 			lfb := sc.GetLatestFinalizedBlock()
 			if b.Round > lfb.Round+aheadN {
+
+				// trigger sync process to pull the latest blocks when
+				// current round is > lfb.Round + aheadN to break the stuck if any.
+				if !syncing {
+					syncBlocksTimer.Reset(0)
+				}
+
 				// avoid the skipping logs when syncing blocks
 				if b.Round <= lfb.Round+2*aheadN {
 					logging.Logger.Debug("process block skip",
@@ -122,12 +143,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 						zap.Int64("current round", cr),
 						zap.Int64("lfb", lfb.Round),
 						zap.Bool("syncing", syncing))
-				}
-
-				// trigger sync process to pull the latest blocks when
-				// current round is > lfb.Round + aheadN to break the stuck if any.
-				if !syncing {
-					syncBlocksTimer.Reset(0)
 				}
 
 				continue
@@ -166,9 +181,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			lfbTk := sc.GetLatestLFBTicket(ctx)
+			lfb = sc.GetLatestFinalizedBlock()
 			logging.Logger.Debug("process block successfully",
 				zap.Int64("round", b.Round),
-				zap.Int64("lfb round", sc.GetLatestFinalizedBlock().Round),
+				zap.Int64("lfb round", lfb.Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
 
 			if b.Round >= lfb.Round+aheadN || b.Round >= endRound {
@@ -329,7 +345,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 
 		// so, transaction sent, let's verify it
 
-		if !sc.ConfirmTransaction(ctx, txn) {
+		if !sc.ConfirmTransaction(ctx, txn, 0) {
 			logging.Logger.Debug("register_sharder_keep_worker -- failed "+
 				"to confirm transaction", zap.Any("txn", txn))
 			continue
@@ -371,7 +387,7 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 
 			mb := sc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls); err != nil {
+			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
 				logging.Logger.Warn("sharder health check failed, try again")
 			}
 

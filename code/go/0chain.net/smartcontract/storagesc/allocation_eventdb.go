@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/chaincore/transaction"
+	"github.com/0chain/common/core/logging"
+
 	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/chaincore/currency"
@@ -89,12 +92,19 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		})
 
 		terms := blobberIDTermMapping[b.BlobberID].Terms
+
+		bwF := gbSize * terms.MinLockDemand * rdtu
+		minLockDemand, err := currency.MultFloat64(terms.WritePrice, bwF)
+		if err != nil {
+			return nil, err
+		}
+
 		tempBlobberAllocation := &BlobberAllocation{
 			BlobberID:     b.BlobberID,
 			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
 			Size:          b.Allocated,
 			Terms:         terms,
-			MinLockDemand: currency.Coin(float64(terms.WritePrice) * gbSize * terms.MinLockDemand * rdtu),
+			MinLockDemand: minLockDemand,
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation
@@ -110,6 +120,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		Expiration:     common.Timestamp(alloc.Expiration),
 		Owner:          alloc.Owner,
 		OwnerPublicKey: alloc.OwnerPublicKey,
+		WritePool:      alloc.WritePool,
 		Stats: &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
@@ -120,14 +131,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
-		BlobberAllocs:    blobberDetails,
-		BlobberAllocsMap: blobberMap,
-		IsImmutable:      alloc.IsImmutable,
-		ReadPriceRange:   PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
-		WritePriceRange:  PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
-
-		// todo: to be added with WritePool : select user_id from WritePools where allocation_id = ?
-		// WritePoolOwners:            nil,
+		BlobberAllocs:           blobberDetails,
+		BlobberAllocsMap:        blobberMap,
+		IsImmutable:             alloc.IsImmutable,
+		ReadPriceRange:          PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
+		WritePriceRange:         PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
 		ChallengeCompletionTime: time.Duration(alloc.ChallengeCompletionTime),
 		StartTime:               common.Timestamp(alloc.StartTime),
 		Finalized:               alloc.Finalized,
@@ -197,6 +205,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		MovedBack:               sa.MovedBack,
 		MovedToValidators:       sa.MovedToValidators,
 		TimeUnit:                int64(sa.TimeUnit),
+		WritePool:               sa.WritePool,
 	}
 
 	if sa.Stats != nil {
@@ -212,13 +221,11 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 	return alloc, nil
 }
 
-func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]byte, error) {
-	termsByte, err := sa.marshalTerms()
-	if err != nil {
-		return nil, err
-	}
+func (sa *StorageAllocation) buildDbUpdates() *dbs.DbUpdates {
 
-	return json.Marshal(&dbs.DbUpdates{
+	termsByte, _ := sa.marshalTerms() //err always is nil
+
+	dbUpdates := &dbs.DbUpdates{
 		Id: sa.ID,
 		Updates: map[string]interface{}{
 			"allocation_name":           sa.Name,
@@ -244,8 +251,20 @@ func (sa *StorageAllocation) marshalUpdates(balances cstate.StateContextI) ([]by
 			"moved_back":                sa.MovedBack,
 			"moved_to_validators":       sa.MovedToValidators,
 			"time_unit":                 int64(sa.TimeUnit),
+			"write_pool":                sa.WritePool,
 		},
-	})
+	}
+
+	if sa.Stats != nil {
+		dbUpdates.Updates["num_writes"] = sa.Stats.NumWrites
+		dbUpdates.Updates["num_reads"] = sa.Stats.NumReads
+		dbUpdates.Updates["total_challenges"] = sa.Stats.TotalChallenges
+		dbUpdates.Updates["open_challenges"] = sa.Stats.OpenChallenges
+		dbUpdates.Updates["successful_challenges"] = sa.Stats.SuccessChallenges
+		dbUpdates.Updates["failed_challenges"] = sa.Stats.FailedChallenges
+		dbUpdates.Updates["latest_closed_challenge_txn"] = sa.Stats.LastestClosedChallengeTxn
+	}
+	return dbUpdates
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
@@ -254,12 +273,7 @@ func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 		return err
 	}
 
-	data, err := json.Marshal(alloc)
-	if err != nil {
-		return fmt.Errorf("error marshalling allocation: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil
 }
@@ -283,4 +297,45 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit c
 	}
 
 	return sas, nil
+}
+
+func (sa *StorageAllocation) ToAllocBlobberTerms() []event.AllocationBlobberTerm {
+	var terms []event.AllocationBlobberTerm
+
+	for _, blobber := range sa.BlobberAllocs {
+		terms = append(terms, event.AllocationBlobberTerm{
+			BlobberID:        blobber.BlobberID,
+			AllocationID:     blobber.AllocationID,
+			ReadPrice:        int64(blobber.Terms.ReadPrice),
+			WritePrice:       int64(blobber.Terms.WritePrice),
+			MinLockDemand:    blobber.Terms.MinLockDemand,
+			MaxOfferDuration: blobber.Terms.MaxOfferDuration,
+		})
+	}
+
+	return terms
+}
+
+func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting add or override terms event")
+
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
+}
+
+func emitUpdateAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting update terms event")
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
+}
+
+func emitDeleteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) error {
+	logging.Logger.Info("emitting delete terms event")
+
+	balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, sa.ToAllocBlobberTerms())
+
+	return nil
 }
