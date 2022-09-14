@@ -3,7 +3,6 @@ package zcnsc_test
 // StateContextI implementation
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -22,22 +21,9 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type item struct {
-	Field int `json:"field"`
-}
-
-// MarshalMsg implements util.MPTSerializable
-func (i *item) MarshalMsg([]byte) ([]byte, error) {
-	var b, err = json.Marshal(i)
-	if err != nil {
-		panic(err)
-	}
-	return b, err
-}
-
-// UnmarshalMsg implements util.MPTSerializable
-func (i *item) UnmarshalMsg(p []byte) ([]byte, error) {
-	return p, json.Unmarshal(p, i)
+type authCount struct {
+	datastore.NOIDField
+	Count int `json:"auth_count"`
 }
 
 const (
@@ -277,13 +263,13 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 		Node:   node,
 	}
 
-	var numAuth item
+	var numAuth authCount
 	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 	if err != nil {
-		numAuth.Field = 0
+		numAuth.Count = 0
 	}
 
-	numAuth.Field++
+	numAuth.Count++
 
 	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 
