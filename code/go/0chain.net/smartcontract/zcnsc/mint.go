@@ -90,8 +90,13 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	numAuth, err := getAuthorizerCount(ctx)
 
 	// verify signatures of authorizers
-	count := payload.countValidSignatures(ctx)
-	if count < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
+	err = payload.verifySignatures(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to verify signatures with error: %v, %s", err, info)
+		err = common.NewError(code, msg)
+	}
+
+	if len(payload.Signatures) < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
 		err = common.NewError(
 			code,
 			"not enough valid signatures for minting",

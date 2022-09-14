@@ -149,38 +149,40 @@ func (mp *MintPayload) GetStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *MintPayload) countValidSignatures(state cstate.StateContextI) int {
-	count := 0
+func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
 	toSign := mp.GetStringToSign()
+	if len(mp.Signatures) == 0 {
+		return errors.New("signatures not found")
+	}
 
 	for _, v := range mp.Signatures {
 		authorizerID := v.ID
 		if authorizerID == "" {
-			continue
+			return errors.New("authorizer ID is empty in a signature")
 		}
 
 		node, err := GetAuthorizerNode(authorizerID, state)
 		if err != nil {
-			continue
+			return errors.Wrapf(err, "failed to find authorizer by ID: %s", authorizerID)
 		}
+
 		if node.PublicKey == "" {
-			continue
+			return errors.New("authorizer public key is empty")
 		}
 
 		signatureScheme := state.GetSignatureScheme()
 		err = signatureScheme.SetPublicKey(node.PublicKey)
 		if err != nil {
-			continue
+			return errors.New("authorizer public key is empty")
 		}
 
 		ok, err := signatureScheme.Verify(v.Signature, toSign)
 		if !ok || err != nil {
-			continue
+			return errors.New("authorizer public key is empty")
 		}
-		count++
 	}
 
-	return count
+	return nil
 }
 
 // ---- BurnPayloadResponse ----------

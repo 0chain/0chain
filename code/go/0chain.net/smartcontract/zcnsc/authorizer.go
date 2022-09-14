@@ -124,19 +124,19 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 }
 
 func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
-	var numAuth item
-	numAuth.Field, err = getAuthorizerCount(ctx)
+	var numAuth int
+	numAuth, err = getAuthorizerCount(ctx)
 	if err != nil {
 		return
 	}
-	numAuth.Field++
+	numAuth++
 
 	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 	return
 }
 
 func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
-	var numAuth item
+	var numAuth int
 	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 	if err == util.ErrValueNotPresent {
 		return 0, nil
