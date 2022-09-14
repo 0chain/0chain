@@ -1,7 +1,6 @@
 package zcnsc
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 
@@ -9,29 +8,10 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/storagesc"
 	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
-
-type item struct {
-	Field int `json:"field"`
-}
-
-// MarshalMsg implements util.MPTSerializable
-func (i *item) MarshalMsg([]byte) ([]byte, error) {
-	var b, err = json.Marshal(i)
-	if err != nil {
-		panic(err)
-	}
-	return b, err
-}
-
-// UnmarshalMsg implements util.MPTSerializable
-func (i *item) UnmarshalMsg(p []byte) ([]byte, error) {
-	return p, json.Unmarshal(p, i)
-}
 
 // Mint inputData - is a MintPayload
 func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (resp string, err error) {
@@ -107,16 +87,11 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	var numAuth item
-	err = ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
-	if err != nil {
-		err = common.NewError(code, fmt.Sprintf("failed to get number of authorizers: %s; %s", err.Error(), info))
-		return
-	}
+	numAuth, err := getAuthorizerCount(ctx)
 
 	// verify signatures of authorizers
 	count := payload.countValidSignatures(ctx)
-	if count < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth.Field))) {
+	if count < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
 		err = common.NewError(
 			code,
 			"not enough valid signatures for minting",
