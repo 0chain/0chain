@@ -18,7 +18,7 @@ import (
 
 type authCount struct {
 	datastore.NOIDField
-	count int `json:"auth_count"`
+	Count int `json:"auth_count"`
 }
 
 // AddAuthorizer sc API function
@@ -131,11 +131,11 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
 	var numAuth authCount
-	numAuth.count, err = getAuthorizerCount(ctx)
+	numAuth.Count, err = getAuthorizerCount(ctx)
 	if err != nil {
 		return
 	}
-	numAuth.count++
+	numAuth.Count++
 
 	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 	return
@@ -151,7 +151,7 @@ func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
 		return 0, err
 	}
 
-	return numAuth.count, nil
+	return numAuth.Count, nil
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
