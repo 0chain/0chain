@@ -173,12 +173,12 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
 		signatureScheme := state.GetSignatureScheme()
 		err = signatureScheme.SetPublicKey(node.PublicKey)
 		if err != nil {
-			return errors.New("authorizer public key is empty")
+			return errors.Wrap(err, "failed to set public key")
 		}
 
 		ok, err := signatureScheme.Verify(v.Signature, toSign)
 		if !ok || err != nil {
-			return errors.New("authorizer public key is empty")
+			return errors.Wrap(err, "failed to verify signature")
 		}
 	}
 
