@@ -624,6 +624,7 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	for idx, txn := range b.Txns {
 		modifiedTxns[idx] = txn
 	}
+	b.SetBlockFinalised()
 	return mc.deleteTxns(modifiedTxns)
 }
 
