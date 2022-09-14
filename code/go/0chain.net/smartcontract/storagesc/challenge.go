@@ -1026,6 +1026,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			"error storing challenge: %v", err)
 	}
 
+	alloc.Stats.OpenChallenges -= int64(len(expiredIDs))
 	alloc.Stats.OpenChallenges++
 	alloc.Stats.TotalChallenges++
 	blobAlloc.Stats.OpenChallenges++
