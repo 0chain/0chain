@@ -185,6 +185,14 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
 	return nil
 }
 
+func (mp *MintPayload) countUniqueSignatures() int {
+	uniqueSignatures := make(map[string]bool)
+	for _, v := range mp.Signatures {
+		uniqueSignatures[v.ID] = true
+	}
+	return len(uniqueSignatures)
+}
+
 // ---- BurnPayloadResponse ----------
 
 type BurnPayloadResponse struct {

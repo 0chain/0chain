@@ -96,7 +96,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = common.NewError(code, msg)
 	}
 
-	if len(payload.Signatures) < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
+	if payload.countUniqueSignatures() < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
 		err = common.NewError(
 			code,
 			"not enough valid signatures for minting",
