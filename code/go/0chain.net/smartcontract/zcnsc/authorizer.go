@@ -6,6 +6,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -14,6 +15,11 @@ import (
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
+
+type authCount struct {
+	datastore.NOIDField
+	count int `json:"auth_count"`
+}
 
 // AddAuthorizer sc API function
 // Transaction must include ClientID, ToClientID, PublicKey, Hash, Value
@@ -124,19 +130,19 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 }
 
 func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
-	var numAuth int
-	numAuth, err = getAuthorizerCount(ctx)
+	var numAuth authCount
+	numAuth.count, err = getAuthorizerCount(ctx)
 	if err != nil {
 		return
 	}
-	numAuth++
+	numAuth.count++
 
 	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 	return
 }
 
 func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
-	var numAuth int
+	var numAuth authCount
 	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 	if err == util.ErrValueNotPresent {
 		return 0, nil
@@ -145,7 +151,7 @@ func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
 		return 0, err
 	}
 
-	return numAuth.Field, nil
+	return numAuth.count, nil
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
