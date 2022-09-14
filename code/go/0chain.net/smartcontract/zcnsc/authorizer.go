@@ -118,24 +118,34 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Events emission
 	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent())
 
-	err = updateAuthorizerCount(ctx)
+	err = increaseAuthorizerCount(ctx)
 
 	return string(authorizer.Encode()), err
 }
 
-func updateAuthorizerCount(ctx cstate.StateContextI) (err error) {
+func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
 	var numAuth item
-	err = ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
-	if err == util.ErrValueNotPresent {
-		numAuth.Field = 0
-	} else if err != nil {
+	numAuth.Field, err = getAuthorizerCount(ctx)
+	if err != nil {
 		return
 	}
-
 	numAuth.Field++
 
 	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
 	return
+}
+
+func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
+	var numAuth item
+	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
+	if err == util.ErrValueNotPresent {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	return numAuth.Field, nil
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
