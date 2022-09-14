@@ -991,7 +991,6 @@ func (sa *StorageAllocation) removeBlobber(
 }
 
 func (sa *StorageAllocation) changeBlobbers(
-	conf *Config,
 	blobbers []*StorageNode,
 	addId, removeId string,
 	ssc *StorageSmartContract,

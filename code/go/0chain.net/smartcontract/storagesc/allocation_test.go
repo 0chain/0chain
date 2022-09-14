@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/provider"
 
@@ -73,10 +74,10 @@ func TestSelectBlobbers(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			ID:       mockBlobberId + strconv.Itoa(index),
 			BaseURL:  mockURL + strconv.Itoa(index),
 			Capacity: mockBlobberCapacity,
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
+				ID:              mockBlobberId + strconv.Itoa(index),
 				LastHealthCheck: common.Timestamp(now.Unix()),
 			},
 			Terms: Terms{
@@ -206,7 +207,7 @@ func TestSelectBlobbers(t *testing.T) {
 			}
 
 			size := int64(sa.DataShards + sa.ParityShards)
-			require.EqualValues(t, int64(sa.Size+size-1)/size, outSize)
+			require.EqualValues(t, (sa.Size+size-1)/size, outSize)
 
 			for _, blobber := range outBlobbers {
 				t.Log(blobber)
@@ -232,7 +233,6 @@ func TestChangeBlobbers(t *testing.T) {
 		mockAllocationID    = "mock_allocation_id"
 		mockAllocationName  = "mock_allocation"
 		mockPoolId          = "mock pool id"
-		confTimeUnit        = 720 * time.Hour
 		mockMaxOffDuration  = 744 * time.Hour
 		mockBlobberCapacity = 20 * confMinAllocSize
 		mockMinPrice        = 0
@@ -343,14 +343,14 @@ func TestChangeBlobbers(t *testing.T) {
 			}
 
 			blobber := &StorageNode{
-				ID:       ba.BlobberID,
 				Capacity: mockBlobberCapacity,
 				Terms: Terms{
 					MaxOfferDuration: mockMaxOffDuration,
 					ReadPrice:        mockReadPrice,
 					WritePrice:       mockWritePrice,
 				},
-				Provider: provider.Provider{
+				Provider: &provider.Provider{
+					ID:              ba.BlobberID,
 					LastHealthCheck: now,
 				},
 			}
@@ -547,26 +547,25 @@ func TestChangeBlobbers(t *testing.T) {
 
 func TestExtendAllocation(t *testing.T) {
 	const (
-		mockURL              = "mock_url"
-		mockOwner            = "mock owner"
-		mockPublicKey        = "mock public key"
-		mockBlobberId        = "mock_blobber_id"
-		mockPoolId           = "mock pool id"
-		mockAllocationId     = "mock allocation id"
-		mockMinPrice         = 0
-		confTimeUnit         = 720 * time.Hour
-		confMinAllocSize     = 1024
-		confMinAllocDuration = 5 * time.Minute
-		mockMaxOffDuration   = 744 * time.Hour
-		mocksSize            = 10000000000
-		mockDataShards       = 2
-		mockParityShards     = 2
-		mockNumAllBlobbers   = 2 + mockDataShards + mockParityShards
-		mockExpiration       = common.Timestamp(17000)
-		mockStake            = 3
-		mockMinLockDemand    = 0.1
-		mockTimeUnit         = 1 * time.Hour
-		mockHash             = "mock hash"
+		mockURL            = "mock_url"
+		mockOwner          = "mock owner"
+		mockPublicKey      = "mock public key"
+		mockBlobberId      = "mock_blobber_id"
+		mockPoolId         = "mock pool id"
+		mockAllocationId   = "mock allocation id"
+		mockMinPrice       = 0
+		confTimeUnit       = 720 * time.Hour
+		confMinAllocSize   = 1024
+		mockMaxOffDuration = 744 * time.Hour
+		mocksSize          = 10000000000
+		mockDataShards     = 2
+		mockParityShards   = 2
+		mockNumAllBlobbers = 2 + mockDataShards + mockParityShards
+		mockExpiration     = common.Timestamp(17000)
+		mockStake          = 3
+		mockMinLockDemand  = 0.1
+		mockTimeUnit       = 1 * time.Hour
+		mockHash           = "mock hash"
 	)
 	var mockBlobberCapacity int64 = 3700000000 * confMinAllocSize
 	var mockMaxPrice = zcnToBalance(100.0)
@@ -587,10 +586,10 @@ func TestExtendAllocation(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			ID:       mockBlobberId + strconv.Itoa(index),
 			BaseURL:  mockURL + strconv.Itoa(index),
 			Capacity: mockBlobberCapacity,
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
+				ID:              mockBlobberId + strconv.Itoa(index),
 				LastHealthCheck: now - blobberHealthTime + 1,
 			},
 			Terms: Terms{
@@ -842,7 +841,6 @@ func TestTransferAllocation(t *testing.T) {
 		mockOldOwner          = "mock old owner"
 		mockCuratorId         = "mock curator id"
 		mockAllocationId      = "mock allocation id"
-		mockNotOwner          = "mock not owner id"
 	)
 	type args struct {
 		ssc      *StorageSmartContract
@@ -1059,7 +1057,6 @@ func newTestAllBlobbers() (all *StorageNodes) {
 	all = new(StorageNodes)
 	all.Nodes = []*StorageNode{
 		{
-			ID:      "b1",
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
 				ReadPrice:        20,
@@ -1069,12 +1066,12 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			Capacity:  25 * GB, // 20 GB
 			Allocated: 5 * GB,  //  5 GB
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
+				ID:              "b1",
 				LastHealthCheck: 0,
 			},
 		},
 		{
-			ID:      "b2",
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
 				ReadPrice:        25,
@@ -1084,7 +1081,8 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			Capacity:  20 * GB, // 20 GB
 			Allocated: 10 * GB, // 10 GB
-			Provider: provider.Provider{
+			Provider: &provider.Provider{
+				ID:              "b2",
 				LastHealthCheck: 0,
 			},
 		},
@@ -1661,8 +1659,6 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 
 		errMsg1 = "allocation_closing_failed: " +
 			"doesn't need to close allocation is about to expire"
-		errMsg2 = "allocation_closing_failed: " +
-			"doesn't need to close allocation is about to expire"
 	)
 
 	var (
@@ -1917,7 +1913,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	uar.ID = alloc.ID
-	uar.Expiration = (alloc.Expiration)
+	uar.Expiration = alloc.Expiration
 	uar.Size = -(alloc.Size / 2)
 
 	tp += 100

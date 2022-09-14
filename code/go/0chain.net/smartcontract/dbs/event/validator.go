@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 
 	"0chain.net/chaincore/currency"
