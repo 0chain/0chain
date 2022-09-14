@@ -101,7 +101,7 @@ func (sp *stakePool) save(providerType spenum.Provider, providerID string,
 
 func (sp *stakePool) emitSaveEvent(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) {
 	data := dbs.DbUpdates{
-		Id: providerID,
+		Id:      providerID,
 		Updates: map[string]interface{}{},
 	}
 	switch providerType {
@@ -125,7 +125,7 @@ func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
 	return staked - sp.TotalUnStake, nil
 }
 
-func (sp *stakePool) stakeByProvider(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) error{
+func (sp *stakePool) stakeByProvider(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
@@ -148,10 +148,10 @@ func (sp *stakePool) stake() (stake currency.Coin, err error) {
 	return
 }
 
-func (sp *stakePool) emitStakeEvent(providerType spenum.Provider, providerID string,staked currency.Coin, balances chainstate.StateContextI)  {
+func (sp *stakePool) emitStakeEvent(providerType spenum.Provider, providerID string, staked currency.Coin, balances chainstate.StateContextI) {
 	logging.Logger.Info("emitting stake event")
 	data := dbs.DbUpdates{
-		Id: providerID,
+		Id:      providerID,
 		Updates: map[string]interface{}{},
 	}
 	switch providerType {
@@ -310,17 +310,7 @@ func (sp *stakePool) slash(
 	return
 }
 
-// unallocated capacity of related blobber, excluding delegate pools want to
-// unstake.
-func (sp *stakePool) unallocatedCapacity(writePrice currency.Coin) (free int64, err error) {
-
-	staked, err := sp.stake()
-	if err != nil {
-		return
-	}
-	var total, offers = staked, sp.TotalOffers
-	logging.Logger.Debug("clean_capacity", zap.Int64("total", int64(total)), zap.Int64("offers",
-		int64(offers)), zap.Int64("writePrice", int64(writePrice)))
+func unallocatedCapacity(writePrice, total, offers currency.Coin) (free int64, err error) {
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater than the clean stake
 		return
@@ -447,8 +437,8 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 
 type stakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
-	ProviderID   string       `json:"provider_id,omitempty"`
-	PoolID       string       `json:"pool_id,omitempty"`
+	ProviderID   string          `json:"provider_id,omitempty"`
+	PoolID       string          `json:"pool_id,omitempty"`
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {

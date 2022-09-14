@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -61,7 +62,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
 		rest.MakeEndpoint(storage+"/errors", srh.getErrors),
 		rest.MakeEndpoint(storage+"/allocations", srh.getAllocations),
-		rest.MakeEndpoint(storage+"/allocation_min_lock", srh.getAllocationMinLock),
+		rest.MakeEndpoint(storage+"/allocation-min-lock", srh.getAllocationMinLock),
 		rest.MakeEndpoint(storage+"/allocation", srh.getAllocation),
 		rest.MakeEndpoint(storage+"/latestreadmarker", srh.getLatestReadMarker),
 		rest.MakeEndpoint(storage+"/readmarkers", srh.getReadMarkers),
@@ -295,16 +296,13 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 	}
 	var creationDate = balances.Now()
 	dur := common.ToTime(creationDate).Add(conf.FreeAllocationSettings.Duration)
-	request := newAllocationRequest{
+	request := allocationBlobbersRequest{
 		DataShards:      conf.FreeAllocationSettings.DataShards,
 		ParityShards:    conf.FreeAllocationSettings.ParityShards,
 		Size:            conf.FreeAllocationSettings.Size,
 		Expiration:      common.Timestamp(dur.Unix()),
-		Owner:           marker.Recipient,
-		OwnerPublicKey:  inputObj.RecipientPublicKey,
 		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
-		Blobbers:        inputObj.Blobbers,
 	}
 
 	edb := balances.GetEventDB()
@@ -320,6 +318,19 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 
 	common.Respond(w, r, blobberIDs, nil)
 
+}
+
+type allocationBlobbersRequest struct {
+	ParityShards    int              `json:"parity_shards"`
+	DataShards      int              `json:"data_shards"`
+	Expiration      common.Timestamp `json:"expiration_date"`
+	ReadPriceRange  PriceRange       `json:"read_price_range"`
+	WritePriceRange PriceRange       `json:"write_price_range"`
+	Size            int64            `json:"size"`
+}
+
+func (nar *allocationBlobbersRequest) decode(b []byte) error {
+	return json.Unmarshal(b, nar)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers alloc_blobbers
@@ -364,7 +375,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	}
 
 	allocData := q.Get("allocation_data")
-	var request newAllocationRequest
+	var request allocationBlobbersRequest
 	if err := request.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
 		return
@@ -379,8 +390,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination) ([]string, error) {
-	var sa = request.storageAllocation()
+func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination) ([]string, error) {
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -388,23 +398,20 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 	}
 
 	var creationDate = balances.Now()
-	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
-
-	// number of blobbers required
-	var numberOfBlobbers = sa.DataShards + sa.ParityShards
+	var numberOfBlobbers = request.DataShards + request.ParityShards
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
 
-	if sa.DataShards <= 0 || sa.ParityShards < 0 {
+	if request.DataShards <= 0 || request.ParityShards < 0 {
 		return nil, common.NewErrorf("allocation_creation_failed",
-			"invalid data shards:%v or parity shards:%v", sa.DataShards, sa.ParityShards)
+			"invalid data shards:%v or parity shards:%v", request.DataShards, request.ParityShards)
 	}
-	// size of allocation for a blobber
-	var allocationSize = sa.bSize()
 
-	dur := common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
+	var allocationSize = bSize(request.Size, request.DataShards)
+
+	dur := common.ToTime(request.Expiration).Sub(common.ToTime(creationDate))
 	allocation := event.AllocationQuery{
 		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
@@ -422,9 +429,8 @@ func getBlobbersForRequest(request newAllocationRequest, edb *event.EventDb, bal
 			Max: int64(request.WritePriceRange.Max),
 		},
 		AllocationSize:     allocationSize,
-		AllocationSizeInGB: sizeInGB(sa.bSize()),
-		PreferredBlobbers:  request.Blobbers,
-		NumberOfDataShards: sa.DataShards,
+		AllocationSizeInGB: sizeInGB(allocationSize),
+		NumberOfDataShards: request.DataShards,
 	}
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
@@ -1542,10 +1548,15 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock allocation_min_lock
-// Calculates the cost of a new allocation request. Todo redo with changes to new allocation request smart contract
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-min-lock allocation-min-lock
+// Calculates the cost of a new allocation request.
 //
 // parameters:
+//    + name: allocation_data
+//      description: json marshall of new allocation request input data
+//      in: query
+//      type: string
+//      required: true
 //
 // responses:
 //  200: Int64Map
@@ -1553,8 +1564,6 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 //  500:
 func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *http.Request) {
 	var err error
-	creationDate := time.Now()
-
 	allocData := r.URL.Query().Get("allocation_data")
 	var req newAllocationRequest
 	if err = req.decode([]byte(allocData)); err != nil {
@@ -1568,56 +1577,71 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := getBlobbersForRequest(req, edb, balances, common2.Pagination{})
-	if err != nil {
-		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
-		return
-	}
 
 	conf, err := getConfig(balances)
 	if err != nil {
-		common.Respond(w, r, "", common.NewErrInternal("error fetching config"))
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	// pr review note: since sa does not contain timeunit,
-	// hence minlock demand was broken, using timeunit from config should fix that
-	sa := req.storageAllocation()
-	var gbSize = sizeInGB(sa.bSize())
-	var minLockDemand currency.Coin
 
-	ids := append(req.Blobbers, blobbers...)
-	uniqueMap := make(map[string]struct{})
-	for _, id := range ids {
-		uniqueMap[id] = struct{}{}
+	var request newAllocationRequest
+	if err = request.decode([]byte(allocData)); err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
+		return
 	}
-	unique := make([]string, 0, len(ids))
-	for id := range uniqueMap {
-		unique = append(unique, id)
-	}
-	if len(unique) > req.ParityShards+req.DataShards {
-		unique = unique[:req.ParityShards+req.DataShards]
+	if err := request.validate(common.ToTime(balances.Now()), conf); err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
 	}
 
-	nodes := getBlobbers(unique, balances)
-	for _, b := range nodes.Nodes {
-		bMinLockDemand, err := b.Terms.minLockDemand(gbSize,
-			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix()), conf.TimeUnit))
-		if err != nil {
-			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
-			return
-		}
-		minLockDemand, err = currency.AddCoin(minLockDemand, bMinLockDemand)
-		if err != nil {
-			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
-			return
-		}
+	blobbers, err := edb.GetBlobbersFromIDs(request.Blobbers)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	var sns []*storageNodeResponse
+	for _, b := range blobbers {
+		sn := blobberTableToStorageNode(b)
+		sns = append(sns, &sn)
 	}
 
-	var response = map[string]interface{}{
-		"min_lock_demand": minLockDemand,
+	sa, _, err := setupNewAllocation(
+		request,
+		sns,
+		Timings{timings: nil, start: common.ToTime(balances.Now())},
+		balances.Now(),
+		conf,
+		"",
+	)
+
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	cost, err := sa.cost()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	cost64, err := cost.Float64()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	mld, err := sa.restMinLockDemand()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	mld64, err := mld.Float64()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
 	}
 
-	common.Respond(w, r, response, nil)
+	common.Respond(w, r, map[string]interface{}{
+		"min_lock_demand": math.Max(cost64, mld64+cost64*conf.CancellationCharge),
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations allocations
@@ -2045,16 +2069,18 @@ type storageNodesResponse struct {
 }
 
 // StorageNode represents Blobber configurations.
+// swagger:model storageNodeResponse
 type storageNodeResponse struct {
-	StorageNode
+	*StorageNode
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 	TotalStake         currency.Coin `json:"total_stake"`
 	UsedAllocation     int64         `json:"used_allocation"`
+	TotalOffers        currency.Coin `json:"total_offers"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
-		StorageNode: StorageNode{
+		StorageNode: &StorageNode{
 			ID:      blobber.BlobberID,
 			BaseURL: blobber.BaseURL,
 			Geolocation: StorageNodeGeolocation{
@@ -2087,6 +2113,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		TotalServiceCharge: blobber.TotalServiceCharge,
 		TotalStake:         blobber.TotalStake,
 		UsedAllocation:     blobber.Used,
+		TotalOffers:        blobber.OffersTotal,
 	}
 }
 
@@ -2107,7 +2134,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 //      in: query
 //      type: string
 // responses:
-//  200: storageNodeResponse
+//  200: storageNodesResponse
 //  500:
 func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Request) {
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2380,7 +2407,7 @@ func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Req
 //      type: string
 //
 // responses:
-//  200: storageNodesResponse
+//  200: storageNodeResponse
 //  400:
 //  500:
 func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request) {
