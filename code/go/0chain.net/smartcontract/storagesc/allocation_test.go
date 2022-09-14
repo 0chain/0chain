@@ -232,6 +232,7 @@ func TestChangeBlobbers(t *testing.T) {
 		mockAllocationID    = "mock_allocation_id"
 		mockAllocationName  = "mock_allocation"
 		mockPoolId          = "mock pool id"
+		confTimeUnit        = 720 * time.Hour
 		mockMaxOffDuration  = 744 * time.Hour
 		mockBlobberCapacity = 20 * confMinAllocSize
 		mockMinPrice        = 0
@@ -710,7 +711,7 @@ func TestExtendAllocation(t *testing.T) {
 				}
 				newFunds := sizeInGB(size) *
 					float64(mockWritePrice) *
-					float64(sa.durationInTimeUnits(args.request.Expiration))
+					float64(sa.durationInTimeUnits(args.request.Expiration, confTimeUnit))
 				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
@@ -778,9 +779,12 @@ func TestExtendAllocation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ssc, txn, sa, aBlobbers, balances := setup(t, tt.args)
-
+			conf := &Config{
+				TimeUnit: confTimeUnit,
+			}
 			err := ssc.extendAllocation(
 				txn,
+				conf,
 				&sa,
 				aBlobbers,
 				&tt.args.request,

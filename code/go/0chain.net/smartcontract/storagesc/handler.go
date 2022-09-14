@@ -1680,6 +1680,14 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
 		return
 	}
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("error fetching config"))
+		return
+	}
+	// pr review note: since sa does not contain timeunit,
+	// hence minlock demand was broken, using timeunit from config should fix that
 	sa := req.storageAllocation()
 	var gbSize = sizeInGB(sa.bSize())
 	var minLockDemand currency.Coin
@@ -1700,7 +1708,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 	nodes := getBlobbers(unique, balances)
 	for _, b := range nodes.Nodes {
 		bMinLockDemand, err := b.Terms.minLockDemand(gbSize,
-			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
+			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix()), conf.TimeUnit))
 		if err != nil {
 			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
 			return
