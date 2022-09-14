@@ -473,6 +473,12 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"invalid request: %v", err)
 	}
 
+	if spr.ProviderType != spenum.Blobber && spr.ProviderType != spenum.Validator {
+		return "", common.NewErrorf("collect_reward_failed",
+			"invalid provider type: %d, allowed providers: %d and %d",
+			spr.ProviderType, spenum.Blobber, spenum.Validator)
+	}
+
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
@@ -510,6 +516,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)
 	}
+
+	if spr.ProviderType != spenum.Blobber && spr.ProviderType != spenum.Validator {
+		return "", common.NewErrorf("collect_reward_failed",
+			"invalid provider type: %d, allowed providers: %d and %d",
+			spr.ProviderType, spenum.Blobber, spenum.Validator)
+	}
+
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
