@@ -90,29 +90,43 @@ func (sp *stakePool) Decode(input []byte) error {
 
 // save the stake pool
 func (sp *stakePool) save(providerType spenum.Provider, providerID string,
-	balances chainstate.StateContextI) (err error) {
+	balances chainstate.StateContextI) error {
 	r, err := balances.InsertTrieNode(stakePoolKey(providerType, providerID), sp)
+	if err != nil {
+		return err
+	}
 	logging.Logger.Debug("after stake pool save", zap.String("root", r))
 
-	sp.emitSaveEvent(providerType, providerID, balances)
+	if err = sp.emitSaveEvent(providerType, providerID, balances); err != nil{
+		return err
+	}
 
-	return
+	return nil
 }
 
-func (sp *stakePool) emitSaveEvent(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) {
+func (sp *stakePool) emitSaveEvent(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) error {
 	data := dbs.DbUpdates{
 		Id: providerID,
 		Updates: map[string]interface{}{},
 	}
+
+	staked, err := sp.stake()
+	if err != nil {
+		return err
+	}
+
 	switch providerType {
 	case spenum.Blobber:
 		data.Updates["offers_total"] = int64(sp.TotalOffers)
+		data.Updates["total_stake"] = int64(staked)
 		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
 	case spenum.Validator:
-		//todo: emit validator event
+		data.Updates["stake"] = int64(staked)
 	default:
 		logging.Logger.Error("invalid providerType in stakepool SaveEvent")
 	}
+
+	return err
 }
 
 // The cleanStake() is stake amount without delegate pools want to unstake.
@@ -123,16 +137,6 @@ func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
 	}
 
 	return staked - sp.TotalUnStake, nil
-}
-
-func (sp *stakePool) stakeByProvider(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) error{
-	staked, err := sp.stake()
-	if err != nil {
-		return err
-	}
-	sp.emitStakeEvent(providerType, providerID, staked, balances)
-
-	return nil
 }
 
 // The stake() returns total stake size including delegate pools want to unstake.
@@ -146,24 +150,6 @@ func (sp *stakePool) stake() (stake currency.Coin, err error) {
 		stake = newStake
 	}
 	return
-}
-
-func (sp *stakePool) emitStakeEvent(providerType spenum.Provider, providerID string,staked currency.Coin, balances chainstate.StateContextI)  {
-	logging.Logger.Info("emitting stake event")
-	data := dbs.DbUpdates{
-		Id: providerID,
-		Updates: map[string]interface{}{},
-	}
-	switch providerType {
-	case spenum.Blobber:
-		data.Updates["total_stake"] = int64(staked)
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
-	case spenum.Validator:
-		data.Updates["stake"] = int64(staked)
-		balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, providerID, data)
-	default:
-		logging.Logger.Error("invalid providerType in stakepool StakeEvent")
-	}
 }
 
 // empty a delegate pool if possible, call update before the empty
@@ -510,12 +496,6 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
-	err = sp.stakeByProvider(spr.ProviderType, spr.ProviderID, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"stake pool staking error: %v", err)
-	}
-
 	return
 }
 
@@ -564,11 +544,6 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
-		err = sp.stakeByProvider(spr.ProviderType, spr.ProviderID, balances)
-		if err != nil {
-			return "", common.NewErrorf("stake_pool_unlock_failed",
-				"stake pool staking error: %v", err)
-		}
 
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
@@ -582,12 +557,6 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
-	}
-
-	err = sp.stakeByProvider(spr.ProviderType, spr.ProviderID, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"stake pool staking error: %v", err)
 	}
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
