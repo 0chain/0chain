@@ -11,6 +11,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/storagesc"
 	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -125,8 +126,10 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 func updateAuthorizerCount(ctx cstate.StateContextI) (err error) {
 	var numAuth item
 	err = ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
-	if err != nil {
+	if err == util.ErrValueNotPresent {
 		numAuth.Field = 0
+	} else if err != nil {
+		return
 	}
 
 	numAuth.Field++
