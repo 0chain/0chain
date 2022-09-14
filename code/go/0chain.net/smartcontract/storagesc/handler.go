@@ -62,7 +62,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
 		rest.MakeEndpoint(storage+"/errors", srh.getErrors),
 		rest.MakeEndpoint(storage+"/allocations", srh.getAllocations),
-		rest.MakeEndpoint(storage+"/allocation-min-lock", srh.getAllocationMinLock),
+		rest.MakeEndpoint(storage+"/allocation_min_lock", srh.getAllocationMinLock),
 		rest.MakeEndpoint(storage+"/allocation", srh.getAllocation),
 		rest.MakeEndpoint(storage+"/latestreadmarker", srh.getLatestReadMarker),
 		rest.MakeEndpoint(storage+"/readmarkers", srh.getReadMarkers),
@@ -1548,7 +1548,7 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-min-lock allocation-min-lock
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock allocation_min_lock
 // Calculates the cost of a new allocation request.
 //
 // parameters:
