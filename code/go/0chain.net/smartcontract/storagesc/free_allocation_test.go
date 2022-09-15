@@ -249,7 +249,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
-			ID:        blob[i],
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
@@ -258,6 +257,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				MinLockDemand:    mockMinLock,
 			},
 			Provider: &provider.Provider{
+				ID:              blob[i],
 				LastHealthCheck: now - blobberHealthTime + 1,
 			},
 		}
@@ -603,7 +603,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
-			ID:        strconv.Itoa(i),
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
@@ -611,6 +610,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
 			Provider: &provider.Provider{
+				ID:              strconv.Itoa(i),
 				LastHealthCheck: now - blobberHealthTime + 1,
 			},
 		}
