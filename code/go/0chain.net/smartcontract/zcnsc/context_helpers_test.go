@@ -259,10 +259,10 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 		Node:   node,
 	}
 
-	var numAuth *AuthCount
+	numAuth := &AuthCount{}
 	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
 	if err == util.ErrValueNotPresent {
-		numAuth = &AuthCount{Count: 0}
+		numAuth.Count = 0
 	} else if err != nil {
 		panic(err)
 	}
