@@ -223,7 +223,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"malformed request: %v", err)
 	}
 	if err := request.validate(common.ToTime(txn.CreationDate), conf); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", err.Error())
+		return "", common.NewErrorf("allocation_creation_failed", "invalid request: "+err.Error())
 	}
 
 	if request.Owner == "" {
