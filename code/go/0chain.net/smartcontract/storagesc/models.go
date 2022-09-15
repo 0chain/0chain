@@ -1403,6 +1403,7 @@ type WriteMarker struct {
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
+	Operation              string           `json:"operation"`
 
 	// file info
 	LookupHash  string `json:"lookup_hash"`
