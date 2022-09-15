@@ -41,6 +41,7 @@ type mockStateContext struct {
 	authorizers  map[string]*Authorizer
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
+	authCount    *authCount
 }
 
 func (ctx *mockStateContext) GetLatestFinalizedBlock() *block.Block {
@@ -360,6 +361,18 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 		return nil
 	}
 
+	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
+		b, err := ctx.authCount.MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+		_, err = node.UnmarshalMsg(b)
+		if err != nil {
+			panic(err)
+		}
+		return nil
+	}
+
 	return util.ErrValueNotPresent
 }
 
@@ -397,6 +410,15 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 		}
 
 		return key, fmt.Errorf("failed to convert key: %s to StakePool: %v", key, node)
+	}
+
+	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
+		if authCount, ok := node.(*authCount); ok {
+			ctx.authCount = authCount
+			return key, nil
+		}
+
+		return key, fmt.Errorf("failed to convert key: %s to authCount: %v", key, node)
 	}
 
 	return "", fmt.Errorf("node with key: %s is not supported", key)
