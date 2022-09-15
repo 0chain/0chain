@@ -21,11 +21,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type authCount struct {
-	datastore.NOIDField
-	Count int `json:"auth_count"`
-}
-
 const (
 	txHash    = "tx hash"
 	startTime = common.Timestamp(100)
@@ -41,7 +36,7 @@ type mockStateContext struct {
 	authorizers  map[string]*Authorizer
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
-	authCount    *authCount
+	authCount    *AuthCount
 }
 
 func (ctx *mockStateContext) GetLatestFinalizedBlock() *block.Block {
@@ -264,8 +259,8 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 		Node:   node,
 	}
 
-	var numAuth authCount
-	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
+	var numAuth *AuthCount
+	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
 	if err == util.ErrValueNotPresent {
 		numAuth.Count = 0
 	} else if err != nil {
@@ -274,7 +269,7 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 
 	numAuth.Count++
 
-	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
+	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
 
 	return ctx.authorizers[node.GetKey()]
 }
@@ -418,7 +413,7 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 	}
 
 	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
-		if authCount, ok := node.(*authCount); ok {
+		if authCount, ok := node.(*AuthCount); ok {
 			ctx.authCount = authCount
 			return key, nil
 		}

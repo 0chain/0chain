@@ -307,3 +307,18 @@ func (ps *poolStat) encode() []byte {
 	buff, _ := json.Marshal(ps)
 	return buff
 }
+
+type AuthCount struct {
+	datastore.NOIDField
+	Count int `json:"auth_count"`
+}
+
+func (ac *AuthCount) Encode() (data []byte, err error) {
+	data, err = json.Marshal(ac)
+	return
+}
+
+func (ac *AuthCount) Decode(input []byte) error {
+	err := json.Unmarshal(input, ac)
+	return err
+}
