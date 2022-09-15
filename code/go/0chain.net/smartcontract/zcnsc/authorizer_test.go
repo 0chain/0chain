@@ -8,6 +8,8 @@ import (
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/partitions"
+	"0chain.net/smartcontract/storagesc"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
@@ -21,6 +23,14 @@ var (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	logging.Logger = zap.NewNop()
+}
+
+func createAuthorizerPartition(ctx cstate.StateContextI) error {
+	_, err := partitions.CreateIfNotExists(
+		ctx,
+		storagesc.AUTHORIZERS_COUNT_KEY,
+		50)
+	return err
 }
 
 func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
@@ -58,6 +68,7 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 	const authorizerID = "auth0"
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
+	require.NoError(t, createAuthorizerPartition(ctx))
 	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
 	input := CreateAuthorizerParamPayload(authorizerID)
 
@@ -71,6 +82,7 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 
 func Test_BasicShouldAddAuthorizer(t *testing.T) {
 	ctx := MakeMockStateContext()
+	require.NoError(t, createAuthorizerPartition(ctx))
 
 	authorizerID := authorizersID[0] + ":10"
 
@@ -94,6 +106,7 @@ func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 	input := CreateAuthorizerParamPayload(authorizerID)
 	sc := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
+	require.NoError(t, createAuthorizerPartition(ctx))
 	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
 
 	address, err := sc.AddAuthorizer(tr, input, ctx)
@@ -151,6 +164,7 @@ func Test_Should_FailWithoutInputData(t *testing.T) {
 
 func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 	ctx := MakeMockStateContext()
+	require.NoError(t, createAuthorizerPartition(ctx))
 
 	data := CreateAuthorizerParamPayload("client0")
 	tr := CreateAddAuthorizerTransaction("client0", ctx)
