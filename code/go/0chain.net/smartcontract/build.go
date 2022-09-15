@@ -1,5 +1,4 @@
 package smartcontract
 
-
 func init() {
 }

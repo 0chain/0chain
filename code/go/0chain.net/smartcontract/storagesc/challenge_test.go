@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
 	"strconv"
@@ -450,7 +451,7 @@ func testBlobberPenalty(
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
 	require.NoError(t, err)
 
-	afterBlobber, err := ssc.getStakePool(blobberId, ctx)
+	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
 	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, ctx)
@@ -505,7 +506,7 @@ func testBlobberReward(
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
 	require.NoError(t, err)
 
-	afterBlobber, err := ssc.getStakePool(blobberId, ctx)
+	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
 	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber, ctx)
@@ -599,7 +600,7 @@ func setupChallengeMocks(
 		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
 	sp.Settings.DelegateWallet = blobberId + " wallet"
-	require.NoError(t, sp.save(ssc.ID, blobberId, ctx))
+	require.NoError(t, sp.save(spenum.Blobber, blobberId, ctx))
 
 	var validatorsSPs []*stakePool
 	for i, validator := range validators {

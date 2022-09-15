@@ -115,8 +115,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var (
-		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime)
-		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime)
+		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
@@ -161,7 +161,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
+	if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
@@ -199,7 +199,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	// save the pools
-	if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
+	if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't save sake pool: %v", err)
 	}
 
@@ -222,7 +222,7 @@ func (ssc *StorageSmartContract) validatorsStakePools(
 	sps = make([]*stakePool, 0, len(validators))
 	for _, id := range validators {
 		var sp *stakePool
-		if sp, err = ssc.getStakePool(id, balances); err != nil {
+		if sp, err = ssc.getStakePool(spenum.Validator, id, balances); err != nil {
 			return nil, fmt.Errorf("can't get validator %s stake pool: %v",
 				id, err)
 		}
@@ -236,7 +236,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 	sps []*stakePool, balances cstate.StateContextI) (err error) {
 
 	for i, sp := range sps {
-		if err = sp.save(ssc.ID, validators[i], balances); err != nil {
+		if err = sp.save(spenum.Validator, validators[i], balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 		staked, err := sp.stake()
@@ -246,10 +246,10 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 		data := dbs.DbUpdates{
 			Id: validators[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
+				"stake": int64(staked),
 			},
 		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, validators[i], data)
+		balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, validators[i], data)
 
 	}
 	return
@@ -284,8 +284,8 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	var (
-		rdtu = alloc.restDurationInTimeUnits(prev)
-		dtu  = alloc.durationInTimeUnits(tp - prev)
+		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp - prev, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
@@ -350,7 +350,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 		// load stake pool
 		var sp *stakePool
-		if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
+		if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
@@ -368,7 +368,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		blobAlloc.Penalty = penalty
 
 		// save stake pool
-		if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
+		if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}

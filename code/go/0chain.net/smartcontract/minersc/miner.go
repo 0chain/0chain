@@ -283,7 +283,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	}
 
 	if mn.Delete {
-		return "", common.NewError("update_settings", "can't update settings of miner being deleted")
+		return "", common.NewError("update_miner_settings", "can't update settings of miner being deleted")
 	}
 
 	if mn.Settings.DelegateWallet != t.ClientID {
