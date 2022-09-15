@@ -222,15 +222,15 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
 
-	key := pathParams[1]
-	names := GetFunctionNames(pathParams[1])
+	key := pathParams[1]                     // same as the smart contract adress
+	names := GetFunctionNames(pathParams[1]) // fill link of endpoint: /v1/screst/ADDRESS/getAuthorizer
 
 	sort.Strings(names)
 	for _, funcName := range names {
-		// friendlyName := strings.TrimLeft(funcName, "/")
+		friendlyName := strings.TrimLeft(funcName, "/")
 		paths := strings.Split(funcName, "/")
-		friendlyName := "/" + paths[len(paths)-1]
-		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+funcName, "/v1/screst/*"+funcName+"*")
+		route := "/" + paths[len(paths)-1]
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+route, "/v1/screst/*"+funcName+"*")
 	}
 	fmt.Fprintf(w, "</table>")
 }
