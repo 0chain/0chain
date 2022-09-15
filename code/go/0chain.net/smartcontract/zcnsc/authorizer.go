@@ -125,7 +125,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 }
 
 func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
-	var numAuth *AuthCount
+	numAuth := &AuthCount{}
 	numAuth.Count, err = getAuthorizerCount(ctx)
 	if err != nil {
 		return
