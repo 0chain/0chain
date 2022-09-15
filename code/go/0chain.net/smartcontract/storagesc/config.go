@@ -199,7 +199,7 @@ func (sc *Config) validate() (err error) {
 			sc.BlobberSlash)
 	}
 	if sc.CancellationCharge < 0.0 || 1.0 < sc.CancellationCharge {
-		return fmt.Errorf("cancellation_charge not in [0; 1] range: %v",
+		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
 			sc.CancellationCharge)
 	}
 	if sc.MaxBlobbersPerAllocation <= 0 {
