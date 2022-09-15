@@ -92,8 +92,7 @@ func getValidatorURL(id string) string {
 }
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
-	var sn StorageNode
-	sn.ID = c.id
+	var sn = newStorageNode(c.id)
 	sn.BaseURL = getBlobberURL(c.id)
 	sn.Terms = c.terms
 	sn.Capacity = c.cap
