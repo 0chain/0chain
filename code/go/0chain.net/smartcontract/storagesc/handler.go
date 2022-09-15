@@ -2537,8 +2537,13 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 	}
 
 	var resp interface{}
-	if allocationID == "" || blobberID == "" {
-		resp, err = edb.GetAllocationBlobberTerms(allocationID, blobberID, limit)
+	if allocationID == "" {
+		common.Respond(w, r, nil, common.NewErrBadRequest("missing allocation id"))
+		return
+	}
+
+	if blobberID == "" {
+		resp, err = edb.GetAllocationBlobberTerms(allocationID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("error finding terms: "+err.Error()))
 			return

@@ -351,9 +351,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	m.tick("add_allocation")
 
 	// emit event to eventDB
-	if err = emitAddOrOverwriteAllocationBlobberTerms(sa, balances, txn); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
-	}
+	emitAddOrOverwriteAllocationBlobberTerms(sa, balances, txn)
 
 	return resp, err
 }
@@ -1242,10 +1240,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	err = emitUpdateAllocationBlobberTerms(alloc, balances, t)
-	if err != nil {
-		return "", common.NewErrorf("allocation_updating_failed", "%V", err)
-	}
+	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 
 	return string(alloc.Encode()), nil
 }
@@ -1463,10 +1458,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	err = emitDeleteAllocationBlobberTerms(alloc, balances, t)
-	if err != nil {
-		return "", common.NewError("alloc_cancel_failed", err.Error())
-	}
+	emitDeleteAllocationBlobberTerms(alloc, balances, t)
 
 	return "canceled", nil
 }
@@ -1544,10 +1536,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	err = emitUpdateAllocationBlobberTerms(alloc, balances, t)
-	if err != nil {
-		return "", common.NewError("alloc_cancel_failed", err.Error())
-	}
+	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 
 	return "finalized", nil
 }
