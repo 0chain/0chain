@@ -364,7 +364,7 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
 		b, err := ctx.authCount.MarshalMsg(nil)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		_, err = node.UnmarshalMsg(b)
 		if err != nil {
