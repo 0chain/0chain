@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
+
 	"0chain.net/core/viper"
 	"github.com/stretchr/testify/require"
 )

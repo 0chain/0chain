@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
+
 	"0chain.net/core/viper"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func setupVolumeRevivingWorker(ctx context.Context) {
