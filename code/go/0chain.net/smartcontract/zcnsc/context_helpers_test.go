@@ -266,8 +266,10 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 
 	var numAuth authCount
 	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, &numAuth)
-	if err != nil {
+	if err == util.ErrValueNotPresent {
 		numAuth.Count = 0
+	} else if err != nil {
+		panic(err)
 	}
 
 	numAuth.Count++
@@ -362,6 +364,9 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 	}
 
 	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
+		if ctx.authCount == nil {
+			return util.ErrValueNotPresent
+		}
 		b, err := ctx.authCount.MarshalMsg(nil)
 		if err != nil {
 			return err
