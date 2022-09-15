@@ -157,10 +157,6 @@ func mergeUpdateChallengesEvents() *eventsMergerImpl[Challenge] {
 	return newEventsMerger[Challenge](TagUpdateChallenge, withUniqueEventOverwrite())
 }
 
-func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withBlobberChallengesStatsAdded())
-}
-
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobber, withUniqueEventOverwrite())
 }

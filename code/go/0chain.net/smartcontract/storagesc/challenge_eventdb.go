@@ -12,7 +12,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func storageChallengeToChallengeTable(ch *StorageChallengeResponse) *event.Challenge {
+func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge {
 	var validators = make([]string, 0, len(ch.Validators))
 	for _, v := range ch.Validators {
 		validators = append(validators, v.ID)
@@ -27,6 +27,7 @@ func storageChallengeToChallengeTable(ch *StorageChallengeResponse) *event.Chall
 		Seed:           ch.Seed,
 		AllocationRoot: ch.AllocationRoot,
 		Responded:      ch.Responded,
+		ExpiredN:       expiredN,
 	}
 }
 
@@ -54,30 +55,18 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	}, nil
 }
 
-func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) {
-
-	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch))
-	return
+func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 }
 
-func emitUpdateChallengeResponse(chID string, responded bool, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, chID, event.Challenge{
-		ChallengeID: chID,
-		Responded:   responded,
+func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, event.Challenge{
+		ChallengeID:  sc.ID,
+		AllocationID: sc.AllocationID,
+		BlobberID:    sc.BlobberID,
+		Responded:    sc.Responded,
+		Passed:       passed,
 	})
-}
-
-func emitUpdateBlobberChallengeStats(blobberId string, passed bool, balances cstate.StateContextI) {
-	b := event.Blobber{
-		BlobberID:           blobberId,
-		ChallengesCompleted: 1, // incremental value,
-	}
-
-	if passed {
-		b.ChallengesPassed = 1 // incremental value
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberId, b)
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {

@@ -80,18 +80,25 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	return &blobber, nil
 }
 
-func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
-
+// onUpdateChallenge will be called when challenge is updated
+func (b *Blobber) onUpdateChallenge(tx *gorm.DB, c *Challenge) error {
 	vs := map[string]interface{}{
 		"challenges_completed": gorm.Expr("blobbers.challenges_completed + excluded.challenges_completed"),
 		"challenges_passed":    gorm.Expr("blobbers.challenges_passed + excluded.challenges_passed"),
 		"rank_metric":          gorm.Expr("((blobbers.challenges_passed + excluded.challenges_passed)::FLOAT / (blobbers.challenges_completed + excluded.challenges_completed)::FLOAT)::DECIMAL(10,3)"),
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
+	b.BlobberID = c.BlobberID
+	b.ChallengesCompleted = 1
+
+	if c.Passed {
+		b.ChallengesPassed = 1
+	}
+
+	return tx.Model(&Blobber{}).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.Assignments(vs),
-	}).Create(&blobbers).Error
+	}).Create(b).Error
 }
 
 func (edb *EventDb) GetBlobberRank(blobberId string) (int64, error) {

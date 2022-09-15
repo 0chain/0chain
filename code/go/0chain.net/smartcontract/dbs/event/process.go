@@ -55,11 +55,11 @@ const (
 	TagStakePoolReward                     // 26
 	TagUpdateDelegatePool                  // 27
 	TagAddAllocation                       // 28
+	TagUpdateAllocationStakes              // 30
 	TagUpdateAllocation                    // 29
 	TagAddReward                           // 30
 	TagAddChallenge                        // 31
 	TagUpdateChallenge                     // 32
-	TagUpdateBlobberChallenge              // 33
 	TagAddOrOverwriteAllocationBlobberTerm // 34
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
@@ -109,7 +109,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddAllocationEvents(),
 			mergeUpdateAllocationEvents(),
 			mergeUpdateChallengesEvents(),
-			mergeUpdateBlobberChallengesEvents(),
 
 			mergeUpdateBlobbersEvents(),
 			mergeUpdateBlobberTotalStakesEvents(),
@@ -444,13 +443,6 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateChallenges(*chs)
-	case TagUpdateBlobberChallenge:
-		bcs, ok := fromEvent[[]Blobber](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateBlobberChallenges(*bcs)
-		// allocation blobber term
 	case TagAddOrOverwriteAllocationBlobberTerm:
 		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)
 		if !ok {
