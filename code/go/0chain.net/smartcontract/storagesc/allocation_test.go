@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -1066,13 +1067,11 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		errMsg1 = "allocation_creation_failed: " +
 			"malformed request: unexpected end of JSON input"
-		errMsg2 = "allocation_creation_failed: " + "invalid number of data shards"
+		errMsg2 = "allocation_creation_failed: " + "invalid request: invalid number of data shards"
 		errMsg4 = "allocation_creation_failed: malformed request: " +
 			"invalid character '}' looking for beginning of value"
-		errMsg5 = "allocation_creation_failed: " +
-			"invalid request: invalid read_price range"
 		errMsg6 = "allocation_creation_failed: " +
-			"blobbers provided are not enough to honour the allocation"
+			"invalid request: blobbers provided are not enough to honour the allocation"
 		errMsg7 = "allocation_creation_failed: " + "getting stake pools: value not present"
 		errMsg8 = "allocation_creation_failed: " +
 			"no tokens to lock"
