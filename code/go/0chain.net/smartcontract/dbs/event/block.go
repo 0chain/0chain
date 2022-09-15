@@ -30,6 +30,7 @@ type Block struct {
 	RunningTxnCount       string    `json:"running_txn_count"`
 	RoundTimeoutCount     int       `json:"round_timeout_count"`
 	CreatedAt             time.Time `json:"created_at"`
+	IsFinalised           bool      `json:"is_finalised"`
 }
 
 func (edb *EventDb) GetBlockByHash(hash string) (Block, error) {

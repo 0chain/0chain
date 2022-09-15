@@ -161,6 +161,7 @@ type Block struct {
 	stateMutex            sync.RWMutex `json:"-" msgpack:"-"`
 	blockState            int8
 	isNotarized           bool
+	isFinalised           bool         // set this field when the block is finalised
 	ticketsMutex          sync.RWMutex `json:"-" msgpack:"-"`
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
@@ -651,6 +652,21 @@ func (b *Block) IsBlockNotarized() bool {
 	defer b.ticketsMutex.RUnlock()
 
 	return b.isNotarized
+}
+
+//SetBlockFinalised - set the block as finalised
+func (b *Block) SetBlockFinalised() {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+	b.isFinalised = true
+}
+
+//IsBlockFinalised - is block notarized?
+func (b *Block) IsBlockFinalised() bool {
+	b.ticketsMutex.RLock()
+	defer b.ticketsMutex.RUnlock()
+
+	return b.isFinalised
 }
 
 /*SetVerificationStatus - set the verification status of the block by this node */
