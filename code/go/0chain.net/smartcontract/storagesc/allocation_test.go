@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -8,8 +9,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
