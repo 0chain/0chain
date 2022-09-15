@@ -115,8 +115,7 @@ func (c *Client) stakeLockRequest(t testing.TB) []byte {
 }
 
 func (c *Client) addValidatorRequest(t testing.TB) []byte {
-	var vn ValidationNode
-	vn.ID = c.id
+	var vn = newValidatorNode(c.id)
 	vn.BaseURL = getValidatorURL(c.id)
 	vn.StakePoolSettings.MaxNumDelegates = 100
 	vn.StakePoolSettings.MinStake = 0
