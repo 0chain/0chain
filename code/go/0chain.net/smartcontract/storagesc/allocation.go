@@ -760,6 +760,17 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 	return
 }
 
+func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI) (err error) {
+	// save allocation
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+	if err != nil {
+		return
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStakes, sa.ID, sa.buildStakeUpdateEvent())
+	return
+}
+
 // allocation period used to calculate weighted average prices
 type allocPeriod struct {
 	read   currency.Coin    // read price
@@ -1156,9 +1167,32 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't update expired allocation")
 	}
+	// update allocation transaction hash
+	alloc.Tx = t.Hash
+	if len(request.Name) > 0 {
+		alloc.Name = request.Name
+	}
+
 	// adjust expiration
 	var newExpiration = alloc.Expiration + request.Expiration
+	// close allocation now
+
+	if newExpiration <= t.CreationDate {
+		return sc.closeAllocation(t, alloc, balances) // update alloc tx, expir
+	}
+
+	// an allocation can't be shorter than configured in SC
+	// (prevent allocation shortening for entire period)
+	if newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
+		return "", common.NewError("allocation_updating_failed",
+			"allocation duration becomes too short")
+	}
+
 	var newSize = request.Size + alloc.Size
+	if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
+		return "", common.NewError("allocation_updating_failed",
+			"allocation size becomes too small")
+	}
 
 	// get blobber of the allocation to update them
 	var blobbers []*StorageNode
@@ -1168,7 +1202,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if len(request.AddBlobberId) > 0 {
-		blobbers, err = alloc.changeBlobbers(
+		blobbers, err = alloc.changeBlobbers( // update alloc parity shards, blobbers terms
 			blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
 		)
 		if err != nil {
@@ -1180,6 +1214,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"error allocation blobber size mismatch")
 	}
+
 	if request.UpdateTerms {
 		for i, bd := range alloc.BlobberAllocs {
 			if bd.Terms.WritePrice >= blobbers[i].Terms.WritePrice {
@@ -1193,39 +1228,14 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	}
 
-	// update allocation transaction hash
-	alloc.Tx = t.Hash
-	if len(request.Name) > 0 {
-		alloc.Name = request.Name
-	}
-
-	// close allocation now
-	if newExpiration <= t.CreationDate {
-		return sc.closeAllocation(t, alloc, balances)
-	}
-
-	// an allocation can't be shorter than configured in SC
-	// (prevent allocation shortening for entire period)
-	if newExpiration < 0 ||
-		newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
-
-		return "", common.NewError("allocation_updating_failed",
-			"allocation duration becomes too short")
-	}
-
-	if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
-		return "", common.NewError("allocation_updating_failed",
-			"allocation size becomes too small")
-	}
-
 	// if size or expiration increased, then we use new terms
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
-		err = sc.extendAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, alloc, blobbers, &request, balances) // update name, expire, size, write pool, movedToChallengePool
 	} else if request.Size != 0 || request.Expiration != 0 {
-		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances) // the same
 	} else if len(request.AddBlobberId) > 0 {
-		err = sc.extendAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, alloc, blobbers, &request, balances) // the same
 	}
 	if err != nil {
 		return "", err

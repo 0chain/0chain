@@ -235,6 +235,16 @@ func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 	return eAlloc
 }
 
+func (sa *StorageAllocation) buildStakeUpdateEvent() event.Allocation {
+	return event.Allocation{
+		AllocationID:      sa.ID,
+		WritePool:         sa.WritePool,
+		MovedToChallenge:  sa.MovedToChallenge,
+		MovedBack:         sa.MovedBack,
+		MovedToValidators: sa.MovedToValidators,
+	}
+}
+
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 	alloc, err := storageAllocationToAllocationTable(sa)
 	if err != nil {
