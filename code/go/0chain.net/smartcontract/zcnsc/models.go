@@ -309,7 +309,6 @@ func (ps *poolStat) encode() []byte {
 }
 
 type AuthCount struct {
-	datastore.NOIDField
 	Count int `json:"auth_count"`
 }
 
