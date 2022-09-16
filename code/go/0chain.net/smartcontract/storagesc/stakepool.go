@@ -56,7 +56,8 @@ type stakePool struct {
 	stakepool.StakePool
 	// TotalOffers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
-	TotalOffers currency.Coin `json:"total_offers"`
+	TotalOffers    currency.Coin `json:"total_offers"`
+	isOfferChanged bool          `json:"-" msg:"-"`
 	// Total amount to be un staked
 	TotalUnStake currency.Coin `json:"total_un_stake"`
 }
@@ -98,8 +99,11 @@ func (sp *stakePool) save(sscKey, blobberID string,
 
 	logging.Logger.Debug("after stake pool save", zap.String("root", util.ToHex([]byte(r))))
 
-	tag, data := event.NewUpdateBlobberTotalOffersEvent(blobberID, sp.TotalOffers)
-	balances.EmitEvent(event.TypeStats, tag, blobberID, data)
+	if sp.isOfferChanged {
+		tag, data := event.NewUpdateBlobberTotalOffersEvent(blobberID, sp.TotalOffers)
+		balances.EmitEvent(event.TypeStats, tag, blobberID, data)
+		sp.isOfferChanged = false
+	}
 
 	return
 }
@@ -213,6 +217,7 @@ func (sp *stakePool) addOffer(amount currency.Coin) error {
 		return err
 	}
 	sp.TotalOffers = newTotalOffers
+	sp.isOfferChanged = true
 	return nil
 }
 
@@ -223,15 +228,7 @@ func (sp *stakePool) reduceOffer(amount currency.Coin) error {
 		return err
 	}
 	sp.TotalOffers = newTotalOffers
-	return nil
-}
-
-// remove offer of an allocation related to blobber owns this stake pool
-func (sp *stakePool) removeOffer(amount currency.Coin) error {
-	if amount > sp.TotalOffers {
-		return fmt.Errorf("amount to be removed %v > total offer present %v", amount, sp.TotalOffers)
-	}
-	sp.TotalOffers -= amount
+	sp.isOfferChanged = true
 	return nil
 }
 

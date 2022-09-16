@@ -355,7 +355,10 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
 
-		sp.TotalOffers -= move                                    // subtract the offer stake
+		if err := sp.reduceOffer(move); err != nil {
+			return err
+		}
+
 		penalty, err := currency.AddCoin(blobAlloc.Penalty, move) // penalty statistic
 		if err != nil {
 			return err
