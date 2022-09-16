@@ -67,7 +67,7 @@ type AllocationTerm struct {
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }
 
-func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
+func (edb *EventDb) GetAllocation(id string) (*Allocation, error) {
 	var alloc Allocation
 	err := edb.Store.Get().Model(&Allocation{}).Where("allocation_id = ?", id).First(&alloc).Error
 	if err != nil {
@@ -77,7 +77,7 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	return &alloc, nil
 }
 
-func (edb EventDb) GetClientsAllocation(clientID string, limit common.Pagination) ([]Allocation, error) {
+func (edb *EventDb) GetClientsAllocation(clientID string, limit common.Pagination) ([]Allocation, error) {
 	allocs := make([]Allocation, 0)
 
 	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).
@@ -94,7 +94,7 @@ func (edb EventDb) GetClientsAllocation(clientID string, limit common.Pagination
 	return allocs, nil
 }
 
-func (edb EventDb) GetActiveAllocationsCount() (int64, error) {
+func (edb *EventDb) GetActiveAllocationsCount() (int64, error) {
 	var count int64
 	result := edb.Store.Get().Model(&Allocation{}).Where("finalized = ? AND cancelled = ?", false, false).Count(&count)
 	if result.Error != nil {
@@ -104,7 +104,7 @@ func (edb EventDb) GetActiveAllocationsCount() (int64, error) {
 	return count, nil
 }
 
-func (edb EventDb) GetActiveAllocsBlobberCount() (int64, error) {
+func (edb *EventDb) GetActiveAllocsBlobberCount() (int64, error) {
 	var count int64
 	err := edb.Store.Get().
 		Raw("SELECT SUM(parity_shards) + SUM(data_shards) FROM allocations WHERE finalized = ? AND cancelled = ?",
