@@ -390,10 +390,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
-	if err = emitUpdateMiner(mn, balances, false); err != nil {
-		return "", common.NewErrorf("pay_fees", "saving generator node to db: %v", err)
-	}
-
 	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {
 		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 		if lfmb != nil {
