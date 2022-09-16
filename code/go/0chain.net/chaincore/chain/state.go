@@ -25,9 +25,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 //SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
@@ -244,9 +244,21 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		output, err = c.ExecuteSmartContract(ctx, txn, &scData, sctx)
 		switch err {
 		//internal errors
-		case context.DeadlineExceeded, context.Canceled, transaction.ErrSmartContractContext, util.ErrNodeNotFound:
+		case context.DeadlineExceeded, transaction.ErrSmartContractContext, util.ErrNodeNotFound:
 			sctx.EmitError(err)
 			logging.Logger.Error("Error executing the SC, internal error",
+				zap.Error(err),
+				zap.String("scname", scData.FunctionName),
+				zap.String("block", b.Hash),
+				zap.String("begin client state", util.ToHex(startRoot)),
+				zap.String("prev block", b.PrevBlock.Hash),
+				zap.Duration("time_spent", time.Since(t)),
+				zap.Any("txn", txn))
+			//return original error, to handle upwards
+			return events, err
+		case context.Canceled:
+			sctx.EmitError(err)
+			logging.Logger.Debug("Error executing the SC, internal error",
 				zap.Error(err),
 				zap.String("scname", scData.FunctionName),
 				zap.String("block", b.Hash),

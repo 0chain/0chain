@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -17,9 +18,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
 	"go.uber.org/zap"
 
@@ -105,8 +106,11 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 }
 
 func (c *Client) stakeLockRequest(t testing.TB) []byte {
-	var spr stakePoolRequest
-	spr.BlobberID = c.id
+	spr := stakePoolRequest{
+		ProviderType: spenum.Blobber,
+		ProviderID:   c.id,
+	}
+
 	return mustEncode(t, &spr)
 }
 

@@ -10,9 +10,9 @@ import (
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"

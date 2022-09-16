@@ -21,7 +21,7 @@ import (
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 const minerScSharderHealthCheck = "sharder_health_check"

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/threshold/bls"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
@@ -26,7 +27,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
@@ -557,6 +558,7 @@ func newBlobberAllocation(
 	allocation *StorageAllocation,
 	blobber *StorageNode,
 	date common.Timestamp,
+	timeUnit time.Duration,
 ) (*BlobberAllocation, error) {
 	var err error
 	ba := &BlobberAllocation{}
@@ -566,7 +568,7 @@ func newBlobberAllocation(
 	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
 	ba.MinLockDemand, err = blobber.Terms.minLockDemand(
-		sizeInGB(size), allocation.restDurationInTimeUnits(date),
+		sizeInGB(size), allocation.restDurationInTimeUnits(date, timeUnit),
 	)
 	return ba, err
 }
@@ -924,6 +926,7 @@ func (sa *StorageAllocation) removeBlobber(
 }
 
 func (sa *StorageAllocation) changeBlobbers(
+	conf *Config,
 	blobbers []*StorageNode,
 	addId, removeId string,
 	ssc *StorageSmartContract,
@@ -953,7 +956,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	afterSize := sa.bSize()
 
 	blobbers = append(blobbers, addedBlobber)
-	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now)
+	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now, conf.TimeUnit)
 	if err != nil {
 		return nil, fmt.Errorf("can't allocate blobber: %v", err)
 	}
@@ -962,7 +965,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(addedBlobber.ID, balances); err != nil {
+	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
 	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {
@@ -1167,20 +1170,14 @@ func (sa *StorageAllocation) Until() common.Timestamp {
 // The durationInTimeUnits returns given duration (represented as
 // common.Timestamp) as duration in time units (float point value) for
 // this allocation (time units for the moment of the allocation creation).
-func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp) (
-	dtu float64) {
-
-	dtu = float64(dur.Duration()) / float64(sa.TimeUnit)
-	return
+func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) float64 {
+	return float64(dur.Duration()) / float64(timeUnit)
 }
 
 // The restDurationInTimeUnits return rest duration of the allocation in time
 // units as a float64 value.
-func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp) (
-	rdtu float64) {
-
-	rdtu = sa.durationInTimeUnits(sa.Expiration - now)
-	return
+func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) float64 {
+	return sa.durationInTimeUnits(sa.Expiration-now, timeUnit)
 }
 
 // For a stored files (size). Changing an allocation duration and terms
@@ -1222,7 +1219,7 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp) (
 // For a case of allocation reducing, where no expiration, nor size changed
 // we are using the same terms. And for this method, the oterms argument is
 // nil for this case (meaning, terms hasn't changed).
-func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
+func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, timeUnit time.Duration,
 	oterms []Terms) (values []currency.Coin) {
 
 	// odr -- old duration remaining
@@ -1230,8 +1227,8 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
 
 	// in time units, instead of common.Timestamp
 	var (
-		odrtu = sa.durationInTimeUnits(odr)
-		ndrtu = sa.durationInTimeUnits(ndr)
+		odrtu = sa.durationInTimeUnits(odr, timeUnit)
+		ndrtu = sa.durationInTimeUnits(ndr, timeUnit)
 	)
 
 	values = make([]currency.Coin, 0, len(sa.BlobberAllocs))
@@ -1411,6 +1408,7 @@ type WriteMarker struct {
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
+	Operation              string           `json:"operation"`
 
 	// file info
 	LookupHash  string `json:"lookup_hash"`

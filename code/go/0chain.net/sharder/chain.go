@@ -9,8 +9,8 @@ import (
 
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -22,7 +22,7 @@ import (
 
 	"github.com/0chain/gorocksdb"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 

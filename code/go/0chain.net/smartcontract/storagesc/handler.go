@@ -14,9 +14,9 @@ import (
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/logging"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -24,7 +24,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract"
@@ -773,10 +773,6 @@ func (srh *StorageRestHandler) getWrittenAmountPerPeriod(w http.ResponseWriter, 
 func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
-		alloc        = &StorageAllocation{
-			ID: allocationID,
-		}
-		cp = &challengePool{}
 	)
 
 	if allocationID == "" {
@@ -784,18 +780,19 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
-	sctx := srh.GetQueryStateContext()
-	if err := sctx.GetTrieNode(alloc.GetKey(ADDRESS), alloc); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	if err := sctx.GetTrieNode(challengePoolKey(ADDRESS, allocationID), cp); err != nil {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge pool"))
-		return
+	cp, err := edb.GetChallengePool(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 	}
 
-	common.Respond(w, r, cp.stat(alloc), nil)
+	common.Respond(w, r, toChallengePoolStat(cp), nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat getReadPoolStat
@@ -894,6 +891,12 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 	}, nil)
 }
 
+// swagger:model fullBlock
+type fullBlock struct {
+	event.Block
+	Transactions []event.Transaction `json:"transactions"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks get_blocks
 // Gets block information for all blocks. Todo: We need to add a filter to this.
 //
@@ -917,13 +920,24 @@ func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Reque
 //      type: string
 //
 // responses:
-//  200: []Block
+//  200: []fullBlock
 //  400:
 //  500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
+
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
+		return
+	}
+	start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
+		return
+	}
+	end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
 		return
 	}
 
@@ -932,12 +946,27 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	block, err := edb.GetBlocks(limit)
+	blocks, err := edb.GetBlocks(start, end, limit)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
 		return
 	}
-	common.Respond(w, r, &block, nil)
+
+	if r.URL.Query().Get("content") != "full" {
+		common.Respond(w, r, blocks, nil)
+		return
+	}
+	var fullBlocks []fullBlock
+	txs, err := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
+	var txnIndex int
+	for i, b := range blocks {
+		fBlock := fullBlock{Block: blocks[i]}
+		for ; txnIndex < len(txs) && txs[txnIndex].Round == b.Round; txnIndex++ {
+			fBlock.Transactions = append(fBlock.Transactions, txs[txnIndex])
+		}
+		fullBlocks = append(fullBlocks, fBlock)
+	}
+	common.Respond(w, r, fullBlocks, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block block
@@ -1580,6 +1609,14 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, "", common.NewErrInternal("error selecting blobbers", err.Error()))
 		return
 	}
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("error fetching config"))
+		return
+	}
+	// pr review note: since sa does not contain timeunit,
+	// hence minlock demand was broken, using timeunit from config should fix that
 	sa := req.storageAllocation()
 	var gbSize = sizeInGB(sa.bSize())
 	var minLockDemand currency.Coin
@@ -1605,7 +1642,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 
 	for _, b := range nodes.Nodes {
 		bMinLockDemand, err := b.Terms.minLockDemand(gbSize,
-			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix())))
+			sa.restDurationInTimeUnits(common.Timestamp(creationDate.Unix()), conf.TimeUnit))
 		if err != nil {
 			common.Respond(w, r, "", common.NewErrInternal("error calculating min lock demand", err.Error()))
 			return
@@ -1901,12 +1938,12 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 
 	if startBlockNum != "" && endBlockNum != "" {
-		startBlockNumInt, err := strconv.Atoi(startBlockNum)
+		startBlockNumInt, err := strconv.ParseInt(r.URL.Query().Get("block-start"), 10, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
 			return
 		}
-		endBlockNumInt, err := strconv.Atoi(endBlockNum)
+		endBlockNumInt, err := strconv.ParseInt(r.URL.Query().Get("block-end"), 10, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("end_block_number is not valid"))
 			return

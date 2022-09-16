@@ -3,8 +3,8 @@ package block
 import (
 	"fmt"
 
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/util"
 )
 
 func blockToBlockEvent(block *Block) *event.Block {
@@ -26,6 +26,7 @@ func blockToBlockEvent(block *Block) *event.Block {
 		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
 		RoundTimeoutCount:     block.RoundTimeoutCount,
 		CreatedAt:             block.CreationDateField.ToTime(),
+		IsFinalised:           block.IsBlockFinalised(),
 	}
 }
 

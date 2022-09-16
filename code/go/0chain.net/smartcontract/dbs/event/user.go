@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"gorm.io/gorm"
 )
 

@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/mocks"
+	"github.com/0chain/common/core/logging"
 )
 
 var (

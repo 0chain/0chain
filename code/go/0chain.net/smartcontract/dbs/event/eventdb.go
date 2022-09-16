@@ -61,6 +61,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&Authorizer{},
 		&Challenge{},
 		&AllocationBlobberTerm{},
+		ChallengePool{},
 	); err != nil {
 		return err
 	}

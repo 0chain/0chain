@@ -11,8 +11,8 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
+	. "github.com/0chain/common/core/logging"
 )
 
 //KeySpace - the keyspace usef for the 0chain data
