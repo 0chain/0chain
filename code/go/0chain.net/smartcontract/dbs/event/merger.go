@@ -149,8 +149,12 @@ func mergeAddAllocationEvents() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagAddAllocation)
 }
 
-func mergeUpdateAllocationEvents() *eventsMergerImpl[Allocation] {
+func mergeUpdateAllocEvents() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagUpdateAllocation, withUniqueEventOverwrite())
+}
+
+func mergeUpdateAllocStatsEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagUpdateAllocationStakes, withUniqueEventOverwrite())
 }
 
 func mergeUpdateChallengesEvents() *eventsMergerImpl[Challenge] {

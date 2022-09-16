@@ -107,7 +107,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddProviderEvents[Blobber](TagAddOrOverwriteBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
 			mergeAddAllocationEvents(),
-			mergeUpdateAllocationEvents(),
+			mergeUpdateAllocEvents(),
+			mergeUpdateAllocStatsEvents(),
 			mergeUpdateAllocBlobbersTermsEvents(),
 			mergeUpdateChallengesEvents(),
 
@@ -426,6 +427,12 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateAllocations(*allocs)
+	case TagUpdateAllocationStakes:
+		allocs, ok := fromEvent[[]Allocation](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateAllocationStakes(*allocs)
 	case TagAddReward:
 		reward, ok := fromEvent[Reward](event.Data)
 		if !ok {

@@ -172,3 +172,27 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		DoUpdates: clause.AssignmentColumns(updateColumns),
 	}).Create(&allocs).Error
 }
+
+func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
+	ts := time.Now()
+	defer func() {
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Debug("event db - update allocation stakes slow",
+				zap.Any("duration", du),
+				zap.Int("num", len(allocs)))
+		}
+	}()
+
+	updateColumns := []string{
+		"write_pool",
+		"moved_to_challenge",
+		"moved_back",
+		"moved_to_validators",
+	}
+
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		DoUpdates: clause.AssignmentColumns(updateColumns),
+	}).Create(&allocs).Error
+}
