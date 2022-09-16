@@ -21,7 +21,7 @@ const (
 	NonExistent
 )
 
-var statusString = []string{"active", "inactive", "shut_down", "killed", "non_existent"}
+var statusString = []string{"unknown", "active", "inactive", "shut_down", "killed", "non_existent"}
 
 func (p Status) String() string {
 	return statusString[p]
