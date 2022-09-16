@@ -2154,13 +2154,15 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 type storageNodeResponse struct {
 	StorageNode
-	TotalServiceCharge currency.Coin `json:"total_service_charge"`
-	TotalStake         currency.Coin `json:"total_stake"`
-	UsedAllocation     int64         `json:"used_allocation"`
+	TotalServiceCharge currency.Coin   `json:"total_service_charge"`
+	TotalStake         currency.Coin   `json:"total_stake"`
+	UsedAllocation     int64           `json:"used_allocation"`
+	Status             provider.Status `json:"status"`
+	StatusReason       string          `json:"status_reason"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
-	return storageNodeResponse{
+	sn := storageNodeResponse{
 		StorageNode: StorageNode{
 			Provider: &provider.Provider{
 				HasBeenKilled:   blobber.IsKilled,
@@ -2199,6 +2201,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		TotalStake:         blobber.TotalStake,
 		UsedAllocation:     blobber.Used,
 	}
+	return sn
 }
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers getblobbers
@@ -2230,7 +2233,8 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	killed := len(r.URL.Query().Get("killed")) > 0
 	shutDown := len(r.URL.Query().Get("killed")) > 0
 
-	edb := srh.GetQueryStateContext().GetEventDB()
+	sCtx := srh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -2244,9 +2248,14 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	sns := storageNodesResponse{
 		Nodes: make([]storageNodeResponse, 0, len(blobbers)),
 	}
-
+	var conf *Config
+	if conf, err = getConfig(sCtx); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
+		return
+	}
 	for _, blobber := range blobbers {
 		sn := blobberTableToStorageNode(blobber)
+		sn.Status, sn.StatusReason = sn.BlobberStatus(sCtx.Now(), conf)
 		sns.Nodes = append(sns.Nodes, sn)
 	}
 	common.Respond(w, r, sns, nil)
@@ -2504,7 +2513,8 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, err)
 		return
 	}
-	edb := srh.GetQueryStateContext().GetEventDB()
+	sCtx := srh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -2516,6 +2526,12 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 	}
 
 	sn := blobberTableToStorageNode(*blobber)
+	var conf *Config
+	if conf, err = getConfig(sCtx); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
+		return
+	}
+	sn.Status, sn.StatusReason = sn.BlobberStatus(sCtx.Now(), conf)
 	common.Respond(w, r, sn, nil)
 }
 
