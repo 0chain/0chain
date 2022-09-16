@@ -80,7 +80,7 @@ func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 
 func (edb *EventDb) addOrOverwriteAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
 	updateFields := []string{"read_price", "write_price", "min_lock_demand",
-		"max_offer_duration", "challenge_completion_time"}
+		"max_offer_duration"}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "allocation_id"}, {Name: "blobber_id"}},
