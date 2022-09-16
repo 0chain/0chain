@@ -710,7 +710,6 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) []*
 	wg.Wait()
 	close(blobberCh)
 
-	//ensure original ordering
 	blobbers := make([]*StorageNode, len(ids))
 	for resp := range blobberCh {
 		blobbers[resp.index] = resp.blobber
