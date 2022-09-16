@@ -55,11 +55,11 @@ const (
 	TagStakePoolReward                     // 26
 	TagUpdateDelegatePool                  // 27
 	TagAddAllocation                       // 28
-	TagUpdateAllocationStakes              // 30
-	TagUpdateAllocation                    // 29
-	TagAddReward                           // 30
-	TagAddChallenge                        // 31
-	TagUpdateChallenge                     // 32
+	TagUpdateAllocationStakes              // 29
+	TagUpdateAllocation                    // 30
+	TagAddReward                           // 31
+	TagAddChallenge                        // 32
+	TagUpdateChallenge                     // 33
 	TagAddOrOverwriteAllocationBlobberTerm // 34
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
