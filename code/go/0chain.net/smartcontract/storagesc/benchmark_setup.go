@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"log"
 	"math/rand"
 	"strconv"
@@ -107,11 +106,11 @@ func addMockAllocation(
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 		if viper.GetBool(sc.EventDbEnabled) {
-			terms := event.AllocationTerm{
+			terms := event.AllocationBlobberTerm{
 				BlobberID:        bId,
 				AllocationID:     sa.ID,
-				ReadPrice:        ba.Terms.ReadPrice,
-				WritePrice:       ba.Terms.WritePrice,
+				ReadPrice:        int64(ba.Terms.ReadPrice),
+				WritePrice:       int64(ba.Terms.WritePrice),
 				MinLockDemand:    ba.Terms.MinLockDemand,
 				MaxOfferDuration: ba.Terms.MaxOfferDuration,
 			}
@@ -124,22 +123,18 @@ func addMockAllocation(
 	}
 
 	if viper.GetBool(sc.EventDbEnabled) {
-		allocationTerms := make([]event.AllocationTerm, 0)
+		allocationTerms := make([]event.AllocationBlobberTerm, 0)
 		for _, b := range sa.BlobberAllocs {
-			allocationTerms = append(allocationTerms, event.AllocationTerm{
+			allocationTerms = append(allocationTerms, event.AllocationBlobberTerm{
 				BlobberID:        b.BlobberID,
 				AllocationID:     b.AllocationID,
-				ReadPrice:        b.Terms.ReadPrice,
-				WritePrice:       b.Terms.WritePrice,
+				ReadPrice:        int64(b.Terms.ReadPrice),
+				WritePrice:       int64(b.Terms.WritePrice),
 				MinLockDemand:    b.Terms.MinLockDemand,
 				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}
 
-		termsByte, err := json.Marshal(allocationTerms)
-		if err != nil {
-			log.Fatal(err)
-		}
 		allocationDb := event.Allocation{
 			AllocationID:             sa.ID,
 			DataShards:               sa.DataShards,
@@ -156,7 +151,7 @@ func addMockAllocation(
 			OpenChallenges:           sa.Stats.OpenChallenges,
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
-			Terms:                    string(termsByte),
+			Terms:                    allocationTerms,
 		}
 		_ = eventDb.Store.Get().Create(&allocationDb)
 	}

@@ -351,9 +351,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	m.tick("add_allocation")
 
 	// emit event to eventDB
-	if err = emitAddOrOverwriteAllocationBlobberTerms(sa, balances, txn); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
-	}
+	emitAddOrOverwriteAllocationBlobberTerms(sa, balances, txn)
 
 	return resp, err
 }
@@ -716,7 +714,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			return "", fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
 				err)
 		}
-		if err := sp.removeOffer(ba.Offer()); err != nil {
+		if err := sp.reduceOffer(ba.Offer()); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"error removing offer: "+err.Error())
 		}
@@ -759,6 +757,17 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
+	return
+}
+
+func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI) (err error) {
+	// save allocation
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+	if err != nil {
+		return
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStakes, sa.ID, sa.buildStakeUpdateEvent())
 	return
 }
 
@@ -1062,7 +1071,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 					err)
 			}
 			if newOffer < oldOffer {
-				if err := sp.removeOffer(oldOffer - newOffer); err != nil {
+				if err := sp.reduceOffer(oldOffer - newOffer); err != nil {
 					return fmt.Errorf("removing offer: %v", err)
 				}
 			} else {
@@ -1158,9 +1167,32 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't update expired allocation")
 	}
+	// update allocation transaction hash
+	alloc.Tx = t.Hash
+	if len(request.Name) > 0 {
+		alloc.Name = request.Name
+	}
+
 	// adjust expiration
 	var newExpiration = alloc.Expiration + request.Expiration
+	// close allocation now
+
+	if newExpiration <= t.CreationDate {
+		return sc.closeAllocation(t, alloc, balances) // update alloc tx, expir
+	}
+
+	// an allocation can't be shorter than configured in SC
+	// (prevent allocation shortening for entire period)
+	if newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
+		return "", common.NewError("allocation_updating_failed",
+			"allocation duration becomes too short")
+	}
+
 	var newSize = request.Size + alloc.Size
+	if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
+		return "", common.NewError("allocation_updating_failed",
+			"allocation size becomes too small")
+	}
 
 	// get blobber of the allocation to update them
 	var blobbers []*StorageNode
@@ -1170,7 +1202,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if len(request.AddBlobberId) > 0 {
-		blobbers, err = alloc.changeBlobbers(
+		blobbers, err = alloc.changeBlobbers( // update alloc parity shards, blobbers terms
 			blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
 		)
 		if err != nil {
@@ -1182,6 +1214,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"error allocation blobber size mismatch")
 	}
+
 	if request.UpdateTerms {
 		for i, bd := range alloc.BlobberAllocs {
 			if bd.Terms.WritePrice >= blobbers[i].Terms.WritePrice {
@@ -1195,39 +1228,14 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	}
 
-	// update allocation transaction hash
-	alloc.Tx = t.Hash
-	if len(request.Name) > 0 {
-		alloc.Name = request.Name
-	}
-
-	// close allocation now
-	if newExpiration <= t.CreationDate {
-		return sc.closeAllocation(t, alloc, balances)
-	}
-
-	// an allocation can't be shorter than configured in SC
-	// (prevent allocation shortening for entire period)
-	if newExpiration < 0 ||
-		newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
-
-		return "", common.NewError("allocation_updating_failed",
-			"allocation duration becomes too short")
-	}
-
-	if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
-		return "", common.NewError("allocation_updating_failed",
-			"allocation size becomes too small")
-	}
-
 	// if size or expiration increased, then we use new terms
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
-		err = sc.extendAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, alloc, blobbers, &request, balances) // update name, expire, size, write pool, movedToChallengePool
 	} else if request.Size != 0 || request.Expiration != 0 {
-		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances) // the same
 	} else if len(request.AddBlobberId) > 0 {
-		err = sc.extendAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, alloc, blobbers, &request, balances) // the same
 	}
 	if err != nil {
 		return "", err
@@ -1242,10 +1250,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	err = emitUpdateAllocationBlobberTerms(alloc, balances, t)
-	if err != nil {
-		return "", common.NewErrorf("allocation_updating_failed", "%V", err)
-	}
+	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 
 	return string(alloc.Encode()), nil
 }
@@ -1442,7 +1447,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			return "", common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		if err := sp.removeOffer(d.Offer()); err != nil {
+		if err := sp.reduceOffer(d.Offer()); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"error removing offer: "+err.Error())
 		}
@@ -1463,10 +1468,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	err = emitDeleteAllocationBlobberTerms(alloc, balances, t)
-	if err != nil {
-		return "", common.NewError("alloc_cancel_failed", err.Error())
-	}
+	emitDeleteAllocationBlobberTerms(alloc, balances, t)
 
 	return "canceled", nil
 }
@@ -1544,10 +1546,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	err = emitUpdateAllocationBlobberTerms(alloc, balances, t)
-	if err != nil {
-		return "", common.NewError("alloc_cancel_failed", err.Error())
-	}
+	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 
 	return "finalized", nil
 }

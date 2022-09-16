@@ -129,11 +129,11 @@ func withEventMerge[T any](mergeFunc mergeEventsFunc[T]) eventMergeMiddleware {
 	}
 }
 
-func newUserEventsMerger() *eventsMergerImpl[User] {
+func mergeAddUsersEvents() *eventsMergerImpl[User] {
 	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
 }
 
-func newTransactionsEventsMerger() *eventsMergerImpl[Transaction] {
+func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
 	return newEventsMerger[Transaction](TagAddTransactions)
 }
 
@@ -145,35 +145,43 @@ func mergeAddReadMarkerEvents() *eventsMergerImpl[ReadMarker] {
 	return newEventsMerger[ReadMarker](TagAddReadMarker)
 }
 
-func newAllocationsEventsMerger() *eventsMergerImpl[Allocation] {
+func mergeAddAllocationEvents() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagAddAllocation)
 }
 
-func newUpdateAllocationsEventsMerger() *eventsMergerImpl[Allocation] {
+func mergeUpdateAllocEvents() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagUpdateAllocation, withUniqueEventOverwrite())
 }
 
-func newUpdateChallengesEventsMerger() *eventsMergerImpl[Challenge] {
+func mergeUpdateAllocStatsEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagUpdateAllocationStakes, withUniqueEventOverwrite())
+}
+
+func mergeUpdateChallengesEvents() *eventsMergerImpl[Challenge] {
 	return newEventsMerger[Challenge](TagUpdateChallenge, withUniqueEventOverwrite())
 }
 
-func newUpdateBlobberChallengesMerger() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withBlobberChallengesStatsAdded())
+func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
+	return newEventsMerger[AllocationBlobberTerm](TagUpdateAllocationBlobberTerm, withUniqueEventOverwrite())
 }
 
-func newBlobberTotalStakesEventsMerger() *eventsMergerImpl[Blobber] {
+func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobber, withUniqueEventOverwrite())
+}
+
+func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withBlobberTotalStakesAdded())
 }
 
-func newBlobberTotalOffersEventsMerger() *eventsMergerImpl[Blobber] {
+func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberTotalOffers, withBlobberTotalOffersAdded())
 }
 
-func newStakePoolRewardEventsMerger() *eventsMergerImpl[dbs.StakePoolReward] {
+func mergeStakePoolRewardsEvents() *eventsMergerImpl[dbs.StakePoolReward] {
 	return newEventsMerger[dbs.StakePoolReward](TagStakePoolReward, withProviderRewardsPenaltiesAdded())
 }
 
-func newAddProviderEventsMerger[T any](tag EventTag, middlewares ...eventMergeMiddleware) eventsMerger {
+func mergeAddProviderEvents[T any](tag EventTag, middlewares ...eventMergeMiddleware) eventsMerger {
 	return newEventsMerger[T](tag, middlewares...)
 }
 

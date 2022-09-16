@@ -3,8 +3,6 @@ package storagesc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
-
 	"0chain.net/smartcontract/dbs/event"
 )
 
@@ -97,28 +95,10 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 }
 
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
-	data := &dbs.DbUpdates{
-		Id: sn.ID,
-		Updates: map[string]interface{}{
-			"base_url":           sn.BaseURL,
-			"latitude":           sn.Geolocation.Latitude,
-			"longitude":          sn.Geolocation.Longitude,
-			"read_price":         int64(sn.Terms.ReadPrice),
-			"write_price":        int64(sn.Terms.WritePrice),
-			"min_lock_demand":    sn.Terms.MinLockDemand,
-			"max_offer_duration": sn.Terms.MaxOfferDuration.Nanoseconds(),
-			"capacity":           sn.Capacity,
-			"allocated":          sn.Allocated,
-			"last_health_check":  int64(sn.LastHealthCheck),
-			"delegate_wallet":    sn.StakePoolSettings.DelegateWallet,
-			"min_stake":          int64(sn.StakePoolSettings.MinStake),
-			"max_stake":          int64(sn.StakePoolSettings.MaxStake),
-			"num_delegates":      sn.StakePoolSettings.MaxNumDelegates,
-			"service_charge":     sn.StakePoolSettings.ServiceChargeRatio,
-			"saved_data":         sn.SavedData,
-		},
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, event.Blobber{
+		BlobberID:       sn.ID,
+		Allocated:       sn.Allocated,
+		LastHealthCheck: int64(sn.LastHealthCheck),
+	})
 	return nil
 }

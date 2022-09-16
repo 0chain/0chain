@@ -23,6 +23,8 @@ type Challenge struct {
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
 	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
+	Passed         bool             `json:"passed"`
+	ExpiredN       int              `json:"expired_n" gorm:"-"`
 }
 
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
@@ -78,14 +80,38 @@ func (edb *EventDb) GetChallengeForBlobber(blobberID, challengeID string) (*Chal
 }
 
 func (edb *EventDb) addChallenge(ch *Challenge) error {
-	result := edb.Store.Get().Create(&ch)
-
-	return result.Error
+	return edb.Store.Get().Create(&ch).Error
 }
 
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "challenge_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"responded"}),
+		DoUpdates: clause.AssignmentColumns([]string{"responded", "passed"}),
 	}).Create(chs).Error
+}
+
+func (c *Challenge) AfterCreate(tx *gorm.DB) error {
+	// update allocation stat
+	if !c.Responded {
+		// new added challenges
+		return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "allocation_id"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"total_challenges": gorm.Expr("allocations.total_challenges + 1"),
+				"open_challenges":  gorm.Expr("allocations.open_challenges + 1 - ?", c.ExpiredN),
+			}),
+		}).Create(&Allocation{AllocationID: c.AllocationID}).Error
+	} else {
+		// challenge updated
+		//
+		// update blobber stat
+		b := &Blobber{BlobberID: c.BlobberID}
+		if err := b.onUpdateChallenge(tx, c); err != nil {
+			return err
+		}
+
+		// update allocation stat
+		alloc := &Allocation{AllocationID: c.AllocationID}
+		return alloc.onUpdateChallenge(tx, c)
+	}
 }

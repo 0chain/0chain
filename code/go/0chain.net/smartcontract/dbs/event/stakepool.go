@@ -20,20 +20,20 @@ type providerAggregateStats struct {
 }
 
 type providerRewardsDelegates struct {
-	rewards []ProviderRewards
-
-	delegateRewards   []DelegatePool
-	delegatePenalties []DelegatePool
+	rewards       []ProviderRewards
+	delegatePools []DelegatePool
+	desc          [][]string
 }
 
 func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
 	var (
-		rewards           = make([]ProviderRewards, 0, len(spus))
-		delegateRewards   = make([]DelegatePool, 0, len(spus))
-		delegatePenalties = make([]DelegatePool, 0, len(spus))
+		rewards       = make([]ProviderRewards, 0, len(spus))
+		delegatePools = make([]DelegatePool, 0, len(spus))
+		descs         = make([][]string, 0, len(spus))
 	)
 
 	for i, sp := range spus {
+		descs = append(descs, sp.Desc)
 		if sp.Reward != 0 {
 			rewards = append(rewards, ProviderRewards{
 				ProviderID:   sp.ProviderId,
@@ -42,30 +42,35 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 			})
 		}
 
+		// merge delegate rewards and penalties
 		for k, v := range spus[i].DelegateRewards {
-			delegateRewards = append(delegateRewards, DelegatePool{
+			delegatePools = append(delegatePools, DelegatePool{
 				ProviderID:   sp.ProviderId,
 				ProviderType: sp.ProviderType,
 				PoolID:       k,
 				Reward:       currency.Coin(v),
 				TotalReward:  currency.Coin(v),
+				TotalPenalty: currency.Coin(spus[i].DelegatePenalties[k]),
 			})
 		}
 
+		// append remaining penalties if any
 		for k, v := range spus[i].DelegatePenalties {
-			delegatePenalties = append(delegatePenalties, DelegatePool{
-				ProviderID:   sp.ProviderId,
-				ProviderType: sp.ProviderType,
-				PoolID:       k,
-				TotalPenalty: currency.Coin(v),
-			})
+			if _, ok := sp.DelegateRewards[k]; !ok {
+				delegatePools = append(delegatePools, DelegatePool{
+					ProviderID:   sp.ProviderId,
+					ProviderType: sp.ProviderType,
+					PoolID:       k,
+					TotalPenalty: currency.Coin(v),
+				})
+			}
 		}
 	}
 
 	return &providerRewardsDelegates{
-		rewards:           rewards,
-		delegateRewards:   delegateRewards,
-		delegatePenalties: delegatePenalties,
+		rewards:       rewards,
+		delegatePools: delegatePools,
+		desc:          descs,
 	}, nil
 }
 
@@ -82,11 +87,14 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
 
 	defer func() {
 		du := time.Since(ts)
-		n := len(rewards.rewards) + len(rewards.delegateRewards) + len(rewards.delegatePenalties)
+		n := len(rewards.rewards) + len(rewards.delegatePools)
 		if du > 50*time.Millisecond {
 			logging.Logger.Debug("event db - update reward slow",
 				zap.Any("duration", du),
-				zap.Int("update items", n))
+				zap.Int("total update items", n),
+				zap.Int("rewards num", len(rewards.rewards)),
+				zap.Int("delegate pools num", len(rewards.delegatePools)),
+				zap.Any("desc", rewards.desc))
 		}
 	}()
 
@@ -101,15 +109,9 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
 		logging.Logger.Debug("event db - reward providers slow", zap.Any("duration", rpdu))
 	}
 
-	if len(rewards.delegateRewards) > 0 {
-		if err := rewardProviderDelegates(edb, rewards.delegateRewards); err != nil {
+	if len(rewards.delegatePools) > 0 {
+		if err := rewardProviderDelegates(edb, rewards.delegatePools); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
-		}
-	}
-
-	if len(rewards.delegatePenalties) > 0 {
-		if err := penaltyProviderDelegates(edb, rewards.delegatePenalties); err != nil {
-			return fmt.Errorf("could not penalty delegate pool: %v", err)
 		}
 	}
 
@@ -142,8 +144,9 @@ func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
 
 func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
 	vs := map[string]interface{}{
-		"reward":       gorm.Expr("delegate_pools.reward + excluded.reward"),
-		"total_reward": gorm.Expr("delegate_pools.total_reward + excluded.total_reward"),
+		"reward":        gorm.Expr("delegate_pools.reward + excluded.reward"),
+		"total_reward":  gorm.Expr("delegate_pools.total_reward + excluded.total_reward"),
+		"total_penalty": gorm.Expr("delegate_pools.total_penalty + excluded.total_penalty"),
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{

@@ -12,8 +12,6 @@ import (
 	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
-	"0chain.net/smartcontract/dbs"
-
 	"github.com/guregu/null"
 	"gorm.io/gorm"
 )
@@ -82,32 +80,25 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	return &blobber, nil
 }
 
-func (edb *EventDb) IncrementDataStored(id string, stored int64) error {
-	blobber, err := edb.GetBlobber(id)
-	if err != nil {
-		return err
-	}
-	update := dbs.DbUpdates{
-		Id: id,
-		Updates: map[string]interface{}{
-			"used": blobber.Used + stored,
-		},
-	}
-	return edb.updateBlobber(update)
-}
-
-func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
-
+// onUpdateChallenge will be called when challenge is updated
+func (b *Blobber) onUpdateChallenge(tx *gorm.DB, c *Challenge) error {
 	vs := map[string]interface{}{
 		"challenges_completed": gorm.Expr("blobbers.challenges_completed + excluded.challenges_completed"),
 		"challenges_passed":    gorm.Expr("blobbers.challenges_passed + excluded.challenges_passed"),
 		"rank_metric":          gorm.Expr("((blobbers.challenges_passed + excluded.challenges_passed)::FLOAT / (blobbers.challenges_completed + excluded.challenges_completed)::FLOAT)::DECIMAL(10,3)"),
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
+	b.BlobberID = c.BlobberID
+	b.ChallengesCompleted = 1
+
+	if c.Passed {
+		b.ChallengesPassed = 1
+	}
+
+	return tx.Model(&Blobber{}).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.Assignments(vs),
-	}).Create(&blobbers).Error
+	}).Create(b).Error
 }
 
 func (edb *EventDb) GetBlobberRank(blobberId string) (int64, error) {
@@ -205,18 +196,11 @@ func (edb *EventDb) deleteBlobber(id string) error {
 	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).Delete(&Blobber{}).Error
 }
 
-func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
-	var blobber = Blobber{BlobberID: updates.Id}
-	exists, err := blobber.exists(edb)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return fmt.Errorf("blobber %v not in database cannot update", blobber.BlobberID)
-	}
-
-	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", blobber.BlobberID).Updates(updates.Updates).Error
+func (edb *EventDb) updateBlobbers(blobbers []Blobber) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "blobber_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"allocated", "last_health_check"}),
+	}).Create(&blobbers).Error
 }
 
 func (edb *EventDb) GetBlobberCount() (int64, error) {
@@ -266,35 +250,6 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("blobber_id").Find(&blobberIDs).Error
-}
-
-func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
-	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", blobber.BlobberID).
-		Updates(map[string]interface{}{
-			"base_url":           blobber.BaseURL,
-			"latitude":           blobber.Latitude,
-			"longitude":          blobber.Longitude,
-			"read_price":         blobber.ReadPrice,
-			"write_price":        blobber.WritePrice,
-			"min_lock_demand":    blobber.MinLockDemand,
-			"max_offer_duration": blobber.MaxOfferDuration,
-			"capacity":           blobber.Capacity,
-			"used":               blobber.Used,
-			"last_health_check":  blobber.LastHealthCheck,
-			"delegate_wallet":    blobber.DelegateWallet,
-			"min_stake":          blobber.MinStake,
-			"max_stake":          blobber.MaxStake,
-			"num_delegates":      blobber.NumDelegates,
-			"service_charge":     blobber.ServiceCharge,
-			"offers_total":       blobber.OffersTotal,
-			"unstake_total":      blobber.UnstakeTotal,
-			"rewards":            blobber.Rewards,
-			"saved_data":         blobber.SavedData,
-			"name":               blobber.Name,
-			"website_url":        blobber.WebsiteUrl,
-			"logo_url":           blobber.LogoUrl,
-			"description":        blobber.Description,
-		}).Error
 }
 
 func (edb *EventDb) addBlobbers(blobbers []Blobber) error {

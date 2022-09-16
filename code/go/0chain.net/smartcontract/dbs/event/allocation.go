@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/common"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
@@ -20,7 +22,6 @@ type Allocation struct {
 	ParityShards             int           `json:"parity_shards"`
 	Size                     int64         `json:"size"`
 	Expiration               int64         `json:"expiration"`
-	Terms                    string        `json:"terms"`
 	Owner                    string        `json:"owner" gorm:"index:idx_aowner"`
 	OwnerPublicKey           string        `json:"owner_public_key"`
 	IsImmutable              bool          `json:"is_immutable"`
@@ -46,28 +47,31 @@ type Allocation struct {
 	LatestClosedChallengeTxn string        `json:"latest_closed_challenge_txn"`
 	WritePool                currency.Coin `json:"write_pool"`
 	//ref
-	User User `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:AllocationID"`
 }
 
-type AllocationTerm struct {
-	BlobberID    string `json:"blobber_id"`
-	AllocationID string `json:"allocation_id"`
-	// ReadPrice is price for reading. Token / GB (no time unit).
-	ReadPrice currency.Coin `json:"read_price"`
-	// WritePrice is price for reading. Token / GB / time unit. Also,
-	// it used to calculate min_lock_demand value.
-	WritePrice currency.Coin `json:"write_price"`
-	// MinLockDemand in number in [0; 1] range. It represents part of
-	// allocation should be locked for the blobber rewards even if
-	// user never write something to the blobber.
-	MinLockDemand float64 `json:"min_lock_demand"`
-	// MaxOfferDuration with this prices and the demand.
-	MaxOfferDuration time.Duration `json:"max_offer_duration"`
+func (alloc *Allocation) onUpdateChallenge(tx *gorm.DB, c *Challenge) error {
+	vs := map[string]interface{}{
+		"open_challenges":             gorm.Expr("allocations.open_challenges - 1"),
+		"latest_closed_challenge_txn": gorm.Expr("?", c.ChallengeID),
+	}
+
+	if c.Passed {
+		vs["successful_challenges"] = gorm.Expr("allocations.successful_challenges + 1")
+	} else {
+		vs["failed_challenges"] = gorm.Expr("allocations.failed_challenges + 1")
+	}
+
+	return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(&Allocation{AllocationID: c.AllocationID}).Error
 }
 
 func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	var alloc Allocation
-	err := edb.Store.Get().Model(&Allocation{}).Where("allocation_id = ?", id).First(&alloc).Error
+	err := edb.Store.Get().Preload("Terms").Model(&Allocation{}).Where("allocation_id = ?", id).First(&alloc).Error
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving allocation: %v, error: %v", id, err)
 	}
@@ -78,15 +82,15 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 func (edb EventDb) GetClientsAllocation(clientID string, limit common.Pagination) ([]Allocation, error) {
 	allocs := make([]Allocation, 0)
 
-	query := edb.Store.Get().Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).
+	err := edb.Store.Get().
+		Preload("Terms").
+		Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "start_time"},
 			Desc:   limit.IsDescending,
-		})
-
-	result := query.Scan(&allocs)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, result.Error)
+		}).Find(&allocs).Error
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, err)
 	}
 
 	return allocs, nil
@@ -120,6 +124,7 @@ func (edb *EventDb) addAllocations(allocs []Allocation) error {
 }
 
 func (edb *EventDb) updateAllocations(allocs []Allocation) error {
+	ts := time.Now()
 	updateColumns := []string{
 		"allocation_name",
 		"transaction_id",
@@ -127,7 +132,6 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"parity_shards",
 		"size",
 		"expiration",
-		"terms",
 		"owner",
 		"owner_public_key",
 		"is_immutable",
@@ -152,6 +156,39 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"successful_challenges",
 		"failed_challenges",
 		"latest_closed_challenge_txn",
+	}
+
+	defer func() {
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Debug("event db - update allocation slow",
+				zap.Duration("duration", du),
+				zap.Int("num", len(allocs)))
+		}
+	}()
+
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		DoUpdates: clause.AssignmentColumns(updateColumns),
+	}).Create(&allocs).Error
+}
+
+func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
+	ts := time.Now()
+	defer func() {
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Debug("event db - update allocation stakes slow",
+				zap.Any("duration", du),
+				zap.Int("num", len(allocs)))
+		}
+	}()
+
+	updateColumns := []string{
+		"write_pool",
+		"moved_to_challenge",
+		"moved_back",
+		"moved_to_validators",
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
