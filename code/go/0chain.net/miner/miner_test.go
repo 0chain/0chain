@@ -29,8 +29,6 @@ import (
 	"github.com/0chain/common/core/logging"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/require"
-
-	"github.com/alicebob/miniredis/v2"
 )
 
 var numOfTransactions int
@@ -473,9 +471,8 @@ func SetUpSingleSelf() func() {
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
-	data := &chain.ConfigData{BlockSize: 1024}
+	data := &chain.ConfigData{}
 	c.ChainConfig = chain.NewConfigImpl(data)
-	data.BlockSize = int32(numOfTransactions)
 
 	data.MinGenerators = 1
 	data.RoundRange = 10000000

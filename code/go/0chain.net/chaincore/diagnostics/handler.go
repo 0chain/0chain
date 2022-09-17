@@ -33,7 +33,6 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	pvals := timer.Percentiles(percentiles)
 	stats := make(map[string]interface{})
 	stats["delta"] = chain.DELTA
-	stats["block_size"] = c.BlockSize()
 	stats["current_round"] = c.GetCurrentRound()
 	lfb := c.GetLatestFinalizedBlock()
 	stats["latest_finalized_round"] = lfb.Round
@@ -63,7 +62,6 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td class='tname'>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.GetGeneratorsNum(), c.NumReplicators())
-	fmt.Fprintf(w, "<tr><td class='tname'>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize(), c.BlockSize())
 	fmt.Fprintf(w, "<tr><td class='tname'>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
 	proposalMode := "dynamic"
 	if c.BlockProposalWaitMode() == chain.BlockProposalWaitStatic {
@@ -143,7 +141,7 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "</table>")
 }
 
-//WritePruneStats - write the last prune stats
+// WritePruneStats - write the last prune stats
 func WritePruneStats(w http.ResponseWriter, ps *util.PruneStats) {
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td>Stage</td><td>%v</td>", ps.Stage)

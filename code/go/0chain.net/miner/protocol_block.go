@@ -28,7 +28,7 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
-//InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
+// InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
 // ErrLFBClientStateNil is returned when client state of latest finalized block is nil
@@ -592,7 +592,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		txns = append(txns, txn)
 	}
 
-	tii := newTxnIterInfo(mc.BlockSize())
+	tii := newTxnIterInfo()
 	invalidTxns := tii.checkForInvalidTxns(b.Txns)
 
 	transaction.RemoveFromPool(ctx, txns)
@@ -642,7 +642,7 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	return nil
 }
 
-//NotarizedBlockFetched - handler to process fetched notarized block
+// NotarizedBlockFetched - handler to process fetched notarized block
 func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 	// mc.SendNotarization(ctx, b)
 }
@@ -787,12 +787,12 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 	}
 }
 
-func newTxnIterInfo(blockSize int32) *TxnIterInfo {
+func newTxnIterInfo() *TxnIterInfo {
 	return &TxnIterInfo{
 		clients:    make(map[string]*client.Client),
-		eTxns:      make([]datastore.Entity, 0, blockSize),
+		eTxns:      make([]datastore.Entity, 0, 100),
 		futureTxns: make(map[datastore.Key][]*transaction.Transaction),
-		txnMap:     make(map[datastore.Key]struct{}, blockSize),
+		txnMap:     make(map[datastore.Key]struct{}, 100),
 	}
 }
 
@@ -841,12 +841,10 @@ func txnIterHandlerFunc(mc *Chain,
 
 		if txnProcessor(ctx, bState, txn, tii) {
 			tii.cost += cost
-			if tii.idx >= mc.ChainConfig.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
+			if tii.byteSize >= mc.MaxByteSize() {
 				logging.Logger.Debug("generate block (too big block size)",
-					zap.Bool("idx >= block size", tii.idx >= mc.ChainConfig.BlockSize()),
 					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.ChainConfig.MaxByteSize()),
 					zap.Int32("idx", tii.idx),
-					zap.Int32("block size", mc.ChainConfig.BlockSize()),
 					zap.Int64("byte size", tii.byteSize),
 					zap.Int64("max byte size", mc.ChainConfig.MaxByteSize()),
 					zap.Int32("count", tii.count),
@@ -873,10 +871,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		return ErrLFBClientStateNil
 	}
 
-	b.Txns = make([]*transaction.Transaction, 0, mc.BlockSize())
+	b.Txns = make([]*transaction.Transaction, 0, 100)
 
 	var (
-		iterInfo       = newTxnIterInfo(mc.BlockSize())
+		iterInfo       = newTxnIterInfo()
 		txnProcessor   = txnProcessorHandlerFunc(mc, b)
 		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		beginState     = blockState.GetRoot()
@@ -950,7 +948,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	rcount := 0
 	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.ChainConfig.MaxBlockCost() &&
-		blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
+		iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
 		txn := iterInfo.currentTxns[i]
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 		if err != nil {
@@ -964,7 +962,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		if txnProcessor(ctx, blockState, txn, iterInfo) {
 			rcount++
 			iterInfo.cost += cost
-			if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
+			if iterInfo.byteSize >= mc.MaxByteSize() {
 				break
 			}
 		}
@@ -973,7 +971,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		blockSize += int32(rcount)
 		logging.Logger.Debug("Processed current transactions", zap.Int("count", rcount))
 	}
-	if blockSize != mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() {
+	if iterInfo.byteSize < mc.MaxByteSize() {
 		if !waitOver && blockSize < mc.MinBlockSize() {
 			b.Txns = nil
 			logging.Logger.Debug("generate block (insufficient txns)",
@@ -1023,8 +1021,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
-	if iterInfo.count > 10*mc.BlockSize() {
-		logging.Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", iterInfo.count))
+	if iterInfo.byteSize > 10*mc.MaxByteSize() {
+		logging.Logger.Info("generate block (too much byte size)", zap.Int64("round", b.Round), zap.Int64("iteration byte size", iterInfo.byteSize))
 	}
 
 	if err = client.GetClients(ctx, iterInfo.clients); err != nil {

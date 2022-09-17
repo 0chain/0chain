@@ -17,7 +17,7 @@ var (
 	SmartContractConfig = viper.New()
 )
 
-//SetupDefaultConfig - setup the default config options that can be overridden via the config file
+// SetupDefaultConfig - setup the default config options that can be overridden via the config file
 func SetupDefaultConfig() {
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("network.relay_time", 200)
@@ -151,7 +151,6 @@ type ChainConfig interface {
 	IsVestingEnabled() bool
 	IsZcnEnabled() bool
 	OwnerID() datastore.Key
-	BlockSize() int32
 	MinBlockSize() int32
 	MaxBlockCost() int
 	MaxByteSize() int64

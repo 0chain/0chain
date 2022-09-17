@@ -54,35 +54,12 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 
 	GenerateClients(c, numClients, workdir)
 
-	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize())
-	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
-	if blockSize <= 0 {
-		return
-	}
-
 	// validate the maxFee and minFee, maxFee must > minFee, otherwise, will panic
 	if maxFee-minFee <= 0 {
 		logging.Logger.Panic(fmt.Sprintf("development.txn_generation.max_txn_fee must be greater than "+
 			"development.txn_generation.min_txn_fee, max_fee: %v, min_fee: %v", maxFee, minFee))
 	}
 
-	switch {
-	case blockSize <= 10:
-		numWorkers = 1
-	case blockSize <= 100:
-		numWorkers = 1
-	case blockSize <= 1000:
-		numWorkers = 2
-		//numTxns = blockSize / 2
-	case blockSize <= 10000:
-		numWorkers = 4
-		//numTxns = blockSize / 2
-	case blockSize <= 100000:
-		numWorkers = 8
-		//numTxns = blockSize / 2
-	default:
-		numWorkers = 16
-	}
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
 	defer memorystore.Close(ctx)
@@ -92,12 +69,13 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 	sc := chain.GetServerChain()
 
 	//Ensure the initial set of transactions succeed or become invalid
-	txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-	for txnCount > blockSize {
-		time.Sleep(20 * time.Millisecond)
-		txnCount = int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-	}
+	//txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
+	//for txnCount > blockSize {
+	//	time.Sleep(20 * time.Millisecond)
+	//	txnCount = int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
+	//}
 
+	numWorkers = 8
 	numGenerators := sc.GetGeneratorsNum()
 	mb := sc.GetCurrentMagicBlock()
 	numMiners := mb.Miners.Size()
@@ -105,7 +83,7 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 	ts := rand.NewSource(time.Now().UnixNano())
 	trng := rand.New(ts)
 	for {
-		numTxns = trng.Int31n(blockSize)
+		numTxns = trng.Int31n(100)
 		numWorkerTxns := numTxns / int32(numWorkers)
 		if numWorkerTxns*int32(numWorkers) < numTxns {
 			numWorkerTxns++
