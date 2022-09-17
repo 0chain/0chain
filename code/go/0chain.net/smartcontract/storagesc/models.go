@@ -390,17 +390,17 @@ func (sn *StorageNode) BlobberStatus(now common.Timestamp, conf *Config) (provid
 	}
 	if sn.Terms.WritePrice > conf.MaxWritePrice {
 		status = provider.Inactive
-		reason += fmt.Sprintf("\twrite price %v, max write prive %v",
+		reason += fmt.Sprintf(" write price %v, max write prive %v.",
 			sn.Terms.WritePrice, conf.MaxWritePrice)
 	}
 	if sn.Terms.ReadPrice > conf.MaxReadPrice {
 		status = provider.Inactive
-		reason += fmt.Sprintf("\tread price %v, max read prive %v",
+		reason += fmt.Sprintf(" read price %v, max read prive %v.",
 			sn.Terms.ReadPrice, conf.MaxReadPrice)
 	}
 	if sn.Capacity < conf.MinBlobberCapacity {
 		status = provider.Inactive
-		reason += fmt.Sprintf("\tcapacity %v, lsess than minimum blobber capcaity %v",
+		reason += fmt.Sprintf(" capacity %v, lsess than minimum blobber capcaity %v",
 			sn.Capacity, conf.MinBlobberCapacity)
 	}
 

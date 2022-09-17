@@ -1370,8 +1370,8 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 
 type validatorResponse struct {
 	event.Validator
-	Status       provider.Status `json:"status"`
-	StatusReason string          `json:"status_reason"`
+	Status       string `json:"status"`
+	StatusReason string `json:"status_reason"`
 }
 
 func newValidatorResponse(
@@ -1381,7 +1381,9 @@ func newValidatorResponse(
 ) *validatorResponse {
 	validatorResponse := validatorResponse{Validator: validator}
 	v := validatorTableToValidatorNode(validator)
-	validatorResponse.Status, validatorResponse.StatusReason = v.ValidatorStatus(now, conf)
+	var status provider.Status
+	status, validatorResponse.StatusReason = v.ValidatorStatus(now, conf)
+	validatorResponse.Status = status.String()
 	return &validatorResponse
 }
 
@@ -2187,11 +2189,11 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 type storageNodeResponse struct {
 	StorageNode
-	TotalServiceCharge currency.Coin   `json:"total_service_charge"`
-	TotalStake         currency.Coin   `json:"total_stake"`
-	UsedAllocation     int64           `json:"used_allocation"`
-	Status             provider.Status `json:"status"`
-	StatusReason       string          `json:"status_reason"`
+	TotalServiceCharge currency.Coin `json:"total_service_charge"`
+	TotalStake         currency.Coin `json:"total_stake"`
+	UsedAllocation     int64         `json:"used_allocation"`
+	Status             string        `json:"status"`
+	StatusReason       string        `json:"status_reason"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
@@ -2288,7 +2290,9 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	}
 	for _, blobber := range blobbers {
 		sn := blobberTableToStorageNode(blobber)
-		sn.Status, sn.StatusReason = sn.BlobberStatus(sCtx.Now(), conf)
+		var status provider.Status
+		status, sn.StatusReason = sn.BlobberStatus(sCtx.Now(), conf)
+		sn.Status = status.String()
 		sns.Nodes = append(sns.Nodes, sn)
 	}
 	common.Respond(w, r, sns, nil)
@@ -2564,7 +2568,9 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
 		return
 	}
-	sn.Status, sn.StatusReason = sn.BlobberStatus(sCtx.Now(), conf)
+	var status provider.Status
+	status, sn.StatusReason = sn.BlobberStatus(sCtx.Now(), conf)
+	sn.Status = status.String()
 	common.Respond(w, r, sn, nil)
 }
 

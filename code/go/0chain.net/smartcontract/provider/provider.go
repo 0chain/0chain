@@ -63,7 +63,7 @@ func (p *Provider) Status(now, healthCheckPeriod common.Timestamp) (Status, stri
 		return ShutDown, ShutDown.String()
 	}
 	if p.LastHealthCheck < (now - healthCheckPeriod) {
-		return Inactive, fmt.Sprintf("\tfailed health check, last check %v", p.LastHealthCheck)
+		return Inactive, fmt.Sprintf(" failed health check, last check %v.", p.LastHealthCheck)
 	}
 	return Active, ""
 }
