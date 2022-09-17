@@ -185,6 +185,14 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
 	return nil
 }
 
+func (mp *MintPayload) countUniqueSignatures() int {
+	uniqueSignatures := make(map[string]bool)
+	for _, v := range mp.Signatures {
+		uniqueSignatures[v.ID] = true
+	}
+	return len(uniqueSignatures)
+}
+
 // ---- BurnPayloadResponse ----------
 
 type BurnPayloadResponse struct {
@@ -298,4 +306,18 @@ type poolStat struct {
 func (ps *poolStat) encode() []byte {
 	buff, _ := json.Marshal(ps)
 	return buff
+}
+
+type AuthCount struct {
+	Count int `json:"auth_count"`
+}
+
+func (ac *AuthCount) Encode() (data []byte, err error) {
+	data, err = json.Marshal(ac)
+	return
+}
+
+func (ac *AuthCount) Decode(input []byte) error {
+	err := json.Unmarshal(input, ac)
+	return err
 }
