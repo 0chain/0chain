@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -51,8 +50,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/getDkgList", mrh.getDkgList),
 		rest.MakeEndpoint(miner+"/getMpksList", mrh.getMpksList),
 		rest.MakeEndpoint(miner+"/getGroupShareOrSigns", mrh.getGroupShareOrSigns),
-		rest.MakeEndpoint(miner+"/getMagicBlock", mrh.getMagicBlock),
-		rest.MakeEndpoint(miner+"/getEvents", mrh.getEvents),
+		rest.MakeEndpoint(miner+"/getMagicBlock", mrh.getMagicBlock), // not sure we store magic block in MPT at the moment, in general, this API will be used when vew-change protocol will be enabled
 		rest.MakeEndpoint(miner+"/nodeStat", mrh.getNodeStat),
 		rest.MakeEndpoint(miner+"/nodePoolStat", mrh.getNodePoolStat),
 		rest.MakeEndpoint(miner+"/configs", mrh.getConfigs),
@@ -226,6 +224,10 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		err    error
 	)
 
+	if id == "" {
+		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
+		return
+	}
 	if sn, err = getMinerNode(id, mrh.GetQueryStateContext()); err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
 		return
@@ -279,89 +281,6 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	common.Respond(w, r, sharderTableToSharderNode(sharder), nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
-// events for block
-//
-// parameters:
-//    + name: block_number
-//      description: block number
-//      in: query
-//      type: string
-//    + name: type
-//      description: type
-//      in: query
-//      type: string
-//    + name: tag
-//      description: tag
-//      in: query
-//      type: string
-//    + name: tx_hash
-//      description: hash of transaction
-//      in: query
-//      type: string
-//    + name: offset
-//      description: offset
-//      in: query
-//      type: string
-//    + name: limit
-//      description: limit
-//      in: query
-//      type: string
-//    + name: sort
-//      description: desc or asc
-//      in: query
-//      type: string
-//
-// responses:
-//  200: eventList
-//  400:
-func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
-	var blockNumber = 0
-	var blockNumberString = r.URL.Query().Get("block_number")
-
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-
-	if len(blockNumberString) > 0 {
-		var err error
-		blockNumber, err = strconv.Atoi(blockNumberString)
-		if err != nil {
-			common.Respond(w, r, nil, fmt.Errorf("cannot parse block number %v", err))
-			return
-		}
-	}
-
-	eventType, err := strconv.Atoi(r.URL.Query().Get("type"))
-	if err != nil {
-		common.Respond(w, r, nil, fmt.Errorf("cannot parse type %s: %v", r.URL.Query().Get("type"), err))
-		return
-	}
-	eventTag, err := strconv.Atoi(r.URL.Query().Get("tag"))
-	if err != nil {
-		common.Respond(w, r, nil, fmt.Errorf("cannot parse tag %s: %v", r.URL.Query().Get("type"), err))
-		return
-	}
-	filter := event.Event{
-		BlockNumber: int64(blockNumber),
-		TxHash:      r.URL.Query().Get("tx_hash"),
-		Type:        eventType,
-		Tag:         eventTag,
-	}
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	events, err := edb.FindEvents(r.Context(), filter, pagination)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, eventList{
-		Events: events,
-	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock getMagicBlock
