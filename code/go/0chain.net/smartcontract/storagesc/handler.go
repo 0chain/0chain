@@ -133,8 +133,8 @@ func validatorTableToValidatorNode(val event.Validator) ValidationNode {
 //  400:
 func (srh *StorageRestHandler) getValidatorStatus(w http.ResponseWriter, r *http.Request) {
 	var id = r.URL.Query().Get("id")
-	sctx := srh.GetQueryStateContext()
-	edb := sctx.GetEventDB()
+	sCtx := srh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -148,11 +148,11 @@ func (srh *StorageRestHandler) getValidatorStatus(w http.ResponseWriter, r *http
 	sn := validatorTableToValidatorNode(validator)
 	var status provider.StatusInfo
 	var conf *Config
-	if conf, err = getConfig(sctx); err != nil {
+	if conf, err = getConfig(sCtx); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
 		return
 	}
-	status.Status, status.Reason = sn.ValidatorStatus(sctx.Now(), conf)
+	status.Status, status.Reason = sn.ValidatorStatus(sCtx.Now(), conf)
 
 	common.Respond(w, r, status, nil)
 }
@@ -1368,6 +1368,23 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 	}, nil)
 }
 
+type validatorResponse struct {
+	event.Validator
+	Status       provider.Status `json:"status"`
+	StatusReason string          `json:"status_reason"`
+}
+
+func newValidatorResponse(
+	validator event.Validator,
+	now common.Timestamp,
+	conf *Config,
+) *validatorResponse {
+	validatorResponse := validatorResponse{Validator: validator}
+	v := validatorTableToValidatorNode(validator)
+	validatorResponse.Status, validatorResponse.StatusReason = v.ValidatorStatus(now, conf)
+	return &validatorResponse
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator get_validator
 // Gets validator information
 //
@@ -1383,7 +1400,6 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 //  400:
 //  500:
 func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Request) {
-
 	var (
 		validatorID = r.URL.Query().Get("validator_id")
 	)
@@ -1392,7 +1408,8 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrBadRequest("no validator id"))
 		return
 	}
-	edb := srh.GetQueryStateContext().GetEventDB()
+	sCtx := srh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
@@ -1402,7 +1419,12 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	common.Respond(w, r, validator, nil)
+	var conf *Config
+	if conf, err = getConfig(sCtx); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
+		return
+	}
+	common.Respond(w, r, newValidatorResponse(validator, sCtx.Now(), conf), nil)
 }
 
 // validators swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators validators
@@ -1421,11 +1443,17 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 	killed := len(r.URL.Query().Get("killed")) > 0
 	shutDown := len(r.URL.Query().Get("killed")) > 0
 
-	edb := srh.GetQueryStateContext().GetEventDB()
+	sCtx := srh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 	}
 
+	var conf *Config
+	if conf, err = getConfig(sCtx); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't get config: "+err.Error()))
+		return
+	}
 	validators, err := edb.GetValidators(pagination, killed, shutDown)
 	if err != nil {
 		err := common.NewErrInternal("cannot get validator list" + err.Error())
@@ -1433,7 +1461,12 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	common.Respond(w, r, validators, nil)
+	var response []*validatorResponse
+	for _, v := range validators {
+		vResponse := newValidatorResponse(v, sCtx.Now(), conf)
+		response = append(response, vResponse)
+	}
+	common.Respond(w, r, response, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers
@@ -2475,7 +2508,7 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 // responses:
 //  200: Int64Map
 //  400:
-func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -2506,7 +2539,7 @@ func (srh StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Req
 //  200: storageNodesResponse
 //  400:
 //  500:
-func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request) {
 	var blobberID = r.URL.Query().Get("blobber_id")
 	if blobberID == "" {
 		err := common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
@@ -2552,7 +2585,7 @@ func (srh StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request)
 //  200: Int64Map
 //  400:
 //  500:
-func (srh StorageRestHandler) getTimeInactive(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getTimeInactive(w http.ResponseWriter, r *http.Request) {
 	pType, ok := spenum.Providers[r.URL.Query().Get("type")]
 	if !ok {
 		pType = spenum.Blobber
@@ -2667,7 +2700,7 @@ type readMarkersCount struct {
 //  200:
 //  400:
 //  500:
-func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Request) {
+func (srh *StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		query = r.URL.Query().Get("searchString")
 	)
