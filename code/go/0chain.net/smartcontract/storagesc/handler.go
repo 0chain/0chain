@@ -2109,12 +2109,6 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				MaxNumDelegates:    blobber.NumDelegates,
 				ServiceChargeRatio: blobber.ServiceCharge,
 			},
-			Information: Info{
-				Name:        blobber.Name,
-				WebsiteUrl:  blobber.WebsiteUrl,
-				LogoUrl:     blobber.LogoUrl,
-				Description: blobber.Description,
-			},
 		},
 		TotalServiceCharge: blobber.TotalServiceCharge,
 		TotalStake:         blobber.TotalStake,
