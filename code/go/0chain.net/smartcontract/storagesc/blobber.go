@@ -786,9 +786,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 }
 
 // blobberAddAllocation add allocation to blobber and create related partitions if needed
-// - add allocation to blobber allocations partitions
-// - add blobber to challenge ready partitions if the allocation is the first one and
-// 	 update blobber partitions locations
+//   - add allocation to blobber allocations partitions
+//   - add blobber to challenge ready partitions if the allocation is the first one and
+//     update blobber partitions locations
 func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transaction,
 	blobAlloc *BlobberAllocation, blobUsedCapacity uint64, balances cstate.StateContextI) error {
 	logging.Logger.Info("commit_connection, add allocation to blobber",
@@ -892,6 +892,9 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
+	logging.Logger.Debug("insertBlobber, save or update stake pool",
+		zap.Any("provider type", spenum.Blobber),
+		zap.String("provider id", blobber.ID))
 
 	staked, err := sp.stake()
 	if err != nil {

@@ -90,18 +90,14 @@ func (sp *stakePool) Decode(input []byte) error {
 
 // save the stake pool
 func (sp *stakePool) save(providerType spenum.Provider, providerID string,
-	balances chainstate.StateContextI) (err error) {
-
-	r, err := balances.InsertTrieNode(stakePoolKey(providerType, providerID), sp)
+	balances chainstate.StateContextI) error {
+	_, err := balances.InsertTrieNode(stakePoolKey(providerType, providerID), sp)
 	if err != nil {
 		return err
 	}
 
-	logging.Logger.Debug("after stake pool save", zap.String("root", util.ToHex([]byte(r))))
-
 	sp.emitSaveEvent(providerType, providerID, balances)
-
-	return
+	return nil
 }
 
 func (sp *stakePool) emitSaveEvent(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) {
