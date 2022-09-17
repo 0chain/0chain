@@ -75,7 +75,7 @@ difference = stake_pool_tokens - required_stake
 
 ###### Blobber not registered or has removed
 
-Create related stake pool. Lock required tokens. 
+Create related stake pool. Lock required tokens.
 
 ```
 required_stake = (capacity / GB) * write_price
@@ -87,7 +87,7 @@ required_stake = (capacity / GB) * write_price
 
 ### 1. Create wallet
 
-User creates wallet by zwalelt or zbox.
+User creates wallet by zwallet or zbox.
 
 ### 2. Create read pool
 
@@ -526,10 +526,10 @@ free to use these zbox command.
     object.
     ```
     ./zbox get --allocation $ALLOC2
-    ``` 
+    ```
     Make sure `total challenges` reaches `failed_challenges_to_cancel`
     configured in sc.yaml ('stroagesc'). Since, blobbers is down after the
-    challenge_completion_time all the challenges are failed. But the 
+    challenge_completion_time all the challenges are failed. But the
     filed_challenges field will be zero, because blobber doesn't send a
     challenge (the failed_challenges is where a blobber sends a failed
     challenge, there is mechanism for challenges expired for a case blobber is
@@ -568,12 +568,12 @@ free to use these zbox command.
     ```
     ./zbox collect-rewards --poolod $POOL_ID --provider_type blobber
     ```
-35. You can now check your balance with    
+35. You can now check your balance with
      ```
     ./zwallet getbalance
     ```
-    unfortunately this might not show your rewards, as `getbalance` ony gives 
-your balance to three decimal places. 
+    unfortunately this might not show your rewards, as `getbalance` ony gives
+your balance to three decimal places.
 
 
 # Client specific API

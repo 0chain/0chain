@@ -87,7 +87,7 @@ Otherwise the node can't be registered. Measured in tokens (101.12 for example).
     sharders_min_n: 0.30 # 30%
     t_percent: .51
     k_percent: .75
-    min_stake: 0.01 
+    min_stake: 0.01
     max_stake: 100.0
     start_rounds: 50
     contribute_rounds: 50
@@ -252,7 +252,7 @@ of all offline nodes returning tokens back.
 
 1. If 0chain has updated, cleanup blockchain and rebuild all.
 2. Start sharder 1 and 1-3 miners (genesis nodes).
-3. Create wallet in zwalelt and fill if with tokens
+3. Create wallet in zwallet and fill if with tokens
     ```
     for run in {1..10}; do ./zwallet faucet --methodName pour --input “{Pay day}”; done
     ```
