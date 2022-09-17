@@ -1,12 +1,13 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	"math/rand"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
@@ -436,7 +437,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string
 
 	ba, ok := alloc.BlobberAllocsMap[blobber.ID]
 	if !ok {
-		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, common.Timestamp(now))
+		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, common.Timestamp(now), 2*time.Minute)
 		require.NoError(t, err)
 	}
 
