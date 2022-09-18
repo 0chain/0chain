@@ -47,6 +47,7 @@ const (
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
+	CancellationCharge
 
 	FreeAllocationDataShards
 	FreeAllocationParityShards
@@ -148,6 +149,7 @@ var (
 
 		"max_total_free_allocation",
 		"max_individual_free_allocation",
+		"cancellation_charge",
 
 		"free_allocation_settings.data_shards",
 		"free_allocation_settings.parity_shards",
@@ -252,6 +254,7 @@ var (
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
+		"cancellation_charge":            {CancellationCharge, smartcontract.Float64},
 
 		"free_allocation_settings.data_shards":           {FreeAllocationDataShards, smartcontract.Int},
 		"free_allocation_settings.parity_shards":         {FreeAllocationParityShards, smartcontract.Int},
@@ -456,6 +459,8 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.FreeAllocationSettings.ReadPoolFraction = change
 	case ValidatorReward:
 		conf.ValidatorReward = change
+	case CancellationCharge:
+		conf.CancellationCharge = change
 	case BlobberSlash:
 		conf.BlobberSlash = change
 	case ChallengeGenerationRate:
@@ -679,6 +684,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
 		return conf.MaxIndividualFreeAllocation
+	case CancellationCharge:
+		return conf.CancellationCharge
 	case FreeAllocationDataShards:
 		return conf.FreeAllocationSettings.DataShards
 	case FreeAllocationParityShards:

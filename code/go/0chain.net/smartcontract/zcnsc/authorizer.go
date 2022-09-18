@@ -1,6 +1,8 @@
 package zcnsc
 
 import (
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -8,8 +10,9 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"fmt"
+	"0chain.net/smartcontract/storagesc"
 	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -116,7 +119,34 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Events emission
 	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent())
 
-	return string(authorizer.Encode()), nil
+	err = increaseAuthorizerCount(ctx)
+
+	return string(authorizer.Encode()), err
+}
+
+func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
+	numAuth := &AuthCount{}
+	numAuth.Count, err = getAuthorizerCount(ctx)
+	if err != nil {
+		return
+	}
+	numAuth.Count++
+
+	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	return
+}
+
+func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
+	numAuth := &AuthCount{}
+	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	if err == util.ErrValueNotPresent {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	return numAuth.Count, nil
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(

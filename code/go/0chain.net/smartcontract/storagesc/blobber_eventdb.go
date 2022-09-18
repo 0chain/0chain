@@ -60,10 +60,10 @@ func (sn *StorageNode) EmitAdd(balances cstate.StateContextI) {
 		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
 
-		Name:        sn.Information.Name,
-		WebsiteUrl:  sn.Information.WebsiteUrl,
-		Description: sn.Information.Description,
-		LogoUrl:     sn.Information.LogoUrl,
+		OffersTotal:  sp.TotalOffers,
+		UnstakeTotal: sp.TotalUnStake,
+		Reward:       sp.Reward,
+		TotalStake:   staked,
 	}
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
 }

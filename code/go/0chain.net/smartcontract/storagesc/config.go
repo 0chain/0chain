@@ -139,6 +139,7 @@ type Config struct {
 	MinWritePrice currency.Coin `json:"min_write_price"`
 
 	// allocation cancellation
+	CancellationCharge float64 `json:"cancellation_charge"`
 
 	// FailedChallengesToCancel is number of failed challenges of an allocation
 	// to be able to cancel an allocation.
@@ -197,6 +198,10 @@ func (sc *Config) validate() (err error) {
 	if sc.BlobberSlash < 0.0 || 1.0 < sc.BlobberSlash {
 		return fmt.Errorf("blobber_slash not in [0; 1] range: %v",
 			sc.BlobberSlash)
+	}
+	if sc.CancellationCharge < 0.0 || 1.0 < sc.CancellationCharge {
+		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
+			sc.CancellationCharge)
 	}
 	if sc.MaxBlobbersPerAllocation <= 0 {
 		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
@@ -399,6 +404,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
+	conf.CancellationCharge = scc.GetFloat64(pfx + "cancellation_charge")
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
 	if err != nil {

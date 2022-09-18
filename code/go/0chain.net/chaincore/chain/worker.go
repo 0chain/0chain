@@ -552,7 +552,7 @@ func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootSt
 	if err != nil {
 		switch err {
 		case context.Canceled:
-			Logger.Error("Sync round state abort, context is canceled, suppose the BC is moving")
+			Logger.Debug("Sync round state abort, context is canceled, suppose the BC is moving")
 			return
 		case context.DeadlineExceeded:
 			Logger.Error("Sync round state abort, context timed out for checking missing nodes")

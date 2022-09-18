@@ -242,6 +242,13 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
 }
 
+// swagger:model nodeStat
+type nodeStat struct {
+	MinerNode
+	Round       int64 `json:"round"`
+	TotalReward int64 `json:"total_reward"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat nodeStat
 // lists sharders
 //
@@ -253,7 +260,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 //      required: true
 //
 // responses:
-//  200: MinerNode
+//  200: nodeStat
 //  400:
 //  484:
 func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
@@ -264,13 +271,21 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
 		return
 	}
-	edb := mrh.GetQueryStateContext().GetEventDB()
+	sCtx := mrh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
+
+	if sCtx.GetBlock() == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("cannot get latest finalised block"))
+		return
+	}
+
 	if miner, err := edb.GetMiner(id); err == nil {
-		common.Respond(w, r, minerTableToMinerNode(miner), nil)
+		common.Respond(w, r, nodeStat{
+			MinerNode: minerTableToMinerNode(miner), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.TotalReward)}, nil)
 		return
 	}
 	sharder, err := edb.GetSharder(id)
@@ -278,7 +293,10 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("miner/sharder not found"))
 		return
 	}
-	common.Respond(w, r, sharderTableToSharderNode(sharder), nil)
+	common.Respond(w, r, nodeStat{
+		MinerNode:   sharderTableToSharderNode(sharder),
+		Round:       sCtx.GetBlock().Round,
+		TotalReward: int64(sharder.TotalReward)}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
@@ -557,7 +575,8 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		}
 		filter.Active = null.BoolFrom(active)
 	}
-	edb := mrh.GetQueryStateContext().GetEventDB()
+	sCtx := mrh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -567,9 +586,13 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
 		return
 	}
-	shardersArr := make([]MinerNode, len(sharders))
+	shardersArr := make([]nodeStat, len(sharders))
 	for i, sharder := range sharders {
-		shardersArr[i] = sharderTableToSharderNode(sharder)
+		shardersArr[i] = nodeStat{
+			MinerNode:   sharderTableToSharderNode(sharder),
+			Round:       sCtx.GetBlock().Round,
+			TotalReward: int64(sharder.TotalReward),
+		}
 	}
 	common.Respond(w, r, rest.InterfaceMap{
 		"Nodes": shardersArr,
@@ -672,7 +695,8 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		}
 		filter.Active = null.BoolFrom(active)
 	}
-	edb := mrh.GetQueryStateContext().GetEventDB()
+	sCtx := mrh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -682,10 +706,15 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
 		return
 	}
-	minersArr := make([]MinerNode, len(miners))
+	minersArr := make([]nodeStat, len(miners))
 	for i, miner := range miners {
-		minersArr[i] = minerTableToMinerNode(miner)
+		minersArr[i] = nodeStat{
+			MinerNode:   minerTableToMinerNode(miner),
+			Round:       sCtx.GetBlock().Round,
+			TotalReward: int64(miner.TotalReward),
+		}
 	}
+
 	common.Respond(w, r, rest.InterfaceMap{
 		"Nodes": minersArr,
 	}, nil)

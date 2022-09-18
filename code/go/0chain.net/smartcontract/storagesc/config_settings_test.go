@@ -136,6 +136,7 @@ func TestUpdateSettings(t *testing.T) {
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
+					"cancellation_charge":            "0.2",
 
 					"free_allocation_settings.data_shards":           "10",
 					"free_allocation_settings.parity_shards":         "5",
@@ -338,6 +339,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"health_check_period":            "1h",
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
+					"cancellation_charge":            "0.2",
 
 					"free_allocation_settings.data_shards":           "10",
 					"free_allocation_settings.parity_shards":         "5",
@@ -427,6 +429,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
 		return conf.MaxIndividualFreeAllocation
+	case CancellationCharge:
+		return conf.CancellationCharge
 
 	case FreeAllocationDataShards:
 		return conf.FreeAllocationSettings.DataShards
