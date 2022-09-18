@@ -122,7 +122,7 @@ smart_contracts:
     stakepool:
       # minimal lock for a delegate pool
       min_lock: 0.1 # tokens
-      # amount stake holders are slashed if blobber or validator is killed
+      # the amount stake holders are slashed if a blobber or validator is killed
       kill_slash: 0.5
       # min_lock_period is min lock period. Default lock period is 3 years worth of blocks.
       min_lock_period: 36m
