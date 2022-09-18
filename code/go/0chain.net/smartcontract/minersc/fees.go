@@ -439,6 +439,7 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 	return totalMaxFee, nil
 }
 
+// gets sharders from a block
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	balances cstate.StateContextI) (sharders []*MinerNode, err error) {
 
