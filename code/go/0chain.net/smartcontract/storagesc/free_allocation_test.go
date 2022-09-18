@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
-	"0chain.net/smartcontract/provider"
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
 

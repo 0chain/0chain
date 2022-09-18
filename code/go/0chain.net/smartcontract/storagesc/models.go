@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 
@@ -1075,7 +1075,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return nil, err
 	}
-	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now); err != nil {
+	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now, conf); err != nil {
 		return nil, err
 	}
 
@@ -1215,21 +1215,22 @@ List:
 func (sa *StorageAllocation) validateEachBlobber(
 	blobbers []*storageNodeResponse,
 	creationDate common.Timestamp,
+	conf *Config,
 ) ([]*StorageNode, []string) {
 	var (
-		errors   = make([]string, 0, len(blobbers))
-		filtered = make([]*StorageNode, 0, len(blobbers))
+		errorSlice = make([]string, 0, len(blobbers))
+		filtered   = make([]*StorageNode, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
-		err := sa.validateAllocationBlobber(b.StorageNode, b.TotalStake, b.TotalOffers, creationDate)
+		err := sa.validateAllocationBlobber(b.StorageNode, b.TotalStake, b.TotalOffers, creationDate, conf)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
-			errors = append(errors, err.Error())
+			errorSlice = append(errorSlice, err.Error())
 			continue
 		}
 		filtered = append(filtered, b.StorageNode)
 	}
-	return filtered, errors
+	return filtered, errorSlice
 }
 
 // Until returns allocation expiration.

@@ -591,7 +591,7 @@ func validateBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
-	var list, errs = sa.validateEachBlobber(blobbers, common.Timestamp(creationDate.Unix()))
+	var list, errs = sa.validateEachBlobber(blobbers, common.Timestamp(creationDate.Unix()), conf)
 
 	if len(list) < size {
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation: " + strings.Join(errs, ", "))

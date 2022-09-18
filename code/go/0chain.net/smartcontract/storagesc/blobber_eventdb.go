@@ -59,11 +59,6 @@ func (sn *StorageNode) EmitAdd(balances cstate.StateContextI) {
 		MaxStake:       sn.StakePoolSettings.MaxStake,
 		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
-
-		OffersTotal:  sp.TotalOffers,
-		UnstakeTotal: sp.TotalUnStake,
-		Reward:       sp.Reward,
-		TotalStake:   staked,
 	}
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
 }
@@ -82,8 +77,8 @@ func (sn *StorageNode) EmitUpdate(sp *stakePool, balances cstate.StateContextI) 
 			"capacity":           sn.Capacity,
 			"allocated":          sn.Allocated,
 			"last_health_check":  int64(sn.LastHealthCheck),
-			"is_killed":          sn.IsKilled,
-			"is_shut_down":       sn.IsShutDown,
+			"is_killed":          sn.IsKilled(),
+			"is_shut_down":       sn.IsShutDown(),
 			"delegate_wallet":    sn.StakePoolSettings.DelegateWallet,
 			"min_stake":          int64(sn.StakePoolSettings.MinStake),
 			"max_stake":          int64(sn.StakePoolSettings.MaxStake),
