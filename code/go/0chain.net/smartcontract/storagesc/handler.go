@@ -2422,7 +2422,7 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 	var total int64
 	for _, blobber := range blobbers {
 		var sp *stakePool
-		sp, err := getStakePool(blobber, sctx)
+		sp, err := getStakePool(spenum.Blobber, blobber, sctx)
 		if err != nil {
 			err := common.NewErrInternal("cannot get stake pool" + err.Error())
 			common.Respond(w, r, nil, err)

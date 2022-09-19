@@ -9,11 +9,9 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -382,20 +380,13 @@ type stakePoolStat struct {
 // getStakePool of given blobber
 func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
 	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
-	sp = newStakePool()
-	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
-	if err != nil {
-		return nil, err
-	}
-
-	return sp, nil
+	return getStakePool(providerType, providerID, balances)
 }
 
-func getStakePool(
-	blobberID datastore.Key, balances chainstate.CommonStateContextI,
-) (sp *stakePool, err error) {
+func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (
+	sp *stakePool, err error) {
 	sp = newStakePool()
-	err = balances.GetTrieNode(stakePoolKey(spenum.Blobber, blobberID), sp)
+	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
 	if err != nil {
 		return nil, err
 	}

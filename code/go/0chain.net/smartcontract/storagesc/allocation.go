@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -262,7 +261,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
-	spMap, err := getStakePoolsByIDs(request.Blobbers, balances)
+	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
 	}
@@ -441,109 +440,6 @@ func (t *Timings) tick(name string) {
 	t.timings[name] = time.Since(t.start)
 }
 
-func (sc *StorageSmartContract) fetchStorageNodePlusStake(blobberIds []string, balances chainstate.CommonStateContextI) ([]storageNodeResponse, error) {
-	type indexedBlobber struct {
-		index   int
-		blobber storageNodeResponse
-	}
-	blobbers := make([]indexedBlobber, 0, len(blobberIds))
-	pools := make(chan indexedBlobber, len(blobberIds))
-	errs := make(chan error, len(blobberIds))
-
-	for i, id := range blobberIds {
-		go func(id string, i int) {
-			var err error
-			blobber, err := getBlobber(id, balances)
-			if err != nil || blobber == nil {
-				errs <- err
-				return
-			}
-			sp, err := sc.getStakePool(spenum.Blobber, id, balances)
-			if err != nil {
-				errs <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
-				return
-			}
-			stake, err := sp.stake()
-			if err != nil {
-				errs <- err
-				return
-			}
-			sns := storageNodeResponse{
-				StorageNode: blobber,
-				TotalStake:  stake,
-				TotalOffers: sp.TotalOffers,
-			}
-			pools <- indexedBlobber{i, sns}
-		}(id, i)
-	}
-
-	for {
-		if len(blobbers) == len(blobberIds) {
-			//ensure ordering
-			sort.Slice(blobbers, func(i, j int) bool {
-				return blobbers[i].index < blobbers[j].index
-			})
-			retBlobbers := make([]storageNodeResponse, 0, len(blobberIds))
-			for _, b := range blobbers {
-				retBlobbers = append(retBlobbers, b.blobber)
-			}
-			return retBlobbers, nil
-		}
-
-		select {
-		case err := <-errs:
-			return nil, err
-		case p := <-pools:
-			blobbers = append(blobbers, p)
-		}
-	}
-}
-
-func (sc *StorageSmartContract) fetchPools(inputBlobbers *StorageNodes, balances chainstate.CommonStateContextI) ([]*blobberWithPool, error) {
-	blobbers := make([]*blobberWithPool, 0, len(inputBlobbers.Nodes))
-	poolC := make(chan *blobberWithPool, len(inputBlobbers.Nodes))
-	errC := make(chan error, len(inputBlobbers.Nodes))
-
-	wg := sync.WaitGroup{}
-	for i, b := range inputBlobbers.Nodes {
-		wg.Add(1)
-		go func(blob *StorageNode, ind int) {
-			defer wg.Done()
-			var sp *stakePool
-			var err error
-			if sp, err = sc.getStakePool(spenum.Blobber, blob.ID, balances); err != nil {
-				errC <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
-				return
-			}
-			poolC <- &blobberWithPool{blob, sp, ind}
-		}(b, i)
-	}
-
-	wg.Wait()
-	close(poolC)
-
-	select {
-	case err := <-errC:
-		return nil, err
-	default:
-	}
-
-	for p := range poolC {
-		blobbers = append(blobbers, p)
-	}
-
-	if len(blobbers) != len(inputBlobbers.Nodes) {
-		return nil, errors.New("fetched stake pools number does not match the requested ones")
-	}
-
-	//ensure ordering
-	sort.Slice(blobbers, func(i, j int) bool {
-		return blobbers[i].idx < blobbers[j].idx
-	})
-
-	return blobbers, nil
-}
-
 func (sc *StorageSmartContract) selectBlobbers(
 	creationDate time.Time,
 	allBlobbersList StorageNodes,
@@ -593,20 +489,6 @@ func (sc *StorageSmartContract) selectBlobbers(
 	}
 
 	return blobberNodes[:size], bSize, nil
-}
-
-func getBlobbers(
-	blobberIDs []string,
-	balances chainstate.CommonStateContextI,
-) (*StorageNodes, error) {
-	blobbers, err := getBlobbersByIDs(blobberIDs, balances)
-	if err != nil {
-		return nil, err
-	}
-
-	return &StorageNodes{
-		Nodes: blobbers,
-	}, nil
 }
 
 func validateBlobbers(
@@ -714,6 +596,7 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 	return alloc.BlobberAllocs[0].Size + uar.getBlobbersSizeDiff(alloc)
 }
 
+// get blobbers by IDs concurrently, return error if any of them could not be acquired.
 func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]*StorageNode, error) {
 	type blobberResp struct {
 		index   int
@@ -729,11 +612,7 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]
 			defer wg.Done()
 			blobber, err := getBlobber(blobberId, balances)
 			if err != nil {
-				if err != util.ErrValueNotPresent {
-					stateErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
-					return
-				}
-
+				stateErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
 				logging.Logger.Debug("could not get blobber", zap.String("blobberId", blobberId), zap.Error(err))
 				return
 			}
@@ -759,53 +638,48 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]
 	for resp := range blobberCh {
 		blobbers[resp.index] = resp.blobber
 	}
-	filtered := make([]*StorageNode, 0, len(ids))
-	for _, b := range blobbers {
-		if b != nil {
-			filtered = append(filtered, b)
-		}
-	}
 
-	return filtered, nil
+	return blobbers, nil
 }
 
-func getStakePoolsByIDs(ids []string, balances chainstate.CommonStateContextI) (map[string]*stakePool, error) {
+func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances chainstate.CommonStateContextI) (map[string]*stakePool, error) {
 	type spResp struct {
-		blobberId string
-		sp        *stakePool
+		providerID string
+		sp         *stakePool
 	}
 
-	stakePoolCh := make(chan spResp, len(ids))
-	errorChan := make(chan error, len(ids))
+	poolC := make(chan spResp, len(ids))
+	errC := make(chan error, len(ids))
 	var wg sync.WaitGroup
-	for i, details := range ids {
+	for i, id := range ids {
 		wg.Add(1)
-		go func(index int, blobberId string) {
+		go func(i int, pid string) {
 			defer wg.Done()
-			sp, err := getStakePool(blobberId, balances)
-			if err != nil || sp == nil {
-				errorChan <- err
-			} else {
-				stakePoolCh <- spResp{
-					blobberId: blobberId,
-					sp:        sp,
-				}
+			sp, err := getStakePool(providerType, pid, balances)
+			if err != nil {
+				errC <- err
+				return
 			}
-		}(i, details)
+			poolC <- spResp{
+				providerID: pid,
+				sp:         sp,
+			}
+		}(i, id)
 	}
 	wg.Wait()
-	close(errorChan)
-	close(stakePoolCh)
-	for err := range errorChan {
-		if err != nil {
-			return nil, err
-		}
+	close(poolC)
+
+	select {
+	case err := <-errC:
+		return nil, err
+	default:
 	}
 	//ensure original ordering
 	stakePoolMap := make(map[string]*stakePool, len(ids))
-	for resp := range stakePoolCh {
-		stakePoolMap[resp.blobberId] = resp.sp
+	for resp := range poolC {
+		stakePoolMap[resp.providerID] = resp.sp
 	}
+
 	return stakePoolMap, nil
 }
 
