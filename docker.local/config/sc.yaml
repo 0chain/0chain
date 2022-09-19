@@ -153,7 +153,7 @@ smart_contracts:
     # blobber_slash represents blobber's stake penalty when a challenge not
     # passed
     blobber_slash: 0.10
-    # the duration between health check after which a blobber or validator is considered inactive
+    # duration between health check after which a blobber or validator is considered inactive
     health_check_period: 1m
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
