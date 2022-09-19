@@ -23,8 +23,8 @@ type Blobber struct {
 
 	//provider
 	LastHealthCheck int64 `json:"last_health_check"`
-	IsKilled        bool  `json:"is_killed" gorm:"index"`
-	IsShutDown      bool  `json:"is_shut_down" gorm:"index"`
+	IsKilled        bool  `json:"is_killed"`
+	IsShutDown      bool  `json:"is_shut_down"`
 	DownTime        int64 `json:"down_time"`
 
 	// geolocation
