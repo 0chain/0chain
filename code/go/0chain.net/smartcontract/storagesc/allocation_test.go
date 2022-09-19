@@ -11,8 +11,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/smartcontract/stakepool/spenum"
-
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/chaincore/currency"
