@@ -5,8 +5,8 @@ import (
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/util"
 )
 
 func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI) {

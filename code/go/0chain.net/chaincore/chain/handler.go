@@ -28,9 +28,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/minersc"
 )
@@ -39,8 +39,8 @@ const (
 	getBlockV1Pattern = "/v1/block/get"
 )
 
-func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
-	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+// chainhandlersMap returns routes of associated with chain
+func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/chain/get": common.Recover(
 			common.ToJSONResponse(
@@ -49,12 +49,14 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 			),
 		),
-		"/v1/chain/put": common.Recover(
-			datastore.ToJSONEntityReqResponse(
-				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
-				chainEntityMetadata,
-			),
-		),
+	}
+	return m
+}
+
+func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	m := map[string]func(http.ResponseWriter, *http.Request){
+
 		"/v1/block/get/latest_finalized": common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
@@ -1743,4 +1745,15 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(writer, "END }\n")
 	}()
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
+}
+
+// SetupHandlers sets up the necessary API end points for miners
+func SetupMinerHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
+	setupHandlers(chainhandlersMap(c))
+}
+
+// SetupHandlers sets up the necessary API end points for sharders
+func SetupSharderHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
 }

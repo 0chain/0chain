@@ -11,9 +11,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -64,11 +65,28 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 }
 
 // save the challenge pool
-func (cp *challengePool) save(sscKey, allocationID string,
-	balances cstate.StateContextI) (err error) {
-
-	r, err := balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
+func (cp *challengePool) save(sscKey string, alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
+	cpKey := challengePoolKey(sscKey, alloc.ID)
+	r, err := balances.InsertTrieNode(cpKey, cp)
 	logging.Logger.Debug("after save challenge pool", zap.String("root", util.ToHex([]byte(r))))
+
+	//emit challenge pool event
+	emitChallengePoolEvent(cpKey, cp.GetBalance(), alloc, balances)
+
+	return
+}
+
+func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllocation, balances cstate.StateContextI) {
+	data := event.ChallengePool{
+		ID:           id,
+		AllocationID: alloc.ID,
+		Balance:      int64(balance),
+		StartTime:    int64(alloc.StartTime),
+		Expiration:   int64(alloc.Expiration),
+		Finalized:    alloc.Finalized,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagAddOrUpdateChallengePool, "", data)
 
 	return
 }
@@ -112,18 +130,16 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	return nil
 }
 
-func (cp *challengePool) stat(alloc *StorageAllocation) (
-	stat *challengePoolStat) {
+func toChallengePoolStat(cp *event.ChallengePool) *challengePoolStat {
+	stat := challengePoolStat{
+		ID:         cp.ID,
+		Balance:    currency.Coin(cp.Balance),
+		StartTime:  common.Timestamp(cp.StartTime),
+		Expiration: common.Timestamp(cp.Expiration),
+		Finalized:  cp.Finalized,
+	}
 
-	stat = new(challengePoolStat)
-
-	stat.ID = cp.ID
-	stat.Balance = cp.Balance
-	stat.StartTime = alloc.StartTime
-	stat.Expiration = alloc.Until()
-	stat.Finalized = alloc.Finalized
-
-	return
+	return &stat
 }
 
 // swagger:model challengePoolStat
@@ -182,7 +198,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	// don't lock anything here
 
 	// save the challenge pool
-	if err = cp.save(ssc.ID, alloc.ID, balances); err != nil {
+	if err = cp.save(ssc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
 

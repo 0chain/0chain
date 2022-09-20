@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

@@ -4,13 +4,15 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/storagesc"
+	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -121,7 +123,34 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Events emission
 	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent())
 
-	return string(input), nil
+	err = increaseAuthorizerCount(ctx)
+
+	return string(authorizer.Encode()), err
+}
+
+func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
+	numAuth := &AuthCount{}
+	numAuth.Count, err = getAuthorizerCount(ctx)
+	if err != nil {
+		return
+	}
+	numAuth.Count++
+
+	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	return
+}
+
+func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
+	numAuth := &AuthCount{}
+	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	if err == util.ErrValueNotPresent {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	return numAuth.Count, nil
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
@@ -272,11 +301,18 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// Mark StakePool as Deleted but not delete it
+	var sp *StakePool
+	if sp, err = zcn.getStakePool(authorizerID, ctx); err != nil {
+		return "", common.NewErrorf(errorCode, "error occurred while getting stake pool: %v", err)
 
-	sp, err := zcn.getStakePool(authorizerID, ctx)
-	if err != nil {
-		return "", common.NewError(errorCode, "failed to get stake pool: "+err.Error())
 	}
+
+	if err := smartcontractinterface.AuthorizeWithDelegate(errorCode, func() bool {
+		return sp.Settings.DelegateWallet == tran.ClientID
+	}); err != nil {
+		return "", err
+	}
+
 	for _, v := range sp.Pools {
 		v.Status = spenum.Deleted
 	}
@@ -311,7 +347,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
-	_ *transaction.Transaction,
+	t *transaction.Transaction,
 	input []byte,
 	ctx cstate.StateContextI,
 ) (string, error) {
@@ -345,6 +381,18 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 	authorizer, err := GetAuthorizerNode(in.ID, ctx)
 	if err != nil {
 		return "", common.NewError(code, err.Error())
+	}
+
+	var sp *StakePool
+	if sp, err = zcn.getStakePool(in.ID, ctx); err != nil {
+		return "", common.NewErrorf(code, "error occurred while getting stake pool: %v", err)
+
+	}
+
+	if err := smartcontractinterface.AuthorizeWithDelegate(code, func() bool {
+		return sp.Settings.DelegateWallet == t.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	err = authorizer.UpdateConfig(in.Config)

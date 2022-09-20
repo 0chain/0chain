@@ -13,7 +13,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
 

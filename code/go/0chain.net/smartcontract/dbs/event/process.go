@@ -11,7 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 type (
@@ -63,10 +63,9 @@ const (
 	TagAddOrOverwriteAllocationBlobberTerm // 34
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
+	TagAddOrUpdateChallengePool
 	NumberOfTags
 )
-
-// 29 32 33
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
@@ -469,6 +468,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteAllocationBlobberTerms(*updates)
+		// challenge pool
+	case TagAddOrUpdateChallengePool:
+		updates, ok := fromEvent[ChallengePool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateChallengePool(*updates)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

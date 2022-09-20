@@ -3,7 +3,7 @@ package partitions
 import (
 	"math/rand"
 
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/chain/state"
 )

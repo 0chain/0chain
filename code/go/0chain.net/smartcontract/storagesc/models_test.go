@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStorageAllocation_validate(t *testing.T) {
+func TestNewAllocationRequest_validate(t *testing.T) {
 
 	const (
 		errMsg1 = "invalid read_price range"
@@ -23,43 +23,34 @@ func TestStorageAllocation_validate(t *testing.T) {
 	)
 
 	var (
-		now   = time.Unix(150, 0)
-		alloc StorageAllocation
-		conf  Config
+		now  = time.Unix(150, 0)
+		nar  newAllocationRequest
+		conf Config
 	)
 
 	conf.MinAllocSize = 10 * 1024
 	conf.MinAllocDuration = 48 * time.Hour
+	nar.DataShards = 1
+	nar.Blobbers = []string{"1", "2"}
 
-	alloc.ReadPriceRange = PriceRange{Min: 20, Max: 10}
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg1)
+	nar.ReadPriceRange = PriceRange{Min: 20, Max: 10}
+	requireErrMsg(t, nar.validate(now, &conf), errMsg1)
 
-	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 20}
-	alloc.WritePriceRange = PriceRange{Min: 20, Max: 10}
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg2)
+	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
+	nar.WritePriceRange = PriceRange{Min: 20, Max: 10}
+	requireErrMsg(t, nar.validate(now, &conf), errMsg2)
 
-	alloc.WritePriceRange = PriceRange{Min: 10, Max: 20}
-	alloc.Size = 5 * 1024
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg3)
+	nar.WritePriceRange = PriceRange{Min: 10, Max: 20}
+	nar.Size = 5 * 1024
+	requireErrMsg(t, nar.validate(now, &conf), errMsg3)
 
-	alloc.Size = 10 * 1024
-	alloc.Expiration = 170
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg4)
+	nar.Size = 10 * 1024
+	nar.Expiration = 170
+	requireErrMsg(t, nar.validate(now, &conf), errMsg4)
 
-	alloc.Expiration = 150 + toSeconds(48*time.Hour)
-	alloc.DataShards = 0
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg5)
-
-	alloc.DataShards = 1
-	alloc.OwnerPublicKey = ""
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg6)
-
-	alloc.OwnerPublicKey = "pk_hex"
-	alloc.Owner = ""
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg7)
-
-	alloc.Owner = "client_hex"
-	assert.NoError(t, alloc.validate(now, &conf))
+	nar.Expiration = 150 + toSeconds(48*time.Hour)
+	nar.DataShards = 0
+	requireErrMsg(t, nar.validate(now, &conf), errMsg5)
 }
 
 func TestStorageAllocation_filterBlobbers(t *testing.T) {
@@ -72,10 +63,10 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	)
 
 	list = []*StorageNode{
-		&StorageNode{Terms: Terms{
+		{Terms: Terms{
 			MaxOfferDuration: 8 * time.Second,
 		}},
-		&StorageNode{Terms: Terms{
+		{Terms: Terms{
 			MaxOfferDuration: 6 * time.Second,
 		}},
 	}

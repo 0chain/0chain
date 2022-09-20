@@ -42,8 +42,3 @@ func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Reques
 
 	return nil, errors.New("could not find latest finalized magic block")
 }
-
-// SetupHandlers sets up the necessary API end points.
-func SetupHandlers(c Chainer) {
-	setupHandlers(handlersMap(c))
-}

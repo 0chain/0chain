@@ -12,7 +12,7 @@ import (
 	common2 "0chain.net/smartcontract/common"
 
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"gorm.io/gorm"

@@ -15,10 +15,10 @@ import (
 // swagger:model Validator
 type Validator struct {
 	gorm.Model
-	ValidatorID string `json:"validator_id" gorm:"uniqueIndex;index:idx_vvalidator_id"`
-	BaseUrl     string `json:"url" gorm:"index:idx_vurl"`
-	Stake       int64  `json:"stake" gorm:"index:idx_vstake"`
-	PublicKey   string `json:"public_key" gorm:"public_key"`
+	ValidatorID string `json:"validator_id" gorm:"uniqueIndex"`
+	BaseUrl     string `json:"url"`
+	Stake       int64  `json:"stake"`
+	PublicKey   string `json:"public_key"`
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`
@@ -73,24 +73,13 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 	return validators, result.Error
 }
 
-//func (edb *EventDb) validatorAggregateStats(id string) (*providerAggregateStats, error) {
-//	var validator providerAggregateStats
-//	result := edb.Store.Get().
-//		Model(&Validator{}).
-//		Where(&Validator{ValidatorID: id}).
-//		First(&validator)
-//	if result.Error != nil {
-//		return nil, fmt.Errorf("error retrieving validator %v, error %v",
-//			id, result.Error)
-//	}
-//
-//	return &validator, nil
-//}
-
 func (edb *EventDb) updateValidator(updates dbs.DbUpdates) error {
-	result := edb.Store.Get().
-		Model(&Validator{}).
-		Where(&Validator{ValidatorID: updates.Id}).
-		Updates(updates.Updates)
-	return result.Error
+	delegateWallet := ""
+	if updates.Updates["delegate_wallet"] != nil {
+		delegateWallet = updates.Updates["delegate_wallet"].(string)
+	}
+
+	return edb.Store.Get().Model(&Validator{}).
+		Where(&Validator{ValidatorID: updates.Id, DelegateWallet: delegateWallet}).
+		Updates(updates.Updates).Error
 }

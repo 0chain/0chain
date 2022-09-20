@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -22,7 +24,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -320,13 +322,13 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
-				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID),
+				"GetTrieNode", stakePoolKey(spenum.Blobber, blobber.ID),
 				mockSetValue(newStakePool())).Return(nil).Once()
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
 			).Return("", nil).Once()
 			balances.On(
-				"InsertTrieNode", stakePoolKey(ssc.ID, blobber.ID), mock.Anything,
+				"InsertTrieNode", stakePoolKey(spenum.Blobber, blobber.ID), mock.Anything,
 			).Return("", nil).Once()
 			balances.On(
 				"GetTrieNode", "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"+blobber.ID,
@@ -416,6 +418,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(
@@ -587,6 +594,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
 		MaxBlobbersPerAllocation:   40,
+		TimeUnit:                   mockTimeUnit,
 	}
 	var now = common.Timestamp(29000000)
 
@@ -716,12 +724,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
-
-		//balances.On("AddMint", &state.Mint{
-		//	Minter:     ADDRESS,
-		//	ToClientID: ADDRESS,
-		//	Amount:     zcnToBalance(p.marker.FreeTokens),
-		//}).Return(nil).Once()
 
 		balances.On(
 			"EmitEvent",

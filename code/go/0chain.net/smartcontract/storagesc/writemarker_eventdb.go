@@ -21,6 +21,7 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker, movedTokens currency.Coin, t
 		LookupHash:             wm.LookupHash,
 		Name:                   wm.Name,
 		ContentHash:            wm.ContentHash,
+		Operation:              wm.Operation,
 		MovedTokens:            movedTokens,
 		TransactionID:          txnHash,
 	}

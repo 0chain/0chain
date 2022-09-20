@@ -8,8 +8,8 @@ import (
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
 )
 
 type curatorInput struct {
@@ -124,7 +124,7 @@ func (sc *StorageSmartContract) addCurator(
 	return "", nil
 }
 
-func (sa StorageAllocation) isCurator(id string) bool {
+func (sa *StorageAllocation) isCurator(id string) bool {
 	for _, curator := range sa.Curators {
 		if curator == id {
 			return true

@@ -185,7 +185,7 @@ done
 Using this command burn some tokens in ZCN
 
 ```shell
-./zwallet bridge-burn-zcn --amount 1 
+./zwallet bridge-burn-zcn --token 1 
 ```
 
 5. Mint WZCN tokens

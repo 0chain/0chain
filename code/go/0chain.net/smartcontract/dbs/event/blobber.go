@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
@@ -222,7 +222,6 @@ type AllocationQuery struct {
 	}
 	AllocationSize     int64
 	AllocationSizeInGB float64
-	PreferredBlobbers  []string
 	NumberOfDataShards int
 }
 

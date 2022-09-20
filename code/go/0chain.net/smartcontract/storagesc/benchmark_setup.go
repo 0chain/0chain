@@ -586,9 +586,6 @@ func GetMockValidatorStakePools(
 	clients []string,
 	balances cstate.StateContextI,
 ) {
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		bId := getMockValidatorId(i)
 		sp := &stakePool{
@@ -602,7 +599,7 @@ func GetMockValidatorStakePools(
 			id := getMockValidatorStakePoolId(i, j)
 			sp.Pools[id] = &stakepool.DelegatePool{}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-			err := sp.save(sscId, getMockValidatorId(i), balances)
+			err := sp.save(spenum.Validator, getMockValidatorId(i), balances)
 			if err != nil {
 				panic(err)
 			}
@@ -614,12 +611,9 @@ func SaveMockStakePools(
 	sps []*stakePool,
 	balances cstate.StateContextI,
 ) {
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
 	for i, sp := range sps {
 		bId := getMockBlobberId(i)
-		err := sp.save(sscId, bId, balances)
+		err := sp.save(spenum.Blobber, bId, balances)
 		if err != nil {
 			panic(err)
 		}
@@ -716,7 +710,7 @@ func getMockBlobberTerms() Terms {
 		ReadPrice:        currency.Coin(0.1 * 1e10),
 		WritePrice:       currency.Coin(0.1 * 1e10),
 		MinLockDemand:    0.0007,
-		MaxOfferDuration: time.Hour*50 + viper.GetDuration(sc.StorageMinOfferDuration),
+		MaxOfferDuration: time.Hour * 744,
 	}
 }
 
@@ -796,6 +790,7 @@ func SetMockConfig(
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1
+	conf.CancellationCharge = 0.2
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0

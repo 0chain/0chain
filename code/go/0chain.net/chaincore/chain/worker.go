@@ -13,8 +13,8 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
-	"0chain.net/core/util"
+	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -556,7 +556,7 @@ func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootSt
 	if err != nil {
 		switch err {
 		case context.Canceled:
-			Logger.Error("Sync round state abort, context is canceled, suppose the BC is moving")
+			Logger.Debug("Sync round state abort, context is canceled, suppose the BC is moving")
 			return
 		case context.DeadlineExceeded:
 			Logger.Error("Sync round state abort, context timed out for checking missing nodes")

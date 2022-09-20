@@ -22,9 +22,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -836,10 +836,17 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			logging.Logger.Debug("verifyAndSend - got error on verify round block",
 				zap.String("phase", round.GetPhaseName(r.GetPhase())), zap.Error(err))
 			switch err {
-			case context.Canceled, context.DeadlineExceeded:
+			case context.DeadlineExceeded:
 				if !r.isVerificationComplete() {
 					b.SetBlockState(block.StateVerificationFailed)
-					logging.Logger.Error("verifyAndSend - canceled or deadline exceed without round verification completed",
+					logging.Logger.Error("verifyAndSend - deadline exceed without round verification completed",
+						zap.Int64("round", b.Round), zap.Error(err))
+				}
+				return false
+			case context.Canceled:
+				if !r.isVerificationComplete() {
+					b.SetBlockState(block.StateVerificationFailed)
+					logging.Logger.Debug("verifyAndSend - canceled without round verification completed",
 						zap.Int64("round", b.Round), zap.Error(err))
 				}
 				return false

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/require"

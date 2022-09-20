@@ -29,11 +29,11 @@ import (
 	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/viper"
 	"0chain.net/miner"
 	"0chain.net/smartcontract/setupsc"
+	"github.com/0chain/common/core/logging"
 )
 
 func main() {
@@ -430,7 +430,7 @@ func initHandlers(c chain.Chainer) {
 	SetupHandlers()
 	config.SetupHandlers()
 	node.SetupHandlers()
-	chain.SetupHandlers(c)
+	chain.SetupMinerHandlers(c)
 	client.SetupHandlers()
 	transaction.SetupHandlers()
 	block.SetupHandlers()

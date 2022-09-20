@@ -14,7 +14,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 var myFailingRound int64 // once set, we ignore all restarts for that round

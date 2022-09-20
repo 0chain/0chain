@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/threshold/bls"
@@ -17,9 +19,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
 	"go.uber.org/zap"
 
@@ -105,8 +107,11 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 }
 
 func (c *Client) stakeLockRequest(t testing.TB) []byte {
-	var spr stakePoolRequest
-	spr.BlobberID = c.id
+	spr := stakePoolRequest{
+		ProviderType: spenum.Blobber,
+		ProviderID:   c.id,
+	}
+
 	return mustEncode(t, &spr)
 }
 
@@ -432,7 +437,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string
 
 	ba, ok := alloc.BlobberAllocsMap[blobber.ID]
 	if !ok {
-		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, common.Timestamp(now))
+		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, common.Timestamp(now), 2*time.Minute)
 		require.NoError(t, err)
 	}
 

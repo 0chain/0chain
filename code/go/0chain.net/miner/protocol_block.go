@@ -22,10 +22,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
@@ -624,6 +624,7 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	for idx, txn := range b.Txns {
 		modifiedTxns[idx] = txn
 	}
+	b.SetBlockFinalised()
 	return mc.deleteTxns(modifiedTxns)
 }
 

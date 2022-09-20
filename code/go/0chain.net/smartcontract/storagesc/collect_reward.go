@@ -48,7 +48,7 @@ func (ssc *StorageSmartContract) collectReward(
 
 	totalMinted := conf.Minted
 	for _, providerID := range providers {
-		sp, err := ssc.getStakePool(providerID, balances)
+		sp, err := ssc.getStakePool(prr.ProviderType, providerID, balances)
 		if err != nil {
 			return "", common.NewErrorf("collect_reward_failed",
 				"can't get related stake pool: %v", err)
@@ -72,7 +72,7 @@ func (ssc *StorageSmartContract) collectReward(
 
 		totalMinted = tm
 
-		if err := sp.save(ssc.ID, providerID, balances); err != nil {
+		if err := sp.save(spenum.Blobber, providerID, balances); err != nil {
 			return "", common.NewErrorf("collect_reward_failed",
 				"error saving stake pool, %v", err)
 		}

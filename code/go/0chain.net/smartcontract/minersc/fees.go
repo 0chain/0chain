@@ -15,9 +15,9 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -351,10 +351,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 	blockReward, err := currency.MultFloat64(gn.BlockReward, gn.RewardRate)
-	Logger.Debug("Pay fees",
-		zap.Any("block reward", blockReward),
-		zap.Any("block fees", fees))
-
 	if err != nil {
 		return "", err
 	}

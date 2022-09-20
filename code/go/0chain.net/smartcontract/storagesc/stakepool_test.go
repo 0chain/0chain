@@ -16,7 +16,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -31,7 +31,7 @@ func Test_newStakePool(t *testing.T) {
 }
 
 func Test_stakePoolKey(t *testing.T) {
-	assert.NotZero(t, stakePoolKey("scKey", "blobberID"))
+	assert.NotZero(t, stakePoolKey(spenum.Blobber, "blobberID"))
 }
 
 func Test_stakePool_Encode_Decode(t *testing.T) {
@@ -46,8 +46,8 @@ func Test_stakePool_save(t *testing.T) {
 		sp       = newStakePool()
 		balances = newTestBalances(t, false)
 	)
-	require.NoError(t, sp.save(ADDRESS, blobID, balances))
-	assert.NotZero(t, balances.tree[stakePoolKey(ADDRESS, blobID)])
+	require.NoError(t, sp.save(spenum.Blobber, blobID, balances))
+	assert.NotZero(t, balances.tree[stakePoolKey(spenum.Blobber, blobID)])
 }
 
 type mockStakePool struct {
@@ -147,8 +147,8 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	_, err := ctx.InsertTrieNode(scConfigKey(ssc.ID), scYaml)
 	require.NoError(t, err)
 	var spr = &stakePoolRequest{
-		BlobberID: blobberId,
-		//PoolID:    "paula",
+		ProviderType: spenum.Blobber,
+		ProviderID:   blobberId,
 	}
 	input, err := json.Marshal(spr)
 	require.NoError(t, err)
@@ -162,14 +162,14 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	}
 	var usp = stakepool.NewUserStakePools()
 	require.NoError(t, usp.Save(spenum.Blobber, txn.ClientID, ctx))
-	require.NoError(t, stakePool.save(ssc.ID, blobberId, ctx))
+	require.NoError(t, stakePool.save(spenum.Blobber, blobberId, ctx))
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
 	if err != nil {
 		return err
 	}
 
-	newStakePool, err := ssc.getStakePool(blobberId, ctx)
+	newStakePool, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 	var newUsp *stakepool.UserStakePools
 	newUsp, err = stakepool.GetUserStakePools(spenum.Blobber, txn.ClientID, ctx)

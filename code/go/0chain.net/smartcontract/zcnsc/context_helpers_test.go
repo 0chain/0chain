@@ -14,9 +14,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/storagesc"
 	. "0chain.net/smartcontract/zcnsc"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -35,6 +36,7 @@ type mockStateContext struct {
 	authorizers  map[string]*Authorizer
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
+	authCount    *AuthCount
 }
 
 func (ctx *mockStateContext) GetLatestFinalizedBlock() *block.Block {
@@ -257,6 +259,18 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 		Node:   node,
 	}
 
+	numAuth := &AuthCount{}
+	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	if err == util.ErrValueNotPresent {
+		numAuth.Count = 0
+	} else if err != nil {
+		panic(err)
+	}
+
+	numAuth.Count++
+
+	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+
 	return ctx.authorizers[node.GetKey()]
 }
 
@@ -344,6 +358,21 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 		return nil
 	}
 
+	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
+		if ctx.authCount == nil {
+			return util.ErrValueNotPresent
+		}
+		b, err := ctx.authCount.MarshalMsg(nil)
+		if err != nil {
+			return err
+		}
+		_, err = node.UnmarshalMsg(b)
+		if err != nil {
+			panic(err)
+		}
+		return nil
+	}
+
 	return util.ErrValueNotPresent
 }
 
@@ -381,6 +410,15 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 		}
 
 		return key, fmt.Errorf("failed to convert key: %s to StakePool: %v", key, node)
+	}
+
+	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
+		if authCount, ok := node.(*AuthCount); ok {
+			ctx.authCount = authCount
+			return key, nil
+		}
+
+		return key, fmt.Errorf("failed to convert key: %s to authCount: %v", key, node)
 	}
 
 	return "", fmt.Errorf("node with key: %s is not supported", key)
