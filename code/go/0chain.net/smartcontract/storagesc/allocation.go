@@ -1738,7 +1738,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	}
 
 	for i, ba := range alloc.BlobberAllocs {
-		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, balances)
+		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, "fini_alloc", balances)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"paying cancellation charge to stake pool of "+ba.BlobberID+": "+err.Error())

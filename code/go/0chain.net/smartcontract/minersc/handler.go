@@ -65,30 +65,31 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 // list minersc config settings
 //
 // parameters:
-//    + name: offset
-//      description: offset
-//      in: query
-//      type: string
-//      required: true
-//    + name: limit
-//      description: limit
-//      in: query
-//      type: string
-//      required: true
-//    + name: sort
-//      description: desc or asc
-//      in: query
-//      type: string
-//    + name: active
-//      description: active
-//      in: query
-//      type: string
-//      required: true
+//   - name: offset
+//     description: offset
+//     in: query
+//     type: string
+//     required: true
+//   - name: limit
+//     description: limit
+//     in: query
+//     type: string
+//     required: true
+//   - name: sort
+//     description: desc or asc
+//     in: query
+//     type: string
+//   - name: active
+//     description: active
+//     in: query
+//     type: string
+//     required: true
 //
 // responses:
-//  200: SharderGeolocation
-//  400:
-//  484:
+//
+//	200: SharderGeolocation
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *http.Request) {
 	var (
 		activeString = r.URL.Query().Get("active")
@@ -128,30 +129,31 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 // list minersc config settings
 //
 // parameters:
-//    + name: offset
-//      description: offset
-//      in: query
-//      type: string
-//      required: true
-//    + name: limit
-//      description: limit
-//      in: query
-//      type: string
-//      required: true
-//    + name: sort
-//      description: desc or asc
-//      in: query
-//      type: string
-//    + name: active
-//      description: active
-//      in: query
-//      type: string
-//      required: true
+//   - name: offset
+//     description: offset
+//     in: query
+//     type: string
+//     required: true
+//   - name: limit
+//     description: limit
+//     in: query
+//     type: string
+//     required: true
+//   - name: sort
+//     description: desc or asc
+//     in: query
+//     type: string
+//   - name: active
+//     description: active
+//     in: query
+//     type: string
+//     required: true
 //
 // responses:
-//  200: MinerGeolocation
-//  400:
-//  484:
+//
+//	200: MinerGeolocation
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http.Request) {
 	var (
 		activeString = r.URL.Query().Get("active")
@@ -190,9 +192,10 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 // list minersc config settings
 //
 // responses:
-//  200: StringMap
-//  400:
-//  484:
+//
+//	200: StringMap
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(mrh.GetQueryStateContext())
 	if err != nil {
@@ -207,16 +210,17 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 // lists sharders
 //
 // parameters:
-//    + name: id
-//      description: id
-//      in: query
-//      type: string
-//      required: true
+//   - name: id
+//     description: id
+//     in: query
+//     type: string
+//     required: true
 //
 // responses:
-//  200:
-//  400:
-//  484:
+//
+//	200:
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		id     = r.URL.Query().Get("id")
@@ -254,16 +258,17 @@ type nodeStat struct {
 // lists sharders
 //
 // parameters:
-//    + name: id
-//      description: id
-//      in: query
-//      type: string
-//      required: true
+//   - name: id
+//     description: id
+//     in: query
+//     type: string
+//     required: true
 //
 // responses:
-//  200: nodeStat
-//  400:
-//  484:
+//
+//	200: nodeStat
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		id = r.URL.Query().Get("id")
@@ -286,7 +291,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 
 	if miner, err := edb.GetMiner(id); err == nil {
 		common.Respond(w, r, nodeStat{
-			MinerNode: minerTableToMinerNode(miner), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.TotalReward)}, nil)
+			MinerNode: minerTableToMinerNode(miner), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
 		return
 	}
 	sharder, err := edb.GetSharder(id)
@@ -297,45 +302,46 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, nodeStat{
 		MinerNode:   sharderTableToSharderNode(sharder),
 		Round:       sCtx.GetBlock().Round,
-		TotalReward: int64(sharder.TotalReward)}, nil)
+		TotalReward: int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
 // events for block
 //
 // parameters:
-//    + name: block_number
-//      description: block number
-//      in: query
-//      type: string
-//    + name: type
-//      description: type
-//      in: query
-//      type: string
-//    + name: tag
-//      description: tag
-//      in: query
-//      type: string
-//    + name: tx_hash
-//      description: hash of transaction
-//      in: query
-//      type: string
-//    + name: offset
-//      description: offset
-//      in: query
-//      type: string
-//    + name: limit
-//      description: limit
-//      in: query
-//      type: string
-//    + name: sort
-//      description: desc or asc
-//      in: query
-//      type: string
+//   - name: block_number
+//     description: block number
+//     in: query
+//     type: string
+//   - name: type
+//     description: type
+//     in: query
+//     type: string
+//   - name: tag
+//     description: tag
+//     in: query
+//     type: string
+//   - name: tx_hash
+//     description: hash of transaction
+//     in: query
+//     type: string
+//   - name: offset
+//     description: offset
+//     in: query
+//     type: string
+//   - name: limit
+//     description: limit
+//     in: query
+//     type: string
+//   - name: sort
+//     description: desc or asc
+//     in: query
+//     type: string
 //
 // responses:
-//  200: eventList
-//  400:
+//
+//	200: eventList
+//	400:
 func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 	var blockNumber = 0
 	var blockNumberString = r.URL.Query().Get("block_number")
@@ -387,8 +393,9 @@ func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 // gets magic block
 //
 // responses:
-//  200: MagicBlock
-//  400:
+//
+//	200: MagicBlock
+//	400:
 func (mrh *MinerRestHandler) getMagicBlock(w http.ResponseWriter, r *http.Request) {
 	mb, err := getMagicBlock(mrh.GetQueryStateContext())
 	if err != nil {
@@ -403,8 +410,9 @@ func (mrh *MinerRestHandler) getMagicBlock(w http.ResponseWriter, r *http.Reques
 // gets group share or signs
 //
 // responses:
-//  200: GroupSharesOrSigns
-//  400:
+//
+//	200: GroupSharesOrSigns
+//	400:
 func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http.Request) {
 	sos, err := getGroupShareOrSigns(mrh.GetQueryStateContext())
 	if err != nil {
@@ -419,8 +427,9 @@ func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http
 // gets dkg miners list
 //
 // responses:
-//  200: Mpks
-//  400:
+//
+//	200: Mpks
+//	400:
 func (mrh *MinerRestHandler) getMpksList(w http.ResponseWriter, r *http.Request) {
 	mpks, err := getMinersMPKs(mrh.GetQueryStateContext())
 	if err != nil {
@@ -435,8 +444,9 @@ func (mrh *MinerRestHandler) getMpksList(w http.ResponseWriter, r *http.Request)
 // gets dkg miners list
 //
 // responses:
-//  200: DKGMinerNodes
-//  500:
+//
+//	200: DKGMinerNodes
+//	500:
 func (mrh *MinerRestHandler) getDkgList(w http.ResponseWriter, r *http.Request) {
 	dkgMinersList, err := getDKGMinersList(mrh.GetQueryStateContext())
 	if err != nil {
@@ -450,8 +460,9 @@ func (mrh *MinerRestHandler) getDkgList(w http.ResponseWriter, r *http.Request) 
 // get phase nodes
 //
 // responses:
-//  200: PhaseNode
-//  400:
+//
+//	200: PhaseNode
+//	400:
 func (mrh *MinerRestHandler) getPhase(w http.ResponseWriter, r *http.Request) {
 	pn, err := GetPhaseNode(mrh.GetQueryStateContext())
 	if err != nil {
@@ -465,8 +476,9 @@ func (mrh *MinerRestHandler) getPhase(w http.ResponseWriter, r *http.Request) {
 // get total sharder stake
 //
 // responses:
-//  200: MinerNodes
-//  500:
+//
+//	200: MinerNodes
+//	500:
 func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.Request) {
 	allShardersList, err := getShardersKeepList(mrh.GetQueryStateContext())
 	if err != nil {
@@ -480,8 +492,9 @@ func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.R
 // get total sharder stake
 //
 // responses:
-//  200: Int64Map
-//  404:
+//
+//	200: Int64Map
+//	404:
 func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Request) {
 	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -504,8 +517,9 @@ func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Req
 // get count of active and inactive miners
 //
 // responses:
-//  200: Int64Map
-//  404:
+//
+//	200: Int64Map
+//	404:
 func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Request) {
 	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -535,27 +549,28 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 // lists sharders
 //
 // parameters:
-//    + name: offset
-//      description: offset
-//      in: query
-//      type: string
-//    + name: limit
-//      description: limit
-//      in: query
-//      type: string
-//    + name: sort
-//      description: desc or asc
-//      in: query
-//      type: string
-//    + name: active
-//      description: active
-//      in: query
-//      type: string
+//   - name: offset
+//     description: offset
+//     in: query
+//     type: string
+//   - name: limit
+//     description: limit
+//     in: query
+//     type: string
+//   - name: sort
+//     description: desc or asc
+//     in: query
+//     type: string
+//   - name: active
+//     description: active
+//     in: query
+//     type: string
 //
 // responses:
-//  200: InterfaceMap
-//  400:
-//  484:
+//
+//	200: InterfaceMap
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Request) {
 	var (
 		activeString = r.URL.Query().Get("active")
@@ -592,7 +607,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		shardersArr[i] = nodeStat{
 			MinerNode:   sharderTableToSharderNode(sharder),
 			Round:       sCtx.GetBlock().Round,
-			TotalReward: int64(sharder.TotalReward),
+			TotalReward: int64(sharder.Rewards.TotalRewards),
 		}
 	}
 	common.Respond(w, r, rest.InterfaceMap{
@@ -604,8 +619,9 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 // get total miner stake
 //
 // responses:
-//  200: Int64Map
-//  404:
+//
+//	200: Int64Map
+//	404:
 func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Request) {
 	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -628,8 +644,9 @@ func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Reque
 // get count of active and inactive miners
 //
 // responses:
-//  200: Int64Map
-//  404:
+//
+//	200: Int64Map
+//	404:
 func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Request) {
 	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -659,27 +676,28 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 // lists miners
 //
 // parameters:
-//    + name: offset
-//      description: offset
-//      in: query
-//      type: string
-//    + name: limit
-//      description: limit
-//      in: query
-//      type: string
-//    + name: sort
-//      description: desc or asc
-//      in: query
-//      type: string
-//    + name: active
-//      description: active
-//      in: query
-//      type: string
+//   - name: offset
+//     description: offset
+//     in: query
+//     type: string
+//   - name: limit
+//     description: limit
+//     in: query
+//     type: string
+//   - name: sort
+//     description: desc or asc
+//     in: query
+//     type: string
+//   - name: active
+//     description: active
+//     in: query
+//     type: string
 //
 // responses:
-//  200: InterfaceMap
-//  400:
-//  484:
+//
+//	200: InterfaceMap
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request) {
 	var (
 		activeString = r.URL.Query().Get("active")
@@ -715,7 +733,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		minersArr[i] = nodeStat{
 			MinerNode:   minerTableToMinerNode(miner),
 			Round:       sCtx.GetBlock().Round,
-			TotalReward: int64(miner.TotalReward),
+			TotalReward: int64(miner.Rewards.TotalRewards),
 		}
 	}
 
@@ -730,19 +748,21 @@ type userPools struct {
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools getUserPools
-//  user oriented pools requests handler
+//
+//	user oriented pools requests handler
 //
 // parameters:
-//    + name: client_id
-//      description: client for which to get write pools statistics
-//      required: true
-//      in: query
-//      type: string
+//   - name: client_id
+//     description: client for which to get write pools statistics
+//     required: true
+//     in: query
+//     type: string
 //
 // responses:
-//  200: userPools
-//  400:
-//  484:
+//
+//	200: userPools
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
 
@@ -803,9 +823,10 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 // provides nodepool information for registered miners
 //
 // responses:
-//  200: PoolMembersInfo
-//  400:
-//  484:
+//
+//	200: PoolMembersInfo
+//	400:
+//	484:
 func (mrh *MinerRestHandler) getNodePool(w http.ResponseWriter, r *http.Request) {
 	npi := (&smartcontract.BCContext{}).GetNodepoolInfo()
 	common.Respond(w, r, npi, nil)
@@ -815,8 +836,9 @@ func (mrh *MinerRestHandler) getNodePool(w http.ResponseWriter, r *http.Request)
 // global object for miner smart contracts
 //
 // responses:
-//  200: MinerGlobalSettings
-//  400:
+//
+//	200: MinerGlobalSettings
+//	400:
 func (mrh *MinerRestHandler) getGlobalSettings(w http.ResponseWriter, r *http.Request) {
 	globals, err := getGlobalSettings(mrh.GetQueryStateContext())
 

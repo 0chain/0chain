@@ -8,12 +8,8 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
-	"go.uber.org/zap"
-
-	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/0chain/common/core/logging"
-
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -96,31 +92,17 @@ func (sp *stakePool) save(providerType spenum.Provider, providerID string,
 	}
 
 	if sp.isOfferChanged {
-		tag, data := event.NewUpdateBlobberTotalOffersEvent(blobberID, sp.TotalOffers)
-		balances.EmitEvent(event.TypeStats, tag, blobberID, data)
-		sp.isOfferChanged = false
+		switch providerType {
+		case spenum.Blobber:
+			tag, data := event.NewUpdateBlobberTotalOffersEvent(providerID, sp.TotalOffers)
+			balances.EmitEvent(event.TypeStats, tag, providerID, data)
+			sp.isOfferChanged = false
+		case spenum.Validator:
+			// TODO: perhaps implement validator stake update events
+		}
 	}
 
-	return
-}
-
-// workaround for save validator to MPT
-// TODO: refactor save() method above
-func (sp *stakePool) saveValidator(sscKey, validatorID string,
-	balances chainstate.StateContextI) (err error) {
-
-	r, err := balances.InsertTrieNode(stakePoolKey(sscKey, validatorID), sp)
-	if err != nil {
-		return err
-	}
-
-	logging.Logger.Debug("after stake pool save", zap.String("root", util.ToHex([]byte(r))))
-
-	// TODO: do it when validator stake pool is added
-	//tag, data := event.NewUpdateBlobberTotalOffersEvent(validatorID, sp.TotalOffers)
-	//balances.EmitEvent(event.TypeStats, tag, blobberID, data)
-
-	return
+	return nil
 }
 
 // The cleanStake() is stake amount without delegate pools want to unstake.
@@ -472,9 +454,13 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"stake pool staking error: %v", err)
 	}
 
-	tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.BlobberID, staked)
-	balances.EmitEvent(event.TypeStats, tag, spr.BlobberID, data)
-
+	switch spr.ProviderType {
+	case spenum.Blobber:
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
+		balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
+	case spenum.Validator:
+		// TODO: implement validator stake update events
+	}
 	return
 }
 
@@ -528,8 +514,15 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"stake pool staking error: %v", err)
 		}
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.BlobberID, staked)
-		balances.EmitEvent(event.TypeStats, tag, spr.BlobberID, data)
+
+		switch spr.ProviderType {
+		case spenum.Blobber:
+			tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
+			balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
+		case spenum.Validator:
+			// TODO: implement validator stake update events
+		}
+
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
@@ -549,8 +542,14 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)
 	}
-	tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.BlobberID, staked)
-	balances.EmitEvent(event.TypeStats, tag, spr.BlobberID, data)
+
+	switch spr.ProviderType {
+	case spenum.Blobber:
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
+		balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
+	case spenum.Validator:
+		// TODO: implement validator stake update events
+	}
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }

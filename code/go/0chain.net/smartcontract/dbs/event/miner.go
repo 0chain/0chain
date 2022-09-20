@@ -5,13 +5,13 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
-	"0chain.net/core/logging"
 	common2 "0chain.net/smartcontract/common"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/logging"
 	"github.com/guregu/null"
 	"gorm.io/gorm"
 )

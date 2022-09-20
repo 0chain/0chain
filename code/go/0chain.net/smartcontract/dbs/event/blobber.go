@@ -9,11 +9,11 @@ import (
 	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/chaincore/currency"
 	"github.com/guregu/null"
-	"gorm.io/gorm"
 )
 
 type Blobber struct {
@@ -278,7 +278,6 @@ func (bl *Blobber) exists(edb *EventDb) (bool, error) {
 }
 
 func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
-	logging.Logger.Warn("event db - emit blobber total stake", zap.String("id", ID))
 	return TagUpdateBlobberTotalStake, Blobber{
 		BlobberID:  ID,
 		TotalStake: totalStake,
