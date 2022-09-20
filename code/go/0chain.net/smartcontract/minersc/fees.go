@@ -40,8 +40,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 
 // LRU cache in action.
 func (msc *MinerSmartContract) deletePoolFromUserNode(
-	delegateID, nodeID,
-	poolID string,
+	delegateID, nodeID string,
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
@@ -50,7 +49,7 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(
 	if err != nil {
 		return fmt.Errorf("getting user node: %v", err)
 	}
-	usp.Del(nodeID, poolID)
+	usp.Del(nodeID)
 	if err := usp.Save(providerType, delegateID, balances); err != nil {
 		return fmt.Errorf("saving user node: %v", err)
 	}
@@ -75,7 +74,7 @@ func (msc *MinerSmartContract) unlockOffline(
 	mn *MinerNode,
 	balances cstate.StateContextI,
 ) error {
-	for id, pool := range mn.Pools {
+	for _, pool := range mn.Pools {
 		transfer := state.NewTransfer(ADDRESS, pool.DelegateID, pool.Balance)
 		if err := balances.AddTransfer(transfer); err != nil {
 			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)
@@ -83,9 +82,9 @@ func (msc *MinerSmartContract) unlockOffline(
 		var err error
 		switch mn.NodeType {
 		case NodeTypeMiner:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, spenum.Miner, balances)
+			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, spenum.Miner, balances)
 		case NodeTypeSharder:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, id, spenum.Sharder, balances)
+			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, spenum.Sharder, balances)
 		default:
 			err = fmt.Errorf("unrecognised node type: %s", mn.NodeType.String())
 		}
@@ -319,10 +318,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	var mb = balances.GetBlock()
-	if mb.Round == gn.ViewChange && !msc.SetMagicBlock(gn, balances) {
-		return "", common.NewErrorf("pay_fee",
-			"can't set magic mb round=%d viewChange=%d",
-			mb.Round, gn.ViewChange)
+	if mb.Round == gn.ViewChange {
+		if err := msc.SetMagicBlock(gn, balances); err != nil {
+			return "", common.NewErrorf("pay_fee",
+				"can't set magic mb round=%d viewChange=%d, %v",
+				mb.Round, gn.ViewChange, err)
+		}
 	}
 
 	if t.ClientID != mb.MinerID {
@@ -350,7 +351,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 	blockReward, err := currency.MultFloat64(gn.BlockReward, gn.RewardRate)
-
 	if err != nil {
 		return "", err
 	}

@@ -30,6 +30,7 @@ type Block struct {
 	RunningTxnCount       string    `json:"running_txn_count"`
 	RoundTimeoutCount     int       `json:"round_timeout_count"`
 	CreatedAt             time.Time `json:"created_at"`
+	IsFinalised           bool      `json:"is_finalised"`
 }
 
 func (edb *EventDb) GetBlockByHash(hash string) (Block, error) {
@@ -61,12 +62,16 @@ func (edb *EventDb) GetBlocksByRound(round string) (Block, error) {
 	return block, res.Error
 }
 
-func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
+func (edb *EventDb) GetBlocks(start, end int64, limit common.Pagination) ([]Block, error) {
 	var blocks []Block
-	res := edb.Store.Get().Table("blocks").Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "round"},
-		Desc:   limit.IsDescending,
-	}).Find(&blocks)
+	res := edb.Store.Get().Table("blocks").
+		Where("round >= ? AND round < ?", start, end).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "round"},
+			Desc:   limit.IsDescending,
+		}).Find(&blocks)
 	return blocks, res.Error
 }
 

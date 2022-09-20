@@ -53,7 +53,7 @@ func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit com
 	return rms, queryBuilder.Scan(&rms).Error
 }
 
-func (edb EventDb) CountReadMarkersFromQuery(query *ReadMarker) (count int64, err error) {
+func (edb *EventDb) CountReadMarkersFromQuery(query *ReadMarker) (count int64, err error) {
 
 	if query == nil {
 		err = common.NewError("count_read_markers", "empty query")

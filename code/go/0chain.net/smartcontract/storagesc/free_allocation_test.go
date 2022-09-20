@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -593,6 +594,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
 		MaxBlobbersPerAllocation:   40,
+		TimeUnit:                   mockTimeUnit,
 	}
 	var now = common.Timestamp(29000000)
 
@@ -722,12 +724,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
-
-		//balances.On("AddMint", &state.Mint{
-		//	Minter:     ADDRESS,
-		//	ToClientID: ADDRESS,
-		//	Amount:     zcnToBalance(p.marker.FreeTokens),
-		//}).Return(nil).Once()
 
 		balances.On(
 			"EmitEvent",

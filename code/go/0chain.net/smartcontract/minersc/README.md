@@ -87,7 +87,7 @@ Otherwise the node can't be registered. Measured in tokens (101.12 for example).
     sharders_min_n: 0.30 # 30%
     t_percent: .51
     k_percent: .75
-    min_stake: 0.01 
+    min_stake: 0.01
     max_stake: 100.0
     start_rounds: 50
     contribute_rounds: 50
@@ -295,7 +295,7 @@ of all offline nodes returning tokens back.
     ```
 11. Check out the pool.
     ```
-    ./zwallet mn-pool-info --id $MINER5 --pool_id $POOL
+    ./zwallet mn-pool-info --id $MINER5
     ```
     Make sure status is ACTIVE, or wait a view change and check again.
     A pool becomes ACTIVE after next view change its created. After it becomes
@@ -305,17 +305,17 @@ of all offline nodes returning tokens back.
 13. It's possible to make a stake for genesis nodes too.
 14. Delete the stake
     ```
-    ./zwallet mn-unlock --id $MINER5 --pool_id $POOL
+    ./zwallet mn-unlock --id $MINER5
     ```
     The stake will be unlocked next view change. Check out the pool
     ```
-    ./zwallet mn-pool-info --id $MINER5 --pool_id $POOL
+    ./zwallet mn-pool-info --id $MINER5
     ```
     It's status should be "DELETING".
 15. Wait a view change to let the stake be unlocked. Check the pool (should
     be not found)
     ```
-    ./zwallet mn-pool-info --id $MINER5 --pool_id $POOL
+    ./zwallet mn-pool-info --id $MINER5
     ```
     Check the node, total_stake should be zero.
     ```
