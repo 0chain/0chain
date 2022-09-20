@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
-	"k8s.io/client-go/kubernetes/typed/core/v1/fake"
 
 	"encoding/json"
 
