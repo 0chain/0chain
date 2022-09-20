@@ -65,25 +65,26 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 // list minersc config settings
 //
 // parameters:
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//     required: true
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//     required: true
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
-//   - name: active
-//     description: active
-//     in: query
-//     type: string
-//     required: true
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	 required: true
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	 required: true
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: active
+//	 description: active
+//	 in: query
+//	 type: string
+//	 required: true
 //
 // responses:
 //
@@ -129,25 +130,26 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 // list minersc config settings
 //
 // parameters:
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//     required: true
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//     required: true
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
-//   - name: active
-//     description: active
-//     in: query
-//     type: string
-//     required: true
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	 required: true
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	 required: true
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: active
+//	 description: active
+//	 in: query
+//	 type: string
+//	 required: true
 //
 // responses:
 //
@@ -210,11 +212,12 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 // lists sharders
 //
 // parameters:
-//   - name: id
-//     description: id
-//     in: query
-//     type: string
-//     required: true
+//
+//	+name: id
+//	 description: id
+//	 in: query
+//	 type: string
+//	 required: true
 //
 // responses:
 //
@@ -258,11 +261,12 @@ type nodeStat struct {
 // lists sharders
 //
 // parameters:
-//   - name: id
-//     description: id
-//     in: query
-//     type: string
-//     required: true
+//
+//	+name: id
+//	 description: id
+//	 in: query
+//	 type: string
+//	 required: true
 //
 // responses:
 //
@@ -309,34 +313,35 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 // events for block
 //
 // parameters:
-//   - name: block_number
-//     description: block number
-//     in: query
-//     type: string
-//   - name: type
-//     description: type
-//     in: query
-//     type: string
-//   - name: tag
-//     description: tag
-//     in: query
-//     type: string
-//   - name: tx_hash
-//     description: hash of transaction
-//     in: query
-//     type: string
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
+//
+//	+name: block_number
+//	 description: block number
+//	 in: query
+//	 type: string
+//	+name: type
+//	 description: type
+//	 in: query
+//	 type: string
+//	+name: tag
+//	 description: tag
+//	 in: query
+//	 type: string
+//	+name: tx_hash
+//	 description: hash of transaction
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
 //
 // responses:
 //
@@ -549,22 +554,23 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 // lists sharders
 //
 // parameters:
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
-//   - name: active
-//     description: active
-//     in: query
-//     type: string
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: active
+//	 description: active
+//	 in: query
+//	 type: string
 //
 // responses:
 //
@@ -676,22 +682,23 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 // lists miners
 //
 // parameters:
-//   - name: offset
-//     description: offset
-//     in: query
-//     type: string
-//   - name: limit
-//     description: limit
-//     in: query
-//     type: string
-//   - name: sort
-//     description: desc or asc
-//     in: query
-//     type: string
-//   - name: active
-//     description: active
-//     in: query
-//     type: string
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: active
+//	 description: active
+//	 in: query
+//	 type: string
 //
 // responses:
 //
@@ -752,11 +759,12 @@ type userPools struct {
 //	user oriented pools requests handler
 //
 // parameters:
-//   - name: client_id
-//     description: client for which to get write pools statistics
-//     required: true
-//     in: query
-//     type: string
+//
+//	+name: client_id
+//	 description: client for which to get write pools statistics
+//	 required: true
+//	 in: query
+//	 type: string
 //
 // responses:
 //
