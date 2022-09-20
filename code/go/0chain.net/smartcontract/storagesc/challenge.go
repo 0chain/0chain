@@ -207,7 +207,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
-		return
+		return err
 	}
 
 	if blobAlloc.Terms.WritePrice > 0 {
@@ -343,7 +343,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
-		return
+		return err
 	}
 
 	err = alloc.moveFromChallengePool(cp, move)
@@ -619,14 +619,14 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 		err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
 		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"error updating blobber reward item")
+			return "", common.NewErrorf("verify_challenge",
+				"error updating blobber reward item: %v", err)
 		}
 
 		err = ongoingParts.Save(balances)
 		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"error saving ongoing blobber reward partition")
+			return "", common.NewErrorf("verify_challenge",
+				"error saving ongoing blobber reward partition: %v", err)
 		}
 
 		if err := allocChallenges.Save(balances, sc.ID); err != nil {
@@ -764,7 +764,7 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 	var challengeBlobbers []ChallengeReadyBlobber
 	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
 	if err != nil {
-		return "", errors.New("error getting random slice from blobber challenge partition")
+		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
 
 	switch selection {

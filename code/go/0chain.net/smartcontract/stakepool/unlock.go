@@ -16,7 +16,6 @@ func (sp *StakePool) UnlockClientStakePool(
 	clientID string,
 	providerType spenum.Provider,
 	providerId datastore.Key,
-	poolId datastore.Key,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
 	var usp *UserStakePools
@@ -29,7 +28,6 @@ func (sp *StakePool) UnlockClientStakePool(
 		clientID,
 		providerType,
 		providerId,
-		poolId,
 		usp,
 		balances,
 	)
@@ -39,29 +37,26 @@ func (sp *StakePool) UnlockPool(
 	clientID string,
 	providerType spenum.Provider,
 	providerId datastore.Key,
-	poolId datastore.Key,
 	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
-	foundProvider := usp.FindProvider(poolId)
-	if len(foundProvider) == 0 || providerId != foundProvider {
-		return 0, fmt.Errorf("user %v does not own stake pool %v", clientID, poolId)
+	if _, ok := usp.Find(providerId); !ok {
+		return 0, fmt.Errorf("user %v does not own stake pool for %v", clientID, providerId)
 	}
 
-	dp, ok := sp.Pools[poolId]
+	dp, ok := sp.Pools[clientID]
 	if !ok {
-		return 0, fmt.Errorf("can't find pool: %v", poolId)
+		return 0, fmt.Errorf("can't find pool of %v", clientID)
 	}
 
 	dp.Status = spenum.Deleting
 	amount, err := sp.MintRewards(
-		clientID, poolId, providerId, providerType, usp, balances,
+		clientID, providerId, providerType, usp, balances,
 	)
 
 	i, _ := amount.Int64()
-	balances.EmitEvent(event.TypeSmartContract, event.TagUnlockStakePool, poolId, event.DelegatePoolLock{
+	balances.EmitEvent(event.TypeSmartContract, event.TagUnlockStakePool, clientID, event.DelegatePoolLock{
 		Client:       clientID,
-		PoolId:       poolId,
 		ProviderId:   providerId,
 		ProviderType: providerType,
 		Amount:       i,

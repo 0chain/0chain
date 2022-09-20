@@ -836,10 +836,17 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			logging.Logger.Debug("verifyAndSend - got error on verify round block",
 				zap.String("phase", round.GetPhaseName(r.GetPhase())), zap.Error(err))
 			switch err {
-			case context.Canceled, context.DeadlineExceeded:
+			case context.DeadlineExceeded:
 				if !r.isVerificationComplete() {
 					b.SetBlockState(block.StateVerificationFailed)
-					logging.Logger.Error("verifyAndSend - canceled or deadline exceed without round verification completed",
+					logging.Logger.Error("verifyAndSend - deadline exceed without round verification completed",
+						zap.Int64("round", b.Round), zap.Error(err))
+				}
+				return false
+			case context.Canceled:
+				if !r.isVerificationComplete() {
+					b.SetBlockState(block.StateVerificationFailed)
+					logging.Logger.Debug("verifyAndSend - canceled without round verification completed",
 						zap.Int64("round", b.Round), zap.Error(err))
 				}
 				return false

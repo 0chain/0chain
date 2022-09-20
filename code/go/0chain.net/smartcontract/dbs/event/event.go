@@ -2,6 +2,8 @@ package event
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"0chain.net/smartcontract/common"
 	"golang.org/x/net/context"
@@ -64,9 +66,9 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-func (edb *EventDb) addEvents(ctx context.Context, events []Event) {
-	if edb.Store != nil && len(events) > 0 {
-		edb.Store.Get().WithContext(ctx).Create(&events)
+func (edb *EventDb) addEvents(ctx context.Context, events blockEvents) {
+	if edb.Store != nil && len(events.events) > 0 {
+		edb.Store.Get().WithContext(ctx).Create(&events.events)
 	}
 }
 
@@ -167,4 +169,17 @@ func (edb *EventDb) Drop() error {
 	}
 
 	return nil
+}
+
+func placeholders(n int, typeCast ...string) string {
+	params := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		if len(typeCast) > 0 {
+			params = append(params, fmt.Sprintf("?::%s", typeCast[0]))
+		} else {
+			params = append(params, "?")
+		}
+	}
+
+	return strings.Join(params, ", ")
 }

@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
+
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -67,7 +68,7 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 func (cp *challengePool) save(sscKey string, alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
 	cpKey := challengePoolKey(sscKey, alloc.ID)
 	r, err := balances.InsertTrieNode(cpKey, cp)
-	logging.Logger.Debug("after save challenge pool", zap.String("root", r))
+	logging.Logger.Debug("after save challenge pool", zap.String("root", util.ToHex([]byte(r))))
 
 	//emit challenge pool event
 	emitChallengePoolEvent(cpKey, cp.GetBalance(), alloc, balances)

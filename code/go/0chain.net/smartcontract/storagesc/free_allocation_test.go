@@ -605,6 +605,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
 		MaxBlobbersPerAllocation:   40,
+		TimeUnit:                   mockTimeUnit,
 	}
 	var now = common.Timestamp(29000000)
 
@@ -737,12 +738,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
 			},
 		).Return("", nil).Once()
-
-		//balances.On("AddMint", &state.Mint{
-		//	Minter:     ADDRESS,
-		//	ToClientID: ADDRESS,
-		//	Amount:     zcnToBalance(p.marker.FreeTokens),
-		//}).Return(nil).Once()
 
 		balances.On(
 			"EmitEvent",

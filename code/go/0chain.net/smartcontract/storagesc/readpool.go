@@ -242,7 +242,7 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
 	rp, err := ssc.getReadPool(txn.ClientID, balances)
 	if err != nil {
-		return "", common.NewError("read_pool_unlock_failed", "no read pool found for clientID to unlock token")
+		return "", common.NewErrorf("read_pool_unlock_failed", "no read pool found for clientID to unlock token: %v", err)
 	}
 
 	// adjust balance

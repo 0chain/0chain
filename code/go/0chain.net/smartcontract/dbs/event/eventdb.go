@@ -19,8 +19,8 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	eventDb := &EventDb{
 		Store:           db,
 		dbConfig:        config,
-		eventsChannel:   make(chan events, 100),
-		roundEventsChan: make(chan events, 10),
+		eventsChannel:   make(chan blockEvents, 1),
+		roundEventsChan: make(chan blockEvents, 10),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 	go eventDb.addRoundEventsWorker(common.GetRootContext(), config.AggregatePeriod)
@@ -33,13 +33,18 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 type EventDb struct {
 	dbs.Store
 	dbConfig           config.DbAccess
-	eventsChannel      chan events
-	roundEventsChan    chan events
+	eventsChannel      chan blockEvents
+	roundEventsChan    chan blockEvents
 	currentRound       int64
-	currentRoundEvents []Event
+	currentRoundEvents blockEvents
 }
 
-type events []Event
+type blockEvents struct {
+	block     string
+	blockSize int
+	round     int64
+	events    []Event
+}
 
 func (edb *EventDb) AutoMigrate() error {
 	if err := edb.Store.Get().AutoMigrate(
@@ -73,14 +78,19 @@ func (edb *EventDb) AutoMigrate() error {
 }
 
 func (edb *EventDb) copyToRoundChan(event Event) {
-	edb.currentRoundEvents = append(edb.currentRoundEvents, event)
+	edb.currentRoundEvents.events = append(edb.currentRoundEvents.events, event)
 	if edb.currentRound == event.BlockNumber {
 		return
 	}
 
 	edb.roundEventsChan <- edb.currentRoundEvents
 	edb.currentRound = event.BlockNumber
-	edb.currentRoundEvents = []Event{}
+	edb.currentRoundEvents = blockEvents{
+		block:     "",
+		blockSize: 0,
+		round:     0,
+		events:    nil,
+	}
 }
 
 func (edb *EventDb) Config() config.DbAccess {

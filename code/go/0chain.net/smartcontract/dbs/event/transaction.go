@@ -13,7 +13,7 @@ type Transaction struct {
 	gorm.Model
 	Hash              string `gorm:"uniqueIndex:idx_thash"`
 	BlockHash         string `gorm:"index:idx_tblock_hash"`
-	BlockRound        int64  `gorm:"index:idx_tblock_round"`
+	Round        int64  `gorm:"index:idx_tblock_round"`
 	Version           string
 	ClientId          string `gorm:"index:idx_tclient_id"`
 	ToClientId        string `gorm:"index:idx_tto_client_id"`
@@ -83,18 +83,27 @@ func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, err
 }
 
 // GetTransactionByBlockNumbers finds the transaction record between two block numbers
-func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int, limit common.Pagination) ([]Transaction, error) {
+func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, limit common.Pagination) ([]Transaction, error) {
 	tr := []Transaction{}
 	res := edb.Store.Get().
 		Model(Transaction{}).
-		Joins("INNER JOIN blocks on blocks.round >= ? AND blocks.round <= ? AND blocks.hash = transactions.block_hash", blockStart, blockEnd).
+		Where("round >= ? AND round < ?", blockStart, blockEnd).
 		Offset(limit.Limit).
 		Limit(limit.Offset).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_date"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
 		}).
-		Scan(&tr)
+		Find(&tr)
+	return tr, res.Error
+}
 
+func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Transaction, error) {
+	tr := []Transaction{}
+	res := edb.Store.Get().
+		Model(Transaction{}).
+		Where("round >= ? AND round < ?", blockStart, blockEnd).
+		Order("round asc").
+		Find(&tr)
 	return tr, res.Error
 }

@@ -92,7 +92,7 @@ func TestWriteMarker(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddOrOverwriteWm}
-	eventDb.AddEvents(context.TODO(), events)
+	eventDb.AddEvents(context.TODO(), events, 100, "hash", 10)
 
 	wm, err := eventDb.GetWriteMarker(eWriteMarker.TransactionID)
 	require.NoError(t, err)

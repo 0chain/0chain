@@ -62,6 +62,7 @@ func AddMockTransactions(
 				transaction := event.Transaction{
 					Hash:              GetMockTransactionHash(blockNumber, i),
 					BlockHash:         GetMockBlockHash(blockNumber),
+					Round:             blockNumber,
 					Version:           "mock version",
 					ClientId:          clients[i%len(clients)],
 					ToClientId:        clients[int(blockNumber)%len(clients)],

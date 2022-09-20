@@ -20,6 +20,7 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
 		LookupHash:             wm.LookupHash,
 		Name:                   wm.Name,
 		ContentHash:            wm.ContentHash,
+		Operation:              wm.Operation,
 	}
 }
 

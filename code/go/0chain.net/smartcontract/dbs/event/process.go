@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -85,20 +86,21 @@ const (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
-	edb.eventsChannel <- events
+func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) {
+	edb.eventsChannel <- blockEvents{events: events, round: round, block: block, blockSize: blockSize}
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	logging.Logger.Info("events worker started")
 	var round int64
 	for {
-		events := <-edb.eventsChannel
-		if len(events) == 0 {
+		es := <-edb.eventsChannel
+		if len(es.events) == 0 {
 			continue
 		}
-		edb.addEvents(ctx, events)
-		for _, event := range events {
+		edb.addEvents(ctx, es)
+		tse := time.Now()
+		for _, event := range es.events {
 			var err error = nil
 			switch EventType(event.Type) {
 			case TypeChain:
@@ -106,16 +108,26 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			case TypeSmartContract:
 
 				// todo remove check bellow when satisfied everything working ok
-				if round > events[0].BlockNumber {
+				if round > es.events[0].BlockNumber {
 					logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
-						"events for round %v recieved after events for ruond %v", events[0].BlockNumber, round))
+						"events for round %v recieved after events for ruond %v", es.events[0].BlockNumber, round))
 					continue
 				}
-				if round != events[0].BlockNumber {
-					round = events[0].BlockNumber
+				if round != es.events[0].BlockNumber {
+					round = es.events[0].BlockNumber
 				}
 
 				err = edb.addSmartContractEvent(event)
+				du := time.Since(tse)
+				if du.Milliseconds() > 50 {
+					logging.Logger.Warn("event db save slow - addStat",
+						zap.Any("duration", du),
+						zap.Int64("round", es.round),
+						zap.String("block", es.block),
+						zap.Int("block size", es.blockSize),
+						zap.Any("event", event),
+					)
+				}
 			case TypeError:
 				err = edb.addError(Error{
 					TransactionID: event.TxHash,
@@ -124,12 +136,23 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			default:
 			}
 			if err != nil {
-				logging.Logger.Error(
-					"event could not be processed",
+				logging.Logger.Error("event could not be processed",
+					zap.Int64("round", es.round),
+					zap.String("block", es.block),
+					zap.Int("block size", es.blockSize),
 					zap.Any("event", event),
 					zap.Error(err),
 				)
 			}
+		}
+		due := time.Since(tse)
+		if due.Milliseconds() > 500 {
+			logging.Logger.Warn("event db work slow",
+				zap.Any("duration", due),
+				zap.Int("events number", len(es.events)),
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize))
 		}
 	}
 }
@@ -142,7 +165,7 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 	for {
 		select {
 		case e := <-edb.roundEventsChan:
-			if len(e) == 0 {
+			if len(e.events) == 0 {
 				continue
 			}
 			//init round with event's if not ran far away
@@ -150,24 +173,24 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 				global, _ := edb.GetGlobal()
 				round = global.Round
 				//if good start (not missed period)
-				if global.Round+period > e[0].BlockNumber {
-					round = e[0].BlockNumber - 1
+				if global.Round+period > e.events[0].BlockNumber {
+					round = e.events[0].BlockNumber - 1
 				}
 			}
-			if round > e[0].BlockNumber {
+			if round > e.events[0].BlockNumber {
 				logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
-					"events for round %v recieved after events for ruond %v", e[0].BlockNumber, round))
+					"events for round %v recieved after events for ruond %v", e.events[0].BlockNumber, round))
 				continue
 			}
-			if round+1 != e[0].BlockNumber {
+			if round+1 != e.events[0].BlockNumber {
 				logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
-					"events for round %v recieved instead", round+1, e[0].BlockNumber))
+					"events for round %v recieved instead", round+1, e.events[0].BlockNumber))
 				continue
 			}
 
-			round = e[0].BlockNumber
+			round = e.events[0].BlockNumber
 			edb.updateBlobberAggregate(round, period, gs)
-			gs.update(e)
+			gs.update(e.events)
 			if round%period == 0 {
 				gs.Round = round
 				if err := edb.addSnapshot(gs.Snapshot); err != nil {

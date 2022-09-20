@@ -259,7 +259,11 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 
 				errC := make(chan error, 1)
 				go func() {
+					ts := time.Now()
 					errC <- c.finalizeBlockProcess(cctx, fbr.block, bsh)
+					Logger.Debug("finalize block processed",
+						zap.Int64("round", fbr.block.Round),
+						zap.Any("duration", time.Since(ts)))
 				}()
 
 				select {
@@ -552,7 +556,7 @@ func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootSt
 	if err != nil {
 		switch err {
 		case context.Canceled:
-			Logger.Error("Sync round state abort, context is canceled, suppose the BC is moving")
+			Logger.Debug("Sync round state abort, context is canceled, suppose the BC is moving")
 			return
 		case context.DeadlineExceeded:
 			Logger.Error("Sync round state abort, context timed out for checking missing nodes")

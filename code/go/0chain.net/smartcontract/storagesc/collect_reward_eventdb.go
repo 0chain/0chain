@@ -14,7 +14,7 @@ func emitAddOrOverwriteReward(amount currency.Coin, providerID string, prr stake
 		Amount:       int64(amount),
 		BlockNumber:  balances.GetBlock().Round,
 		ClientID:     t.ClientID,
-		PoolID:       prr.PoolId,
+		PoolID:       t.ClientID,
 		ProviderType: prr.ProviderType.String(),
 		ProviderID:   providerID,
 	}
