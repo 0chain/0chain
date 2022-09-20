@@ -404,10 +404,9 @@ func BenchmarkTests(
 					Provider: &provider.Provider{
 						ID: encryption.Hash("my_new_blobber"),
 					},
-					BaseURL:  "my_new_blobber.com",
-					Terms:    getMockBlobberTerms(),
-					Capacity: maxStake,
-					//Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
+					BaseURL:           "my_new_blobber.com",
+					Terms:             getMockBlobberTerms(),
+					Capacity:          maxStake,
 					StakePoolSettings: getMockStakePoolSettings(data.Clients[0]),
 				})
 				return bytes
