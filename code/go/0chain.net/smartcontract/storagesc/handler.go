@@ -10,6 +10,7 @@ import (
 	"time"
 
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/currency"
@@ -830,20 +831,39 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 const cantGetConfigErrMsg = "can't get config"
 
 func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
+	gn := new(minersc.GlobalNode)
+	err := balances.GetTrieNode(minersc.GlobalNodeKey, gn)
+	if err != nil {
+		return nil, err
+	}
+
+	return gn.Config, nil
+}
+
+func refreshConfig(balances cstate.CommonStateContextI) error {
 	var conf = &Config{}
-	err := balances.GetTrieNode(scConfigKey(ADDRESS), conf)
+
+	gn := new(minersc.GlobalNode)
+	err := balances.GetTrieNode(minersc.GlobalNodeKey, gn)
+	if err != nil {
+		return err
+	}
+
+	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			return nil, err
-		} else {
-			conf, err = getConfiguredConfig()
-			if err != nil {
-				return nil, err
-			}
-			return conf, err
+			return err
 		}
+		conf, err = getConfiguredConfig()
+		if err != nil {
+			return err
+		}
+		return err
+
 	}
-	return conf, nil
+
+	gn.Config = conf
+	return nil
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage_config storage_config
