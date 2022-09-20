@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"0chain.net/chaincore/currency"
-	"0chain.net/smartcontract/storagesc"
 
 	"0chain.net/smartcontract"
 
@@ -251,8 +250,6 @@ type GlobalNode struct {
 	OwnerId              string         `json:"owner_id"`
 	CooldownPeriod       int64          `json:"cooldown_period"`
 	Cost                 map[string]int `json:"cost"`
-
-	Config *storagesc.Config `json:"config"`
 }
 
 func (gn *GlobalNode) readConfig() (err error) {
