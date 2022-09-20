@@ -47,7 +47,7 @@ func kill(
 	}
 
 	var sp *stakePool
-	if sp, err = getProviderStakePool(pType, req.ID, balances); err != nil {
+	if sp, err = getStakePool(pType, req.ID, balances); err != nil {
 		return common.NewError(errCode, "can't get related stake pool: "+err.Error())
 	}
 
