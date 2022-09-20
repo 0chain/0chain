@@ -492,12 +492,9 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 		b *block.Block
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *block.Block
-		want1   bool
-		wantErr error
+		name   string
+		fields fields
+		args   args
 	}{
 		{
 			name: "FALSE",
@@ -513,9 +510,7 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 					}(),
 				},
 			},
-			args:  args{b: b},
-			want:  b,
-			want1: false,
+			args: args{b: b},
 		},
 		{
 			name: "TRUE",
@@ -524,9 +519,7 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 					b,
 				},
 			},
-			args:  args{b: b2},
-			want:  b2,
-			want1: true,
+			args: args{b: b2},
 		},
 	}
 	for _, tt := range tests {
@@ -549,14 +542,27 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 				softTimeoutCount: tt.fields.softTimeoutCount,
 				vrfStartTime:     tt.fields.vrfStartTime,
 			}
-			got, got1 := r.AddNotarizedBlock(tt.args.b)
+			r.AddNotarizedBlock(tt.args.b)
+			var foundProposed bool
+			for _, b := range r.proposedBlocks {
+				if b.Hash == tt.args.b.Hash {
+					require.Equal(t, tt.args.b, b)
+					foundProposed = true
+					break
+				}
+			}
 
-			if !assert.Equal(t, tt.want, got) {
-				t.Errorf("AddNotarizedBlock() got = %v, want %v", got, tt.want)
+			require.True(t, foundProposed)
+
+			var foundNotarized bool
+			for _, b := range r.notarizedBlocks {
+				if b.Hash == tt.args.b.Hash {
+					require.Equal(t, tt.args.b, b)
+					foundNotarized = true
+					break
+				}
 			}
-			if got1 != tt.want1 {
-				t.Errorf("AddNotarizedBlock() got1 = %v, want %v", got1, tt.want1)
-			}
+			require.True(t, foundNotarized)
 		})
 	}
 }
@@ -710,17 +716,9 @@ func TestRound_AddProposedBlock(t *testing.T) {
 				softTimeoutCount: tt.fields.softTimeoutCount,
 				vrfStartTime:     tt.fields.vrfStartTime,
 			}
-			got, gotResult := r.AddProposedBlock(tt.args.b)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AddProposedBlock() got = %v, want %v", got, tt.want)
-			}
-			if gotResult != tt.wantResult {
-				t.Errorf("AddProposedBlock() gotResult = %v, want %v", gotResult, tt.wantResult)
-			}
+			r.AddProposedBlock(tt.args.b)
 			gotProposedBlocks := r.GetProposedBlocks()
-			if !assert.Equal(t, gotProposedBlocks, tt.wantPrBlocks) {
-				t.Errorf("AddProposedBlock() got proposed blocks = %v, want = %v", gotProposedBlocks, tt.wantPrBlocks)
-			}
+			require.Equal(t, tt.wantPrBlocks, gotProposedBlocks)
 		})
 	}
 }

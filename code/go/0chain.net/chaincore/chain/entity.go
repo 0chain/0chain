@@ -674,7 +674,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 
 	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
-	b, _ = r.AddNotarizedBlock(b)
+	r.AddNotarizedBlock(b)
 
 	return b, r
 }
@@ -991,6 +991,16 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 		return nil
 	}
 	return r
+}
+
+func (c *Chain) GetRoundClone(roundNumber int64) round.RoundI {
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
+	r, ok := c.rounds[roundNumber]
+	if !ok {
+		return nil
+	}
+	return r.Clone()
 }
 
 /*DeleteRound - delete a round and associated block data */

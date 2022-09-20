@@ -10,21 +10,11 @@ import (
 func (z *UserStakePools) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
-	// string "Pools"
-	o = append(o, 0x81, 0xa5, 0x50, 0x6f, 0x6f, 0x6c, 0x73)
-	o = msgp.AppendMapHeader(o, uint32(len(z.Pools)))
-	keys_za0001 := make([]string, 0, len(z.Pools))
-	for k := range z.Pools {
-		keys_za0001 = append(keys_za0001, k)
-	}
-	msgp.Sort(keys_za0001)
-	for _, k := range keys_za0001 {
-		za0002 := z.Pools[k]
-		o = msgp.AppendString(o, k)
-		o = msgp.AppendArrayHeader(o, uint32(len(za0002)))
-		for za0003 := range za0002 {
-			o = msgp.AppendString(o, za0002[za0003])
-		}
+	// string "Providers"
+	o = append(o, 0x81, 0xa9, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Providers)))
+	for za0001 := range z.Providers {
+		o = msgp.AppendString(o, z.Providers[za0001])
 	}
 	return
 }
@@ -47,48 +37,24 @@ func (z *UserStakePools) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "Pools":
+		case "Providers":
 			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
+			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Pools")
+				err = msgp.WrapError(err, "Providers")
 				return
 			}
-			if z.Pools == nil {
-				z.Pools = make(map[string][]string, zb0002)
-			} else if len(z.Pools) > 0 {
-				for key := range z.Pools {
-					delete(z.Pools, key)
-				}
+			if cap(z.Providers) >= int(zb0002) {
+				z.Providers = (z.Providers)[:zb0002]
+			} else {
+				z.Providers = make([]string, zb0002)
 			}
-			for zb0002 > 0 {
-				var za0001 string
-				var za0002 []string
-				zb0002--
-				za0001, bts, err = msgp.ReadStringBytes(bts)
+			for za0001 := range z.Providers {
+				z.Providers[za0001], bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "Pools")
+					err = msgp.WrapError(err, "Providers", za0001)
 					return
 				}
-				var zb0003 uint32
-				zb0003, bts, err = msgp.ReadArrayHeaderBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "Pools", za0001)
-					return
-				}
-				if cap(za0002) >= int(zb0003) {
-					za0002 = (za0002)[:zb0003]
-				} else {
-					za0002 = make([]string, zb0003)
-				}
-				for za0003 := range za0002 {
-					za0002[za0003], bts, err = msgp.ReadStringBytes(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Pools", za0001, za0003)
-						return
-					}
-				}
-				z.Pools[za0001] = za0002
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -104,15 +70,9 @@ func (z *UserStakePools) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *UserStakePools) Msgsize() (s int) {
-	s = 1 + 6 + msgp.MapHeaderSize
-	if z.Pools != nil {
-		for za0001, za0002 := range z.Pools {
-			_ = za0002
-			s += msgp.StringPrefixSize + len(za0001) + msgp.ArrayHeaderSize
-			for za0003 := range za0002 {
-				s += msgp.StringPrefixSize + len(za0002[za0003])
-			}
-		}
+	s = 1 + 10 + msgp.ArrayHeaderSize
+	for za0001 := range z.Providers {
+		s += msgp.StringPrefixSize + len(z.Providers[za0001])
 	}
 	return
 }

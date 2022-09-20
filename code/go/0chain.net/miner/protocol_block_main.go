@@ -29,7 +29,7 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	mc.updateFinalizedBlock(ctx, b)
+	go mc.updateFinalizedBlock(ctx, b)
 }
 
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
