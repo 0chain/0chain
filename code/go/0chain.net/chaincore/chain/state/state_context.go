@@ -60,6 +60,8 @@ type CommonStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
 	GetBlock() *block.Block
 	GetLatestFinalizedBlock() *block.Block
+	GetConfig() storagescConfig
+	SetConfig(config storagescConfig)
 }
 
 //go:generate mockery --case underscore --name=QueryStateContextI --output=./mocks
@@ -73,6 +75,8 @@ type TimedQueryStateContextI interface {
 	QueryStateContextI
 	Now() common.Timestamp
 }
+
+type storagescConfig interface{}
 
 type Appender func(events []event.Event, current event.Event) []event.Event
 
@@ -120,6 +124,7 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
+	config                        *storagescConfig
 }
 
 type GetNow func() common.Timestamp
@@ -399,4 +404,12 @@ func (sc *StateContext) SetStateContext(s *state.State) error {
 
 func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 	return sc.getLatestFinalizedBlock()
+}
+
+func (sc *StateContext) GetConfig() storagescConfig {
+	return sc.config
+}
+
+func (sc *StateContext) SetConfig(config storagescConfig) {
+	sc.config = &config
 }
