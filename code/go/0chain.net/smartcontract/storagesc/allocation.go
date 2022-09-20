@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -153,26 +152,35 @@ func sizeInGB(size int64) float64 {
 func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	size int64, balances chainstate.CommonStateContextI) (filter filterBlobberFunc) {
 
-	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
-		var sp, err = sc.getStakePool(spenum.Blobber, b.ID, balances)
-		if err != nil {
-			return true // kick off
+	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
+		var sp *stakePool
+		sp, err = sc.getStakePool(spenum.Blobber, b.ID, balances)
+		switch err {
+		case nil:
+		case util.ErrValueNotPresent:
+			return true, nil // kick off
+		default:
+			return false, err
 		}
+
 		if b.Terms.WritePrice == 0 {
-			return false // keep, ok or already filtered by bid
+			return false, nil // keep, ok or already filtered by bid
 		}
 		staked, err := sp.stake()
 		if err != nil {
 			logging.Logger.Error("filter blobber for stake, cannot total stake",
 				zap.String("blobber id", b.ID))
-			return true
+			return true, nil
 		}
 		// clean capacity (without delegate pools want to 'unstake')
 		free, err := unallocatedCapacity(b.Terms.WritePrice, staked, sp.TotalOffers)
 		if err != nil {
-			return true // kick off
+			logging.Logger.Warn("could not get unallocated capacity when filtering blobbers by free space",
+				zap.String("blobber id", b.ID),
+				zap.Error(err))
+			return true, nil // kick off
 		}
-		return free < size // kick off if it hasn't enough free space
+		return free < size, nil // kick off if it hasn't enough free space
 	})
 }
 
@@ -231,32 +239,44 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		request.OwnerPublicKey = txn.PublicKey
 	}
 
-	inputBlobbers := getBlobbersByIDs(request.Blobbers, balances)
-	if len(inputBlobbers) < (request.DataShards + request.ParityShards) {
+	blobbers, err := getBlobbersByIDs(request.Blobbers, balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed", "get blobbers failed: %v", err)
+	}
+
+	if len(blobbers) < (request.DataShards + request.ParityShards) {
 		logging.Logger.Error("new_allocation_request_failed: blobbers fetched are less than requested blobbers",
 			zap.String("txn", txn.Hash),
-			zap.Int("fetched blobbers", len(inputBlobbers)),
+			zap.Int("fetched blobbers", len(blobbers)),
 			zap.Int("data shards", request.DataShards),
 			zap.Int("parity_shards", request.ParityShards))
 		return "", common.NewErrorf("allocation_creation_failed",
-			"Blobbers provided are not enough to honour the allocation")
+			"Not enough provided blobbers found in mpt")
 	}
-	spMap, err := getStakePoolsByIDs(request.Blobbers, balances)
+
+	if request.Owner == "" {
+		request.Owner = txn.ClientID
+		request.OwnerPublicKey = txn.PublicKey
+	}
+
+	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers))
+	var sa = request.storageAllocation() // (set fields, including expiration)
+	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
 	}
-	if len(spMap) != len(inputBlobbers) {
+	if len(spMap) != len(blobbers) {
 		return "", common.NewErrorf("allocation_creation_failed", "missing blobber's stake pool: %v", err)
 	}
 	var sns []*storageNodeResponse
-	for i := 0; i < len(inputBlobbers); i++ {
-		stake, err := spMap[inputBlobbers[i].ID].stake()
+	for i := 0; i < len(blobbers); i++ {
+		stake, err := spMap[blobbers[i].ID].stake()
 		if err != nil {
-			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber %s: %v", inputBlobbers[i].ID, err)
+			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber %s: %v", blobbers[i].ID, err)
 		}
 		sns = append(sns, &storageNodeResponse{
-			StorageNode: inputBlobbers[i],
-			TotalOffers: spMap[inputBlobbers[i].ID].TotalOffers,
+			StorageNode: blobbers[i],
+			TotalOffers: spMap[blobbers[i].ID].TotalOffers,
 			TotalStake:  stake,
 		})
 	}
@@ -420,100 +440,6 @@ func (t *Timings) tick(name string) {
 	t.timings[name] = time.Since(t.start)
 }
 
-func (sc *StorageSmartContract) fetchStorageNodePlusStake(blobberIds []string, balances chainstate.CommonStateContextI) ([]storageNodeResponse, error) {
-	type indexedBlobber struct {
-		index   int
-		blobber storageNodeResponse
-	}
-	blobbers := make([]indexedBlobber, 0, len(blobberIds))
-	pools := make(chan indexedBlobber, len(blobberIds))
-	errs := make(chan error, len(blobberIds))
-
-	for i, id := range blobberIds {
-		go func(id string, i int) {
-			var err error
-			blobber, err := getBlobber(id, balances)
-			if err != nil || blobber == nil {
-				errs <- err
-				return
-			}
-			sp, err := sc.getStakePool(spenum.Blobber, id, balances)
-			if err != nil {
-				errs <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
-				return
-			}
-			stake, err := sp.stake()
-			if err != nil {
-				errs <- err
-				return
-			}
-			sns := storageNodeResponse{
-				StorageNode: blobber,
-				TotalStake:  stake,
-				TotalOffers: sp.TotalOffers,
-			}
-			pools <- indexedBlobber{i, sns}
-		}(id, i)
-	}
-
-	for {
-		if len(blobbers) == len(blobberIds) {
-			//ensure ordering
-			sort.Slice(blobbers, func(i, j int) bool {
-				return blobbers[i].index < blobbers[j].index
-			})
-			retBlobbers := make([]storageNodeResponse, 0, len(blobberIds))
-			for _, b := range blobbers {
-				retBlobbers = append(retBlobbers, b.blobber)
-			}
-			return retBlobbers, nil
-		}
-
-		select {
-		case err := <-errs:
-			return nil, err
-		case p := <-pools:
-			blobbers = append(blobbers, p)
-		}
-	}
-}
-
-func (sc *StorageSmartContract) fetchPools(inputBlobbers *StorageNodes, balances chainstate.CommonStateContextI) ([]*blobberWithPool, error) {
-	blobbers := make([]*blobberWithPool, 0, len(inputBlobbers.Nodes))
-	pools := make(chan *blobberWithPool, len(inputBlobbers.Nodes))
-	errs := make(chan error, len(inputBlobbers.Nodes))
-
-	for i, b := range inputBlobbers.Nodes {
-		go func(blob *StorageNode, ind int) {
-			var sp *stakePool
-			var err error
-			if sp, err = sc.getStakePool(spenum.Blobber, blob.ID, balances); err != nil {
-				errs <- common.NewErrorf("allocation_creation_failed", "can't get blobber's stake pool: %v", err)
-				return
-			}
-			pools <- &blobberWithPool{blob, sp, ind}
-		}(b, i)
-	}
-
-	for {
-		if len(blobbers) == len(inputBlobbers.Nodes) {
-			//ensure ordering
-			sort.Slice(blobbers, func(i, j int) bool {
-				return blobbers[i].idx < blobbers[j].idx
-			})
-
-			return blobbers, nil
-		}
-
-		select {
-		case err := <-errs:
-			return nil, err
-		case p := <-pools:
-			blobbers = append(blobbers, p)
-		}
-	}
-}
-
 func (sc *StorageSmartContract) selectBlobbers(
 	creationDate time.Time,
 	allBlobbersList StorageNodes,
@@ -534,12 +460,16 @@ func (sc *StorageSmartContract) selectBlobbers(
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
 	timestamp := common.Timestamp(creationDate.Unix())
-	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), timestamp,
+
+	list, err := sa.filterBlobbers(allBlobbersList.Nodes.copy(), timestamp,
 		bSize, filterHealthyBlobbers(timestamp),
 		sc.filterBlobbersByFreeSpace(timestamp, bSize, balances))
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not filter blobbers: %v", err)
+	}
 
 	if len(list) < size {
-		return nil, 0, errors.New("Not enough blobbers to honor the allocation")
+		return nil, 0, errors.New("not enough blobbers to honor the allocation")
 	}
 
 	sa.BlobberAllocs = make([]*BlobberAllocation, 0)
@@ -559,24 +489,6 @@ func (sc *StorageSmartContract) selectBlobbers(
 	}
 
 	return blobberNodes[:size], bSize, nil
-}
-
-func getBlobbers(
-	blobberIDs []string,
-	balances chainstate.CommonStateContextI,
-) *StorageNodes {
-	blobbers := getBlobbersByIDs(blobberIDs, balances)
-	return &StorageNodes{
-		Nodes: blobbers,
-	}
-}
-
-// getBlobbers get blobbers from MPT concurrently based on input blobber ids (TODO: We need to remove as much pointers as much to reduce load on garbage collector, this function was made to keep things simple and backward code compatible)
-func (_ *StorageSmartContract) getBlobbers(
-	blobberIDs []string,
-	balances chainstate.CommonStateContextI,
-) *StorageNodes {
-	return getBlobbers(blobberIDs, balances)
 }
 
 func validateBlobbers(
@@ -684,23 +596,27 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 	return alloc.BlobberAllocs[0].Size + uar.getBlobbersSizeDiff(alloc)
 }
 
-func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) []*StorageNode {
+// get blobbers by IDs concurrently, return error if any of them could not be acquired.
+func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]*StorageNode, error) {
 	type blobberResp struct {
 		index   int
 		blobber *StorageNode
 	}
 
 	blobberCh := make(chan blobberResp, len(ids))
+	stateErrC := make(chan error, len(ids))
 	var wg sync.WaitGroup
 	for i, details := range ids {
 		wg.Add(1)
 		go func(index int, blobberId string) {
 			defer wg.Done()
 			blobber, err := getBlobber(blobberId, balances)
-			if err != nil || blobber == nil {
-				logging.Logger.Debug("can't get blobber", zap.String("blobberId", blobberId), zap.Error(err))
+			if err != nil {
+				stateErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
+				logging.Logger.Debug("could not get blobber", zap.String("blobberId", blobberId), zap.Error(err))
 				return
 			}
+
 			blobberCh <- blobberResp{
 				index:   index,
 				blobber: blobber,
@@ -710,57 +626,60 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) []*
 	wg.Wait()
 	close(blobberCh)
 
+	// return if got state error
+	select {
+	case err := <-stateErrC:
+		return nil, err
+	default:
+	}
+
+	//ensure original ordering
 	blobbers := make([]*StorageNode, len(ids))
 	for resp := range blobberCh {
 		blobbers[resp.index] = resp.blobber
 	}
-	filtered := make([]*StorageNode, 0, len(ids))
-	for _, b := range blobbers {
-		if b != nil {
-			filtered = append(filtered, b)
-		}
-	}
 
-	return filtered
+	return blobbers, nil
 }
 
-func getStakePoolsByIDs(ids []string, balances chainstate.CommonStateContextI) (map[string]*stakePool, error) {
+func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances chainstate.CommonStateContextI) (map[string]*stakePool, error) {
 	type spResp struct {
-		blobberId string
-		sp        *stakePool
+		providerID string
+		sp         *stakePool
 	}
 
-	stakePoolCh := make(chan spResp, len(ids))
-	errorChan := make(chan error, len(ids))
+	poolC := make(chan spResp, len(ids))
+	errC := make(chan error, len(ids))
 	var wg sync.WaitGroup
-	for i, details := range ids {
+	for i, id := range ids {
 		wg.Add(1)
-		go func(index int, blobberId string) {
+		go func(i int, pid string) {
 			defer wg.Done()
-			sp, err := getStakePool(blobberId, balances)
-			if err != nil || sp == nil {
-				errorChan <- err
-			} else {
-				stakePoolCh <- spResp{
-					blobberId: blobberId,
-					sp:        sp,
-				}
+			sp, err := getStakePool(providerType, pid, balances)
+			if err != nil {
+				errC <- err
+				return
 			}
-		}(i, details)
+			poolC <- spResp{
+				providerID: pid,
+				sp:         sp,
+			}
+		}(i, id)
 	}
 	wg.Wait()
-	close(errorChan)
-	close(stakePoolCh)
-	for err := range errorChan {
-		if err != nil {
-			return nil, err
-		}
+	close(poolC)
+
+	select {
+	case err := <-errC:
+		return nil, err
+	default:
 	}
 	//ensure original ordering
 	stakePoolMap := make(map[string]*stakePool, len(ids))
-	for resp := range stakePoolCh {
-		stakePoolMap[resp.blobberId] = resp.sp
+	for resp := range poolC {
+		stakePoolMap[resp.providerID] = resp.sp
 	}
+
 	return stakePoolMap, nil
 }
 
@@ -785,6 +704,7 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 			blobber, err = sc.getBlobber(blobberId, balances)
 			if err != nil {
 				errorCh <- fmt.Errorf("can't get blobber %q: %v", blobberId, err)
+				return
 			}
 			blobberCh <- blobberResp{
 				index:   index,
@@ -793,12 +713,12 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 		}(i, details.BlobberID)
 	}
 	wg.Wait()
-	close(errorCh)
 	close(blobberCh)
-	for err := range errorCh {
-		if err != nil {
-			return nil, err
-		}
+
+	select {
+	case err := <-errorCh:
+		return nil, err
+	default:
 	}
 
 	for resp := range blobberCh {
@@ -1418,21 +1338,32 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 	for _, ba := range alloc.BlobberAllocs {
 		if ba.Stats == nil {
 			ba.Stats = new(StorageAllocationStats)
-		}
-		ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
-		ba.Stats.OpenChallenges = 0
-		ba.Stats.TotalChallenges = ba.Stats.FailedChallenges + ba.Stats.SuccessChallenges
-		if ba.Stats.TotalChallenges == 0 {
 			passRates = append(passRates, 1.0)
 			continue
 		}
+		ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
+		ba.Stats.OpenChallenges = 0
+
+		baTotal := ba.Stats.FailedChallenges + ba.Stats.SuccessChallenges
+		if baTotal == 0 {
+			passRates = append(passRates, 1.0)
+			continue
+		}
+
+		if ba.Stats.TotalChallenges == 0 {
+			logging.Logger.Warn("empty total challenges on finalizedPassRates",
+				zap.Any("OpenChallenges", ba.Stats.OpenChallenges),
+				zap.Any("FailedChallenges", ba.Stats.FailedChallenges),
+				zap.Any("SuccessChallenges", ba.Stats.SuccessChallenges))
+			return nil, errors.New("empty total challenges")
+		}
+
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 		succesful += ba.Stats.SuccessChallenges
 		failed += ba.Stats.FailedChallenges
 	}
 	alloc.Stats.SuccessChallenges = succesful
 	alloc.Stats.FailedChallenges = failed
-	alloc.Stats.TotalChallenges = alloc.Stats.FailedChallenges + alloc.Stats.FailedChallenges
 	alloc.Stats.OpenChallenges = 0
 	return passRates, nil
 }
@@ -1447,7 +1378,6 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		alloc.Stats = &StorageAllocationStats{}
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberAllocs))
-	var failed, successful int64 = 0, 0
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	switch err {
@@ -1463,9 +1393,6 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			//if c.Responded || c.AllocationID != alloc.ID {
-			//	continue // already accepted, already rewarded/penalized
-			//}
 			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime())
 			if expire < now {
 				ba.Stats.FailedChallenges++
@@ -1474,6 +1401,8 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 				ba.Stats.SuccessChallenges++
 				alloc.Stats.SuccessChallenges++
 			}
+			ba.Stats.OpenChallenges--
+			alloc.Stats.OpenChallenges--
 		}
 
 	default:
@@ -1481,9 +1410,15 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	}
 
 	for _, ba := range alloc.BlobberAllocs {
+		if ba.Stats.OpenChallenges > 0 {
+			logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
 
-		ba.Stats.OpenChallenges = 0
-		ba.Stats.TotalChallenges = ba.Stats.SuccessChallenges + ba.Stats.FailedChallenges
+			ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
+			alloc.Stats.FailedChallenges += ba.Stats.OpenChallenges
+
+			ba.Stats.OpenChallenges = 0
+		}
+
 		if ba.Stats.TotalChallenges == 0 {
 			passRates = append(passRates, 1.0)
 			continue
@@ -1491,13 +1426,8 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		// success rate for the blobber allocation
 		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
-		successful += ba.Stats.SuccessChallenges
-		failed += ba.Stats.FailedChallenges
 	}
 
-	alloc.Stats.SuccessChallenges = successful
-	alloc.Stats.FailedChallenges = failed
-	alloc.Stats.TotalChallenges = alloc.Stats.SuccessChallenges + alloc.Stats.FailedChallenges
 	alloc.Stats.OpenChallenges = 0
 	return passRates, nil
 }
@@ -1664,10 +1594,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	sps []*stakePool,
 	balances chainstate.StateContextI,
 ) (err error) {
-	if err != nil {
-		return common.NewErrorf("fini_alloc_failed", "%v", err)
-	}
-
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
 	// passRates list above because of algorithm of the adjustChallenges

@@ -111,7 +111,14 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 			fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)",
 				t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
 	}
-	logging.Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", currency.Coin(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", currency.Coin(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
+	logging.Logger.Info("Valid sc request",
+		zap.Any("contract_balance", smartContractBalance),
+		zap.Any("txn.Value", t.Value),
+		zap.Any("max_pour", gn.PourAmount),
+		zap.Any("periodic_used+t.Value", currency.Coin(t.Value)+un.Used),
+		zap.Any("periodic_limit", gn.PeriodicLimit),
+		zap.Any("global_used+txn.Value", currency.Coin(t.Value)+gn.Used),
+		zap.Any("global_limit", gn.GlobalLimit))
 	return true, nil
 }
 

@@ -719,7 +719,7 @@ func BenchmarkTests(
 					ProviderType: spenum.Blobber,
 					ProviderID:   getMockBlobberId(0),
 					//PoolID:    getMockStakePoolId(0, 0, data.Clients),
-					PoolID: getMockBlobberStakePoolId(0, 0),
+					//PoolID: getMockBlobberStakePoolId(0, 0),
 				})
 				return bytes
 			}(),
@@ -736,7 +736,6 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&stakePoolRequest{
 					ProviderType: spenum.Blobber,
 					ProviderID:   getMockBlobberId(0),
-					PoolID:       getMockBlobberStakePoolId(0, 0),
 				})
 				return bytes
 			}(),
@@ -751,7 +750,6 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
-					PoolId:       getMockBlobberStakePoolId(0, 0),
 					ProviderType: spenum.Blobber,
 				})
 				return bytes

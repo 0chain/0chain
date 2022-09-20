@@ -2,8 +2,11 @@ package event
 
 import (
 	"fmt"
+	"time"
 
 	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -23,21 +26,51 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 		}
 	}
 
-	dps, err := edb.GetDelegatePools(spu.ProviderId, int(spu.ProviderType))
-	if err != nil {
-		return err
+	if len(spu.DelegateRewards) == 0 {
+		return nil
 	}
 
-	for _, dp := range dps {
-		if reward, ok := spu.DelegateRewards[dp.PoolID]; ok {
-			err := edb.updateReward(reward, dp)
-			if err != nil {
-				return err
-			}
+	ts := time.Now()
+
+	defer func() {
+		du := time.Since(ts)
+		if du > 50*time.Millisecond {
+			logging.Logger.Debug("event db - update reward slow",
+				zap.Any("duration", du),
+				zap.Int("update items", len(spu.DelegateRewards)))
+		}
+	}()
+
+	var (
+		penalties = make([]rewardInfo, 0, len(spu.DelegateRewards))
+		rewards   = make([]rewardInfo, 0, len(spu.DelegateRewards))
+	)
+
+	for pool, reward := range spu.DelegateRewards {
+		// TODO: only blobbers have penalty?
+		if reward < 0 && spu.ProviderType == int(spenum.Blobber) {
+			penalties = append(penalties, rewardInfo{pool: pool, value: -reward})
+		} else {
+			rewards = append(rewards, rewardInfo{pool: pool, value: reward})
 		}
 	}
 
+	if len(penalties) > 0 {
+		if err := edb.bulkUpdatePenalty(spu.ProviderId, spu.ProviderType, penalties); err != nil {
+			return err
+		}
+	}
+
+	if len(rewards) > 0 {
+		return edb.bulkUpdateRewards(spu.ProviderId, spu.ProviderType, rewards)
+	}
+
 	return nil
+}
+
+type rewardInfo struct {
+	pool  string
+	value int64
 }
 
 func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {

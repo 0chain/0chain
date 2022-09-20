@@ -9,11 +9,9 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -90,13 +88,14 @@ func (sp *stakePool) Decode(input []byte) error {
 
 // save the stake pool
 func (sp *stakePool) save(providerType spenum.Provider, providerID string,
-	balances chainstate.StateContextI) (err error) {
-	r, err := balances.InsertTrieNode(stakePoolKey(providerType, providerID), sp)
-	logging.Logger.Debug("after stake pool save", zap.String("root", r))
+	balances chainstate.StateContextI) error {
+	_, err := balances.InsertTrieNode(stakePoolKey(providerType, providerID), sp)
+	if err != nil {
+		return err
+	}
 
 	sp.emitSaveEvent(providerType, providerID, balances)
-
-	return
+	return nil
 }
 
 func (sp *stakePool) emitSaveEvent(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) {
@@ -398,18 +397,6 @@ func getProviderStakePool(
 	return sp, nil
 }
 
-func getStakePool(
-	blobberID datastore.Key, balances chainstate.CommonStateContextI,
-) (sp *stakePool, err error) {
-	sp = newStakePool()
-	err = balances.GetTrieNode(stakePoolKey(spenum.Blobber, blobberID), sp)
-	if err != nil {
-		return nil, err
-	}
-
-	return sp, nil
-}
-
 // initial or successive method should be used by add_blobber/add_validator
 // SC functions
 
@@ -534,9 +521,9 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"can't get related stake pool: %v", err)
 	}
 
-	dp, ok := sp.Pools[spr.PoolID]
+	dp, ok := sp.Pools[t.ClientID]
 	if !ok {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", spr.PoolID)
+		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
 	}
 
 	// if StakeAt has valid value and lock period is less than MinLockPeriod
@@ -548,7 +535,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		}
 	}
 
-	unstake, err := sp.empty(ssc.ID, spr.PoolID, t.ClientID, balances)
+	unstake, err := sp.empty(ssc.ID, t.ClientID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
@@ -571,7 +558,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockClientStakePool(t.ClientID, spr.ProviderType, spr.ProviderID, spr.PoolID, balances)
+	amount, err := sp.UnlockClientStakePool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}

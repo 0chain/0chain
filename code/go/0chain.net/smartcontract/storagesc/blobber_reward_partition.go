@@ -57,8 +57,8 @@ func passedCallback(id string, data []byte, toPartition, _ int, sCtx c_state.Sta
 
 // getActivePassedBlobberRewardsPartitions gets blobbers passed challenge from last challenge period
 func getActivePassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
-	name := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
-	blobbers, err := partitions.CreateIfNotExists(balances, name, blobberRewardsPartitionSize)
+	key := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
+	blobbers, err := partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +84,8 @@ func ongoingCallback(id string, data []byte, toPartition, _ int, sCtx c_state.St
 
 // getOngoingPassedBlobberRewardsPartitions gets blobbers passed challenge from ongoing challenge period
 func getOngoingPassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
-	name := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
-	blobbers, err := partitions.CreateIfNotExists(balances, name, blobberRewardsPartitionSize)
+	key := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
+	blobbers, err := partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
 	if err != nil {
 		return nil, err
 	}

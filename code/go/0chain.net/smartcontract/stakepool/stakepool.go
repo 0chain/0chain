@@ -2,7 +2,6 @@ package stakepool
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -122,8 +121,7 @@ func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.
 }
 
 func (sp *StakePool) MintRewards(
-	clientId,
-	poolId, providerId string,
+	clientId, providerId string,
 	providerType spenum.Provider,
 	usp *UserStakePools,
 	balances cstate.StateContextI,
@@ -135,17 +133,12 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		if len(poolId) == 0 {
-			return reward, nil
-		}
-	}
-	if len(poolId) == 0 {
-		return 0, errors.New("no pool id from which to release funds found")
+		return reward, nil
 	}
 
-	dPool, ok := sp.Pools[poolId]
+	dPool, ok := sp.Pools[clientId]
 	if !ok {
-		return 0, fmt.Errorf("cannot find rewards for %s", poolId)
+		return 0, fmt.Errorf("cannot find rewards for %s", clientId)
 	}
 
 	if dPool.Reward > 0 {
@@ -168,17 +161,17 @@ func (sp *StakePool) MintRewards(
 		dPool.Reward = 0
 	}
 
-	var dpUpdate = newDelegatePoolUpdate(poolId, providerId, providerType)
+	var dpUpdate = newDelegatePoolUpdate(clientId, providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
 
 	if dPool.Status == spenum.Deleting || sp.IsDead {
-		delete(sp.Pools, poolId)
+		delete(sp.Pools, clientId)
 		dpUpdate.Updates["status"] = spenum.Deleted
 		err := dpUpdate.emitUpdate(balances)
 		if err != nil {
 			return 0, err
 		}
-		usp.Del(providerId, poolId)
+		usp.Del(providerId)
 		return reward, nil
 	} else {
 		err := dpUpdate.emitUpdate(balances)
@@ -228,10 +221,11 @@ func (sp *StakePool) DistributeRewards(
 	}
 	if serviceCharge > 0 {
 		reward := serviceCharge
-		sp.Reward, err = currency.AddCoin(sp.Reward, reward)
+		sr, err := currency.AddCoin(sp.Reward, reward)
 		if err != nil {
 			return err
 		}
+		sp.Reward = sr
 		spUpdate.Reward = reward
 	}
 

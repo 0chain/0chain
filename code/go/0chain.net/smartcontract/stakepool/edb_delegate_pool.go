@@ -23,7 +23,7 @@ func (dp DelegatePool) emitNew(
 	poolId, providerId string,
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
-) error {
+) {
 	data := &event.DelegatePool{
 		Balance:      dp.Balance,
 		PoolID:       poolId,
@@ -41,7 +41,6 @@ func (dp DelegatePool) emitNew(
 		providerId,
 		data,
 	)
-	return nil
 }
 
 func (dpu DelegatePoolUpdate) emitUpdate(

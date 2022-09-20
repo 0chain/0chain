@@ -2027,8 +2027,8 @@ func Test_finalize_allocation(t *testing.T) {
 
 	//
 	var (
-		step            = (int64(alloc.Expiration) - tp) / 10
-		challID, prevID string
+		step    = (int64(alloc.Expiration) - tp) / 10
+		challID string
 	)
 
 	// expire the allocation challenging it (+ last challenge)
@@ -2036,8 +2036,7 @@ func Test_finalize_allocation(t *testing.T) {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
-		genChall(t, ssc, b1.id, tp, prevID, challID, i, validators,
-			alloc.ID, blobber, allocRoot, balances)
+		genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 
 		var chall = new(ChallengeResponse)
 		chall.ID = challID
@@ -2056,8 +2055,6 @@ func Test_finalize_allocation(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
 		require.Zero(t, resp)
-		// next stage
-		prevID = challID
 	}
 
 	// balances

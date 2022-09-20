@@ -42,7 +42,7 @@ const (
 	Deleted
 )
 
-var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting"}
+var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting", "deleted"}
 
 func (p PoolStatus) String() string {
 	return poolString[p]
