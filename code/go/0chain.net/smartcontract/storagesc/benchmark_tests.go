@@ -103,6 +103,7 @@ func BenchmarkTests(
 	for i := 0; i < viper.GetInt(bk.StorageFasDataShards)+viper.GetInt(bk.StorageFasParityShards); i++ {
 		freeBlobbers = append(freeBlobbers, getMockBlobberId(i))
 	}
+	maxStake := viper.GetInt64(bk.StorageMaxStake) * 1e10 * viper.GetInt64(bk.StorageMaxDelegates)
 
 	var ssc = StorageSmartContract{
 
@@ -403,9 +404,10 @@ func BenchmarkTests(
 					Provider: &provider.Provider{
 						ID: encryption.Hash("my_new_blobber"),
 					},
-					BaseURL:           "my_new_blobber.com",
-					Terms:             getMockBlobberTerms(),
-					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
+					BaseURL:  "my_new_blobber.com",
+					Terms:    getMockBlobberTerms(),
+					Capacity: maxStake,
+					//Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
 					StakePoolSettings: getMockStakePoolSettings(data.Clients[0]),
 				})
 				return bytes
@@ -467,7 +469,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: creationTime + 1,
-				ClientID:     getMockBlobberId(0),
+				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
@@ -476,7 +478,7 @@ func BenchmarkTests(
 						ID: getMockBlobberId(0),
 					},
 					Terms:             getMockBlobberTerms(),
-					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
+					Capacity:          maxStake,
 					StakePoolSettings: getMockStakePoolSettings(data.Clients[0]),
 				})
 				return bytes
@@ -490,7 +492,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: creationTime + 1,
-				ClientID:     getMockValidatorId(0),
+				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {

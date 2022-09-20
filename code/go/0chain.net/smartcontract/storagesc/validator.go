@@ -86,8 +86,7 @@ func getValidator(
 	validatorID string,
 	balances state.CommonStateContextI,
 ) (*ValidationNode, error) {
-	validator := new(ValidationNode)
-	validator.ID = validatorID
+	validator := newValidatorNode(validatorID)
 	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
 	if err != nil {
 		return nil, err

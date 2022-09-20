@@ -27,7 +27,11 @@ func emitUpdateProvider(p provider.ProviderI, sp *stakePool, balances cstate.Sta
 	switch pType := p.(type) {
 	case *ValidationNode:
 		validator := p.(*ValidationNode)
-		return validator.EmitUpdate(&sp.StakePool, balances)
+		if sp != nil {
+			return validator.EmitUpdate(&sp.StakePool, balances)
+		} else {
+			return validator.EmitUpdate(nil, balances)
+		}
 	case *StorageNode:
 		blobber := p.(*StorageNode)
 		return blobber.EmitUpdate(sp, balances)

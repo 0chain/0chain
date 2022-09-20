@@ -191,7 +191,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var blobber = new(StorageNode)
+	var blobber = newStorageNode("")
 	if err = blobber.Decode(input); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"malformed request: "+err.Error())
@@ -236,7 +236,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"can't get config: "+err.Error())
 	}
 
-	var updatedBlobber = new(StorageNode)
+	var updatedBlobber = newStorageNode("")
 	if err = updatedBlobber.Decode(input); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())
