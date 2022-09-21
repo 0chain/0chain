@@ -60,7 +60,7 @@ type CommonStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
 	GetBlock() *block.Block
 	GetLatestFinalizedBlock() *block.Block
-	GetConfig() storagescConfig
+	GetConfig() *storagescConfig
 	SetConfig(config storagescConfig)
 }
 
@@ -406,7 +406,7 @@ func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 	return sc.getLatestFinalizedBlock()
 }
 
-func (sc *StateContext) GetConfig() storagescConfig {
+func (sc *StateContext) GetConfig() *storagescConfig {
 	return sc.config
 }
 

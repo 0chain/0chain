@@ -830,7 +830,7 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 const cantGetConfigErrMsg = "can't get config"
 
 func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
-	var conf = balances.GetConfig().(Config)
+	var conf = (*balances.GetConfig()).(Config)
 	return &conf, nil
 }
 
