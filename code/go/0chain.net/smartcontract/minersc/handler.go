@@ -253,8 +253,9 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 // swagger:model nodeStat
 type nodeStat struct {
 	MinerNode
-	Round       int64 `json:"round"`
-	TotalReward int64 `json:"total_reward"`
+	FeesLastUpdated    int64 `json:"fees_last_updated"`
+	RewardsLastUpdated int64 `json:"rewards_last_updated"`
+	TotalReward        int64 `json:"total_reward"`
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat nodeStat
@@ -295,7 +296,10 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 
 	if miner, err := edb.GetMiner(id); err == nil {
 		common.Respond(w, r, nodeStat{
-			MinerNode: minerTableToMinerNode(miner), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.TotalReward)}, nil)
+			MinerNode:          minerTableToMinerNode(miner),
+			FeesLastUpdated:    miner.FeesLastUpdated,
+			RewardsLastUpdated: miner.RewardsLastUpdated,
+			TotalReward:        int64(miner.TotalReward)}, nil)
 		return
 	}
 	sharder, err := edb.GetSharder(id)
@@ -304,9 +308,10 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	common.Respond(w, r, nodeStat{
-		MinerNode:   sharderTableToSharderNode(sharder),
-		Round:       sCtx.GetBlock().Round,
-		TotalReward: int64(sharder.TotalReward)}, nil)
+		MinerNode:          sharderTableToSharderNode(sharder),
+		FeesLastUpdated:    sharder.FeesLastUpdated,
+		RewardsLastUpdated: sharder.RewardsLastUpdated,
+		TotalReward:        int64(sharder.TotalReward)}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
@@ -611,9 +616,10 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	shardersArr := make([]nodeStat, len(sharders))
 	for i, sharder := range sharders {
 		shardersArr[i] = nodeStat{
-			MinerNode:   sharderTableToSharderNode(sharder),
-			Round:       sCtx.GetBlock().Round,
-			TotalReward: int64(sharder.TotalReward),
+			MinerNode:          sharderTableToSharderNode(sharder),
+			FeesLastUpdated:    sharder.FeesLastUpdated,
+			RewardsLastUpdated: sharder.RewardsLastUpdated,
+			TotalReward:        int64(sharder.TotalReward),
 		}
 	}
 	common.Respond(w, r, rest.InterfaceMap{
@@ -738,9 +744,10 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	minersArr := make([]nodeStat, len(miners))
 	for i, miner := range miners {
 		minersArr[i] = nodeStat{
-			MinerNode:   minerTableToMinerNode(miner),
-			Round:       sCtx.GetBlock().Round,
-			TotalReward: int64(miner.TotalReward),
+			MinerNode:          minerTableToMinerNode(miner),
+			FeesLastUpdated:    miner.FeesLastUpdated,
+			RewardsLastUpdated: miner.RewardsLastUpdated,
+			TotalReward:        int64(miner.TotalReward),
 		}
 	}
 

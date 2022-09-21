@@ -50,11 +50,11 @@ type Blobber struct {
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 	TotalStake         currency.Coin `json:"total_stake"`
 
-	Name        string `json:"name" gorm:"name"`
-	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
-	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
-	Description string `json:"description" gorm:"description"`
-
+	Name                string  `json:"name" gorm:"name"`
+	WebsiteUrl          string  `json:"website_url" gorm:"website_url"`
+	LogoUrl             string  `json:"logo_url" gorm:"logo_url"`
+	Description         string  `json:"description" gorm:"description"`
+	RewardsLastUpdated  int64   `json:"rewards_last_updated"`
 	ChallengesPassed    uint64  `json:"challenges_passed"`
 	ChallengesCompleted uint64  `json:"challenges_completed"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted

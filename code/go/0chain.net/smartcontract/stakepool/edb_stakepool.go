@@ -23,20 +23,16 @@ func (spu StakePoolReward) Emit(
 	tag event.EventTag,
 	balances cstate.StateContextI,
 ) error {
-
 	balances.EmitEvent(
 		event.TypeStats,
 		tag,
 		spu.ProviderId,
-		stakePoolRewardToStakePoolRewardEvent(spu),
+		dbs.StakePoolReward{
+			StakePoolId:        spu.StakePoolId,
+			Reward:             spu.Reward,
+			DelegateRewards:    spu.DelegateRewards,
+			RewardsLastUpdated: balances.GetBlock().Round,
+		},
 	)
 	return nil
-}
-
-func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolReward {
-	return &dbs.StakePoolReward{
-		StakePoolId:     spu.StakePoolId,
-		Reward:          spu.Reward,
-		DelegateRewards: spu.DelegateRewards,
-	}
 }

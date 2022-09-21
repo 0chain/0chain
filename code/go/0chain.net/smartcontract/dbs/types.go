@@ -21,8 +21,9 @@ type StakePoolId struct {
 
 type StakePoolReward struct {
 	StakePoolId
-	Reward          currency.Coin    `json:"reward"`
-	DelegateRewards map[string]int64 `json:"delegate_rewards"`
+	Reward             currency.Coin    `json:"reward"`
+	DelegateRewards    map[string]int64 `json:"delegate_rewards"`
+	RewardsLastUpdated int64            `json:"rewards_last_updated"`
 }
 
 type StakePoolUpdate struct {

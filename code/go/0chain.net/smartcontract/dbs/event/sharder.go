@@ -17,28 +17,30 @@ import (
 
 type Sharder struct {
 	gorm.Model
-	SharderID         string `gorm:"uniqueIndex"`
-	N2NHost           string `gorm:"column:n2n_host"`
-	Host              string
-	Port              int
-	Path              string
-	PublicKey         string
-	ShortName         string
-	BuildTag          string
-	TotalStaked       currency.Coin
-	Delete            bool
-	DelegateWallet    string
-	ServiceCharge     float64
-	NumberOfDelegates int
-	MinStake          currency.Coin
-	MaxStake          currency.Coin
-	LastHealthCheck   common.Timestamp
-	Rewards           currency.Coin
-	TotalReward       currency.Coin
-	Fees              currency.Coin
-	Active            bool
-	Longitude         float64
-	Latitude          float64
+	SharderID          string `gorm:"uniqueIndex"`
+	N2NHost            string `gorm:"column:n2n_host"`
+	Host               string
+	Port               int
+	Path               string
+	PublicKey          string
+	ShortName          string
+	BuildTag           string
+	TotalStaked        currency.Coin
+	Delete             bool
+	DelegateWallet     string
+	ServiceCharge      float64
+	NumberOfDelegates  int
+	MinStake           currency.Coin
+	MaxStake           currency.Coin
+	LastHealthCheck    common.Timestamp
+	Rewards            currency.Coin
+	TotalReward        currency.Coin
+	Fees               currency.Coin
+	Active             bool
+	Longitude          float64
+	Latitude           float64
+	FeesLastUpdated    int64
+	RewardsLastUpdated int64
 }
 
 // swagger:model SharderGeolocation

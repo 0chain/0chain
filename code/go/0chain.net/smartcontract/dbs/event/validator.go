@@ -28,8 +28,9 @@ type Validator struct {
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
 
-	Rewards     int64 `json:"rewards"`
-	TotalReward int64 `json:"total_reward"`
+	Rewards            int64 `json:"rewards"`
+	TotalReward        int64 `json:"total_reward"`
+	RewardsLastUpdated int64 `json:"rewards_last_updated"`
 }
 
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
