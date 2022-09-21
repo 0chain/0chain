@@ -154,7 +154,7 @@ func getGlobalNode(
 	return gn, nil
 }
 
-func ReadConfig(
+func InitConfig(
 	balances cstate.CommonStateContextI,
 ) (err error) {
 	gn := new(GlobalNode)
@@ -170,7 +170,7 @@ func ReadConfig(
 		if err := gn.validate(); err != nil {
 			return fmt.Errorf("validating global node: %v", err)
 		}
-		return nil
+		return balances.InsertTrieNode(GlobalNodeKey, gn)
 	}
 	return nil
 }
