@@ -181,6 +181,10 @@ func mergeStakePoolRewardsEvents() *eventsMergerImpl[dbs.StakePoolReward] {
 	return newEventsMerger[dbs.StakePoolReward](TagStakePoolReward, withProviderRewardsPenaltiesAdded())
 }
 
+func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
+	return newEventsMerger[DelegatePool](TagAddOrOverwriteDelegatePool, withUniqueEventOverwrite())
+}
+
 func mergeAddProviderEvents[T any](tag EventTag, middlewares ...eventMergeMiddleware) eventsMerger {
 	return newEventsMerger[T](tag, middlewares...)
 }
