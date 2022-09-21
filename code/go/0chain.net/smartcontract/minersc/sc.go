@@ -160,7 +160,8 @@ func InitConfig(
 		if err := gn.validate(); err != nil {
 			return fmt.Errorf("validating global node: %v", err)
 		}
-		return balances.InsertTrieNode(GlobalNodeKey, gn)
+		_, err = balances.InsertTrieNode(GlobalNodeKey, gn)
+		return err
 	}
 	return nil
 }

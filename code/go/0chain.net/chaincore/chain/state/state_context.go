@@ -58,7 +58,7 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 
 type CommonStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
-	InsertTrieNode(key datastore.Key, v util.MPTSerializable) error
+	InsertTrieNode(key datastore.Key, v util.MPTSerializable) (datastore.Key, error)
 	GetBlock() *block.Block
 	GetLatestFinalizedBlock() *block.Block
 }
