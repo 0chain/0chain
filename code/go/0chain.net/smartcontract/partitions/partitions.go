@@ -33,7 +33,7 @@ func CreateIfNotExists(
 	case nil:
 		return &Partitions{rs: rs}, nil
 	case util.ErrValueNotPresent:
-		rs, err = newRandomSelector(name, partitionSize)
+		rs, err = newRandomSelector(name, partitionSize, nil)
 		if err != nil {
 			return nil, err
 		}

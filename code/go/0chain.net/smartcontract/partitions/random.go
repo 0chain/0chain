@@ -31,11 +31,13 @@ type randomSelector struct {
 func newRandomSelector(
 	name string,
 	size int,
+	callback ChangePartitionCallback,
 ) (*randomSelector, error) {
 	// TODO: limit the name length
 	return &randomSelector{
 		Name:          name,
 		PartitionSize: size,
+		Callback:      callback,
 	}, nil
 }
 
