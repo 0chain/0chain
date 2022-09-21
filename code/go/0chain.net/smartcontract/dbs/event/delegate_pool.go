@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
+	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -125,15 +126,9 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 	return result.Error
 }
 
-func (edb *EventDb) addOrOverwriteDelegatePool(dp DelegatePool) error {
-	exists, err := dp.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteDelegatePool(dp)
-	}
-
-	result := edb.Store.Get().Create(&dp)
-	return result.Error
+func (edb *EventDb) addOrOverwriteDelegatePools(dps []DelegatePool) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"provider_id", "provider_type"}),
+	}).Create(&dps).Error
 }

@@ -397,11 +397,11 @@ func (edb *EventDb) addStat(event Event) error {
 
 	//stake pool
 	case TagAddOrOverwriteDelegatePool:
-		sp, ok := fromEvent[DelegatePool](event.Data)
+		dps, ok := fromEvent[[]DelegatePool](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteDelegatePool(*sp)
+		return edb.addOrOverwriteDelegatePools(*dps)
 	case TagUpdateDelegatePool:
 		spUpdate, ok := fromEvent[dbs.DelegatePoolUpdate](event.Data)
 		if !ok {
