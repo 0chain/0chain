@@ -499,7 +499,7 @@ func AddMockValidators(
 			Provider:          &provider.Provider{ID: id},
 			BaseURL:           url,
 			PublicKey:         publicKeys[i%len(publicKeys)],
-			StakePoolSettings: getMockStakePoolSettings(clients[i]),
+			StakePoolSettings: getMockStakePoolSettings(clients[0]),
 		}
 		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
 		if err != nil {
@@ -601,12 +601,11 @@ func GetMockValidatorStakePools(
 	balances cstate.StateContextI,
 ) {
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
-		bId := getMockValidatorId(i)
 		sp := &stakePool{
 			StakePool: stakepool.StakePool{
 				Pools:    make(map[string]*stakepool.DelegatePool),
 				Reward:   0,
-				Settings: getMockStakePoolSettings(bId),
+				Settings: getMockStakePoolSettings(clients[0]),
 			},
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {

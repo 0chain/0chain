@@ -829,10 +829,7 @@ func BenchmarkTests(
 
 					"readpool.min_lock": "10",
 
-					"writepool.min_lock":        "10",
-					"writepool.min_lock_period": "2m",
-					"writepool.max_lock_period": "8760h",
-
+					"writepool.min_lock": "10",
 					"stakepool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
