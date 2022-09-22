@@ -162,7 +162,7 @@ func TestCommitBlobberRead(t *testing.T) {
 	t.Run(errExpiredAllocation, func(t *testing.T) {
 		var faultyRead = read
 		faultyRead.timestamp = allocation.expiration +
-			toSeconds(blobberYaml.challengeCompletionTime) + 1
+			toSeconds(getMaxChallengeCompletionTime()) + 1
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPool,
 		)
@@ -281,10 +281,9 @@ func testCommitBlobberRead(
 	_, err = ctx.InsertTrieNode(readConnection.GetKey(ssc.ID), lastReadConnection)
 	require.NoError(t, err)
 	var storageAllocation = &StorageAllocation{
-		ID:                      allocationId,
-		StartTime:               allocation.startTime,
-		ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
-		Expiration:              allocation.expiration,
+		ID:         allocationId,
+		StartTime:  allocation.startTime,
+		Expiration: allocation.expiration,
 		BlobberAllocs: []*BlobberAllocation{
 			{
 				BlobberID: blobberId,

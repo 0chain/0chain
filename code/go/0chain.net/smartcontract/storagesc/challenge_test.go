@@ -280,8 +280,7 @@ func TestBlobberReward(t *testing.T) {
 		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
-		serviceCharge:           0.30,
-		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
+		serviceCharge: 0.30,
 	}
 	var validatorYamls = []mockBlobberYaml{
 		{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3},
@@ -295,7 +294,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
+		var thisChallenge = thisExpires + toSeconds(getMaxChallengeCompletionTime()) + 1
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -353,9 +352,8 @@ func TestBlobberPenalty(t *testing.T) {
 		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
-		serviceCharge:           0.30,
-		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
-		writePrice:              1,
+		serviceCharge: 0.30,
+		writePrice:    1,
 	}
 	var validatorYamls = []mockBlobberYaml{
 		{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3},
@@ -377,7 +375,7 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
+		var thisChallenge = thisExpires + toSeconds(getMaxChallengeCompletionTime()) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
