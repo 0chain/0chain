@@ -31,7 +31,7 @@ import (
 	"0chain.net/core/encryption"
 )
 
-const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
+const confChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
 
 //msgp:ignore StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
@@ -1172,7 +1172,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 
 // Until returns allocation expiration.
 func (sa *StorageAllocation) Until() common.Timestamp {
-	return sa.Expiration + toSeconds(getMaxChallengeCompletionTime())
+	return sa.Expiration + toSeconds(getChallengeCompletionTime())
 }
 
 // The durationInTimeUnits returns given duration (represented as
@@ -1331,8 +1331,8 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 	return o, nil
 }
 
-func getMaxChallengeCompletionTime() time.Duration {
-	return config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)
+func getChallengeCompletionTime() time.Duration {
+	return config.SmartContractConfig.GetDuration(confChallengeCompletionTime)
 }
 
 // removeExpiredChallenges removes all expired challenges from the allocation,
@@ -1344,7 +1344,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		expiredChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
 	)
 
-	cct := getMaxChallengeCompletionTime()
+	cct := getChallengeCompletionTime()
 	for _, oc := range allocChallenges.OpenChallenges {
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here

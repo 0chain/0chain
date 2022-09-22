@@ -44,11 +44,11 @@ func TestNewAllocation(t *testing.T) {
 	var stakes = blobberStakes{}
 	var now = common.Timestamp(10000)
 	scYaml = &Config{
-		MinAllocSize:               1027,
-		MinAllocDuration:           5 * time.Minute,
-		MaxChallengeCompletionTime: 30 * time.Minute,
-		MaxStake:                   zcnToBalance(100.0),
-		MaxBlobbersPerAllocation:   10,
+		MinAllocSize:             1027,
+		MinAllocDuration:         5 * time.Minute,
+		ChallengeCompletionTime:  30 * time.Minute,
+		MaxStake:                 zcnToBalance(100.0),
+		MaxBlobbersPerAllocation: 10,
 	}
 	var blobberYaml = mockBlobberYaml{
 		readPrice:  0.01,
@@ -119,12 +119,12 @@ func TestCancelAllocationRequest(t *testing.T) {
 		StakePool:                       &stakePoolConfig{},
 		BlobberSlash:                    0.1,
 		ValidatorReward:                 0.025,
-		MaxChallengeCompletionTime:      30 * time.Minute,
+		ChallengeCompletionTime:         30 * time.Minute,
 		TimeUnit:                        720 * time.Hour,
 		FailedChallengesToRevokeMinLock: 10,
 		MaxStake:                        zcnToBalance(100.0),
 	}
-	var now = common.Timestamp(scYaml.MaxChallengeCompletionTime) * 5
+	var now = common.Timestamp(scYaml.ChallengeCompletionTime) * 5
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
 		writePrice:    0.1,
@@ -190,7 +190,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 			challenges = append(challenges, []common.Timestamp{})
 			for j := 0; j < int(allocation.BlobberAllocs[i].Stats.OpenChallenges); j++ {
-				var expires = now - common.Timestamp(float64(j)*float64(getMaxChallengeCompletionTime())/3.0)
+				var expires = now - common.Timestamp(float64(j)*float64(getChallengeCompletionTime())/3.0)
 				challenges[i] = append(challenges[i], expires)
 			}
 		}
@@ -238,7 +238,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		MaxMint:                         zcnToBalance(4000000.0),
 		BlobberSlash:                    0.1,
 		ValidatorReward:                 0.025,
-		MaxChallengeCompletionTime:      30 * time.Minute,
+		ChallengeCompletionTime:         30 * time.Minute,
 		TimeUnit:                        720 * time.Hour,
 		FailedChallengesToRevokeMinLock: 10,
 		MaxStake:                        zcnToBalance(100.0),
@@ -659,7 +659,7 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
 
 func (f *formulaeFinalizeAllocation) setCancelPassRates() {
 	f._passRates = []float64{}
-	var deadline = f.now - toSeconds(getMaxChallengeCompletionTime())
+	var deadline = f.now - toSeconds(getChallengeCompletionTime())
 
 	for i, details := range f.allocation.BlobberAllocs {
 		var successful = float64(details.Stats.SuccessChallenges)

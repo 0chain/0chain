@@ -162,7 +162,7 @@ func TestCommitBlobberRead(t *testing.T) {
 	t.Run(errExpiredAllocation, func(t *testing.T) {
 		var faultyRead = read
 		faultyRead.timestamp = allocation.expiration +
-			toSeconds(getMaxChallengeCompletionTime()) + 1
+			toSeconds(getChallengeCompletionTime()) + 1
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPool,
 		)

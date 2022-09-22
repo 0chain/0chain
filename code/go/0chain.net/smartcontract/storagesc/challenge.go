@@ -100,7 +100,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	// time of this challenge
 	var tp = allocChallenges.LatestCompletedChallenge.Created
 
-	if tp > alloc.Expiration+toSeconds(getMaxChallengeCompletionTime()) {
+	if tp > alloc.Expiration+toSeconds(getChallengeCompletionTime()) {
 		return errors.New("late challenge response")
 	}
 
@@ -116,7 +116,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	var (
 		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
-		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp-latestCompletedChallTime, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
@@ -269,7 +269,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	// time of this challenge
 	var tp = ac.LatestCompletedChallenge.Created
 
-	if tp > alloc.Expiration+toSeconds(getMaxChallengeCompletionTime()) {
+	if tp > alloc.Expiration+toSeconds(getChallengeCompletionTime()) {
 		return errors.New("late challenge response")
 	}
 
@@ -285,7 +285,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	var (
 		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
-		dtu  = alloc.durationInTimeUnits(tp - prev, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp-prev, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
@@ -502,7 +502,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		threshold = challenge.TotalValidators / 2
 		pass      = success > threshold ||
 			(success > failure && success+failure < threshold)
-		cct   = toSeconds(getMaxChallengeCompletionTime())
+		cct   = toSeconds(getChallengeCompletionTime())
 		fresh = challenge.Created+cct >= t.CreationDate
 	)
 

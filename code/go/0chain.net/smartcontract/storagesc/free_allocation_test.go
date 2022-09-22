@@ -230,12 +230,12 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 		mockAllBlobbers = &StorageNodes{}
 		conf            = &Config{
-			MinAllocSize:               1027,
-			MinAllocDuration:           5 * time.Minute,
-			MaxChallengeCompletionTime: 1 * time.Hour,
-			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
-			FreeAllocationSettings:     mockFreeAllocationSettings,
-			TimeUnit:                   time.Hour,
+			MinAllocSize:            1027,
+			MinAllocDuration:        5 * time.Minute,
+			ChallengeCompletionTime: 1 * time.Hour,
+			MaxTotalFreeAllocation:  mockMaxAnnualFreeAllocation,
+			FreeAllocationSettings:  mockFreeAllocationSettings,
+			TimeUnit:                time.Hour,
 			ReadPool: &readPoolConfig{
 				MinLock: mockMinLock,
 			},
@@ -588,13 +588,13 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	}
 	var mockAllBlobbers = &StorageNodes{}
 	var conf = &Config{
-		MinAllocSize:               1027,
-		MinAllocDuration:           5 * time.Minute,
-		MaxChallengeCompletionTime: 1 * time.Hour,
-		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
-		FreeAllocationSettings:     mockFreeAllocationSettings,
-		MaxBlobbersPerAllocation:   40,
-		TimeUnit:                   mockTimeUnit,
+		MinAllocSize:             1027,
+		MinAllocDuration:         5 * time.Minute,
+		ChallengeCompletionTime:  1 * time.Hour,
+		MaxTotalFreeAllocation:   mockMaxAnnualFreeAllocation,
+		FreeAllocationSettings:   mockFreeAllocationSettings,
+		MaxBlobbersPerAllocation: 40,
+		TimeUnit:                 mockTimeUnit,
 	}
 	var now = common.Timestamp(29000000)
 

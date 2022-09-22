@@ -735,7 +735,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	resp string, err error) {
 
 	if alloc.Expiration-t.CreationDate <
-		toSeconds(getMaxChallengeCompletionTime()) {
+		toSeconds(getChallengeCompletionTime()) {
 		return "", common.NewError("allocation_closing_failed",
 			"doesn't need to close allocation is about to expire")
 	}
@@ -1393,7 +1393,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime())
+			var expire = oc.CreatedAt + toSeconds(getChallengeCompletionTime())
 			if expire < now {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++

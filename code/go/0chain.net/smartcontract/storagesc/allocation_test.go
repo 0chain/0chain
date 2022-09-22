@@ -1098,7 +1098,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	balances.setTransaction(t, &tx)
 
 	conf = setConfig(t, balances)
-	conf.MaxChallengeCompletionTime = 20 * time.Second
+	conf.ChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 10 * GB
 	conf.TimeUnit = 2 * time.Minute
@@ -1509,7 +1509,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	balances.(*testBalances).setTransaction(t, &tx)
 
-	conf.MaxChallengeCompletionTime = 20 * time.Second
+	conf.ChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 10 * GB
 	conf.MaxBlobbersPerAllocation = 4
@@ -1656,7 +1656,7 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 
 	// 2. close (all related pools has created)
 	alloc.Expiration = tx.CreationDate +
-		toSeconds(getMaxChallengeCompletionTime()) + 20
+		toSeconds(getChallengeCompletionTime()) + 20
 	resp, err = ssc.closeAllocation(&tx, alloc, balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
@@ -2064,7 +2064,7 @@ func Test_finalize_allocation(t *testing.T) {
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
-	tp += int64(toSeconds(getMaxChallengeCompletionTime()))
+	tp += int64(toSeconds(getChallengeCompletionTime()))
 	assert.Zero(t, cp.Balance, "should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)

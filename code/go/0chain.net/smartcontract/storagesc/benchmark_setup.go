@@ -798,7 +798,7 @@ func SetMockConfig(
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
-	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
+	conf.ChallengeCompletionTime = viper.GetDuration(sc.StorageChallengeCompletionTime)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)
 	conf.MinStake = currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10)
 	conf.MaxStake = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)

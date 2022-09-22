@@ -899,7 +899,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
+		tp += int64(toSeconds(getChallengeCompletionTime()))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1120,7 +1120,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
+		tp += int64(toSeconds(getChallengeCompletionTime()))
 
 		tp += 10 // a not expired allocation to cancel
 
