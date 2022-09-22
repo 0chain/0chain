@@ -1,6 +1,8 @@
 package zcnsc
 
 import (
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -8,7 +10,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"fmt"
 	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
@@ -73,7 +74,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	// transaction type can only be executed by sc owner
+	// only sc owner can add new authorizer
 	if err := smartcontractinterface.AuthorizeWithOwner("register-authorizer", func() bool {
 		return globalNode.ZCNSConfig.OwnerId == tran.ClientID
 	}); err != nil {
