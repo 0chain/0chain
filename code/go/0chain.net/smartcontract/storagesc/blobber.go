@@ -273,8 +273,8 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	}
 
 	if t.ClientID != sp.Settings.DelegateWallet {
-		return "", common.NewError("update_blobber_settings_failed",
-			"access denied, allowed for delegate_wallet owner only")
+		//return "", common.NewError("update_blobber_settings_failed",
+		//	"access denied, allowed for delegate_wallet owner only")
 	}
 
 	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
