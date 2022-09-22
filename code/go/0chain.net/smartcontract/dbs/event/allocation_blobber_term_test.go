@@ -42,22 +42,20 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 	terms := []AllocationBlobberTerm{
 		{
-			AllocationID:            encryption.Hash("mockAllocation_" + strconv.Itoa(0)),
-			BlobberID:               encryption.Hash("mockBlobber_" + strconv.Itoa(0)),
-			ReadPrice:               int64(currency.Coin(29)),
-			WritePrice:              int64(currency.Coin(31)),
-			MinLockDemand:           37.0,
-			MaxOfferDuration:        39 * time.Minute,
-			ChallengeCompletionTime: 41 * time.Minute,
+			AllocationID:     encryption.Hash("mockAllocation_" + strconv.Itoa(0)),
+			BlobberID:        encryption.Hash("mockBlobber_" + strconv.Itoa(0)),
+			ReadPrice:        int64(currency.Coin(29)),
+			WritePrice:       int64(currency.Coin(31)),
+			MinLockDemand:    37.0,
+			MaxOfferDuration: 39 * time.Minute,
 		},
 		{
-			AllocationID:            encryption.Hash("mockAllocation_" + strconv.Itoa(0)),
-			BlobberID:               encryption.Hash("mockBlobber_" + strconv.Itoa(1)),
-			ReadPrice:               int64(currency.Coin(41)),
-			WritePrice:              int64(currency.Coin(43)),
-			MinLockDemand:           47.0,
-			MaxOfferDuration:        49 * time.Minute,
-			ChallengeCompletionTime: 51 * time.Minute,
+			AllocationID:     encryption.Hash("mockAllocation_" + strconv.Itoa(0)),
+			BlobberID:        encryption.Hash("mockBlobber_" + strconv.Itoa(1)),
+			ReadPrice:        int64(currency.Coin(41)),
+			WritePrice:       int64(currency.Coin(43)),
+			MinLockDemand:    47.0,
+			MaxOfferDuration: 49 * time.Minute,
 		},
 	}
 

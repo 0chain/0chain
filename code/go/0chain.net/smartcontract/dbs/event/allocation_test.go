@@ -151,9 +151,6 @@ func TestAllocations(t *testing.T) {
 
 		WritePoolOwners []string `json:"write_pool_owners"`
 
-		// ChallengeCompletionTime is max challenge completion time of
-		// all blobbers of the allocation.
-		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 		// StartTime is time when the allocation has been created. We will
 		// use it to check blobber's MaxOfferTime extending the allocation.
 		StartTime common.Timestamp `json:"start_time"`
@@ -211,7 +208,6 @@ func TestAllocations(t *testing.T) {
 			ReadPriceMax:             sa.ReadPriceRange.Max,
 			WritePriceMin:            sa.WritePriceRange.Min,
 			WritePriceMax:            sa.WritePriceRange.Max,
-			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
 			StartTime:                int64(sa.StartTime),
 			Finalized:                sa.Finalized,
 			Cancelled:                sa.Canceled,
@@ -332,16 +328,15 @@ func TestAllocations(t *testing.T) {
 			Min: 10,
 			Max: 20,
 		},
-		ChallengeCompletionTime: 12,
-		StartTime:               10212,
-		Finalized:               true,
-		Canceled:                false,
-		UsedSize:                50,
-		MovedToChallenge:        10,
-		MovedBack:               1,
-		MovedToValidators:       1,
-		TimeUnit:                12453,
-		Curators:                []string{"curator1"},
+		StartTime:         10212,
+		Finalized:         true,
+		Canceled:          false,
+		UsedSize:          50,
+		MovedToChallenge:  10,
+		MovedBack:         1,
+		MovedToValidators: 1,
+		TimeUnit:          12453,
+		Curators:          []string{"curator1"},
 	}
 
 	saAllocation := convertSa(sa)
