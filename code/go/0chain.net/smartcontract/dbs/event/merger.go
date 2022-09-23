@@ -65,7 +65,7 @@ func (em *eventsMergerImpl[T]) merge(round int64, blockHash string) (*Event, err
 		Type:        int(TypeStats),
 		Tag:         em.tag,
 		BlockNumber: round,
-		Index:       blockHash,
+		Index:       "m:" + blockHash, //m:block hash to avoid events being overwriten by block adding event
 		Data:        data,
 	}, nil
 }
