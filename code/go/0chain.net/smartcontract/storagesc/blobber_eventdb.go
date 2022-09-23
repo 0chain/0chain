@@ -38,7 +38,15 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		TotalStake:   staked,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, data)
+	edb := balances.GetEventDB()
+	if edb != nil {
+		_, err := edb.GetBlobber(sn.ID)
+		if err != nil {
+			logging.Logger.Error("blobber existence checking failed", zap.Error(err), zap.String("id", sn.ID))
+		}
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
 	logging.Logger.Warn("emit blobber - emitAddOrOverwriteBlobber", zap.String("id", sn.ID))
 	return nil
 }
@@ -86,7 +94,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 }
 
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, event.Blobber{
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedHealth, sn.ID, event.Blobber{
 		BlobberID:       sn.ID,
 		Allocated:       sn.Allocated,
 		LastHealthCheck: int64(sn.LastHealthCheck),

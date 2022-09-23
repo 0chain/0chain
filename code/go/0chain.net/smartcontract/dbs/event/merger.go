@@ -166,7 +166,7 @@ func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTe
 }
 
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobber, withUniqueEventOverwrite())
+	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedHealth, withUniqueEventOverwrite())
 }
 
 func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
