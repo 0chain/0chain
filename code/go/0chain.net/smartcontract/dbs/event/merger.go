@@ -43,6 +43,17 @@ func (em *eventsMergerImpl[T]) merge(round int64, blockHash string) (*Event, err
 		return nil, nil
 	}
 
+	if em.tag == int(TagAddBlobber) {
+		ids := make([]string, 0, len(em.events))
+		for _, e := range em.events {
+			if e.Tag == int(TagAddBlobber) {
+				ids = append(ids, e.Index)
+			}
+		}
+
+		logging.Logger.Debug("before merge add blobber", zap.Any("ids", ids))
+	}
+
 	events := em.events
 	for _, mHandler := range em.middlewares {
 		var err error
@@ -52,6 +63,18 @@ func (em *eventsMergerImpl[T]) merge(round int64, blockHash string) (*Event, err
 		}
 	}
 
+	if em.tag == int(TagAddBlobber) {
+		ids := make([]string, 0, len(em.events))
+		for _, e := range events {
+			if e.Tag == int(TagAddBlobber) {
+				ids = append(ids, e.Index)
+			}
+		}
+
+		logging.Logger.Debug("after merge add blobber", zap.Any("ids", ids))
+	}
+
+	dids := make([]string, 0, len(events))
 	data := make([]T, 0, len(events))
 	for _, e := range events {
 		pd, ok := fromEvent[T](e.Data)
@@ -59,13 +82,20 @@ func (em *eventsMergerImpl[T]) merge(round int64, blockHash string) (*Event, err
 			return nil, ErrInvalidEventData
 		}
 		data = append(data, *pd)
+		if em.tag == int(TagAddBlobber) {
+			dids = append(dids, (e.Data).(*Blobber).BlobberID)
+		}
+	}
+
+	if em.tag == int(TagAddBlobber) {
+		logging.Logger.Debug("merge data add blobber", zap.Any("ids", dids))
 	}
 
 	return &Event{
 		Type:        int(TypeStats),
 		Tag:         em.tag,
 		BlockNumber: round,
-		Index:       "m:" + blockHash, //m:block hash to avoid events being overwriten by block adding event
+		Index:       blockHash,
 		Data:        data,
 	}, nil
 }
