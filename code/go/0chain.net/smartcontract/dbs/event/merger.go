@@ -2,6 +2,8 @@ package event
 
 import (
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 type eventMergeMiddleware func([]Event) ([]Event, error)
@@ -27,6 +29,9 @@ func newEventsMerger[T any](tag EventTag, middlewares ...eventMergeMiddleware) *
 func (em *eventsMergerImpl[T]) filter(event Event) bool {
 	if event.Tag == em.tag {
 		em.events = append(em.events, event)
+		if event.Tag == int(TagAddBlobber) {
+			logging.Logger.Debug("add blobber filtered", zap.String("id", event.Index))
+		}
 		return true
 	}
 
