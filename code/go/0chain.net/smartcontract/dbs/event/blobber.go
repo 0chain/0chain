@@ -196,7 +196,7 @@ func (edb *EventDb) deleteBlobber(id string) error {
 	return edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).Delete(&Blobber{}).Error
 }
 
-func (edb *EventDb) updateBlobbers(blobbers []Blobber) error {
+func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"allocated", "last_health_check"}),
@@ -258,10 +258,19 @@ func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
 
 func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
 	logging.Logger.Debug("event db - handler blobber, add or overwrite blobbers")
-	return edb.Store.Get().Clauses(clause.OnConflict{
+
+	err := edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		UpdateAll: true,
 	}).Create(&blobbers).Error
+	if err != nil {
+		bids := make([]string, 0, len(blobbers))
+		for _, b := range blobbers {
+			bids = append(bids, b.BlobberID)
+		}
+		logging.Logger.Debug("add or overwrite blobbers failed", zap.Any("ids", bids))
+	}
+	return err
 }
 
 func (bl *Blobber) exists(edb *EventDb) (bool, error) {
