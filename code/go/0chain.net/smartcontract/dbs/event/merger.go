@@ -98,8 +98,8 @@ func withUniqueEventOverwrite() eventMergeMiddleware {
 // mergeEventsFunc merge a and b, data will be merged to a and returned.
 type mergeEventsFunc[T any] func(a, b *T) (*T, error)
 
-// withEventMerge merge events that has the same index and add up the
-// event value by calling the addFunc function.
+// withEventMerge merge events that has the same index and merge the
+// event data by calling the mergeFunc function.
 func withEventMerge[T any](mergeFunc mergeEventsFunc[T]) eventMergeMiddleware {
 	return func(events []Event) ([]Event, error) {
 		eMap := make(map[string]*Event, len(events))
@@ -128,7 +128,11 @@ func withEventMerge[T any](mergeFunc mergeEventsFunc[T]) eventMergeMiddleware {
 				return nil, err
 			}
 
-			ee.Data = newData
+			err = setEventData[T](ee, *newData)
+			if err != nil {
+				return nil, err
+			}
+			//ee.Data = *newData
 		}
 
 		ret := make([]Event, 0, len(eMap))
@@ -173,7 +177,31 @@ func mergeUpdateChallengesEvents() *eventsMergerImpl[Challenge] {
 }
 
 func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
-	return newEventsMerger[AllocationBlobberTerm](TagUpdateAllocationBlobberTerm, withUniqueEventOverwrite())
+	return newEventsMerger[AllocationBlobberTerm](TagUpdateAllocationBlobberTerm, withAllocBlobberTermsMerged())
+}
+
+func withAllocBlobberTermsMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *[]AllocationBlobberTerm) (*[]AllocationBlobberTerm, error) {
+		var (
+			aMap = make(map[string]AllocationBlobberTerm, len(*a))
+			pa   = *a
+			pb   = *b
+		)
+		for i, ai := range pa {
+			aMap[ai.BlobberID] = pa[i]
+		}
+
+		for _, bi := range pb {
+			aMap[bi.BlobberID] = bi
+		}
+
+		ret := make([]AllocationBlobberTerm, 0, len(aMap))
+		for _, v := range aMap {
+			ret = append(ret, v)
+		}
+
+		return &ret, nil
+	})
 }
 
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {

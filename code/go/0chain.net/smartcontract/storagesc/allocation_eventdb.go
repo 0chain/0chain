@@ -282,7 +282,7 @@ func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances cs
 }
 
 func emitUpdateAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationBlobberTerm, t.Hash, sa.buildEventBlobberTerms())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationBlobberTerm, sa.ID, sa.buildEventBlobberTerms())
 }
 
 func emitDeleteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {

@@ -502,3 +502,23 @@ func fromEvent[T any](eventData interface{}) (*T, bool) {
 		zap.Any("got", reflect.TypeOf(eventData)))
 	return nil, false
 }
+
+func setEventData[T any](e *Event, data interface{}) error {
+	if data == nil {
+		return nil
+	}
+
+	_, ok := e.Data.(T)
+	if ok {
+		e.Data = data
+		return nil
+	}
+
+	tp, ok := e.Data.(*T)
+	if ok {
+		*(tp) = data.(T)
+		return nil
+	}
+
+	return ErrInvalidEventData
+}
