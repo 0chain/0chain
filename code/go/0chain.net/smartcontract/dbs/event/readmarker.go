@@ -16,7 +16,7 @@ type ReadMarker struct {
 	ClientID      string  `json:"client_id"`
 	BlobberID     string  `json:"blobber_id"`
 	AllocationID  string  `json:"allocation_id" gorm:"index:idx_ralloc_block,priority:1;index:idx_rauth_alloc,priority:2"` //used in alloc_read_size, used in readmarkers
-	TransactionID string  `json:"transaction_id"`
+	TransactionID string  `json:"transaction_id" gorm:"uniqueIndex"`
 	OwnerID       string  `json:"owner_id"`
 	Timestamp     int64   `json:"timestamp"`
 	ReadCounter   int64   `json:"read_counter"`

@@ -18,7 +18,7 @@ type WriteMarker struct {
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
 	AllocationID  string `json:"allocation_id" gorm:"index:idx_walloc_block,priority:1;index:idx_walloc_file,priority:2"` //used in alloc_write_marker_count, alloc_written_size
-	TransactionID string `json:"transaction_id"`
+	TransactionID string `json:"transaction_id" gorm:"uniqueIndex"`
 
 	AllocationRoot         string `json:"allocation_root"`
 	PreviousAllocationRoot string `json:"previous_allocation_root"`
