@@ -320,3 +320,17 @@ func (ac *AuthCount) Encode() ([]byte, error) {
 func (ac *AuthCount) Decode(input []byte) error {
 	return json.Unmarshal(input, ac)
 }
+
+type DeleteAuthorizerPayload struct {
+	ID string `json:"id"`
+}
+
+func (dap *DeleteAuthorizerPayload) Encode() (data []byte, err error) {
+	data, err = json.Marshal(dap)
+	return
+}
+
+func (dap *DeleteAuthorizerPayload) Decode(input []byte) error {
+	err := json.Unmarshal(input, dap)
+	return err
+}

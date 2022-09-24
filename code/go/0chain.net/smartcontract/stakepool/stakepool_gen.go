@@ -222,20 +222,14 @@ func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Pools"
 	o = append(o, 0x84, 0xa5, 0x50, 0x6f, 0x6f, 0x6c, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Pools)))
-	keys_za0001 := make([]string, 0, len(z.Pools))
-	for k := range z.Pools {
-		keys_za0001 = append(keys_za0001, k)
-	}
-	msgp.Sort(keys_za0001)
-	for _, k := range keys_za0001 {
-		za0002 := z.Pools[k]
-		o = msgp.AppendString(o, k)
+	for za0001, za0002 := range z.Pools {
+		o = msgp.AppendString(o, za0001)
 		if za0002 == nil {
 			o = msgp.AppendNil(o)
 		} else {
 			o, err = za0002.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "Pools", k)
+				err = msgp.WrapError(err, "Pools", za0001)
 				return
 			}
 		}

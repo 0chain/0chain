@@ -1,6 +1,7 @@
 package zcnsc_test
 
 import (
+	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
@@ -223,9 +224,12 @@ func Test_Can_Delete_Authorizer(t *testing.T) {
 		ctx  = MakeMockStateContext()
 		data []byte
 	)
-
+	payload := DeleteAuthorizerPayload{
+		ID: defaultAuthorizer,
+	}
+	data, _ = json.Marshal(payload)
 	sc := CreateZCNSmartContract()
-	tr, err := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx)
+	tr, err := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx, data)
 	require.NoError(t, err)
 	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.NoError(t, err)
