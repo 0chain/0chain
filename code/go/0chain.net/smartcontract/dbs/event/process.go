@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"golang.org/x/net/context"
@@ -146,7 +147,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	}
 
 	mergedEvents := make([]Event, 0, len(mergers))
-	var hasAddBlobber bool
 	for _, em := range mergers {
 		e, err := em.merge(round, block)
 		if err != nil {
@@ -155,35 +155,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 		if e != nil {
 			mergedEvents = append(mergedEvents, *e)
-			if e.Tag == int(TagAddBlobber) {
-				logging.Logger.Debug("merge events add blobber",
-					zap.Any("event", e),
-					zap.Int64("round", round),
-					zap.String("block", block))
-				hasAddBlobber = true
-			}
 		}
 	}
 
-	re := append(mergedEvents, others...)
-	if hasAddBlobber {
-		var found bool
-		for _, e := range re {
-			if e.Tag == int(TagAddBlobber) {
-				logging.Logger.Debug("after merge events add blobber",
-					zap.Any("event", e),
-					zap.Int64("round", round),
-					zap.String("block", block))
-				found = true
-			}
-		}
-
-		if !found {
-			logging.Logger.Warn("add blobber event disappear", zap.Int64("round", round), zap.String("block", block))
-		}
-	}
-
-	return re, nil
+	return append(mergedEvents, others...), nil
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
@@ -522,5 +497,8 @@ func fromEvent[T any](eventData interface{}) (*T, bool) {
 		return t2, true
 	}
 
+	logging.Logger.Error("fromEvent invalid data type",
+		zap.Any("expect", reflect.TypeOf(new(T))),
+		zap.Any("got", reflect.TypeOf(eventData)))
 	return nil, false
 }

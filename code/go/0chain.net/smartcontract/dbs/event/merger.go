@@ -1,6 +1,8 @@
 package event
 
 import (
+	"reflect"
+
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -43,17 +45,6 @@ func (em *eventsMergerImpl[T]) merge(round int64, blockHash string) (*Event, err
 		return nil, nil
 	}
 
-	if em.tag == int(TagAddBlobber) {
-		ids := make([]string, 0, len(em.events))
-		for _, e := range em.events {
-			if e.Tag == int(TagAddBlobber) {
-				ids = append(ids, e.Index)
-			}
-		}
-
-		logging.Logger.Debug("before merge add blobber", zap.Any("ids", ids))
-	}
-
 	events := em.events
 	for _, mHandler := range em.middlewares {
 		var err error
@@ -63,32 +54,22 @@ func (em *eventsMergerImpl[T]) merge(round int64, blockHash string) (*Event, err
 		}
 	}
 
-	if em.tag == int(TagAddBlobber) {
-		ids := make([]string, 0, len(em.events))
-		for _, e := range events {
-			if e.Tag == int(TagAddBlobber) {
-				ids = append(ids, e.Index)
-			}
-		}
-
-		logging.Logger.Debug("after merge add blobber", zap.Any("ids", ids))
-	}
-
-	dids := make([]string, 0, len(events))
 	data := make([]T, 0, len(events))
 	for _, e := range events {
-		pd, ok := fromEvent[T](e.Data)
-		if !ok {
-			return nil, ErrInvalidEventData
-		}
-		data = append(data, *pd)
-		if em.tag == int(TagAddBlobber) {
-			dids = append(dids, (e.Data).(*Blobber).BlobberID)
-		}
-	}
+		if reflect.TypeOf(e.Data).Kind() == reflect.Slice {
+			pd, ok := fromEvent[[]T](e.Data)
+			if !ok {
+				return nil, ErrInvalidEventData
+			}
 
-	if em.tag == int(TagAddBlobber) {
-		logging.Logger.Debug("merge data add blobber", zap.Any("ids", dids))
+			data = append(data, *pd...)
+		} else {
+			pd, ok := fromEvent[T](e.Data)
+			if !ok {
+				return nil, ErrInvalidEventData
+			}
+			data = append(data, *pd)
+		}
 	}
 
 	return &Event{
