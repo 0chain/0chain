@@ -1032,7 +1032,7 @@ func removeAllocationFromBlobber(
 
 	blobberID := blobAlloc.BlobberID
 	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
-		logging.Logger.Error("skipping removing allocation from blobber partition" +
+		logging.Logger.Warn("skipping removing allocation from blobber partition, " +
 			"empty blobber allocation partition location")
 		return nil
 	}
