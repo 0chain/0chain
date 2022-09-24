@@ -836,11 +836,9 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
-	_, err = sc.getBlobber(blobber.ID, balances)
+	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err == nil {
-		//return sc.updateBlobber(t, conf, blobber, savedBlobber, balances)
-		//ret
-		return fmt.Errorf("blobber already exist: %v", blobber.ID)
+		return sc.updateBlobber(t, conf, blobber, savedBlobber, balances)
 	}
 
 	has, err := sc.hasBlobberUrl(blobber.BaseURL, balances)
