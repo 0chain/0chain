@@ -150,7 +150,7 @@ type Block struct {
 	ChainID   datastore.Key `json:"chain_id"`
 	RoundRank int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
 	PrevBlock *Block        `json:"-" msgpack:"-"`
-	Events    []event.Event
+	Events    []event.Event `json:"-" msgpack:"-"`
 
 	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
 	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
@@ -654,14 +654,14 @@ func (b *Block) IsBlockNotarized() bool {
 	return b.isNotarized
 }
 
-//SetBlockFinalised - set the block as finalised
+// SetBlockFinalised - set the block as finalised
 func (b *Block) SetBlockFinalised() {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
 	b.isFinalised = true
 }
 
-//IsBlockFinalised - is block notarized?
+// IsBlockFinalised - is block notarized?
 func (b *Block) IsBlockFinalised() bool {
 	b.ticketsMutex.RLock()
 	defer b.ticketsMutex.RUnlock()
