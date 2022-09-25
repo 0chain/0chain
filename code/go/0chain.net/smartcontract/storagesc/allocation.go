@@ -1800,3 +1800,20 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 	// txn.Hash is the id of the new token pool
 	return txn.Hash, nil
 }
+
+func emitUpdateAllocationStatEvent(w *WriteMarker, movedTokens currency.Coin, balances chainstate.StateContextI) {
+	alloc := event.Allocation{
+		AllocationID: w.AllocationID,
+		UsedSize:     w.Size,
+	}
+
+	if w.Size > 0 {
+		alloc.MovedToChallenge = movedTokens
+		alloc.WritePool = movedTokens
+	} else if w.Size < 0 {
+		alloc.MovedBack = movedTokens
+		alloc.WritePool = -movedTokens
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStat, alloc.AllocationID, &alloc)
+}

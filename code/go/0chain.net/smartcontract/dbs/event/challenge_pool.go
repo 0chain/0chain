@@ -13,13 +13,13 @@ type ChallengePool struct {
 	Finalized    bool   `json:"finalized"`
 }
 
-func (edb *EventDb) addOrUpdateChallengePool(cp ChallengePool) error {
+func (edb *EventDb) addOrUpdateChallengePools(cps []ChallengePool) error {
 	updateFields := []string{"balance", "start_time", "expiration", "finalized"}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns(updateFields), // column needed to be updated
-	}).Create(&cp).Error
+	}).Create(&cps).Error
 }
 
 func (edb *EventDb) GetChallengePool(allocationID string) (*ChallengePool, error) {

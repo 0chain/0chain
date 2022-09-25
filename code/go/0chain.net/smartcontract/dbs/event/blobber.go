@@ -316,3 +316,27 @@ func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
 		DoUpdates: clause.AssignmentColumns([]string{"offers_total"}),
 	}).Create(&blobbers).Error
 }
+
+func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {
+	vs := map[string]interface{}{
+		"used":       gorm.Expr("blobbers.used + excluded.used"),
+		"saved_data": gorm.Expr("blobbers.saved_data + excluded.saved_data"),
+	}
+
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "blobber_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(&blobbers).Error
+}
+
+func mergeUpdateBlobberStatsEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobberStat, withBlobberStatsMerged())
+}
+
+func withBlobberStatsMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
+		a.Used += b.Used
+		a.SavedData += b.SavedData
+		return a, nil
+	})
+}

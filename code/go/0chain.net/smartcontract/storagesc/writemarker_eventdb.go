@@ -31,4 +31,7 @@ func emitAddWriteMarker(t *transaction.Transaction, wm *WriteMarker, movedTokens
 	balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker,
 		t.Hash, writeMarkerToWriteMarkerTable(wm, movedTokens, t.Hash))
+
+	emitUpdateAllocationStatEvent(wm, movedTokens, balances)
+	emitUpdateBlobberStatEvent(wm, movedTokens, balances)
 }

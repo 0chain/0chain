@@ -895,3 +895,13 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	afterInsertBlobber(blobber.ID)
 	return
 }
+
+func emitUpdateBlobberStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
+	bb := event.Blobber{
+		BlobberID: w.BlobberID,
+		Used:      w.Size,
+		SavedData: w.Size,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.BlobberID, bb)
+}

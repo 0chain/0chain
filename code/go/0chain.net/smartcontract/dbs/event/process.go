@@ -65,6 +65,8 @@ const (
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
 	TagAddOrUpdateChallengePool
+	TagUpdateAllocationStat
+	TagUpdateBlobberStat
 	NumberOfTags
 )
 
@@ -111,6 +113,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateAllocStatsEvents(),
 			mergeUpdateAllocBlobbersTermsEvents(),
 			mergeUpdateChallengesEvents(),
+			mergeAddChallengePoolsEvents(),
 
 			mergeUpdateBlobbersEvents(),
 			mergeUpdateBlobberTotalStakesEvents(),
@@ -121,6 +124,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
 			mergeAddReadMarkerEvents(),
+			mergeAllocationStatsEvents(),
+			mergeUpdateBlobberStatsEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -470,13 +475,25 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteAllocationBlobberTerms(*updates)
-		// challenge pool
-	case TagAddOrUpdateChallengePool:
-		updates, ok := fromEvent[ChallengePool](event.Data)
+	case TagUpdateAllocationStat:
+		stats, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrUpdateChallengePool(*updates)
+		return edb.updateAllocationsStats(*stats)
+	case TagUpdateBlobberStat:
+		stats, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateBlobbersStats(*stats)
+	case TagAddOrUpdateChallengePool:
+		// challenge pool
+		cps, ok := fromEvent[[]ChallengePool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateChallengePools(*cps)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
