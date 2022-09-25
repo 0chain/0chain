@@ -7,7 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -204,7 +204,28 @@ func main() {
 	initIntegrationsTests(node.Self.Underlying().GetKey())
 
 	var server *http.Server
+	var profServer *http.Server
+
+	mux := http.NewServeMux()
+	http.DefaultServeMux = mux
+
 	if config.Development() {
+		if viper.GetBool("development.pprof") {
+			// start pprof server
+			pprofMux := http.NewServeMux()
+			profServer = &http.Server{
+				Addr:           fmt.Sprintf(":%d", node.Self.Underlying().Port+10),
+				ReadTimeout:    30 * time.Second,
+				MaxHeaderBytes: 1 << 20,
+				Handler:        pprofMux,
+			}
+			initProfHandlers(pprofMux)
+			go func() {
+				err2 := profServer.ListenAndServe()
+				logging.Logger.Info("Http server shut down", zap.Error(err2))
+			}()
+		}
+
 		// No WriteTimeout setup to enable pprof
 		server = &http.Server{
 			Addr:           address,
@@ -328,6 +349,10 @@ func main() {
 	}
 
 	shutdown := common.HandleShutdown(server, []func(){shutdownIntegrationTests, done, chain.CloseStateDB})
+	if profServer != nil {
+		shutdownProf := common.HandleShutdown(profServer, nil)
+		<-shutdownProf
+	}
 	<-shutdown
 	time.Sleep(2 * time.Second)
 	logging.Logger.Info("0chain miner shut down gracefully")
@@ -463,4 +488,12 @@ func initWorkers(ctx context.Context) {
 	serverChain.SetupWorkers(ctx)
 	//miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
+}
+
+func initProfHandlers(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 }
