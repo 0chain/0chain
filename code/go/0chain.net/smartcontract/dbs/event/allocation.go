@@ -197,24 +197,6 @@ func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
 	}).Create(&allocs).Error
 }
 
-func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
-	// update allocation stat
-	vs := map[string]interface{}{
-		"used_size":          gorm.Expr("allocations.used_size + excluded.used_size"),
-		"num_writes":         gorm.Expr("allocations.num_writes + excluded.num_writes"),
-		"moved_to_challenge": gorm.Expr("allocations.moved_to_challenge + excluded.moved_to_challenge"),
-		"moved_back":         gorm.Expr("allocations.moved_back + excluded.moved_back"),
-		"write_pool":         gorm.Expr("allocations.write_pool + excluded.write_pool"),
-	}
-
-	logging.Logger.Debug("update alloc stat", zap.Any("alloc", allocs))
-
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "allocation_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&allocs).Error
-}
-
 func mergeAllocationStatsEvents() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagUpdateAllocationStat, withAllocStatsMerged())
 }
@@ -225,9 +207,24 @@ func withAllocStatsMerged() eventMergeMiddleware {
 		a.NumWrites += b.NumWrites
 		a.MovedToChallenge += b.MovedToChallenge
 		a.MovedBack += b.MovedBack
-		a.WritePool += b.WritePool
 		return a, nil
 	})
+}
+
+func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
+	// update allocation stat
+	vs := map[string]interface{}{
+		"used_size":          gorm.Expr("allocations.used_size + excluded.used_size"),
+		"num_writes":         gorm.Expr("allocations.num_writes + excluded.num_writes"),
+		"moved_to_challenge": gorm.Expr("allocations.moved_to_challenge + excluded.moved_to_challenge"),
+		"moved_back":         gorm.Expr("allocations.moved_back + excluded.moved_back"),
+		"write_pool":         gorm.Expr("allocations.write_pool - excluded.moved_to_challenge + excluded.moved_back"),
+	}
+
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(&allocs).Error
 }
 
 func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {

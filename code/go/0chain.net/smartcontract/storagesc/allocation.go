@@ -1809,10 +1809,8 @@ func emitUpdateAllocationStatEvent(w *WriteMarker, movedTokens currency.Coin, ba
 
 	if w.Size > 0 {
 		alloc.MovedToChallenge = movedTokens
-		alloc.WritePool = movedTokens
 	} else if w.Size < 0 {
 		alloc.MovedBack = movedTokens
-		alloc.WritePool = -movedTokens
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStat, alloc.AllocationID, &alloc)
