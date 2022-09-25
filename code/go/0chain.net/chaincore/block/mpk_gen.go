@@ -93,8 +93,14 @@ func (z *Mpks) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Mpks"
 	o = append(o, 0x81, 0xa4, 0x4d, 0x70, 0x6b, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Mpks)))
-	for za0001, za0002 := range z.Mpks {
-		o = msgp.AppendString(o, za0001)
+	keys_za0001 := make([]string, 0, len(z.Mpks))
+	for k := range z.Mpks {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.Mpks[k]
+		o = msgp.AppendString(o, k)
 		if za0002 == nil {
 			o = msgp.AppendNil(o)
 		} else {

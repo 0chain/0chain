@@ -26,14 +26,20 @@ func (z *DKGMinerNodes) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "SimpleNodes"
 	o = append(o, 0xab, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x4e, 0x6f, 0x64, 0x65, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.SimpleNodes)))
-	for za0001, za0002 := range z.SimpleNodes {
-		o = msgp.AppendString(o, za0001)
+	keys_za0001 := make([]string, 0, len(z.SimpleNodes))
+	for k := range z.SimpleNodes {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.SimpleNodes[k]
+		o = msgp.AppendString(o, k)
 		if za0002 == nil {
 			o = msgp.AppendNil(o)
 		} else {
 			o, err = za0002.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "SimpleNodes", za0001)
+				err = msgp.WrapError(err, "SimpleNodes", k)
 				return
 			}
 		}
@@ -53,15 +59,27 @@ func (z *DKGMinerNodes) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "RevealedShares"
 	o = append(o, 0xae, 0x52, 0x65, 0x76, 0x65, 0x61, 0x6c, 0x65, 0x64, 0x53, 0x68, 0x61, 0x72, 0x65, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.RevealedShares)))
-	for za0003, za0004 := range z.RevealedShares {
-		o = msgp.AppendString(o, za0003)
+	keys_za0003 := make([]string, 0, len(z.RevealedShares))
+	for k := range z.RevealedShares {
+		keys_za0003 = append(keys_za0003, k)
+	}
+	msgp.Sort(keys_za0003)
+	for _, k := range keys_za0003 {
+		za0004 := z.RevealedShares[k]
+		o = msgp.AppendString(o, k)
 		o = msgp.AppendInt(o, za0004)
 	}
 	// string "Waited"
 	o = append(o, 0xa6, 0x57, 0x61, 0x69, 0x74, 0x65, 0x64)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Waited)))
-	for za0005, za0006 := range z.Waited {
-		o = msgp.AppendString(o, za0005)
+	keys_za0005 := make([]string, 0, len(z.Waited))
+	for k := range z.Waited {
+		keys_za0005 = append(keys_za0005, k)
+	}
+	msgp.Sort(keys_za0005)
+	for _, k := range keys_za0005 {
+		za0006 := z.Waited[k]
+		o = msgp.AppendString(o, k)
 		o = msgp.AppendBool(o, za0006)
 	}
 	// string "StartRound"
@@ -394,8 +412,14 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Cost"
 	o = append(o, 0xa4, 0x43, 0x6f, 0x73, 0x74)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Cost)))
-	for za0001, za0002 := range z.Cost {
-		o = msgp.AppendString(o, za0001)
+	keys_za0001 := make([]string, 0, len(z.Cost))
+	for k := range z.Cost {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.Cost[k]
+		o = msgp.AppendString(o, k)
 		o = msgp.AppendInt(o, za0002)
 	}
 	return
@@ -1054,14 +1078,20 @@ func (z SimpleNodeGeolocation) Msgsize() (s int) {
 func (z SimpleNodes) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	o = msgp.AppendMapHeader(o, uint32(len(z)))
-	for za0001, za0002 := range z {
-		o = msgp.AppendString(o, za0001)
+	keys_za0001 := make([]string, 0, len(z))
+	for k := range z {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z[k]
+		o = msgp.AppendString(o, k)
 		if za0002 == nil {
 			o = msgp.AppendNil(o)
 		} else {
 			o, err = za0002.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, za0001)
+				err = msgp.WrapError(err, k)
 				return
 			}
 		}

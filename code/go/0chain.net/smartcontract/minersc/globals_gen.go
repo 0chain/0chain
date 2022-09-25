@@ -16,8 +16,14 @@ func (z *GlobalSettings) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Fields"
 	o = append(o, 0xa6, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Fields)))
-	for za0001, za0002 := range z.Fields {
-		o = msgp.AppendString(o, za0001)
+	keys_za0001 := make([]string, 0, len(z.Fields))
+	for k := range z.Fields {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.Fields[k]
+		o = msgp.AppendString(o, k)
 		o = msgp.AppendString(o, za0002)
 	}
 	return
