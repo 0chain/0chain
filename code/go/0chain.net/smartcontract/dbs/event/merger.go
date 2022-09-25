@@ -180,34 +180,6 @@ func mergeAddChallengePoolsEvents() *eventsMergerImpl[ChallengePool] {
 	return newEventsMerger[ChallengePool](TagAddOrUpdateChallengePool, withUniqueEventOverwrite())
 }
 
-func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
-	return newEventsMerger[AllocationBlobberTerm](TagUpdateAllocationBlobberTerm, withAllocBlobberTermsMerged())
-}
-
-func withAllocBlobberTermsMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *[]AllocationBlobberTerm) (*[]AllocationBlobberTerm, error) {
-		var (
-			aMap = make(map[string]AllocationBlobberTerm, len(*a))
-			pa   = *a
-			pb   = *b
-		)
-		for i, ai := range pa {
-			aMap[ai.BlobberID] = pa[i]
-		}
-
-		for _, bi := range pb {
-			aMap[bi.BlobberID] = bi
-		}
-
-		ret := make([]AllocationBlobberTerm, 0, len(aMap))
-		for _, v := range aMap {
-			ret = append(ret, v)
-		}
-
-		return &ret, nil
-	})
-}
-
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedHealth, withUniqueEventOverwrite())
 }

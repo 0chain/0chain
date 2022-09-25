@@ -62,11 +62,11 @@ const (
 	TagAddChallenge                        // 32
 	TagUpdateChallenge                     // 33
 	TagAddOrOverwriteAllocationBlobberTerm // 34
-	TagUpdateAllocationBlobberTerm
-	TagDeleteAllocationBlobberTerm
-	TagAddOrUpdateChallengePool
-	TagUpdateAllocationStat
-	TagUpdateBlobberStat
+	TagUpdateAllocationBlobberTerm         // 35
+	TagDeleteAllocationBlobberTerm         // 36
+	TagAddOrUpdateChallengePool            // 37
+	TagUpdateAllocationStat                // 38
+	TagUpdateBlobberStat                   // 39
 	NumberOfTags
 )
 
@@ -108,10 +108,14 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
+
 			mergeAddAllocationEvents(),
 			mergeUpdateAllocEvents(),
 			mergeUpdateAllocStatsEvents(),
 			mergeUpdateAllocBlobbersTermsEvents(),
+			mergeAddOrOverwriteAllocBlobbersTermsEvents(),
+			mergeDeleteAllocBlobbersTermsEvents(),
+
 			mergeUpdateChallengesEvents(),
 			mergeAddChallengePoolsEvents(),
 

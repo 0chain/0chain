@@ -207,6 +207,8 @@ func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
 		"write_pool":         gorm.Expr("allocations.write_pool + excluded.write_pool"),
 	}
 
+	logging.Logger.Debug("update alloc stat", zap.Any("alloc", allocs))
+
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "allocation_id"}},
 		DoUpdates: clause.Assignments(vs),
@@ -225,5 +227,41 @@ func withAllocStatsMerged() eventMergeMiddleware {
 		a.MovedBack += b.MovedBack
 		a.WritePool += b.WritePool
 		return a, nil
+	})
+}
+
+func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
+	return newEventsMerger[AllocationBlobberTerm](TagUpdateAllocationBlobberTerm, withAllocBlobberTermsMerged())
+}
+
+func mergeAddOrOverwriteAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
+	return newEventsMerger[AllocationBlobberTerm](TagUpdateAllocationBlobberTerm, withAllocBlobberTermsMerged())
+}
+
+func mergeDeleteAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
+	return newEventsMerger[AllocationBlobberTerm](TagDeleteAllocationBlobberTerm, withAllocBlobberTermsMerged())
+}
+
+func withAllocBlobberTermsMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *[]AllocationBlobberTerm) (*[]AllocationBlobberTerm, error) {
+		var (
+			aMap = make(map[string]AllocationBlobberTerm, len(*a))
+			pa   = *a
+			pb   = *b
+		)
+		for i, ai := range pa {
+			aMap[ai.BlobberID] = pa[i]
+		}
+
+		for _, bi := range pb {
+			aMap[bi.BlobberID] = bi
+		}
+
+		ret := make([]AllocationBlobberTerm, 0, len(aMap))
+		for _, v := range aMap {
+			ret = append(ret, v)
+		}
+
+		return &ret, nil
 	})
 }
