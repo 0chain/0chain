@@ -171,8 +171,6 @@ func TestUpdateSettings(t *testing.T) {
 					"block_reward.zeta.i":           "1",
 					"block_reward.zeta.k":           "0.9",
 					"block_reward.zeta.mu":          "0.2",
-
-					"expose_mpt": "false",
 				},
 			},
 		},
@@ -375,8 +373,6 @@ func TestCommitSettingChanges(t *testing.T) {
 					"block_reward.zeta.i":           "1",
 					"block_reward.zeta.k":           "0.9",
 					"block_reward.zeta.mu":          "0.2",
-
-					"expose_mpt": "false",
 				},
 			},
 		},
