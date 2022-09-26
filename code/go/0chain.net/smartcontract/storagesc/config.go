@@ -180,10 +180,8 @@ type Config struct {
 
 	BlockReward *blockReward `json:"block_reward"`
 
-	// Allow direct access to MPT
-	ExposeMpt bool           `json:"expose_mpt"`
-	OwnerId   string         `json:"owner_id"`
-	Cost      map[string]int `json:"cost"`
+	OwnerId string         `json:"owner_id"`
+	Cost    map[string]int `json:"cost"`
 }
 
 func (sc *Config) validate() (err error) {
@@ -521,7 +519,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.BlockReward.Zeta.K = scc.GetFloat64(pfx + "block_reward.zeta.k")
 	conf.BlockReward.Zeta.Mu = scc.GetFloat64(pfx + "block_reward.zeta.mu")
 
-	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
 	conf.Cost = scc.GetStringMapInt(pfx + "cost")
 

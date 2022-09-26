@@ -853,8 +853,6 @@ func SetMockConfig(
 		panic(err)
 	}
 
-	conf.ExposeMpt = true
-
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		panic(err)
