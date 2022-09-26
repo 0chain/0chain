@@ -380,16 +380,12 @@ func TestCommitSettingChanges(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.title, func(t *testing.T) {
 			test := test
-			//t.Parallel()
 			args := setExpectations(t, test.parameters)
-
 			_, err := args.ssc.commitSettingChanges(args.txn, args.input, args.balances)
-			//require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
 				t.Fatal("commitSettingChanges err: ", err.Error())
 				return
 			}
-			//require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
 }
