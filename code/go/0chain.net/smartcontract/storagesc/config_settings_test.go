@@ -497,9 +497,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.Zeta.K
 	case BlockRewardZetaMu:
 		return conf.BlockReward.Zeta.Mu
-
-	case ExposeMpt:
-		return conf.ExposeMpt
 	default:
 		panic("unknown field: " + field)
 	}

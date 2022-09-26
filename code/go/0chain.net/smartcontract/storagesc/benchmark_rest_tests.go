@@ -58,7 +58,7 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlobbersByGeoLocation,
 			},
 			{
-				FuncName: "storage_config",
+				FuncName: "storage-config",
 				Endpoint: srh.getConfig,
 			},
 			{
