@@ -723,13 +723,13 @@ func BenchmarkTests(
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
-					"max_mint":                      "1500000.02",
-					"time_unit":                     "720h",
-					"min_alloc_size":                "1024",
-					"min_alloc_duration":            "5m",
-					"max_challenge_completion_time": "3m",
-					"min_offer_duration":            "10h",
-					"min_blobber_capacity":          "1024",
+					"max_mint":                  "1500000.02",
+					"time_unit":                 "720h",
+					"min_alloc_size":            "1024",
+					"min_alloc_duration":        "5m",
+					"challenge_completion_time": "3m",
+					"min_offer_duration":        "10h",
+					"min_blobber_capacity":      "1024",
 
 					"readpool.min_lock": "10",
 

@@ -1537,10 +1537,10 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		t.Run(test.name,
 			func(t *testing.T) {
 				if test.setValidConfig {
-					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_time", 1000)
+					config.SmartContractConfig.Set("smart_contracts.storagesc.challenge_completion_time", 1000)
 					config.SmartContractConfig.Set("smart_contracts.vestingsc.min_duration", time.Second*5)
 				} else {
-					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_time", -1)
+					config.SmartContractConfig.Set("smart_contracts.storagesc.challenge_completion_time", -1)
 					config.SmartContractConfig.Set("smart_contracts.vestingsc.min_duration", 0)
 				}
 

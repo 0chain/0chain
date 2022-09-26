@@ -82,7 +82,7 @@ smart_contracts:
     min_alloc_duration: 50h
     max_read_price: 100.0
     max_write_price: 100.0
-    max_challenge_completion_time: 3m
+    challenge_completion_time: 3m
     min_offer_duration: 10h
     max_offer_duration: 744h
     min_blobber_capacity: 1024
@@ -106,7 +106,7 @@ smart_contracts:
     free_allocation_settings:
       data_shards: 2
       duration: 50h
-      max_challenge_completion_time: 1m
+      challenge_completion_time: 1m
       parity_shards: 2
       read_pool_fraction: 0.2
       mint_amount: 0.5

@@ -107,7 +107,7 @@ type Config struct {
 	// allocation allowed by the SC.
 	MinAllocDuration time.Duration `json:"min_alloc_duration"`
 	// ChallengeCompletionTime is max time to complete a challenge.
-	ChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	// MinOfferDuration represents lower boundary of blobber's MaxOfferDuration.
 	MinOfferDuration time.Duration `json:"min_offer_duration"`
 	// MinBlobberCapacity allowed to register in the SC.
@@ -215,7 +215,7 @@ func (sc *Config) validate() (err error) {
 			sc.MinOfferDuration)
 	}
 	if sc.ChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative max_challenge_completion_time: %v",
+		return fmt.Errorf("negative challenge_completion_time: %v",
 			sc.ChallengeCompletionTime)
 	}
 	if sc.MinAllocDuration < 0 {
@@ -391,7 +391,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
-	conf.ChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
+	conf.ChallengeCompletionTime = scc.GetDuration(pfx + "challenge_completion_time")
 	conf.MinOfferDuration = scc.GetDuration(pfx + "min_offer_duration")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")

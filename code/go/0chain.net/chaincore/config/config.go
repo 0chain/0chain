@@ -106,7 +106,7 @@ func SetupDefaultSmartContractConfig() {
 
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_enabled", true)
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_rate_per_mb_min", 1)
-	SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", "3m")
+	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_completion_time", "3m")
 }
 
 // SetupSmartContractConfig setups the smart contracts configuration system.
