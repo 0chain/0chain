@@ -149,13 +149,13 @@ func (mp *MintPayload) GetStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
+func (mp *MintPayload) verifySignatures(signatures map[string]*AuthorizerSignature, state cstate.StateContextI) error {
 	toSign := mp.GetStringToSign()
-	if len(mp.Signatures) == 0 {
+	if len(signatures) == 0 {
 		return errors.New("signatures not found")
 	}
 
-	for _, v := range mp.Signatures {
+	for _, v := range signatures {
 		authorizerID := v.ID
 		if authorizerID == "" {
 			return errors.New("authorizer ID is empty in a signature")
@@ -183,6 +183,15 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
 	}
 
 	return nil
+}
+
+func (mp *MintPayload) getUniqueSignatures() map[string]*AuthorizerSignature {
+	uniqueSignatures := make(map[string]*AuthorizerSignature)
+	for _, v := range mp.Signatures {
+
+		uniqueSignatures[v.ID] = v
+	}
+	return uniqueSignatures
 }
 
 // ---- BurnPayloadResponse ----------
@@ -299,4 +308,16 @@ type poolStat struct {
 func (ps *poolStat) encode() []byte {
 	buff, _ := json.Marshal(ps)
 	return buff
+}
+
+type AuthCount struct {
+	Count int `json:"auth_count"`
+}
+
+func (ac *AuthCount) Encode() ([]byte, error) {
+	return json.Marshal(ac)
+}
+
+func (ac *AuthCount) Decode(input []byte) error {
+	return json.Unmarshal(input, ac)
 }

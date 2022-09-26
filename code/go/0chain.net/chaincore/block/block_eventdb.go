@@ -26,6 +26,7 @@ func blockToBlockEvent(block *Block) *event.Block {
 		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
 		RoundTimeoutCount:     block.RoundTimeoutCount,
 		CreatedAt:             block.CreationDateField.ToTime(),
+		IsFinalised:           block.IsBlockFinalised(),
 	}
 }
 

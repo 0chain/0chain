@@ -66,29 +66,101 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 	return true, nil
 }
 
-func (edb *EventDb) updateReward(reward int64, dp DelegatePool) (err error) {
+func (edb *EventDb) bulkUpdateRewards(providerID string, providerType int, rewards []rewardInfo) error {
+	n := len(rewards)
+	sql := fmt.Sprintf(`
+	UPDATE delegate_pools
+		SET reward = reward + data_table.reward_in, total_reward = total_reward + data_table.total_reward_in
+	FROM (
+		SELECT
+		UNNEST(ARRAY[%s]) as provider_id,
+		UNNEST(ARRAY[%s]) as provider_type,
+		UNNEST(ARRAY[%s]) as pool_id,
+		UNNEST(ARRAY[%s]) as reward_in,
+		UNNEST(ARRAY[%s]) as total_reward_in
+	) AS data_table
+	WHERE (delegate_pools.provider_id = data_table.provider_id)
+		AND (delegate_pools.provider_type = data_table.provider_type)
+		AND (delegate_pools.pool_id = data_table.pool_id)
+		AND (delegate_pools.status != ?)`,
+		placeholders(n),
+		placeholders(n, "integer"),
+		placeholders(n),
+		placeholders(n, "integer"),
+		placeholders(n, "integer"),
+	)
 
-	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
+	vs := append(makeBulkRewardsValues(providerID, providerType, rewards), spenum.Deleted)
+	return edb.Store.Get().Exec(sql, vs...).Error
+}
 
-	if dp.ProviderType == int(spenum.Blobber) && reward < 0 {
-		dpu.Updates["total_penalty"], err = currency.MinusInt64(dp.TotalPenalty, reward)
-		if err != nil {
-			return err
-		}
-	} else {
-		dpu.Updates["reward"], err = currency.AddInt64(dp.Reward, reward)
-		if err != nil {
-			return err
-		}
-		dpu.Updates["total_reward"], err = currency.AddInt64(dp.TotalReward, reward)
-		if err != nil {
-			return err
-		}
+func makeBulkRewardsValues(providerID string, providerType int, rewardInfos []rewardInfo) []interface{} {
+	var (
+		n             = len(rewardInfos)
+		providerIDs   = make([]interface{}, n)
+		providerTypes = make([]interface{}, n)
+		pools         = make([]interface{}, n)
+		rewards       = make([]interface{}, n)
+		totalRewards  = make([]interface{}, n)
+	)
+
+	for i, r := range rewardInfos {
+		providerIDs[i] = providerID
+		providerTypes[i] = providerType
+		pools[i] = r.pool
+		rewards[i] = r.value
+		totalRewards[i] = r.value
 	}
-	if err := edb.updateDelegatePool(*dpu); err != nil {
-		return err
+
+	return append(append(append(append(providerIDs, providerTypes...), pools...), rewards...), totalRewards...)
+}
+
+func (edb *EventDb) bulkUpdatePenalty(providerID string, providerType int, penalties []rewardInfo) error {
+	var (
+		n  = len(penalties)
+		vs = append(makeBulkPenaltyValues(providerID, providerType, penalties), spenum.Deleted)
+	)
+
+	sql := fmt.Sprintf(`
+	UPDATE delegate_pools
+		SET total_penalty = total_penalty + data_table.total_penalty_in
+	FROM (
+		SELECT
+		UNNEST(ARRAY[%s]) as provider_id,
+		UNNEST(ARRAY[%s]) as provider_type,
+		UNNEST(ARRAY[%s]) as pool_id,
+		UNNEST(ARRAY[%s]) as total_penalty_in
+	) AS data_table
+	WHERE (delegate_pools.provider_id = data_table.provider_id)
+		AND (delegate_pools.provider_type = data_table.provider_type)
+		AND (delegate_pools.pool_id = data_table.pool_id)
+		AND (delegate_pools.status != ?)`,
+		placeholders(n),
+		placeholders(n, "integer"),
+		placeholders(n),
+		placeholders(n, "integer"),
+	)
+
+	return edb.Store.Get().Exec(sql, vs...).Error
+}
+
+func makeBulkPenaltyValues(providerID string, providerType int, penaltyInfos []rewardInfo) []interface{} {
+	var (
+		n             = len(penaltyInfos)
+		providerIDs   = make([]interface{}, n)
+		providerTypes = make([]interface{}, n)
+		pools         = make([]interface{}, n)
+		penalties     = make([]interface{}, n)
+	)
+
+	for i, r := range penaltyInfos {
+		providerIDs[i] = providerID
+		providerTypes[i] = providerType
+		pools[i] = r.pool
+		penalties[i] = r.value
 	}
-	return nil
+
+	return append(append(append(providerIDs, providerTypes...), pools...), penalties...)
 }
 
 func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, error) {

@@ -27,19 +27,11 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "storage"
-    - "storage_rest"
     - "miner"
     - "miner_rest"
-    - "faucet"
-    - "faucet_rest"
-    - "vesting"
-    - "vesting_rest"
-    - "multi_sig"
-    - "zcnscbridge"
-    - "zcnscbridge_rest"
+    - "storage_rest"
   omitted_tests:
-  save_path: ./saved_data # do not add a load_path key, this is read from command line options
+  save_path: # do not add a load_path key, this is read from command line options
   load_concurrency: 4
 
 dbs:
@@ -92,7 +84,7 @@ smart_contracts:
     max_write_price: 100.0
     max_challenge_completion_time: 3m
     min_offer_duration: 10h
-    max_offer_duration: 10h
+    max_offer_duration: 744h
     min_blobber_capacity: 1024
     max_charge: 0.2
     min_stake: 0.0

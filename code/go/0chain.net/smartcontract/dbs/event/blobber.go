@@ -251,7 +251,6 @@ type AllocationQuery struct {
 	}
 	AllocationSize     int64
 	AllocationSizeInGB float64
-	PreferredBlobbers  []string
 	NumberOfDataShards int
 }
 

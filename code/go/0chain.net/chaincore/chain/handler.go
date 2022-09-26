@@ -1746,3 +1746,14 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
 }
+
+// SetupHandlers sets up the necessary API end points for miners
+func SetupMinerHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
+	setupHandlers(chainhandlersMap(c))
+}
+
+// SetupHandlers sets up the necessary API end points for sharders
+func SetupSharderHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
+}
