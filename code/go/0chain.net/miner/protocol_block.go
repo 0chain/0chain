@@ -831,7 +831,7 @@ func txnIterHandlerFunc(mc *Chain,
 
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 		if err != nil {
-			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 			return true
 		}
 		if tii.cost+cost >= mc.ChainConfig.MaxBlockCost() {
@@ -954,7 +954,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		txn := iterInfo.currentTxns[i]
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 		if err != nil {
-			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 			break
 		}
 		if iterInfo.cost+cost >= mc.ChainConfig.MaxBlockCost() {
@@ -1071,7 +1071,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		for _, txn := range b.Txns {
 			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 			if err != nil {
-				logging.Logger.Debug("Bad transaction cost", zap.Error(err))
+				logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 				break
 			}
 			costs = append(costs, c)
