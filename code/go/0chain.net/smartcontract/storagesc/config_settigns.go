@@ -86,7 +86,6 @@ const (
 
 	OwnerId
 
-	Cost
 	CostUpdateSettings
 	CostReadRedeem
 	CostCommitConnection
@@ -184,7 +183,6 @@ func initSettingName() {
 	SettingName[BlockRewardZetaK] = "block_reward.zeta.k"
 	SettingName[BlockRewardZetaMu] = "block_reward.zeta.mu"
 	SettingName[OwnerId] = "owner_id"
-	SettingName[Cost] = "cost"
 	SettingName[CostUpdateSettings] = "cost.update_settings"
 	SettingName[CostReadRedeem] = "cost.read_redeem"
 	SettingName[CostCommitConnection] = "cost.commit_connection"
@@ -272,7 +270,6 @@ func initSettings() {
 		SettingName[BlockRewardZetaK]:                 {BlockRewardZetaK, smartcontract.Float64},
 		SettingName[BlockRewardZetaMu]:                {BlockRewardZetaMu, smartcontract.Float64},
 		SettingName[OwnerId]:                          {OwnerId, smartcontract.Key},
-		SettingName[Cost]:                             {Cost, smartcontract.Cost},
 		SettingName[CostUpdateSettings]:               {CostUpdateSettings, smartcontract.Cost},
 		SettingName[CostReadRedeem]:                   {CostReadRedeem, smartcontract.Cost},
 		SettingName[CostCommitConnection]:             {CostCommitConnection, smartcontract.Cost},
@@ -519,13 +516,6 @@ func (conf *Config) setBoolean(key string, change bool) error {
 	return nil
 }
 
-func (conf *Config) setCost(key string, change int) {
-	if change < 0 {
-		return
-	}
-	conf.Cost[strings.TrimPrefix(key, fmt.Sprintf("%s.", SettingName[Cost]))] = change
-}
-
 func (conf *Config) setKey(key string, change string) {
 	switch Settings[key].setting {
 	case OwnerId:
@@ -595,15 +585,6 @@ func (conf *Config) set(key string, change string) error {
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
-	case smartcontract.Cost:
-		if key == SettingName[Cost] {
-			return fmt.Errorf("cost update key must follow cost.* format")
-		}
-		value, err := strconv.Atoi(change)
-		if err != nil {
-			return fmt.Errorf("key %s, unable to convert %v to integer", key, change)
-		}
-		conf.setCost(key, value)
 	case smartcontract.Key:
 		if _, err := hex.DecodeString(change); err != nil {
 			return fmt.Errorf("%s must be a hes string: %v", key, err)
@@ -616,6 +597,7 @@ func (conf *Config) set(key string, change string) error {
 }
 
 func (conf *Config) get(key Setting) interface{} {
+	const costPrefix = "cost."
 	switch key {
 	case MaxMint:
 		return conf.MaxMint
@@ -713,72 +695,70 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.Zeta.Mu
 	case OwnerId:
 		return conf.OwnerId
-	case Cost:
-		return ""
 	case CostUpdateSettings:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostUpdateSettings], costPrefix)]
 	case CostReadRedeem:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadRedeem], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostReadRedeem], costPrefix)]
 	case CostCommitConnection:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCommitConnection], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCommitConnection], costPrefix)]
 	case CostNewAllocationRequest:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostNewAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostNewAllocationRequest], costPrefix)]
 	case CostUpdateAllocationRequest:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostUpdateAllocationRequest], costPrefix)]
 	case CostFinalizeAllocation:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFinalizeAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostFinalizeAllocation], costPrefix)]
 	case CostCancelAllocation:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCancelAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCancelAllocation], costPrefix)]
 	case CostAddFreeStorageAssigner:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddFreeStorageAssigner], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostAddFreeStorageAssigner], costPrefix)]
 	case CostFreeAllocationRequest:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFreeAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostFreeAllocationRequest], costPrefix)]
 	case CostFreeUpdateAllocation:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFreeUpdateAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostFreeUpdateAllocation], costPrefix)]
 	case CostAddCurator:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddCurator], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostAddCurator], costPrefix)]
 	case CostRemoveCurator:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostRemoveCurator], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostRemoveCurator], costPrefix)]
 	case CostBlobberHealthCheck:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostBlobberHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostBlobberHealthCheck], costPrefix)]
 	case CostUpdateBlobberSettings:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateBlobberSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostUpdateBlobberSettings], costPrefix)]
 	case CostPayBlobberBlockRewards:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostPayBlobberBlockRewards], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostPayBlobberBlockRewards], costPrefix)]
 	case CostCuratorTransferAllocation:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCuratorTransferAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCuratorTransferAllocation], costPrefix)]
 	case CostChallengeRequest:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostChallengeRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostChallengeRequest], costPrefix)]
 	case CostChallengeResponse:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostChallengeResponse], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostChallengeResponse], costPrefix)]
 	case CostGenerateChallenges:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostGenerateChallenges], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostGenerateChallenges], costPrefix)]
 	case CostAddValidator:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddValidator], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostAddValidator], costPrefix)]
 	case CostUpdateValidatorSettings:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateValidatorSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostUpdateValidatorSettings], costPrefix)]
 	case CostAddBlobber:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddBlobber], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostAddBlobber], costPrefix)]
 	case CostNewReadPool:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostNewReadPool], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostNewReadPool], costPrefix)]
 	case CostReadPoolLock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostReadPoolLock], costPrefix)]
 	case CostReadPoolUnlock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostReadPoolUnlock], costPrefix)]
 	case CostWritePoolLock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostWritePoolLock], costPrefix)]
 	case CostWritePoolUnlock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostWritePoolUnlock], costPrefix)]
 	case CostStakePoolLock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostStakePoolLock], costPrefix)]
 	case CostStakePoolUnlock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostStakePoolUnlock], costPrefix)]
 	case CostStakePoolPayInterests:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolPayInterests], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostStakePoolPayInterests], costPrefix)]
 	case CostCommitSettingsChanges:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCommitSettingsChanges], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCommitSettingsChanges], costPrefix)]
 	case CostCollectReward:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCollectReward], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCollectReward], costPrefix)]
 
 	default:
 		panic("Setting not implemented")
@@ -845,7 +825,7 @@ func (ssc *StorageSmartContract) updateSettings(
 }
 
 func (ssc *StorageSmartContract) commitSettingChanges(
-	t *transaction.Transaction,
+	_ *transaction.Transaction,
 	_ []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
