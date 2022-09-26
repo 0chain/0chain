@@ -214,7 +214,7 @@ func main() {
 			// start pprof server
 			pprofMux := http.NewServeMux()
 			profServer = &http.Server{
-				Addr:           fmt.Sprintf(":%d", node.Self.Underlying().Port+10),
+				Addr:           fmt.Sprintf(":%d", node.Self.Underlying().Port-1000),
 				ReadTimeout:    30 * time.Second,
 				MaxHeaderBytes: 1 << 20,
 				Handler:        pprofMux,
