@@ -322,7 +322,7 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	t.Run(ErrFinalizedTooSoon, func(t *testing.T) {
 		var allocationExpired = allocation
-		allocationExpired.Expiration = now - toSeconds(allocation.ChallengeCompletionTime) + 1
+		allocationExpired.Expiration = now - toSeconds(getMaxChallengeCompletionTime()) + 1
 
 		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml,
 			challengePoolBalance, blobberOffer, thisExpires, now)
