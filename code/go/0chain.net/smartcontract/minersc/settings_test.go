@@ -132,17 +132,34 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
+					case smartcontract.Cost:
+						{
+							expected, err := strconv.Atoi(value)
+							require.NoError(t, err)
+							actual, ok := setting.(int)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+
+					default:
+						return false
 					}
+
 				}
 				return true
 			}),
 		).Return("", nil).Once()
 
 		return args{
-			msc:      msc,
-			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
-			gn:       &GlobalNode{OwnerId: owner},
+			msc:   msc,
+			txn:   txn,
+			input: (&smartcontract.StringMap{p.inputMap}).Encode(),
+			gn: &GlobalNode{
+				OwnerId: owner,
+				Cost:    make(map[string]int),
+			},
 			balances: balances,
 		}
 	}
@@ -162,25 +179,43 @@ func TestUpdateSettings(t *testing.T) {
 			parameters: parameters{
 				client: owner,
 				inputMap: map[string]string{
-					"min_stake":              "0.0",
-					"max_stake":              "100",
-					"max_n":                  "7",
-					"min_n":                  "3",
-					"t_percent":              "0.66",
-					"k_percent":              "0.75",
-					"x_percent":              "0.70",
-					"max_s":                  "2",
-					"min_s":                  "1",
-					"max_delegates":          "200",
-					"reward_round_frequency": "64250",
-					"reward_rate":            "1.0",
-					"share_ratio":            "50",
-					"block_reward":           "021",
-					"max_charge":             "0.5",
-					"epoch":                  "6415000000",
-					"reward_decline_rate":    "0.1",
-					"max_mint":               "1500000.0",
-					"owner_id":               owner,
+					"min_stake":                    "0.0",
+					"max_stake":                    "100",
+					"max_n":                        "7",
+					"min_n":                        "3",
+					"t_percent":                    "0.66",
+					"k_percent":                    "0.75",
+					"x_percent":                    "0.70",
+					"max_s":                        "2",
+					"min_s":                        "1",
+					"max_delegates":                "200",
+					"reward_round_frequency":       "64250",
+					"reward_rate":                  "1.0",
+					"share_ratio":                  "50",
+					"block_reward":                 "021",
+					"max_charge":                   "0.5",
+					"epoch":                        "6415000000",
+					"reward_decline_rate":          "0.1",
+					"max_mint":                     "1500000.0",
+					"owner_id":                     owner,
+					"cost.add_miner":               "111",
+					"cost.add_sharder":             "111",
+					"cost.delete_miner":            "111",
+					"cost.miner_health_check":      "111",
+					"cost.sharder_health_check":    "111",
+					"cost.contributeMpk":           "111",
+					"cost.shareSignsOrShares":      "111",
+					"cost.wait":                    "111",
+					"cost.update_globals":          "111",
+					"cost.update_settings":         "111",
+					"cost.update_miner_settings":   "111",
+					"cost.update_sharder_settings": "111",
+					"cost.payFees":                 "111",
+					"cost.feesPaid":                "111",
+					"cost.mintedTokens":            "111",
+					"cost.addToDelegatePool":       "111",
+					"cost.deleteFromDelegatePool":  "111",
+					"cost.sharder_keep":            "111",
 				},
 			},
 		},
