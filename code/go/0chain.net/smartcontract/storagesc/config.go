@@ -184,153 +184,153 @@ type Config struct {
 	Cost    map[string]int `json:"cost"`
 }
 
-func (sc *Config) validate() (err error) {
-	if sc.TimeUnit <= 1*time.Second {
-		return fmt.Errorf("time_unit less than 1s: %v", sc.TimeUnit)
+func (conf *Config) validate() (err error) {
+	if conf.TimeUnit <= 1*time.Second {
+		return fmt.Errorf("time_unit less than 1s: %v", conf.TimeUnit)
 	}
-	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
+	if conf.ValidatorReward < 0.0 || 1.0 < conf.ValidatorReward {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
-			sc.ValidatorReward)
+			conf.ValidatorReward)
 	}
-	if sc.BlobberSlash < 0.0 || 1.0 < sc.BlobberSlash {
+	if conf.BlobberSlash < 0.0 || 1.0 < conf.BlobberSlash {
 		return fmt.Errorf("blobber_slash not in [0; 1] range: %v",
-			sc.BlobberSlash)
+			conf.BlobberSlash)
 	}
-	if sc.CancellationCharge < 0.0 || 1.0 < sc.CancellationCharge {
+	if conf.CancellationCharge < 0.0 || 1.0 < conf.CancellationCharge {
 		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
-			sc.CancellationCharge)
+			conf.CancellationCharge)
 	}
-	if sc.MaxBlobbersPerAllocation <= 0 {
+	if conf.MaxBlobbersPerAllocation <= 0 {
 		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
-			sc.MaxBlobbersPerAllocation)
+			conf.MaxBlobbersPerAllocation)
 	}
-	if sc.MinBlobberCapacity < 0 {
+	if conf.MinBlobberCapacity < 0 {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
-			sc.MinBlobberCapacity)
+			conf.MinBlobberCapacity)
 	}
-	if sc.MinOfferDuration < 0 {
+	if conf.MinOfferDuration < 0 {
 		return fmt.Errorf("negative min_offer_duration: %v",
-			sc.MinOfferDuration)
+			conf.MinOfferDuration)
 	}
-	if sc.MaxChallengeCompletionTime < 0 {
+	if conf.MaxChallengeCompletionTime < 0 {
 		return fmt.Errorf("negative max_challenge_completion_time: %v",
-			sc.MaxChallengeCompletionTime)
+			conf.MaxChallengeCompletionTime)
 	}
-	if sc.MinAllocDuration < 0 {
+	if conf.MinAllocDuration < 0 {
 		return fmt.Errorf("negative min_alloc_duration: %v",
-			sc.MinAllocDuration)
+			conf.MinAllocDuration)
 	}
-	if sc.MinAllocSize < 0 {
-		return fmt.Errorf("negative min_alloc_size: %v", sc.MinAllocSize)
+	if conf.MinAllocSize < 0 {
+		return fmt.Errorf("negative min_alloc_size: %v", conf.MinAllocSize)
 	}
 
-	if sc.MaxWritePrice < sc.MinWritePrice {
+	if conf.MaxWritePrice < conf.MinWritePrice {
 		return fmt.Errorf("max wirte price %v must be more than min_write_price: %v",
-			sc.MaxWritePrice, sc.MinWritePrice)
+			conf.MaxWritePrice, conf.MinWritePrice)
 	}
-	if sc.StakePool.MinLock <= 1 {
+	if conf.StakePool.MinLock <= 1 {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
-			sc.StakePool.MinLock)
+			conf.StakePool.MinLock)
 	}
 
-	if sc.FreeAllocationSettings.DataShards < 0 {
+	if conf.FreeAllocationSettings.DataShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
-			sc.FreeAllocationSettings.DataShards)
+			conf.FreeAllocationSettings.DataShards)
 	}
-	if sc.FreeAllocationSettings.ParityShards < 0 {
+	if conf.FreeAllocationSettings.ParityShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.parity_shards: %v",
-			sc.FreeAllocationSettings.ParityShards)
+			conf.FreeAllocationSettings.ParityShards)
 	}
-	if sc.FreeAllocationSettings.Size < 0 {
+	if conf.FreeAllocationSettings.Size < 0 {
 		return fmt.Errorf("negative free_allocation_settings.size: %v",
-			sc.FreeAllocationSettings.Size)
+			conf.FreeAllocationSettings.Size)
 	}
-	if sc.FreeAllocationSettings.Duration <= 0 {
+	if conf.FreeAllocationSettings.Duration <= 0 {
 		return fmt.Errorf("negative free_allocation_settings.expiration_date: %v",
-			sc.FreeAllocationSettings.Duration)
+			conf.FreeAllocationSettings.Duration)
 	}
-	if !sc.FreeAllocationSettings.ReadPriceRange.isValid() {
+	if !conf.FreeAllocationSettings.ReadPriceRange.isValid() {
 		return fmt.Errorf("invalid free_allocation_settings.read_price_range: %v",
-			sc.FreeAllocationSettings.ReadPriceRange)
+			conf.FreeAllocationSettings.ReadPriceRange)
 	}
-	if !sc.FreeAllocationSettings.WritePriceRange.isValid() {
+	if !conf.FreeAllocationSettings.WritePriceRange.isValid() {
 		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
-			sc.FreeAllocationSettings.WritePriceRange)
+			conf.FreeAllocationSettings.WritePriceRange)
 	}
-	if sc.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < sc.FreeAllocationSettings.ReadPoolFraction {
+	if conf.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < conf.FreeAllocationSettings.ReadPoolFraction {
 		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
-			sc.FreeAllocationSettings.ReadPoolFraction)
+			conf.FreeAllocationSettings.ReadPoolFraction)
 	}
 
-	if sc.FailedChallengesToCancel < 0 {
+	if conf.FailedChallengesToCancel < 0 {
 		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
-			sc.FailedChallengesToCancel)
+			conf.FailedChallengesToCancel)
 	}
-	if sc.FailedChallengesToRevokeMinLock < 0 {
+	if conf.FailedChallengesToRevokeMinLock < 0 {
 		return fmt.Errorf("negative failed_challenges_to_revoke_min_lock: %v",
-			sc.FailedChallengesToRevokeMinLock)
+			conf.FailedChallengesToRevokeMinLock)
 	}
-	if sc.MaxChallengesPerGeneration <= 0 {
+	if conf.MaxChallengesPerGeneration <= 0 {
 		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
-			sc.MaxChallengesPerGeneration)
+			conf.MaxChallengesPerGeneration)
 	}
-	if sc.ValidatorsPerChallenge <= 0 {
+	if conf.ValidatorsPerChallenge <= 0 {
 		return fmt.Errorf("invalid validators_per_challenge <= 0: %v",
-			sc.ValidatorsPerChallenge)
+			conf.ValidatorsPerChallenge)
 	}
-	if sc.ChallengeGenerationRate < 0 {
+	if conf.ChallengeGenerationRate < 0 {
 		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
-			sc.ChallengeGenerationRate)
+			conf.ChallengeGenerationRate)
 	}
 
-	if sc.MaxStake < sc.MinStake {
-		return fmt.Errorf("max_stake less than min_stake: %v < %v", sc.MinStake,
-			sc.MaxStake)
+	if conf.MaxStake < conf.MinStake {
+		return fmt.Errorf("max_stake less than min_stake: %v < %v", conf.MinStake,
+			conf.MaxStake)
 	}
-	if sc.MaxDelegates < 1 {
-		return fmt.Errorf("max_delegates is too small %v", sc.MaxDelegates)
+	if conf.MaxDelegates < 1 {
+		return fmt.Errorf("max_delegates is too small %v", conf.MaxDelegates)
 	}
-	if sc.MaxCharge < 0 {
-		return fmt.Errorf("negative max_charge: %v", sc.MaxCharge)
+	if conf.MaxCharge < 0 {
+		return fmt.Errorf("negative max_charge: %v", conf.MaxCharge)
 	}
-	if sc.MaxCharge > 1.0 {
+	if conf.MaxCharge > 1.0 {
 		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
-			sc.MaxCharge)
+			conf.MaxCharge)
 	}
 
-	if sc.BlockReward.SharderWeight < 0 {
+	if conf.BlockReward.SharderWeight < 0 {
 		return fmt.Errorf("negative block_reward.sharder_weight: %v",
-			sc.BlockReward.SharderWeight)
+			conf.BlockReward.SharderWeight)
 	}
-	if sc.BlockReward.MinerWeight < 0 {
+	if conf.BlockReward.MinerWeight < 0 {
 		return fmt.Errorf("negative block_reward.miner_weight: %v",
-			sc.BlockReward.MinerWeight)
+			conf.BlockReward.MinerWeight)
 	}
-	if sc.BlockReward.BlobberWeight < 0 {
+	if conf.BlockReward.BlobberWeight < 0 {
 		return fmt.Errorf("negative block_reward.blobber_capacity_weight: %v",
-			sc.BlockReward.BlobberWeight)
+			conf.BlockReward.BlobberWeight)
 	}
-	if len(sc.OwnerId) == 0 {
+	if len(conf.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
 	}
 
-	if sc.BlockReward.Gamma.A <= 0 {
-		return fmt.Errorf("invalid block_reward.gamma.a <= 0: %v", sc.BlockReward.Gamma.A)
+	if conf.BlockReward.Gamma.A <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.a <= 0: %v", conf.BlockReward.Gamma.A)
 	}
-	if sc.BlockReward.Gamma.B <= 0 {
-		return fmt.Errorf("invalid block_reward.gamma.b <= 0: %v", sc.BlockReward.Gamma.B)
+	if conf.BlockReward.Gamma.B <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.b <= 0: %v", conf.BlockReward.Gamma.B)
 	}
-	if sc.BlockReward.Gamma.Alpha <= 0 {
-		return fmt.Errorf("invalid block_reward.gamma.alpha <= 0: %v", sc.BlockReward.Gamma.Alpha)
+	if conf.BlockReward.Gamma.Alpha <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.alpha <= 0: %v", conf.BlockReward.Gamma.Alpha)
 	}
-	if sc.BlockReward.Zeta.Mu <= 0 {
-		return fmt.Errorf("invalid block_reward.zeta.mu <= 0: %v", sc.BlockReward.Zeta.Mu)
+	if conf.BlockReward.Zeta.Mu <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.mu <= 0: %v", conf.BlockReward.Zeta.Mu)
 	}
-	if sc.BlockReward.Zeta.I <= 0 {
-		return fmt.Errorf("invalid block_reward.zeta.i <= 0: %v", sc.BlockReward.Zeta.I)
+	if conf.BlockReward.Zeta.I <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.i <= 0: %v", conf.BlockReward.Zeta.I)
 	}
-	if sc.BlockReward.Zeta.K <= 0 {
-		return fmt.Errorf("invalid block_reward.zeta.k <=0: %v", sc.BlockReward.Zeta.K)
+	if conf.BlockReward.Zeta.K <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.k <=0: %v", conf.BlockReward.Zeta.K)
 	}
 
 	return
