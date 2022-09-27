@@ -848,8 +848,6 @@ func updateConfig(balances cstate.CommonStateContextI) error {
 		if err != nil {
 			return err
 		}
-		return err
-
 	}
 	balances.SetConfig(conf)
 
