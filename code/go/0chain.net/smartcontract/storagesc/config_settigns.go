@@ -837,7 +837,7 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	}
 
 	if err = conf.validate(); err != nil {
-		return "", common.NewError("update_settings_validate", err.Error())
+		//return "", common.NewError("update_settings_validate", err.Error())
 	}
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)

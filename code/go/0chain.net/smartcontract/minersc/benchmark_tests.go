@@ -255,7 +255,6 @@ func BenchmarkTests(
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
-
 					"min_stake":                    "0.0",
 					"max_stake":                    "100",
 					"max_n":                        "7",
@@ -274,6 +273,7 @@ func BenchmarkTests(
 					"epoch":                        "6415000000",
 					"reward_decline_rate":          "0.1",
 					"max_mint":                     "1500000.0",
+					"owner_id":                     "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
 					"cost.add_miner":               "111",
 					"cost.add_sharder":             "111",
 					"cost.delete_miner":            "111",

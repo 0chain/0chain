@@ -1,6 +1,7 @@
 package minersc_test
 
 import (
+	"encoding/hex"
 	"strconv"
 	"testing"
 	"time"
@@ -134,7 +135,16 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-
+					case smartcontract.Key:
+						{
+							_, err := hex.DecodeString(value)
+							require.NoError(t, err)
+							actual, ok := setting.(string)
+							require.True(t, ok)
+							if value != actual {
+								return false
+							}
+						}
 					default:
 						return false
 					}
@@ -189,6 +199,7 @@ func TestUpdateSettings(t *testing.T) {
 					"epoch":                        "6415000000",
 					"reward_decline_rate":          "0.1",
 					"max_mint":                     "1500000.0",
+					"owner_id":                     owner,
 					"cost.add_miner":               "111",
 					"cost.add_sharder":             "111",
 					"cost.delete_miner":            "111",

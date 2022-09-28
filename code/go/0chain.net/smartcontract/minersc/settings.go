@@ -328,7 +328,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 		}
 	case smartcontract.Key:
 		if _, err := hex.DecodeString(change); err != nil {
-			return fmt.Errorf("%s must be a hes string: %v", key, err)
+			return fmt.Errorf("%s must be a hex string: %v", key, err)
 		}
 		gn.setKey(key, change)
 	case smartcontract.Cost:
