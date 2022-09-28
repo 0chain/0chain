@@ -317,7 +317,7 @@ func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
 	var out smartcontract.StringMap
 	out.Fields = make(map[string]string)
 	for _, key := range SettingName {
-		info, ok := Settings[strings.ToLower(key)]
+		info, ok := Settings[key]
 		if !ok {
 			return out, fmt.Errorf("SettingName %s not found in Settings", key)
 		}
@@ -568,7 +568,6 @@ func (conf *Config) setKey(key string, change string) {
 }
 
 func (conf *Config) set(key string, change string) error {
-	key = strings.ToLower(key)
 	s, ok := Settings[key]
 	if !ok {
 		return fmt.Errorf("unknown key %s, can't set value %v", key, change)

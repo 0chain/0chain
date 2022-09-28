@@ -284,7 +284,6 @@ func isCost(key string) bool {
 }
 
 func (gn *GlobalNode) set(key string, change string) error {
-	key = strings.ToLower(key)
 	settings, ok := Settings[key]
 	if !ok {
 		return fmt.Errorf("unsupported key %v", key)

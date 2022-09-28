@@ -1,9 +1,7 @@
 package minersc_test
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -31,7 +29,7 @@ func TestSettings(t *testing.T) {
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[strings.ToLower(name)].Setting])
+		require.EqualValues(t, name, SettingName[Settings[name].Setting])
 	}
 }
 
@@ -63,13 +61,7 @@ func TestUpdateSettings(t *testing.T) {
 			GlobalNodeKey,
 			mock.MatchedBy(func(gn *GlobalNode) bool {
 				for key, value := range p.inputMap {
-					//if gn.Get(Settings[key].Setting) != value {
-					//	return false
-					//}
-
-					//var setting interface{} = getConfField(*conf, key)
 					setting, _ := gn.Get(Settings[key].Setting)
-					fmt.Println("setting", setting, "value", value)
 					switch Settings[key].ConfigType {
 					case smartcontract.Int:
 						{
@@ -197,7 +189,6 @@ func TestUpdateSettings(t *testing.T) {
 					"epoch":                        "6415000000",
 					"reward_decline_rate":          "0.1",
 					"max_mint":                     "1500000.0",
-					"owner_id":                     owner,
 					"cost.add_miner":               "111",
 					"cost.add_sharder":             "111",
 					"cost.delete_miner":            "111",

@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -25,7 +24,7 @@ func TestSettings(t *testing.T) {
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[strings.ToLower(name)].setting])
+		require.EqualValues(t, name, SettingName[Settings[name].setting])
 	}
 }
 
