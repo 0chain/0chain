@@ -84,10 +84,7 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 
 func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
 	scheme := ctx.GetSignatureScheme()
-
 	_ = scheme.GenerateKeys()
-	fmt.Println("Public Key")
-	fmt.Println(scheme.GetPublicKey())
 	var txn = &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
@@ -95,27 +92,6 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 		Value:             1,
 		CreationDate:      startTime,
 		PublicKey:         AuthorizerPublicKey,
-		TransactionData:   "",
-		Signature:         "",
-		Fee:               0,
-		TransactionType:   transaction.TxnTypeSmartContract,
-		TransactionOutput: "",
-		OutputHash:        "",
-	}
-
-	addTransactionData(txn, AddAuthorizerFunc, CreateAuthorizerParamPayload(fromClient, AuthorizerPublicKey))
-
-	return txn
-}
-
-func CreateAddAuthorizerTransactionWithPublicKey(fromClient string, publicKey string, ctx state.StateContextI) *transaction.Transaction {
-	var txn = &transaction.Transaction{
-		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
-		ClientID:          "",
-		ToClientID:        ADDRESS,
-		Value:             1,
-		CreationDate:      startTime,
-		PublicKey:         publicKey,
 		TransactionData:   "",
 		Signature:         "",
 		Fee:               0,
