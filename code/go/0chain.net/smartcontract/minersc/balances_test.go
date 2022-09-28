@@ -25,7 +25,7 @@ type testBalances struct {
 	block         *block.Block
 	blockSharders []string
 	lfmb          *block.Block
-	config        *cstate.CommonStateContextI
+	config        *cstate.StoragescConfig
 }
 
 func newTestBalances() *testBalances {
@@ -157,11 +157,11 @@ func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock {
 }
 
 // GetConfig implements state.StateContextI
-func (tb *testBalances) GetConfig() *cstate.CommonStateContextI {
+func (tb *testBalances) GetConfig() *cstate.StoragescConfig {
 	return tb.config
 }
 
 // SetConfig implements state.StateContextI
-func (tb *testBalances) SetConfig(config cstate.CommonStateContextI) {
+func (tb *testBalances) SetConfig(config cstate.StoragescConfig) {
 	tb.config = &config
 }

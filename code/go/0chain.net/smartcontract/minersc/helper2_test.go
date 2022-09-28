@@ -27,6 +27,17 @@ type mockStateContext struct {
 	sharders                   []string
 	events                     []event.Event
 	LastestFinalizedMagicBlock *block.Block
+	config                     *cstate.StoragescConfig
+}
+
+// GetConfig implements state.CommonStateContextI
+func (sc *mockStateContext) GetConfig() *cstate.StoragescConfig {
+	return sc.config
+}
+
+// SetConfig implements state.CommonStateContextI
+func (sc *mockStateContext) SetConfig(config cstate.StoragescConfig) {
+	sc.config = &config
 }
 
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     {}
