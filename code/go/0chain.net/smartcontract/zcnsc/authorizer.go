@@ -278,12 +278,22 @@ func (zcn *ZCNSmartContract) CollectRewards(
 	return "", nil
 }
 
-func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, input []byte, ctx cstate.StateContextI) (string, error) {
 	var (
-		authorizerID = tran.ClientID
 		errorCode    = "failed to delete authorizer"
 		err          error
+		authorizerID string
 	)
+
+	payload := DeleteAuthorizerPayload{}
+	err = payload.Decode(input)
+	if err != nil {
+		err = common.NewError(errorCode, "failed to decode AddAuthorizerPayload")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+
+	authorizerID = payload.ID
 
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
 	if err != nil {
