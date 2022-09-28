@@ -1319,7 +1319,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, err
 	}
 
-	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, sc.OwnerID())
+	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, txn.ClientID)
 	if !isValid(err) {
 		return nil, err
 	}
