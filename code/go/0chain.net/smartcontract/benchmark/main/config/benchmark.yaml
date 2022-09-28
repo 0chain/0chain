@@ -29,7 +29,6 @@ options:
   test_suites:
     - "miner"
     - "miner_rest"
-    - "storage"
     - "storage_rest"
   omitted_tests:
   save_path: # do not add a load_path key, this is read from command line options
