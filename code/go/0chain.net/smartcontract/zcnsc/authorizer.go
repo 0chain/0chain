@@ -1,9 +1,10 @@
 package zcnsc
 
 import (
-	"0chain.net/core/encryption"
 	"encoding/hex"
 	"fmt"
+
+	"0chain.net/core/encryption"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -53,15 +54,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		Logger.Error("public key error", zap.Error(err))
 		return "", err
 	}
-
-	if params.ID == "" {
-		err = common.NewError(code, "authorizer ID cannot be empty")
-		Logger.Error("authorizer id error", zap.Error(err))
-		return "", err
-	}
-
-	authorizerID = params.ID
-
 	if params.PublicKey == "" {
 		err = common.NewError(code, "public key was not included with transaction")
 		Logger.Error("public key error", zap.Error(err))
@@ -69,8 +61,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	}
 
 	publicKeyBytes, _ := hex.DecodeString(params.PublicKey)
-	clientId = encryption.Hash(publicKeyBytes)
-
+	authorizerID = encryption.Hash(publicKeyBytes)
+	clientId = tran.ClientID
 	if params.StakePoolSettings.DelegateWallet == "" {
 		return "", common.NewError(code, "authorizer's delegate_wallet not set")
 	}
