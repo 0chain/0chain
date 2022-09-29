@@ -136,6 +136,7 @@ func TestUpdateSettings(t *testing.T) {
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
+					"cancellation_charge":            "0.2",
 
 					"free_allocation_settings.data_shards":           "10",
 					"free_allocation_settings.parity_shards":         "5",
@@ -170,8 +171,6 @@ func TestUpdateSettings(t *testing.T) {
 					"block_reward.zeta.i":           "1",
 					"block_reward.zeta.k":           "0.9",
 					"block_reward.zeta.mu":          "0.2",
-
-					"expose_mpt": "false",
 				},
 			},
 		},
@@ -338,6 +337,7 @@ func TestCommitSettingChanges(t *testing.T) {
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
+					"cancellation_charge":            "0.2",
 
 					"free_allocation_settings.data_shards":           "10",
 					"free_allocation_settings.parity_shards":         "5",
@@ -373,8 +373,6 @@ func TestCommitSettingChanges(t *testing.T) {
 					"block_reward.zeta.i":           "1",
 					"block_reward.zeta.k":           "0.9",
 					"block_reward.zeta.mu":          "0.2",
-
-					"expose_mpt": "false",
 				},
 			},
 		},
@@ -382,16 +380,12 @@ func TestCommitSettingChanges(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.title, func(t *testing.T) {
 			test := test
-			//t.Parallel()
 			args := setExpectations(t, test.parameters)
-
 			_, err := args.ssc.commitSettingChanges(args.txn, args.input, args.balances)
-			//require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
 				t.Fatal("commitSettingChanges err: ", err.Error())
 				return
 			}
-			//require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
 }
@@ -425,6 +419,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
 		return conf.MaxIndividualFreeAllocation
+	case CancellationCharge:
+		return conf.CancellationCharge
 
 	case FreeAllocationDataShards:
 		return conf.FreeAllocationSettings.DataShards
@@ -493,9 +489,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.Zeta.K
 	case BlockRewardZetaMu:
 		return conf.BlockReward.Zeta.Mu
-
-	case ExposeMpt:
-		return conf.ExposeMpt
 	default:
 		panic("unknown field: " + field)
 	}

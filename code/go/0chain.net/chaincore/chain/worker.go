@@ -259,7 +259,11 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 
 				errC := make(chan error, 1)
 				go func() {
+					ts := time.Now()
 					errC <- c.finalizeBlockProcess(cctx, fbr.block, bsh)
+					Logger.Debug("finalize block processed",
+						zap.Int64("round", fbr.block.Round),
+						zap.Any("duration", time.Since(ts)))
 				}()
 
 				select {

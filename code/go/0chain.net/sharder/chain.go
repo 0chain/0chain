@@ -222,7 +222,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 
 	// add as notarized
 	bl.lfb.SetBlockState(block.StateNotarized)
-	bl.lfb, _ = bl.r.AddNotarizedBlock(bl.lfb)
+	bl.r.AddNotarizedBlock(bl.lfb)
 
 	// setup nlfmb
 	if bl.nlfmb != nil && bl.nlfmb.Round > bl.lfmb.Round {

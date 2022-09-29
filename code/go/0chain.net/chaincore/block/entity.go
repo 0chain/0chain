@@ -769,6 +769,7 @@ func (b *Block) Clone() *Block {
 		blockState:          b.blockState,
 		isNotarized:         b.isNotarized,
 		verificationStatus:  b.verificationStatus,
+		StateChangesCount:   b.StateChangesCount,
 	}
 	if b.MagicBlock != nil {
 		clone.MagicBlock = b.MagicBlock.Clone()

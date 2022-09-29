@@ -506,8 +506,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 		//
 		var (
-			step            = (int64(alloc.Expiration) - tp) / 10
-			challID, prevID string
+			step    = (int64(alloc.Expiration) - tp) / 10
+			challID string
 		)
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
@@ -518,8 +518,7 @@ func Test_flow_reward(t *testing.T) {
 			}
 
 			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, b3.id, tp, prevID, challID, i, validators,
-				alloc.ID, blobber, allocRoot, balances)
+			genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 
 			var chall = new(ChallengeResponse)
 			chall.ID = challID
@@ -668,8 +667,8 @@ func Test_flow_penalty(t *testing.T) {
 
 		//
 		var (
-			step            = (int64(alloc.Expiration) - tp) / 10
-			challID, prevID string
+			step    = (int64(alloc.Expiration) - tp) / 10
+			challID string
 
 			//until = alloc.Until()
 			// last loop balances (previous balance)
@@ -687,8 +686,7 @@ func Test_flow_penalty(t *testing.T) {
 			}
 
 			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, b4.id, tp, prevID, challID, i, validators,
-				alloc.ID, blobber, allocRoot, balances)
+			genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 
 			var chall = new(ChallengeResponse)
 			chall.ID = challID
@@ -893,13 +891,9 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 				blobber, err = ssc.getBlobber(b.id, balances)
 				require.NoError(t, err)
 
-				var challID, prevID string
+				var challID string
 				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
-				if i > 0 {
-					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
-				}
-				genChall(t, ssc, b.id, tp, prevID, challID, i,
-					validators, alloc.ID, blobber, allocRoot, balances)
+				genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 				gfc++
 			}
 		}
@@ -1119,28 +1113,14 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 				blobber, err = ssc.getBlobber(b.id, balances)
 				require.NoError(t, err)
 
-				var challID, prevID string
+				var challID string
 				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
-				if i > 0 {
-					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
-				}
-				genChall(t, ssc, b.id, tp, prevID, challID, i,
-					validators, alloc.ID, blobber, allocRoot, balances)
+				genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 			}
 		}
 
 		// let expire all the challenges
 		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
-
-		// add open challenges to allocation stats
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		if alloc.Stats == nil {
-			alloc.Stats = new(StorageAllocationStats)
-		}
-		alloc.Stats.OpenChallenges = 50 // just a non-zero number
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
-		require.NoError(t, err)
 
 		tp += 10 // a not expired allocation to cancel
 
@@ -1181,7 +1161,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Zero(t, cpa)
-		require.EqualValues(t, wpb, wpa)
+		require.Equal(t, wpb, wpa)
 		require.Equal(t, alloc.MovedBack, cpb)
 
 		// no rewards for the blobber

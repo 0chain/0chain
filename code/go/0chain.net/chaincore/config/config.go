@@ -27,6 +27,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.messages.verification_tickets_to", "generator")
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
+	viper.SetDefault("server_chain.transaction.transfer_cost", 10)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 66)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)
@@ -183,6 +184,7 @@ type ChainConfig interface {
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
 	MinTxnFee() currency.Coin
+	TxnTransferCost() int
 }
 
 type DbAccess struct {

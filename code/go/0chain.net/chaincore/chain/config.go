@@ -43,13 +43,16 @@ type ConfigImpl struct {
 	guard sync.RWMutex
 }
 
-// FOR TEST PURPOSE ONLY
+//FOR TEST PURPOSE ONLY
 func (c *ConfigImpl) ConfDataForTest() *ConfigData {
 	return c.conf
 }
 
-// TODO: for test usage only, extend with more fields
+//TODO: for test usage only, extend with more fields
 func UpdateConfigImpl(conf *ConfigImpl, data *ConfigData) {
+	if data.BlockSize != 0 {
+		conf.conf.BlockSize = data.BlockSize
+	}
 }
 
 func NewConfigImpl(conf *ConfigData) *ConfigImpl {
@@ -127,6 +130,13 @@ func (c *ConfigImpl) OwnerID() datastore.Key {
 	defer c.guard.RUnlock()
 
 	return c.conf.OwnerID
+}
+
+func (c *ConfigImpl) BlockSize() int32 {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.BlockSize
 }
 
 func (c *ConfigImpl) MinBlockSize() int32 {
@@ -339,7 +349,14 @@ func (c *ConfigImpl) MinTxnFee() currency.Coin {
 	return c.conf.MinTxnFee
 }
 
-// ConfigData - chain Configuration
+func (c *ConfigImpl) TxnTransferCost() int {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.TxnTransferCost
+}
+
+//ConfigData - chain Configuration
 type ConfigData struct {
 	version               int64         `json:"-"` //version of config to track updates
 	IsStateEnabled        bool          `json:"state"`
@@ -353,20 +370,22 @@ type ConfigData struct {
 	IsMultisigEnabled     bool          `json:"multisig"`
 	IsVestingEnabled      bool          `json:"vesting"`
 	IsZcnEnabled          bool          `json:"zcn"`
-	OwnerID               datastore.Key `json:"owner_id"`                // Client who created this chain
-	MinBlockSize          int32         `json:"min_block_size"`          // Number of transactions a block needs to have
-	MaxBlockCost          int           `json:"max_block_cost"`          // multiplier of soft timeouts to restart a round
-	MaxByteSize           int64         `json:"max_byte_size"`           // Max number of bytes a block can have
-	MinGenerators         int           `json:"min_generators"`          // Min number of block generators.
-	GeneratorsPercent     float64       `json:"generators_percent"`      // Percentage of all miners
-	NumReplicators        int           `json:"num_replicators"`         // Number of sharders that can store the block
-	ThresholdByCount      int           `json:"threshold_by_count"`      // Threshold count for a block to be notarized
-	ThresholdByStake      int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
-	ValidationBatchSize   int           `json:"validation_size"`         // Batch size of txns for crypto verification
-	TxnMaxPayload         int           `json:"transaction_max_payload"` // Max payload allowed in the transaction
-	MinTxnFee             currency.Coin `json:"min_txn_fee"`             // Minimum txn fee allowed
-	PruneStateBelowCount  int           `json:"prune_state_below_count"` // Prune state below these many rounds
-	RoundRange            int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
+	OwnerID               datastore.Key `json:"owner_id"`                  // Client who created this chain
+	BlockSize             int32         `json:"block_size"`                // Number of transactions in a block
+	MinBlockSize          int32         `json:"min_block_size"`            // Number of transactions a block needs to have
+	MaxBlockCost          int           `json:"max_block_cost"`            // multiplier of soft timeouts to restart a round
+	MaxByteSize           int64         `json:"max_byte_size"`             // Max number of bytes a block can have
+	MinGenerators         int           `json:"min_generators"`            // Min number of block generators.
+	GeneratorsPercent     float64       `json:"generators_percent"`        // Percentage of all miners
+	NumReplicators        int           `json:"num_replicators"`           // Number of sharders that can store the block
+	ThresholdByCount      int           `json:"threshold_by_count"`        // Threshold count for a block to be notarized
+	ThresholdByStake      int           `json:"threshold_by_stake"`        // Stake threshold for a block to be notarized
+	ValidationBatchSize   int           `json:"validation_size"`           // Batch size of txns for crypto verification
+	TxnMaxPayload         int           `json:"transaction_max_payload"`   // Max payload allowed in the transaction
+	TxnTransferCost       int           `json:"transaction_transfer_cost"` // Transaction transfer cost
+	MinTxnFee             currency.Coin `json:"min_txn_fee"`               // Minimum txn fee allowed
+	PruneStateBelowCount  int           `json:"prune_state_below_count"`   // Prune state below these many rounds
+	RoundRange            int64         `json:"round_range"`               // blocks are stored in separate directory for each range of rounds
 
 	// todo move BlocksToSharder out of ConfigData
 	BlocksToSharder       int `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
@@ -420,6 +439,7 @@ func (c *ConfigImpl) FromViper() error {
 	conf.IsMultisigEnabled = viper.GetBool("server_chain.smart_contract.multisig")
 	conf.IsVestingEnabled = viper.GetBool("server_chain.smart_contract.vesting")
 	conf.IsZcnEnabled = viper.GetBool("server_chain.smart_contract.zcn")
+	conf.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	conf.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
 	conf.MaxBlockCost = viper.GetInt("server_chain.block.max_block_cost")
 	conf.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
@@ -434,6 +454,10 @@ func (c *ConfigImpl) FromViper() error {
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
 	var err error
 	conf.MinTxnFee, err = currency.Int64ToCoin(viper.GetInt64("server_chain.transaction.min_fee"))
+	if err != nil {
+		return err
+	}
+	conf.TxnTransferCost = viper.GetInt("server_chain.transaction.transfer_cost")
 	if err != nil {
 		return err
 	}
@@ -510,7 +534,7 @@ func (c *ConfigImpl) FromViper() error {
 	return nil
 }
 
-// Updates the config fields from GlobalSettings fields
+//Updates the config fields from GlobalSettings fields
 func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	c.guard.Lock()
 	defer c.guard.Unlock()
@@ -568,6 +592,10 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 		return err
 	}
 	conf.MinBlockSize, err = cf.GetInt32(minersc.BlockMinSize)
+	if err != nil {
+		return err
+	}
+	conf.BlockSize, err = cf.GetInt32(minersc.BlockMaxSize)
 	if err != nil {
 		return err
 	}

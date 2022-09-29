@@ -98,16 +98,14 @@ func addMockStakePools(clients []string, ctx cstate.StateContextI) {
 		sp := NewStakePool()
 		sp.Settings = getMockStakePoolSettings(clients[i])
 		for j := 0; j < numDelegates; j++ {
-			did := getMockAuthoriserStakePoolId(clients[i], j)
-			sp.Pools[did] = getMockDelegatePool(clients[j])
+			//did := getMockAuthoriserStakePoolId(clients[i], j)
+			sp.Pools[clients[j]] = getMockDelegatePool(clients[j])
 
 			if usps[j] == nil {
 				usps[j] = stakepool.NewUserStakePools()
 			}
-			usps[j].Pools[clients[j]] = append(
-				usps[j].Pools[clients[j]],
-				did,
-			)
+
+			usps[j].Providers = append(usps[j].Providers, clients[i])
 		}
 		sp.Reward = 11
 		sp.Minter = cstate.MinterZcn

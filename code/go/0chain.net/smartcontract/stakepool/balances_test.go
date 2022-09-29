@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -27,6 +28,7 @@ import (
 //
 
 type testBalances struct {
+	sync.RWMutex
 	balances  map[datastore.Key]currency.Coin
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
@@ -96,6 +98,8 @@ func (tb *testBalances) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 		return datastore.Key(btkey), err
 	}
 
+	tb.Lock()
+	defer tb.Unlock()
 	delete(tb.tree, key)
 	return "", nil
 }
@@ -128,6 +132,8 @@ func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 		return tb.mpts.mpt.GetNodeValue(util.Path(encryption.Hash(key)), v)
 	}
 
+	tb.Lock()
+	defer tb.Unlock()
 	nd, ok := tb.tree[key]
 	if !ok {
 		return util.ErrValueNotPresent
@@ -154,6 +160,8 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 		return datastore.Key(btkey), err
 	}
 
+	tb.Lock()
+	defer tb.Unlock()
 	tb.tree[key] = node
 	return "", nil
 }

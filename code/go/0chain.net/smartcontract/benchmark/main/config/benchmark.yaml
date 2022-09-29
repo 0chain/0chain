@@ -84,7 +84,7 @@ smart_contracts:
     max_write_price: 100.0
     max_challenge_completion_time: 3m
     min_offer_duration: 10h
-    max_offer_duration: 10h
+    max_offer_duration: 744h
     min_blobber_capacity: 1024
     max_charge: 0.2
     min_stake: 0.0
