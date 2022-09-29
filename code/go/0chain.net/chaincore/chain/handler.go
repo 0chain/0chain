@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -1316,6 +1317,18 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	if err := txn.ValidateNonce(); err != nil {
 		return nil, err
+	}
+
+	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, txn.ClientID)
+	if !isValid(err) {
+		return nil, err
+	}
+	nonce := int64(0)
+	if s != nil {
+		nonce = s.Nonce
+	}
+	if txn.Nonce <= nonce {
+		return nil, errors.New("invalid transaction nonce")
 	}
 
 	return transaction.PutTransaction(ctx, txn)
