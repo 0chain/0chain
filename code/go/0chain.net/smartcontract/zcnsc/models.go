@@ -248,6 +248,7 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 // ------- AddAuthorizerPayload ------------
 
 type AddAuthorizerPayload struct {
+	ID                string             `json:"id"`
 	PublicKey         string             `json:"public_key"`
 	URL               string             `json:"url"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"` // Used to initially create stake pool
