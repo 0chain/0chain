@@ -56,7 +56,7 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	tr.TransactionData = string(snBytes)
 }
 
-func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContextI) (*transaction.Transaction, error) {
+func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContextI, input []byte) (*transaction.Transaction, error) {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 	value, err := currency.ParseZCN(1)
@@ -77,7 +77,7 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 		TransactionOutput: "",
 		OutputHash:        "",
 	}
-	addTransactionData(txn, DeleteAuthorizerFunc, nil)
+	addTransactionData(txn, DeleteAuthorizerFunc, input)
 	return txn, nil
 }
 
