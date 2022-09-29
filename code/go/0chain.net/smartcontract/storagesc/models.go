@@ -1172,7 +1172,8 @@ func (sa *StorageAllocation) validateEachBlobber(
 
 // Until returns allocation expiration.
 func (sa *StorageAllocation) Until() common.Timestamp {
-	return sa.Expiration + toSeconds(getMaxChallengeCompletionTime())
+	var conf = Config{}
+	return sa.Expiration + toSeconds(conf.MaxChallengeCompletionTime)
 }
 
 // The durationInTimeUnits returns given duration (represented as
