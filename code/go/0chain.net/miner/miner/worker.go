@@ -68,13 +68,6 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 	collectionName := txn.GetCollectionName()
 	sc := chain.GetServerChain()
 
-	//Ensure the initial set of transactions succeed or become invalid
-	//txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-	//for txnCount > blockSize {
-	//	time.Sleep(20 * time.Millisecond)
-	//	txnCount = int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-	//}
-
 	numWorkers = 8
 	numGenerators := sc.GetGeneratorsNum()
 	mb := sc.GetCurrentMagicBlock()
