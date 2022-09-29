@@ -291,40 +291,40 @@ func (gn *GlobalNode) set(key string, change string) error {
 
 	switch settings.ConfigType {
 	case smartcontract.Int:
-		if value, err := strconv.Atoi(change); err == nil {
-			if err := gn.setInt(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.Atoi(change)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
+		if err := gn.setInt(key, value); err != nil {
+			return err
+		}
 	case smartcontract.CurrencyCoin:
-		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			coinV, err := currency.ParseZCN(value)
-			if err != nil {
-				return err
-			}
-			if err := gn.setBalance(key, coinV); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.ParseFloat(change, 64)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
 		}
+		coinV, err := currency.ParseZCN(value)
+		if err != nil {
+			return err
+		}
+		if err := gn.setBalance(key, coinV); err != nil {
+			return err
+		}
 	case smartcontract.Int64:
-		if value, err := strconv.ParseInt(change, 10, 64); err == nil {
-			if err := gn.setInt64(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.ParseInt(change, 10, 64)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
 		}
+		if err := gn.setInt64(key, value); err != nil {
+			return err
+		}
 	case smartcontract.Float64:
-		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := gn.setFloat64(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.ParseFloat(change, 64)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
+		}
+		if err := gn.setFloat64(key, value); err != nil {
+			return err
 		}
 	case smartcontract.Key:
 		if _, err := hex.DecodeString(change); err != nil {
@@ -332,12 +332,12 @@ func (gn *GlobalNode) set(key string, change string) error {
 		}
 		gn.setKey(key, change)
 	case smartcontract.Cost:
-		if value, err := strconv.Atoi(change); err == nil {
-			if err := gn.setCost(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.Atoi(change)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
+		}
+		if err := gn.setCost(key, value); err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("unsupported type setting %v", smartcontract.ConfigTypeName[Settings[key].ConfigType])

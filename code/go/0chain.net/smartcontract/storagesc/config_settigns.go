@@ -575,64 +575,64 @@ func (conf *Config) set(key string, change string) error {
 
 	switch s.configType {
 	case smartcontract.Int:
-		if value, err := strconv.Atoi(change); err == nil {
-			if err := conf.setInt(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.Atoi(change)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
+		if err := conf.setInt(key, value); err != nil {
+			return err
+		}
 	case smartcontract.CurrencyCoin:
-		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			vCoin, err2 := currency.ParseZCN(value)
-			if err2 != nil {
-				return err2
-			}
-			if err := conf.setCoin(key, vCoin); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.ParseFloat(change, 64)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
 		}
+		vCoin, err := currency.ParseZCN(value)
+		if err != nil {
+			return err
+		}
+		if err := conf.setCoin(key, vCoin); err != nil {
+			return err
+		}
 	case smartcontract.Int64:
-		if value, err := strconv.ParseInt(change, 10, 64); err == nil {
-			if err := conf.setInt64(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.ParseInt(change, 10, 64)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
+		}
+		if err := conf.setInt64(key, value); err != nil {
+			return err
 		}
 	case smartcontract.Float64:
-		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			if err := conf.setFloat64(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.ParseFloat(change, 64)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
 		}
+		if err := conf.setFloat64(key, value); err != nil {
+			return err
+		}
 	case smartcontract.Duration:
-		if value, err := time.ParseDuration(change); err == nil {
-			if err := conf.setDuration(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := time.ParseDuration(change)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, change, err)
 		}
+		if err := conf.setDuration(key, value); err != nil {
+			return err
+		}
 	case smartcontract.Boolean:
-		if value, err := strconv.ParseBool(change); err == nil {
-			if err := conf.setBoolean(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.ParseBool(change)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
+		if err := conf.setBoolean(key, value); err != nil {
+			return err
+		}
 	case smartcontract.Cost:
-		if value, err := strconv.Atoi(change); err == nil {
-			if err := conf.setCost(key, value); err != nil {
-				return err
-			}
-		} else {
+		value, err := strconv.Atoi(change)
+		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
+		}
+		if err := conf.setCost(key, value); err != nil {
+			return err
 		}
 	case smartcontract.Key:
 		if _, err := hex.DecodeString(change); err != nil {
