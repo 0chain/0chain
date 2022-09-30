@@ -562,5 +562,5 @@ storage:
 		panic(err)
 	}
 
-	blockstore.InitializeStore(context.Background(), v.Sub("storage"), baseDir)
+	blockstore.Init(context.Background(), v.Sub("storage"), baseDir)
 }
