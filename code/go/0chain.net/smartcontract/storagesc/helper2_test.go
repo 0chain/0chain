@@ -21,6 +21,17 @@ type mockStateContext struct {
 	ctx           cstate.StateContext
 	clientBalance currency.Coin
 	store         map[datastore.Key]util.MPTSerializable
+	config        *cstate.StoragescConfig
+}
+
+// GetConfig implements state.StateContextI
+func (sc *mockStateContext) GetConfig() *cstate.StoragescConfig {
+	return sc.config
+}
+
+// SetConfig implements state.StateContextI
+func (sc *mockStateContext) SetConfig(config cstate.StoragescConfig) {
+	sc.config = &config
 }
 
 type mockBlobberYaml struct {
