@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -481,6 +482,10 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	}
 
 	sn := len(sharders)
+	if sn <= 0 {
+		return errors.New("no sharders to pay")
+	}
+
 	// fess and mint
 	feeShare, feeLeft, err := currency.DistributeCoin(fee, int64(sn))
 	if err != nil {
