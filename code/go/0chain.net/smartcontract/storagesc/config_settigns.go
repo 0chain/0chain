@@ -755,7 +755,9 @@ func (conf *Config) get(key Setting) interface{} {
 
 func (conf *Config) update(changes smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
-		if err := conf.set(key, value); err != nil {
+		trimmedKey := strings.TrimSpace(key)
+		trimmedValue := strings.TrimSpace(value)
+		if err := conf.set(trimmedKey, trimmedValue); err != nil {
 			return err
 		}
 	}

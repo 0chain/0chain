@@ -90,6 +90,17 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio floa
 	return nil
 }
 
+func newConfig() *Config {
+	return &Config{
+		ReadPool:               &readPoolConfig{},
+		WritePool:              &writePoolConfig{},
+		StakePool:              &stakePoolConfig{},
+		FreeAllocationSettings: freeAllocationSettings{},
+		BlockReward:            &blockReward{},
+		Cost:                   make(map[string]int),
+	}
+}
+
 // Config represents SC configurations ('storagesc:' from sc.yaml).
 type Config struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
@@ -371,7 +382,7 @@ func (conf *Config) Decode(b []byte) error {
 func getConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
 
-	conf = new(Config)
+	conf = newConfig()
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
@@ -544,7 +555,7 @@ func (ssc *StorageSmartContract) getConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *Config, err error) {
 
-	conf = new(Config)
+	conf = newConfig()
 	err = balances.GetTrieNode(scConfigKey(ssc.ID), conf)
 	switch err {
 	case util.ErrValueNotPresent:

@@ -781,7 +781,7 @@ func getMockChallengeId(blobberId, allocationId string) string {
 func SetMockConfig(
 	balances cstate.StateContextI,
 ) (conf *Config) {
-	conf = new(Config)
+	conf = newConfig()
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
