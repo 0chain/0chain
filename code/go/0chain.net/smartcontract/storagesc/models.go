@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,13 +8,16 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/threshold/bls"
 
-	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
@@ -27,7 +29,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"github.com/0chain/common/core/util"
 )
 
 const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
@@ -36,6 +37,7 @@ const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
+	AUTHORIZERS_COUNT_KEY            = ADDRESS + encryption.Hash("all_authorizers")
 	ALL_VALIDATORS_KEY               = ADDRESS + encryption.Hash("all_validators")
 	ALL_CHALLENGE_READY_BLOBBERS_KEY = ADDRESS + encryption.Hash("all_challenge_ready_blobbers")
 	BLOBBER_REWARD_KEY               = ADDRESS + encryption.Hash("blobber_rewards")
@@ -344,7 +346,6 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
 	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
-	Information       Info                    `json:"info"`
 }
 
 // validate the blobber configurations
@@ -456,10 +457,6 @@ type BlobberAllocation struct {
 	Returned currency.Coin `json:"returned"`
 	// ChallengeReward of the blobber.
 	ChallengeReward currency.Coin `json:"challenge_reward"`
-	// FinalReward is number of tokens moved to the blobber on finalization.
-	// It can be greater than zero, if user didn't spent the min lock demand
-	// during the allocation.
-	FinalReward currency.Coin `json:"final_reward"`
 
 	// ChallengePoolIntegralValue represents integral price * size * dt for this
 	// blobber. Since, a user can upload and delete file, and a challenge
@@ -636,7 +633,7 @@ type StorageAllocation struct {
 	// ID is unique allocation ID that is equal to hash of transaction with
 	// which the allocation has created.
 	ID string `json:"id"`
-	// Tx keeps hash with which the allocation has created or updated.
+	// Tx keeps hash with which the allocation has created or updated. todo do we need this field?
 	Tx string `json:"tx"`
 
 	DataShards        int                     `json:"data_shards"`
@@ -778,7 +775,7 @@ func (sa *StorageAllocation) moveToChallengePool(
 		return errors.New("invalid challenge pool")
 	}
 	if value > sa.WritePool {
-		return fmt.Errorf("insufficent funds %v in write pool to pay %v", sa.WritePool, value)
+		return fmt.Errorf("insufficient funds %v in write pool to pay %v", sa.WritePool, value)
 	}
 
 	if balance, err := currency.AddCoin(cp.Balance, value); err != nil {
@@ -791,6 +788,7 @@ func (sa *StorageAllocation) moveToChallengePool(
 	} else {
 		sa.WritePool = writePool
 	}
+
 	return nil
 }
 
@@ -822,7 +820,7 @@ func (sa *StorageAllocation) moveFromChallengePool(
 
 func (sa *StorageAllocation) validateAllocationBlobber(
 	blobber *StorageNode,
-	sp *stakePool,
+	total, offers currency.Coin,
 	now common.Timestamp,
 ) error {
 	bSize := sa.bSize()
@@ -845,7 +843,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 	}
 	// filter by blobber's capacity left
 	if blobber.Capacity-blobber.Allocated < bSize {
-		return fmt.Errorf("blobber %s free capacity %v insufficent, wanted %v",
+		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
 			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
 	}
 
@@ -853,21 +851,62 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 		return fmt.Errorf("blobber %s failed health check", blobber.ID)
 	}
 
-	unallocCapacity, err := sp.unallocatedCapacity(blobber.Terms.WritePrice)
+	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, total, offers)
 	if err != nil {
 		return fmt.Errorf("failed to get unallocated capacity: %v", err)
 	}
 
 	if blobber.Terms.WritePrice > 0 && unallocCapacity < bSize {
-		return fmt.Errorf("blobber %v staked capacity %v is insufficent, wanted %v",
+		return fmt.Errorf("blobber %v staked capacity %v is insufficient, wanted %v",
 			blobber.ID, unallocCapacity, bSize)
 	}
 
 	return nil
 }
 
+func (sa *StorageAllocation) cost() (currency.Coin, error) {
+	var cost currency.Coin
+	for _, ba := range sa.BlobberAllocs {
+		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+		if err != nil {
+			return 0, err
+		}
+		cost += c
+	}
+	return cost, nil
+}
+
+func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (currency.Coin, error) {
+	cost, err := sa.cost()
+	if err != nil {
+		return 0, err
+	}
+	return currency.MultFloat64(cost, cancellationFraction)
+}
+
+func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
+	cancellationCharge, err := sa.cancellationCharge(cancellationFraction)
+	if err != nil {
+		return err
+	}
+	mld, err := sa.restMinLockDemand()
+	if err != nil {
+		return err
+	}
+	if sa.WritePool < cancellationCharge+mld {
+		return fmt.Errorf("not enough tokens to honor the cancellation charge plus min lock demand"+" (%d < %d + %d)",
+			sa.WritePool, cancellationCharge, mld)
+	}
+
+	return nil
+}
+
 func (sa *StorageAllocation) bSize() int64 {
-	return int64(math.Ceil(float64(sa.Size) / float64(sa.DataShards)))
+	return bSize(sa.Size, sa.DataShards)
+}
+
+func bSize(size int64, dataShards int) int64 {
+	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
 func (sa *StorageAllocation) removeBlobber(
@@ -968,7 +1007,11 @@ func (sa *StorageAllocation) changeBlobbers(
 	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
-	if err := sa.validateAllocationBlobber(addedBlobber, sp, now); err != nil {
+	staked, err := sp.stake()
+	if err != nil {
+		return nil, err
+	}
+	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now); err != nil {
 		return nil, err
 	}
 
@@ -1062,43 +1105,11 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error)
 	return
 }
 
-func (sa *StorageAllocation) validate(now time.Time,
-	conf *Config) (err error) {
-
-	if !sa.ReadPriceRange.isValid() {
-		return errors.New("invalid read_price range")
-	}
-	if !sa.WritePriceRange.isValid() {
-		return errors.New("invalid write_price range")
-	}
-	if sa.Size < conf.MinAllocSize {
-		return errors.New("insufficient allocation size")
-	}
-	dur := common.ToTime(sa.Expiration).Sub(now)
-	if dur < conf.MinAllocDuration {
-		return errors.New("insufficient allocation duration")
-	}
-
-	if sa.DataShards <= 0 {
-		return errors.New("invalid number of data shards")
-	}
-
-	if sa.OwnerPublicKey == "" {
-		return errors.New("missing owner public key")
-	}
-
-	if sa.Owner == "" {
-		return errors.New("missing owner id")
-	}
-
-	return // nil
-}
-
-type filterBlobberFunc func(blobber *StorageNode) (kick bool)
+type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
-	filtered []*StorageNode) {
+	filtered []*StorageNode, err error) {
 
 	var (
 		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
@@ -1125,7 +1136,12 @@ List:
 		}
 
 		for _, filter := range filters {
-			if filter(b) {
+			kick, err := filter(b)
+			if err != nil {
+				return nil, err
+			}
+
+			if kick {
 				continue List
 			}
 		}
@@ -1133,28 +1149,28 @@ List:
 		i++
 	}
 
-	return list[:i]
+	return list[:i], nil
 }
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
-func (sa *StorageAllocation) validateEachBlobber(ssc *StorageSmartContract, blobbers []*blobberWithPool,
-	creationDate common.Timestamp, balances cstate.StateContextI) (
-	[]*blobberWithPool, []string) {
-
+func (sa *StorageAllocation) validateEachBlobber(
+	blobbers []*storageNodeResponse,
+	creationDate common.Timestamp,
+) ([]*StorageNode, []string) {
 	var (
-		errors   = make([]string, 0, len(blobbers))
-		filtered = make([]*blobberWithPool, 0, len(blobbers))
+		errs     = make([]string, 0, len(blobbers))
+		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
-		err := sa.validateAllocationBlobber(b.StorageNode, b.Pool, creationDate)
+		err := sa.validateAllocationBlobber(b.StorageNode, b.TotalStake, b.TotalOffers, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
-			errors = append(errors, err.Error())
+			errs = append(errs, err.Error())
 			continue
 		}
-		filtered = append(filtered, b)
+		filtered = append(filtered, b.StorageNode)
 	}
-	return filtered, errors
+	return filtered, errs
 }
 
 // Until returns allocation expiration.
@@ -1183,8 +1199,8 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // 1 GB of stored files. For the 1GB related challenge pool originally filled
 // up with
 //
-//     (integral): write_price * size * duration
-//     e.g.: (integral) write_price * 1 GB * 1 month
+//	(integral): write_price * size * duration
+//	e.g.: (integral) write_price * 1 GB * 1 month
 //
 // After some time (a half or the month, for example) some tokens from the
 // challenge pool moved back to write_pool. Some tokens moved to blobbers. And
@@ -1198,12 +1214,12 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // For (1) case, we should move more tokens to the challenge pool. The
 // difference is
 //
-//     a = old_write_price * size * old_duration_remaining (old expiration)
-//     b = new_write_price * size * new_duration_remaining (new expiration)
+//	   a = old_write_price * size * old_duration_remaining (old expiration)
+//	   b = new_write_price * size * new_duration_remaining (new expiration)
 //
-//  And the difference is
+//	And the difference is
 //
-//     b - a (move to challenge pool, or move back from challenge pool)
+//	   b - a (move to challenge pool, or move back from challenge pool)
 //
 // This movement should be performed during allocation extension or reduction.
 // So, if positive, then we should add more tokens to related challenge pool.
@@ -1403,6 +1419,7 @@ type WriteMarker struct {
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
+	Operation              string           `json:"operation"`
 
 	// file info
 	LookupHash  string `json:"lookup_hash"`

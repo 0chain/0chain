@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStorageAllocation_validate(t *testing.T) {
+func TestNewAllocationRequest_validate(t *testing.T) {
 
 	const (
 		errMsg1 = "invalid read_price range"
@@ -23,43 +23,34 @@ func TestStorageAllocation_validate(t *testing.T) {
 	)
 
 	var (
-		now   = time.Unix(150, 0)
-		alloc StorageAllocation
-		conf  Config
+		now  = time.Unix(150, 0)
+		nar  newAllocationRequest
+		conf Config
 	)
 
 	conf.MinAllocSize = 10 * 1024
 	conf.MinAllocDuration = 48 * time.Hour
+	nar.DataShards = 1
+	nar.Blobbers = []string{"1", "2"}
 
-	alloc.ReadPriceRange = PriceRange{Min: 20, Max: 10}
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg1)
+	nar.ReadPriceRange = PriceRange{Min: 20, Max: 10}
+	requireErrMsg(t, nar.validate(now, &conf), errMsg1)
 
-	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 20}
-	alloc.WritePriceRange = PriceRange{Min: 20, Max: 10}
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg2)
+	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
+	nar.WritePriceRange = PriceRange{Min: 20, Max: 10}
+	requireErrMsg(t, nar.validate(now, &conf), errMsg2)
 
-	alloc.WritePriceRange = PriceRange{Min: 10, Max: 20}
-	alloc.Size = 5 * 1024
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg3)
+	nar.WritePriceRange = PriceRange{Min: 10, Max: 20}
+	nar.Size = 5 * 1024
+	requireErrMsg(t, nar.validate(now, &conf), errMsg3)
 
-	alloc.Size = 10 * 1024
-	alloc.Expiration = 170
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg4)
+	nar.Size = 10 * 1024
+	nar.Expiration = 170
+	requireErrMsg(t, nar.validate(now, &conf), errMsg4)
 
-	alloc.Expiration = 150 + toSeconds(48*time.Hour)
-	alloc.DataShards = 0
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg5)
-
-	alloc.DataShards = 1
-	alloc.OwnerPublicKey = ""
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg6)
-
-	alloc.OwnerPublicKey = "pk_hex"
-	alloc.Owner = ""
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg7)
-
-	alloc.Owner = "client_hex"
-	assert.NoError(t, alloc.validate(now, &conf))
+	nar.Expiration = 150 + toSeconds(48*time.Hour)
+	nar.DataShards = 0
+	requireErrMsg(t, nar.validate(now, &conf), errMsg5)
 }
 
 func TestStorageAllocation_filterBlobbers(t *testing.T) {
@@ -83,7 +74,9 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	// 1. filter all by max offer duration
 
 	alloc.Expiration = now + 10 // one second duration
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err := alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 2. filter all by read price range
 	alloc.Expiration = now + 5
@@ -91,7 +84,9 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	list[0].Terms.ReadPrice = 100
 	list[1].Terms.ReadPrice = 150
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 3. filter all by write price range
 	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 200}
@@ -99,21 +94,27 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 40}
 	list[0].Terms.WritePrice = 100
 	list[1].Terms.WritePrice = 150
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 4. filter all by size
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 200}
 	list[0].Capacity, list[0].Allocated = 100, 90
 	list[1].Capacity, list[1].Allocated = 100, 50
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// accept one
 	list[0].Capacity, list[0].Allocated = 330, 100
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bs, 1)
 
 	// accept all
 	list[1].Capacity, list[1].Allocated = 330, 100
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 2)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bs, 2)
 }
 
 func TestVerifyClientID(t *testing.T) {

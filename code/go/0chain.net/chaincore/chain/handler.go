@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -1318,6 +1319,18 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, err
 	}
 
+	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, txn.ClientID)
+	if !isValid(err) {
+		return nil, err
+	}
+	nonce := int64(0)
+	if s != nil {
+		nonce = s.Nonce
+	}
+	if txn.Nonce <= nonce {
+		return nil, errors.New("invalid transaction nonce")
+	}
+
 	return transaction.PutTransaction(ctx, txn)
 }
 
@@ -1745,4 +1758,15 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(writer, "END }\n")
 	}()
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
+}
+
+// SetupHandlers sets up the necessary API end points for miners
+func SetupMinerHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
+	setupHandlers(chainhandlersMap(c))
+}
+
+// SetupHandlers sets up the necessary API end points for sharders
+func SetupSharderHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
 }

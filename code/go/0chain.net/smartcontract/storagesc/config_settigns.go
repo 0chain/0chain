@@ -46,6 +46,7 @@ const (
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
+	CancellationCharge
 
 	FreeAllocationDataShards
 	FreeAllocationParityShards
@@ -83,11 +84,8 @@ const (
 	BlockRewardZetaK
 	BlockRewardZetaMu
 
-	ExposeMpt
-
 	OwnerId
 
-	Cost
 	CostUpdateSettings
 	CostReadRedeem
 	CostCommitConnection
@@ -120,198 +118,192 @@ const (
 	CostStakePoolPayInterests
 	CostCommitSettingsChanges
 	CostCollectReward
+	NumberOfSettings
 )
 
 var (
-	SettingName = []string{
-		"max_mint",
-		"time_unit",
-		"min_alloc_size",
-		"min_alloc_duration",
-		"max_challenge_completion_time",
-		"min_offer_duration",
-		"min_blobber_capacity",
-
-		"readpool.min_lock",
-		"writepool.min_lock",
-		"stakepool.min_lock",
-		"stakepool.min_lock_period",
-
-		"max_total_free_allocation",
-		"max_individual_free_allocation",
-
-		"free_allocation_settings.data_shards",
-		"free_allocation_settings.parity_shards",
-		"free_allocation_settings.size",
-		"free_allocation_settings.duration",
-		"free_allocation_settings.read_price_range.min",
-		"free_allocation_settings.read_price_range.max",
-		"free_allocation_settings.write_price_range.min",
-		"free_allocation_settings.write_price_range.max",
-		"free_allocation_settings.read_pool_fraction",
-
-		"validator_reward",
-		"blobber_slash",
-		"max_blobbers_per_allocation",
-		"max_read_price",
-		"max_write_price",
-		"max_write_price",
-		"failed_challenges_to_cancel",
-		"failed_challenges_to_revoke_min_lock",
-		"challenge_enabled",
-		"challenge_rate_per_mb_min",
-		"max_challenges_per_generation",
-		"validators_per_challenge",
-		"max_delegates",
-
-		"block_reward.block_reward",
-		"block_reward.qualifying_stake",
-		"block_reward.sharder_ratio",
-		"block_reward.miner_ratio",
-		"block_reward.blobber_ratio",
-		"block_reward.gamma.alpha",
-		"block_reward.gamma.a",
-		"block_reward.gamma.b",
-		"block_reward.zeta.i",
-		"block_reward.zeta.k",
-		"block_reward.zeta.mu",
-
-		"expose_mpt",
-
-		"owner_id",
-
-		"cost",
-		"cost.update_settings",
-		"cost.read_redeem",
-		"cost.commit_connection",
-		"cost.new_allocation_request",
-		"cost.update_allocation_request",
-		"cost.finalize_allocation",
-		"cost.cancel_allocation",
-		"cost.add_free_storage_assigner",
-		"cost.free_allocation_request",
-		"cost.free_update_allocation",
-		"cost.add_curator",
-		"cost.remove_curator",
-		"cost.blobber_health_check",
-		"cost.update_blobber_settings",
-		"cost.pay_blobber_block_rewards",
-		"cost.curator_transfer_allocation",
-		"cost.challenge_request",
-		"cost.challenge_response",
-		"cost.generate_challenges",
-		"cost.add_validator",
-		"cost.update_validator_settings",
-		"cost.add_blobber",
-		"cost.new_read_pool",
-		"cost.read_pool_lock",
-		"cost.read_pool_unlock",
-		"cost.write_pool_lock",
-		"cost.write_pool_unlock",
-		"cost.stake_pool_lock",
-		"cost.stake_pool_unlock",
-		"cost.stake_pool_pay_interests",
-		"cost.commit_settings_changes",
-		"cost.collect_reward",
+	SettingName = make([]string, NumberOfSettings)
+	Settings    map[string]struct {
+		setting    Setting
+		configType smartcontract.ConfigType
 	}
+)
 
-	NumberOfSettings = len(SettingName)
+func init() {
+	initSettingName()
+	initSettings()
+}
 
+func initSettingName() {
+	SettingName[MaxMint] = "max_mint"
+	SettingName[TimeUnit] = "time_unit"
+	SettingName[MinAllocSize] = "min_alloc_size"
+	SettingName[MinAllocDuration] = "min_alloc_duration"
+	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
+	SettingName[MinOfferDuration] = "min_offer_duration"
+	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
+	SettingName[ReadPoolMinLock] = "readpool.min_lock"
+	SettingName[WritePoolMinLock] = "writepool.min_lock"
+	SettingName[StakePoolMinLock] = "stakepool.min_lock"
+	SettingName[StakePoolMinLockPeriod] = "stakepool.min_lock_period"
+	SettingName[MaxTotalFreeAllocation] = "max_total_free_allocation"
+	SettingName[MaxIndividualFreeAllocation] = "max_individual_free_allocation"
+	SettingName[CancellationCharge] = "cancellation_charge"
+	SettingName[FreeAllocationDataShards] = "free_allocation_settings.data_shards"
+	SettingName[FreeAllocationParityShards] = "free_allocation_settings.parity_shards"
+	SettingName[FreeAllocationSize] = "free_allocation_settings.size"
+	SettingName[FreeAllocationDuration] = "free_allocation_settings.duration"
+	SettingName[FreeAllocationReadPriceRangeMin] = "free_allocation_settings.read_price_range.min"
+	SettingName[FreeAllocationReadPriceRangeMax] = "free_allocation_settings.read_price_range.max"
+	SettingName[FreeAllocationWritePriceRangeMin] = "free_allocation_settings.write_price_range.min"
+	SettingName[FreeAllocationWritePriceRangeMax] = "free_allocation_settings.write_price_range.max"
+	SettingName[FreeAllocationReadPoolFraction] = "free_allocation_settings.read_pool_fraction"
+	SettingName[ValidatorReward] = "validator_reward"
+	SettingName[BlobberSlash] = "blobber_slash"
+	SettingName[MaxBlobbersPerAllocation] = "max_blobbers_per_allocation"
+	SettingName[MaxReadPrice] = "max_read_price"
+	SettingName[MaxWritePrice] = "max_write_price"
+	SettingName[MinWritePrice] = "min_write_price"
+	SettingName[FailedChallengesToCancel] = "failed_challenges_to_cancel"
+	SettingName[FailedChallengesToRevokeMinLock] = "failed_challenges_to_revoke_min_lock"
+	SettingName[ChallengeEnabled] = "challenge_enabled"
+	SettingName[ChallengeGenerationRate] = "challenge_rate_per_mb_min"
+	SettingName[MaxChallengesPerGeneration] = "max_challenges_per_generation"
+	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
+	SettingName[MaxDelegates] = "max_delegates"
+	SettingName[BlockRewardBlockReward] = "block_reward.block_reward"
+	SettingName[BlockRewardQualifyingStake] = "block_reward.qualifying_stake"
+	SettingName[BlockRewardSharderWeight] = "block_reward.sharder_ratio"
+	SettingName[BlockRewardMinerWeight] = "block_reward.miner_ratio"
+	SettingName[BlockRewardBlobberWeight] = "block_reward.blobber_ratio"
+	SettingName[BlockRewardGammaAlpha] = "block_reward.gamma.alpha"
+	SettingName[BlockRewardGammaA] = "block_reward.gamma.a"
+	SettingName[BlockRewardGammaB] = "block_reward.gamma.b"
+	SettingName[BlockRewardZetaI] = "block_reward.zeta.i"
+	SettingName[BlockRewardZetaK] = "block_reward.zeta.k"
+	SettingName[BlockRewardZetaMu] = "block_reward.zeta.mu"
+	SettingName[OwnerId] = "owner_id"
+	SettingName[CostUpdateSettings] = "cost.update_settings"
+	SettingName[CostReadRedeem] = "cost.read_redeem"
+	SettingName[CostCommitConnection] = "cost.commit_connection"
+	SettingName[CostNewAllocationRequest] = "cost.new_allocation_request"
+	SettingName[CostUpdateAllocationRequest] = "cost.update_allocation_request"
+	SettingName[CostFinalizeAllocation] = "cost.finalize_allocation"
+	SettingName[CostCancelAllocation] = "cost.cancel_allocation"
+	SettingName[CostAddFreeStorageAssigner] = "cost.add_free_storage_assigner"
+	SettingName[CostFreeAllocationRequest] = "cost.free_allocation_request"
+	SettingName[CostFreeUpdateAllocation] = "cost.free_update_allocation"
+	SettingName[CostAddCurator] = "cost.add_curator"
+	SettingName[CostRemoveCurator] = "cost.remove_curator"
+	SettingName[CostBlobberHealthCheck] = "cost.blobber_health_check"
+	SettingName[CostUpdateBlobberSettings] = "cost.update_blobber_settings"
+	SettingName[CostPayBlobberBlockRewards] = "cost.pay_blobber_block_rewards"
+	SettingName[CostCuratorTransferAllocation] = "cost.curator_transfer_allocation"
+	SettingName[CostChallengeRequest] = "cost.challenge_request"
+	SettingName[CostChallengeResponse] = "cost.challenge_response"
+	SettingName[CostGenerateChallenges] = "cost.generate_challenges"
+	SettingName[CostAddValidator] = "cost.add_validator"
+	SettingName[CostUpdateValidatorSettings] = "cost.update_validator_settings"
+	SettingName[CostAddBlobber] = "cost.add_blobber"
+	SettingName[CostNewReadPool] = "cost.new_read_pool"
+	SettingName[CostReadPoolLock] = "cost.read_pool_lock"
+	SettingName[CostReadPoolUnlock] = "cost.read_pool_unlock"
+	SettingName[CostWritePoolLock] = "cost.write_pool_lock"
+	SettingName[CostWritePoolUnlock] = "cost.write_pool_unlock"
+	SettingName[CostStakePoolLock] = "cost.stake_pool_lock"
+	SettingName[CostStakePoolUnlock] = "cost.stake_pool_unlock"
+	SettingName[CostStakePoolPayInterests] = "cost.stake_pool_pay_interests"
+	SettingName[CostCommitSettingsChanges] = "cost.commit_settings_changes"
+	SettingName[CostCollectReward] = "cost.collect_reward"
+}
+
+func initSettings() {
 	Settings = map[string]struct {
 		setting    Setting
 		configType smartcontract.ConfigType
 	}{
-		"max_mint":                      {MaxMint, smartcontract.CurrencyCoin},
-		"time_unit":                     {TimeUnit, smartcontract.Duration},
-		"min_alloc_size":                {MinAllocSize, smartcontract.Int64},
-		"min_alloc_duration":            {MinAllocDuration, smartcontract.Duration},
-		"max_challenge_completion_time": {MaxChallengeCompletionTime, smartcontract.Duration},
-		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
-		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
-
-		"readpool.min_lock":         {ReadPoolMinLock, smartcontract.CurrencyCoin},
-		"writepool.min_lock":        {WritePoolMinLock, smartcontract.CurrencyCoin},
-		"stakepool.min_lock":        {StakePoolMinLock, smartcontract.CurrencyCoin},
-		"stakepool.min_lock_period": {StakePoolMinLockPeriod, smartcontract.Duration},
-
-		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
-		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
-
-		"free_allocation_settings.data_shards":           {FreeAllocationDataShards, smartcontract.Int},
-		"free_allocation_settings.parity_shards":         {FreeAllocationParityShards, smartcontract.Int},
-		"free_allocation_settings.size":                  {FreeAllocationSize, smartcontract.Int64},
-		"free_allocation_settings.duration":              {FreeAllocationDuration, smartcontract.Duration},
-		"free_allocation_settings.read_price_range.min":  {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
-		"free_allocation_settings.read_price_range.max":  {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
-		"free_allocation_settings.write_price_range.min": {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
-		"free_allocation_settings.write_price_range.max": {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
-		"free_allocation_settings.read_pool_fraction":    {FreeAllocationReadPoolFraction, smartcontract.Float64},
-
-		"validator_reward":                     {ValidatorReward, smartcontract.Float64},
-		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
-		"max_blobbers_per_allocation":          {MaxBlobbersPerAllocation, smartcontract.Int},
-		"max_read_price":                       {MaxReadPrice, smartcontract.CurrencyCoin},
-		"max_write_price":                      {MaxWritePrice, smartcontract.CurrencyCoin},
-		"min_write_price":                      {MinWritePrice, smartcontract.CurrencyCoin},
-		"failed_challenges_to_cancel":          {FailedChallengesToCancel, smartcontract.Int},
-		"failed_challenges_to_revoke_min_lock": {FailedChallengesToRevokeMinLock, smartcontract.Int},
-		"challenge_enabled":                    {ChallengeEnabled, smartcontract.Boolean},
-		"challenge_rate_per_mb_min":            {ChallengeGenerationRate, smartcontract.Float64},
-		"max_challenges_per_generation":        {MaxChallengesPerGeneration, smartcontract.Int},
-		"validators_per_challenge":             {ValidatorsPerChallenge, smartcontract.Int},
-		"max_delegates":                        {MaxDelegates, smartcontract.Int},
-
-		"block_reward.block_reward":     {BlockRewardBlockReward, smartcontract.CurrencyCoin},
-		"block_reward.qualifying_stake": {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
-		"block_reward.sharder_ratio":    {BlockRewardSharderWeight, smartcontract.Float64},
-		"block_reward.miner_ratio":      {BlockRewardMinerWeight, smartcontract.Float64},
-		"block_reward.blobber_ratio":    {BlockRewardBlobberWeight, smartcontract.Float64},
-		"block_reward.gamma.alpha":      {BlockRewardGammaAlpha, smartcontract.Float64},
-		"block_reward.gamma.a":          {BlockRewardGammaA, smartcontract.Float64},
-		"block_reward.gamma.b":          {BlockRewardGammaB, smartcontract.Float64},
-		"block_reward.zeta.i":           {BlockRewardZetaI, smartcontract.Float64},
-		"block_reward.zeta.k":           {BlockRewardZetaK, smartcontract.Float64},
-		"block_reward.zeta.mu":          {BlockRewardZetaMu, smartcontract.Float64},
-
-		"expose_mpt": {ExposeMpt, smartcontract.Boolean},
-
-		"owner_id": {OwnerId, smartcontract.Key},
-
-		"cost":                             {Cost, smartcontract.Cost},
-		"cost.update_settings":             {CostUpdateSettings, smartcontract.Cost},
-		"cost.read_redeem":                 {CostReadRedeem, smartcontract.Cost},
-		"cost.commit_connection":           {CostCommitConnection, smartcontract.Cost},
-		"cost.new_allocation_request":      {CostNewAllocationRequest, smartcontract.Cost},
-		"cost.update_allocation_request":   {CostUpdateAllocationRequest, smartcontract.Cost},
-		"cost.finalize_allocation":         {CostFinalizeAllocation, smartcontract.Cost},
-		"cost.cancel_allocation":           {CostCancelAllocation, smartcontract.Cost},
-		"cost.add_free_storage_assigner":   {CostAddFreeStorageAssigner, smartcontract.Cost},
-		"cost.free_allocation_request":     {CostFreeAllocationRequest, smartcontract.Cost},
-		"cost.free_update_allocation":      {CostFreeUpdateAllocation, smartcontract.Cost},
-		"cost.add_curator":                 {CostAddCurator, smartcontract.Cost},
-		"cost.remove_curator":              {CostRemoveCurator, smartcontract.Cost},
-		"cost.blobber_health_check":        {CostBlobberHealthCheck, smartcontract.Cost},
-		"cost.update_blobber_settings":     {CostUpdateBlobberSettings, smartcontract.Cost},
-		"cost.pay_blobber_block_rewards":   {CostPayBlobberBlockRewards, smartcontract.Cost},
-		"cost.curator_transfer_allocation": {CostCuratorTransferAllocation, smartcontract.Cost},
-		"cost.challenge_request":           {CostChallengeRequest, smartcontract.Cost},
-		"cost.challenge_response":          {CostChallengeResponse, smartcontract.Cost},
-		"cost.generate_challenges":         {CostGenerateChallenges, smartcontract.Cost},
-		"cost.add_validator":               {CostAddValidator, smartcontract.Cost},
-		"cost.update_validator_settings":   {CostUpdateValidatorSettings, smartcontract.Cost},
-		"cost.add_blobber":                 {CostAddBlobber, smartcontract.Cost},
-		"cost.new_read_pool":               {CostNewReadPool, smartcontract.Cost},
-		"cost.read_pool_lock":              {CostReadPoolLock, smartcontract.Cost},
-		"cost.read_pool_unlock":            {CostReadPoolUnlock, smartcontract.Cost},
-		"cost.write_pool_lock":             {CostWritePoolLock, smartcontract.Cost},
-		"cost.write_pool_unlock":           {CostWritePoolUnlock, smartcontract.Cost},
-		"cost.stake_pool_lock":             {CostStakePoolLock, smartcontract.Cost},
-		"cost.stake_pool_unlock":           {CostStakePoolUnlock, smartcontract.Cost},
-		"cost.stake_pool_pay_interests":    {CostStakePoolPayInterests, smartcontract.Cost},
-		"cost.commit_settings_changes":     {CostCommitSettingsChanges, smartcontract.Cost},
-		"cost.collect_reward":              {CostCollectReward, smartcontract.Cost},
+		SettingName[MaxMint]:                          {MaxMint, smartcontract.CurrencyCoin},
+		SettingName[TimeUnit]:                         {TimeUnit, smartcontract.Duration},
+		SettingName[MinAllocSize]:                     {MinAllocSize, smartcontract.Int64},
+		SettingName[MinAllocDuration]:                 {MinAllocDuration, smartcontract.Duration},
+		SettingName[MaxChallengeCompletionTime]:       {MaxChallengeCompletionTime, smartcontract.Duration},
+		SettingName[MinOfferDuration]:                 {MinOfferDuration, smartcontract.Duration},
+		SettingName[MinBlobberCapacity]:               {MinBlobberCapacity, smartcontract.Int64},
+		SettingName[ReadPoolMinLock]:                  {ReadPoolMinLock, smartcontract.CurrencyCoin},
+		SettingName[WritePoolMinLock]:                 {WritePoolMinLock, smartcontract.CurrencyCoin},
+		SettingName[StakePoolMinLock]:                 {StakePoolMinLock, smartcontract.CurrencyCoin},
+		SettingName[StakePoolMinLockPeriod]:           {StakePoolMinLockPeriod, smartcontract.Duration},
+		SettingName[MaxTotalFreeAllocation]:           {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
+		SettingName[MaxIndividualFreeAllocation]:      {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
+		SettingName[CancellationCharge]:               {CancellationCharge, smartcontract.Float64},
+		SettingName[FreeAllocationDataShards]:         {FreeAllocationDataShards, smartcontract.Int},
+		SettingName[FreeAllocationParityShards]:       {FreeAllocationParityShards, smartcontract.Int},
+		SettingName[FreeAllocationSize]:               {FreeAllocationSize, smartcontract.Int64},
+		SettingName[FreeAllocationDuration]:           {FreeAllocationDuration, smartcontract.Duration},
+		SettingName[FreeAllocationReadPriceRangeMin]:  {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
+		SettingName[FreeAllocationReadPriceRangeMax]:  {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
+		SettingName[FreeAllocationWritePriceRangeMin]: {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
+		SettingName[FreeAllocationWritePriceRangeMax]: {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
+		SettingName[FreeAllocationReadPoolFraction]:   {FreeAllocationReadPoolFraction, smartcontract.Float64},
+		SettingName[ValidatorReward]:                  {ValidatorReward, smartcontract.Float64},
+		SettingName[BlobberSlash]:                     {BlobberSlash, smartcontract.Float64},
+		SettingName[MaxBlobbersPerAllocation]:         {MaxBlobbersPerAllocation, smartcontract.Int},
+		SettingName[MaxReadPrice]:                     {MaxReadPrice, smartcontract.CurrencyCoin},
+		SettingName[MaxWritePrice]:                    {MaxWritePrice, smartcontract.CurrencyCoin},
+		SettingName[MinWritePrice]:                    {MinWritePrice, smartcontract.CurrencyCoin},
+		SettingName[FailedChallengesToCancel]:         {FailedChallengesToCancel, smartcontract.Int},
+		SettingName[FailedChallengesToRevokeMinLock]:  {FailedChallengesToRevokeMinLock, smartcontract.Int},
+		SettingName[ChallengeEnabled]:                 {ChallengeEnabled, smartcontract.Boolean},
+		SettingName[ChallengeGenerationRate]:          {ChallengeGenerationRate, smartcontract.Float64},
+		SettingName[MaxChallengesPerGeneration]:       {MaxChallengesPerGeneration, smartcontract.Int},
+		SettingName[ValidatorsPerChallenge]:           {ValidatorsPerChallenge, smartcontract.Int},
+		SettingName[MaxDelegates]:                     {MaxDelegates, smartcontract.Int},
+		SettingName[BlockRewardBlockReward]:           {BlockRewardBlockReward, smartcontract.CurrencyCoin},
+		SettingName[BlockRewardQualifyingStake]:       {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
+		SettingName[BlockRewardSharderWeight]:         {BlockRewardSharderWeight, smartcontract.Float64},
+		SettingName[BlockRewardMinerWeight]:           {BlockRewardMinerWeight, smartcontract.Float64},
+		SettingName[BlockRewardBlobberWeight]:         {BlockRewardBlobberWeight, smartcontract.Float64},
+		SettingName[BlockRewardGammaAlpha]:            {BlockRewardGammaAlpha, smartcontract.Float64},
+		SettingName[BlockRewardGammaA]:                {BlockRewardGammaA, smartcontract.Float64},
+		SettingName[BlockRewardGammaB]:                {BlockRewardGammaB, smartcontract.Float64},
+		SettingName[BlockRewardZetaI]:                 {BlockRewardZetaI, smartcontract.Float64},
+		SettingName[BlockRewardZetaK]:                 {BlockRewardZetaK, smartcontract.Float64},
+		SettingName[BlockRewardZetaMu]:                {BlockRewardZetaMu, smartcontract.Float64},
+		SettingName[OwnerId]:                          {OwnerId, smartcontract.Key},
+		SettingName[CostUpdateSettings]:               {CostUpdateSettings, smartcontract.Cost},
+		SettingName[CostReadRedeem]:                   {CostReadRedeem, smartcontract.Cost},
+		SettingName[CostCommitConnection]:             {CostCommitConnection, smartcontract.Cost},
+		SettingName[CostNewAllocationRequest]:         {CostNewAllocationRequest, smartcontract.Cost},
+		SettingName[CostUpdateAllocationRequest]:      {CostUpdateAllocationRequest, smartcontract.Cost},
+		SettingName[CostFinalizeAllocation]:           {CostFinalizeAllocation, smartcontract.Cost},
+		SettingName[CostCancelAllocation]:             {CostCancelAllocation, smartcontract.Cost},
+		SettingName[CostAddFreeStorageAssigner]:       {CostAddFreeStorageAssigner, smartcontract.Cost},
+		SettingName[CostFreeAllocationRequest]:        {CostFreeAllocationRequest, smartcontract.Cost},
+		SettingName[CostFreeUpdateAllocation]:         {CostFreeUpdateAllocation, smartcontract.Cost},
+		SettingName[CostAddCurator]:                   {CostAddCurator, smartcontract.Cost},
+		SettingName[CostRemoveCurator]:                {CostRemoveCurator, smartcontract.Cost},
+		SettingName[CostBlobberHealthCheck]:           {CostBlobberHealthCheck, smartcontract.Cost},
+		SettingName[CostUpdateBlobberSettings]:        {CostUpdateBlobberSettings, smartcontract.Cost},
+		SettingName[CostPayBlobberBlockRewards]:       {CostPayBlobberBlockRewards, smartcontract.Cost},
+		SettingName[CostCuratorTransferAllocation]:    {CostCuratorTransferAllocation, smartcontract.Cost},
+		SettingName[CostChallengeRequest]:             {CostChallengeRequest, smartcontract.Cost},
+		SettingName[CostChallengeResponse]:            {CostChallengeResponse, smartcontract.Cost},
+		SettingName[CostGenerateChallenges]:           {CostGenerateChallenges, smartcontract.Cost},
+		SettingName[CostAddValidator]:                 {CostAddValidator, smartcontract.Cost},
+		SettingName[CostUpdateValidatorSettings]:      {CostUpdateValidatorSettings, smartcontract.Cost},
+		SettingName[CostAddBlobber]:                   {CostAddBlobber, smartcontract.Cost},
+		SettingName[CostNewReadPool]:                  {CostNewReadPool, smartcontract.Cost},
+		SettingName[CostReadPoolLock]:                 {CostReadPoolLock, smartcontract.Cost},
+		SettingName[CostReadPoolUnlock]:               {CostReadPoolUnlock, smartcontract.Cost},
+		SettingName[CostWritePoolLock]:                {CostWritePoolLock, smartcontract.Cost},
+		SettingName[CostWritePoolUnlock]:              {CostWritePoolUnlock, smartcontract.Cost},
+		SettingName[CostStakePoolLock]:                {CostStakePoolLock, smartcontract.Cost},
+		SettingName[CostStakePoolUnlock]:              {CostStakePoolUnlock, smartcontract.Cost},
+		SettingName[CostStakePoolPayInterests]:        {CostStakePoolPayInterests, smartcontract.Cost},
+		SettingName[CostCommitSettingsChanges]:        {CostCommitSettingsChanges, smartcontract.Cost},
+		SettingName[CostCollectReward]:                {CostCollectReward, smartcontract.Cost},
 	}
-)
+}
 
 func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
 	var out smartcontract.StringMap
@@ -434,6 +426,8 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.FreeAllocationSettings.ReadPoolFraction = change
 	case ValidatorReward:
 		conf.ValidatorReward = change
+	case CancellationCharge:
+		conf.CancellationCharge = change
 	case BlobberSlash:
 		conf.BlobberSlash = change
 	case ChallengeGenerationRate:
@@ -516,19 +510,10 @@ func (conf *Config) setBoolean(key string, change bool) error {
 	switch Settings[key].setting {
 	case ChallengeEnabled:
 		conf.ChallengeEnabled = change
-	case ExposeMpt:
-		conf.ExposeMpt = change
 	default:
 		return fmt.Errorf("key: %v not implemented as boolean", key)
 	}
 	return nil
-}
-
-func (conf *Config) setCost(key string, change int) {
-	if change < 0 {
-		return
-	}
-	conf.Cost[strings.TrimPrefix(key, fmt.Sprintf("%s.", SettingName[Cost]))] = change
 }
 
 func (conf *Config) setKey(key string, change string) {
@@ -600,15 +585,6 @@ func (conf *Config) set(key string, change string) error {
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
-	case smartcontract.Cost:
-		if key == SettingName[Cost] {
-			return fmt.Errorf("cost update key must follow cost.* format")
-		}
-		value, err := strconv.Atoi(change)
-		if err != nil {
-			return fmt.Errorf("key %s, unable to convert %v to integer", key, change)
-		}
-		conf.setCost(key, value)
 	case smartcontract.Key:
 		if _, err := hex.DecodeString(change); err != nil {
 			return fmt.Errorf("%s must be a hes string: %v", key, err)
@@ -621,6 +597,7 @@ func (conf *Config) set(key string, change string) error {
 }
 
 func (conf *Config) get(key Setting) interface{} {
+	const costPrefix = "cost."
 	switch key {
 	case MaxMint:
 		return conf.MaxMint
@@ -648,6 +625,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
 		return conf.MaxIndividualFreeAllocation
+	case CancellationCharge:
+		return conf.CancellationCharge
 	case FreeAllocationDataShards:
 		return conf.FreeAllocationSettings.DataShards
 	case FreeAllocationParityShards:
@@ -714,76 +693,72 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.Zeta.K
 	case BlockRewardZetaMu:
 		return conf.BlockReward.Zeta.Mu
-	case ExposeMpt:
-		return conf.ExposeMpt
 	case OwnerId:
 		return conf.OwnerId
-	case Cost:
-		return ""
 	case CostUpdateSettings:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostUpdateSettings], costPrefix)]
 	case CostReadRedeem:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadRedeem], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostReadRedeem], costPrefix)]
 	case CostCommitConnection:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCommitConnection], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCommitConnection], costPrefix)]
 	case CostNewAllocationRequest:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostNewAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostNewAllocationRequest], costPrefix)]
 	case CostUpdateAllocationRequest:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostUpdateAllocationRequest], costPrefix)]
 	case CostFinalizeAllocation:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFinalizeAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostFinalizeAllocation], costPrefix)]
 	case CostCancelAllocation:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCancelAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCancelAllocation], costPrefix)]
 	case CostAddFreeStorageAssigner:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddFreeStorageAssigner], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostAddFreeStorageAssigner], costPrefix)]
 	case CostFreeAllocationRequest:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFreeAllocationRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostFreeAllocationRequest], costPrefix)]
 	case CostFreeUpdateAllocation:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFreeUpdateAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostFreeUpdateAllocation], costPrefix)]
 	case CostAddCurator:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddCurator], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostAddCurator], costPrefix)]
 	case CostRemoveCurator:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostRemoveCurator], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostRemoveCurator], costPrefix)]
 	case CostBlobberHealthCheck:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostBlobberHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostBlobberHealthCheck], costPrefix)]
 	case CostUpdateBlobberSettings:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateBlobberSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostUpdateBlobberSettings], costPrefix)]
 	case CostPayBlobberBlockRewards:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostPayBlobberBlockRewards], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostPayBlobberBlockRewards], costPrefix)]
 	case CostCuratorTransferAllocation:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCuratorTransferAllocation], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCuratorTransferAllocation], costPrefix)]
 	case CostChallengeRequest:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostChallengeRequest], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostChallengeRequest], costPrefix)]
 	case CostChallengeResponse:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostChallengeResponse], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostChallengeResponse], costPrefix)]
 	case CostGenerateChallenges:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostGenerateChallenges], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostGenerateChallenges], costPrefix)]
 	case CostAddValidator:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddValidator], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostAddValidator], costPrefix)]
 	case CostUpdateValidatorSettings:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateValidatorSettings], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostUpdateValidatorSettings], costPrefix)]
 	case CostAddBlobber:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddBlobber], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostAddBlobber], costPrefix)]
 	case CostNewReadPool:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostNewReadPool], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostNewReadPool], costPrefix)]
 	case CostReadPoolLock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostReadPoolLock], costPrefix)]
 	case CostReadPoolUnlock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostReadPoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostReadPoolUnlock], costPrefix)]
 	case CostWritePoolLock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostWritePoolLock], costPrefix)]
 	case CostWritePoolUnlock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWritePoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostWritePoolUnlock], costPrefix)]
 	case CostStakePoolLock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolLock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostStakePoolLock], costPrefix)]
 	case CostStakePoolUnlock:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolUnlock], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostStakePoolUnlock], costPrefix)]
 	case CostStakePoolPayInterests:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostStakePoolPayInterests], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostStakePoolPayInterests], costPrefix)]
 	case CostCommitSettingsChanges:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCommitSettingsChanges], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCommitSettingsChanges], costPrefix)]
 	case CostCollectReward:
-		return conf.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostCollectReward], fmt.Sprintf("%s.", SettingName[Cost])))]
+		return conf.Cost[strings.TrimPrefix(SettingName[CostCollectReward], costPrefix)]
 
 	default:
 		panic("Setting not implemented")
@@ -850,7 +825,7 @@ func (ssc *StorageSmartContract) updateSettings(
 }
 
 func (ssc *StorageSmartContract) commitSettingChanges(
-	t *transaction.Transaction,
+	_ *transaction.Transaction,
 	_ []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {

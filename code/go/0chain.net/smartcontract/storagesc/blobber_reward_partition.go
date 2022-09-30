@@ -39,12 +39,12 @@ func BlobberRewardKey(round int64) datastore.Key {
 
 // getActivePassedBlobberRewardsPartitions gets blobbers passed challenge from last challenge period
 func getActivePassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
-	name := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
-	return partitions.CreateIfNotExists(balances, name, blobberRewardsPartitionSize)
+	key := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
+	return partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
 }
 
 // getOngoingPassedBlobberRewardsPartitions gets blobbers passed challenge from ongoing challenge period
 func getOngoingPassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
-	name := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
-	return partitions.CreateIfNotExists(balances, name, blobberRewardsPartitionSize)
+	key := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
+	return partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
 }

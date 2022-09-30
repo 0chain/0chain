@@ -1,16 +1,18 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
+	"encoding/json"
+	"fmt"
+
 	"0chain.net/chaincore/currency"
+
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"fmt"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
@@ -66,7 +68,7 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 func (cp *challengePool) save(sscKey string, alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
 	cpKey := challengePoolKey(sscKey, alloc.ID)
 	r, err := balances.InsertTrieNode(cpKey, cp)
-	logging.Logger.Debug("after save challenge pool", zap.String("root", r))
+	logging.Logger.Debug("after save challenge pool", zap.String("root", util.ToHex([]byte(r))))
 
 	//emit challenge pool event
 	emitChallengePoolEvent(cpKey, cp.GetBalance(), alloc, balances)
