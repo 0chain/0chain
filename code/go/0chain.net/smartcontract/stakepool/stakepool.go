@@ -8,7 +8,6 @@ import (
 
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -258,7 +257,7 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[id], err = reward.Int64()
+		spUpdate.DelegateRewards[id] = reward
 		if err != nil {
 			return err
 		}
@@ -309,7 +308,10 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 	if share == 0 {
 		for i := int64(0); i < c; i++ {
 			delegates[i].Reward++
-			spUpdate.DelegateRewards[delegates[i].DelegateID]++
+			spUpdate.DelegateRewards[delegates[i].DelegateID], err = currency.AddCoin(spUpdate.DelegateRewards[delegates[i].DelegateID], currency.Coin(1))
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -324,8 +326,7 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 			return err
 		}
 
-		spUpdate.DelegateRewards[delegates[i].DelegateID], err =
-			maths.SafeAddInt64(spUpdate.DelegateRewards[delegates[i].DelegateID], iShare)
+		spUpdate.DelegateRewards[delegates[i].DelegateID], err = currency.AddCoin(spUpdate.DelegateRewards[delegates[i].DelegateID], currency.Coin(iShare))
 		if err != nil {
 			return err
 		}
@@ -335,7 +336,10 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 	if r > 0 {
 		for i := 0; i < int(r); i++ {
 			delegates[i].Reward++
-			spUpdate.DelegateRewards[delegates[i].DelegateID]++
+			spUpdate.DelegateRewards[delegates[i].DelegateID], err = currency.AddCoin(spUpdate.DelegateRewards[delegates[i].DelegateID], currency.Coin(1))
+			if err != nil {
+				return err
+			}
 		}
 	}
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -113,7 +114,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	spr.ProviderId = "provider_id"
 	spr.ProviderType = int(spenum.Blobber)
 	spr.Reward = 17
-	spr.DelegateRewards = map[string]int64{
+	spr.DelegateRewards = map[string]currency.Coin{
 		"pool_id_1": 15,
 		"pool_id_2": 2,
 	}

@@ -6,6 +6,7 @@ import (
 	"0chain.net/smartcontract/dbs"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs/event"
 )
 
@@ -15,7 +16,7 @@ func NewStakePoolReward(pId string, pType spenum.Provider) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ProviderId = pId
 	spu.ProviderType = int(pType)
-	spu.DelegateRewards = make(map[string]int64)
+	spu.DelegateRewards = make(map[string]currency.Coin)
 	return &spu
 }
 

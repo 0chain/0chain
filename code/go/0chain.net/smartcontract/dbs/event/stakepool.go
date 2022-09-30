@@ -70,7 +70,7 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 
 type rewardInfo struct {
 	pool  string
-	value int64
+	value currency.Coin
 }
 
 func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {

@@ -299,7 +299,7 @@ func (sp *stakePool) slash(
 		if err != nil {
 			return 0, err
 		}
-		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
+		edbSlash.DelegateRewards[id] = -dpSlash
 	}
 	// todo we should slash from stake pools not rewards. 0chain issue 1495
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
