@@ -48,7 +48,7 @@ func (edb *EventDb) rewardUpdate(spu dbs.StakePoolReward) error {
 
 	for pool, reward := range spu.DelegateRewards {
 		// TODO: only blobbers have penalty?
-		if reward < 0 && spu.ProviderType == int(spenum.Blobber) {
+		if spu.ProviderType == int(spenum.Blobber) {
 			penalties = append(penalties, rewardInfo{pool: pool, value: -reward})
 		} else {
 			rewards = append(rewards, rewardInfo{pool: pool, value: reward})
