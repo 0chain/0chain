@@ -46,8 +46,13 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 	viper.SetDefault("development.txn_generation.min_txn_value", 100)
 	minValue = viper.GetInt64("development.txn_generation.min_txn_value")
 
+	txnCost := viper.GetInt("server_chain.transaction.transfer_cost")
+	maxBlockCost := viper.GetInt("server_chain.block.max_block_cost")
+	blockSize := maxBlockCost / txnCost
+
+	numClients := viper.GetInt("development.txn_generation.wallets")
+
 	var (
-		numClients = viper.GetInt("development.txn_generation.wallets")
 		numTxns    int32
 		numWorkers int
 	)
@@ -68,7 +73,21 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 	collectionName := txn.GetCollectionName()
 	sc := chain.GetServerChain()
 
-	numWorkers = 8
+	switch {
+	case blockSize <= 10:
+		numWorkers = 1
+	case blockSize <= 100:
+		numWorkers = 1
+	case blockSize <= 1000:
+		numWorkers = 2
+	case blockSize <= 10000:
+		numWorkers = 4
+	case blockSize <= 100000:
+		numWorkers = 8
+	default:
+		numWorkers = 16
+	}
+
 	numGenerators := sc.GetGeneratorsNum()
 	mb := sc.GetCurrentMagicBlock()
 	numMiners := mb.Miners.Size()

@@ -592,7 +592,9 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		txns = append(txns, txn)
 	}
 
-	tii := newTxnIterInfo()
+	blockSize := mc.ChainConfig.MaxBlockCost() / mc.ChainConfig.TxnTransferCost()
+
+	tii := newTxnIterInfo(int32(blockSize))
 	invalidTxns := tii.checkForInvalidTxns(b.Txns)
 
 	transaction.RemoveFromPool(ctx, txns)
@@ -787,12 +789,12 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 	}
 }
 
-func newTxnIterInfo() *TxnIterInfo {
+func newTxnIterInfo(blockSize int32) *TxnIterInfo {
 	return &TxnIterInfo{
 		clients:    make(map[string]*client.Client),
-		eTxns:      make([]datastore.Entity, 0, 100),
+		eTxns:      make([]datastore.Entity, 0, blockSize),
 		futureTxns: make(map[datastore.Key][]*transaction.Transaction),
-		txnMap:     make(map[datastore.Key]struct{}, 100),
+		txnMap:     make(map[datastore.Key]struct{}, blockSize),
 	}
 }
 
@@ -873,8 +875,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	b.Txns = make([]*transaction.Transaction, 0, 100)
 
+	initialBlockSize := mc.ChainConfig.MaxBlockCost() / mc.ChainConfig.TxnTransferCost()
+
 	var (
-		iterInfo       = newTxnIterInfo()
+		iterInfo       = newTxnIterInfo(int32(initialBlockSize))
 		txnProcessor   = txnProcessorHandlerFunc(mc, b)
 		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		beginState     = blockState.GetRoot()
