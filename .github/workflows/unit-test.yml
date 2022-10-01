@@ -48,7 +48,7 @@ jobs:
           go-version: '1.18'
 
       - name: check git init and remote add
-        run: ./docker.local/bin/check.git.init.sh
+        run: ./docker.local/bin/check.gitinit.sh
 
       - name: Check msgp changes
         run: ./docker.local/bin/check.msgp.sh
