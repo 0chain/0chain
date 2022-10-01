@@ -60,7 +60,10 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	publicKeyBytes, _ := hex.DecodeString(params.PublicKey)
+	publicKeyBytes, err := hex.DecodeString(params.PublicKey)
+	if err != nil {
+		return "", err
+	}
 	authorizerID = encryption.Hash(publicKeyBytes)
 	clientId = tran.ClientID
 	if params.StakePoolSettings.DelegateWallet == "" {
