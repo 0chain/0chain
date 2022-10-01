@@ -1047,9 +1047,9 @@ func (z *RewardPartitionLocation) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 28
+	// map header, size 27
 	// string "ID"
-	o = append(o, 0xde, 0x0, 0x1c, 0xa2, 0x49, 0x44)
+	o = append(o, 0xde, 0x0, 0x1b, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Tx"
 	o = append(o, 0xa2, 0x54, 0x78)
@@ -1160,9 +1160,6 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "WritePriceRange", "Max")
 		return
 	}
-	// string "ChallengeCompletionTime"
-	o = append(o, 0xb7, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x69, 0x6d, 0x65)
-	o = msgp.AppendDuration(o, z.ChallengeCompletionTime)
 	// string "StartTime"
 	o = append(o, 0xa9, 0x53, 0x74, 0x61, 0x72, 0x74, 0x54, 0x69, 0x6d, 0x65)
 	o, err = z.StartTime.MarshalMsg(o)
@@ -1444,12 +1441,6 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 					}
 				}
 			}
-		case "ChallengeCompletionTime":
-			z.ChallengeCompletionTime, bts, err = msgp.ReadDurationBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ChallengeCompletionTime")
-				return
-			}
 		case "StartTime":
 			bts, err = z.StartTime.UnmarshalMsg(bts)
 			if err != nil {
@@ -1549,7 +1540,7 @@ func (z *StorageAllocationDecode) Msgsize() (s int) {
 			s += z.BlobberAllocs[za0002].Msgsize()
 		}
 	}
-	s += 12 + msgp.BoolSize + 21 + msgp.BoolSize + 12 + msgp.Uint8Size + 10 + z.WritePool.Msgsize() + 15 + 1 + 4 + z.ReadPriceRange.Min.Msgsize() + 4 + z.ReadPriceRange.Max.Msgsize() + 16 + 1 + 4 + z.WritePriceRange.Min.Msgsize() + 4 + z.WritePriceRange.Max.Msgsize() + 24 + msgp.DurationSize + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.DurationSize + 9 + msgp.ArrayHeaderSize
+	s += 12 + msgp.BoolSize + 21 + msgp.BoolSize + 12 + msgp.Uint8Size + 10 + z.WritePool.Msgsize() + 15 + 1 + 4 + z.ReadPriceRange.Min.Msgsize() + 4 + z.ReadPriceRange.Max.Msgsize() + 16 + 1 + 4 + z.WritePriceRange.Min.Msgsize() + 4 + z.WritePriceRange.Max.Msgsize() + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.DurationSize + 9 + msgp.ArrayHeaderSize
 	for za0003 := range z.Curators {
 		s += msgp.StringPrefixSize + len(z.Curators[za0003])
 	}
