@@ -247,6 +247,15 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 
 // ------- AddAuthorizerPayload ------------
 
+//type addAuthorizerPayload struct {
+//	URL           string
+//	ClientID      string
+//	ClientKey     string
+//	MinStake      int64
+//	MaxStake      int64
+//	NumDelegates  int
+//	ServiceCharge float64
+//}
 type AddAuthorizerPayload struct {
 	PublicKey         string             `json:"public_key"`
 	URL               string             `json:"url"`
@@ -319,4 +328,18 @@ func (ac *AuthCount) Encode() ([]byte, error) {
 
 func (ac *AuthCount) Decode(input []byte) error {
 	return json.Unmarshal(input, ac)
+}
+
+type DeleteAuthorizerPayload struct {
+	ID string `json:"id"`
+}
+
+func (dap *DeleteAuthorizerPayload) Encode() (data []byte, err error) {
+	data, err = json.Marshal(dap)
+	return
+}
+
+func (dap *DeleteAuthorizerPayload) Decode(input []byte) error {
+	err := json.Unmarshal(input, dap)
+	return err
 }

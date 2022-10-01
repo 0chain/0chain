@@ -211,7 +211,6 @@ func TestAllocations(t *testing.T) {
 			ReadPriceMax:             sa.ReadPriceRange.Max,
 			WritePriceMin:            sa.WritePriceRange.Min,
 			WritePriceMax:            sa.WritePriceRange.Max,
-			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
 			StartTime:                int64(sa.StartTime),
 			Finalized:                sa.Finalized,
 			Cancelled:                sa.Canceled,

@@ -745,7 +745,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	resp string, err error) {
 
 	if alloc.Expiration-t.CreationDate <
-		toSeconds(alloc.ChallengeCompletionTime) {
+		toSeconds(getMaxChallengeCompletionTime()) {
 		return "", common.NewError("allocation_closing_failed",
 			"doesn't need to close allocation is about to expire")
 	}
@@ -1513,7 +1513,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 
 	// can cancel
 	// new values
-	alloc.Expiration, alloc.ChallengeCompletionTime = t.CreationDate, 0
+	alloc.Expiration = t.CreationDate
 
 	sps := make([]*stakePool, 0, len(alloc.BlobberAllocs))
 	for _, d := range alloc.BlobberAllocs {

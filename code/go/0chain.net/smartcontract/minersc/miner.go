@@ -58,7 +58,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			"failed to get miner list: %v", err)
 	}
 
-	msc.verifyMinerState(balances,
+	msc.verifyMinerState(allMiners, balances,
 		"add_miner: checking all miners list in the beginning")
 
 	if newMiner.Settings.DelegateWallet == "" {
@@ -129,7 +129,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			return "", common.NewError("add_miner", err.Error())
 		}
 
-		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
+		msc.verifyMinerState(allMiners, balances, "add_miner: Checking all miners list afterInsert")
 
 		update = true
 	}
@@ -312,15 +312,8 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 
 //------------- local functions ---------------------
 // TODO: remove this or return error and do real checking
-func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
+func (msc *MinerSmartContract) verifyMinerState(allMinersList *MinerNodes, balances cstate.StateContextI,
 	msg string) {
-
-	allMinersList, err := getMinersList(balances)
-	if err != nil {
-		logging.Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
-			"Failed to retrieve existing miners list: " + err.Error())
-		return
-	}
 	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
 		logging.Logger.Info(msg + " allminerslist is empty")
 		return

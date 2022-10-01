@@ -63,6 +63,7 @@ func MakeMockStateContext() *mockStateContext {
 		ID: ADDRESS,
 		ZCNSConfig: &ZCNSConfig{
 			MinStakeAmount: 11,
+			OwnerId:        "8a15e216a3b4237330c1fff19c7b3916ece5b0f47341013ceb64d53595a4cebb",
 		},
 	}
 

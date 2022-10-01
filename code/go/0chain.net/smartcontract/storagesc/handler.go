@@ -2032,7 +2032,7 @@ func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
 	return conf, nil
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage_config storage_config
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config storage-config
 // Gets the current storage smart contract settings
 //
 // responses:
