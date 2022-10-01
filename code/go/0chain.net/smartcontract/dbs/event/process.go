@@ -72,7 +72,7 @@ const (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) error {
+func (edb *EventDb) ProcessEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) error {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
@@ -81,19 +81,44 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, 
 
 	pdu := time.Since(ts)
 
-	select {
-	case edb.eventsChannel <- blockEvents{events: es, round: round, block: block, blockSize: blockSize}:
-	case <-ctx.Done():
-		logging.Logger.Warn("add events - context done", zap.Error(ctx.Err()))
+	event := blockEvents{
+		events:    es,
+		round:     round,
+		block:     block,
+		blockSize: blockSize,
+		doneC:     make(chan struct{}, 1),
 	}
 
-	du := time.Since(ts)
-	if du.Milliseconds() > 200 {
-		logging.Logger.Warn("EventDb - add events slow", zap.Any("duration", du),
-			zap.Any("preprocess events duration", pdu),
+	select {
+	case edb.eventsChannel <- event:
+	case <-ctx.Done():
+		logging.Logger.Warn("process events - context done",
+			zap.Error(ctx.Err()),
 			zap.Int64("round", round),
 			zap.String("block", block),
-			zap.Int("blockSize", blockSize))
+			zap.Int("block size", blockSize))
+		return fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
+	}
+
+	select {
+	case <-event.doneC:
+		du := time.Since(ts)
+		if du.Milliseconds() > 200 {
+			logging.Logger.Warn("process events slow",
+				zap.Any("duration", du),
+				zap.Any("merge events duration", pdu),
+				zap.Int64("round", round),
+				zap.String("block", block),
+				zap.Int("block size", blockSize))
+		}
+	case <-ctx.Done():
+		du := time.Since(ts)
+		logging.Logger.Warn("process events - context done",
+			zap.Error(ctx.Err()),
+			zap.Any("duration", du),
+			zap.Int64("round", round),
+			zap.String("block", block),
+			zap.Int("block size", blockSize))
 	}
 
 	return nil
@@ -230,6 +255,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				zap.String("block", es.block),
 				zap.Int("block size", es.blockSize))
 		}
+		es.doneC <- struct{}{}
 	}
 }
 

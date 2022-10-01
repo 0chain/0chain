@@ -38,6 +38,7 @@ type blockEvents struct {
 	blockSize int
 	round     int64
 	events    []Event
+	doneC     chan struct{}
 }
 
 func (edb *EventDb) AutoMigrate() error {
