@@ -15,10 +15,8 @@ jobs:
         with:
           go-version: '1.18'
       
-      - name: git init and remote add
-        run: |
-          git init
-          git remote add 0chain https://github.com/0chain/0chain.git
+      - name: check git init and remote add
+        run: ./docker.local/bin/check.gitinit.sh
 
       - name: Check msgp changes
         run: ./docker.local/bin/check.msgp.sh
