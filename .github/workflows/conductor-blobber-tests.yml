@@ -128,7 +128,9 @@ jobs:
 
     - name: Build blobber
       run: |
-        cd blobber && ./docker.local/bin/build.blobber-integration-tests.sh
+        cd blobber
+        chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
+        ./docker.local/bin/build.blobber-integration-tests.sh
 
     - name: Add ZCN config
       run: |
