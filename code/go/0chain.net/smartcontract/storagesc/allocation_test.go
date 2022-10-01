@@ -133,6 +133,9 @@ func TestSelectBlobbers(t *testing.T) {
 			return true
 		})).Return(nil).Once()
 
+		balances.On("GetConfig", mock.Anything).Return(conf, nil).Once()
+		balances.On("SetConfig", mock.Anything, mock.Anything).Return(nil).Once()
+
 		return ssc, sa, sNodes, balances
 	}
 
