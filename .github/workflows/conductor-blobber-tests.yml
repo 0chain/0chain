@@ -109,6 +109,7 @@ jobs:
 
     - name: 0chain configuration Patching
       run: |
+        cd 0chain
         sed -i 's/magic_block_file: config\/b0magicBlock_4_miners_2_sharders.json/magic_block_file: config\/b0magicBlock_4_miners_1_sharder.json/' docker.local/config/0chain.yaml
 
     - name: Build 0dns
