@@ -48,7 +48,7 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 
 	txnCost := viper.GetInt("server_chain.transaction.transfer_cost")
 	maxBlockCost := viper.GetInt("server_chain.block.max_block_cost")
-	blockSize := maxBlockCost / txnCost
+	blockSize := int32(maxBlockCost / txnCost)
 
 	numClients := viper.GetInt("development.txn_generation.wallets")
 
@@ -95,7 +95,7 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 	ts := rand.NewSource(time.Now().UnixNano())
 	trng := rand.New(ts)
 	for {
-		numTxns = trng.Int31n(100)
+		numTxns = trng.Int31n(blockSize)
 		numWorkerTxns := numTxns / int32(numWorkers)
 		if numWorkerTxns*int32(numWorkers) < numTxns {
 			numWorkerTxns++

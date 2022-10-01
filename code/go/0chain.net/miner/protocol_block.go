@@ -592,9 +592,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		txns = append(txns, txn)
 	}
 
-	blockSize := mc.ChainConfig.MaxBlockCost() / mc.ChainConfig.TxnTransferCost()
-
-	tii := newTxnIterInfo(int32(blockSize))
+	tii := newTxnIterInfo(int32(len(b.Txns)))
 	invalidTxns := tii.checkForInvalidTxns(b.Txns)
 
 	transaction.RemoveFromPool(ctx, txns)
@@ -875,10 +873,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	b.Txns = make([]*transaction.Transaction, 0, 100)
 
-	initialBlockSize := mc.ChainConfig.MaxBlockCost() / mc.ChainConfig.TxnTransferCost()
-
 	var (
-		iterInfo       = newTxnIterInfo(int32(initialBlockSize))
+		iterInfo       = newTxnIterInfo(int32(len(b.Txns)))
 		txnProcessor   = txnProcessorHandlerFunc(mc, b)
 		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		beginState     = blockState.GetRoot()
