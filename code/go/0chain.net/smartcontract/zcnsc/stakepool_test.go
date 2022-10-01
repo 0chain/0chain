@@ -16,7 +16,7 @@ func Test_WhenAuthorizerExists_StakePool_IsCreated(t *testing.T) {
 
 	// Add authorizer
 	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
-	resp, err := contract.AddAuthorizer(tr, CreateAuthorizerParamPayload(authorizerID), ctx)
+	resp, err := contract.AddAuthorizer(tr, CreateAuthorizerParamPayload(authorizerID, AuthorizerPublicKey), ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)
 

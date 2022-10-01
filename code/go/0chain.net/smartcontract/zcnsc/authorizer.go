@@ -1,6 +1,8 @@
 package zcnsc
 
 import (
+	"0chain.net/core/encryption"
+	"encoding/hex"
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -31,15 +33,9 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	)
 
 	var (
-		authorizerID = tran.ClientID // sender address
+		authorizerID string
+		clientId     string
 	)
-
-	if authorizerID == "" {
-		msg := "authorizerID is empty"
-		err = common.NewError(code, msg)
-		Logger.Error(msg, zap.Error(err))
-		return "", err
-	}
 
 	if input == nil {
 		msg := "input data is nil"
@@ -58,18 +54,25 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
+	if params.ID == "" {
+		err = common.NewError(code, "authorizer ID cannot be empty")
+		Logger.Error("authorizer id error", zap.Error(err))
+		return "", err
+	}
+
+	authorizerID = params.ID
+
 	if params.PublicKey == "" {
 		err = common.NewError(code, "public key was not included with transaction")
 		Logger.Error("public key error", zap.Error(err))
 		return "", err
 	}
 
+	publicKeyBytes, _ := hex.DecodeString(params.PublicKey)
+	clientId = encryption.Hash(publicKeyBytes)
+
 	if params.StakePoolSettings.DelegateWallet == "" {
 		return "", common.NewError(code, "authorizer's delegate_wallet not set")
-	}
-
-	if authorizerID != params.StakePoolSettings.DelegateWallet {
-		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
 	}
 
 	globalNode, err := GetGlobalNode(ctx)
@@ -80,10 +83,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	// Validating StakePoolSettings against GlobalNode settings
+	// only sc owner can add new authorizer
+	if err := smartcontractinterface.AuthorizeWithOwner("register-authorizer", func() bool {
+		return globalNode.ZCNSConfig.OwnerId == clientId
+	}); err != nil {
+		return "", err
+	}
 
 	// Check existing Authorizer
-
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
 	switch err {
 	case util.ErrValueNotPresent:
@@ -278,12 +285,22 @@ func (zcn *ZCNSmartContract) CollectRewards(
 	return "", nil
 }
 
-func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, input []byte, ctx cstate.StateContextI) (string, error) {
 	var (
-		authorizerID = tran.ClientID
 		errorCode    = "failed to delete authorizer"
 		err          error
+		authorizerID string
 	)
+
+	payload := DeleteAuthorizerPayload{}
+	err = payload.Decode(input)
+	if err != nil {
+		err = common.NewError(errorCode, "failed to decode AddAuthorizerPayload")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+
+	authorizerID = payload.ID
 
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
 	if err != nil {

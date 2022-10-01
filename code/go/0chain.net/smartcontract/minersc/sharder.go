@@ -156,7 +156,14 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder", "saving all sharders list: %v", err)
 	}
 
-	msc.verifyMinerState(balances, "checking all sharders list after insert")
+	allMiners, err := getMinersList(balances)
+	if err != nil {
+		logging.Logger.Error("add_miner: Error in getting list from the DB",
+			zap.Error(err))
+		return "", common.NewErrorf("add_miner",
+			"failed to get miner list: %v", err)
+	}
+	msc.verifyMinerState(allMiners, balances, "checking all sharders list after insert")
 
 	return string(newSharder.Encode()), nil
 }
@@ -346,7 +353,15 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 	if err := updateShardersKeepList(balances, sharderKeepList); err != nil {
 		return "", err
 	}
-	msc.verifyMinerState(balances, "Checking allsharderslist afterInsert")
+	allMiners, err := getMinersList(balances)
+	if err != nil {
+		logging.Logger.Error("add_miner: Error in getting list from the DB",
+			zap.Error(err))
+		return "", common.NewErrorf("add_miner",
+			"failed to get miner list: %v", err)
+	}
+
+	msc.verifyMinerState(allMiners, balances, "Checking allsharderslist afterInsert")
 	buff := newSharder.Encode()
 	return string(buff), nil
 }

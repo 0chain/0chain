@@ -1,6 +1,7 @@
 package zcnsc_test
 
 import (
+	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
-	input := CreateAuthorizerParamPayload(authorizerID)
+	input := CreateAuthorizerParamPayload(authorizerID, AuthorizerPublicKey)
 
 	_, err := contract.AddAuthorizer(tr, input, ctx)
 	require.NoError(t, err)
@@ -74,7 +75,7 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 
 	authorizerID := authorizersID[0] + ":10"
 
-	input := CreateAuthorizerParamPayload(authorizerID)
+	input := CreateAuthorizerParamPayload(authorizerID, AuthorizerPublicKey)
 	sc := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
 
@@ -91,7 +92,7 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 
 func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 	authorizerID := authorizersID[0] + time.Now().String()
-	input := CreateAuthorizerParamPayload(authorizerID)
+	input := CreateAuthorizerParamPayload(authorizerID, AuthorizerPublicKey)
 	sc := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
@@ -152,7 +153,7 @@ func Test_Should_FailWithoutInputData(t *testing.T) {
 func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 	ctx := MakeMockStateContext()
 
-	data := CreateAuthorizerParamPayload("client0")
+	data := CreateAuthorizerParamPayload("client0", AuthorizerPublicKey)
 	tr := CreateAddAuthorizerTransaction("client0", ctx)
 	tr.PublicKey = ""
 	sc := CreateZCNSmartContract()
@@ -223,9 +224,12 @@ func Test_Can_Delete_Authorizer(t *testing.T) {
 		ctx  = MakeMockStateContext()
 		data []byte
 	)
-
+	payload := DeleteAuthorizerPayload{
+		ID: defaultAuthorizer,
+	}
+	data, _ = json.Marshal(payload)
 	sc := CreateZCNSmartContract()
-	tr, err := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx)
+	tr, err := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx, data)
 	require.NoError(t, err)
 	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.NoError(t, err)

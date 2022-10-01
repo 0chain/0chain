@@ -171,8 +171,6 @@ func TestUpdateSettings(t *testing.T) {
 					"block_reward.zeta.i":           "1",
 					"block_reward.zeta.k":           "0.9",
 					"block_reward.zeta.mu":          "0.2",
-
-					"expose_mpt": "false",
 				},
 			},
 		},
@@ -375,8 +373,6 @@ func TestCommitSettingChanges(t *testing.T) {
 					"block_reward.zeta.i":           "1",
 					"block_reward.zeta.k":           "0.9",
 					"block_reward.zeta.mu":          "0.2",
-
-					"expose_mpt": "false",
 				},
 			},
 		},
@@ -384,16 +380,12 @@ func TestCommitSettingChanges(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.title, func(t *testing.T) {
 			test := test
-			//t.Parallel()
 			args := setExpectations(t, test.parameters)
-
 			_, err := args.ssc.commitSettingChanges(args.txn, args.input, args.balances)
-			//require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
 				t.Fatal("commitSettingChanges err: ", err.Error())
 				return
 			}
-			//require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
 }
@@ -497,9 +489,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.Zeta.K
 	case BlockRewardZetaMu:
 		return conf.BlockReward.Zeta.Mu
-
-	case ExposeMpt:
-		return conf.ExposeMpt
 	default:
 		panic("unknown field: " + field)
 	}

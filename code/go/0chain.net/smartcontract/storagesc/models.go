@@ -673,9 +673,6 @@ type StorageAllocation struct {
 	ReadPriceRange  PriceRange `json:"read_price_range"`
 	WritePriceRange PriceRange `json:"write_price_range"`
 
-	// ChallengeCompletionTime is max challenge completion time of
-	// all blobbers of the allocation.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	// StartTime is time when the allocation has been created. We will
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
@@ -1175,7 +1172,8 @@ func (sa *StorageAllocation) validateEachBlobber(
 
 // Until returns allocation expiration.
 func (sa *StorageAllocation) Until() common.Timestamp {
-	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
+	var conf = Config{}
+	return sa.Expiration + toSeconds(conf.MaxChallengeCompletionTime)
 }
 
 // The durationInTimeUnits returns given duration (represented as
