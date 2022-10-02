@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/smartcontract/dbs/benchmark"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"encoding/hex"
 	"encoding/json"
@@ -42,10 +42,6 @@ func BenchmarkRestTests(
 			{
 				FuncName: "get_blobber_total_stakes",
 				Endpoint: srh.getBlobberTotalStakes,
-			},
-			{
-				FuncName: "total-blobber-capacity",
-				Endpoint: srh.getTotalBlobberCapacity,
 			},
 			{
 				FuncName: "blobbers-by-geolocation",
@@ -116,10 +112,6 @@ func BenchmarkRestTests(
 			{
 				FuncName: "total-saved-data",
 				Endpoint: srh.getTotalData,
-			},
-			{
-				FuncName: "average-write-price",
-				Endpoint: srh.getAverageWritePrice,
 			},
 			{
 				FuncName: "latestreadmarker",
@@ -201,14 +193,6 @@ func BenchmarkRestTests(
 					"blobber": getMockBlobberId(0),
 				},
 				Endpoint: srh.getOpenChallenges,
-			},
-			{
-				FuncName: "blobber-rank",
-				Params: map[string]string{
-					"time": "1660753917",
-					"id":   getMockBlobberId(3),
-				},
-				Endpoint: srh.getBlobberRank,
 			},
 			{
 				FuncName: "getchallenge",
@@ -421,252 +405,6 @@ func BenchmarkRestTests(
 					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
 				},
 				Endpoint: srh.getBlobberChallenges,
-			},
-			{
-				FuncName: "graph-blobber-write-price",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberWritePrice,
-			},
-			{
-				FuncName: "graph-blobber-capacity",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberCapacity,
-			},
-			{
-				FuncName: "graph-blobber-allocated",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberAllocated,
-			},
-			{
-				FuncName: "graph-blobber-saved-data",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberSavedData,
-			},
-			{
-				FuncName: "graph-blobber-read-data",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberSavedData,
-			},
-			{
-				FuncName: "graph-blobber-offers-total",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberOffersTotal,
-			},
-			{
-				FuncName: "graph-blobber-unstake-total",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberUnstakeTotal,
-			},
-			{
-				FuncName: "graph-blobber-total-stake",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberTotalStake,
-			},
-
-			{
-				FuncName: "graph-blobber-service-charge",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberServiceCharge,
-			},
-			{
-				FuncName: "graph-blobber-challenges-open",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberOpenCallenges,
-			},
-			{
-				FuncName: "graph-blobber-challenges-passed",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberChallengesPassed,
-			},
-			{
-				FuncName: "graph-blobber-challenges-completed",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberChallengesCompleted,
-			},
-			{
-				FuncName: "graph-blobber-inactive-rounds",
-				Params: map[string]string{
-					"id":          getMockBlobberId(0),
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "7",
-				},
-				Endpoint: srh.graphBlobberInactiveRounds,
-			},
-			{
-				FuncName: "total-minted",
-				Endpoint: srh.getTotalMinted,
-			},
-			{
-				FuncName: "total-blobber-capacity",
-				Endpoint: srh.getTotalBlobberCapacity,
-			},
-			{
-				FuncName: "average-write-price",
-				Endpoint: srh.getAverageWritePrice,
-			},
-			{
-				FuncName: "total-stored-data",
-				Endpoint: srh.getTotalData,
-			},
-			{
-				FuncName: "total-staked",
-				Endpoint: srh.getTotalStaked,
-			},
-			{
-				FuncName: "total-successful-challenges",
-				Endpoint: srh.getTotalSuccessfulChallenges,
-			},
-			{
-				FuncName: "total-total-challenges",
-				Endpoint: srh.getTotalTotalChallenges,
-			},
-			{
-				FuncName: "total-allocated-storage",
-				Endpoint: srh.getTotalAllocatedStorage,
-			},
-
-			{
-				FuncName: "graph-write-price",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphWritePrice,
-			},
-			{
-				FuncName: "graph-total-challenge-pools",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          "1660605906", //strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "17",
-				},
-				Endpoint: srh.graphTotalChallengePools,
-			},
-
-			{
-				FuncName: "graph-allocated-storage",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphAllocatedStorage,
-			},
-			{
-				FuncName: "graph-used-storage",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphUsedStorage,
-			},
-			{
-				FuncName: "graph-total-locked",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphTotalTokenLocked,
-			},
-			{
-				FuncName: "graph-total-minted",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphTotalMinted,
-			},
-			{
-				FuncName: "graph-total-staked",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphTotalStaked,
-			},
-			{
-				FuncName: "graph-challenges",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphChallenges,
-			},
-			{
-				FuncName: "graph-token-supply",
-				Params: map[string]string{
-					"from":        "0",
-					"to":          strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
-					"data-points": "120",
-				},
-				Endpoint: srh.graphTokenSupply,
 			},
 			{
 				FuncName: "search",

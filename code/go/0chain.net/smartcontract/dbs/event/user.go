@@ -1,7 +1,7 @@
 package event
 
 import (
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

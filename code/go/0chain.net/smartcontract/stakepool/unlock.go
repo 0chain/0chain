@@ -3,8 +3,8 @@ package stakepool
 import (
 	"fmt"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 

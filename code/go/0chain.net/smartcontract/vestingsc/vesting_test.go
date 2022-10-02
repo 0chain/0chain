@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"

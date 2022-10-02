@@ -10,8 +10,8 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/common/core/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"

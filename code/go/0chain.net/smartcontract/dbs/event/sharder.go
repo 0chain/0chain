@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
 	"github.com/guregu/null"

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract"

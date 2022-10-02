@@ -3,10 +3,11 @@ package event
 import (
 	"fmt"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type BlobberAggregate struct {
@@ -30,6 +31,29 @@ type BlobberAggregate struct {
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
+}
+
+func (edb *EventDb) replicateBlobberAggregate(round int64, offset, limit int) ([]BlobberAggregate, error) {
+	var snapshots []BlobberAggregate
+
+	queryBuilder := edb.Store.Get().
+		Model(&BlobberAggregate{}).Where("round > ?", round).Offset(offset).Limit(limit)
+
+	queryBuilder.Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "round"},
+		Desc:   false,
+	})
+	queryBuilder.Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "blobber_id"},
+		Desc:   false,
+	})
+
+	result := queryBuilder.Scan(&snapshots)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return snapshots, nil
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapshot) {

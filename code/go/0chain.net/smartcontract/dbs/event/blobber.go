@@ -12,8 +12,8 @@ import (
 	common2 "0chain.net/smartcontract/common"
 	"gorm.io/gorm/clause"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/currency"
 
 	"github.com/guregu/null"
 	"gorm.io/gorm"

@@ -1,9 +1,14 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/currency"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
@@ -12,13 +17,9 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (

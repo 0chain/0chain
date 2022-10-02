@@ -7,7 +7,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/config/mocks"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -373,7 +373,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	if err != nil {
 		return err
 	}
-
 	require.NoError(t, err)
 
 	mn, err := getMinerNode(txn.ClientID, ctx)

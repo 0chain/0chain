@@ -1,14 +1,13 @@
 package event
 
 import (
-	"fmt"
-
 	"0chain.net/chaincore/state"
 	"github.com/0chain/common/core/logging"
+	"gorm.io/gorm/clause"
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 )
 
 //max_capacity - maybe change it max capacity in blobber config and everywhere else to be less confusing.
@@ -63,46 +62,23 @@ type AllocationBlobberValueChanged struct {
 	Delta        int64
 }
 
-func (edb *EventDb) GetDifference(start, end int64, roundsPerPoint int64, row, table string) ([]int64, error) {
-	query := fmt.Sprintf(`
-		SELECT %s - LAG(%s,1, CAST(0 AS Bigint)) OVER(ORDER BY round ASC) 
-		FROM %s
-		WHERE ( round BETWEEN %v AND %v ) 
-				AND ( Mod(round, %v) <= %v )
-		ORDER BY round ASC	`,
-		row, row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1)
+func (edb *EventDb) replicateSnapshots(round int64, limit int) ([]Snapshot, error) {
+	var snapshots []Snapshot
 
-	var deltas []int64
-	res := edb.Store.Get().Raw(query).Scan(&deltas)
-	return deltas, res.Error
-}
+	queryBuilder := edb.Store.Get().
+		Model(&Snapshot{}).Where("round > ?", round).Limit(limit)
 
-func (edb *EventDb) GetAverage(start, end int64, roundsPerPoint int64, row, table string) ([]int64, error) {
-	query := fmt.Sprintf(`
-		SELECT ( %s + LAG(%s,1, CAST(0 AS Bigint)) OVER(ORDER BY round ASC) )/2
-		FROM %s
-		WHERE ( round BETWEEN %v AND %v ) 
-				AND ( Mod(round, %v) <= %v )
-		ORDER BY round ASC	`,
-		row, row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1)
+	queryBuilder.Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "round"},
+		Desc:   false,
+	})
 
-	var deltas []int64
-	res := edb.Store.Get().Raw(query).Scan(&deltas)
-	return deltas, res.Error
-}
+	result := queryBuilder.Scan(&snapshots)
+	if result.Error != nil {
+		return nil, result.Error
+	}
 
-func (edb *EventDb) GetTotal(start, end int64, roundsPerPoint int64, row, table string) ([]int64, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM %s
-		WHERE ( round BETWEEN %v AND %v ) 
-				AND ( Mod(round, %v) <= %v )
-		ORDER BY round ASC	`,
-		row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1)
-
-	var deltas []int64
-	res := edb.Store.Get().Raw(query).Scan(&deltas)
-	return deltas, res.Error
+	return snapshots, nil
 }
 
 type globalSnapshot struct {

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -430,7 +430,6 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 type stakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
 	ProviderID   string          `json:"provider_id,omitempty"`
-
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {

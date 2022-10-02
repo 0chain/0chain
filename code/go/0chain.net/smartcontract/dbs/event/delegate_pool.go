@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 

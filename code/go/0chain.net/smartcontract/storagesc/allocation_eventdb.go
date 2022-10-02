@@ -10,8 +10,8 @@ import (
 
 	"0chain.net/smartcontract/dbs"
 
-	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"

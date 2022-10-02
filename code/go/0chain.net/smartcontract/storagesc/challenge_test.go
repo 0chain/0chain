@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
 	"strconv"
@@ -9,7 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/stakepool/spenum"
+
+	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"

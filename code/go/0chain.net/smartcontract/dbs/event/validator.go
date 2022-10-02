@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"

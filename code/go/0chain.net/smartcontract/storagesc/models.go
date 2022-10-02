@@ -16,8 +16,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/common/core/currency"
 
 	"go.uber.org/zap"
 

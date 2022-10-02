@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"

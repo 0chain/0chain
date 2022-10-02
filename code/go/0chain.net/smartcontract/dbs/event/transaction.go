@@ -1,8 +1,8 @@
 package event
 
 import (
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -13,7 +13,7 @@ type Transaction struct {
 	gorm.Model
 	Hash              string `gorm:"uniqueIndex:idx_thash"`
 	BlockHash         string `gorm:"index:idx_tblock_hash"`
-	Round        int64  `gorm:"index:idx_tblock_round"`
+	Round             int64  `gorm:"index:idx_tblock_round"`
 	Version           string
 	ClientId          string `gorm:"index:idx_tclient_id"`
 	ToClientId        string `gorm:"index:idx_tto_client_id"`

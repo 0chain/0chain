@@ -8,12 +8,12 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"

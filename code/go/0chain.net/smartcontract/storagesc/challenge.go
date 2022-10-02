@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -116,7 +116,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	var (
 		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
-		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp-latestCompletedChallTime, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
@@ -309,7 +309,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	var (
 		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
-		dtu  = alloc.durationInTimeUnits(tp - prev, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp-prev, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 

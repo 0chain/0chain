@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"golang.org/x/net/context"
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 

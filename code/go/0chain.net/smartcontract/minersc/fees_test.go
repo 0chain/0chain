@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"

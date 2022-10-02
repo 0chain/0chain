@@ -1,7 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 
