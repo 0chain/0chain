@@ -425,6 +425,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	msg := fmt.Sprintf("commit_blobber_read: manohar: numReads %d", numReads)
 	logging.Logger.Info(msg)
+	msg = fmt.Sprintf("commit_blobber_read: manohar: sizeRead %f", sizeRead)
+	logging.Logger.Info(msg)
+	msg = fmt.Sprintf("commit_blobber_read: manohar: value %d", value)
+	logging.Logger.Info(msg)
 
 	commitRead.ReadMarker.ReadSize = sizeRead
 
