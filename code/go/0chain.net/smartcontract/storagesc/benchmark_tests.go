@@ -715,6 +715,12 @@ func BenchmarkTests(
 			}(),
 		},
 		{
+			name:     "storage.commit_settings_changes",
+			endpoint: ssc.commitSettingChanges,
+			txn:      &transaction.Transaction{},
+		},
+
+		{
 			name:     "storage.update_settings",
 			endpoint: ssc.updateSettings,
 			txn: &transaction.Transaction{
