@@ -349,7 +349,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"decoding input: %v", err)
 	}
 
-	msg := fmt.Sprintf("commit_blobber_read: manohar: commitRead %v", *commitRead)
+	msg := fmt.Sprintf("commit_blobber_read: manohar: commitRead %v", *commitRead.ReadMarker)
 	logging.Logger.Info(msg)
 
 	if commitRead.ReadMarker == nil {
@@ -441,7 +441,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	// move tokens from read pool to blobber
 	var rp *readPool
-	if rp, err = sc.getReadPool(commitRead.ReadMarker.ClientID, balances); err != nil {
+	if rp, err = sc.getReadPool(alloc.Owner, balances); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}
@@ -540,7 +540,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't save stake pool: %v", err)
 	}
 
-	if err = rp.save(sc.ID, commitRead.ReadMarker.ClientID, balances); err != nil {
+	if err = rp.save(sc.ID, alloc.Owner, balances); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't save read pool: %v", err)
 	}
