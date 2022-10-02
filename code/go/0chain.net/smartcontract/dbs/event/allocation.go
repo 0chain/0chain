@@ -231,7 +231,7 @@ func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTe
 }
 
 func mergeAddOrOverwriteAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
-	return newEventsMerger[AllocationBlobberTerm](TagUpdateAllocationBlobberTerm, withAllocBlobberTermsMerged())
+	return newEventsMerger[AllocationBlobberTerm](TagAddOrOverwriteAllocationBlobberTerm, withAllocBlobberTermsMerged())
 }
 
 func mergeDeleteAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
