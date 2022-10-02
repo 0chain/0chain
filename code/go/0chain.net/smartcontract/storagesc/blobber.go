@@ -423,7 +423,11 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		value    = currency.Coin(float64(details.Terms.ReadPrice) * sizeRead)
 	)
 
-	msg := fmt.Sprintf("commit_blobber_read: manohar: numReads %d", numReads)
+	msg := fmt.Sprintf("commit_blobber_read: manohar: details %v", *details)
+	logging.Logger.Info(msg)
+	msg = fmt.Sprintf("commit_blobber_read: manohar: numReads %d", numReads)
+	logging.Logger.Info(msg)
+	msg = fmt.Sprintf("commit_blobber_read: manohar: details.Terms %v", details.Terms)
 	logging.Logger.Info(msg)
 	msg = fmt.Sprintf("commit_blobber_read: manohar: sizeRead %f", sizeRead)
 	logging.Logger.Info(msg)
