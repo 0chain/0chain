@@ -541,12 +541,18 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	if err = rp.save(sc.ID, alloc.Owner, balances); err != nil {
+		msg = fmt.Sprintf("commit_blobber_read: rp.save error %v", err)
+		logging.Logger.Info(msg)
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't save read pool: %v", err)
 	}
 
+	msg = fmt.Sprintf("commit_blobber_read: inserting blobber")
+	logging.Logger.Info(msg)
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
+		msg = fmt.Sprintf("commit_blobber_read: inserting blobber error %v", err)
+		logging.Logger.Info(msg)
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't save blobber: %v", err)
 	}
@@ -558,9 +564,13 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't save allocation: %v", err)
 	}
 
+	msg = fmt.Sprintf("commit_blobber_read: inserting readmarker")
+	logging.Logger.Info(msg)
 	// save read marker
 	_, err = balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
 	if err != nil {
+		msg = fmt.Sprintf("commit_blobber_read: inserting read  marker error %v", err)
+		logging.Logger.Info(msg)
 		return "", common.NewError("saving read marker", err.Error())
 	}
 
