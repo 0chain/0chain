@@ -349,6 +349,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"decoding input: %v", err)
 	}
 
+	msg := fmt.Sprintf("commit_blobber_read: manohar: commitRead %v", *commitRead)
+	logging.Logger.Info(msg)
+
 	if commitRead.ReadMarker == nil {
 		return "", common.NewError("commit_blobber_read",
 			"malformed request: missing read_marker")
@@ -423,7 +426,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		value    = currency.Coin(float64(details.Terms.ReadPrice) * sizeRead)
 	)
 
-	msg := fmt.Sprintf("commit_blobber_read: manohar: details %v", *details)
+	msg = fmt.Sprintf("commit_blobber_read: manohar: details %v", *details)
 	logging.Logger.Info(msg)
 	msg = fmt.Sprintf("commit_blobber_read: manohar: numReads %d", numReads)
 	logging.Logger.Info(msg)
