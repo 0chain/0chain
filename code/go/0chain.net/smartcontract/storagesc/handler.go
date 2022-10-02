@@ -834,7 +834,10 @@ func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
 		return nil, fmt.Errorf("nil balances")
 	}
 	if *balances.GetConfig() == nil {
-		updateConfig(balances)
+		err := updateConfig(balances)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if *balances.GetConfig() == nil {
 		return nil, util.ErrValueNotPresent
