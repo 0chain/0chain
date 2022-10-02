@@ -317,7 +317,7 @@ func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
 	var out smartcontract.StringMap
 	out.Fields = make(map[string]string)
 	for _, key := range SettingName {
-		info, ok := Settings[strings.ToLower(key)]
+		info, ok := Settings[key]
 		if !ok {
 			return out, fmt.Errorf("SettingName %s not found in Settings", key)
 		}
