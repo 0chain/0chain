@@ -423,6 +423,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		value    = currency.Coin(float64(details.Terms.ReadPrice) * sizeRead)
 	)
 
+	msg := fmt.Sprintf("commit_blobber_read: manohar: numReads %d", numReads)
+	logging.Logger.Info(msg)
+
 	commitRead.ReadMarker.ReadSize = sizeRead
 
 	// move tokens from read pool to blobber
@@ -432,12 +435,18 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related read pool: %v", err)
 	}
 
+	msg = fmt.Sprintf("commit_blobber_read: manohar: readpool %v of client %s", *rp, commitRead.ReadMarker.ClientID)
+	logging.Logger.Info(msg)
+
 	var sp *stakePool
 	sp, err = sc.getStakePool(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related stake pool: %v", err)
 	}
+
+	msg = fmt.Sprintf("commit_blobber_read: manohar: stakepool %v of blobber %s", *sp, commitRead.ReadMarker.BlobberID)
+	logging.Logger.Info(msg)
 
 	details.Stats.NumReads++
 	alloc.Stats.NumReads++
@@ -448,19 +457,29 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't transfer tokens from read pool to stake pool: %v", err)
 	}
+
+	msg = fmt.Sprintf("commit_blobber_read: manohar: resp of moveToBlobber %s", resp)
+	logging.Logger.Info(msg)
+
 	readReward, err := currency.AddCoin(details.ReadReward, value) // stat
 	if err != nil {
 		return "", err
 	}
 	details.ReadReward = readReward
+	msg = fmt.Sprintf("commit_blobber_read: manohar: new readreward %d", details.ReadReward)
+	logging.Logger.Info(msg)
 
 	spent, err := currency.AddCoin(details.Spent, value) // reduce min lock demand left
 	if err != nil {
 		return "", err
 	}
 	details.Spent = spent
+	msg = fmt.Sprintf("commit_blobber_read: manohar: new spent %d", details.Spent)
+	logging.Logger.Info(msg)
 
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
+	msg = fmt.Sprintf("commit_blobber_read: manohar: rewardRound %d", rewardRound)
+	logging.Logger.Info(msg)
 
 	if blobber.LastRewardDataReadRound >= rewardRound {
 		blobber.DataReadLastRewardRound += sizeRead
@@ -496,6 +515,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 				"error saving ongoing blobber reward partition: %v", err)
 		}
 	}
+
+	msg = fmt.Sprintf("commit_blobber_read: manohar: at last stakepool %v", *sp)
+	logging.Logger.Info(msg)
+
+	msg = fmt.Sprintf("commit_blobber_read: manohar: at last readpool %v", *rp)
+	logging.Logger.Info(msg)
 
 	// save pools
 	err = sp.save(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
