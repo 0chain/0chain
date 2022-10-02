@@ -138,7 +138,6 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"read_price_max",
 		"write_price_min",
 		"write_price_max",
-		"challenge_completion_time",
 		"start_time",
 		"finalized",
 		"cancelled",
