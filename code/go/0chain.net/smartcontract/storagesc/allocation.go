@@ -2,10 +2,11 @@ package storagesc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"math"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -715,10 +716,8 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 	wg.Wait()
 	close(blobberCh)
 
-	select {
-	case err := <-errorCh:
+	if err := GetAggregatedError(AggregateErrorsFromChannel(errorCh), true); err != nil {
 		return nil, err
-	default:
 	}
 
 	for resp := range blobberCh {
@@ -726,6 +725,44 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 	}
 
 	return
+}
+
+func AggregateErrorsFromChannel(ch chan error) []error {
+	errs := make([]error, 0)
+	for i := 0; i < len(ch); i++ {
+		select {
+		case err := <-ch:
+			errs = append(errs, err)
+		}
+	}
+
+	return errs
+}
+
+func GetAggregatedError(errs []error, sorted bool) error {
+	if len(errs) == 0 {
+		return nil
+	}
+
+	err := errs[0]
+	if len(errs) == 1 {
+		return err
+	}
+
+	errStrings := make([]string, 0)
+	for _, err := range errs {
+		errStrings = append(errStrings, err.Error())
+	}
+
+	if sorted {
+		sort.Strings(errStrings)
+	}
+
+	for i := 1; i < len(errs); i++ {
+		err = errors.Wrap(err, errStrings[i])
+	}
+
+	return err
 }
 
 // closeAllocation making it expired; the allocation will be alive the
