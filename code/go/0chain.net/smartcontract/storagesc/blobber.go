@@ -540,44 +540,56 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't save stake pool: %v", err)
 	}
 
+	msg = fmt.Sprintf("commit_blobber_read: manohar saving readpool")
+	logging.Logger.Info(msg)
 	if err = rp.save(sc.ID, alloc.Owner, balances); err != nil {
-		msg = fmt.Sprintf("commit_blobber_read: rp.save error %v", err)
+		msg = fmt.Sprintf("commit_blobber_read: manohar rp.save error %v", err)
 		logging.Logger.Info(msg)
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't save read pool: %v", err)
 	}
 
-	msg = fmt.Sprintf("commit_blobber_read: inserting blobber")
+	msg = fmt.Sprintf("commit_blobber_read: manohar inserting blobber")
 	logging.Logger.Info(msg)
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
-		msg = fmt.Sprintf("commit_blobber_read: inserting blobber error %v", err)
+		msg = fmt.Sprintf("commit_blobber_read: manohar inserting blobber error %v", err)
 		logging.Logger.Info(msg)
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't save blobber: %v", err)
 	}
 
 	// save allocation
+	msg = fmt.Sprintf("commit_blobber_read: manohar inserting allocation")
+	logging.Logger.Info(msg)
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
+		msg = fmt.Sprintf("commit_blobber_read: manohar error in blobber allocation %v", err)
+		logging.Logger.Info(msg)
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't save allocation: %v", err)
 	}
 
-	msg = fmt.Sprintf("commit_blobber_read: inserting readmarker")
+	msg = fmt.Sprintf("commit_blobber_read: manohar inserting readmarker")
 	logging.Logger.Info(msg)
 	// save read marker
 	_, err = balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
 	if err != nil {
-		msg = fmt.Sprintf("commit_blobber_read: inserting read  marker error %v", err)
+		msg = fmt.Sprintf("commit_blobber_read: manohar inserting read  marker error %v", err)
 		logging.Logger.Info(msg)
 		return "", common.NewError("saving read marker", err.Error())
 	}
 
+	msg = fmt.Sprintf("commit_blobber_read: manohar balances.EmitEven")
+	logging.Logger.Info(msg)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
+	msg = fmt.Sprintf("commit_blobber_read: manohar emitAddOrOverwriteReadMarker")
+	logging.Logger.Info(msg)
 	err = emitAddOrOverwriteReadMarker(commitRead.ReadMarker, balances, t)
 	if err != nil {
+		msg = fmt.Sprintf("commit_blobber_read: manohar read marker in db %v", err)
+		logging.Logger.Info(msg)
 		return "", common.NewError("saving read marker in db:", err.Error())
 	}
 
