@@ -91,8 +91,8 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.ID, a)
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.ID, b)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.AllocationID, a)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {

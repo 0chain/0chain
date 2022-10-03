@@ -90,35 +90,6 @@ func (edb *EventDb) updateChallenges(chs []Challenge) error {
 	}).Create(chs).Error
 }
 
-func (c *Challenge) AfterCreate(tx *gorm.DB) error {
-	if c.Responded {
-		return nil
-	}
-	//if !c.Responded {
-	// new added challenges
-	return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "allocation_id"}},
-		DoUpdates: clause.Assignments(map[string]interface{}{
-			"total_challenges": gorm.Expr("allocations.total_challenges + 1"),
-			"open_challenges":  gorm.Expr("allocations.open_challenges + 1 - ?", c.ExpiredN),
-		}),
-	}).Create(&Allocation{AllocationID: c.AllocationID}).Error
-	//}
-	//else {
-	// challenge updated
-	//
-	// update blobber stat
-	//b := &Blobber{BlobberID: c.BlobberID}
-	//if err := b.onUpdateChallenge(tx, c); err != nil {
-	//	return err
-	//}
-	//
-	//// update allocation stat
-	//alloc := &Allocation{AllocationID: c.AllocationID}
-	//return alloc.onUpdateChallenge(tx, c)
-	//}
-}
-
 func mergeAddChallengesEvents() *eventsMergerImpl[Challenge] {
 	return newEventsMerger[Challenge](TagAddChallenge, withUniqueEventOverwrite())
 }
