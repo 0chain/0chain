@@ -2,7 +2,7 @@ name: Benchmark Tests
 
 on:
   push:
-    branches: [ master, staging ]
+    branches: [ master, staging, feature/add-slack-notifications-for-benchmark-tests ]
   pull_request:
     branches: [ master, staging ]
 
