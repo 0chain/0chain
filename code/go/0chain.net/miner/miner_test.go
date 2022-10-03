@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/alicebob/miniredis/v2"
 	"log"
 	"os"
 	"os/user"
