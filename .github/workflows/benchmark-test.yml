@@ -33,4 +33,10 @@ jobs:
       - name: Run tests
         run: |
           cd docker.local/benchmarks
-          ../bin/start.benchmarks.sh
+          ../bin/start.benchmarks.sh | tee benchmark_results
+          
+      - name: "Convert results file to png"
+        uses: 0chain/actions/text-to-png@feature/add-txt-to-png
+        with:
+          file_location: ./docker.local/benchmarks/benchmark_results
+          archive_file: "true"    
