@@ -75,7 +75,7 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	}, nil
 }
 
-func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
+func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error {
 	if len(spus) == 0 {
 		return nil
 	}
@@ -91,6 +91,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
 		n := len(rewards.rewards) + len(rewards.delegatePools)
 		if du > 50*time.Millisecond {
 			logging.Logger.Debug("event db - update reward slow",
+				zap.Int64("round", round),
 				zap.Any("duration", du),
 				zap.Int("total update items", n),
 				zap.Int("rewards num", len(rewards.rewards)),
@@ -107,7 +108,9 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward) error {
 
 	rpdu := time.Since(ts)
 	if rpdu.Milliseconds() > 50 {
-		logging.Logger.Debug("event db - reward providers slow", zap.Any("duration", rpdu))
+		logging.Logger.Debug("event db - reward providers slow",
+			zap.Any("duration", rpdu),
+			zap.Int64("round", round))
 	}
 
 	if len(rewards.delegatePools) > 0 {

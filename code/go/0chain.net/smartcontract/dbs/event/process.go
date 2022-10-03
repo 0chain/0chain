@@ -458,7 +458,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.rewardUpdate(*spus)
+		return edb.rewardUpdate(*spus, event.BlockNumber)
 	case TagAddAllocation:
 		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
