@@ -843,7 +843,8 @@ func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
 		return nil, util.ErrValueNotPresent
 	}
 	var conf = *(balances.GetConfig())
-	return conf.(*Config), nil
+	ret := conf.(Config)
+	return &ret, nil
 }
 
 func updateConfig(balances cstate.CommonStateContextI) error {
