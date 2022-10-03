@@ -1,14 +1,15 @@
 package storagesc
 
 import (
+	"testing"
+
 	"0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
-const extraStats = 7
+const extraStats = 6
 
 func TestStorageBenchmarkTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}
