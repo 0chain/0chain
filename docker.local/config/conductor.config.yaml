@@ -194,7 +194,7 @@ commands:
   upload:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh"
-    should_fail: false # should fail, consensus 66.6%, but expected is 76.6%
+    should_fail: false
   unverified_transaction:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/unverified_transaction.sh"
