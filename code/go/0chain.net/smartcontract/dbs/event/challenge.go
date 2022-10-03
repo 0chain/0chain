@@ -79,8 +79,8 @@ func (edb *EventDb) GetChallengeForBlobber(blobberID, challengeID string) (*Chal
 	return ch, nil
 }
 
-func (edb *EventDb) addChallenge(ch *Challenge) error {
-	return edb.Store.Get().Create(&ch).Error
+func (edb *EventDb) addChallenges(chlgs []Challenge) error {
+	return edb.Store.Get().Create(&chlgs).Error
 }
 
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
@@ -91,27 +91,38 @@ func (edb *EventDb) updateChallenges(chs []Challenge) error {
 }
 
 func (c *Challenge) AfterCreate(tx *gorm.DB) error {
-	// update allocation stat
-	if !c.Responded {
-		// new added challenges
-		return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
-			Columns: []clause.Column{{Name: "allocation_id"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{
-				"total_challenges": gorm.Expr("allocations.total_challenges + 1"),
-				"open_challenges":  gorm.Expr("allocations.open_challenges + 1 - ?", c.ExpiredN),
-			}),
-		}).Create(&Allocation{AllocationID: c.AllocationID}).Error
-	} else {
-		// challenge updated
-		//
-		// update blobber stat
-		b := &Blobber{BlobberID: c.BlobberID}
-		if err := b.onUpdateChallenge(tx, c); err != nil {
-			return err
-		}
-
-		// update allocation stat
-		alloc := &Allocation{AllocationID: c.AllocationID}
-		return alloc.onUpdateChallenge(tx, c)
+	if c.Responded {
+		return nil
 	}
+	//if !c.Responded {
+	// new added challenges
+	return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "allocation_id"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"total_challenges": gorm.Expr("allocations.total_challenges + 1"),
+			"open_challenges":  gorm.Expr("allocations.open_challenges + 1 - ?", c.ExpiredN),
+		}),
+	}).Create(&Allocation{AllocationID: c.AllocationID}).Error
+	//}
+	//else {
+	// challenge updated
+	//
+	// update blobber stat
+	//b := &Blobber{BlobberID: c.BlobberID}
+	//if err := b.onUpdateChallenge(tx, c); err != nil {
+	//	return err
+	//}
+	//
+	//// update allocation stat
+	//alloc := &Allocation{AllocationID: c.AllocationID}
+	//return alloc.onUpdateChallenge(tx, c)
+	//}
+}
+
+func mergeAddChallengesEvents() *eventsMergerImpl[Challenge] {
+	return newEventsMerger[Challenge](TagAddChallenge, withUniqueEventOverwrite())
+}
+
+func mergeUpdateChallengesEvents() *eventsMergerImpl[Challenge] {
+	return newEventsMerger[Challenge](TagUpdateChallenge, withUniqueEventOverwrite())
 }

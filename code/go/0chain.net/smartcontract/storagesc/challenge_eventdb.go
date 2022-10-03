@@ -5,10 +5,9 @@ import (
 	"strings"
 	"time"
 
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
-
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 )
 
@@ -57,16 +56,43 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 
 func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
+	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
+		AllocationID:    ch.AllocationID,
+		OpenChallenges:  int64(1 - expiredN), // increase one challenge and remove expired ones
+		TotalChallenges: int64(1),
+	})
 }
 
 func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, event.Challenge{
+	clg := event.Challenge{
 		ChallengeID:  sc.ID,
 		AllocationID: sc.AllocationID,
 		BlobberID:    sc.BlobberID,
 		Responded:    sc.Responded,
 		Passed:       passed,
-	})
+	}
+
+	a := event.Allocation{
+		AllocationID:             sc.AllocationID,
+		OpenChallenges:           1,
+		LatestClosedChallengeTxn: sc.ID,
+	}
+
+	b := event.Blobber{
+		BlobberID:           sc.BlobberID,
+		ChallengesCompleted: 1,
+	}
+
+	if passed {
+		a.SuccessfulChallenges = 1
+		b.ChallengesPassed = 1
+	} else {
+		a.FailedChallenges = 1
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.ID, a)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.ID, b)
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {

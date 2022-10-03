@@ -50,24 +50,6 @@ type Allocation struct {
 	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:AllocationID"`
 }
 
-func (alloc *Allocation) onUpdateChallenge(tx *gorm.DB, c *Challenge) error {
-	vs := map[string]interface{}{
-		"open_challenges":             gorm.Expr("allocations.open_challenges - 1"),
-		"latest_closed_challenge_txn": gorm.Expr("?", c.ChallengeID),
-	}
-
-	if c.Passed {
-		vs["successful_challenges"] = gorm.Expr("allocations.successful_challenges + 1")
-	} else {
-		vs["failed_challenges"] = gorm.Expr("allocations.failed_challenges + 1")
-	}
-
-	return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "allocation_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&Allocation{AllocationID: c.AllocationID}).Error
-}
-
 func (edb *EventDb) GetAllocation(id string) (*Allocation, error) {
 	var alloc Allocation
 	err := edb.Store.Get().Preload("Terms").Model(&Allocation{}).Where("allocation_id = ?", id).First(&alloc).Error
@@ -258,5 +240,76 @@ func withAllocBlobberTermsMerged() eventMergeMiddleware {
 		}
 
 		return &ret, nil
+	})
+}
+
+//func (alloc *Allocation) onUpdateChallenge(tx *gorm.DB, c *Challenge) error {
+//	vs := map[string]interface{}{
+//		"open_challenges":             gorm.Expr("allocations.open_challenges - 1"),
+//		"latest_closed_challenge_txn": gorm.Expr("?", c.ChallengeID),
+//	}
+//
+//	if c.Passed {
+//		vs["successful_challenges"] = gorm.Expr("allocations.successful_challenges + 1")
+//	} else {
+//		vs["failed_challenges"] = gorm.Expr("allocations.failed_challenges + 1")
+//	}
+//
+//	return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
+//		Columns:   []clause.Column{{Name: "allocation_id"}},
+//		DoUpdates: clause.Assignments(vs),
+//	}).Create(&Allocation{AllocationID: c.AllocationID}).Error
+//}
+
+func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withAllocChallengesMerged())
+}
+
+func withAllocChallengesMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
+		a.OpenChallenges += b.OpenChallenges
+		a.LatestClosedChallengeTxn = b.LatestClosedChallengeTxn
+		a.SuccessfulChallenges += b.SuccessfulChallenges
+		a.FailedChallenges += b.FailedChallenges
+
+		return a, nil
+	})
+}
+
+func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
+	vs := map[string]interface{}{
+		"open_challenges":             gorm.Expr("allocations.open_challenges - excluded.open_challenges"),
+		"latest_closed_challenge_txn": gorm.Expr("excluded.latest_closed_challenge_txn"),
+		"successful_challenges":       gorm.Expr("allocations.successful_challenges + excluded.successful_challenges"),
+		"failed_challenges":           gorm.Expr("allocations.failed_challenges + excluded.failed_challenges"),
+	}
+
+	return edb.Store.Get().Model(&Allocation{}).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(&allocs).Error
+}
+
+func (edb *EventDb) addChallengesToAllocations(allocs []Allocation) error {
+	vs := map[string]interface{}{
+		"total_challenges": gorm.Expr("allocations.total_challenges + excluded.total_challenges"),
+		"open_challenges":  gorm.Expr("allocations.open_challenges + excluded.open_challenges"),
+	}
+
+	return edb.Store.Get().Model(&Allocation{}).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(&allocs).Error
+}
+
+func mergeAddChallengesToAllocsEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagAddChallengeToAllocation, withAddChallengesToAllocMerged())
+}
+
+func withAddChallengesToAllocMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
+		a.OpenChallenges += b.OpenChallenges
+		a.TotalChallenges += b.TotalChallenges
+		return a, nil
 	})
 }
