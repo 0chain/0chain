@@ -23,10 +23,20 @@ env:
   MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
 
 jobs:
-  miner:
+  pre-build:
     runs-on: [self-hosted, build]
     steps:
-    
+
+    - name: Generate mocks
+      run: |
+        make install-mockery
+        make build-mocks
+
+  miner:
+    runs-on: [self-hosted, build]
+    needs: [pre-build]
+    steps:
+
     - name: Set docker image tag
       id: get_info
       run: |
@@ -59,12 +69,10 @@ jobs:
 
     - name: Build & Push
       run: |
-        make install-mockery
-        make build-mocks
         sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
-       
-        
+
+
         docker tag miner:latest ${MINER_REGISTRY}:$TAG
         docker push ${MINER_REGISTRY}:$TAG
 
@@ -75,7 +83,7 @@ jobs:
       env:
         DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
-    - name: Push latest 
+    - name: Push latest
       if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
       run: |
           docker push $MINER_REGISTRY:latest
@@ -83,6 +91,7 @@ jobs:
 
   sharder:
     runs-on: [self-hosted, build]
+    needs: [pre-build]
     steps:
 
     - name: Set docker image tag
@@ -118,9 +127,6 @@ jobs:
 
     - name: Build & Push
       run: |
-        make install-mockery
-        make build-mocks
-        
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
 
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
@@ -128,7 +134,7 @@ jobs:
 
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
-        docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA  
+        docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
 
 
     - name: Push latest
@@ -171,7 +177,7 @@ jobs:
 
           echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
           echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
-        
+
           echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
