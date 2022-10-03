@@ -1,12 +1,14 @@
 package zcnsc_test
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
 
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/encryption"
 
 	cstate "0chain.net/chaincore/chain/state"
 	. "0chain.net/smartcontract/zcnsc"
@@ -17,6 +19,7 @@ import (
 
 var (
 	stringEmpty = ""
+	ownerId     = "8a15e216a3b4237330c1fff19c7b3916ece5b0f47341013ceb64d53595a4cebb"
 )
 
 func init() {
@@ -56,34 +59,37 @@ func Test_Basic_GetUserNode_ReturnsUserNode(t *testing.T) {
 }
 
 func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
-	const authorizerID = "auth0"
-	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
-	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
-	input := CreateAuthorizerParamPayload(authorizerID)
+	delegateWallet := authorizersID[0] + ":10"
 
-	_, err := contract.AddAuthorizer(tr, input, ctx)
+	input := CreateAuthorizerParamPayload(delegateWallet, AuthorizerPublicKey)
+	sc := CreateZCNSmartContract()
+	tr := CreateAddAuthorizerTransaction(ownerId, ctx)
+
+	_, err := sc.AddAuthorizer(tr, input, ctx)
 	require.NoError(t, err)
 
-	_, err = contract.AddAuthorizer(tr, input, ctx)
+	_, err = sc.AddAuthorizer(tr, input, ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "already exists")
 }
 
 func Test_BasicShouldAddAuthorizer(t *testing.T) {
 	ctx := MakeMockStateContext()
+	delegateWallet := authorizersID[0] + ":10"
 
-	authorizerID := authorizersID[0] + ":10"
+	input := CreateAuthorizerParamPayload(delegateWallet, AuthorizerPublicKey)
+	publicKeyBytes, _ := hex.DecodeString(AuthorizerPublicKey)
+	id := encryption.Hash(publicKeyBytes)
 
-	input := CreateAuthorizerParamPayload(authorizerID)
 	sc := CreateZCNSmartContract()
-	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
+	tr := CreateAddAuthorizerTransaction(ownerId, ctx)
 
 	resp, err := sc.AddAuthorizer(tr, input, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)
 
-	authorizeNode, err := GetAuthorizerNode(authorizerID, ctx)
+	authorizeNode, err := GetAuthorizerNode(id, ctx)
 	require.NoError(t, err)
 
 	err = ctx.GetTrieNode(authorizeNode.GetKey(), authorizeNode)
@@ -91,18 +97,22 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 }
 
 func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
-	authorizerID := authorizersID[0] + time.Now().String()
-	input := CreateAuthorizerParamPayload(authorizerID)
-	sc := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
-	tr := CreateAddAuthorizerTransaction(authorizerID, ctx)
+	delegateWallet := authorizersID[0] + ":10"
+
+	input := CreateAuthorizerParamPayload(delegateWallet, AuthorizerPublicKey)
+	publicKeyBytes, _ := hex.DecodeString(AuthorizerPublicKey)
+	id := encryption.Hash(publicKeyBytes)
+
+	sc := CreateZCNSmartContract()
+	tr := CreateAddAuthorizerTransaction(ownerId, ctx)
 
 	address, err := sc.AddAuthorizer(tr, input, ctx)
 	require.NoError(t, err, "must be able to add authorizer")
 	require.NotEmpty(t, address)
 
 	// Check nodes state
-	node, err := GetAuthorizerNode(authorizerID, ctx)
+	node, err := GetAuthorizerNode(id, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
@@ -113,7 +123,7 @@ func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 	require.Empty(t, address)
 
 	// Check nodes state
-	node, err = GetAuthorizerNode(authorizerID, ctx)
+	node, err = GetAuthorizerNode(id, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 }
@@ -152,13 +162,14 @@ func Test_Should_FailWithoutInputData(t *testing.T) {
 
 func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 	ctx := MakeMockStateContext()
+	delegateWallet := authorizersID[0] + ":10"
 
-	data := CreateAuthorizerParamPayload("client0")
-	tr := CreateAddAuthorizerTransaction("client0", ctx)
-	tr.PublicKey = ""
+	input := CreateAuthorizerParamPayload(delegateWallet, AuthorizerPublicKey)
+
 	sc := CreateZCNSmartContract()
+	tr := CreateAddAuthorizerTransaction(ownerId, ctx)
 
-	resp, err := sc.AddAuthorizer(tr, data, ctx)
+	resp, err := sc.AddAuthorizer(tr, input, ctx)
 	require.NotEmpty(t, resp)
 	require.NotNil(t, resp)
 	require.NoError(t, err)

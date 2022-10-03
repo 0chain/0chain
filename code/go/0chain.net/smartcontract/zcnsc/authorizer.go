@@ -1,7 +1,10 @@
 package zcnsc
 
 import (
+	"encoding/hex"
 	"fmt"
+
+	"0chain.net/core/encryption"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -31,15 +34,9 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	)
 
 	var (
-		authorizerID = tran.ClientID // sender address
+		authorizerID string
+		clientId     string
 	)
-
-	if authorizerID == "" {
-		msg := "authorizerID is empty"
-		err = common.NewError(code, msg)
-		Logger.Error(msg, zap.Error(err))
-		return "", err
-	}
 
 	if input == nil {
 		msg := "input data is nil"
@@ -57,19 +54,20 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		Logger.Error("public key error", zap.Error(err))
 		return "", err
 	}
-
 	if params.PublicKey == "" {
 		err = common.NewError(code, "public key was not included with transaction")
 		Logger.Error("public key error", zap.Error(err))
 		return "", err
 	}
 
+	publicKeyBytes, err := hex.DecodeString(params.PublicKey)
+	if err != nil {
+		return "", err
+	}
+	authorizerID = encryption.Hash(publicKeyBytes)
+	clientId = tran.ClientID
 	if params.StakePoolSettings.DelegateWallet == "" {
 		return "", common.NewError(code, "authorizer's delegate_wallet not set")
-	}
-
-	if authorizerID != params.StakePoolSettings.DelegateWallet {
-		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
 	}
 
 	globalNode, err := GetGlobalNode(ctx)
@@ -80,10 +78,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	// Validating StakePoolSettings against GlobalNode settings
+	// only sc owner can add new authorizer
+	if err := smartcontractinterface.AuthorizeWithOwner("register-authorizer", func() bool {
+		return globalNode.ZCNSConfig.OwnerId == clientId
+	}); err != nil {
+		return "", err
+	}
 
 	// Check existing Authorizer
-
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
 	switch err {
 	case util.ErrValueNotPresent:

@@ -4,7 +4,7 @@ set -e
 
 # add tokens to write pools
 ./zboxcli/zbox --wallet testing.json wp-lock \
-    --duration=1h --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
+    --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
 
 # create random file
 head -c 52428800 < /dev/urandom > random.bin

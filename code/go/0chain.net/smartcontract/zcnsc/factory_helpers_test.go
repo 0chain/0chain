@@ -23,10 +23,11 @@ const (
 var (
 	events map[string]*AuthorizerNode
 	//authorizers       = make(map[string]*Authorizer, len(authorizersID))
-	authorizersID     = []string{authorizerPrefixID + "_0", authorizerPrefixID + "_1", authorizerPrefixID + "_2"}
-	clients           = []string{clientPrefixID + "_0", clientPrefixID + "_1", clientPrefixID + "_2"}
-	defaultAuthorizer = authorizersID[0]
-	defaultClient     = clients[0]
+	authorizersID       = []string{authorizerPrefixID + "_0", authorizerPrefixID + "_1", authorizerPrefixID + "_2"}
+	clients             = []string{clientPrefixID + "_0", clientPrefixID + "_1", clientPrefixID + "_2"}
+	defaultAuthorizer   = authorizersID[0]
+	defaultClient       = clients[0]
+	AuthorizerPublicKey = "57b0bc98f4af974c6842e5eb812004af3bc02564b0e59bc734274a531471470b9f081c10b61ca44274a350293f98c6425e7701e18569d6daa0d025dbd6f42e01"
 )
 
 type Authorizer struct {
@@ -84,14 +85,13 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
-
 	var txn = &transaction.Transaction{
 		HashIDField:       datastore.HashIDField{Hash: txHash + "_transaction"},
 		ClientID:          fromClient,
 		ToClientID:        ADDRESS,
 		Value:             1,
 		CreationDate:      startTime,
-		PublicKey:         scheme.GetPublicKey(),
+		PublicKey:         AuthorizerPublicKey,
 		TransactionData:   "",
 		Signature:         "",
 		Fee:               0,
@@ -100,7 +100,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 		OutputHash:        "",
 	}
 
-	addTransactionData(txn, AddAuthorizerFunc, CreateAuthorizerParamPayload(fromClient))
+	addTransactionData(txn, AddAuthorizerFunc, CreateAuthorizerParamPayload(fromClient, AuthorizerPublicKey))
 
 	return txn
 }
@@ -133,9 +133,9 @@ func CreateTransaction(fromClient, method string, payload []byte, ctx state.Stat
 	return txn, nil
 }
 
-func CreateAuthorizerParam(delegateWalletID string) *AddAuthorizerPayload {
+func CreateAuthorizerParam(delegateWalletID string, publicKey string) *AddAuthorizerPayload {
 	return &AddAuthorizerPayload{
-		PublicKey: "public key",
+		PublicKey: publicKey,
 		URL:       "http://localhost:2344",
 		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:     delegateWalletID,
@@ -159,8 +159,8 @@ func CreateAuthorizerStakingPoolParam(delegateWalletID string) *UpdateAuthorizer
 	}
 }
 
-func CreateAuthorizerParamPayload(delegateWalletID string) []byte {
-	p := CreateAuthorizerParam(delegateWalletID)
+func CreateAuthorizerParamPayload(delegateWalletID string, publicKey string) []byte {
+	p := CreateAuthorizerParam(delegateWalletID, publicKey)
 	encode, _ := p.Encode()
 	return encode
 }

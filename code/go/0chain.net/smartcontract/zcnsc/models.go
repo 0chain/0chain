@@ -247,6 +247,15 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 
 // ------- AddAuthorizerPayload ------------
 
+//type addAuthorizerPayload struct {
+//	URL           string
+//	ClientID      string
+//	ClientKey     string
+//	MinStake      int64
+//	MaxStake      int64
+//	NumDelegates  int
+//	ServiceCharge float64
+//}
 type AddAuthorizerPayload struct {
 	PublicKey         string             `json:"public_key"`
 	URL               string             `json:"url"`
