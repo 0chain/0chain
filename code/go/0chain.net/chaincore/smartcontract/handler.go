@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-//ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
+// ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
 
 func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
@@ -48,6 +48,8 @@ func GetSmartContract(scAddress string) sci.SmartContractInterface {
 
 func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 	ts := time.Now()
+	msg := fmt.Sprintf("commit_blobber_read: manohar: ExecuteWithStats")
+	logging.Logger.Info(msg)
 	inter, err := smcoi.Execute(t.Clone(), funcName, input, balances)
 	if err == nil {
 		if tm := smcoi.GetExecutionStats()[funcName]; tm != nil {
@@ -59,14 +61,18 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 	return inter, err
 }
 
-//ExecuteSmartContract - executes the smart contract in the context of the given transaction
+// ExecuteSmartContract - executes the smart contract in the context of the given transaction
 func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
 	contractObj := getSmartContract(t.ToClientID)
+	msg := fmt.Sprintf("commit_blobber_read: manohar: transaction object %v", t)
+	logging.Logger.Info(msg)
 	if contractObj != nil {
 		transactionOutput, err := ExecuteWithStats(contractObj, t, scData.FunctionName, scData.InputData, balances)
 		if err != nil {
 			return "", err
 		}
+		msg = fmt.Sprintf("commit_blobber_read: manohar: transactionOutput %s", transactionOutput)
+		logging.Logger.Info(msg)
 		return transactionOutput, nil
 	}
 	return "", common.NewError("invalid_smart_contract_address", "Invalid Smart Contract address")

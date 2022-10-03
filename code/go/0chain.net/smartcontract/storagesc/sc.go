@@ -173,11 +173,16 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances chainstate.StateContextI) (
 	resp string, err error) {
 
+	msg := fmt.Sprintf("commit_blobber_read: manohar: commitRead staring smart contract execution")
+	logging.Logger.Info(msg)
+
 	switch funcName {
 
 	// read/write markers
 
 	case "read_redeem":
+		msg := fmt.Sprintf("commit_blobber_read: manohar: starting read_redeem")
+		logging.Logger.Info(msg)
 		if resp, err = sc.commitBlobberRead(t, input, balances); err != nil {
 			return
 		}
@@ -284,5 +289,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 			"Invalid storage function '%s' called", funcName)
 	}
 
+	msg = fmt.Sprintf("commit_blobber_read: manohar: switch case complete %s", resp)
+	logging.Logger.Info(msg)
 	return
 }
