@@ -100,7 +100,7 @@ func main() {
 			rootContext := common.GetRootContext()
 			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
-			serverChain.GetEventDb().AddEvents(ctx, []event.Event{ev}, b.Round, b.Hash, len(b.Txns))
+			serverChain.GetEventDb().ProcessEvents(ctx, []event.Event{ev}, b.Round, b.Hash, len(b.Txns))
 		}()
 	}
 

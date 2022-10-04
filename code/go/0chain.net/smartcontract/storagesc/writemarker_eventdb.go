@@ -2,12 +2,13 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/dbs/event"
 )
 
 // TransactionID and BlockNumber is added at the time of emitting event
-func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
+func writeMarkerToWriteMarkerTable(wm *WriteMarker, movedTokens currency.Coin, txnHash string) *event.WriteMarker {
 	return &event.WriteMarker{
 		ClientID:               wm.ClientID,
 		BlobberID:              wm.BlobberID,
@@ -21,12 +22,16 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
 		Name:                   wm.Name,
 		ContentHash:            wm.ContentHash,
 		Operation:              wm.Operation,
+		MovedTokens:            movedTokens,
+		TransactionID:          txnHash,
 	}
 }
 
-func emitAddWriteMarker(wm *WriteMarker, balances cstate.StateContextI, t *transaction.Transaction) error {
+func emitAddWriteMarker(t *transaction.Transaction, wm *WriteMarker, movedTokens currency.Coin,
+	balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker,
+		t.Hash, writeMarkerToWriteMarkerTable(wm, movedTokens, t.Hash))
 
-	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker, t.Hash, writeMarkerToWriteMarkerTable(wm))
-
-	return nil
+	emitUpdateAllocationStatEvent(wm, movedTokens, balances)
+	emitUpdateBlobberStatEvent(wm, movedTokens, balances)
 }

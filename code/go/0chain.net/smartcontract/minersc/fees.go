@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 
 	"0chain.net/chaincore/currency"
@@ -369,14 +370,15 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 
-	if err := mn.StakePool.DistributeRewards(
-		moveValue, mn.ID, spenum.Miner, balances,
+	// pay random N miners
+	if err := mn.StakePool.DistributeRewardsRandN(
+		moveValue, mn.ID, spenum.Miner, mb.GetRoundRandomSeed(), 10, "fee", balances,
 	); err != nil {
 		return "", err
 	}
 
 	// pay and mint rest for mb sharders
-	if err := msc.payShardersAndDelegates(sharderFees, sharderRewards, mb, gn, balances); err != nil {
+	if err := msc.payShardersAndDelegates(sharderFees, sharderRewards, mb, 5, balances); err != nil {
 		return "", err
 	}
 
@@ -384,10 +386,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("pay_fees",
 			"saving generator node: %v", err)
-	}
-
-	if err = emitUpdateMiner(mn, balances, false); err != nil {
-		return "", common.NewErrorf("pay_fees", "saving generator node to db: %v", err)
 	}
 
 	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {
@@ -471,7 +469,8 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
-	fee, mint currency.Coin, block *block.Block, gn *GlobalNode, balances cstate.StateContextI,
+	fee, mint currency.Coin, block *block.Block, randN int,
+	balances cstate.StateContextI,
 ) error {
 	var err error
 	var sharders []*MinerNode
@@ -513,8 +512,12 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		totalCoinLeft = cl
 	}
 
-	// part for every sharder
-	for _, sh := range sharders {
+	var (
+		seed  = block.GetRoundRandomSeed()
+		randS = rand.New(rand.NewSource(seed))
+	)
+
+	rewardSharder := func(sh *MinerNode) error {
 		var extraShare currency.Coin
 		if totalCoinLeft > 0 {
 			extraShare = 1
@@ -525,8 +528,8 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		if err != nil {
 			return err
 		}
-		if err = sh.StakePool.DistributeRewards(
-			moveValue, sh.ID, spenum.Sharder, balances,
+		if err = sh.StakePool.DistributeRewardsRandN(
+			moveValue, sh.ID, spenum.Sharder, seed, 1, "pay sharders", balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)
@@ -535,6 +538,26 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		if err = sh.save(balances); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"saving sharder node: %v", err)
+		}
+
+		return nil
+	}
+
+	var perm []int
+	if sn > randN {
+		// select randN sharders to distribute rewards
+		perm = randS.Perm(randN)
+	} else {
+		// randN >= sharders number
+		perm = make([]int, 0, randN)
+		for i := 0; i < randN; i++ {
+			perm = append(perm, randS.Intn(sn))
+		}
+	}
+
+	for _, i := range perm {
+		if err := rewardSharder(sharders[i]); err != nil {
+			return err
 		}
 	}
 

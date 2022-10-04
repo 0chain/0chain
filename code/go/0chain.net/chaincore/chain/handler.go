@@ -181,11 +181,13 @@ func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 	if content == "" {
 		content = "header"
 	}
-	parts := strings.Split(content, ",")
-	b, err := GetServerChain().GetBlock(ctx, hash)
+
+	b, err := GetServerChain().GetBlockClone(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
+
+	parts := strings.Split(content, ",")
 	return GetBlockResponse(b, parts)
 }
 
@@ -1241,7 +1243,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-//N2NStatsWriter - writes the n2n stats of all the nodes
+// N2NStatsWriter - writes the n2n stats of all the nodes
 func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
@@ -1334,7 +1336,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	return transaction.PutTransaction(ctx, txn)
 }
 
-//RoundInfoHandler collects and writes information about current round
+// RoundInfoHandler collects and writes information about current round
 func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -1692,7 +1694,7 @@ func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter, numGenerators i
 	fmt.Fprintf(w, "</table>")
 }
 
-//PrintCSS - print the common css elements
+// PrintCSS - print the common css elements
 func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
@@ -1711,7 +1713,7 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</style>")
 }
 
-//StateDumpHandler - a handler to dump the state
+// StateDumpHandler - a handler to dump the state
 func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 	c := GetServerChain()
 	lfb := c.GetLatestFinalizedBlock()

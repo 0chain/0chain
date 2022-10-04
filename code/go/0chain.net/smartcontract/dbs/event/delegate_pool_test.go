@@ -40,7 +40,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 		Balance: 29,
 	}
 
-	err = eventDb.addOrOverwriteDelegatePool(dp)
+	err = eventDb.addOrOverwriteDelegatePools(dp)
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
 	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
@@ -101,9 +101,9 @@ func TestTagStakePoolReward(t *testing.T) {
 		Balance: 5,
 	}
 
-	err = eventDb.addOrOverwriteDelegatePool(dp)
+	err = eventDb.addOrOverwriteDelegatePools(dp)
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
-	err = eventDb.addOrOverwriteDelegatePool(dp2)
+	err = eventDb.addOrOverwriteDelegatePools(dp2)
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
 	var before int64

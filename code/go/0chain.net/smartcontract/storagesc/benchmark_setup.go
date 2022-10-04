@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"log"
 	"math/rand"
 	"strconv"
@@ -63,17 +62,16 @@ func addMockAllocation(
 ) {
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
-		ID:                      id,
-		DataShards:              viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-		ParityShards:            viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-		Size:                    viper.GetInt64(sc.StorageMinAllocSize),
-		Expiration:              benchAllocationExpire(balances.GetTransaction().CreationDate),
-		Owner:                   clients[cIndex],
-		OwnerPublicKey:          publicKey,
-		ReadPriceRange:          PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
-		WritePriceRange:         PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
-		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
-		DiverseBlobbers:         viper.GetBool(sc.StorageDiverseBlobbers),
+		ID:              id,
+		DataShards:      viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		ParityShards:    viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		Size:            viper.GetInt64(sc.StorageMinAllocSize),
+		Expiration:      benchAllocationExpire(balances.GetTransaction().CreationDate),
+		Owner:           clients[cIndex],
+		OwnerPublicKey:  publicKey,
+		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
+		WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+		DiverseBlobbers: viper.GetBool(sc.StorageDiverseBlobbers),
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1,
 			NumWrites:                 1,
@@ -107,11 +105,11 @@ func addMockAllocation(
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 		if viper.GetBool(sc.EventDbEnabled) {
-			terms := event.AllocationTerm{
+			terms := event.AllocationBlobberTerm{
 				BlobberID:        bId,
 				AllocationID:     sa.ID,
-				ReadPrice:        ba.Terms.ReadPrice,
-				WritePrice:       ba.Terms.WritePrice,
+				ReadPrice:        int64(ba.Terms.ReadPrice),
+				WritePrice:       int64(ba.Terms.WritePrice),
 				MinLockDemand:    ba.Terms.MinLockDemand,
 				MaxOfferDuration: ba.Terms.MaxOfferDuration,
 			}
@@ -124,22 +122,18 @@ func addMockAllocation(
 	}
 
 	if viper.GetBool(sc.EventDbEnabled) {
-		allocationTerms := make([]event.AllocationTerm, 0)
+		allocationTerms := make([]event.AllocationBlobberTerm, 0)
 		for _, b := range sa.BlobberAllocs {
-			allocationTerms = append(allocationTerms, event.AllocationTerm{
+			allocationTerms = append(allocationTerms, event.AllocationBlobberTerm{
 				BlobberID:        b.BlobberID,
 				AllocationID:     b.AllocationID,
-				ReadPrice:        b.Terms.ReadPrice,
-				WritePrice:       b.Terms.WritePrice,
+				ReadPrice:        int64(b.Terms.ReadPrice),
+				WritePrice:       int64(b.Terms.WritePrice),
 				MinLockDemand:    b.Terms.MinLockDemand,
 				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}
 
-		termsByte, err := json.Marshal(allocationTerms)
-		if err != nil {
-			log.Fatal(err)
-		}
 		allocationDb := event.Allocation{
 			AllocationID:             sa.ID,
 			DataShards:               sa.DataShards,
@@ -148,7 +142,6 @@ func addMockAllocation(
 			Expiration:               int64(sa.Expiration),
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
-			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
 			UsedSize:                 sa.UsedSize,
 			NumWrites:                sa.Stats.NumWrites,
 			NumReads:                 sa.Stats.NumReads,
@@ -156,7 +149,7 @@ func addMockAllocation(
 			OpenChallenges:           sa.Stats.OpenChallenges,
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
-			Terms:                    string(termsByte),
+			Terms:                    allocationTerms,
 		}
 		_ = eventDb.Store.Get().Create(&allocationDb)
 	}

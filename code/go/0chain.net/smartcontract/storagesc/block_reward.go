@@ -13,7 +13,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
@@ -177,7 +176,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				zap.Int64("round", balances.GetBlock().Round),
 				zap.String("block_hash", balances.GetBlock().Hash))
 
-			if err := qsp.DistributeRewards(reward, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+			if err := qsp.DistributeRewards(reward, qualifyingBlobberIds[i], spenum.Blobber, "bbr", balances); err != nil {
 				return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 			}
 
@@ -196,7 +195,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 		if rShare > 0 {
 			for i := range stakePools {
-				if err := stakePools[i].DistributeRewards(rShare, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+				if err := stakePools[i].DistributeRewards(rShare, qualifyingBlobberIds[i], spenum.Blobber, "bbr", balances); err != nil {
 					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 				}
 			}
@@ -204,7 +203,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 		if rl > 0 {
 			for i := 0; i < int(rl); i++ {
-				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, balances); err != nil {
+				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, "bbr", balances); err != nil {
 					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 				}
 			}
@@ -223,13 +222,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				"getting stake pool stake: "+err.Error())
 		}
 
-		data := dbs.DbUpdates{
-			Id: qualifyingBlobberIds[i],
-			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
-			},
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
+		bid := qualifyingBlobberIds[i]
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(bid, staked)
+		balances.EmitEvent(event.TypeStats, tag, bid, data)
 
 	}
 

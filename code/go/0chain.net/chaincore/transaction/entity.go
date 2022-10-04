@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/viper"
+
 	"0chain.net/chaincore/currency"
 
 	"encoding/json"
@@ -408,14 +410,12 @@ func (t *Transaction) GetSummary() *TransactionSummary {
 	return summary
 }
 
-/*DebugTxn - is this a transaction that needs being debugged
+/*
+DebugTxn - is this a transaction that needs being debugged
 - applicable only when running in test mode and the transaction_data string contains debug keyword somewhere in it
 */
 func (t *Transaction) DebugTxn() bool {
-	if !config.Development() {
-		return false
-	}
-	return strings.Contains(t.TransactionData, "debug")
+	return config.Development() && viper.GetBool("logging.verbose")
 }
 
 /*ComputeOutputHash - compute the hash from the transaction output */
