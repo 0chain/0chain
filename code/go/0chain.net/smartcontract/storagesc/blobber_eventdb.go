@@ -3,8 +3,6 @@ package storagesc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
@@ -39,7 +37,6 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
-	logging.Logger.Warn("emit blobber - emitAddOrOverwriteBlobber", zap.String("id", sn.ID))
 	return nil
 }
 
@@ -81,7 +78,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)
-	logging.Logger.Warn("emit blobber - addBlobber", zap.String("id", sn.ID))
 	return nil
 }
 

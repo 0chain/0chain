@@ -231,13 +231,10 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 }
 
 func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
-	logging.Logger.Debug("event db  - add blobbers", zap.Any("blobbers", blobbers))
 	return edb.Store.Get().Create(&blobbers).Error
 }
 
 func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
-	logging.Logger.Debug("event db - handler blobber, add or overwrite blobbers")
-
 	err := edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		UpdateAll: true,
@@ -273,7 +270,6 @@ func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 }
 
 func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag EventTag, data interface{}) {
-	logging.Logger.Warn("event db - emit blobber total offers", zap.String("id", ID))
 	return TagUpdateBlobberTotalOffers, Blobber{
 		BlobberID:   ID,
 		OffersTotal: totalOffers,
@@ -281,7 +277,6 @@ func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag
 }
 
 func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
-	logging.Logger.Debug("event db - handler blobber, update total stakes")
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
@@ -289,7 +284,6 @@ func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
 }
 
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
-	logging.Logger.Debug("event db - handler blobber, update total offers")
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"offers_total"}),
@@ -344,24 +338,3 @@ func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
 		DoUpdates: clause.Assignments(vs),
 	}).Create(blobbers).Error
 }
-
-//// onUpdateChallenge will be called when challenge is updated
-//func (b *Blobber) onUpdateChallenge(tx *gorm.DB, c *Challenge) error {
-//	vs := map[string]interface{}{
-//		"challenges_completed": gorm.Expr("blobbers.challenges_completed + excluded.challenges_completed"),
-//		"challenges_passed":    gorm.Expr("blobbers.challenges_passed + excluded.challenges_passed"),
-//		"rank_metric":          gorm.Expr("((blobbers.challenges_passed + excluded.challenges_passed)::FLOAT / (blobbers.challenges_completed + excluded.challenges_completed)::FLOAT)::DECIMAL(10,3)"),
-//	}
-//
-//	b.BlobberID = c.BlobberID
-//	b.ChallengesCompleted = 1
-//
-//	if c.Passed {
-//		b.ChallengesPassed = 1
-//	}
-//
-//	return tx.Model(&Blobber{}).Clauses(clause.OnConflict{
-//		Columns:   []clause.Column{{Name: "blobber_id"}},
-//		DoUpdates: clause.Assignments(vs),
-//	}).Create(b).Error
-//}

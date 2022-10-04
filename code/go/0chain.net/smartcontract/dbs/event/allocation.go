@@ -243,24 +243,6 @@ func withAllocBlobberTermsMerged() eventMergeMiddleware {
 	})
 }
 
-//func (alloc *Allocation) onUpdateChallenge(tx *gorm.DB, c *Challenge) error {
-//	vs := map[string]interface{}{
-//		"open_challenges":             gorm.Expr("allocations.open_challenges - 1"),
-//		"latest_closed_challenge_txn": gorm.Expr("?", c.ChallengeID),
-//	}
-//
-//	if c.Passed {
-//		vs["successful_challenges"] = gorm.Expr("allocations.successful_challenges + 1")
-//	} else {
-//		vs["failed_challenges"] = gorm.Expr("allocations.failed_challenges + 1")
-//	}
-//
-//	return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
-//		Columns:   []clause.Column{{Name: "allocation_id"}},
-//		DoUpdates: clause.Assignments(vs),
-//	}).Create(&Allocation{AllocationID: c.AllocationID}).Error
-//}
-
 func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withAllocChallengesMerged())
 }
