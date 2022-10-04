@@ -36,18 +36,11 @@ jobs:
           ../bin/start.benchmarks.sh | tee benchmark_run_output
           grep -R "Results" -A 1000 benchmark_run_output > benchmark_results
           echo "TESTS_RAN=true" >> $GITHUB_ENV
-          
-      - name: "Convert results file to png"
-        if: ${{ always() && env.TESTS_RAN == 'true' }}
-        uses: 0chain/actions/text-to-png@feature/add-txt-to-png
-        with:
-          file_location: ./docker.local/benchmarks/benchmark_results
-          archive_file: "true"
 
-      - name: "Archive"
-        uses: actions/upload-artifact@v3
-        with:
-          name: benchmark_results
-          path: |
-            ./docker.local/benchmarks/benchmark_results
-
+      - name: "Notify Slack"
+        if: failure() && steps.send-slack-notification.outputs.value == 'true'
+        run: |
+          cd docker.local/benchmarks
+          benchmark_results=$(cat benchmark_results | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | awk -F'|' '{print $2}' | awk '{$1=$1};1' | sed 's/OK/:passed:/g' | sed 's/FAILED/:failed:/g')
+          echo $benchmark_results
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Benchmark results: $benchmark_results\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}    
