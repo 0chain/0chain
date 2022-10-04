@@ -1,9 +1,12 @@
 name: Conductor No View Change Scenarios Tests
 
 on:
-  schedule:
-    - cron: '0 1 * * * '
-
+  # schedule:
+  #   - cron: '0  * * * '
+  push:
+    branches: [ master, staging ]
+  pull_request:
+    branches: [ master, staging ]
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
   ZCHAIN_BUILDRUN: zchain_run_base

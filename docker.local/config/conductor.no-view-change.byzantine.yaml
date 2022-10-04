@@ -1,19 +1,19 @@
 enable:
   - "attack round transfer"
-  # - "resend past messages"
-  # - "restart"
-  # - "attack fetching"
+  - "resend past messages"
+  - "restart"
+  - "attack fetching"
 sets:
   - name: "attack round transfer"
     tests:
       - "not notarised block extension"
-      # - "send different blocks from first generator"
-      # - "send different blocks from all generators"
-      # - "breaking single block"
-      # - "send insufficient proposals"
-      # - "verifying non existent block"
-      # - "notarising non existent block"
-      # - "missing lfb tickets"
+      - "send different blocks from first generator"
+      - "send different blocks from all generators"
+      - "breaking single block"
+      - "send insufficient proposals"
+      - "verifying non existent block"
+      - "notarising non existent block"
+      - "missing lfb tickets"
   - name: "resend past messages"
     tests:
       # TODO: Review tests specification.
