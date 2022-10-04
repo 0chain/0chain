@@ -30,11 +30,6 @@ jobs:
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 
-    - name: Install mockery
-      run: |
-        make install-mockery
-        make build-mocks
-
     - name: Docker Init Setup.
       run: |
         bash ./docker.local/bin/init.setup.sh

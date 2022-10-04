@@ -1,19 +1,15 @@
 name: Conductor Blobber Tests
 
 on:
-  # schedule:
-  #   # Runs everyday at 02:00 am
-  #   - cron: '0 2 * * * '
+  schedule:
+    # Runs everyday at 02:00 am
+    - cron: '0 2 * * * '
   workflow_dispatch:
     inputs:
       view_change:
         description: 'Type true/false for setting view change.'
         default: 'false'
         required: true
-  push:
-    branches: [ master, staging ]
-  pull_request:
-    branches: [ master, staging ]
 
 jobs:
   conductor_blobbers_tests:
@@ -36,7 +32,7 @@ jobs:
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
-        cd 0chain && git checkout fix/build-blobber-integration-tests-script-execution
+        cd 0chain && git checkout ${{ steps.get_branch.outputs.BRANCH }}
 
     - name: Docker Init Setup.
       run: |
@@ -73,7 +69,7 @@ jobs:
         git clone https://github.com/0chain/blobber.git
 
     - name: Git clone zboxcli
-      run: |
+      run: |    
         git clone https://github.com/0chain/zboxcli.git
 
     - name: Git clone zwalletcli
@@ -109,28 +105,21 @@ jobs:
 
     - name: 0chain configuration Patching
       run: |
-        cd 0chain
         sed -i 's/magic_block_file: config\/b0magicBlock_4_miners_2_sharders.json/magic_block_file: config\/b0magicBlock_4_miners_1_sharder.json/' docker.local/config/0chain.yaml
 
     - name: Build 0dns
-      run: |
+      run: | 
         cd 0dns
         ./docker.local/bin/init.sh
         ./docker.local/bin/build.sh
 
     - name: Init setup for blobbers
-      run: |
+      run: | 
         cd blobber && ./docker.local/bin/blobber.init.setup.sh
 
     - name: Build blobber base
-      run: |
+      run: | 
         cd blobber && ./docker.local/bin/build.base.sh
-
-    - name: Build blobber
-      run: |
-        cd blobber
-        chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
-        ./docker.local/bin/build.blobber-integration-tests.sh
 
     - name: Add ZCN config
       run: |
@@ -155,9 +144,8 @@ jobs:
 
     - name: Starting blobber Tests.
       run: |
-        cd 0chain
-        ./docker.local/bin/start.conductor.sh blobber-1
-        ./docker.local/bin/start.conductor.sh blobber-2
+        cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
+        cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
 
   upload_artifacts:
     name: UPLOAD-LOGS-AS-ARTIFACTS
