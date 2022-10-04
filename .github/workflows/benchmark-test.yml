@@ -40,6 +40,6 @@ jobs:
       - name: "Notify Slack"
         run: |
           cd docker.local/benchmarks
-          benchmark_results=$(cat benchmark_results | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | awk -F'|' '{print $2}' | awk '{$1=$1};1' | sed 's/OK/:passed:/g' | sed 's/FAILED/:failed:/g')
+          benchmark_results=$(cat benchmark_results | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | awk -F'|' '{print $2}' | awk '{$1=$1};1' | sed 's/OK/:passed:/g' | sed 's/FAILED/:failed:/g')$'\n'
           echo $benchmark_results
-          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Benchmark results: $benchmark_results Full results are here: https://github.com/0chain/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}    
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Benchmark $benchmark_results Full results are here: https://github.com/0chain/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}    
