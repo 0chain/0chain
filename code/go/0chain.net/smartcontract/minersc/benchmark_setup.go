@@ -1,7 +1,13 @@
 package minersc
 
 import (
+	"fmt"
+	"math/big"
 	"strconv"
+
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
+
+	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/chaincore/currency"
 
@@ -48,7 +54,8 @@ func AddMockNodes(
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 		key = AllShardersKey
 	}
-
+	lat := dbs.BigRat{big.NewRat(103, 2)}
+	long := dbs.BigRat{big.NewRat(-1, 10)}
 	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
 		newNode.ID = GetMockNodeId(i, nodeType)
@@ -60,6 +67,8 @@ func AddMockNodes(
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
+		newNode.Geolocation.Latitude = lat
+		newNode.Geolocation.Longitude = long
 
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
@@ -78,8 +87,9 @@ func AddMockNodes(
 		}
 		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
+
 		nodes = append(nodes, newNode.ID)
 		nodeMap[newNode.ID] = newNode.SimpleNode
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
@@ -94,8 +104,11 @@ func AddMockNodes(
 					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
 					MinStake:          newNode.Settings.MinStake,
 					MaxStake:          newNode.Settings.MaxStake,
+					Latitude:          lat,
+					Longitude:         long,
 				}
-				_ = eventDb.Store.Get().Create(&minerDb)
+				result := eventDb.Store.Get().Create(&minerDb)
+				fmt.Println("result put  in miner", result)
 			} else {
 				sharderDb := event.Sharder{
 					SharderID:         newNode.ID,
@@ -105,6 +118,8 @@ func AddMockNodes(
 					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
 					MinStake:          newNode.Settings.MinStake,
 					MaxStake:          newNode.Settings.MaxStake,
+					Latitude:          lat,
+					Longitude:         long,
 				}
 				_ = eventDb.Store.Get().Create(&sharderDb)
 			}

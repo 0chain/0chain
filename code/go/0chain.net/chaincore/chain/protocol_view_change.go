@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/dbs"
+
 	"0chain.net/chaincore/currency"
 
 	"go.uber.org/zap"
@@ -266,8 +268,8 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 		return nil, err
 	}
 	mn.Geolocation = minersc.SimpleNodeGeolocation{
-		Latitude:  viper.GetFloat64("latitude"),
-		Longitude: viper.GetFloat64("longitude"),
+		Latitude:  *dbs.NewBigRat(viper.GetFloat64("latitude")),
+		Longitude: *dbs.NewBigRat(viper.GetFloat64("longitude")),
 	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
@@ -477,14 +479,14 @@ func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder st
 // The GetFromSharders used to obtains an information from sharders using REST
 // API interface of a SC. About the arguments:
 //
-//     - address    -- SC address
-//     - relative   -- REST API relative path (e.g. handler name)
-//     - sharders   -- list of sharders to request from (N2N URLs)
-//     - newFunc    -- factory to create new value of type you want to request
-//     - rejectFunc -- filter to reject some values, can't be nil (feel free
-//                     to modify)
-//     - highFunc   -- function that returns value highness; used to choose
-//                     highest values
+//   - address    -- SC address
+//   - relative   -- REST API relative path (e.g. handler name)
+//   - sharders   -- list of sharders to request from (N2N URLs)
+//   - newFunc    -- factory to create new value of type you want to request
+//   - rejectFunc -- filter to reject some values, can't be nil (feel free
+//     to modify)
+//   - highFunc   -- function that returns value highness; used to choose
+//     highest values
 //
 // TODO (sfxdx): to trust or not to trust, that is the question
 //

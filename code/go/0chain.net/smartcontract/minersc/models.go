@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/smartcontract/dbs"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract"
@@ -632,8 +634,8 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 
 // swagger:model SimpleNodeGeolocation
 type SimpleNodeGeolocation struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	Latitude  dbs.BigRat `json:"latitude" msg:"latitude,extension"`
+	Longitude dbs.BigRat `json:"longitude" msg:"longitude,extension"`
 }
 
 // swagger:model SimpleNode

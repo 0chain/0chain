@@ -28,9 +28,9 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		Delete:      edbSharder.Delete,
 
 		LastHealthCheck: edbSharder.LastHealthCheck,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbSharder.Latitude,
-			Longitude: edbSharder.Longitude,
+		Geolocation:     SimpleNodeGeolocation{
+			//	Latitude:  edbSharder.Latitude,
+			//	Longitude: edbSharder.Longitude,
 		},
 		NodeType: NodeTypeSharder,
 		Status:   status,
@@ -73,8 +73,8 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		LastHealthCheck:   sn.LastHealthCheck,
 		Rewards:           sn.Reward,
 		Active:            sn.Status == node.NodeStatusActive,
-		Longitude:         sn.Geolocation.Longitude,
-		Latitude:          sn.Geolocation.Latitude,
+		//Longitude:         sn.Geolocation.Longitude,
+		//Latitude:          sn.Geolocation.Latitude,
 	}
 }
 
