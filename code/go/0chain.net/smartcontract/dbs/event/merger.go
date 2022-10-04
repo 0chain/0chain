@@ -2,8 +2,6 @@ package event
 
 import (
 	"reflect"
-
-	"0chain.net/smartcontract/dbs"
 )
 
 type eventMergeMiddleware func([]Event) ([]Event, error)
@@ -122,7 +120,7 @@ func withEventMerge[T any](mergeFunc mergeEventsFunc[T]) eventMergeMiddleware {
 				return nil, ErrInvalidEventData
 			}
 
-			// new event data after adding
+			// new event data
 			newData, err := mergeFunc(eeData, eData)
 			if err != nil {
 				return nil, err
@@ -132,7 +130,6 @@ func withEventMerge[T any](mergeFunc mergeEventsFunc[T]) eventMergeMiddleware {
 			if err != nil {
 				return nil, err
 			}
-			//ee.Data = *newData
 		}
 
 		ret := make([]Event, 0, len(eMap))
@@ -144,113 +141,6 @@ func withEventMerge[T any](mergeFunc mergeEventsFunc[T]) eventMergeMiddleware {
 	}
 }
 
-func mergeAddUsersEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
-}
-
-func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
-	return newEventsMerger[Transaction](TagAddTransactions)
-}
-
-func mergeAddWriteMarkerEvents() *eventsMergerImpl[WriteMarker] {
-	return newEventsMerger[WriteMarker](TagAddWriteMarker)
-}
-
-func mergeAddReadMarkerEvents() *eventsMergerImpl[ReadMarker] {
-	return newEventsMerger[ReadMarker](TagAddReadMarker)
-}
-
-func mergeAddAllocationEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagAddAllocation)
-}
-
-func mergeUpdateAllocEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagUpdateAllocation, withUniqueEventOverwrite())
-}
-
-func mergeUpdateAllocStatsEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagUpdateAllocationStakes, withUniqueEventOverwrite())
-}
-
-func mergeAddChallengePoolsEvents() *eventsMergerImpl[ChallengePool] {
-	return newEventsMerger[ChallengePool](TagAddOrUpdateChallengePool, withUniqueEventOverwrite())
-}
-
-func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedHealth, withUniqueEventOverwrite())
-}
-
-func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withBlobberTotalStakesAdded())
-}
-
-func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberTotalOffers, withBlobberTotalOffersAdded())
-}
-
-func mergeStakePoolRewardsEvents() *eventsMergerImpl[dbs.StakePoolReward] {
-	return newEventsMerger[dbs.StakePoolReward](TagStakePoolReward, withProviderRewardsPenaltiesAdded())
-}
-
-func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
-	return newEventsMerger[DelegatePool](TagAddOrOverwriteDelegatePool, withUniqueEventOverwrite())
-}
-
 func mergeAddProviderEvents[T any](tag EventTag, middlewares ...eventMergeMiddleware) eventsMerger {
 	return newEventsMerger[T](tag, middlewares...)
-}
-
-func withBlobberTotalStakesAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		a.TotalStake += b.TotalStake
-		return a, nil
-	})
-}
-
-func withBlobberTotalOffersAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		a.OffersTotal += b.OffersTotal
-		return a, nil
-	})
-}
-
-// withProviderRewardsPenaltiesAdded is an event merger middleware that merge two
-// StakePoolRewards
-func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *dbs.StakePoolReward) (*dbs.StakePoolReward, error) {
-		a.Reward += b.Reward
-		a.Desc = append(a.Desc, b.Desc...)
-
-		// merge delegate pool rewards
-		for k, v := range b.DelegateRewards {
-			_, ok := a.DelegateRewards[k]
-			if !ok {
-				a.DelegateRewards[k] = v
-				continue
-			}
-
-			a.DelegateRewards[k] += v
-		}
-
-		// merge delegate pool penalties
-		for k, v := range b.DelegatePenalties {
-			_, ok := a.DelegatePenalties[k]
-			if !ok {
-				a.DelegatePenalties[k] = v
-				continue
-			}
-
-			a.DelegatePenalties[k] += v
-		}
-
-		return a, nil
-	})
-}
-
-func withBlobberChallengesStatsAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		a.ChallengesCompleted += b.ChallengesCompleted
-		a.ChallengesPassed += b.ChallengesPassed
-		return a, nil
-	})
 }

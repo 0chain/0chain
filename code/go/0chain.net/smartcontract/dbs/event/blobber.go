@@ -182,6 +182,10 @@ func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
 	}).Create(&blobbers).Error
 }
 
+func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedHealth, withUniqueEventOverwrite())
+}
+
 func (edb *EventDb) GetBlobberCount() (int64, error) {
 	var count int64
 	res := edb.Store.Get().Model(Blobber{}).Count(&count)
@@ -283,11 +287,33 @@ func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
 	}).Create(&blobbers).Error
 }
 
+func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withBlobberTotalStakesAdded())
+}
+
+func withBlobberTotalStakesAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
+		a.TotalStake += b.TotalStake
+		return a, nil
+	})
+}
+
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "blobber_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"offers_total"}),
 	}).Create(&blobbers).Error
+}
+
+func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobberTotalOffers, withBlobberTotalOffersAdded())
+}
+
+func withBlobberTotalOffersAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
+		a.OffersTotal += b.OffersTotal
+		return a, nil
+	})
 }
 
 func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {

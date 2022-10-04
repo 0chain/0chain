@@ -136,7 +136,7 @@ func TestMergeUserEvents(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			um := newUserEventsMerger()
+			um := mergeAddUsersEvents()
 			others := make([]Event, 0, len(tc.events))
 			for _, u := range tc.events {
 				if um.filter(u) {
@@ -259,7 +259,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			em := newBlobberTotalStakesEventsMerger()
+			em := mergeUpdateBlobberTotalStakesEvents()
 			others := make([]Event, 0, len(tc.events))
 			for _, e := range tc.events {
 				if em.filter(e) {
@@ -382,7 +382,7 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			em := newBlobberTotalOffersEventsMerger()
+			em := mergeUpdateBlobberTotalOffersEvents()
 			others := make([]Event, 0, len(tc.events))
 			for _, e := range tc.events {
 				if em.filter(e) {
@@ -640,7 +640,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			em := newStakePoolRewardEventsMerger()
+			em := mergeStakePoolRewardsEvents()
 			others := make([]Event, 0, len(tc.events))
 			for _, e := range tc.events {
 				if em.filter(e) {

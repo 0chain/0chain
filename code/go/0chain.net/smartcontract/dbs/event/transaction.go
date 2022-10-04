@@ -36,6 +36,10 @@ func (edb *EventDb) addTransactions(txns []Transaction) error {
 	return edb.Store.Get().Create(&txns).Error
 }
 
+func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
+	return newEventsMerger[Transaction](TagAddTransactions)
+}
+
 // GetTransactionByHash finds the transaction record by hash
 func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 	tr := Transaction{}

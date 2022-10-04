@@ -54,7 +54,7 @@ func TestUserEvent(t *testing.T) {
 		Nonce:   1,
 	}
 
-	err = eventDb.upsertUsers([]User{user1})
+	err = eventDb.addOrUpdateUsers([]User{user1})
 	require.NoError(t, err, "Error while inserting User to event Database")
 
 	eventDb.Get().Table("users").Count(&count)
@@ -69,7 +69,7 @@ func TestUserEvent(t *testing.T) {
 
 	user1.Balance = user1.Balance + 1
 	user1.Nonce = user1.Nonce + 1
-	err = eventDb.upsertUsers([]User{user1})
+	err = eventDb.addOrUpdateUsers([]User{user1})
 	require.NoError(t, err, "Error while inserting User to event Database")
 
 	eventDb.Get().Table("users").Count(&count)
@@ -90,7 +90,7 @@ func TestUserEvent(t *testing.T) {
 		Round:   10,
 		Nonce:   1,
 	}
-	err = eventDb.upsertUsers([]User{user2})
+	err = eventDb.addOrUpdateUsers([]User{user2})
 	require.NoError(t, err, "Error while inserting User to event Database")
 
 	user, err = eventDb.GetUser(clientID2)
@@ -146,7 +146,7 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 		}
 	}
 
-	err := eventDb.upsertUsers(users)
+	err := eventDb.addOrUpdateUsers(users)
 	require.NoError(t, err, "Error while inserting Users to event Database")
 
 	for i := 0; i < 10; i++ {
@@ -169,7 +169,7 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 		}
 	}
 
-	err = eventDb.upsertUsers(users)
+	err = eventDb.addOrUpdateUsers(users)
 	require.NoError(t, err)
 
 	for i := 0; i < 10; i++ {
@@ -194,7 +194,7 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 		}
 	}
 
-	err = eventDb.upsertUsers(users)
+	err = eventDb.addOrUpdateUsers(users)
 	require.NoError(t, err)
 
 	for i := 5; i < 15; i++ {

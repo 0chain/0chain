@@ -353,7 +353,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.upsertUsers(*users)
+		return edb.addOrUpdateUsers(*users)
 	case TagAddTransactions:
 		txns, ok := fromEvent[[]Transaction](event.Data)
 		if !ok {
@@ -378,12 +378,6 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateValidator(*updates)
-	//case TagAddMiner:
-	//	miners, ok := fromEvent[[]Miner](event.Data)
-	//	if !ok {
-	//		return ErrInvalidEventData
-	//	}
-	//	return edb.addMiners(*miners)
 	case TagAddOrOverwriteMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
@@ -402,12 +396,6 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteMiner(*minerID)
-	//case TagAddSharder:
-	//	sharders, ok := fromEvent[[]Sharder](event.Data)
-	//	if !ok {
-	//		return ErrInvalidEventData
-	//	}
-	//	return edb.addSharders(*sharders)
 	case TagAddOrOverwriteSharder:
 		sharders, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {

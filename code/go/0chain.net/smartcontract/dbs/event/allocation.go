@@ -104,6 +104,10 @@ func (edb *EventDb) addAllocations(allocs []Allocation) error {
 	return edb.Store.Get().Create(&allocs).Error
 }
 
+func mergeAddAllocationEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagAddAllocation)
+}
+
 func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 	ts := time.Now()
 	updateColumns := []string{
@@ -153,6 +157,10 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 	}).Create(&allocs).Error
 }
 
+func mergeUpdateAllocEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagUpdateAllocation, withUniqueEventOverwrite())
+}
+
 func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
 	ts := time.Now()
 	defer func() {
@@ -175,6 +183,10 @@ func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
 		Columns:   []clause.Column{{Name: "allocation_id"}},
 		DoUpdates: clause.AssignmentColumns(updateColumns),
 	}).Create(&allocs).Error
+}
+
+func mergeUpdateAllocStatsEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagUpdateAllocationStakes, withUniqueEventOverwrite())
 }
 
 func mergeAllocationStatsEvents() *eventsMergerImpl[Allocation] {

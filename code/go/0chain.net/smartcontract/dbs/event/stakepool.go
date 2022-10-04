@@ -75,6 +75,43 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	}, nil
 }
 
+func mergeStakePoolRewardsEvents() *eventsMergerImpl[dbs.StakePoolReward] {
+	return newEventsMerger[dbs.StakePoolReward](TagStakePoolReward, withProviderRewardsPenaltiesAdded())
+}
+
+// withProviderRewardsPenaltiesAdded is an event merger middleware that merge two
+// StakePoolRewards
+func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *dbs.StakePoolReward) (*dbs.StakePoolReward, error) {
+		a.Reward += b.Reward
+		a.Desc = append(a.Desc, b.Desc...)
+
+		// merge delegate pool rewards
+		for k, v := range b.DelegateRewards {
+			_, ok := a.DelegateRewards[k]
+			if !ok {
+				a.DelegateRewards[k] = v
+				continue
+			}
+
+			a.DelegateRewards[k] += v
+		}
+
+		// merge delegate pool penalties
+		for k, v := range b.DelegatePenalties {
+			_, ok := a.DelegatePenalties[k]
+			if !ok {
+				a.DelegatePenalties[k] = v
+				continue
+			}
+
+			a.DelegatePenalties[k] += v
+		}
+
+		return a, nil
+	})
+}
+
 func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error {
 	if len(spus) == 0 {
 		return nil

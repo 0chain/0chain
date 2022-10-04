@@ -87,3 +87,7 @@ func (edb *EventDb) addOrOverwriteReadMarker(rms []ReadMarker) error {
 		UpdateAll: true,
 	}).Create(&rms).Error
 }
+
+func mergeAddReadMarkerEvents() *eventsMergerImpl[ReadMarker] {
+	return newEventsMerger[ReadMarker](TagAddReadMarker)
+}

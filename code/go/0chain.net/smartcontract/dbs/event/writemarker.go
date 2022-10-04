@@ -159,6 +159,10 @@ func (edb *EventDb) addWriteMarkers(wms []WriteMarker) error {
 	return edb.Store.Get().Create(&wms).Error
 }
 
+func mergeAddWriteMarkerEvents() *eventsMergerImpl[WriteMarker] {
+	return newEventsMerger[WriteMarker](TagAddWriteMarker)
+}
+
 func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString string, limit common.Pagination) ([]interface{}, error) {
 	var wm []interface{}
 

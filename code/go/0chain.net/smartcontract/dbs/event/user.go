@@ -46,7 +46,7 @@ func (edb *EventDb) overwriteUser(u User) error {
 }
 
 // update or create users
-func (edb *EventDb) upsertUsers(users []User) error {
+func (edb *EventDb) addOrUpdateUsers(users []User) error {
 	ts := time.Now()
 	defer func() {
 		logging.Logger.Debug("event db - upsert users ", zap.Any("duration", time.Since(ts)),
@@ -56,6 +56,10 @@ func (edb *EventDb) upsertUsers(users []User) error {
 		Columns:   []clause.Column{{Name: "user_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce"}),
 	}).Create(&users).Error
+}
+
+func mergeAddUsersEvents() *eventsMergerImpl[User] {
+	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) GetUserFromId(userId string) (User, error) {
