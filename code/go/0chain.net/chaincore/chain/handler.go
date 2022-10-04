@@ -249,7 +249,7 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
 }
 
-func (c *Chain) txnPoolSummaryTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
+func (c *Chain) txnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
 	//Row start
 	fmt.Fprintf(w, "<tr>")
 
@@ -1636,7 +1636,7 @@ func txnIterHandlerFunc(c *Chain, w http.ResponseWriter) func(context.Context, d
 			return false
 		}
 
-		c.txnPoolSummaryTableRows(w, txn, s)
+		c.txnsInPoolTableRows(w, txn, s)
 		return true
 	}
 }
