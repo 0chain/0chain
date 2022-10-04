@@ -26,7 +26,7 @@ jobs:
   miner:
     runs-on: [self-hosted, build]
     steps:
-
+    
     - name: Set docker image tag
       id: get_info
       run: |
@@ -75,7 +75,7 @@ jobs:
       env:
         DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
-    - name: Push latest
+    - name: Push latest 
       if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
       run: |
           docker push $MINER_REGISTRY:latest

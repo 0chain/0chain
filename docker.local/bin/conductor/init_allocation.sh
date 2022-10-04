@@ -31,7 +31,7 @@ BLOBBER3=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
 # create allocation
 ./zboxcli/zbox --wallet testing.json newallocation \
     --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 4 \
-    --data 1 --parity 1 --expire 48h
+    --data 2 --parity 1 --expire 48h
 
 # add to read pools
 ./zboxcli/zbox --wallet testing.json rp-lock \

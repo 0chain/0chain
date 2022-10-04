@@ -26,6 +26,18 @@ tests:
   ## List, download, and delete should continue to work.
   - name: "One blobber down"
     flow:
+      - command:
+          name: 'build_base'
+          timeout: '15m'
+      - command:
+          name: 'build_sharder'
+          timeout: '15m'
+      - command:
+          name: 'build_miner'
+          timeout: '15m'
+      - command:
+          name: 'build_test_blobbers'
+          timeout: '10m'
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
@@ -54,10 +66,6 @@ tests:
           name: 'init_allocation'
           timeout: '15m'
       - stop: ['blobber-3']
-      - command:
-          name: 'sleep_20s'
-      - command:
-          name: 'sleep_20s'
       - command:
           name: 'sleep_20s'
       - command:
