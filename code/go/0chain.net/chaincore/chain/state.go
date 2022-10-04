@@ -89,7 +89,7 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 			zap.String("hash", b.Hash))
 		return err
 	}
-	cctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	cctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	return b.SaveChanges(cctx, c)
 }
