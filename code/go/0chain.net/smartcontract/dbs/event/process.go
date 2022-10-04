@@ -77,7 +77,6 @@ const (
 	TagAllocValueChange
 	TagAllocBlobberValueChange
 	TagUpdateBlobberChallenge
-	NumberOfTags
 	TagAddOrOverwriteAllocationBlobberTerm
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
@@ -191,6 +190,7 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 			round = e.events[0].BlockNumber
 			edb.updateBlobberAggregate(round, period, gs)
 			gs.update(e.events)
+
 			if round%period == 0 {
 				gs.Round = round
 				if err := edb.addSnapshot(gs.Snapshot); err != nil {

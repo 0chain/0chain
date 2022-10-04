@@ -37,12 +37,8 @@ func (edb *EventDb) replicateBlobberAggregate(round int64, offset, limit int) ([
 	var snapshots []BlobberAggregate
 
 	queryBuilder := edb.Store.Get().
-		Model(&BlobberAggregate{}).Where("round > ?", round).Offset(offset).Limit(limit)
+		Model(&BlobberAggregate{}).Where("round = ?", round+1).Offset(offset).Limit(limit)
 
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "round"},
-		Desc:   false,
-	})
 	queryBuilder.Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "blobber_id"},
 		Desc:   false,
@@ -150,82 +146,4 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		return
 	}
 	gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
-}
-
-func (edb *EventDb) getClosest(id string, round int64) (BlobberAggregate, error) {
-	var aggregate BlobberAggregate
-	res := edb.Store.Get().
-		Model(BlobberAggregate{}).
-		Where("blobber_id = ? and round <= ?", id, round).
-		Order("round desc").
-		First(&aggregate)
-	return aggregate, res.Error
-}
-
-func (edb *EventDb) GetBlobberRankByRound(blobberId string, round int64) (int64, error) {
-	aggregate, err := edb.getClosest(blobberId, round)
-	if err != nil {
-		return 0, err
-	}
-	var rank int64
-	result := edb.Store.Get().
-		Model(&BlobberAggregate{}).
-		Where("rank_metric > ? and (round between ? and ?)",
-			aggregate.RankMetric, round, round-edb.dbConfig.AggregatePeriod+1).
-		Count(&rank)
-	return rank + 1, result.Error
-}
-
-func (edb *EventDb) GetBlobberAggregate(id string, round int64) (BlobberAggregate, error) {
-	var aggregate BlobberAggregate
-	res := edb.Store.Get().
-		Model(BlobberAggregate{}).
-		Where("blobber_id = ? and round <= ?", id, round).
-		Order("round desc").
-		First(&aggregate)
-	return aggregate, res.Error
-}
-
-func (edb *EventDb) GetAggregateData(
-	from, to int64, dataPoints int64, row, table, id string,
-) ([]int64, error) {
-	return edb.GetTotalId(from, to, dataPoints, row, table, id)
-}
-
-func (edb *EventDb) GetTotalId(start, end, roundsPerPoint int64, row, table, blobberId string) ([]int64, error) {
-	if roundsPerPoint < edb.Config().AggregatePeriod {
-		return nil, fmt.Errorf("too many points %v for aggregate period %v",
-			roundsPerPoint, edb.Config().AggregatePeriod)
-	}
-	query := fmt.Sprintf(`
-		SELECT %s 
-		FROM %s
-		WHERE ( round BETWEEN %v AND %v ) 
-				AND ( Mod(round, %v) < %v )
-		        AND ( blobber_id = '%v' )
-		ORDER BY round ASC	`,
-		row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1, blobberId)
-
-	var deltas []int64
-	res := edb.Store.Get().Raw(query).Scan(&deltas)
-	return deltas, res.Error
-}
-
-func (edb *EventDb) GetDifferenceId(start, end int64, roundsPerPoint int64, row, table, blobberId string) ([]int64, error) {
-	if roundsPerPoint < edb.Config().AggregatePeriod {
-		return nil, fmt.Errorf("too many points %v for aggregate period %v",
-			roundsPerPoint, edb.Config().AggregatePeriod)
-	}
-	query := fmt.Sprintf(`
-		SELECT %s - LAG(%s,1, CAST(0 AS Bigint)) OVER(ORDER BY round ASC) 
-		FROM %s
-		WHERE ( round BETWEEN %v AND %v ) 
-				AND ( Mod(round, %v) < %v )
-		        AND ( blobber_id = '%v' )
-		ORDER BY round ASC	`,
-		row, row, table, start, end, roundsPerPoint, edb.dbConfig.AggregatePeriod-1, blobberId)
-
-	var deltas []int64
-	res := edb.Store.Get().Raw(query).Scan(&deltas)
-	return deltas, res.Error
 }
