@@ -2,7 +2,7 @@ name: Conductor No View Change Scenarios Tests
 
 on:
   # schedule:
-  #   - cron: '0  * * * '
+  #   - cron: '0 1 * * * '
   push:
     branches: [ master, staging ]
   pull_request:
