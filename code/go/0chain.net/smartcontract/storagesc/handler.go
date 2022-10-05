@@ -2767,7 +2767,7 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 	}
 	blobbers, err := edb.ReplicateSnapshots(intR, limit.Limit)
 	if err != nil {
-		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
+		err := common.NewErrInternal("cannot get snapshots" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -2826,6 +2826,8 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, err)
 		return
 	}
-
+	if len(blobbers) == 0 {
+		blobbers = []event.BlobberAggregate{}
+	}
 	common.Respond(w, r, blobbers, nil)
 }
