@@ -1622,17 +1622,11 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func txnIterHandlerFunc(c *Chain, w http.ResponseWriter) func(context.Context, datastore.CollectionEntity) bool {
+func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(context.Context, datastore.CollectionEntity) bool {
 	return func(ctx context.Context, ce datastore.CollectionEntity) bool {
 		txn, ok := ce.(*transaction.Transaction)
 		if !ok {
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", ce))
-			return false
-		}
-
-		s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
-		if !isValid(err) {
-			logging.Logger.Error(err.Error(), zap.Any("clientState", s))
 			return false
 		}
 
@@ -1662,12 +1656,19 @@ func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr class='header'><td>Client ID</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
 
 	ctx := common.GetRootContext()
-	var txnIterHandler = txnIterHandlerFunc(c, w)
+
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
 	defer memorystore.Close(cctx)
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
+
+	s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
+	if !isValid(err) {
+		logging.Logger.Error(err.Error(), zap.Any("clientState", s))
+	}
+
+	var txnIterHandler = txnIterHandlerFunc(c, w, s)
 
 	_ = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 
