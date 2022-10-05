@@ -2,14 +2,6 @@ version: '3'
 services:
   cassandra:
     image: cassandra:3.11.4
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '0.5'
-    #       memory: 1500M
-    #     reservations:
-    #       cpus: '0.25'
-    #       memory: 100M
     networks:
       default:
     #ports:
@@ -22,22 +14,44 @@ services:
     volumes:
       - ../../bin:/0chain/bin
       - ../../sql:/0chain/sql
-    command: ./0chain/bin/cassandra-init.sh
+    command: bash /0chain/bin/cassandra-init.sh
     links:
       - cassandra:cassandra
     restart: on-failure
 
-  sharder:
-    image: 0chaindev/sharder:latest
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '0.5'
-    #       memory: 500M
-    #     reservations:
-    #       cpus: '0.1'
-    #       memory: 100M
+  postgres:
+    image: postgres:14
     environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ../config/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
+      - ../sql_script/:/docker-entrypoint-initdb.d/
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      default:
+  
+  postgres-post:
+    image: postgres:14
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ../bin:/0chain/bin
+      - ../sql:/0chain/sql
+      - ../sql_script/:/docker-entrypoint-initdb.d/
+    links:
+      - postgres:postgres
+  
+  sharder:
+    image: 0chaindev/sharder:staging
+    environment:
+      - POSTGRES_HOST=postgres
       - DOCKER=true
       - CASSANDRA_CLUSTER=cassandra
     depends_on:
