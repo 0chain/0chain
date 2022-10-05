@@ -216,7 +216,6 @@ func (sp *stakePool) reduceOffer(amount currency.Coin) error {
 func (sp *stakePool) slash(
 	blobID string,
 	offer, slash currency.Coin,
-	desc string,
 	balances chainstate.StateContextI,
 ) (move currency.Coin, err error) {
 	if offer == 0 || slash == 0 {
@@ -259,7 +258,7 @@ func (sp *stakePool) slash(
 		edbSlash.DelegatePenalties[id] = int64(dpSlash)
 	}
 	// todo we should slash from stake pools not rewards. 0chain issue 1495
-	if err := edbSlash.Emit(event.TagStakePoolReward, desc, balances); err != nil {
+	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
 		return 0, err
 	}
 

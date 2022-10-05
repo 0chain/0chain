@@ -136,7 +136,7 @@ func TestBlobbers(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Tag:         int(TagAddBlobber),
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
@@ -205,7 +205,7 @@ func TestBlobbers(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Tag:         int(TagUpdateBlobber),
 		Data:        string(data),
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwrite}, 100, "hash", 10)
@@ -304,6 +304,7 @@ func TestBlobberIds(t *testing.T) {
 }
 
 func TestBlobberLatLong(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
 	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),

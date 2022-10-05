@@ -216,9 +216,12 @@ func TestAddAndUpdateStakePoolRewards(t *testing.T) {
 	miners := make([]Miner, 10)
 	for i := 0; i < 10; i++ {
 		miners[i] = Miner{
-			MinerID:     fmt.Sprintf("m_%v", i),
-			Rewards:     currency.Coin((i + 1) * 10),
-			TotalReward: currency.Coin((i + 1) * 1000),
+			MinerID: fmt.Sprintf("m_%v", i),
+			Rewards: ProviderRewards{
+				ProviderID:   fmt.Sprintf("m_%v", i),
+				Rewards:      currency.Coin((i + 1) * 10),
+				TotalRewards: currency.Coin((i + 1) * 1000),
+			},
 		}
 	}
 

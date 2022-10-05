@@ -97,10 +97,13 @@ func TestSharders(t *testing.T) {
 			MinStake:          sn.MinStake,
 			MaxStake:          sn.MaxStake,
 			LastHealthCheck:   sn.LastHealthCheck,
-			Rewards:           sn.Stat.GeneratorRewards,
-			Fees:              sn.Stat.GeneratorFees,
-			Longitude:         0,
-			Latitude:          0,
+			Rewards: ProviderRewards{
+				ProviderID: sn.ID,
+				Rewards:    sn.Stat.GeneratorRewards,
+			},
+			Fees:      sn.Stat.GeneratorFees,
+			Longitude: 0,
+			Latitude:  0,
 		}
 	}
 
@@ -161,7 +164,7 @@ func TestSharders(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddSharder),
+		Tag:         int(TagAddOrOverwriteSharder),
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
@@ -275,6 +278,7 @@ func TestSharderFilter(t *testing.T) {
 }
 
 func TestGetSharderLocations(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
 	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
@@ -336,7 +340,7 @@ func TestGetSharderLocations(t *testing.T) {
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i)}
-		err := eventDb.addSharder(s)
+		err := eventDb.addSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }
@@ -344,7 +348,7 @@ func createSharders(t *testing.T, eventDb *EventDb, count int) {
 func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
-		err := eventDb.addSharder(s)
+		err := eventDb.addSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }

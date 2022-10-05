@@ -34,7 +34,6 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	)
 
 	for i, sp := range spus {
-		descs = append(descs, sp.Desc)
 		if sp.Reward != 0 {
 			rewards = append(rewards, ProviderRewards{
 				ProviderID:   sp.ProviderId,
@@ -84,7 +83,6 @@ func mergeStakePoolRewardsEvents() *eventsMergerImpl[dbs.StakePoolReward] {
 func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 	return withEventMerge(func(a, b *dbs.StakePoolReward) (*dbs.StakePoolReward, error) {
 		a.Reward += b.Reward
-		a.Desc = append(a.Desc, b.Desc...)
 
 		// merge delegate pool rewards
 		for k, v := range b.DelegateRewards {
@@ -219,11 +217,6 @@ func penaltyProviderDelegates(edb *EventDb, penalties []DelegatePool) error {
 		},
 		DoUpdates: clause.Assignments(vs),
 	}).Create(&penalties).Error
-}
-
-type rewardInfo struct {
-	pool  string
-	value int64
 }
 
 func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {

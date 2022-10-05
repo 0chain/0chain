@@ -127,7 +127,7 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 
 	rp.Balance = currentBalance
 
-	err = sp.DistributeRewards(value, blobID, spenum.Blobber, "mtb", balances)
+	err = sp.DistributeRewards(value, blobID, spenum.Blobber, balances)
 	if err != nil {
 		return "", fmt.Errorf("can't move tokens to blobber: %v", err)
 	}

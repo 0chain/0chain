@@ -204,7 +204,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 		}
 		spUpdate.Reward = value
 
-		if err := spUpdate.Emit(event.TagStakePoolReward, desc, balances); err != nil {
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
 		}
 		return nil
@@ -274,7 +274,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 			return err
 		}
 	}
-	if err := spUpdate.Emit(event.TagStakePoolReward, desc, balances); err != nil {
+	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 		return err
 	}
 	return nil
@@ -332,7 +332,6 @@ func (sp *StakePool) DistributeRewards(
 	value currency.Coin,
 	providerId string,
 	providerType spenum.Provider,
-	desc string,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
@@ -348,7 +347,7 @@ func (sp *StakePool) DistributeRewards(
 		}
 		spUpdate.Reward = value
 
-		if err := spUpdate.Emit(event.TagStakePoolReward, desc, balances); err != nil {
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
 		}
 
@@ -418,7 +417,7 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 	}
-	if err := spUpdate.Emit(event.TagStakePoolReward, desc, balances); err != nil {
+	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 		return err
 	}
 

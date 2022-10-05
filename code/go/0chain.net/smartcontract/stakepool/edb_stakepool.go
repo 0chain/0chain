@@ -22,7 +22,6 @@ func NewStakePoolReward(pId string, pType spenum.Provider) *StakePoolReward {
 
 func (spu StakePoolReward) Emit(
 	tag event.EventTag,
-	desc string,
 	balances cstate.StateContextI,
 ) error {
 
@@ -30,16 +29,15 @@ func (spu StakePoolReward) Emit(
 		event.TypeStats,
 		tag,
 		spu.ProviderId,
-		stakePoolRewardToStakePoolRewardEvent(spu, desc),
+		stakePoolRewardToStakePoolRewardEvent(spu),
 	)
 	return nil
 }
 
-func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward, desc string) *dbs.StakePoolReward {
+func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolReward {
 	return &dbs.StakePoolReward{
 		StakePoolId:     spu.StakePoolId,
 		Reward:          spu.Reward,
 		DelegateRewards: spu.DelegateRewards,
-		Desc:            []string{desc},
 	}
 }

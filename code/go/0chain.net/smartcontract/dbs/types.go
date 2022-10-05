@@ -26,7 +26,6 @@ type StakePoolReward struct {
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 	// penalties delegate pools
 	DelegatePenalties map[string]int64 `json:"delegate_penalties"`
-	Desc              []string         `json:"-"`
 }
 
 type StakePoolUpdate struct {

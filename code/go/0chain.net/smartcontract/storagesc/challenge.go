@@ -163,7 +163,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, "br", balances)
+	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, balances)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
@@ -350,7 +350,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		}
 
 		var move currency.Coin
-		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, "blobberPenalty", balances)
+		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}

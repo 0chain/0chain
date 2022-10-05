@@ -20,6 +20,7 @@ func init() {
 }
 
 func TestReadMarkersPaginated(t *testing.T) {
+	t.Skip("only for local debugging, requires local")
 	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
@@ -132,7 +133,8 @@ func insertMultipleReadMarker(t *testing.T, eventDb *EventDb) {
 			if !assert.NoError(t, err, "Error while writing blobber marker") {
 				return
 			}
-			err = eventDb.addOrOverwriteReadMarker(ReadMarker{TransactionID: transactionHash, BlobberID: blobberID, ClientID: "someClientID", AllocationID: strconv.Itoa(i), AuthTicket: strconv.Itoa(i), BlockNumber: int64(i), ReadSize: float64(i)})
+			rm := ReadMarker{TransactionID: transactionHash, BlobberID: blobberID, ClientID: "someClientID", AllocationID: strconv.Itoa(i), AuthTicket: strconv.Itoa(i), BlockNumber: int64(i), ReadSize: float64(i)}
+			err = eventDb.addOrOverwriteReadMarker([]ReadMarker{rm})
 			if !assert.NoError(t, err, "Error while writing read marker") {
 				return
 			}

@@ -660,25 +660,19 @@ func TestExtendAllocation(t *testing.T) {
 					},
 				}
 				sp.Pools[mockPoolId].Balance = zcnToBalance(mockStake)
-				balances.On(
-					"GetTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
+				balances.On("GetTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
 					mock.MatchedBy(func(s *stakePool) bool {
 						*s = sp
 						return true
 					})).Return(nil).Once()
-				balances.On(
-					"InsertTrieNode",
-					stakePoolKey(spenum.Blobber, mockBlobber.ID),
-					mock.Anything,
-				).Return("", nil).Once()
-				balances.On(
-					"EmitEvent",
-					event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
-				).Return().Maybe()
-				balances.On(
-					"EmitEvent",
-					event.TypeStats, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
-				).Return().Maybe()
+				balances.On("InsertTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
+					mock.Anything).Return("", nil).Once()
+				balances.On("EmitEvent", event.TypeStats,
+					event.TagUpdateBlobber, mock.Anything, mock.Anything).Return().Maybe()
+				balances.On("EmitEvent", event.TypeStats,
+					event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything).Return().Maybe()
+				balances.On("EmitEvent", event.TypeStats,
+					event.TagUpdateBlobberTotalOffers, mock.Anything, mock.Anything).Return().Maybe()
 			}
 		}
 
