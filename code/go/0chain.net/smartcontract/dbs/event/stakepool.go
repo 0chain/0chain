@@ -15,11 +15,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 )
 
-type providerAggregateStats struct {
-	Rewards     currency.Coin `json:"rewards"`
-	TotalReward currency.Coin `json:"total_reward"`
-}
-
 type providerRewardsDelegates struct {
 	rewards       []ProviderRewards
 	delegatePools []DelegatePool
@@ -171,8 +166,8 @@ func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T)
 
 func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
 	vs := map[string]interface{}{
-		"rewards":       gorm.Expr(fmt.Sprintf("provider_rewards.rewards + excluded.rewards")),
-		"total_rewards": gorm.Expr(fmt.Sprintf("provider_rewards.total_rewards + excluded.total_rewards")),
+		"rewards":       gorm.Expr("provider_rewards.rewards + excluded.rewards"),
+		"total_rewards": gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
@@ -199,24 +194,6 @@ func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
 		},
 		DoUpdates: clause.Assignments(vs),
 	}).Create(&rewards).Error
-}
-
-func penaltyProviderDelegates(edb *EventDb, penalties []DelegatePool) error {
-	vs := map[string]interface{}{
-		"total_penalty": gorm.Expr("delegate_pools.total_penalty + excluded.total_penalty"),
-	}
-
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Where: clause.Where{
-			Exprs: []clause.Expression{gorm.Expr("delegate_pools.status != ?", spenum.Deleted)},
-		},
-		Columns: []clause.Column{
-			{Name: "provider_type"},
-			{Name: "provider_id"},
-			{Name: "pool_id"},
-		},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&penalties).Error
 }
 
 func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {

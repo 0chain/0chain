@@ -250,26 +250,3 @@ func TestUpdateStakePoolDelegateRewards(t *testing.T) {
 	err := rewardProviderDelegates(eventDb, miners)
 	require.NoError(t, err)
 }
-
-func TestUpdateStakePoolDelegatePenalties(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, closeDB := prepareEventDB(t)
-	defer closeDB()
-
-	// create new users
-	var miners []DelegatePool
-	for i := 0; i < 10; i++ {
-		miners = append(miners, DelegatePool{
-			ProviderID:   fmt.Sprintf("pd_%v", i),
-			ProviderType: int(spenum.Miner),
-			DelegateID:   fmt.Sprintf("p_%v", i),
-			PoolID:       fmt.Sprintf("p_%v", i),
-			Reward:       currency.Coin((i + 1) * 10),
-			TotalReward:  currency.Coin((i + 1) * 1000),
-			TotalPenalty: currency.Coin((i + 1) * 1000),
-		})
-	}
-
-	err := penaltyProviderDelegates(eventDb, miners)
-	require.NoError(t, err)
-}

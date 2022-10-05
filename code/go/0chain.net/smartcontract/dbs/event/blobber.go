@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -251,19 +250,6 @@ func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
 		logging.Logger.Debug("add or overwrite blobbers failed", zap.Any("ids", bids))
 	}
 	return err
-}
-
-func (bl *Blobber) exists(edb *EventDb) (bool, error) {
-	var blobber Blobber
-	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", bl.BlobberID).Take(&blobber).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to check Blobber existence %v, error %v", bl, err)
-	}
-
-	return true, nil
 }
 
 func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {

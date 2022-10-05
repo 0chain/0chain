@@ -226,52 +226,6 @@ func TestBlobbers(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestBlobberExists(t *testing.T) {
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
-	if err != nil {
-		return
-	}
-	defer eventDb.Close()
-
-	err = eventDb.AutoMigrate()
-	require.NoError(t, err)
-	bl := Blobber{
-		BlobberID: "something",
-	}
-	res := eventDb.Store.Get().Create(&bl)
-	if res.Error != nil {
-		t.Errorf("Error while inserting blobber %v", bl)
-		return
-	}
-	gotExists, err := bl.exists(eventDb)
-
-	if !gotExists || err != nil {
-		t.Errorf("Exists function did not work want true got %v and err was %v", gotExists, err)
-	}
-	b2 := Blobber{
-		BlobberID: "somethingNew",
-	}
-	gotExists, err = b2.exists(eventDb)
-	if gotExists || err != nil {
-		t.Errorf("Exists function did not work want false got %v and err was %v", gotExists, err)
-	}
-	err = eventDb.Drop()
-	require.NoError(t, err)
-}
-
 func TestBlobberIds(t *testing.T) {
 	access := config.DbAccess{
 		Enabled:         true,

@@ -113,55 +113,6 @@ func (edb *EventDb) GetShardersTotalStake() (int64, error) {
 	return count, err
 }
 
-func (edb *EventDb) addSharders(sharders []Sharder) error {
-	return edb.Store.Get().Create(&sharders).Error
-}
-
-//func (edb *EventDb) sharderAggregateStats(id string) (*providerAggregateStats, error) {
-//	var sharder providerAggregateStats
-//	result := edb.Store.Get().
-//		Model(&Sharder{}).
-//		Where(&Sharder{SharderID: id}).
-//		First(&sharder)
-//	if result.Error != nil {
-//		return nil, fmt.Errorf("error retrieving sharder %v, error %v",
-//			id, result.Error)
-//	}
-//
-//	return &sharder, nil
-//}
-
-func (edb *EventDb) overwriteSharder(sharder Sharder) error {
-
-	result := edb.Store.Get().
-		Model(&Sharder{}).
-		Where(&Sharder{SharderID: sharder.SharderID}).
-		Updates(map[string]interface{}{
-			"n2n_host":            sharder.N2NHost,
-			"host":                sharder.Host,
-			"port":                sharder.Port,
-			"path":                sharder.Path,
-			"public_key":          sharder.PublicKey,
-			"short_name":          sharder.ShortName,
-			"build_tag":           sharder.BuildTag,
-			"total_staked":        sharder.TotalStaked,
-			"delete":              sharder.Delete,
-			"delegate_wallet":     sharder.DelegateWallet,
-			"service_charge":      sharder.ServiceCharge,
-			"number_of_delegates": sharder.NumberOfDelegates,
-			"min_stake":           sharder.MinStake,
-			"max_stake":           sharder.MaxStake,
-			"last_health_check":   sharder.LastHealthCheck,
-			"rewards":             sharder.Rewards,
-			"fees":                sharder.Fees,
-			"active":              sharder.Active,
-			"longitude":           sharder.Longitude,
-			"latitude":            sharder.Latitude,
-		})
-
-	return result.Error
-}
-
 func (edb *EventDb) addOrOverwriteSharders(sharders []Sharder) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "sharder_id"}},

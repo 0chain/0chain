@@ -2,8 +2,6 @@ package event
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"0chain.net/smartcontract/common"
 	"golang.org/x/net/context"
@@ -154,38 +152,4 @@ func (edb *EventDb) Drop() error {
 	}
 
 	return nil
-}
-
-type (
-	castType       string
-	castTypeOption func(*castType)
-)
-
-// option that set the placeholder casting type
-func toInteger() castTypeOption {
-	return func(t *castType) {
-		*t = "integer"
-	}
-}
-
-func placeholders(n int, opts ...castTypeOption) string {
-	var tp castType
-	for _, opt := range opts {
-		opt(&tp)
-	}
-
-	params := make([]string, 0, n)
-	for i := 0; i < n; i++ {
-		if len(tp) > 0 {
-			params = append(params, fmt.Sprintf("?::%s", tp))
-		} else {
-			params = append(params, "?")
-		}
-	}
-
-	return strings.Join(params, ", ")
-}
-
-func placeholdersInteger(n int) string {
-	return placeholders(n, toInteger())
 }

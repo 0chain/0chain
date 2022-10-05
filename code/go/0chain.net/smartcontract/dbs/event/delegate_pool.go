@@ -29,27 +29,6 @@ type DelegatePool struct {
 	RoundCreated int64         `json:"round_created"`
 }
 
-func (edb *EventDb) overwriteDelegatePool(sp DelegatePool) error {
-	result := edb.Store.Get().
-		Model(&DelegatePool{}).
-		Where(&DelegatePool{
-			PoolID:       sp.PoolID,
-			ProviderType: sp.ProviderType,
-		}).Updates(map[string]interface{}{
-		"delegate_id":   sp.DelegateID,
-		"provider_type": sp.ProviderType,
-		"provider_id":   sp.ProviderID,
-		"pool_id":       sp.PoolID,
-		"balance":       sp.Balance,
-		"reward":        sp.Reward,
-		"total_reward":  sp.TotalReward,
-		"total_penalty": sp.TotalPenalty,
-		"status":        sp.Status,
-		"round_created": sp.RoundCreated,
-	})
-	return result.Error
-}
-
 func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 	var dp DelegatePool
 	result := edb.Store.Get().Model(&DelegatePool{}).Where(&DelegatePool{

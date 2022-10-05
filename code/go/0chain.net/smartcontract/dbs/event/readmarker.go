@@ -73,14 +73,6 @@ func (edb *EventDb) CountReadMarkersFromQuery(query *ReadMarker) (count int64, e
 	return
 }
 
-func (edb *EventDb) overwriteReadMarker(rm ReadMarker) error {
-	result := edb.Store.Get().
-		Model(&ReadMarker{}).
-		Where(&ReadMarker{TransactionID: rm.TransactionID}).
-		Updates(&rm)
-	return result.Error
-}
-
 func (edb *EventDb) addOrOverwriteReadMarker(rms []ReadMarker) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "transaction_id"}},

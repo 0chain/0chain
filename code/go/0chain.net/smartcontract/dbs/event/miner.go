@@ -6,12 +6,10 @@ import (
 
 	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
-	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
-	"github.com/0chain/common/core/logging"
 	"github.com/guregu/null"
 	"gorm.io/gorm"
 )
@@ -175,48 +173,6 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 		Find(&miners)
 
 	return miners, result.Error
-}
-
-func (edb *EventDb) addMiners(miners []Miner) error {
-	result := edb.Store.Get().Create(&miners)
-	if result.Error != nil {
-		logging.Logger.Error("event db - add miner failed",
-			zap.Error(result.Error),
-			zap.Any("miner", miners))
-	}
-
-	return result.Error
-}
-
-func (edb *EventDb) overwriteMiner(miner Miner) error {
-
-	result := edb.Store.Get().
-		Model(&Miner{}).
-		Where(&Miner{MinerID: miner.MinerID}).
-		Updates(map[string]interface{}{
-			"n2n_host":            miner.N2NHost,
-			"host":                miner.Host,
-			"port":                miner.Port,
-			"path":                miner.Path,
-			"public_key":          miner.PublicKey,
-			"short_name":          miner.ShortName,
-			"build_tag":           miner.BuildTag,
-			"total_staked":        miner.TotalStaked,
-			"delete":              miner.Delete,
-			"delegate_wallet":     miner.DelegateWallet,
-			"service_charge":      miner.ServiceCharge,
-			"number_of_delegates": miner.NumberOfDelegates,
-			"min_stake":           miner.MinStake,
-			"max_stake":           miner.MaxStake,
-			"last_health_check":   miner.LastHealthCheck,
-			"rewards":             miner.Rewards,
-			"fees":                miner.Fees,
-			"active":              miner.Active,
-			"longitude":           miner.Longitude,
-			"latitude":            miner.Latitude,
-		})
-
-	return result.Error
 }
 
 func (edb *EventDb) addOrOverwriteMiner(miners []Miner) error {

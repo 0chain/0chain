@@ -340,7 +340,7 @@ func TestGetSharderLocations(t *testing.T) {
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i)}
-		err := eventDb.addSharders([]Sharder{s})
+		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }
@@ -348,7 +348,7 @@ func createSharders(t *testing.T, eventDb *EventDb, count int) {
 func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
-		err := eventDb.addSharders([]Sharder{s})
+		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }
