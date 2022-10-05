@@ -33,7 +33,7 @@ type BlobberAggregate struct {
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
 }
 
-func (edb *EventDb) replicateBlobberAggregate(round int64, offset, limit int) ([]BlobberAggregate, error) {
+func (edb *EventDb) ReplicateBlobberAggregate(round int64, offset, limit int) ([]BlobberAggregate, error) {
 	var snapshots []BlobberAggregate
 
 	queryBuilder := edb.Store.Get().

@@ -62,7 +62,7 @@ type AllocationBlobberValueChanged struct {
 	Delta        int64
 }
 
-func (edb *EventDb) replicateSnapshots(round int64, limit int) ([]Snapshot, error) {
+func (edb *EventDb) ReplicateSnapshots(round int64, limit int) ([]Snapshot, error) {
 	var snapshots []Snapshot
 
 	queryBuilder := edb.Store.Get().

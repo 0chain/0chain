@@ -92,6 +92,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 
 		rest.MakeEndpoint(storage+"/search", srh.getSearchHandler),
 		rest.MakeEndpoint(storage+"/alloc-blobber-term", srh.getAllocBlobberTerms),
+		rest.MakeEndpoint(storage+"/replicate-snapshots", srh.replicateSnapshots),
+		rest.MakeEndpoint(storage+"/replicate-blobber-aggregates", srh.replicateBlobberAggregates),
 	}
 }
 
@@ -2716,4 +2718,114 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	common.Respond(w, r, nil, common.NewErrInternal("Request failed, searchString isn't a (wallet address)/(block hash)/(txn hash)/(round num)/(content hash)/(file name)"))
+}
+
+// replicateSnapshots swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicateSnapshots replicate-snapshots
+// Gets list of snapshot records
+//
+// parameters:
+//
+//	+name: round
+//	 description: current round
+//	 in: query
+//	 type: int64
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: Snapshot
+//	500:
+func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	round := r.URL.Query().Get("round")
+	intR, err := strconv.ParseInt(round, 10, 64)
+	if err != nil || intR < 0 {
+		err := common.NewErrInternal("bad round format" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobbers, err := edb.ReplicateSnapshots(intR, limit.Limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, blobbers, nil)
+}
+
+// replicateSnapshots swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicateBlobberAggregates replicate-blobber-aggregate
+// Gets list of blobber aggregate records
+//
+// parameters:
+//
+//	+name: round
+//	 description: current round
+//	 in: query
+//	 type: int64
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: Snapshot
+//	500:
+func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	round := r.URL.Query().Get("round")
+	intR, err := strconv.ParseInt(round, 10, 64)
+	if err != nil || intR < 0 {
+		err := common.NewErrInternal("bad round format" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobbers, err := edb.ReplicateBlobberAggregate(intR, limit.Offset, limit.Limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, blobbers, nil)
 }
