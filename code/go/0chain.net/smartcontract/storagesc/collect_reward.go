@@ -90,7 +90,7 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"max min %v exceeded: %v", conf.MaxMint, conf.Minted)
 	}
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
 			"cannot save config: %v", err)

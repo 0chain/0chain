@@ -775,7 +775,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 	conf.FailedChallengesToCancel = 100
 	conf.FailedChallengesToRevokeMinLock = 50
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
 	require.NoError(t, err)
 
 	tp += 100
@@ -996,7 +996,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 	conf.FailedChallengesToCancel = 10
 	conf.FailedChallengesToRevokeMinLock = 5
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
 	require.NoError(t, err)
 
 	tp += 100

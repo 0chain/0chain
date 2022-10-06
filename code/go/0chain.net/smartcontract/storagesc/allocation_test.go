@@ -126,7 +126,7 @@ func TestSelectBlobbers(t *testing.T) {
 			MinAllocDuration: confMinAllocDuration,
 			OwnerId:          owner,
 		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID), mock.MatchedBy(func(c *Config) bool {
+		balances.On("GetTrieNode", STORAGESC_CONFIG_KEY, mock.MatchedBy(func(c *Config) bool {
 			*c = *conf
 			return true
 		})).Return(nil).Once()
@@ -1111,7 +1111,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	conf.MinAllocSize = 10 * GB
 	conf.TimeUnit = 2 * time.Minute
 
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
 	require.NoError(t, err)
 
 	// 1.
@@ -1521,7 +1521,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MaxBlobbersPerAllocation = 4
 	conf.TimeUnit = 48 * time.Hour
 
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
+	_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, &conf)
 	require.NoError(t, err)
 
 	allBlobbers = newTestAllBlobbers()

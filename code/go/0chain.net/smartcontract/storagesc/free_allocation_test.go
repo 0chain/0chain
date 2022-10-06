@@ -96,7 +96,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 		input, err := json.Marshal(p.info)
 		require.NoError(t, err)
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", STORAGESC_CONFIG_KEY,
 			mockSetValue(conf)).Return(nil).Once()
 
 		//var newRedeemed []freeStorageRedeemed
@@ -312,7 +312,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
 			mockSetValue(p.assigner)).Return(nil).Once()
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", STORAGESC_CONFIG_KEY,
 			mockSetValue(conf)).Return(nil)
 
 		balances.On("GetClientBalance", mockRecipient,
@@ -665,7 +665,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				mockSetValue(p.assigner),
 			).Return(nil).Once()
 		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", STORAGESC_CONFIG_KEY,
 			mockSetValue(conf)).Return(nil).Once()
 
 		var sa = StorageAllocation{

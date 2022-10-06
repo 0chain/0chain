@@ -38,6 +38,7 @@ var (
 	ALL_VALIDATORS_KEY               = ADDRESS + encryption.Hash("all_validators")
 	ALL_CHALLENGE_READY_BLOBBERS_KEY = ADDRESS + encryption.Hash("all_challenge_ready_blobbers")
 	BLOBBER_REWARD_KEY               = ADDRESS + encryption.Hash("blobber_rewards")
+	STORAGESC_CONFIG_KEY             = ADDRESS + encryption.Hash("storagesc_config")
 )
 
 func getBlobberAllocationsKey(blobberID string) string {

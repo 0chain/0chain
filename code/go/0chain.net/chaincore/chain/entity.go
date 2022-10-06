@@ -572,7 +572,13 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 
 	err := minersc.InitConfig(state)
 	if err != nil {
-		logging.Logger.Error("chain.stateDB getGlobalNode failed", zap.Error(err))
+		logging.Logger.Error("chain.stateDB minersc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	_, err = storagesc.InitConfig(state)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB storagesc InitConfig failed", zap.Error(err))
 		panic(err)
 	}
 
