@@ -64,6 +64,7 @@ func (edb *EventDb) ReplicateBlobberAggregate(round int64, offset, limit int) ([
 		for i, s := range snapshots {
 			if r != s.Round {
 				res = snapshots[:i]
+				break
 			}
 		}
 	}
