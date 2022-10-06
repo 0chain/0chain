@@ -39,13 +39,17 @@ func (edb *EventDb) ReplicateBlobberAggregate(round int64, offset, limit int) ([
 	queryBuilder := edb.Store.Get().
 		Model(&BlobberAggregate{}).Where("round > ?", round).Offset(offset).Limit(limit)
 
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "round"},
-		Desc:   false,
-	})
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "blobber_id"},
-		Desc:   false,
+	queryBuilder.Order(clause.OrderBy{
+		Columns: []clause.OrderByColumn{
+			{
+				Column: clause.Column{Name: "round"},
+				Desc:   false,
+			},
+			{
+				Column: clause.Column{Name: "blobber_id"},
+				Desc:   false,
+			},
+		},
 	})
 
 	result := queryBuilder.Scan(&snapshots)
