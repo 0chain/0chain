@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/core/common"
 
 	"0chain.net/chaincore/currency"
@@ -111,7 +113,7 @@ func BenchmarkTests(
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
 					Settings: stakepool.Settings{
-						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
+						ServiceChargeRatio: *zbig.NewBigRat(viper.GetFloat64(bk.MinerMaxCharge)),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
 						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
 						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
@@ -134,7 +136,7 @@ func BenchmarkTests(
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
 					Settings: stakepool.Settings{
-						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
+						ServiceChargeRatio: *zbig.NewBigRat(viper.GetFloat64(bk.MinerMaxCharge)),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
 						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
 						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
@@ -309,7 +311,7 @@ func BenchmarkTests(
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
 					Settings: stakepool.Settings{
-						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
+						ServiceChargeRatio: *zbig.NewBigRat(viper.GetFloat64(bk.MinerMaxCharge)),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
 						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
 						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
@@ -331,7 +333,7 @@ func BenchmarkTests(
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
 					Settings: stakepool.Settings{
-						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
+						ServiceChargeRatio: *zbig.NewBigRat(viper.GetFloat64(bk.MinerMaxCharge)),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
 						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
 						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),

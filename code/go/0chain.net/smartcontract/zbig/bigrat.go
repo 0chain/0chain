@@ -1,4 +1,4 @@
-package dbs
+package zbig
 
 import (
 	"database/sql/driver"

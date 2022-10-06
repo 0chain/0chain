@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
 	"gorm.io/gorm/clause"
@@ -28,7 +30,7 @@ type Sharder struct {
 	TotalStaked       currency.Coin
 	Delete            bool
 	DelegateWallet    string
-	ServiceCharge     float64
+	ServiceCharge     zbig.BigRat
 	NumberOfDelegates int
 	MinStake          currency.Coin
 	MaxStake          currency.Coin
@@ -37,8 +39,8 @@ type Sharder struct {
 	TotalReward       currency.Coin
 	Fees              currency.Coin
 	Active            bool
-	Longitude         dbs.BigRat
-	Latitude          dbs.BigRat
+	Longitude         zbig.BigRat
+	Latitude          zbig.BigRat
 }
 
 // swagger:model SharderGeolocation

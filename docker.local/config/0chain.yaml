@@ -99,7 +99,7 @@ server_chain:
     check_interval: 10 # seconds
     time_threshold: 60 #seconds
   smart_contract:
-    setting_update_period: 200 #rounds
+    setting_update_period: 3 #rounds
     timeout: 8000ms
     storage: true
     faucet: true

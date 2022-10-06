@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/smartcontract/zbig"
 	"errors"
 	"fmt"
 	"time"
@@ -42,7 +43,7 @@ type Blobber struct {
 	MinStake       currency.Coin `json:"min_stake"`
 	MaxStake       currency.Coin `json:"max_stake"`
 	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	ServiceCharge  zbig.BigRat   `json:"service_charge"`
 
 	OffersTotal        currency.Coin `json:"offers_total"`
 	UnstakeTotal       currency.Coin `json:"unstake_total"`

@@ -3,6 +3,9 @@ package currency
 import (
 	"errors"
 	"math"
+	"math/big"
+
+	"0chain.net/smartcontract/zbig"
 
 	"github.com/shopspring/decimal"
 )
@@ -49,8 +52,9 @@ func init() {
 	maxDecimal = decimal.NewFromInt(math.MaxInt64)
 }
 
+// Coin - any quantity that is represented as an integer in the lowest denomination
+//
 //go:generate msgp -io=false -tests=false -v
-//Coin - any quantity that is represented as an integer in the lowest denomination
 type Coin uint64
 
 func ParseZCN(c float64) (Coin, error) {
@@ -145,6 +149,17 @@ func MultFloat64(c Coin, a float64) (Coin, error) {
 		return 0, ErrUint64OverflowsFloat64
 	}
 	return Float64ToCoin(b)
+}
+
+func MultBigRat(c Coin, r zbig.BigRat) (Coin, error) {
+	iCoin, err := c.Int64()
+	if err != nil {
+		return 0, err
+	}
+	ratCoin := big.NewRat(iCoin, 1)
+	ratMultiple := ratCoin.Mul(ratCoin, r.Rat)
+	floatMultiple, _ := ratMultiple.Float64()
+	return Float64ToCoin(floatMultiple)
 }
 
 // MinusCoin subtracts b from c, returning an error if the values overflow

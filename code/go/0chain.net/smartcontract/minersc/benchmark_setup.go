@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"strconv"
 
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
+	"0chain.net/smartcontract/zbig"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"0chain.net/chaincore/currency"
 
@@ -54,14 +54,14 @@ func AddMockNodes(
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 		key = AllShardersKey
 	}
-	lat := dbs.BigRat{big.NewRat(103, 2)}
-	long := dbs.BigRat{big.NewRat(-1, 10)}
+	lat := zbig.BigRat{big.NewRat(103, 2)}
+	long := zbig.BigRat{big.NewRat(-1, 10)}
 	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
 		newNode.ID = GetMockNodeId(i, nodeType)
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 		newNode.PublicKey = "mockPublicKey"
-		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.Settings.ServiceChargeRatio = *zbig.NewBigRat(viper.GetFloat64(benchmark.MinerMaxCharge))
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
 		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)

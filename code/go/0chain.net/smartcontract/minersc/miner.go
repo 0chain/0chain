@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"fmt"
+	"math/big"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -73,7 +74,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.String("pkey", newMiner.PublicKey),
 		zap.Any("mscID", msc.ID),
 		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet),
-		zap.Float64("service_charge", newMiner.Settings.ServiceChargeRatio),
+		zap.An("service_charge", newMiner.Settings.ServiceChargeRatio),
 		zap.Int("number_of_delegates", newMiner.Settings.MaxNumDelegates),
 		zap.Int64("min_stake", int64(newMiner.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newMiner.Settings.MaxStake)),
@@ -311,7 +312,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	return string(mn.Encode()), nil
 }
 
-//------------- local functions ---------------------
+// ------------- local functions ---------------------
 // TODO: remove this or return error and do real checking
 func (msc *MinerSmartContract) verifyMinerState(allMinersList *MinerNodes, balances cstate.StateContextI,
 	msg string) {
@@ -342,12 +343,12 @@ func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, erro
 }
 
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {
-	if node.Settings.ServiceChargeRatio < 0 {
+	if node.Settings.ServiceChargeRatio.Cmp(big.NewRat(0, 1)) == -1 {
 		return common.NewErrorf(opcode,
 			"invalid negative service charge: %v", node.Settings.ServiceChargeRatio)
 	}
 
-	if node.Settings.ServiceChargeRatio > gn.MaxCharge {
+	if node.Settings.ServiceChargeRatio.Cmp(gn.MaxCharge.Rat) == 1 { //} > gn.MaxCharge {
 		return common.NewErrorf(opcode,
 			"max_charge is greater than allowed by SC: %v > %v",
 			node.Settings.ServiceChargeRatio, gn.MaxCharge)

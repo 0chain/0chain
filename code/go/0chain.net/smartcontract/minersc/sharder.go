@@ -100,7 +100,7 @@ func (msc *MinerSmartContract) AddSharder(
 		zap.String("pkey", newSharder.PublicKey),
 		zap.Any("mscID", msc.ID),
 		zap.String("delegate_wallet", newSharder.Settings.DelegateWallet),
-		zap.Float64("service_charge", newSharder.Settings.ServiceChargeRatio),
+		zap.Any("service_charge", newSharder.Settings.ServiceChargeRatio),
 		zap.Int("number_of_delegates", newSharder.Settings.MaxNumDelegates),
 		zap.Int64("min_stake", int64(newSharder.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newSharder.Settings.MaxStake)))
@@ -238,7 +238,7 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 	return err
 }
 
-//------------- local functions ---------------------
+// ------------- local functions ---------------------
 func verifyAllShardersState(balances cstate.StateContextI, msg string) {
 	shardersList, err := getAllShardersList(balances)
 	if err != nil {

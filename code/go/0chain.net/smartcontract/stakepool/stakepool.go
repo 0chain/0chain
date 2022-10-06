@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	"0chain.net/smartcontract/zbig"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -40,7 +41,7 @@ type Settings struct {
 	MinStake           currency.Coin `json:"min_stake"`
 	MaxStake           currency.Coin `json:"max_stake"`
 	MaxNumDelegates    int           `json:"num_delegates"`
-	ServiceChargeRatio float64       `json:"service_charge"`
+	ServiceChargeRatio zbig.BigRat   `json:"service_charge msg:"latitude,extension"`
 }
 
 type DelegatePool struct {
@@ -207,11 +208,7 @@ func (sp *StakePool) DistributeRewards(
 		return nil
 	}
 
-	fValue, err := value.Float64()
-	if err != nil {
-		return err
-	}
-	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
+	serviceCharge, err := currency.MultBigRat(value, sp.Settings.ServiceChargeRatio)
 	if err != nil {
 		return err
 	}

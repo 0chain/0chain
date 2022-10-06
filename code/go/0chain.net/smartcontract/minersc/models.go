@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/currency"
 
@@ -231,7 +231,7 @@ type GlobalNode struct {
 	// BlockReward
 	BlockReward currency.Coin `json:"block_reward"`
 	// MaxCharge can be set by a generator.
-	MaxCharge float64 `json:"max_charge"` // %
+	MaxCharge zbig.BigRat `json:"max_charge"` // %
 	// Epoch is number of rounds to decline interests and rewards.
 	Epoch int64 `json:"epoch"`
 	// RewardDeclineRate is ratio of epoch rewards declining.
@@ -634,8 +634,8 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 
 // swagger:model SimpleNodeGeolocation
 type SimpleNodeGeolocation struct {
-	Latitude  dbs.BigRat `json:"latitude" msg:"latitude,extension"`
-	Longitude dbs.BigRat `json:"longitude" msg:"longitude,extension"`
+	Latitude  zbig.BigRat `json:"latitude" msg:"latitude,extension"`
+	Longitude zbig.BigRat `json:"longitude" msg:"longitude,extension"`
 }
 
 // swagger:model SimpleNode
