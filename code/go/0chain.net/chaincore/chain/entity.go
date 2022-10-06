@@ -16,6 +16,7 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/storagesc"
+	"0chain.net/smartcontract/vestingsc"
 	"github.com/herumi/bls/ffi/go/bls"
 	"go.uber.org/zap"
 
@@ -579,6 +580,12 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	_, err = storagesc.InitConfig(state)
 	if err != nil {
 		logging.Logger.Error("chain.stateDB storagesc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	_, err = vestingsc.InitConfig(state)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB vestingsc InitConfig failed", zap.Error(err))
 		panic(err)
 	}
 

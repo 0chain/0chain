@@ -18,6 +18,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
 
@@ -58,6 +59,8 @@ var (
 		"unlock",
 		"vestingsc-update-settings",
 	}
+
+	VESTINGSC_CONFIG_KEY = ADDRESS + encryption.Hash("vestingsc_config")
 )
 
 func scConfigKey(scKey string) datastore.Key {
@@ -232,7 +235,7 @@ func (vsc *VestingSmartContract) updateConfig(
 		return "", common.NewError("update_config", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
+	_, err = balances.InsertTrieNode(VESTINGSC_CONFIG_KEY, conf)
 	if err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
@@ -292,25 +295,25 @@ func (vsc *VestingSmartContract) getConfig(
 	balances chainstate.StateContextI,
 ) (conf *config, err error) {
 	conf = new(config)
-	err = balances.GetTrieNode(scConfigKey(vsc.ID), conf)
+	err = balances.GetTrieNode(VESTINGSC_CONFIG_KEY, conf)
 	switch err {
 	case nil:
 		return conf, nil
 	case util.ErrValueNotPresent:
-		return vsc.setupConfig(balances)
+		return InitConfig(balances)
 	default:
 		return nil, err
 	}
 }
 
-func (vsc *VestingSmartContract) setupConfig(
+func InitConfig(
 	balances chainstate.StateContextI,
 ) (conf *config, err error) {
 
 	if conf, err = getConfiguredConfig(); err != nil {
 		return
 	}
-	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
+	_, err = balances.InsertTrieNode(VESTINGSC_CONFIG_KEY, conf)
 	if err != nil {
 		return nil, err
 	}
