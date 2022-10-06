@@ -2807,20 +2807,13 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, err)
 		return
 	}
-	id := r.URL.Query().Get("id")
-	intId, err := strconv.ParseInt(id, 10, 64)
-	if err != nil || intId < 0 {
-		err := common.NewErrInternal("bad round format" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
 
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateBlobberAggregate(intId, limit.Limit)
+	blobbers, err := edb.ReplicateBlobberAggregate(limit)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
 		common.Respond(w, r, nil, err)

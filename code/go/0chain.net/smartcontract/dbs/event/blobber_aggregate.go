@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -33,11 +34,11 @@ type BlobberAggregate struct {
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
 }
 
-func (edb *EventDb) ReplicateBlobberAggregate(id int64, limit int) ([]BlobberAggregate, error) {
+func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAggregate, error) {
 	var snapshots []BlobberAggregate
 
 	queryBuilder := edb.Store.Get().
-		Model(&BlobberAggregate{}).Where("id > ?", id).Limit(limit)
+		Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit)
 
 	queryBuilder.Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
