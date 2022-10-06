@@ -2807,9 +2807,9 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, err)
 		return
 	}
-	round := r.URL.Query().Get("round")
-	intR, err := strconv.ParseInt(round, 10, 64)
-	if err != nil || intR < 0 {
+	id := r.URL.Query().Get("id")
+	intId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil || intId < 0 {
 		err := common.NewErrInternal("bad round format" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
@@ -2820,7 +2820,7 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateBlobberAggregate(intR, limit.Offset, limit.Limit)
+	blobbers, err := edb.ReplicateBlobberAggregate(intId, limit.Limit)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
 		common.Respond(w, r, nil, err)

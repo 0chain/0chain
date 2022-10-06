@@ -33,20 +33,19 @@ type BlobberAggregate struct {
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
 }
 
-func (edb *EventDb) ReplicateBlobberAggregate(round int64, offset, limit int) ([]BlobberAggregate, error) {
+func (edb *EventDb) ReplicateBlobberAggregate(id int64, limit int) ([]BlobberAggregate, error) {
 	var snapshots []BlobberAggregate
 
 	queryBuilder := edb.Store.Get().
-		Model(&BlobberAggregate{}).Where("round > ?", round).Offset(offset).Limit(limit)
+		Model(&BlobberAggregate{}).Where("id > ?", id).Limit(limit)
+	if id != 0 {
+		queryBuilder.Where("id > ?", id)
+	}
 
 	queryBuilder.Order(clause.OrderBy{
 		Columns: []clause.OrderByColumn{
 			{
-				Column: clause.Column{Name: "round"},
-				Desc:   false,
-			},
-			{
-				Column: clause.Column{Name: "blobber_id"},
+				Column: clause.Column{Name: "id"},
 				Desc:   false,
 			},
 		},
@@ -57,18 +56,7 @@ func (edb *EventDb) ReplicateBlobberAggregate(round int64, offset, limit int) ([
 		return nil, result.Error
 	}
 
-	//we return only snapshots for one round, if different pages are returned we will cut snapshots from the next round
-	res := snapshots
-	if len(snapshots) > 0 {
-		r := snapshots[0].Round
-		for i, s := range snapshots {
-			if r != s.Round {
-				res = snapshots[:i]
-				break
-			}
-		}
-	}
-	return res, nil
+	return snapshots, nil
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapshot) {
