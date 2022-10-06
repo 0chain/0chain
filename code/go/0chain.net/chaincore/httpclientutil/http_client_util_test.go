@@ -23,9 +23,10 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/mocks"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	utilmocks "github.com/0chain/common/core/mocks"
+	"github.com/0chain/common/core/util"
 )
 
 func init() {
@@ -739,7 +740,7 @@ func TestGetTransactionStatus(t *testing.T) {
 }
 
 type mokeErrEntity struct {
-	mocks.Serializable
+	utilmocks.Serializable
 }
 
 func (ee *mokeErrEntity) Decode([]byte) error {
@@ -747,7 +748,7 @@ func (ee *mokeErrEntity) Decode([]byte) error {
 }
 
 type mokeEntity struct {
-	mocks.Serializable
+	utilmocks.Serializable
 }
 
 func (me *mokeEntity) Decode([]byte) error {

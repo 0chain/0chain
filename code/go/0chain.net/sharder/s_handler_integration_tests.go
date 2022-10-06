@@ -17,7 +17,7 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config/cases"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 // SetupX2SResponders setups sharders responders for miner and sharders.

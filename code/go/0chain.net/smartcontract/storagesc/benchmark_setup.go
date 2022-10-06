@@ -63,17 +63,16 @@ func addMockAllocation(
 ) {
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
-		ID:                      id,
-		DataShards:              viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-		ParityShards:            viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-		Size:                    viper.GetInt64(sc.StorageMinAllocSize),
-		Expiration:              benchAllocationExpire(balances.GetTransaction().CreationDate),
-		Owner:                   clients[cIndex],
-		OwnerPublicKey:          publicKey,
-		ReadPriceRange:          PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
-		WritePriceRange:         PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
-		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
-		DiverseBlobbers:         viper.GetBool(sc.StorageDiverseBlobbers),
+		ID:              id,
+		DataShards:      viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		ParityShards:    viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		Size:            viper.GetInt64(sc.StorageMinAllocSize),
+		Expiration:      benchAllocationExpire(balances.GetTransaction().CreationDate),
+		Owner:           clients[cIndex],
+		OwnerPublicKey:  publicKey,
+		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
+		WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+		DiverseBlobbers: viper.GetBool(sc.StorageDiverseBlobbers),
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1,
 			NumWrites:                 1,
@@ -148,7 +147,6 @@ func addMockAllocation(
 			Expiration:               int64(sa.Expiration),
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
-			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
 			UsedSize:                 sa.UsedSize,
 			NumWrites:                sa.Stats.NumWrites,
 			NumReads:                 sa.Stats.NumReads,
@@ -552,10 +550,7 @@ func GetMockBlobberStakePools(
 			if usps[clientIndex] == nil {
 				usps[clientIndex] = stakepool.NewUserStakePools()
 			}
-			usps[clientIndex].Pools[bId] = append(
-				usps[clientIndex].Pools[bId],
-				id,
-			)
+			usps[clientIndex].Providers = append(usps[clientIndex].Providers, bId)
 
 			if viper.GetBool(sc.EventDbEnabled) {
 				dp := event.DelegatePool{
@@ -594,9 +589,6 @@ func GetMockValidatorStakePools(
 	clients []string,
 	balances cstate.StateContextI,
 ) {
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		bId := getMockValidatorId(i)
 		sp := &stakePool{
@@ -610,7 +602,7 @@ func GetMockValidatorStakePools(
 			id := getMockValidatorStakePoolId(i, j)
 			sp.Pools[id] = &stakepool.DelegatePool{}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-			err := sp.save(sscId, getMockValidatorId(i), balances)
+			err := sp.save(spenum.Validator, getMockValidatorId(i), balances)
 			if err != nil {
 				panic(err)
 			}
@@ -622,12 +614,9 @@ func SaveMockStakePools(
 	sps []*stakePool,
 	balances cstate.StateContextI,
 ) {
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
 	for i, sp := range sps {
 		bId := getMockBlobberId(i)
-		err := sp.save(sscId, bId, balances)
+		err := sp.save(spenum.Blobber, bId, balances)
 		if err != nil {
 			panic(err)
 		}
@@ -724,7 +713,7 @@ func getMockBlobberTerms() Terms {
 		ReadPrice:        currency.Coin(0.1 * 1e10),
 		WritePrice:       currency.Coin(0.1 * 1e10),
 		MinLockDemand:    0.0007,
-		MaxOfferDuration: time.Hour*50 + viper.GetDuration(sc.StorageMinOfferDuration),
+		MaxOfferDuration: time.Hour * 744,
 	}
 }
 
@@ -790,7 +779,7 @@ func getMockChallengeId(blobberId, allocationId string) string {
 func SetMockConfig(
 	balances cstate.StateContextI,
 ) (conf *Config) {
-	conf = new(Config)
+	conf = newConfig()
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
@@ -804,6 +793,7 @@ func SetMockConfig(
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1
+	conf.CancellationCharge = 0.2
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0
@@ -861,11 +851,44 @@ func SetMockConfig(
 		panic(err)
 	}
 
-	conf.ExposeMpt = true
-
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		panic(err)
+	}
+	var mockCost = 100
+	conf.Cost = map[string]int{
+		"cost.update_settings":             mockCost,
+		"cost.read_redeem":                 mockCost,
+		"cost.commit_connection":           mockCost,
+		"cost.new_allocation_request":      mockCost,
+		"cost.update_allocation_request":   mockCost,
+		"cost.finalize_allocation":         mockCost,
+		"cost.cancel_allocation":           mockCost,
+		"cost.add_free_storage_assigner":   mockCost,
+		"cost.free_allocation_request":     mockCost,
+		"cost.free_update_allocation":      mockCost,
+		"cost.add_curator":                 mockCost,
+		"cost.remove_curator":              mockCost,
+		"cost.blobber_health_check":        mockCost,
+		"cost.update_blobber_settings":     mockCost,
+		"cost.pay_blobber_block_rewards":   mockCost,
+		"cost.curator_transfer_allocation": mockCost,
+		"cost.challenge_request":           mockCost,
+		"cost.challenge_response":          mockCost,
+		"cost.generate_challenges":         mockCost,
+		"cost.add_validator":               mockCost,
+		"cost.update_validator_settings":   mockCost,
+		"cost.add_blobber":                 mockCost,
+		"cost.new_read_pool":               mockCost,
+		"cost.read_pool_lock":              mockCost,
+		"cost.read_pool_unlock":            mockCost,
+		"cost.write_pool_lock":             mockCost,
+		"cost.write_pool_unlock":           mockCost,
+		"cost.stake_pool_lock":             mockCost,
+		"cost.stake_pool_unlock":           mockCost,
+		"cost.stake_pool_pay_interests":    mockCost,
+		"cost.commit_settings_changes":     mockCost,
+		"cost.collect_reward":              mockCost,
 	}
 	return
 }

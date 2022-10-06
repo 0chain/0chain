@@ -7,8 +7,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/util"
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
@@ -66,19 +66,19 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	sp, err = sc.getOrUpdateStakePool(conf, t.ClientID, spenum.Validator,
+	sp, err = sc.getOrCreateStakePool(conf, spenum.Validator, t.ClientID,
 		newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
 	}
-	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(spenum.Validator, t.ClientID, balances); err != nil {
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
 
 	if err = newValidator.emitAdd(balances); err != nil {
-		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
+		return "", common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
 	}
 
 	buff := newValidator.Encode()
@@ -126,7 +126,7 @@ func (sc *StorageSmartContract) updateValidatorSettings(t *transaction.Transacti
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(updatedValidator.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(spenum.Validator, updatedValidator.ID, balances); err != nil {
 		return "", common.NewError("update_validator_settings_failed",
 			"can't get related stake pool: "+err.Error())
 	}
@@ -156,11 +156,18 @@ func (sc *StorageSmartContract) updateValidatorSettings(t *transaction.Transacti
 }
 
 func (sc *StorageSmartContract) hasValidatorUrl(validatorURL string,
-	balances state.StateContextI) bool {
+	balances state.StateContextI) (bool, error) {
 	validator := new(ValidationNode)
 	validator.BaseURL = validatorURL
 	err := balances.GetTrieNode(validator.GetUrlKey(sc.ID), &datastore.NOIDField{})
-	return err == nil
+	switch err {
+	case nil:
+		return true, nil
+	case util.ErrValueNotPresent:
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 // update existing validator, or reborn a deleted one
@@ -175,7 +182,12 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 
 	if savedValidator.BaseURL != inputValidator.BaseURL {
 		//if updating url
-		if sc.hasValidatorUrl(inputValidator.BaseURL, balances) {
+		has, err := sc.hasValidatorUrl(inputValidator.BaseURL, balances)
+		if err != nil {
+			return fmt.Errorf("could not get validator of url: %s : %v", inputValidator.BaseURL, err)
+		}
+
+		if has {
 			return fmt.Errorf("invalid validator url update, already used")
 		}
 		// save url
@@ -201,7 +213,7 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 
 	// update stake pool settings
 	var sp *stakePool
-	if sp, err = sc.getStakePool(inputValidator.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(spenum.Validator, inputValidator.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
@@ -214,13 +226,13 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 	sp.Settings.ServiceChargeRatio = inputValidator.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = inputValidator.StakePoolSettings.MaxNumDelegates
 
-	if err := inputValidator.emitUpdate(balances); err != nil {
-		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
+	// save stake pool
+	if err = sp.save(spenum.Validator, inputValidator.ID, balances); err != nil {
+		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	// save stake pool
-	if err = sp.save(sc.ID, inputValidator.ID, balances); err != nil {
-		return fmt.Errorf("saving stake pool: %v", err)
+	if err := inputValidator.emitUpdate(balances); err != nil {
+		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
 	}
 
 	return

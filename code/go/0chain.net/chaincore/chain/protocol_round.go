@@ -18,7 +18,7 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 var DELTA = 200 * time.Millisecond
@@ -361,7 +361,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				resultC: make(chan error, 1),
 			}
 
-			ts := time.Now()
 			select {
 			case <-ctx.Done():
 				logging.Logger.Info("finalize round - context done",
@@ -369,6 +368,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					zap.Int64("round", roundNumber))
 				return
 			case c.finalizedBlocksChannel <- fbWithReply:
+				ts := time.Now()
 				select {
 				case <-ctx.Done():
 					logging.Logger.Error("finalize round - context done",

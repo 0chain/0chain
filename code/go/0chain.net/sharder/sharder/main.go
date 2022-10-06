@@ -33,14 +33,14 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
+	"github.com/0chain/common/core/logging"
+	. "github.com/0chain/common/core/logging"
 )
 
 func processMinioConfig(reader io.Reader) (blockstore.MinioConfiguration, error) {
@@ -155,7 +155,7 @@ func main() {
 			rootContext := common.GetRootContext()
 			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
-			serverChain.GetEventDb().AddEvents(ctx, []event.Event{ev})
+			serverChain.GetEventDb().AddEvents(ctx, []event.Event{ev}, b.Round, b.Hash, len(b.Txns))
 		}()
 	}
 
@@ -421,7 +421,7 @@ func initHandlers(c chain.Chainer) {
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()
-	chain.SetupHandlers(c)
+	chain.SetupSharderHandlers(c)
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()

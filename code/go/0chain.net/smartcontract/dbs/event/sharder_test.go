@@ -14,8 +14,8 @@ import (
 	common2 "0chain.net/smartcontract/common"
 
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/logging"
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -165,7 +165,7 @@ func TestSharders(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.AddEvents(context.TODO(), events)
+	eventDb.AddEvents(context.TODO(), events, 100, "hash", 10)
 
 	sharder, err := eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -185,7 +185,7 @@ func TestSharders(t *testing.T) {
 		Tag:         int(TagAddOrOverwriteSharder),
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventAddOrOverwriteSn})
+	eventDb.AddEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -209,7 +209,7 @@ func TestSharders(t *testing.T) {
 		Tag:         int(TagUpdateSharder),
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventUpdateSn})
+	eventDb.AddEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -224,7 +224,7 @@ func TestSharders(t *testing.T) {
 		Tag:         int(TagDeleteSharder),
 		Data:        sn.ID,
 	}
-	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
+	eventDb.AddEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.Error(t, err)

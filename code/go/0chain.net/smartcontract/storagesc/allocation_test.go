@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/partitions"
@@ -26,7 +28,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,7 +115,7 @@ func TestSelectBlobbers(t *testing.T) {
 			}
 			sp.Pools[mockPoolId].Balance = mockStatke
 			balances.On("GetTrieNode",
-				stakePoolKey(ssc.ID, mockBlobberId+strconv.Itoa(i)),
+				stakePoolKey(spenum.Blobber, mockBlobberId+strconv.Itoa(i)),
 				mock.MatchedBy(func(s *stakePool) bool {
 					*s = sp
 					return true
@@ -227,6 +229,7 @@ func TestChangeBlobbers(t *testing.T) {
 		mockAllocationID    = "mock_allocation_id"
 		mockAllocationName  = "mock_allocation"
 		mockPoolId          = "mock pool id"
+		confTimeUnit        = 720 * time.Hour
 		mockMaxOffDuration  = 744 * time.Hour
 		mockBlobberCapacity = 20 * confMinAllocSize
 		mockMinPrice        = 0
@@ -374,7 +377,7 @@ func TestChangeBlobbers(t *testing.T) {
 				},
 			}
 			sp.Pools[mockPoolId].Balance = mockState
-			_, err := balances.InsertTrieNode(stakePoolKey(sc.ID, arg.addBlobberID), &sp)
+			_, err := balances.InsertTrieNode(stakePoolKey(spenum.Blobber, arg.addBlobberID), &sp)
 			require.NoError(t, err)
 		}
 
@@ -519,7 +522,7 @@ func TestChangeBlobbers(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(blobbers, addID, removeID, sc, now, balances)
+			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, sc, now, balances)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -658,21 +661,24 @@ func TestExtendAllocation(t *testing.T) {
 				}
 				sp.Pools[mockPoolId].Balance = zcnToBalance(mockStake)
 				balances.On(
-					"GetTrieNode", stakePoolKey(ssc.ID, mockBlobber.ID),
+					"GetTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
 					mock.MatchedBy(func(s *stakePool) bool {
 						*s = sp
 						return true
 					})).Return(nil).Once()
 				balances.On(
 					"InsertTrieNode",
-					stakePoolKey(ssc.ID, mockBlobber.ID),
+					stakePoolKey(spenum.Blobber, mockBlobber.ID),
 					mock.Anything,
 				).Return("", nil).Once()
 				balances.On(
 					"EmitEvent",
 					event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
 				).Return().Maybe()
-
+				balances.On(
+					"EmitEvent",
+					event.TypeStats, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
+				).Return().Maybe()
 			}
 		}
 
@@ -691,7 +697,7 @@ func TestExtendAllocation(t *testing.T) {
 				}
 				newFunds := sizeInGB(size) *
 					float64(mockWritePrice) *
-					float64(sa.durationInTimeUnits(args.request.Expiration))
+					float64(sa.durationInTimeUnits(args.request.Expiration, confTimeUnit))
 				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
@@ -705,7 +711,7 @@ func TestExtendAllocation(t *testing.T) {
 		want want
 	}{
 		{
-			name: "ok_multiple_users",
+			name: "ok_funded",
 			args: args{
 				request: updateAllocationRequest{
 					ID:           mockAllocationId,
@@ -720,7 +726,7 @@ func TestExtendAllocation(t *testing.T) {
 			},
 		},
 		{
-			name: "ok_multiple_write_pools",
+			name: "ok_unfounded",
 			args: args{
 				request: updateAllocationRequest{
 					ID:           mockAllocationId,
@@ -730,27 +736,12 @@ func TestExtendAllocation(t *testing.T) {
 					SetImmutable: false,
 				},
 				expiration: mockExpiration,
-				value:      0.1e10,
-				poolFunds:  7,
-			},
-		},
-		{
-			name: "ok_multiple_users",
-			args: args{
-				request: updateAllocationRequest{
-					ID:           mockAllocationId,
-					OwnerID:      mockOwner,
-					Size:         zcnToInt64(31),
-					Expiration:   7000,
-					SetImmutable: false,
-				},
-				expiration: mockExpiration,
-				value:      0.1e10,
+				value:      0.0,
 				poolFunds:  0.0,
 			},
 			want: want{
 				err:    true,
-				errMsg: "allocation_extending_failed: not enough tokens in write pool to extend allocation",
+				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 6287864",
 			},
 		},
 	}
@@ -759,9 +750,12 @@ func TestExtendAllocation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ssc, txn, sa, aBlobbers, balances := setup(t, tt.args)
-
+			conf := &Config{
+				TimeUnit: confTimeUnit,
+			}
 			err := ssc.extendAllocation(
 				txn,
+				conf,
 				&sa,
 				aBlobbers,
 				&tt.args.request,
@@ -1035,7 +1029,7 @@ func Test_sizeInGB(t *testing.T) {
 func newTestAllBlobbers() (all *StorageNodes) {
 	all = new(StorageNodes)
 	all.Nodes = []*StorageNode{
-		&StorageNode{
+		{
 			ID:      "b1",
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
@@ -1048,7 +1042,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			Allocated:       5 * GB,  //  5 GB
 			LastHealthCheck: 0,
 		},
-		&StorageNode{
+		{
 			ID:      "b2",
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
@@ -1073,14 +1067,12 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		errMsg1 = "allocation_creation_failed: " +
 			"malformed request: unexpected end of JSON input"
+		errMsg2 = "allocation_creation_failed: " + "invalid request: invalid number of data shards"
 		errMsg4 = "allocation_creation_failed: malformed request: " +
 			"invalid character '}' looking for beginning of value"
-		errMsg5 = "allocation_creation_failed: " +
-			"invalid request: invalid read_price range"
 		errMsg6 = "allocation_creation_failed: " +
-			"Blobbers provided are not enough to honour the allocation"
-		errMsg7 = "allocation_creation_failed: " +
-			"can't get blobber's stake pool: value not present"
+			"invalid request: blobbers provided are not enough to honour the allocation"
+		errMsg7 = "allocation_creation_failed: " + "getting stake pools: value not present"
 		errMsg8 = "allocation_creation_failed: " +
 			"no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
@@ -1126,12 +1118,11 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 
 	// 4.
-	t.Run("invalid read_price range", func(t *testing.T) {
+	t.Run("empty request", func(t *testing.T) {
 		var nar newAllocationRequest
-		nar.ReadPriceRange = PriceRange{20, 10}
 
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
-		requireErrMsg(t, err, errMsg5)
+		requireErrMsg(t, err, errMsg2)
 	})
 
 	t.Run("Blobbers provided are not enough to honour the allocation", func(t *testing.T) {
@@ -1255,8 +1246,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		)
 		dp1.Balance, dp2.Balance = 20e10, 20e10
 		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
-		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
+		require.NoError(t, sp1.save(spenum.Blobber, "b1", balances))
+		require.NoError(t, sp2.save(spenum.Blobber, "b2", balances))
 
 		tx.Value = 0
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
@@ -1299,8 +1290,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		)
 		dp1.Balance, dp2.Balance = 20e10, 20e10
 		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
-		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
+		require.NoError(t, sp1.save(spenum.Blobber, "b1", balances))
+		require.NoError(t, sp2.save(spenum.Blobber, "b2", balances))
 
 		tx.Value = 400
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
@@ -1344,12 +1335,12 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		)
 		dp1.Balance, dp2.Balance = 20e10, 20e10
 		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-		require.NoError(t, sp1.save(ssc.ID, "b1", balances))
-		require.NoError(t, sp2.save(ssc.ID, "b2", balances))
+		require.NoError(t, sp1.save(spenum.Blobber, "b1", balances))
+		require.NoError(t, sp2.save(spenum.Blobber, "b2", balances))
 
-		balances.balances[clientID] = 1100
+		balances.balances[clientID] = 1100 + 4500
 
-		tx.Value = 400
+		tx.Value = 5000
 		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
 
@@ -1377,6 +1368,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		ab = append(ab, loaded0)
 		ab = append(ab, loaded1)
 		require.NoError(t, err)
+		for i, sbn := range sb.Nodes {
+			assert.EqualValues(t, *sbn, *ab[i])
+		}
 		assert.EqualValues(t, sb.Nodes, ab)
 		// independent saved blobbers
 		var blob1, blob2 *StorageNode
@@ -1403,7 +1397,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		// details
 		var details = []*BlobberAllocation{
-			&BlobberAllocation{
+			{
 				BlobberID:     "b1",
 				AllocationID:  txHash,
 				Size:          10 * GB,
@@ -1412,7 +1406,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 				MinLockDemand: 166, // (wp * (size/GB) * mld) / time_unit
 				Spent:         0,
 			},
-			&BlobberAllocation{
+			{
 				BlobberID:     "b2",
 				AllocationID:  txHash,
 				Size:          10 * GB,
@@ -1425,10 +1419,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		assert.Equal(t, len(details), len(aresp.BlobberAllocs))
 
-		_, err = ssc.getStakePool("b1", balances)
+		_, err = ssc.getStakePool(spenum.Blobber, "b1", balances)
 		require.NoError(t, err)
 
-		_, err = ssc.getStakePool("b2", balances)
+		_, err = ssc.getStakePool(spenum.Blobber, "b2", balances)
 		require.NoError(t, err)
 
 		// 3. challenge pool existence
@@ -1472,7 +1466,7 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 	assert.Error(t, uar.validate(&conf, &alloc))
 
 	// 4. ok
-	alloc.BlobberAllocs = []*BlobberAllocation{&BlobberAllocation{}}
+	alloc.BlobberAllocs = []*BlobberAllocation{{}}
 	assert.NoError(t, uar.validate(&conf, &alloc))
 }
 
@@ -1557,12 +1551,12 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	)
 	dp1.Balance, dp2.Balance = 20e10, 20e10
 	sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-	require.NoError(t, sp1.save(ssc.ID, "b1", balances))
-	require.NoError(t, sp2.save(ssc.ID, "b2", balances))
+	require.NoError(t, sp1.save(spenum.Blobber, "b1", balances))
+	require.NoError(t, sp2.save(spenum.Blobber, "b2", balances))
 
-	balances.(*testBalances).balances[clientID] = 1100
+	balances.(*testBalances).balances[clientID] = 1100 + 4500
 
-	tx.Value = 400
+	tx.Value = 4500
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 	require.NoError(t, err)
 }
@@ -1660,9 +1654,13 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 	_, err = ssc.closeAllocation(&tx, alloc, balances)
 	requireErrMsg(t, err, errMsg1)
 
+	var conf = Config{
+		MaxChallengeCompletionTime: 30 * time.Minute,
+	}
+
 	// 2. close (all related pools has created)
 	alloc.Expiration = tx.CreationDate +
-		toSeconds(alloc.ChallengeCompletionTime) + 20
+		toSeconds(conf.MaxChallengeCompletionTime) + 20
 	resp, err = ssc.closeAllocation(&tx, alloc, balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
@@ -2017,8 +2015,8 @@ func Test_finalize_allocation(t *testing.T) {
 
 	//
 	var (
-		step            = (int64(alloc.Expiration) - tp) / 10
-		challID, prevID string
+		step    = (int64(alloc.Expiration) - tp) / 10
+		challID string
 	)
 
 	// expire the allocation challenging it (+ last challenge)
@@ -2026,8 +2024,7 @@ func Test_finalize_allocation(t *testing.T) {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
-		genChall(t, ssc, b1.id, tp, prevID, challID, i, validators,
-			alloc.ID, blobber, allocRoot, balances)
+		genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 
 		var chall = new(ChallengeResponse)
 		chall.ID = challID
@@ -2046,8 +2043,6 @@ func Test_finalize_allocation(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
 		require.Zero(t, resp)
-		// next stage
-		prevID = challID
 	}
 
 	// balances
@@ -2073,7 +2068,11 @@ func Test_finalize_allocation(t *testing.T) {
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
-	tp += int64(toSeconds(alloc.ChallengeCompletionTime))
+	var conf *Config
+	conf, err = getConfig(balances)
+	require.NoError(t, err)
+
+	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))
 	assert.Zero(t, cp.Balance, "should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)

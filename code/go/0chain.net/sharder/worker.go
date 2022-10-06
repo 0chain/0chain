@@ -21,7 +21,7 @@ import (
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 const minerScSharderHealthCheck = "sharder_health_check"
@@ -160,29 +160,38 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
 					zap.String("prev block", b.PrevHash))
-				if err != ErrNoPreviousBlock {
+
+				var pb *block.Block
+				if err == ErrNoPreviousBlock {
+					// fetch the previous block
+					pb, _ = sc.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+				} else if ErrNoPreviousState.Is(err) {
+					// get the previous block from local
+					pb, _ = sc.GetBlock(ctx, b.PrevHash)
+				} else {
 					continue
 				}
 
-				// fetch the previous block
-				pb, _ := sc.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
-				if pb != nil {
-					if err := sc.processBlock(ctx, pb); err != nil {
-						logging.Logger.Error("process block, handle previous block failed",
-							zap.Int64("round", pb.Round),
-							zap.String("block", pb.Hash),
-							zap.Error(err))
-						continue
-					}
+				if pb == nil {
+					continue
+				}
 
-					// process this block again
-					if err := sc.processBlock(ctx, b); err != nil {
-						logging.Logger.Error("process block, failed after getting previous block",
-							zap.Int64("round", b.Round),
-							zap.String("block", b.Hash),
-							zap.Error(err))
-						continue
-					}
+				// process previous block
+				if err := sc.processBlock(ctx, pb); err != nil {
+					logging.Logger.Error("process block, handle previous block failed",
+						zap.Int64("round", pb.Round),
+						zap.String("block", pb.Hash),
+						zap.Error(err))
+					continue
+				}
+
+				// process this block again
+				if err := sc.processBlock(ctx, b); err != nil {
+					logging.Logger.Error("process block, failed after getting previous block",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					continue
 				}
 			}
 

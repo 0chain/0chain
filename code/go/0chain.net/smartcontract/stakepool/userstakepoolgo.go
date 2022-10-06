@@ -7,58 +7,55 @@ import (
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -v
 
 type UserStakePools struct {
-	Pools map[string][]string `json:"pools"`
+	Providers []string `json:"providers"` // provider ids
 }
 
 func UserStakePoolsKey(p spenum.Provider, clientID datastore.Key) datastore.Key {
-	return datastore.Key(p.String() + ":stakepool:user_pools:" + clientID)
+	return p.String() + ":stakepool:user_pools:" + clientID
 }
 
-func NewUserStakePools() (usp *UserStakePools) {
-	usp = new(UserStakePools)
-	usp.Pools = make(map[datastore.Key][]datastore.Key)
-	return
+func NewUserStakePools() *UserStakePools {
+	return &UserStakePools{}
 }
 
-func (usp *UserStakePools) add(providerId, poolID datastore.Key) {
-	usp.Pools[providerId] = append(usp.Pools[providerId], poolID)
+func (usp *UserStakePools) Add(providerID datastore.Key) {
+	if _, exist := usp.Find(providerID); exist {
+		return
+	}
+
+	usp.Providers = append(usp.Providers, providerID)
 }
 
-func (usp *UserStakePools) FindProvider(searchId datastore.Key) datastore.Key {
-	for providedId, provider := range usp.Pools {
-		for _, poolId := range provider {
-			if searchId == poolId {
-				return providedId
-			}
+func (usp *UserStakePools) Find(providerID datastore.Key) (int, bool) {
+	for i, p := range usp.Providers {
+		if p == providerID {
+			return i, true
 		}
 	}
-	return ""
+	return -1, false
 }
 
-func (usp *UserStakePools) Del(providerId, poolID datastore.Key) (empty bool) {
-	var (
-		list = usp.Pools[providerId]
-		i    int
-	)
-	for _, id := range list {
-		if id == poolID {
-			continue
-		}
-		list[i], i = id, i+1
+func (usp *UserStakePools) Del(providerID datastore.Key) (empty bool) {
+	i, ok := usp.Find(providerID)
+	if !ok {
+		return len(usp.Providers) == 0
 	}
-	list = list[:i]
-	if len(list) == 0 {
-		delete(usp.Pools, providerId) // delete empty
-	} else {
-		usp.Pools[providerId] = list // update
+
+	l := len(usp.Providers)
+	if i == l-1 {
+		usp.Providers = usp.Providers[:l-1]
+		return len(usp.Providers) == 0
 	}
-	return len(usp.Pools) == 0
+
+	usp.Providers[i] = usp.Providers[l-1]
+	usp.Providers = usp.Providers[:l-1]
+	return len(usp.Providers) == 0
 }
 
 func (usp *UserStakePools) Encode() []byte {
@@ -83,7 +80,7 @@ func (usp *UserStakePools) Save(
 	return
 }
 
-// GetUserStakePool of given client
+// GetUserStakePools of given client and provider type
 func GetUserStakePools(
 	p spenum.Provider,
 	clientID datastore.Key,

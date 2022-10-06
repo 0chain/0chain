@@ -20,8 +20,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -189,23 +189,19 @@ func makeTestNode() (*node.Node, error) {
 }
 
 func generateProposedBlockToRound(t *testing.T, r *round.Round, n *node.Node) {
-	for {
-		b := block.NewBlock("", r.Number)
-		b.MinerID = n.Client.ID
-		randomData := make([]byte, 10)
-		read, err := rand.Reader.Read(randomData)
-		require.NoError(t, err)
-		require.Equal(t, read, len(randomData))
-		txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(randomData)}}
-		b.Txns = append(b.Txns, &txn)
-		b.AddTransaction(&txn)
-		b.TxnsMap = make(map[string]bool)
-		b.TxnsMap[txn.Hash] = true
-		b.HashBlock()
-		if _, added := r.AddProposedBlock(b); added {
-			break
-		}
-	}
+	b := block.NewBlock("", r.Number)
+	b.MinerID = n.Client.ID
+	randomData := make([]byte, 10)
+	read, err := rand.Reader.Read(randomData)
+	require.NoError(t, err)
+	require.Equal(t, read, len(randomData))
+	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(randomData)}}
+	b.Txns = append(b.Txns, &txn)
+	b.AddTransaction(&txn)
+	b.TxnsMap = make(map[string]bool)
+	b.TxnsMap[txn.Hash] = true
+	b.HashBlock()
+	r.AddProposedBlock(b)
 }
 
 func TestRoundInfoHandler(t *testing.T) {

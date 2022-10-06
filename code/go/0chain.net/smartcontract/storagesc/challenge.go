@@ -22,8 +22,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
 	"go.uber.org/zap"
 )
@@ -115,8 +115,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var (
-		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime)
-		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime)
+		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp - latestCompletedChallTime, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
@@ -161,7 +161,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
+	if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
@@ -195,15 +195,15 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
-		return
+		return err
 	}
 
 	// save the pools
-	if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
+	if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't save sake pool: %v", err)
 	}
 
-	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
+	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
 
@@ -222,7 +222,7 @@ func (ssc *StorageSmartContract) validatorsStakePools(
 	sps = make([]*stakePool, 0, len(validators))
 	for _, id := range validators {
 		var sp *stakePool
-		if sp, err = ssc.getStakePool(id, balances); err != nil {
+		if sp, err = ssc.getStakePool(spenum.Validator, id, balances); err != nil {
 			return nil, fmt.Errorf("can't get validator %s stake pool: %v",
 				id, err)
 		}
@@ -236,7 +236,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 	sps []*stakePool, balances cstate.StateContextI) (err error) {
 
 	for i, sp := range sps {
-		if err = sp.save(ssc.ID, validators[i], balances); err != nil {
+		if err = sp.save(spenum.Validator, validators[i], balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 		staked, err := sp.stake()
@@ -246,10 +246,10 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 		data := dbs.DbUpdates{
 			Id: validators[i],
 			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
+				"stake": int64(staked),
 			},
 		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, validators[i], data)
+		balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, validators[i], data)
 
 	}
 	return
@@ -284,8 +284,8 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	var (
-		rdtu = alloc.restDurationInTimeUnits(prev)
-		dtu  = alloc.durationInTimeUnits(tp - prev)
+		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
+		dtu  = alloc.durationInTimeUnits(tp - prev, conf.TimeUnit)
 		move = blobAlloc.challenge(dtu, rdtu)
 	)
 
@@ -319,7 +319,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
-		return
+		return err
 	}
 
 	err = alloc.moveFromChallengePool(cp, move)
@@ -350,7 +350,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 		// load stake pool
 		var sp *stakePool
-		if sp, err = sc.getStakePool(blobAlloc.BlobberID, balances); err != nil {
+		if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
@@ -368,7 +368,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		blobAlloc.Penalty = penalty
 
 		// save stake pool
-		if err = sp.save(sc.ID, blobAlloc.BlobberID, balances); err != nil {
+		if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
@@ -378,7 +378,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			"saving allocation pools: "+err.Error())
 	}
 
-	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
+	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
 
@@ -582,14 +582,14 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 		err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
 		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"error updating blobber reward item")
+			return "", common.NewErrorf("verify_challenge",
+				"error updating blobber reward item: %v", err)
 		}
 
 		err = ongoingParts.Save(balances)
 		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"error saving ongoing blobber reward partition")
+			return "", common.NewErrorf("verify_challenge",
+				"error saving ongoing blobber reward partition: %v", err)
 		}
 
 		if err := allocChallenges.Save(balances, sc.ID); err != nil {
@@ -727,7 +727,7 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 	var challengeBlobbers []ChallengeReadyBlobber
 	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
 	if err != nil {
-		return "", errors.New("error getting random slice from blobber challenge partition")
+		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
 
 	switch selection {

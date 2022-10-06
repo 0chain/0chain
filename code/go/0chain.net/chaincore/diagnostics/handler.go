@@ -6,8 +6,8 @@ import (
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -21,6 +21,7 @@ func SetupHandlers() {
 	sc := chain.GetServerChain()
 	http.HandleFunc("/_diagnostics/n2n/info", common.UserRateLimit(sc.N2NStatsWriter))
 	http.HandleFunc("/_diagnostics/miner_stats", common.UserRateLimit(sc.MinerStatsHandler))
+	http.HandleFunc("/_diagnostics/txns_in_pool", common.UserRateLimit(sc.TxnsInPoolHandler))
 	http.HandleFunc("/_diagnostics/block_chain", common.UserRateLimit(sc.WIPBlockChainHandler))
 }
 
@@ -143,7 +144,7 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "</table>")
 }
 
-//WritePruneStats - write the last prune stats
+// WritePruneStats - write the last prune stats
 func WritePruneStats(w http.ResponseWriter, ps *util.PruneStats) {
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td>Stage</td><td>%v</td>", ps.Stage)

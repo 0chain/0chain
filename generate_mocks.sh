@@ -4,7 +4,7 @@ BASEDIR=$(pwd)
 
 echo "Making mocks..."
 
- generate_mock() {
+generate_mock() {
 	OUTPUT=$1
 	mockery --case underscore --output=$OUTPUT --all
 }
@@ -43,5 +43,3 @@ generate_mock "../benchmark/mocks"
 
 cd $BASEDIR/code/go/0chain.net || exit
 go generate -run="mockery" ./...
-
-echo "Mocks files are generated."

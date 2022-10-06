@@ -12,9 +12,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/util"
 )
 
 //msgp:ignore unlockResponse stakePoolRequest
@@ -30,7 +30,6 @@ type unlockResponse struct {
 }
 
 type stakePoolRequest struct {
-	PoolID       string `json:"pool_id,omitempty"`
 	AuthorizerID string `json:"authorizer_id,omitempty"`
 }
 
@@ -77,10 +76,10 @@ func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContex
 }
 
 // empty a delegate pool if possible, call update before the empty
-func (sp *StakePool) empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error) {
-	var dp, ok = sp.Pools[poolID]
+func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI) (bool, error) {
+	var dp, ok = sp.Pools[clientID]
 	if !ok {
-		return false, fmt.Errorf("no such delegate pool: %q", poolID)
+		return false, fmt.Errorf("no such delegate pool: %q", clientID)
 	}
 
 	if dp.DelegateID != clientID {
@@ -92,8 +91,8 @@ func (sp *StakePool) empty(sscID, poolID, clientID string, balances cstate.State
 		return false, err
 	}
 
-	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = spenum.Deleting
+	sp.Pools[clientID].Balance = 0
+	sp.Pools[clientID].Status = spenum.Deleting
 
 	return true, nil
 }
@@ -256,12 +255,12 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
 	}
 
-	_, err = sp.empty(zcn.ID, spr.PoolID, t.ClientID, ctx)
+	_, err = sp.empty(zcn.ID, t.ClientID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
 	}
 
-	amount, err := sp.UnlockClientStakePool(t.ClientID, spenum.Blobber, spr.AuthorizerID, spr.PoolID, ctx)
+	amount, err := sp.UnlockClientStakePool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "%v", err)
 	}

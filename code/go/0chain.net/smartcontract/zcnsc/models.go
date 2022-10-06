@@ -149,13 +149,13 @@ func (mp *MintPayload) GetStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
+func (mp *MintPayload) verifySignatures(signatures map[string]*AuthorizerSignature, state cstate.StateContextI) error {
 	toSign := mp.GetStringToSign()
-	if len(mp.Signatures) == 0 {
+	if len(signatures) == 0 {
 		return errors.New("signatures not found")
 	}
 
-	for _, v := range mp.Signatures {
+	for _, v := range signatures {
 		authorizerID := v.ID
 		if authorizerID == "" {
 			return errors.New("authorizer ID is empty in a signature")
@@ -183,6 +183,15 @@ func (mp *MintPayload) verifySignatures(state cstate.StateContextI) error {
 	}
 
 	return nil
+}
+
+func (mp *MintPayload) getUniqueSignatures() map[string]*AuthorizerSignature {
+	uniqueSignatures := make(map[string]*AuthorizerSignature)
+	for _, v := range mp.Signatures {
+
+		uniqueSignatures[v.ID] = v
+	}
+	return uniqueSignatures
 }
 
 // ---- BurnPayloadResponse ----------
@@ -238,6 +247,15 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 
 // ------- AddAuthorizerPayload ------------
 
+//type addAuthorizerPayload struct {
+//	URL           string
+//	ClientID      string
+//	ClientKey     string
+//	MinStake      int64
+//	MaxStake      int64
+//	NumDelegates  int
+//	ServiceCharge float64
+//}
 type AddAuthorizerPayload struct {
 	PublicKey         string             `json:"public_key"`
 	URL               string             `json:"url"`
@@ -298,4 +316,30 @@ type poolStat struct {
 func (ps *poolStat) encode() []byte {
 	buff, _ := json.Marshal(ps)
 	return buff
+}
+
+type AuthCount struct {
+	Count int `json:"auth_count"`
+}
+
+func (ac *AuthCount) Encode() ([]byte, error) {
+	return json.Marshal(ac)
+}
+
+func (ac *AuthCount) Decode(input []byte) error {
+	return json.Unmarshal(input, ac)
+}
+
+type DeleteAuthorizerPayload struct {
+	ID string `json:"id"`
+}
+
+func (dap *DeleteAuthorizerPayload) Encode() (data []byte, err error) {
+	data, err = json.Marshal(dap)
+	return
+}
+
+func (dap *DeleteAuthorizerPayload) Decode(input []byte) error {
+	err := json.Unmarshal(input, dap)
+	return err
 }

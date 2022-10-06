@@ -4,8 +4,8 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/util"
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
@@ -85,7 +85,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 			"error getting miner node: %v", err)
 	}
 
-	pool, ok := mn.Pools[dp.PoolID]
+	pool, ok := mn.Pools[t.ClientID]
 	if !ok {
 		return "", common.NewError("delegate_pool_del",
 			"pool does not exist for deletion")
@@ -100,7 +100,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	switch pool.Status {
 	case spenum.Pending:
 		{
-			_, err := mn.UnlockClientStakePool(t.ClientID, spenum.Miner, dp.MinerID, dp.PoolID, balances)
+			_, err := mn.UnlockClientStakePool(t.ClientID, spenum.Miner, dp.MinerID, balances)
 			if err != nil {
 				return "", common.NewErrorf("delegate_pool_del",
 					"stake_pool_unlock_failed: %v", err)

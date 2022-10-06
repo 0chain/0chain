@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
 	"strconv"
@@ -17,9 +18,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -279,8 +280,7 @@ func TestBlobberReward(t *testing.T) {
 		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
-		serviceCharge:           0.30,
-		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
+		serviceCharge: 0.30,
 	}
 	var validatorYamls = []mockBlobberYaml{
 		{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3},
@@ -294,7 +294,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -352,9 +352,8 @@ func TestBlobberPenalty(t *testing.T) {
 		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
-		serviceCharge:           0.30,
-		challengeCompletionTime: scYaml.MaxChallengeCompletionTime,
-		writePrice:              1,
+		serviceCharge: 0.30,
+		writePrice:    1,
 	}
 	var validatorYamls = []mockBlobberYaml{
 		{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3},
@@ -376,7 +375,7 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
@@ -450,7 +449,7 @@ func testBlobberPenalty(
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
 	require.NoError(t, err)
 
-	afterBlobber, err := ssc.getStakePool(blobberId, ctx)
+	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
 	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, ctx)
@@ -505,7 +504,7 @@ func testBlobberReward(
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
 	require.NoError(t, err)
 
-	afterBlobber, err := ssc.getStakePool(blobberId, ctx)
+	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
 	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber, ctx)
@@ -588,7 +587,7 @@ func setupChallengeMocks(
 			},
 		},
 	}
-	require.NoError(t, cPool.save(ssc.ID, allocation.ID, ctx))
+	require.NoError(t, cPool.save(ssc.ID, allocation, ctx))
 
 	var sp = newStakePool()
 	sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
@@ -599,7 +598,7 @@ func setupChallengeMocks(
 		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
 	sp.Settings.DelegateWallet = blobberId + " wallet"
-	require.NoError(t, sp.save(ssc.ID, blobberId, ctx))
+	require.NoError(t, sp.save(spenum.Blobber, blobberId, ctx))
 
 	var validatorsSPs []*stakePool
 	for i, validator := range validators {

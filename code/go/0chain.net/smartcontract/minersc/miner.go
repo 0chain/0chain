@@ -10,25 +10,24 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
 func doesMinerExist(pkey datastore.Key,
-	balances cstate.CommonStateContextI) bool {
+	balances cstate.CommonStateContextI) (bool, error) {
 
 	mn := NewMinerNode()
 	err := balances.GetTrieNode(pkey, mn)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
-				zap.String("key", pkey))
-		}
-		return false
+	switch err {
+	case nil:
+		return true, nil
+	case util.ErrValueNotPresent:
+		return false, nil
+	default:
+		return false, err
 	}
-
-	return true
 }
 
 // AddMiner Function to handle miner register
@@ -59,7 +58,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			"failed to get miner list: %v", err)
 	}
 
-	msc.verifyMinerState(balances,
+	msc.verifyMinerState(allMiners, balances,
 		"add_miner: checking all miners list in the beginning")
 
 	if newMiner.Settings.DelegateWallet == "" {
@@ -121,12 +120,17 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		update = true
 	}
 
-	if !doesMinerExist(newMiner.GetKey(), balances) {
+	exist, err := doesMinerExist(newMiner.GetKey(), balances)
+	if err != nil {
+		return "", common.NewErrorf("add_miner", "error checking miner existence: %v", err)
+	}
+
+	if !exist {
 		if err = newMiner.save(balances); err != nil {
 			return "", common.NewError("add_miner", err.Error())
 		}
 
-		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
+		msc.verifyMinerState(allMiners, balances, "add_miner: Checking all miners list afterInsert")
 
 		update = true
 	}
@@ -201,7 +205,7 @@ func (msc *MinerSmartContract) deleteNode(
 		switch pool.Status {
 		case spenum.Pending:
 			_, err := deleteNode.UnlockPool(
-				pool.DelegateID, nodeType, deleteNode.ID, key, usp, balances)
+				pool.DelegateID, nodeType, key, usp, balances)
 			if err != nil {
 				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
 			}
@@ -283,7 +287,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	}
 
 	if mn.Delete {
-		return "", common.NewError("update_settings", "can't update settings of miner being deleted")
+		return "", common.NewError("update_miner_settings", "can't update settings of miner being deleted")
 	}
 
 	if mn.Settings.DelegateWallet != t.ClientID {
@@ -308,15 +312,9 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 }
 
 //------------- local functions ---------------------
-func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
+// TODO: remove this or return error and do real checking
+func (msc *MinerSmartContract) verifyMinerState(allMinersList *MinerNodes, balances cstate.StateContextI,
 	msg string) {
-
-	allMinersList, err := getMinersList(balances)
-	if err != nil {
-		logging.Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
-			"Failed to retrieve existing miners list: " + err.Error())
-		return
-	}
 	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
 		logging.Logger.Info(msg + " allminerslist is empty")
 		return

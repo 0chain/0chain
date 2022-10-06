@@ -2,12 +2,13 @@ package zcnsc
 
 import (
 	"fmt"
+	"math"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -86,11 +87,22 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	numAuth, err := getAuthorizerCount(ctx)
+
+	uniqueSignatures := payload.getUniqueSignatures()
+
 	// verify signatures of authorizers
-	err = payload.verifySignatures(ctx)
+	err = payload.verifySignatures(uniqueSignatures, ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to verify signatures with error: %v, %s", err, info)
 		err = common.NewError(code, msg)
+	}
+
+	if len(uniqueSignatures) < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
+		err = common.NewError(
+			code,
+			"not enough valid signatures for minting",
+		)
 		return
 	}
 

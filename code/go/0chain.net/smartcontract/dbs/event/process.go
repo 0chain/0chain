@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -10,7 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 type (
@@ -62,23 +63,36 @@ const (
 	TagAddOrOverwriteAllocationBlobberTerm
 	TagUpdateAllocationBlobberTerm
 	TagDeleteAllocationBlobberTerm
+	TagAddOrUpdateChallengePool
 )
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
-	edb.eventsChannel <- events
+func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) {
+	edb.eventsChannel <- blockEvents{events: events, round: round, block: block, blockSize: blockSize}
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
-		events := <-edb.eventsChannel
-		edb.addEvents(ctx, events)
-		for _, event := range events {
+		es := <-edb.eventsChannel
+		edb.addEvents(ctx, es)
+		tse := time.Now()
+		for _, event := range es.events {
 			var err error = nil
 			switch EventType(event.Type) {
 			case TypeStats:
+				ts := time.Now()
 				err = edb.addStat(event)
+				du := time.Since(ts)
+				if du.Milliseconds() > 50 {
+					logging.Logger.Warn("event db save slow - addStat",
+						zap.Any("duration", du),
+						zap.Int64("round", es.round),
+						zap.String("block", es.block),
+						zap.Int("block size", es.blockSize),
+						zap.Any("event", event),
+					)
+				}
 			case TypeError:
 				err = edb.addError(Error{
 					TransactionID: event.TxHash,
@@ -88,12 +102,23 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			default:
 			}
 			if err != nil {
-				logging.Logger.Error(
-					"event could not be processed",
+				logging.Logger.Error("event could not be processed",
+					zap.Int64("round", es.round),
+					zap.String("block", es.block),
+					zap.Int("block size", es.blockSize),
 					zap.Any("event", event),
 					zap.Error(err),
 				)
 			}
+		}
+		due := time.Since(tse)
+		if due.Milliseconds() > 500 {
+			logging.Logger.Warn("event db work slow",
+				zap.Any("duration", due),
+				zap.Int("events number", len(es.events)),
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize))
 		}
 	}
 }
@@ -323,6 +348,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteAllocationBlobberTerms(*updates)
+		// challenge pool
+	case TagAddOrUpdateChallengePool:
+		updates, ok := fromEvent[ChallengePool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateChallengePool(*updates)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

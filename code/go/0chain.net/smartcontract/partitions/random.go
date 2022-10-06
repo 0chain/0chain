@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -295,26 +295,14 @@ func (rs *randomSelector) Size(state state.StateContextI) (int, error) {
 }
 
 func (rs *randomSelector) Save(balances state.StateContextI) error {
-	var numPartitions = 0
-	for i, partition := range rs.Partitions {
+	for _, partition := range rs.Partitions {
 		if partition != nil && partition.changed() {
-			if partition.length() > 0 {
-				err := partition.save(balances)
-				if err != nil {
-					return err
-				}
-				numPartitions++
-			} else {
-				_, err := balances.DeleteTrieNode(rs.partitionKey(i))
-				if err != nil {
-					if err != util.ErrValueNotPresent {
-						return err
-					}
-				}
+			err := partition.save(balances)
+			if err != nil {
+				return err
 			}
 		}
 	}
-	rs.NumPartitions = numPartitions
 
 	_, err := balances.InsertTrieNode(rs.Name, rs)
 	if err != nil {

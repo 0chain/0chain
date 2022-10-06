@@ -21,10 +21,25 @@ jobs:
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
 
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose || true
+          sudo chmod +x /usr/local/bin/docker-compose || true 
+          docker-compose --version
+          
       - name: Docker Build Image
         run: ./docker.local/bin/build.benchmark.sh
 
       - name: Run tests
         run: |
           cd docker.local/benchmarks
-          ../bin/start.benchmarks.sh
+          ../bin/start.benchmarks.sh | tee benchmark_run_output
+          grep -R "Results" -A 1000 benchmark_run_output > benchmark_results
+          echo "TESTS_RAN=true" >> $GITHUB_ENV
+
+      - name: Notify Slack
+        if: ${{ always() && env.TESTS_RAN == 'true' && github.ref == 'refs/heads/staging' && github.event_name != 'workflow_dispatch' }}
+        run: |
+          cd docker.local/benchmarks
+          benchmark_results=$(cat benchmark_results | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | awk -F'|' '{print $2}' | awk '{$1=$1};1' | awk NF | sed -E "s/(benchmark suite)(.*)/*\1\2*/" | sed 's/OK/:passed:/g' | sed 's/FAILED/:failed:/g')$'\n\n'
+          curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Staging Benchmark $benchmark_results Full results are here: https://github.com/0chain/${{ github.event.repository.name }}/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}    

@@ -19,8 +19,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract"
+	"github.com/0chain/common/core/util"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"

@@ -14,8 +14,8 @@ import (
 	common2 "0chain.net/smartcontract/common"
 
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/logging"
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -167,7 +167,7 @@ func TestMiners(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddMn}
-	eventDb.AddEvents(context.TODO(), events)
+	eventDb.AddEvents(context.TODO(), events, 100, "hash", 10)
 	time.Sleep(100 * time.Millisecond)
 	miner, err := eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -187,7 +187,7 @@ func TestMiners(t *testing.T) {
 		Tag:         int(TagAddOrOverwriteMiner),
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventAddOrOverwriteMn})
+	eventDb.AddEvents(context.TODO(), []Event{eventAddOrOverwriteMn}, 100, "hash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -211,7 +211,7 @@ func TestMiners(t *testing.T) {
 		Tag:         int(TagUpdateMiner),
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventUpdateMn})
+	eventDb.AddEvents(context.TODO(), []Event{eventUpdateMn}, 100, "bhash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -226,7 +226,7 @@ func TestMiners(t *testing.T) {
 		Tag:         int(TagDeleteMiner),
 		Data:        mn.ID,
 	}
-	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
+	eventDb.AddEvents(context.TODO(), []Event{deleteEvent}, 100, "bhash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	assert.Error(t, err)

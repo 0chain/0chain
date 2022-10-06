@@ -2,7 +2,7 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/config"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/chain/state"
 )
@@ -52,14 +52,5 @@ func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
 }
 
 func GetGlobalNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
-	gn, err := GetGlobalSavedNode(ctx)
-	if err == nil {
-		return gn, nil
-	}
-
-	if gn == nil {
-		return nil, err
-	}
-
-	return gn, nil
+	return GetGlobalSavedNode(ctx)
 }

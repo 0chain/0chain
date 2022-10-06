@@ -169,6 +169,21 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	return blobbers, result.Error
 }
 
+func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error) {
+	var blobberIDs []string
+
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Select("blobber_id").
+		Offset(limit.Offset).Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "rank_metric"},
+			Desc:   true,
+		}).Find(&blobberIDs)
+
+	return blobberIDs, result.Error
+}
+
 func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 	var blobberIDs []string
 	result := edb.Store.Get().Model(&Blobber{}).Select("blobber_id").Find(&blobberIDs)
@@ -236,7 +251,6 @@ type AllocationQuery struct {
 	}
 	AllocationSize     int64
 	AllocationSizeInGB float64
-	PreferredBlobbers  []string
 	NumberOfDataShards int
 }
 

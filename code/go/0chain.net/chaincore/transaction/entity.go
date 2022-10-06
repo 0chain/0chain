@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"0chain.net/core/viper"
 	"context"
 	"errors"
 	"fmt"
@@ -19,9 +20,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -412,10 +413,7 @@ func (t *Transaction) GetSummary() *TransactionSummary {
 - applicable only when running in test mode and the transaction_data string contains debug keyword somewhere in it
 */
 func (t *Transaction) DebugTxn() bool {
-	if !config.Development() {
-		return false
-	}
-	return strings.Contains(t.TransactionData, "debug")
+	return config.Development() && viper.GetBool("logging.verbose")
 }
 
 /*ComputeOutputHash - compute the hash from the transaction output */

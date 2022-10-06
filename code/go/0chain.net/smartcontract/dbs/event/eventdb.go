@@ -18,7 +18,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	}
 	eventDb := &EventDb{
 		Store:         db,
-		eventsChannel: make(chan events, 100),
+		eventsChannel: make(chan blockEvents, 1),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 
@@ -30,10 +30,15 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
-	eventsChannel chan events
+	eventsChannel chan blockEvents
 }
 
-type events []Event
+type blockEvents struct {
+	block     string
+	blockSize int
+	round     int64
+	events    []Event
+}
 
 func (edb *EventDb) AutoMigrate() error {
 	if err := edb.Store.Get().AutoMigrate(
@@ -56,6 +61,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&Authorizer{},
 		&Challenge{},
 		&AllocationBlobberTerm{},
+		ChallengePool{},
 	); err != nil {
 		return err
 	}

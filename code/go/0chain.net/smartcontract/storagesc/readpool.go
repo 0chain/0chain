@@ -10,9 +10,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/util"
 )
 
 //msgp:ignore readPoolRedeem
@@ -234,7 +234,7 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
 	rp, err := ssc.getReadPool(txn.ClientID, balances)
 	if err != nil {
-		return "", common.NewError("read_pool_unlock_failed", "no read pool found for clientID to unlock token")
+		return "", common.NewErrorf("read_pool_unlock_failed", "no read pool found for clientID to unlock token: %v", err)
 	}
 
 	// adjust balance

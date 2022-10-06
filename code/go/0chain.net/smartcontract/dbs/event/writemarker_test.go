@@ -10,8 +10,8 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -92,7 +92,7 @@ func TestWriteMarker(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddOrOverwriteWm}
-	eventDb.AddEvents(context.TODO(), events)
+	eventDb.AddEvents(context.TODO(), events, 100, "hash", 10)
 
 	wm, err := eventDb.GetWriteMarker(eWriteMarker.TransactionID)
 	require.NoError(t, err)

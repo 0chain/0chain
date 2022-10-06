@@ -6,12 +6,13 @@ import (
 	"math"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/config"
@@ -19,7 +20,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -38,8 +39,20 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 
 /*UpdateFinalizedBlock - updates the finalized block */
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	fr := sc.GetRound(b.Round)
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.GetLatestFinalizedBlock().Round), zap.Any("current_round", sc.GetCurrentRound()))
+	fr := sc.GetRoundClone(b.Round)
+	if fr == nil {
+		fr = round.NewRound(b.Round)
+	}
+
+	b = b.Clone()
+	fr.Finalize(b)
+	wg := sync.WaitGroup{}
+	Logger.Info("update finalized block",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("round block hash", fr.GetBlockHash()),
+		zap.Any("lf_round", sc.GetLatestFinalizedBlock().Round),
+		zap.Any("current_round", sc.GetCurrentRound()))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -48,57 +61,81 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
 		}
 	}
+
 	if err := sc.BlockCache.Add(b.Hash, b); err != nil {
-		Logger.Warn("update finalized block, add block to cache failed",
+		Logger.Panic("update finalized block, add block to cache failed",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Error(err))
 	}
 
-	if fr == nil {
-		fr = round.NewRound(b.Round)
-	}
-	fr.Finalize(b)
-	bsHistogram.Update(int64(len(b.Txns)))
-	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
-	err := sc.StoreTransactions(b)
-	if err != nil {
-		Logger.Error("db store transaction failed", zap.Error(err))
-	}
-	err = sc.StoreBlockSummaryFromBlock(b)
-	if err != nil {
-		Logger.Error("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-	}
 	self := node.GetSelfNode(ctx)
+	bsHistogram.Update(int64(len(b.Txns)))
+	self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := sc.StoreTransactions(b)
+		if err != nil {
+			Logger.Panic("db store transaction failed", zap.Error(err))
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := sc.StoreBlockSummaryFromBlock(b); err != nil {
+			Logger.Panic("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		}
+	}()
+
 	if b.MagicBlock != nil {
-		bs := b.GetSummary()
-		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
-		if err != nil {
-			Logger.DPanic("failed to store magic block map", zap.Any("error", err))
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			bs := b.GetSummary()
+			if err := sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap()); err != nil {
+				Logger.DPanic("failed to store magic block map", zap.Any("error", err))
+			}
+		}()
 	}
+
 	if sc.IsBlockSharder(b, self.Underlying()) {
-		sc.SharderStats.ShardedBlocksCount++
-		ts := time.Now()
-		if err := blockstore.GetStore().Write(b); err != nil {
-			Logger.Error("store block failed",
-				zap.Int64("round", b.Round),
-				zap.Error(err))
-		}
-		duration := time.Since(ts)
-		blockSaveTimer.UpdateSince(ts)
-		p95 := blockSaveTimer.Percentile(.95)
-		if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-			Logger.Error("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sc.SharderStats.ShardedBlocksCount++
+			ts := time.Now()
+			if err := blockstore.GetStore().Write(b); err != nil {
+				Logger.Panic("store block failed",
+					zap.Int64("round", b.Round),
+					zap.Error(err))
+			}
+
+			duration := time.Since(ts)
+			blockSaveTimer.UpdateSince(ts)
+			p95 := blockSaveTimer.Percentile(.95)
+			if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
+				Logger.Warn("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+			}
+		}()
 	}
+
 	if frImpl, ok := fr.(*round.Round); ok {
-		err := sc.StoreRound(frImpl)
-		if err != nil {
-			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := sc.StoreRound(frImpl)
+			if err != nil {
+				Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
+			}
+		}()
 	}
-	sc.DeleteRoundsBelow(b.Round)
+	go sc.DeleteRoundsBelow(b.Round)
+	wg.Wait()
+	Logger.Debug("update finalized blocks storage success",
+		zap.Int64("round", b.Round), zap.String("block", b.Hash))
 }
 
 func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error { //nolint: unused

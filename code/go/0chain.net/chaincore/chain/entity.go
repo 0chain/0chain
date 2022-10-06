@@ -31,10 +31,10 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 // notifySyncLFRStateTimeout is the maximum time allowed for sending a notification
@@ -693,7 +693,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 
 	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
-	b, _ = r.AddNotarizedBlock(b)
+	r.AddNotarizedBlock(b)
 
 	return b, r
 }
@@ -1010,6 +1010,16 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 		return nil
 	}
 	return r
+}
+
+func (c *Chain) GetRoundClone(roundNumber int64) round.RoundI {
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
+	r, ok := c.rounds[roundNumber]
+	if !ok {
+		return nil
+	}
+	return r.Clone()
 }
 
 /*DeleteRound - delete a round and associated block data */

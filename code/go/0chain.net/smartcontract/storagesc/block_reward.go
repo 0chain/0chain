@@ -12,11 +12,12 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -70,6 +71,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	if err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards); err != nil {
 		logging.Logger.Info("blobber_block_rewards_failed",
 			zap.String("getting random partition", err.Error()))
+		if err != util.ErrValueNotPresent {
+			return err
+		}
 		return nil
 	}
 
@@ -79,16 +83,16 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	var wg sync.WaitGroup
-	errorChan := make(chan error, len(blobberRewards))
-	spChan := make(chan spResp, len(blobberRewards))
+	errC := make(chan error, len(blobberRewards))
+	spC := make(chan spResp, len(blobberRewards))
 	for i, br := range blobberRewards {
 		wg.Add(1)
 		go func(b BlobberRewardNode, i int) {
 			defer wg.Done()
-			if sp, err := ssc.getStakePool(b.ID, balances); err != nil {
-				errorChan <- err
+			if sp, err := ssc.getStakePool(spenum.Blobber, b.ID, balances); err != nil {
+				errC <- err
 			} else {
-				spChan <- spResp{
+				spC <- spResp{
 					index: i,
 					sp:    sp,
 				}
@@ -96,17 +100,16 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		}(br, i)
 	}
 	wg.Wait()
-	close(errorChan)
-	close(spChan)
+	close(spC)
 
-	for err := range errorChan {
-		if err != nil {
-			return err
-		}
+	select {
+	case err := <-errC:
+		return err
+	default:
 	}
 
 	stakePools := make([]*stakePool, len(blobberRewards))
-	for resp := range spChan {
+	for resp := range spC {
 		stakePools[resp.index] = resp.sp
 	}
 
@@ -210,7 +213,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	for i, qsp := range stakePools {
-		if err = qsp.save(ssc.ID, qualifyingBlobberIds[i], balances); err != nil {
+		if err = qsp.save(spenum.Blobber, qualifyingBlobberIds[i], balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}

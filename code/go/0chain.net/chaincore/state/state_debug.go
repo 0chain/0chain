@@ -1,6 +1,10 @@
 package state
 
-import "0chain.net/core/util"
+import (
+	"0chain.net/chaincore/config"
+	"0chain.net/core/viper"
+	"github.com/0chain/common/core/util"
+)
 
 const (
 	DebugLevelNone  = 0
@@ -29,7 +33,7 @@ func DebugBlock() bool {
 
 //DebugTxn - indicates whether state debugging level is txn or more granular
 func DebugTxn() bool {
-	return debugState >= DebugLevelTxn
+	return config.Development() && viper.GetBool("logging.verbose")
 }
 
 //DebugNode - indicates whether state debugging level is mpt node or more granular

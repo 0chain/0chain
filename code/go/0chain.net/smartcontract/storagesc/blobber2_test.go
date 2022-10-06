@@ -1,11 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"strconv"
-	"strings"
-	"testing"
-
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
@@ -15,9 +10,15 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"encoding/json"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
 )
 
 const (
@@ -159,9 +160,12 @@ func TestCommitBlobberRead(t *testing.T) {
 	})
 
 	t.Run(errExpiredAllocation, func(t *testing.T) {
+		var conf = Config{
+			MaxChallengeCompletionTime: 30 * time.Minute,
+		}
 		var faultyRead = read
 		faultyRead.timestamp = allocation.expiration +
-			toSeconds(blobberYaml.challengeCompletionTime) + 1
+			toSeconds(conf.MaxChallengeCompletionTime) + 1
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPool,
 		)
@@ -280,19 +284,20 @@ func testCommitBlobberRead(
 	_, err = ctx.InsertTrieNode(readConnection.GetKey(ssc.ID), lastReadConnection)
 	require.NoError(t, err)
 	var storageAllocation = &StorageAllocation{
-		ID:                      allocationId,
-		StartTime:               allocation.startTime,
-		ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
-		Expiration:              allocation.expiration,
+		ID:         allocationId,
+		StartTime:  allocation.startTime,
+		Expiration: allocation.expiration,
 		BlobberAllocs: []*BlobberAllocation{
 			{
 				BlobberID: blobberId,
 				Terms: Terms{
 					ReadPrice: zcnToBalance(blobberYaml.readPrice),
 				},
+				Stats: &StorageAllocationStats{},
 			},
 		},
 		Owner: client.id,
+		Stats: &StorageAllocationStats{},
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
 	require.NoError(t, err)
@@ -327,7 +332,7 @@ func testCommitBlobberRead(
 			RoundCreated: stake.MintAt,
 		}
 	}
-	require.NoError(t, sPool.save(ssc.ID, blobberId, ctx))
+	require.NoError(t, sPool.save(spenum.Blobber, blobberId, ctx))
 
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {
@@ -339,7 +344,7 @@ func testCommitBlobberRead(
 
 	require.NotEqualValues(t, rPool.Balance, newRp.Balance)
 
-	newSp, err := ssc.getStakePool(blobberId, ctx)
+	newSp, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
 	confirmCommitBlobberRead(t, f, resp, newSp)

@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"

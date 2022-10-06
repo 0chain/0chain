@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	"testing"
 	"time"
@@ -169,7 +170,7 @@ func Test_flow_reward(t *testing.T) {
 		err    error
 	)
 
-	setConfig(t, balances)
+	conf := setConfig(t, balances)
 
 	tp += 100
 	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
@@ -354,7 +355,7 @@ func Test_flow_reward(t *testing.T) {
 
 		var moved = int64(sizeInGB(cc.WriteMarker.Size) *
 			float64(avgTerms.WritePrice) *
-			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp))
+			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit))
 
 		require.EqualValues(t, moved, cp.Balance)
 
@@ -505,8 +506,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 		//
 		var (
-			step            = (int64(alloc.Expiration) - tp) / 10
-			challID, prevID string
+			step    = (int64(alloc.Expiration) - tp) / 10
+			challID string
 		)
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
@@ -517,8 +518,7 @@ func Test_flow_reward(t *testing.T) {
 			}
 
 			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, b3.id, tp, prevID, challID, i, validators,
-				alloc.ID, blobber, allocRoot, balances)
+			genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 
 			var chall = new(ChallengeResponse)
 			chall.ID = challID
@@ -649,7 +649,7 @@ func Test_flow_penalty(t *testing.T) {
 		require.NoError(t, err)
 
 		//var sp *stakePool
-		_, err = ssc.getStakePool(b4.id, balances)
+		_, err = ssc.getStakePool(spenum.Blobber, b4.id, balances)
 		require.NoError(t, err)
 
 		// until the end
@@ -667,8 +667,8 @@ func Test_flow_penalty(t *testing.T) {
 
 		//
 		var (
-			step            = (int64(alloc.Expiration) - tp) / 10
-			challID, prevID string
+			step    = (int64(alloc.Expiration) - tp) / 10
+			challID string
 
 			//until = alloc.Until()
 			// last loop balances (previous balance)
@@ -686,8 +686,7 @@ func Test_flow_penalty(t *testing.T) {
 			}
 
 			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, b4.id, tp, prevID, challID, i, validators,
-				alloc.ID, blobber, allocRoot, balances)
+			genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 
 			var chall = new(ChallengeResponse)
 			chall.ID = challID
@@ -728,7 +727,7 @@ func Test_flow_penalty(t *testing.T) {
 			//cpl = cp.Balance
 			//
 			//// offer pool should be reduced (blobber slash)
-			//sp, err = ssc.getStakePool(b4.id, balances)
+			//sp, err = ssc.getStakePool(spenum.Blobber, b4.id, balances)
 			//require.NoError(t, err)
 			//assert.True(t, sp.stake() < spl)
 			//spl = sp.stake()
@@ -739,7 +738,7 @@ func Test_flow_penalty(t *testing.T) {
 			//
 			//// validators reward
 			//for _, val := range valids {
-			//	_, err = ssc.getStakePool(val.id, balances)
+			//	_, err = ssc.getStakePool(spenum.Blobber, val.id, balances)
 			//	require.NoError(t, err)
 			//}
 			//
@@ -892,13 +891,9 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 				blobber, err = ssc.getBlobber(b.id, balances)
 				require.NoError(t, err)
 
-				var challID, prevID string
+				var challID string
 				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
-				if i > 0 {
-					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
-				}
-				genChall(t, ssc, b.id, tp, prevID, challID, i,
-					validators, alloc.ID, blobber, allocRoot, balances)
+				genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 				gfc++
 			}
 		}
@@ -941,7 +936,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 				continue
 			}
 			var sp *stakePool
-			sp, err = ssc.getStakePool(b.id, balances)
+			sp, err = ssc.getStakePool(spenum.Blobber, b.id, balances)
 			require.NoError(t, err)
 			spTotal, err := stakePoolTotal(sp)
 			require.NoError(t, err)
@@ -971,7 +966,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		// no rewards for validators
 		for _, val := range valids {
 			var vsp *stakePool
-			vsp, err = ssc.getStakePool(val.id, balances)
+			vsp, err = ssc.getStakePool(spenum.Blobber, val.id, balances)
 			require.NoError(t, err)
 			assert.Zero(t, vsp.Reward)
 			assert.Zero(t, balances.balances[val.id])
@@ -1075,7 +1070,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 				continue
 			}
 			var sp *stakePool
-			sp, err = ssc.getStakePool(b.id, balances)
+			sp, err = ssc.getStakePool(spenum.Blobber, b.id, balances)
 			require.NoError(t, err)
 			spTotal, err := stakePoolTotal(sp)
 			require.NoError(t, err)
@@ -1118,28 +1113,14 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 				blobber, err = ssc.getBlobber(b.id, balances)
 				require.NoError(t, err)
 
-				var challID, prevID string
+				var challID string
 				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
-				if i > 0 {
-					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
-				}
-				genChall(t, ssc, b.id, tp, prevID, challID, i,
-					validators, alloc.ID, blobber, allocRoot, balances)
+				genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 			}
 		}
 
 		// let expire all the challenges
 		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
-
-		// add open challenges to allocation stats
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		if alloc.Stats == nil {
-			alloc.Stats = new(StorageAllocationStats)
-		}
-		alloc.Stats.OpenChallenges = 50 // just a non-zero number
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
-		require.NoError(t, err)
 
 		tp += 10 // a not expired allocation to cancel
 
@@ -1165,7 +1146,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 				continue
 			}
 			var sp *stakePool
-			sp, err = ssc.getStakePool(b.id, balances)
+			sp, err = ssc.getStakePool(spenum.Blobber, b.id, balances)
 			require.NoError(t, err)
 			spTotal, err := stakePoolTotal(sp)
 			require.NoError(t, err)
@@ -1180,7 +1161,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Zero(t, cpa)
-		require.EqualValues(t, wpb, wpa)
+		require.Equal(t, wpb, wpa)
 		require.Equal(t, alloc.MovedBack, cpb)
 
 		// no rewards for the blobber
@@ -1194,7 +1175,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		// no rewards for validators
 		for _, val := range valids {
 			var vsp *stakePool
-			vsp, err = ssc.getStakePool(val.id, balances)
+			vsp, err = ssc.getStakePool(spenum.Validator, val.id, balances)
 			require.NoError(t, err)
 			assert.Zero(t, vsp.Reward)
 			assert.Zero(t, balances.balances[val.id])
