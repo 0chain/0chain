@@ -144,8 +144,8 @@ server_chain:
       conn_max_lifetime: 20s
 
 network:
-  magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
-  initial_states: config/initial_state.yaml
+  magic_block_file: config/b0magicBlock.json
+  initial_states: config/initial-states.yaml
   genesis_dkg: 0
   dns_url: "" # http://198.18.0.98:9091
   relay_time: 200 # milliseconds
