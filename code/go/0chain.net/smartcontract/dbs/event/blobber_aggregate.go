@@ -38,17 +38,10 @@ func (edb *EventDb) ReplicateBlobberAggregate(id int64, limit int) ([]BlobberAgg
 
 	queryBuilder := edb.Store.Get().
 		Model(&BlobberAggregate{}).Where("id > ?", id).Limit(limit)
-	if id != 0 {
-		queryBuilder.Where("id > ?", id)
-	}
 
-	queryBuilder.Order(clause.OrderBy{
-		Columns: []clause.OrderByColumn{
-			{
-				Column: clause.Column{Name: "id"},
-				Desc:   false,
-			},
-		},
+	queryBuilder.Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   false,
 	})
 
 	result := queryBuilder.Scan(&snapshots)
