@@ -50,6 +50,7 @@ func (br *BigRat) Float64() float64 {
 	return f
 }
 
+// impment Extension interface for mgsp
 func (br *BigRat) ExtensionType() int8 {
 	return BigRatMsgpExtensionType
 }
@@ -80,6 +81,10 @@ func (br *BigRat) MarshalJSON() ([]byte, error) {
 	}
 	f, _ := br.Rat.Float64()
 	return []byte(fmt.Sprintf("%f", f)), nil
+}
+
+func (br *BigRat) UnmarshalJSON(input []byte) error {
+	return br.Scan(input)
 }
 
 func (br *BigRat) Scan(value interface{}) error {

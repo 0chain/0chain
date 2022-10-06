@@ -610,15 +610,21 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "", common.NewError("verify_challenge", err.Error())
 		}
 
-		var partial = 1.0
+		var partial *big.Rat
 		if success < threshold {
-			partial = float64(success) / float64(threshold)
+			partial = big.NewRat(int64(success), int64(threshold))
+		} else {
+			partial.Set(zbig.OneBigRat)
 		}
-
-		err = sc.blobberReward(alloc, latestCompletedChallTime, allocChallenges, blobAlloc,
+		err = sc.blobberReward(
+			alloc,
+			latestCompletedChallTime,
+			allocChallenges,
+			blobAlloc,
 			validators,
-
-			partial, balances)
+			partial,
+			balances,
+		)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
