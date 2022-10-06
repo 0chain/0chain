@@ -448,7 +448,8 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 		}
 		return edb.addOrUpdateChallengePool(*updates)
 	default:
-		return fmt.Errorf("unrecognised event %v", event)
+		logging.Logger.Debug("skipping event", zap.Int("tag", event.Tag))
+		return nil
 	}
 }
 
