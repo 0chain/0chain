@@ -62,11 +62,11 @@ type AllocationBlobberValueChanged struct {
 	Delta        int64
 }
 
-func (edb *EventDb) ReplicateSnapshots(round int64, limit int) ([]Snapshot, error) {
+func (edb *EventDb) ReplicateSnapshots(offset int, limit int) ([]Snapshot, error) {
 	var snapshots []Snapshot
 
 	queryBuilder := edb.Store.Get().
-		Model(&Snapshot{}).Where("round > ?", round).Limit(limit)
+		Model(&Snapshot{}).Offset(offset).Limit(limit)
 
 	queryBuilder.Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "round"},

@@ -2752,20 +2752,12 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 		common.Respond(w, r, nil, err)
 		return
 	}
-	round := r.URL.Query().Get("round")
-	intR, err := strconv.ParseInt(round, 10, 64)
-	if err != nil || intR < 0 {
-		err := common.NewErrInternal("bad round format" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateSnapshots(intR, limit.Limit)
+	blobbers, err := edb.ReplicateSnapshots(limit.Offset, limit.Limit)
 	if err != nil {
 		err := common.NewErrInternal("cannot get snapshots" + err.Error())
 		common.Respond(w, r, nil, err)
