@@ -3,7 +3,10 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
+
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/currency"
 
@@ -26,7 +29,7 @@ type freeAllocationSettings struct {
 	Duration         time.Duration `json:"duration"`
 	ReadPriceRange   PriceRange    `json:"read_price_range"`
 	WritePriceRange  PriceRange    `json:"write_price_range"`
-	ReadPoolFraction float64       `json:"read_pool_fraction"`
+	ReadPoolFraction zbig.BigRat   `json:"read_pool_fraction" msg:"read_pool_fraction,extension"`
 }
 
 type stakePoolConfig struct {
@@ -45,49 +48,47 @@ type writePoolConfig struct {
 type blockReward struct {
 	BlockReward             currency.Coin    `json:"block_reward"`
 	BlockRewardChangePeriod int64            `json:"block_reward_change_period"`
-	BlockRewardChangeRatio  float64          `json:"block_reward_change_ratio"`
+	BlockRewardChangeRatio  zbig.BigRat      `json:"block_reward_change_ratio" msg:"block_reward_change_ratio,extension"`
 	QualifyingStake         currency.Coin    `json:"qualifying_stake"`
-	SharderWeight           float64          `json:"sharder_weight"`
-	MinerWeight             float64          `json:"miner_weight"`
-	BlobberWeight           float64          `json:"blobber_weight"`
+	SharderWeight           zbig.BigRat      `json:"sharder_weight" msg:"sharder_weight,extension"`
+	MinerWeight             zbig.BigRat      `json:"miner_weight" msg:"miner_weight,extension"`
+	BlobberWeight           zbig.BigRat      `json:"blobber_weight" msg:"blobber_weight,extension"`
 	TriggerPeriod           int64            `json:"trigger_period"`
 	Gamma                   blockRewardGamma `json:"gamma"`
 	Zeta                    blockRewardZeta  `json:"zeta"`
 }
 
 type blockRewardGamma struct {
-	Alpha float64 `json:"alpha"`
-	A     float64 `json:"a"`
-	B     float64 `json:"b"`
+	Alpha zbig.BigRat `json:"alpha" msg:"alpha,extension"`
+	A     zbig.BigRat `json:"a" msg:"a,extension"`
+	B     zbig.BigRat `json:"b" msg:"b,extension"`
 }
 
 type blockRewardZeta struct {
-	I  float64 `json:"i"`
-	K  float64 `json:"k"`
-	Mu float64 `json:"mu"`
+	I  zbig.BigRat `json:"i" msg:"i,extension"`
+	K  zbig.BigRat `json:"k" msg:"k,extension"`
+	Mu zbig.BigRat `json:"mu" msg:"mu,extension"`
 }
 
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) error {
-	total := sharderRatio + minerRatio + bRatio
-	if total == 0 {
-		br.SharderWeight = 0
-		br.MinerWeight = 0
-		br.BlobberWeight = 0
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio zbig.BigRat) error {
+	var total *big.Rat
+	_ = total.Add(sharderRatio.Rat, total.Add(minerRatio.Rat, bRatio.Rat))
+	if total.Cmp(zbig.ZeroBigRat) == 0 {
+		br.SharderWeight.Rat.Set(zbig.ZeroBigRat)
+		br.MinerWeight.Set(zbig.ZeroBigRat)
+		br.BlobberWeight.Set(zbig.ZeroBigRat)
 	} else {
-		br.SharderWeight = sharderRatio / total
-		br.MinerWeight = minerRatio / total
-		br.BlobberWeight = bRatio / total
+		br.SharderWeight.Quo(sharderRatio.Rat, total)
+		br.MinerWeight.Quo(minerRatio.Rat, total)
+		br.BlobberWeight.Quo(bRatio.Rat, total)
 	}
-
-	totalWeight := br.SharderWeight + br.MinerWeight + br.BlobberWeight
-	switch totalWeight {
-	case 0:
-	case 1:
+	var totalWeight *big.Rat
+	_ = totalWeight.Add(br.SharderWeight.Rat, totalWeight.Add(br.MinerWeight.Rat, br.BlobberWeight.Rat))
+	if totalWeight.Cmp(zbig.ZeroBigRat) == 0 || totalWeight.Cmp(zbig.OneBigRat) == 0 {
 		return nil
-	default:
+	} else {
 		return fmt.Errorf("total weight is not 1: %v", totalWeight)
 	}
-	return nil
 }
 
 func newConfig() *Config {
@@ -132,10 +133,10 @@ type Config struct {
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
 	// goes to validators. Even if a blobber doesn't pass a challenge validators
 	// receive this reward.
-	ValidatorReward float64 `json:"validator_reward"`
+	ValidatorReward zbig.BigRat `json:"validator_reward" msg:"validator_reward,extension"`
 	// BlobberSlash represents % (value in [0; 1] range) of blobbers' stake
 	// tokens penalized on challenge not passed.
-	BlobberSlash float64 `json:"blobber_slash"`
+	BlobberSlash zbig.BigRat `json:"blobber_slash" msg:"blobber_slash,extension"`
 
 	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
 	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation"`
@@ -149,7 +150,7 @@ type Config struct {
 	MinWritePrice currency.Coin `json:"min_write_price"`
 
 	// allocation cancellation
-	CancellationCharge float64 `json:"cancellation_charge"`
+	CancellationCharge zbig.BigRat `json:"cancellation_charge" msg:"cancellation_charge,extension"`
 
 	// FailedChallengesToCancel is number of failed challenges of an allocation
 	// to be able to cancel an allocation.
@@ -176,7 +177,7 @@ type Config struct {
 	// challenges.
 	ValidatorsPerChallenge int `json:"validators_per_challenge"`
 	// ChallengeGenerationRate is number of challenges generated for a MB/min.
-	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
+	ChallengeGenerationRate zbig.BigRat `json:"challenge_rate_per_mb_min" msg:"challenge_rate_per_mb_min,extension"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake"`
@@ -187,7 +188,7 @@ type Config struct {
 	MaxDelegates int `json:"max_delegates"`
 
 	// MaxCharge that blobber gets from rewards to its delegate_wallet.
-	MaxCharge float64 `json:"max_charge"`
+	MaxCharge zbig.BigRat `json:"max_charge" msg:"max_charge,extension"`
 
 	BlockReward *blockReward `json:"block_reward"`
 
@@ -199,15 +200,15 @@ func (conf *Config) validate() (err error) {
 	if conf.TimeUnit <= 1*time.Second {
 		return fmt.Errorf("time_unit less than 1s: %v", conf.TimeUnit)
 	}
-	if conf.ValidatorReward < 0.0 || 1.0 < conf.ValidatorReward {
+	if conf.ValidatorReward.Cmp(zbig.ZeroBigRat) == -1 || 1 == conf.ValidatorReward.Cmp(zbig.OneBigRat) {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
 			conf.ValidatorReward)
 	}
-	if conf.BlobberSlash < 0.0 || 1.0 < conf.BlobberSlash {
+	if conf.BlobberSlash.Cmp(zbig.ZeroBigRat) == -1 || 1 == conf.BlobberSlash.Cmp(zbig.OneBigRat) {
 		return fmt.Errorf("blobber_slash not in [0; 1] range: %v",
 			conf.BlobberSlash)
 	}
-	if conf.CancellationCharge < 0.0 || 1.0 < conf.CancellationCharge {
+	if conf.CancellationCharge.Cmp(zbig.ZeroBigRat) == -1 || 1 == conf.CancellationCharge.Cmp(zbig.OneBigRat) {
 		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
 			conf.CancellationCharge)
 	}
@@ -268,7 +269,8 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
 			conf.FreeAllocationSettings.WritePriceRange)
 	}
-	if conf.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < conf.FreeAllocationSettings.ReadPoolFraction {
+	if conf.FreeAllocationSettings.ReadPoolFraction.Cmp(zbig.ZeroBigRat) == -1 ||
+		1 == conf.FreeAllocationSettings.ReadPoolFraction.Cmp(zbig.OneBigRat) {
 		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
 			conf.FreeAllocationSettings.ReadPoolFraction)
 	}
@@ -289,7 +291,7 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("invalid validators_per_challenge <= 0: %v",
 			conf.ValidatorsPerChallenge)
 	}
-	if conf.ChallengeGenerationRate < 0 {
+	if conf.ChallengeGenerationRate.Cmp(zbig.ZeroBigRat) == -1 {
 		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
 			conf.ChallengeGenerationRate)
 	}
@@ -301,23 +303,23 @@ func (conf *Config) validate() (err error) {
 	if conf.MaxDelegates < 1 {
 		return fmt.Errorf("max_delegates is too small %v", conf.MaxDelegates)
 	}
-	if conf.MaxCharge < 0 {
+	if conf.MaxCharge.Cmp(zbig.ZeroBigRat) == -1 {
 		return fmt.Errorf("negative max_charge: %v", conf.MaxCharge)
 	}
-	if conf.MaxCharge > 1.0 {
+	if conf.MaxCharge.Cmp(zbig.OneBigRat) == 1 {
 		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
 			conf.MaxCharge)
 	}
 
-	if conf.BlockReward.SharderWeight < 0 {
+	if conf.BlockReward.SharderWeight.Cmp(zbig.ZeroBigRat) == -1 {
 		return fmt.Errorf("negative block_reward.sharder_weight: %v",
 			conf.BlockReward.SharderWeight)
 	}
-	if conf.BlockReward.MinerWeight < 0 {
+	if conf.BlockReward.MinerWeight.Cmp(zbig.ZeroBigRat) == -1 {
 		return fmt.Errorf("negative block_reward.miner_weight: %v",
 			conf.BlockReward.MinerWeight)
 	}
-	if conf.BlockReward.BlobberWeight < 0 {
+	if conf.BlockReward.BlobberWeight.Cmp(zbig.ZeroBigRat) == -1 {
 		return fmt.Errorf("negative block_reward.blobber_capacity_weight: %v",
 			conf.BlockReward.BlobberWeight)
 	}
@@ -325,22 +327,22 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("owner_id does not set or empty")
 	}
 
-	if conf.BlockReward.Gamma.A <= 0 {
+	if conf.BlockReward.Gamma.A.Cmp(zbig.ZeroBigRat) <= 0 {
 		return fmt.Errorf("invalid block_reward.gamma.a <= 0: %v", conf.BlockReward.Gamma.A)
 	}
-	if conf.BlockReward.Gamma.B <= 0 {
+	if conf.BlockReward.Gamma.B.Cmp(zbig.ZeroBigRat) <= 0 {
 		return fmt.Errorf("invalid block_reward.gamma.b <= 0: %v", conf.BlockReward.Gamma.B)
 	}
-	if conf.BlockReward.Gamma.Alpha <= 0 {
+	if conf.BlockReward.Gamma.Alpha.Cmp(zbig.ZeroBigRat) <= 0 {
 		return fmt.Errorf("invalid block_reward.gamma.alpha <= 0: %v", conf.BlockReward.Gamma.Alpha)
 	}
-	if conf.BlockReward.Zeta.Mu <= 0 {
+	if conf.BlockReward.Zeta.Mu.Cmp(zbig.ZeroBigRat) <= 0 {
 		return fmt.Errorf("invalid block_reward.zeta.mu <= 0: %v", conf.BlockReward.Zeta.Mu)
 	}
-	if conf.BlockReward.Zeta.I <= 0 {
+	if conf.BlockReward.Zeta.I.Cmp(zbig.ZeroBigRat) <= 0 {
 		return fmt.Errorf("invalid block_reward.zeta.i <= 0: %v", conf.BlockReward.Zeta.I)
 	}
-	if conf.BlockReward.Zeta.K <= 0 {
+	if conf.BlockReward.Zeta.K.Cmp(zbig.ZeroBigRat) <= 0 {
 		return fmt.Errorf("invalid block_reward.zeta.k <=0: %v", conf.BlockReward.Zeta.K)
 	}
 
@@ -403,9 +405,9 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
 	conf.MinOfferDuration = scc.GetDuration(pfx + "min_offer_duration")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
-	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
-	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
-	conf.CancellationCharge = scc.GetFloat64(pfx + "cancellation_charge")
+	conf.ValidatorReward = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "validator_reward"))
+	conf.BlobberSlash = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "blobber_slash"))
+	conf.CancellationCharge = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "cancellation_charge"))
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
 	if err != nil {
@@ -484,7 +486,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 		Min: writePriceRangeMin,
 		Max: writePriceRangeMax,
 	}
-	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
+	conf.FreeAllocationSettings.ReadPoolFraction = zbig.BigRatFromFloat64(scc.GetFloat64(fas + "read_pool_fraction"))
 
 	// allocation cancellation
 	conf.FailedChallengesToCancel = scc.GetInt(
@@ -497,11 +499,11 @@ func getConfiguredConfig() (conf *Config, err error) {
 		pfx + "max_challenges_per_generation")
 	conf.ValidatorsPerChallenge = scc.GetInt(
 		pfx + "validators_per_challenge")
-	conf.ChallengeGenerationRate = scc.GetFloat64(
-		pfx + "challenge_rate_per_mb_min")
+	conf.ChallengeGenerationRate = zbig.BigRatFromFloat64(scc.GetFloat64(
+		pfx + "challenge_rate_per_mb_min"))
 
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
-	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
+	conf.MaxCharge = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "max_charge"))
 
 	conf.BlockReward = new(blockReward)
 	conf.BlockReward.BlockReward, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.block_reward"))
@@ -509,26 +511,26 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.BlockReward.BlockRewardChangePeriod = scc.GetInt64(pfx + "block_reward.block_reward_change_period")
-	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
+	conf.BlockReward.BlockRewardChangeRatio = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio"))
 	conf.BlockReward.QualifyingStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.qualifying_stake"))
 	if err != nil {
 		return nil, err
 	}
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	err = conf.BlockReward.setWeightsFromRatio(
-		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
-		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
-		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
+		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.sharder_ratio")),
+		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.miner_ratio")),
+		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.blobber_ratio")),
 	)
 	if err != nil {
 		return nil, err
 	}
-	conf.BlockReward.Gamma.Alpha = scc.GetFloat64(pfx + "block_reward.gamma.alpha")
-	conf.BlockReward.Gamma.A = scc.GetFloat64(pfx + "block_reward.gamma.a")
-	conf.BlockReward.Gamma.B = scc.GetFloat64(pfx + "block_reward.gamma.b")
-	conf.BlockReward.Zeta.I = scc.GetFloat64(pfx + "block_reward.zeta.i")
-	conf.BlockReward.Zeta.K = scc.GetFloat64(pfx + "block_reward.zeta.k")
-	conf.BlockReward.Zeta.Mu = scc.GetFloat64(pfx + "block_reward.zeta.mu")
+	conf.BlockReward.Gamma.Alpha = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "block_reward.gamma.alpha"))
+	conf.BlockReward.Gamma.A = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "block_reward.gamma.a"))
+	conf.BlockReward.Gamma.B = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "block_reward.gamma.b"))
+	conf.BlockReward.Zeta.I = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "block_reward.zeta.i"))
+	conf.BlockReward.Zeta.K = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "block_reward.zeta.k"))
+	conf.BlockReward.Zeta.Mu = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "block_reward.zeta.mu"))
 
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
 	conf.Cost = scc.GetStringMapInt(pfx + "cost")

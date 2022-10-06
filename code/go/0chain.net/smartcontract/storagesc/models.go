@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
+	"math/big"
 	"strings"
 	"time"
+
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
@@ -254,7 +256,7 @@ type Terms struct {
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
-	MinLockDemand float64 `json:"min_lock_demand"`
+	MinLockDemand zbig.BigRat `json:"min_lock_demand" msg:"min_lock_demand,extension"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }
@@ -262,15 +264,15 @@ type Terms struct {
 // The minLockDemand returns min lock demand value for this Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rdtu float64) (currency.Coin, error) {
-
-	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
-	return currency.Float64ToCoin(mldf * rdtu)                  //
+func (t *Terms) minLockDemand(gbSize, rdtu *big.Rat) (currency.Coin, error) {
+	var mldf *big.Rat
+	mldf = mldf.Mul(t.WritePrice.BigRat(), mldf.Mul(gbSize, t.MinLockDemand.Rat))
+	return currency.BigRatToCoin(mldf.Mul(mldf, rdtu))
 }
 
 // validate a received terms
 func (t *Terms) validate(conf *Config) (err error) {
-	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
+	if t.MinLockDemand.Cmp(zbig.ZeroBigRat) < 0.0 || t.MinLockDemand.Cmp(zbig.OneBigRat) > 0.0 {
 		return errors.New("invalid min_lock_demand")
 	}
 	if t.MaxOfferDuration < conf.MinOfferDuration {
@@ -290,26 +292,25 @@ func (t *Terms) validate(conf *Config) (err error) {
 	return // nil
 }
 
-const (
-	MaxLatitude  = 90
-	MinLatitude  = -90
-	MaxLongitude = 180
-	MinLongitude = -180
+var (
+	MaxLatitude  = big.NewRat(90, 1)
+	MinLatitude  = big.NewRat(-90, 1)
+	MaxLongitude = big.NewRat(180, 1)
+	MinLongitude = big.NewRat(-180, 1)
 )
 
 // Move to the core, in case of multi-entity use of geo data
 type StorageNodeGeolocation struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	// reserved / Accuracy float64 `mapstructure:"accuracy"`
+	Latitude  zbig.BigRat `json:"latitude" msg:"latitude,extension"`
+	Longitude zbig.BigRat `json:"longitude" msg:"longitude,extension"`
 }
 
 func (sng StorageNodeGeolocation) validate() error {
-	if sng.Latitude < MinLatitude || MaxLatitude < sng.Latitude {
+	if sng.Latitude.Cmp(MinLatitude) < 0 || MaxLatitude.Cmp(sng.Latitude.Rat) < 0 {
 		return common.NewErrorf("out_of_range_geolocation",
 			"latitude %f should be in range [-90, 90]", sng.Latitude)
 	}
-	if sng.Longitude < MinLongitude || MaxLongitude < sng.Longitude {
+	if sng.Longitude.Cmp(MinLongitude) < 0 || MaxLongitude.Cmp(sng.Latitude.Rat) < 0 {
 		return common.NewErrorf("out_of_range_geolocation",
 			"latitude %f should be in range [-180, 180]", sng.Longitude)
 	}
@@ -341,8 +342,8 @@ type StorageNode struct {
 	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
-	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
+	DataReadLastRewardRound zbig.BigRat            `json:"data_read_last_reward_round" msg:"data_read_last_reward_round,extension"` // in GB
+	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"`                                             // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
 	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
@@ -572,32 +573,39 @@ func newBlobberAllocation(
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
-func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin, err error) {
-
-	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+func (d *BlobberAllocation) upload(size int64, rdtu *big.Rat) (currency.Coin, error) {
+	var rMove *big.Rat
+	rMove = rMove.Mul(sizeInGB(size), rMove.Mul(d.Terms.WritePrice.BigRat(), rdtu))
+	move, err := currency.BigRatToCoin(rMove)
+	if err != nil {
+		return 0, err
+	}
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
-		return
+		return 0, err
 	}
 	d.ChallengePoolIntegralValue = challengePoolIntegralValue
-
-	return
+	return move, nil
 }
 
-func (d *BlobberAllocation) Offer() currency.Coin {
-	return currency.Coin(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
+func (d *BlobberAllocation) Offer() (currency.Coin, error) {
+	var offer *big.Rat
+	offer = offer.Mul(sizeInGB(d.Size), d.Terms.WritePrice.BigRat())
+	return currency.BigRatToCoin(offer)
 }
 
 // The upload used after commitBlobberConnection (size < 0) to calculate
 // internal integral value. The size argument expected to be positive (not
 // negative).
-func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin) {
-
-	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+func (d *BlobberAllocation) delete(size int64, rdtu *big.Rat) (currency.Coin, error) {
+	var rMove *big.Rat
+	rMove = rMove.Mul(sizeInGB(size), rMove.Mul(d.Terms.WritePrice.BigRat(), rdtu))
+	move, err := currency.BigRatToCoin(rMove)
+	if err != nil {
+		return 0, err
+	}
 	d.ChallengePoolIntegralValue -= move
-	return
+	return move, nil
 }
 
 // The upload used after commitBlobberConnection (size < 0) to calculate
@@ -605,10 +613,17 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 // challenge (doesn't matter rewards or penalty). The RDTU should be based on
 // previous challenge time. And the DTU should be based on previous - current
 // challenge time.
-func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin) {
-	move = currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
+func (d *BlobberAllocation) challenge(dtu, rdtu *big.Rat) (currency.Coin, error) {
+	if rdtu.Cmp(big.NewRat(0, 1)) == 0 {
+		return 0, fmt.Errorf("callucatlion internalintegral value; divison by zero")
+	}
+	var rMove *big.Rat
+	move, err := currency.BigRatToCoin(rMove.Mul(d.ChallengePoolIntegralValue.BigRat(), rMove.Quo(dtu, rdtu)))
+	if err != nil {
+		return 0, err
+	}
 	d.ChallengePoolIntegralValue -= move
-	return
+	return move, nil
 }
 
 // PriceRange represents a price range allowed by user to filter blobbers.
@@ -864,7 +879,7 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	var cost currency.Coin
 	for _, ba := range sa.BlobberAllocs {
-		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+		c, err := currency.MultBigRat(ba.Terms.WritePrice, sizeInGB(ba.Size))
 		if err != nil {
 			return 0, err
 		}
@@ -873,15 +888,15 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
-func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (currency.Coin, error) {
+func (sa *StorageAllocation) cancellationCharge(cancellationFraction *big.Rat) (currency.Coin, error) {
 	cost, err := sa.cost()
 	if err != nil {
 		return 0, err
 	}
-	return currency.MultFloat64(cost, cancellationFraction)
+	return currency.MultBigRat(cost, cancellationFraction)
 }
 
-func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
+func (sa *StorageAllocation) checkFunding(cancellationFraction *big.Rat) error {
 	cancellationCharge, err := sa.cancellationCharge(cancellationFraction)
 	if err != nil {
 		return err
@@ -903,7 +918,14 @@ func (sa *StorageAllocation) bSize() int64 {
 }
 
 func bSize(size int64, dataShards int) int64 {
-	return int64(math.Ceil(float64(size) / float64(dataShards)))
+	var iSize, bDataShards, div, remainder *big.Int
+	iSize = big.NewInt(size)
+	bDataShards = big.NewInt(int64(dataShards))
+	div, remainder = div.QuoRem(iSize, bDataShards, remainder)
+	if remainder.Cmp(big.NewInt(0)) > 0 {
+		div = div.Add(div, big.NewInt(1))
+	}
+	return remainder.Int64()
 }
 
 func (sa *StorageAllocation) removeBlobber(
@@ -1179,13 +1201,12 @@ func (sa *StorageAllocation) Until() common.Timestamp {
 // The durationInTimeUnits returns given duration (represented as
 // common.Timestamp) as duration in time units (float point value) for
 // this allocation (time units for the moment of the allocation creation).
-func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) float64 {
-	return float64(dur.Duration()) / float64(timeUnit)
+func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) *big.Rat {
+	return big.NewRat(int64(dur.Duration()), int64(timeUnit))
 }
 
 // The restDurationInTimeUnits return rest duration of the allocation in time
-// units as a float64 value.
-func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) float64 {
+func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) *big.Rat {
 	return sa.durationInTimeUnits(sa.Expiration-now, timeUnit)
 }
 
@@ -1229,7 +1250,7 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // we are using the same terms. And for this method, the oterms argument is
 // nil for this case (meaning, terms hasn't changed).
 func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, timeUnit time.Duration,
-	oterms []Terms) (values []currency.Coin) {
+	oterms []Terms) ([]currency.Coin, error) {
 
 	// odr -- old duration remaining
 	// ndr -- new duration remaining
@@ -1240,7 +1261,7 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 		ndrtu = sa.durationInTimeUnits(ndr, timeUnit)
 	)
 
-	values = make([]currency.Coin, 0, len(sa.BlobberAllocs))
+	values := make([]currency.Coin, 0, len(sa.BlobberAllocs))
 
 	for i, d := range sa.BlobberAllocs {
 		if d.Stats == nil || d.Stats.UsedSize == 0 {
@@ -1248,28 +1269,31 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 			continue
 		}
 		var (
-			size = sizeInGB(d.Stats.UsedSize)  // in GB
-			nwp  = float64(d.Terms.WritePrice) // new write price
-			owp  float64                       // original write price
+			size = sizeInGB(d.Stats.UsedSize) // in GB
+			nwp  = d.Terms.WritePrice         // new write price
+			owp  *big.Rat                     // original write price
 
-			a, b, diff float64 // original value, new value, value difference
+			originalValue, newValue, diff *big.Rat // original value, new value, value difference
 		)
 
 		if oterms != nil {
-			owp = float64(oterms[i].WritePrice) // original write price
+			owp = oterms[i].WritePrice.BigRat() // original write price
 		} else {
-			owp = float64(d.Terms.WritePrice) // terms weren't changed
+			owp = d.Terms.WritePrice.BigRat() // terms weren't changed
 		}
 
-		a = owp * size * odrtu // original value (by original terms)
-		b = nwp * size * ndrtu // new value (by new terms)
+		originalValue = originalValue.Mul(owp, originalValue.Mul(size, odrtu))
+		newValue = newValue.Mul(nwp.BigRat(), newValue.Mul(size, ndrtu))
 
-		diff = b - a // value difference
+		coinDiff, err := currency.BigRatToCoin(diff.Sub(newValue, originalValue))
+		if err != nil {
+			return nil, err
+		}
 
-		values = append(values, currency.Coin(diff))
+		values = append(values, coinDiff)
 	}
 
-	return
+	return values, nil
 }
 
 func (sa *StorageAllocation) IsValidFinalizer(id string) bool {
@@ -1499,7 +1523,7 @@ type ReadMarker struct {
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
-	ReadSize        float64          `json:"read_size"`
+	ReadSize        zbig.BigRat      `json:"read_size" msg:"read_size,extension"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances cstate.StateContextI) bool {

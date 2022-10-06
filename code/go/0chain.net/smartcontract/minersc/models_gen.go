@@ -368,7 +368,11 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "MaxCharge"
 	o = append(o, 0xa9, 0x4d, 0x61, 0x78, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
-	o = msgp.AppendFloat64(o, z.MaxCharge)
+	o, err = z.MaxCharge.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MaxCharge")
+		return
+	}
 	// string "Epoch"
 	o = append(o, 0xa5, 0x45, 0x70, 0x6f, 0x63, 0x68)
 	o = msgp.AppendInt64(o, z.Epoch)
@@ -534,7 +538,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MaxCharge":
-			z.MaxCharge, bts, err = msgp.ReadFloat64Bytes(bts)
+			bts, err = z.MaxCharge.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxCharge")
 				return
@@ -642,7 +646,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *GlobalNode) Msgsize() (s int) {
-	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 15
+	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + z.MaxCharge.Msgsize() + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 15
 	if z.PrevMagicBlock == nil {
 		s += msgp.NilSize
 	} else {

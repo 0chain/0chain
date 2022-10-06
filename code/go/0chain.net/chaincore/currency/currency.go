@@ -5,8 +5,6 @@ import (
 	"math"
 	"math/big"
 
-	"0chain.net/smartcontract/zbig"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -103,6 +101,11 @@ func (c Coin) Int64() (int64, error) {
 	return b, nil
 }
 
+func (c Coin) BigRat() *big.Rat {
+	var ratCoin big.Rat
+	return ratCoin.SetUint64(uint64(c))
+}
+
 // Float64 converts c uint64 Coin to a float64, returning an error if the uint64 value overflows float64
 func (c Coin) Float64() (float64, error) {
 	b := float64(c)
@@ -151,15 +154,10 @@ func MultFloat64(c Coin, a float64) (Coin, error) {
 	return Float64ToCoin(b)
 }
 
-func MultBigRat(c Coin, r zbig.BigRat) (Coin, error) {
-	iCoin, err := c.Int64()
-	if err != nil {
-		return 0, err
-	}
-	ratCoin := big.NewRat(iCoin, 1)
-	ratMultiple := ratCoin.Mul(ratCoin, r.Rat)
-	floatMultiple, _ := ratMultiple.Float64()
-	return Float64ToCoin(floatMultiple)
+func MultBigRat(c Coin, r *big.Rat) (Coin, error) {
+	var ratCoin *big.Rat
+	ratCoin = ratCoin.Mul(c.BigRat(), r)
+	return BigRatToCoin(ratCoin)
 }
 
 // MinusCoin subtracts b from c, returning an error if the values overflow
@@ -196,6 +194,15 @@ func Int64ToCoin(a int64) (Coin, error) {
 		return 0, ErrInt64UnderflowsUint64
 	}
 	return Coin(a), nil
+}
+
+func BigRatToCoin(rat *big.Rat) (Coin, error) {
+	var div big.Int
+	div.Div(rat.Num(), rat.Denom())
+	if !div.IsUint64() {
+		return 0, ErrTooLarge
+	}
+	return Coin(div.Uint64()), nil
 }
 
 // Float64ToCoin converts an float64 to a uint64 Coin, returning an error if the float64 value underflows uint64

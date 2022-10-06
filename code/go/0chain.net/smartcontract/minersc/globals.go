@@ -241,7 +241,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[BlockValidationBatchSize]:          {smartcontract.Int, true},
 	GlobalSettingName[BlockReuseTransactions]:            {smartcontract.Boolean, true},
 	GlobalSettingName[BlockMinGenerators]:                {smartcontract.Int, true},
-	GlobalSettingName[BlockGeneratorsPercent]:            {smartcontract.Float64, true},
+	GlobalSettingName[BlockGeneratorsPercent]:            {smartcontract.BigRational, true},
 	GlobalSettingName[RoundRange]:                        {smartcontract.Int64, true},
 	GlobalSettingName[RoundTimeoutsSofttoMin]:            {smartcontract.Int, true},
 	GlobalSettingName[RoundTimeoutsSofttoMult]:           {smartcontract.Int, true},
@@ -452,7 +452,7 @@ func (gl *GlobalSettings) GetFloat64(field GlobalSetting) (float64, error) {
 	if !found {
 		return viper.GetFloat64(key), nil
 	}
-	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Float64)
+	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.BigRational)
 	if err != nil {
 		return viper.GetFloat64(key), nil
 	}

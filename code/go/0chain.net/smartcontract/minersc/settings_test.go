@@ -84,7 +84,7 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Float64:
+					case smartcontract.BigRational:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
 							require.NoError(t, err)

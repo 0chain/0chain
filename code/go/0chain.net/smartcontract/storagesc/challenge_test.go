@@ -438,7 +438,7 @@ func testBlobberPenalty(
 		wpBalance, challengePoolIntegralValue,
 		challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(txn, allocation, previous, challenge, details, validators, ctx)
+	err = ssc.blobberPenalty(allocation, previous, challenge, details, validators, ctx)
 	if err != nil {
 		return err
 	}
@@ -493,7 +493,7 @@ func testBlobberReward(
 		wpBalance, challengePoolIntegralValue,
 		challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(txn, allocation, previous, challenge, details, validators, partial, ctx)
+	err = ssc.blobberReward(allocation, previous, challenge, details, validators, partial, ctx)
 	if err != nil {
 		return err
 	}

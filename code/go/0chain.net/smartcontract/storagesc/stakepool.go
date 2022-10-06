@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
+
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
@@ -36,10 +39,10 @@ func validateStakePoolSettings(
 	if err != nil {
 		return err
 	}
-	if sps.ServiceChargeRatio < 0.0 {
+	if sps.ServiceChargeRatio.Cmp(zbig.ZeroBigRat) < 0.0 {
 		return errors.New("negative service charge")
 	}
-	if sps.ServiceChargeRatio > conf.MaxCharge {
+	if sps.ServiceChargeRatio.Cmp(conf.MaxCharge.Rat) > 0 {
 		return fmt.Errorf("service_charge (%f) is greater than"+
 			" max allowed by SC (%f)", sps.ServiceChargeRatio, conf.MaxCharge)
 	}
@@ -278,10 +281,11 @@ func (sp *stakePool) slash(
 	// offer ratio of entire stake; we are slashing only part of the offer
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
-	var ratio = float64(slash) / float64(staked)
+	var ratio *big.Rat
+	ratio = ratio.Quo(slash.BigRat(), staked.BigRat())
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
 	for id, dp := range sp.Pools {
-		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
+		dpSlash, err := currency.MultBigRat(dp.Balance, ratio)
 		if err != nil {
 			return 0, err
 		}

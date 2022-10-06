@@ -61,7 +61,7 @@ func AddMockNodes(
 		newNode.ID = GetMockNodeId(i, nodeType)
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 		newNode.PublicKey = "mockPublicKey"
-		newNode.Settings.ServiceChargeRatio = *zbig.NewBigRat(viper.GetFloat64(benchmark.MinerMaxCharge))
+		newNode.Settings.ServiceChargeRatio = *zbig.BigRatFromFloat64(viper.GetFloat64(benchmark.MinerMaxCharge))
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
 		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)

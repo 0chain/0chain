@@ -21,12 +21,26 @@ type BigRat struct {
 	*big.Rat `msg:"-"`
 }
 
-func NewBigRat(f float64) *BigRat {
+func NewBigRat(r big.Rat) *BigRat {
+	return &BigRat{&r}
+}
+
+func BigRatFromFloat64(f float64) BigRat {
 	rat := new(big.Rat)
-	return &BigRat{
+	return BigRat{
 		Rat: rat.SetFloat64(f),
 	}
 }
+
+func BigRatFromInt64(i int64) BigRat {
+	rat := new(big.Rat)
+	return BigRat{
+		Rat: rat.SetInt64(i),
+	}
+}
+
+var ZeroBigRat = big.NewRat(0, 1)
+var OneBigRat = big.NewRat(1, 1)
 
 func (br *BigRat) Float64() float64 {
 	if br.Rat == nil {

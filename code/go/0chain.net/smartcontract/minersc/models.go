@@ -279,7 +279,7 @@ func (gn *GlobalNode) readConfig() (err error) {
 	if err != nil {
 		return
 	}
-	gn.MaxCharge = config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge])
+	gn.MaxCharge = *zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge]))
 	gn.Epoch = config.SmartContractConfig.GetInt64(pfx + SettingName[Epoch])
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
 	gn.MaxMint, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxMint]))

@@ -3,9 +3,12 @@ package smartcontract
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
+
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/currency"
 )
@@ -17,13 +20,13 @@ const (
 	Int64
 	Int32
 	Duration
-	Float64
 	Boolean
 	String
 	CurrencyCoin
 	Key
 	Cost
 	Strings
+	BigRational
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -33,13 +36,13 @@ var ConfigTypeName = []string{
 	"int64",
 	"int32",
 	"time.duration",
-	"float64",
 	"bool",
 	"string",
 	"currency.Coin",
 	"datastore.Key",
 	"Cost",
 	"[]string",
+	"BigRat",
 }
 
 // swagger:model StringMap
@@ -85,8 +88,6 @@ func StringToInterface(input string, iType ConfigType) (interface{}, error) {
 		return strconv.ParseInt(input, 10, 64)
 	case Duration:
 		return time.ParseDuration(input)
-	case Float64:
-		return strconv.ParseFloat(input, 64)
 	case Boolean:
 		return strconv.ParseBool(input)
 	case String:
@@ -99,6 +100,13 @@ func StringToInterface(input string, iType ConfigType) (interface{}, error) {
 		return currency.Int64ToCoin(value)
 	case Strings:
 		return strings.Split(input, ","), nil
+	case BigRational:
+		r := new(big.Rat)
+		_, ok := r.SetString(input)
+		if !ok {
+			return nil, fmt.Errorf("failed to convert %s to big.rat", input)
+		}
+		return zbig.BigRat{r}, nil
 	default:
 		panic(fmt.Sprintf("StringToInterface input %s unsupported type %v", input, iType))
 	}

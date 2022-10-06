@@ -243,7 +243,7 @@ func initSettings() {
 		StakePoolMinLockPeriod.String():           {StakePoolMinLockPeriod, smartcontract.Duration},
 		MaxTotalFreeAllocation.String():           {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		MaxIndividualFreeAllocation.String():      {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
-		CancellationCharge.String():               {CancellationCharge, smartcontract.Float64},
+		CancellationCharge.String():               {CancellationCharge, smartcontract.BigRational},
 		FreeAllocationDataShards.String():         {FreeAllocationDataShards, smartcontract.Int},
 		FreeAllocationParityShards.String():       {FreeAllocationParityShards, smartcontract.Int},
 		FreeAllocationSize.String():               {FreeAllocationSize, smartcontract.Int64},
@@ -252,9 +252,9 @@ func initSettings() {
 		FreeAllocationReadPriceRangeMax.String():  {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
 		FreeAllocationWritePriceRangeMin.String(): {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
 		FreeAllocationWritePriceRangeMax.String(): {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
-		FreeAllocationReadPoolFraction.String():   {FreeAllocationReadPoolFraction, smartcontract.Float64},
-		ValidatorReward.String():                  {ValidatorReward, smartcontract.Float64},
-		BlobberSlash.String():                     {BlobberSlash, smartcontract.Float64},
+		FreeAllocationReadPoolFraction.String():   {FreeAllocationReadPoolFraction, smartcontract.BigRational},
+		ValidatorReward.String():                  {ValidatorReward, smartcontract.BigRational},
+		BlobberSlash.String():                     {BlobberSlash, smartcontract.BigRational},
 		MaxBlobbersPerAllocation.String():         {MaxBlobbersPerAllocation, smartcontract.Int},
 		MaxReadPrice.String():                     {MaxReadPrice, smartcontract.CurrencyCoin},
 		MaxWritePrice.String():                    {MaxWritePrice, smartcontract.CurrencyCoin},
@@ -262,21 +262,21 @@ func initSettings() {
 		FailedChallengesToCancel.String():         {FailedChallengesToCancel, smartcontract.Int},
 		FailedChallengesToRevokeMinLock.String():  {FailedChallengesToRevokeMinLock, smartcontract.Int},
 		ChallengeEnabled.String():                 {ChallengeEnabled, smartcontract.Boolean},
-		ChallengeGenerationRate.String():          {ChallengeGenerationRate, smartcontract.Float64},
+		ChallengeGenerationRate.String():          {ChallengeGenerationRate, smartcontract.BigRational},
 		MaxChallengesPerGeneration.String():       {MaxChallengesPerGeneration, smartcontract.Int},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, smartcontract.Int},
 		MaxDelegates.String():                     {MaxDelegates, smartcontract.Int},
 		BlockRewardBlockReward.String():           {BlockRewardBlockReward, smartcontract.CurrencyCoin},
 		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
-		BlockRewardSharderWeight.String():         {BlockRewardSharderWeight, smartcontract.Float64},
-		BlockRewardMinerWeight.String():           {BlockRewardMinerWeight, smartcontract.Float64},
-		BlockRewardBlobberWeight.String():         {BlockRewardBlobberWeight, smartcontract.Float64},
-		BlockRewardGammaAlpha.String():            {BlockRewardGammaAlpha, smartcontract.Float64},
-		BlockRewardGammaA.String():                {BlockRewardGammaA, smartcontract.Float64},
-		BlockRewardGammaB.String():                {BlockRewardGammaB, smartcontract.Float64},
-		BlockRewardZetaI.String():                 {BlockRewardZetaI, smartcontract.Float64},
-		BlockRewardZetaK.String():                 {BlockRewardZetaK, smartcontract.Float64},
-		BlockRewardZetaMu.String():                {BlockRewardZetaMu, smartcontract.Float64},
+		BlockRewardSharderWeight.String():         {BlockRewardSharderWeight, smartcontract.BigRational},
+		BlockRewardMinerWeight.String():           {BlockRewardMinerWeight, smartcontract.BigRational},
+		BlockRewardBlobberWeight.String():         {BlockRewardBlobberWeight, smartcontract.BigRational},
+		BlockRewardGammaAlpha.String():            {BlockRewardGammaAlpha, smartcontract.BigRational},
+		BlockRewardGammaA.String():                {BlockRewardGammaA, smartcontract.BigRational},
+		BlockRewardGammaB.String():                {BlockRewardGammaB, smartcontract.BigRational},
+		BlockRewardZetaI.String():                 {BlockRewardZetaI, smartcontract.BigRational},
+		BlockRewardZetaK.String():                 {BlockRewardZetaK, smartcontract.BigRational},
+		BlockRewardZetaMu.String():                {BlockRewardZetaMu, smartcontract.BigRational},
 		OwnerId.String():                          {OwnerId, smartcontract.Key},
 		CostUpdateSettings.String():               {CostUpdateSettings, smartcontract.Cost},
 		CostReadRedeem.String():                   {CostReadRedeem, smartcontract.Cost},
@@ -602,7 +602,7 @@ func (conf *Config) set(key string, change string) error {
 		if err := conf.setInt64(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Float64:
+	case smartcontract.BigRational:
 		value, err := strconv.ParseFloat(change, 64)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)

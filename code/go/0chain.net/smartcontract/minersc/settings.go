@@ -133,19 +133,19 @@ func initSettings() {
 		MaxStake.String():                   {MaxStake, smartcontract.CurrencyCoin},
 		MaxN.String():                       {MaxN, smartcontract.Int},
 		MinN.String():                       {MinN, smartcontract.Int},
-		TPercent.String():                   {TPercent, smartcontract.Float64},
-		KPercent.String():                   {KPercent, smartcontract.Float64},
-		XPercent.String():                   {XPercent, smartcontract.Float64},
+		TPercent.String():                   {TPercent, smartcontract.BigRational},
+		KPercent.String():                   {KPercent, smartcontract.BigRational},
+		XPercent.String():                   {XPercent, smartcontract.BigRational},
 		MaxS.String():                       {MaxS, smartcontract.Int},
 		MinS.String():                       {MinS, smartcontract.Int},
 		MaxDelegates.String():               {MaxDelegates, smartcontract.Int},
 		RewardRoundFrequency.String():       {RewardRoundFrequency, smartcontract.Int64},
-		RewardRate.String():                 {RewardRate, smartcontract.Float64},
-		ShareRatio.String():                 {ShareRatio, smartcontract.Float64},
+		RewardRate.String():                 {RewardRate, smartcontract.BigRational},
+		ShareRatio.String():                 {ShareRatio, smartcontract.BigRational},
 		BlockReward.String():                {BlockReward, smartcontract.CurrencyCoin},
-		MaxCharge.String():                  {MaxCharge, smartcontract.Float64},
+		MaxCharge.String():                  {MaxCharge, smartcontract.BigRational},
 		Epoch.String():                      {Epoch, smartcontract.Int64},
-		RewardDeclineRate.String():          {RewardDeclineRate, smartcontract.Float64},
+		RewardDeclineRate.String():          {RewardDeclineRate, smartcontract.BigRational},
 		MaxMint.String():                    {MaxMint, smartcontract.CurrencyCoin},
 		OwnerId.String():                    {OwnerId, smartcontract.Key},
 		CooldownPeriod.String():             {CooldownPeriod, smartcontract.Int64},
@@ -318,7 +318,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 		if err := gn.setInt64(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Float64:
+	case smartcontract.BigRational:
 		value, err := strconv.ParseFloat(change, 64)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
