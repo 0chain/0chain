@@ -37,7 +37,7 @@ func (edb *EventDb) ReplicateBlobberAggregate(round int64, offset, limit int) ([
 	var snapshots []BlobberAggregate
 
 	queryBuilder := edb.Store.Get().
-		Model(&BlobberAggregate{}).Where("round = ?", round+1).Offset(offset).Limit(limit)
+		Model(&BlobberAggregate{}).Where("round > ?", round).Offset(offset).Limit(limit)
 
 	queryBuilder.Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "blobber_id"},
@@ -49,7 +49,17 @@ func (edb *EventDb) ReplicateBlobberAggregate(round int64, offset, limit int) ([
 		return nil, result.Error
 	}
 
-	return snapshots, nil
+	//we return only snapshots for one round, if different pages are returned we will cut snapshots from the next round
+	res := snapshots
+	if len(snapshots) > 0 {
+		r := snapshots[0].Round
+		for i, s := range snapshots {
+			if r != s.Round {
+				res = snapshots[:i]
+			}
+		}
+	}
+	return res, nil
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapshot) {
