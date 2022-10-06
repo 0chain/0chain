@@ -2,6 +2,7 @@ version: 1.0
 
 logging:
   level: "debug"
+  verbose: false
   console: true # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
@@ -18,6 +19,7 @@ development:
     min_txn_value: 100
   faucet:
     refill_amount: 1000000000000000
+  pprof: true
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"

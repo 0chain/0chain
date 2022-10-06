@@ -835,7 +835,7 @@ func getMockChallengeId(blobberId, allocationId string) string {
 func SetMockConfig(
 	balances cstate.StateContextI,
 ) (conf *Config) {
-	conf = new(Config)
+	conf = newConfig()
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
@@ -910,6 +910,41 @@ func SetMockConfig(
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		panic(err)
+	}
+	var mockCost = 100
+	conf.Cost = map[string]int{
+		"cost.update_settings":             mockCost,
+		"cost.read_redeem":                 mockCost,
+		"cost.commit_connection":           mockCost,
+		"cost.new_allocation_request":      mockCost,
+		"cost.update_allocation_request":   mockCost,
+		"cost.finalize_allocation":         mockCost,
+		"cost.cancel_allocation":           mockCost,
+		"cost.add_free_storage_assigner":   mockCost,
+		"cost.free_allocation_request":     mockCost,
+		"cost.free_update_allocation":      mockCost,
+		"cost.add_curator":                 mockCost,
+		"cost.remove_curator":              mockCost,
+		"cost.blobber_health_check":        mockCost,
+		"cost.update_blobber_settings":     mockCost,
+		"cost.pay_blobber_block_rewards":   mockCost,
+		"cost.curator_transfer_allocation": mockCost,
+		"cost.challenge_request":           mockCost,
+		"cost.challenge_response":          mockCost,
+		"cost.generate_challenges":         mockCost,
+		"cost.add_validator":               mockCost,
+		"cost.update_validator_settings":   mockCost,
+		"cost.add_blobber":                 mockCost,
+		"cost.new_read_pool":               mockCost,
+		"cost.read_pool_lock":              mockCost,
+		"cost.read_pool_unlock":            mockCost,
+		"cost.write_pool_lock":             mockCost,
+		"cost.write_pool_unlock":           mockCost,
+		"cost.stake_pool_lock":             mockCost,
+		"cost.stake_pool_unlock":           mockCost,
+		"cost.stake_pool_pay_interests":    mockCost,
+		"cost.commit_settings_changes":     mockCost,
+		"cost.collect_reward":              mockCost,
 	}
 	return
 }

@@ -29,7 +29,17 @@ const (
 //go:generate msgp -io=false -tests=false -v
 
 var ConfigTypeName = []string{
-	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "currency.Coin", "Cost", "datastore.Key", "[]string",
+	"int",
+	"int64",
+	"int32",
+	"time.duration",
+	"float64",
+	"bool",
+	"string",
+	"currency.Coin",
+	"datastore.Key",
+	"Cost",
+	"[]string",
 }
 
 // swagger:model StringMap

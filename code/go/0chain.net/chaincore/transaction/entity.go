@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"0chain.net/core/viper"
 	"context"
 	"errors"
 	"fmt"
@@ -413,10 +414,7 @@ DebugTxn - is this a transaction that needs being debugged
 - applicable only when running in test mode and the transaction_data string contains debug keyword somewhere in it
 */
 func (t *Transaction) DebugTxn() bool {
-	if !config.Development() {
-		return false
-	}
-	return strings.Contains(t.TransactionData, "debug")
+	return config.Development() && viper.GetBool("logging.verbose")
 }
 
 /*ComputeOutputHash - compute the hash from the transaction output */

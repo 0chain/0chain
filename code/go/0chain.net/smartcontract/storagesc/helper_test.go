@@ -336,7 +336,7 @@ func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
 func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf *Config) {
 
-	conf = new(Config)
+	conf = newConfig()
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
