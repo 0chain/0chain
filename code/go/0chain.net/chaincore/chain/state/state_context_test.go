@@ -163,7 +163,7 @@ func TestGetItemsByIDs(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := GetItemsByIDs[testItem](tc.args.ids, tc.args.getItem, tc.args.balances)
+			got, err := GetItemsByIDs(tc.args.ids, tc.args.getItem, tc.args.balances)
 			require.Equal(t, tc.err, err)
 			if err != nil {
 				return
@@ -172,4 +172,18 @@ func TestGetItemsByIDs(t *testing.T) {
 			require.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestWrongGetItemFunc(t *testing.T) {
+	// NOTE: uncomment the following code to see compiler error
+
+	//type testItem struct {
+	//	ID    string
+	//	Value string
+	//}
+	//ids := []string{"t1"}
+	//_, err := GetItemsByIDs(ids, func(id string, _ CommonStateContextI) (testItem, error) {
+	//	return testItem{}, nil
+	//}, nil)
+	//require.NoError(t, err)
 }
