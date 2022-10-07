@@ -1523,7 +1523,7 @@ type ReadMarker struct {
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
-	ReadSize        zbig.BigRat      `json:"read_size" msg:"read_size,extension"`
+	ReadSize        float64          `json:"read_size"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances cstate.StateContextI) bool {
