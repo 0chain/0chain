@@ -584,10 +584,12 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	tii := newTxnIterInfo(mc.BlockSize())
 	invalidTxns := tii.checkForInvalidTxns(b.Txns)
 
-	transaction.RemoveFromPool(ctx, txns)
+	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	transaction.RemoveFromPool(cleanPoolCtx, txns)
 
 	if len(invalidTxns) > 0 {
-		transaction.RemoveFromPool(ctx, invalidTxns)
+		transaction.RemoveFromPool(cleanPoolCtx, invalidTxns)
 	}
 }
 
