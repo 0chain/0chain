@@ -152,7 +152,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
-func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T) error {
+func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T) error { //nolint:unused
 	vs := map[string]interface{}{
 		"rewards":      gorm.Expr(fmt.Sprintf("%s.rewards + excluded.rewards", tableName)),
 		"total_reward": gorm.Expr(fmt.Sprintf("%s.total_reward + excluded.total_reward", tableName)),
@@ -196,7 +196,7 @@ func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
 	}).Create(&rewards).Error
 }
 
-func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error {
+func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: unused
 	if spu.Reward == 0 {
 		return nil
 	}
