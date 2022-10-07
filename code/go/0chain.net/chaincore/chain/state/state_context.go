@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/0chain/common/core/logging"
@@ -104,6 +105,7 @@ type StateContextI interface {
 	EmitEvent(event.EventType, event.EventTag, string, interface{}, ...Appender)
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
+	GetInvalidStateErrors() []error
 }
 
 // StateContext - a context object used to manipulate global state
@@ -122,6 +124,7 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
+	invalidStateErrors            []error
 }
 
 type GetNow func() common.Timestamp
@@ -334,6 +337,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	err := sc.state.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
+			sc.addInvalidStateError(err)
 			return nil, err
 		}
 		return s, err
@@ -377,20 +381,15 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	key_hash := encryption.Hash(key)
-	return sc.state.GetNodeValue(util.Path(key_hash), v)
+	return sc.getNodeValue(key, v)
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
-	key_hash := encryption.Hash(key)
-	byteKey, err := sc.state.Insert(util.Path(key_hash), node)
-	return datastore.Key(byteKey), err
+	return sc.setNodeValue(key, node)
 }
 
 func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
-	key_hash := encryption.Hash(key)
-	byteKey, err := sc.state.Delete(util.Path(key_hash))
-	return datastore.Key(byteKey), err
+	return sc.deleteNode(key)
 }
 
 // SetStateContext - set the state context
@@ -401,6 +400,60 @@ func (sc *StateContext) SetStateContext(s *state.State) error {
 
 func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 	return sc.getLatestFinalizedBlock()
+}
+
+func (sc *StateContext) getNodeValue(key datastore.Key, v util.MPTSerializable) error {
+	if err := sc.state.GetNodeValue(util.Path(encryption.Hash(key)), v); err != nil {
+		if err != util.ErrValueNotPresent {
+			sc.addInvalidStateError(err)
+		}
+		return err
+	}
+	return nil
+}
+
+func (sc *StateContext) setNodeValue(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
+	newKey, err := sc.state.Insert(util.Path(encryption.Hash(key)), node)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			sc.addInvalidStateError(err)
+		}
+		return "", err
+	}
+
+	return datastore.Key(newKey), nil
+}
+
+func (sc *StateContext) deleteNode(key datastore.Key) (datastore.Key, error) {
+	newKey, err := sc.state.Delete(util.Path(encryption.Hash(key)))
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			sc.addInvalidStateError(err)
+		}
+		return "", err
+	}
+
+	return datastore.Key(newKey), nil
+}
+
+func (sc *StateContext) addInvalidStateError(err error) {
+	sc.mutex.Lock()
+	sc.invalidStateErrors = append(sc.invalidStateErrors, err)
+	sc.mutex.Unlock()
+}
+
+// GetInvalidStateErrors returns invalid state errors if any
+func (sc *StateContext) GetInvalidStateErrors() []error {
+	sc.mutex.Lock()
+	errs := make([]error, len(sc.invalidStateErrors))
+	copy(errs, sc.invalidStateErrors)
+	sc.mutex.Unlock()
+	return errs
+}
+
+// ErrInvalidState checks if the error is an invalid state error
+func ErrInvalidState(err error) bool {
+	return strings.Contains(err.Error(), util.ErrNodeNotFound.Error())
 }
 
 type errorIndex struct {
