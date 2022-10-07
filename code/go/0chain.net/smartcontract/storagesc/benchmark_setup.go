@@ -388,20 +388,17 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
 		blobber := &StorageNode{
-			ID:      id,
-			BaseURL: getMockBlobberUrl(i),
-			Geolocation: StorageNodeGeolocation{
-				Latitude:  latitudeStep*float64(i) - maxLatitude,
-				Longitude: longitudeStep*float64(i) - maxLongitude,
-			},
+			ID:                id,
+			BaseURL:           getMockBlobberUrl(i),
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
 			LastHealthCheck:   balances.GetTransaction().CreationDate, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
-			//TotalStake: viper.GetInt64(sc.StorageMaxStake), todo missing field
 		}
+		blobber.Geolocation.Latitude.SetFloat64(latitudeStep*float64(i) - maxLatitude)
+		blobber.Geolocation.Longitude.SetFloat64(longitudeStep*float64(i) - maxLongitude)
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
 		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
@@ -433,8 +430,8 @@ func AddMockBlobbers(
 				ServiceCharge:       blobber.StakePoolSettings.ServiceChargeRatio,
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
-				RankMetric:          float64(i) / (float64(i) + 1),
 			}
+			blobberDb.RankMetric.SetFloat64(float64(i) / (float64(i) + 1))
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
 				panic(err)

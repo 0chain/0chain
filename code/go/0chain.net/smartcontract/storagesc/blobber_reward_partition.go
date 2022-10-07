@@ -4,8 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/smartcontract/zbig"
-
 	"0chain.net/chaincore/currency"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -22,8 +20,8 @@ type BlobberRewardNode struct {
 	SuccessChallenges int           `json:"success_challenges"`
 	WritePrice        currency.Coin `json:"write_price"`
 	ReadPrice         currency.Coin `json:"read_price"`
-	TotalData         zbig.BigRat   `json:"total_data" msg:"total_data,extension"`
-	DataRead          zbig.BigRat   `json:"data_read" msg:"data_read,extension"`
+	TotalData         float64       `json:"total_data"`
+	DataRead          float64       `json:"data_read"`
 }
 
 func (bn *BlobberRewardNode) GetID() string {

@@ -154,6 +154,18 @@ func MultFloat64(c Coin, a float64) (Coin, error) {
 	return Float64ToCoin(b)
 }
 
+func MultInt64(c Coin, i int64) (Coin, error) {
+	iCoin, err := Int64ToCoin(i)
+	if err != nil {
+		return 0, err
+	}
+	result, err := MultCoin(c, iCoin)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
 func MultBigRat(c Coin, r *big.Rat) (Coin, error) {
 	var ratCoin *big.Rat
 	ratCoin = ratCoin.Mul(c.BigRat(), r)

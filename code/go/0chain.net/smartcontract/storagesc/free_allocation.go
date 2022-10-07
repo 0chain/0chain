@@ -1,11 +1,10 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-
-	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/currency"
 
@@ -17,7 +16,7 @@ import (
 )
 
 const (
-	floatToBalance = 10 * 1000 * 1000 * 1000
+	tokensToBalance = 10 * 1000 * 1000 * 1000
 )
 
 //msgp:ignore freeStorageAllocationInput newFreeStorageAssignerInfo
@@ -53,7 +52,7 @@ type freeStorageUpgradeInput struct {
 type newFreeStorageAssignerInfo struct {
 	Name            string  `json:"name"`
 	PublicKey       string  `json:"public_key"`
-	IndividualLimit float64 `json:"individual_limit"`
+	IndividualLimit float64 `json:"individual_limit" `
 	TotalLimit      float64 `json:"total_limit"`
 }
 
@@ -155,7 +154,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't unmarshal input: %v", err)
 	}
 
-	newTotalLimit, err := currency.Float64ToCoin(assignerInfo.TotalLimit * floatToBalance)
+	newTotalLimit, err := currency.Float64ToCoin(assignerInfo.TotalLimit * tokensToBalance)
 	if err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner", "can't convert total limit to coin: %v", err)
 	}
@@ -165,7 +164,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"total tokens limit %d exceeds maximum permitted: %d", newTotalLimit, conf.MaxTotalFreeAllocation)
 	}
 
-	newIndividualLimit, err := currency.Float64ToCoin(assignerInfo.IndividualLimit * floatToBalance)
+	newIndividualLimit, err := currency.Float64ToCoin(assignerInfo.IndividualLimit * tokensToBalance)
 	if err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner", "can't convert individual limit to coin: %v", err)
 	}
@@ -287,10 +286,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 	assigner.CurrentRedeemed = newRedeemed
 
-	if err != nil {
-		return "", err
-	}
-	readPoolTokens, err := currency.Float64ToCoin(float64(totalMint) * conf.FreeAllocationSettings.ReadPoolFraction)
+	readPoolTokens, err := currency.MultBigRat(totalMint, conf.FreeAllocationSettings.ReadPoolFraction.Rat)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "converting read pool tokens to Coin: %v", err)
 	}

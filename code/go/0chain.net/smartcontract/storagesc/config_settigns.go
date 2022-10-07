@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -462,63 +463,63 @@ func (conf *Config) setInt64(key string, change int64) error {
 	return nil
 }
 
-func (conf *Config) setFloat64(key string, change float64) error {
+func (conf *Config) setBigRat(key string, change *big.Rat) error {
 	switch Settings[key].setting {
 	case FreeAllocationReadPoolFraction:
-		conf.FreeAllocationSettings.ReadPoolFraction = change
+		conf.FreeAllocationSettings.ReadPoolFraction.Set(change)
 	case ValidatorReward:
-		conf.ValidatorReward = change
+		conf.ValidatorReward.Set(change)
 	case CancellationCharge:
-		conf.CancellationCharge = change
+		conf.CancellationCharge.Set(change)
 	case BlobberSlash:
-		conf.BlobberSlash = change
+		conf.BlobberSlash.Set(change)
 	case ChallengeGenerationRate:
-		conf.ChallengeGenerationRate = change
+		conf.ChallengeGenerationRate.Set(change)
 	case BlockRewardSharderWeight:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.SharderWeight = change
+		conf.BlockReward.SharderWeight.Set(change)
 	case BlockRewardMinerWeight:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.MinerWeight = change
+		conf.BlockReward.MinerWeight.Set(change)
 	case BlockRewardBlobberWeight:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.BlobberWeight = change
+		conf.BlockReward.BlobberWeight.Set(change)
 	case BlockRewardGammaAlpha:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.Gamma.Alpha = change
+		conf.BlockReward.Gamma.Alpha.Set(change)
 	case BlockRewardGammaA:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.Gamma.A = change
+		conf.BlockReward.Gamma.A.Set(change)
 	case BlockRewardGammaB:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.Gamma.B = change
+		conf.BlockReward.Gamma.B.Set(change)
 	case BlockRewardZetaI:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.Zeta.I = change
+		conf.BlockReward.Zeta.I.Set(change)
 	case BlockRewardZetaK:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.Zeta.K = change
+		conf.BlockReward.Zeta.K.Set(change)
 	case BlockRewardZetaMu:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.Zeta.Mu = change
+		conf.BlockReward.Zeta.Mu.Set(change)
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
@@ -603,11 +604,11 @@ func (conf *Config) set(key string, change string) error {
 			return err
 		}
 	case smartcontract.BigRational:
-		value, err := strconv.ParseFloat(change, 64)
-		if err != nil {
-			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
+		var value *big.Rat
+		if _, ok := value.SetString(change); !ok {
+			return fmt.Errorf("cannot convert key %s value %v to big rational", key, change)
 		}
-		if err := conf.setFloat64(key, value); err != nil {
+		if err := conf.setBigRat(key, value); err != nil {
 			return err
 		}
 	case smartcontract.Duration:

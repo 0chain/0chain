@@ -1,10 +1,11 @@
 package event
 
 import (
-	"0chain.net/smartcontract/zbig"
 	"errors"
 	"fmt"
 	"time"
+
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
@@ -23,13 +24,13 @@ type Blobber struct {
 	BaseURL   string `json:"url" gorm:"uniqueIndex"`
 
 	// geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	Latitude  zbig.BigRat `json:"latitude"`
+	Longitude zbig.BigRat `json:"longitude"`
 
 	// terms
 	ReadPrice        currency.Coin `json:"read_price"`
 	WritePrice       currency.Coin `json:"write_price"`
-	MinLockDemand    float64       `json:"min_lock_demand"`
+	MinLockDemand    currency.Coin `json:"min_lock_demand"`
 	MaxOfferDuration int64         `json:"max_offer_duration"`
 
 	Capacity        int64 `json:"capacity"`  // total blobber capacity
@@ -56,9 +57,9 @@ type Blobber struct {
 	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
 	Description string `json:"description" gorm:"description"`
 
-	ChallengesPassed    uint64  `json:"challenges_passed"`
-	ChallengesCompleted uint64  `json:"challenges_completed"`
-	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+	ChallengesPassed    uint64      `json:"challenges_passed"`
+	ChallengesCompleted uint64      `json:"challenges_completed"`
+	RankMetric          zbig.BigRat `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`

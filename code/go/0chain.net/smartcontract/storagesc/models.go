@@ -256,7 +256,7 @@ type Terms struct {
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
-	MinLockDemand zbig.BigRat `json:"min_lock_demand" msg:"min_lock_demand,extension"`
+	MinLockDemand currency.Coin `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }
@@ -342,7 +342,7 @@ type StorageNode struct {
 	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
-	DataReadLastRewardRound zbig.BigRat            `json:"data_read_last_reward_round" msg:"data_read_last_reward_round,extension"` // in GB
+	DataReadLastRewardRound float64                `json:"data_read_last_reward_round" msg:"data_read_last_reward_round,extension"` // in GB
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"`                                             // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
