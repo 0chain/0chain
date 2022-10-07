@@ -1,7 +1,6 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -473,7 +472,7 @@ type rspIndex struct {
 // GetItemsByIDs read items by ids from MPT concurrently and safely with consistent values
 // Note: the GetItemFunc should not return custom error that wraps the error returned from
 // StateContextI
-func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[T], balances CommonStateContextI) ([]T, error) {
+func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[*T], balances CommonStateContextI) ([]*T, error) {
 	var (
 		itemC     = make(chan rspIndex, len(ids))
 		stateErrC = make(chan error, len(ids))
@@ -499,9 +498,9 @@ func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[T], balances CommonS
 				return
 			}
 
-			if item == nil {
+			if reflect.ValueOf(item).IsNil() {
 				errC <- errorIndex{
-					err:   errors.New("nil item returned without ErrValueNotPresent"),
+					err:   fmt.Errorf("nil item returned without ErrValueNotPresent"),
 					index: idx,
 				}
 				return
@@ -542,9 +541,9 @@ func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[T], balances CommonS
 	}
 
 	//ensure original ordering
-	items := make([]T, len(ids))
+	items := make([]*T, len(ids))
 	for item := range itemC {
-		v, ok := item.item.(T)
+		v, ok := item.item.(*T)
 		if !ok {
 			return nil, fmt.Errorf("invalid item type: %v", reflect.TypeOf(item.item))
 		}

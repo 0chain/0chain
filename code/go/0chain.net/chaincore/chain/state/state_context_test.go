@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -148,11 +149,21 @@ func TestGetItemsByIDs(t *testing.T) {
 			},
 			err: fmt.Errorf("could not get item %q: %v", "t1", util.ErrValueNotPresent),
 		},
+		{
+			name: "return nil item without ErrValueNotPresent",
+			args: args{
+				ids: []string{"t1"},
+				getItem: func(id string, _ CommonStateContextI) (*testItem, error) {
+					return nil, nil
+				},
+			},
+			err: fmt.Errorf("could not get item %q: %v", "t1", errors.New("nil item returned without ErrValueNotPresent")),
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := GetItemsByIDs[*testItem](tc.args.ids, tc.args.getItem, tc.args.balances)
+			got, err := GetItemsByIDs[testItem](tc.args.ids, tc.args.getItem, tc.args.balances)
 			require.Equal(t, tc.err, err)
 			if err != nil {
 				return
