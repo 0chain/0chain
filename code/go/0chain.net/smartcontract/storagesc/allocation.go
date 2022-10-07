@@ -598,7 +598,7 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 // get blobbers by IDs concurrently, return error if any of them could not be acquired.
 func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]*StorageNode, error) {
 	return chainstate.GetItemsByIDs[*StorageNode](ids,
-		func(id string, balances chainstate.CommonStateContextI) (interface{}, error) {
+		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
 			return getBlobber(id, balances)
 		},
 		balances)
@@ -611,7 +611,7 @@ func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances cha
 	}
 
 	stakePools, err := chainstate.GetItemsByIDs[*stakePoolPID](ids,
-		func(id string, balances chainstate.CommonStateContextI) (interface{}, error) {
+		func(id string, balances chainstate.CommonStateContextI) (*stakePoolPID, error) {
 			sp, err := getStakePool(providerType, id, balances)
 			if err != nil {
 				return nil, err
@@ -644,7 +644,7 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 	}
 
 	return chainstate.GetItemsByIDs[*StorageNode](ids,
-		func(id string, balances chainstate.CommonStateContextI) (interface{}, error) {
+		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
 			return sc.getBlobber(id, balances)
 		},
 		balances)
