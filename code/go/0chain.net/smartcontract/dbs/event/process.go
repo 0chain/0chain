@@ -165,6 +165,7 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 		select {
 		case e := <-edb.roundEventsChan:
 			if len(e.events) == 0 {
+				round = e.round
 				continue
 			}
 			//init round with event's if not ran far away

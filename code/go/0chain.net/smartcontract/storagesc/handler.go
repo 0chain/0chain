@@ -2767,7 +2767,7 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 	common.Respond(w, r, blobbers, nil)
 }
 
-// replicateSnapshots swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicateBlobberAggregates replicate-blobber-aggregate
+// replicateBlobberAggregates swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicateBlobberAggregates replicate-blobber-aggregate
 // Gets list of blobber aggregate records
 //
 // parameters:
