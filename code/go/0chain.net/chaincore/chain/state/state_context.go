@@ -1,7 +1,9 @@
 package state
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -497,6 +499,14 @@ func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[T], balances CommonS
 				return
 			}
 
+			if item == nil {
+				errC <- errorIndex{
+					err:   errors.New("nil item returned without ErrValueNotPresent"),
+					index: idx,
+				}
+				return
+			}
+
 			itemC <- rspIndex{
 				index: idx,
 				item:  item,
@@ -534,7 +544,12 @@ func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[T], balances CommonS
 	//ensure original ordering
 	items := make([]T, len(ids))
 	for item := range itemC {
-		items[item.index] = item.item.(T)
+		v, ok := item.item.(T)
+		if !ok {
+			return nil, fmt.Errorf("invalid item type: %v", reflect.TypeOf(item.item))
+		}
+
+		items[item.index] = v
 	}
 
 	return items, nil
