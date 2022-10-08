@@ -76,8 +76,9 @@ type TimedQueryStateContextI interface {
 
 type Appender func(events []event.Event, current event.Event) []event.Event
 
+// StateContextI - a state context interface. These interface are available for the smart contract
+//
 //go:generate mockery --case underscore --name=StateContextI --output=./mocks
-//StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
 	QueryStateContextI
 	GetLastestFinalizedMagicBlock() *block.Block
@@ -96,7 +97,7 @@ type StateContextI interface {
 	GetSignedTransfers() []*state.SignedTransfer
 	GetMints() []*state.Mint // cannot use in smart contracts or REST endpoints
 	Validate() error
-	GetBlockSharders(b *block.Block) []string
+	GetBlockSharders(b *block.Block) ([]string, error)
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
 	EmitEvent(event.EventType, event.EventTag, string, interface{}, ...Appender)
@@ -104,7 +105,7 @@ type StateContextI interface {
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 }
 
-//StateContext - a context object used to manipulate global state
+// StateContext - a context object used to manipulate global state
 type StateContext struct {
 	block                         *block.Block
 	state                         util.MerklePatriciaTrieI
@@ -113,7 +114,7 @@ type StateContext struct {
 	signedTransfers               []*state.SignedTransfer
 	mints                         []*state.Mint
 	events                        []event.Event
-	getSharders                   func(*block.Block) []string
+	getSharders                   func(*block.Block) ([]string, error)
 	getLastestFinalizedMagicBlock func() *block.Block
 	getLatestFinalizedBlock       func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
@@ -145,7 +146,7 @@ func NewStateContext(
 	b *block.Block,
 	s util.MerklePatriciaTrieI,
 	t *transaction.Transaction,
-	getSharderFunc func(*block.Block) []string,
+	getSharderFunc func(*block.Block) ([]string, error),
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
@@ -168,7 +169,7 @@ func NewStateContext(
 	}
 }
 
-//GetBlock - get the block associated with this state context
+// GetBlock - get the block associated with this state context
 func (sc *StateContext) GetBlock() *block.Block {
 	return sc.block
 }
@@ -177,17 +178,17 @@ func (sc *StateContext) SetMagicBlock(block *block.MagicBlock) {
 	sc.block.MagicBlock = block
 }
 
-//GetState - get the state MPT associated with this state context
+// GetState - get the state MPT associated with this state context
 func (sc *StateContext) GetState() util.MerklePatriciaTrieI {
 	return sc.state
 }
 
-//GetTransaction - get the transaction associated with this context
+// GetTransaction - get the transaction associated with this context
 func (sc *StateContext) GetTransaction() *transaction.Transaction {
 	return sc.txn
 }
 
-//AddTransfer - add the transfer
+// AddTransfer - add the transfer
 func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
@@ -199,13 +200,13 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	return nil
 }
 
-//AddSignedTransfer - add the signed transfer
+// AddSignedTransfer - add the signed transfer
 func (sc *StateContext) AddSignedTransfer(st *state.SignedTransfer) {
 	// Signature on the signed transfer will be checked on call to sc.Validate()
 	sc.signedTransfers = append(sc.signedTransfers, st)
 }
 
-//AddMint - add the mint
+// AddMint - add the mint
 func (sc *StateContext) AddMint(m *state.Mint) error {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
@@ -226,17 +227,17 @@ func (sc *StateContext) isApprovedMinter(m *state.Mint) bool {
 	return false
 }
 
-//GetTransfers - get all the transfers
+// GetTransfers - get all the transfers
 func (sc *StateContext) GetTransfers() []*state.Transfer {
 	return sc.transfers
 }
 
-//GetSignedTransfers - get all the signed transfers
+// GetSignedTransfers - get all the signed transfers
 func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
 	return sc.signedTransfers
 }
 
-//GetMints - get all the mints and fight bad breath
+// GetMints - get all the mints and fight bad breath
 func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
 }
@@ -284,7 +285,7 @@ func (sc *StateContext) GetEventDB() *event.EventDb {
 	return sc.eventDb
 }
 
-//Validate - implement interface
+// Validate - implement interface
 func (sc *StateContext) Validate() error {
 	var (
 		amount currency.Coin
@@ -340,7 +341,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	return s, nil
 }
 
-//GetClientBalance - get the balance of the client
+// GetClientBalance - get the balance of the client
 func (sc *StateContext) GetClientBalance(clientID string) (currency.Coin, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {
@@ -349,7 +350,7 @@ func (sc *StateContext) GetClientBalance(clientID string) (currency.Coin, error)
 	return s.Balance, nil
 }
 
-//GetClientNonce - get the nonce of the client
+// GetClientNonce - get the nonce of the client
 func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {
@@ -358,7 +359,7 @@ func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
 	return s.Nonce, nil
 }
 
-func (sc *StateContext) GetBlockSharders(b *block.Block) []string {
+func (sc *StateContext) GetBlockSharders(b *block.Block) ([]string, error) {
 	return sc.getSharders(b)
 }
 
@@ -391,7 +392,7 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	return datastore.Key(byteKey), err
 }
 
-//SetStateContext - set the state context
+// SetStateContext - set the state context
 func (sc *StateContext) SetStateContext(s *state.State) error {
 	s.SetRound(sc.block.Round)
 	return s.SetTxnHash(sc.txn.Hash)

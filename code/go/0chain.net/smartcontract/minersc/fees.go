@@ -449,7 +449,11 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 			block.Round, block.Hash)
 	}
 
-	var sids = balances.GetBlockSharders(block.PrevBlock)
+	sids, err := balances.GetBlockSharders(block.PrevBlock)
+	if err != nil {
+		return nil, fmt.Errorf("could not get sharders: %v", err)
+	}
+
 	sort.Strings(sids)
 
 	sharders = make([]*MinerNode, 0, len(sids))
