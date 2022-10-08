@@ -172,6 +172,13 @@ func (edb *EventDb) BlobberTotalCapacity() (int64, error) {
 		Find(&total).Error
 }
 
+func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
+	var average float64
+	return average, edb.Store.Get().Model(&Blobber{}).
+		Select("AVG(write_price)").
+		Find(&average).Error
+}
+
 func (edb *EventDb) blobberAggregateStats(id string) (*blobberAggregateStats, error) {
 	var blobber blobberAggregateStats
 	err := edb.Store.Get().Model(&Blobber{}).Where("blobber_id = ?", id).First(&blobber).Error

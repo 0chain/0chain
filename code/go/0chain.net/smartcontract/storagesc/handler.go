@@ -78,6 +78,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
 		rest.MakeEndpoint(storage+"/block", srh.getBlock),
 		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
+		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
 		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
@@ -89,12 +90,92 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber_ids", srh.getBlobberIdsByUrls),
 		rest.MakeEndpoint(storage+"/alloc_blobbers", srh.getAllocationBlobbers),
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
-
+		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
 		rest.MakeEndpoint(storage+"/search", srh.getSearchHandler),
 		rest.MakeEndpoint(storage+"/alloc-blobber-term", srh.getAllocBlobberTerms),
 		rest.MakeEndpoint(storage+"/replicate-snapshots", srh.replicateSnapshots),
 		rest.MakeEndpoint(storage+"/replicate-blobber-aggregates", srh.replicateBlobberAggregates),
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank blobber-rank
+// Gets the rank of a blobber.
+//
+//	challenges passed / total challenges
+//
+// parameters:
+//
+//	+name: id
+//	 description: id of blobber
+//	 required: true
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: Int64Map
+//	400:
+func (srh *StorageRestHandler) getBlobberRank(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	rank, err := edb.GetBlobberRank(id)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"blobber-rank": rank,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
+// Gets the total blobber capacity across all blobbers. Note that this is not staked capacity.
+//
+// responses:
+//
+//	200: Int64Map
+//	400:
+func (srh *StorageRestHandler) getTotalBlobberCapacity(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	totalCapacity, err := edb.BlobberTotalCapacity()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"total-blobber-capacity": totalCapacity,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
+// Gets the average write price across all blobbers
+//
+// responses:
+//
+//	200: Int64Map
+//	400:
+func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	averageWritePrice, err := edb.BlobberAverageWritePrice()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
+		return
+	}
+	common.Respond(w, r, rest.Int64Map{
+		"average-write-price": int64(averageWritePrice),
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids blobber_ids
