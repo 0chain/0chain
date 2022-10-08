@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/core/datastore"
@@ -382,8 +384,6 @@ func AddMockBlobbers(
 	var rtvBlobbers []*StorageNode
 	const maxLatitude float64 = 88
 	const maxLongitude float64 = 175
-	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
-	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
@@ -397,8 +397,6 @@ func AddMockBlobbers(
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
-		blobber.Geolocation.Latitude.SetFloat64(latitudeStep*float64(i) - maxLatitude)
-		blobber.Geolocation.Longitude.SetFloat64(longitudeStep*float64(i) - maxLongitude)
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
 		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
@@ -440,13 +438,14 @@ func AddMockBlobbers(
 		}
 
 		if i < numRewardPartitionBlobbers {
+			mockTotal, _ := sizeInGB(int64(i * 1000)).Float64()
 			_, err = partition.AddItem(balances,
 				&BlobberRewardNode{
 					ID:                blobber.ID,
 					SuccessChallenges: 10,
 					WritePrice:        blobber.Terms.WritePrice,
 					ReadPrice:         blobber.Terms.ReadPrice,
-					TotalData:         sizeInGB(int64(i * 1000)),
+					TotalData:         mockTotal,
 					DataRead:          float64(i) * 0.1,
 				})
 			if err != nil {
@@ -709,8 +708,8 @@ func getMockBlobberTerms() Terms {
 	return Terms{
 		ReadPrice:        currency.Coin(0.1 * 1e10),
 		WritePrice:       currency.Coin(0.1 * 1e10),
-		MinLockDemand:    0.0007,
 		MaxOfferDuration: time.Hour * 744,
+		MinLockDemand:    zbig.BigRatFromFloat64(0.0007),
 	}
 }
 
@@ -720,7 +719,7 @@ func getMockStakePoolSettings(blobber string) stakepool.Settings {
 		MinStake:           currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10),
 		MaxStake:           currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10),
 		MaxNumDelegates:    viper.GetInt(sc.NumBlobberDelegates),
-		ServiceChargeRatio: viper.GetFloat64(sc.StorageMaxCharge),
+		ServiceChargeRatio: zbig.BigRatFromFloat64(viper.GetFloat64(sc.StorageMaxCharge)),
 	}
 }
 
@@ -780,7 +779,7 @@ func SetMockConfig(
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
-	conf.ChallengeGenerationRate = 1
+	conf.ChallengeGenerationRate.SetFloat64(1.0)
 	conf.MaxChallengesPerGeneration = viper.GetInt(sc.StorageMaxChallengesPerGeneration)
 	conf.FailedChallengesToCancel = viper.GetInt(sc.StorageFailedChallengesToCancel)
 	conf.FailedChallengesToRevokeMinLock = 50
@@ -788,15 +787,15 @@ func SetMockConfig(
 	conf.MinAllocDuration = viper.GetDuration(sc.StorageMinAllocDuration)
 	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
-	conf.ValidatorReward = 0.025
-	conf.BlobberSlash = 0.1
-	conf.CancellationCharge = 0.2
+	conf.ValidatorReward.SetFloat64(0.025)
+	conf.BlobberSlash.SetFloat64(0.1)
+	conf.CancellationCharge.SetFloat64(0.2)
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
 	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
-	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)
+	conf.MaxCharge = zbig.BigRatFromFloat64(viper.GetFloat64(sc.StorageMaxCharge))
 	conf.MinStake = currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10)
 	conf.MaxStake = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
 	conf.MaxMint = currency.Coin((viper.GetFloat64(sc.StorageMaxMint)) * 1e10)
@@ -830,19 +829,19 @@ func SetMockConfig(
 			Min: currency.Coin(viper.GetFloat64(sc.StorageFasWritePriceMin) * 1e10),
 			Max: currency.Coin(viper.GetFloat64(sc.StorageFasWritePriceMax) * 1e10),
 		},
-		ReadPoolFraction: viper.GetFloat64(sc.StorageFasReadPoolFraction),
+		ReadPoolFraction: zbig.BigRatFromFloat64(viper.GetFloat64(sc.StorageFasReadPoolFraction)),
 	}
 	conf.BlockReward = new(blockReward)
 	conf.BlockReward.BlockReward = currency.Coin(viper.GetFloat64(sc.StorageBlockReward) * 1e10)
 	conf.BlockReward.BlockRewardChangePeriod = viper.GetInt64(sc.StorageBlockRewardChangePeriod)
-	conf.BlockReward.BlockRewardChangeRatio = viper.GetFloat64(sc.StorageBlockRewardChangeRatio)
+	conf.BlockReward.BlockRewardChangeRatio.SetFloat64(viper.GetFloat64(sc.StorageBlockRewardChangeRatio))
 	conf.BlockReward.QualifyingStake = currency.Coin(viper.GetFloat64(sc.StorageBlockRewardQualifyingStake) * 1e10)
 	conf.MaxBlobbersPerAllocation = viper.GetInt(sc.StorageMaxBlobbersPerAllocation)
 	conf.BlockReward.TriggerPeriod = viper.GetInt64(sc.StorageBlockRewardTriggerPeriod)
 	err = conf.BlockReward.setWeightsFromRatio(
-		viper.GetFloat64(sc.StorageBlockRewardSharderRatio),
-		viper.GetFloat64(sc.StorageBlockRewardMinerRatio),
-		viper.GetFloat64(sc.StorageBlockRewardBlobberRatio),
+		zbig.BigRatFromFloat64(viper.GetFloat64(sc.StorageBlockRewardSharderRatio)).Rat,
+		zbig.BigRatFromFloat64(viper.GetFloat64(sc.StorageBlockRewardMinerRatio)).Rat,
+		zbig.BigRatFromFloat64(viper.GetFloat64(sc.StorageBlockRewardBlobberRatio)).Rat,
 	)
 	if err != nil {
 		panic(err)

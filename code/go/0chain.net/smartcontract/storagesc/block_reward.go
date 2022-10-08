@@ -3,9 +3,12 @@ package storagesc
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"math/rand"
 	"strconv"
 	"sync"
+
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/currency"
 
@@ -44,9 +47,13 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		return nil
 	}
 
-	bbr, err := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
-		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio,
-		conf.BlockReward.BlobberWeight)
+	bbr, err := getBlockReward(
+		conf.BlockReward.BlockReward,
+		balances.GetBlock().Round,
+		conf.BlockReward.BlockRewardChangePeriod,
+		conf.BlockReward.BlockRewardChangeRatio.Rat,
+		conf.BlockReward.BlobberWeight.Rat,
+	)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get block rewards: "+err.Error())
@@ -126,16 +133,16 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		stake := float64(staked)
 
 		gamma := maths.GetGamma(
-			conf.BlockReward.Gamma.A,
-			conf.BlockReward.Gamma.B,
-			conf.BlockReward.Gamma.Alpha,
+			conf.BlockReward.Gamma.A.Float64(),
+			conf.BlockReward.Gamma.B.Float64(),
+			conf.BlockReward.Gamma.Alpha.Float64(),
 			br.TotalData,
 			br.DataRead,
 		)
 		zeta := maths.GetZeta(
-			conf.BlockReward.Zeta.I,
-			conf.BlockReward.Zeta.K,
-			conf.BlockReward.Zeta.Mu,
+			conf.BlockReward.Zeta.I.Float64(),
+			conf.BlockReward.Zeta.K.Float64(),
+			conf.BlockReward.Zeta.Mu.Float64(),
 			float64(br.WritePrice),
 			float64(br.ReadPrice),
 		)
@@ -237,19 +244,24 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 }
 
 func getBlockReward(
-	br currency.Coin,
+	blockReward currency.Coin,
 	currentRound,
 	brChangePeriod int64,
-	brChangeRatio,
-	blobberWeight float64) (currency.Coin, error) {
-	if brChangeRatio <= 0 || brChangeRatio >= 1 {
+	brChangeRatio, blobberWeight *big.Rat,
+) (currency.Coin, error) {
+	if brChangeRatio.Cmp(zbig.ZeroBigRat) <= 0 || brChangeRatio.Cmp(zbig.OneBigRat) >= 0 {
 		return 0, fmt.Errorf("unexpected block reward change ratio: %f", brChangeRatio)
 	}
-	changeBalance := 1 - brChangeRatio
-	changePeriods := currentRound / brChangePeriod
+	var changeBalance, changePeriods, factor *big.Rat
+	_ = changeBalance.Sub(zbig.OneBigRat, brChangeRatio)
+	changePeriods = big.NewRat(currentRound, brChangePeriod)
 
-	factor := math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
-	return currency.MultFloat64(br, factor)
+	cb, _ := changeBalance.Float64()
+	cp, _ := changePeriods.Float64()
+	balancePowerPeriods := factor.SetFloat64(math.Pow(cb, cp))
+
+	factor = factor.Mul(balancePowerPeriods, blobberWeight)
+	return currency.MultBigRat(blockReward, factor)
 }
 
 func GetCurrentRewardRound(currentRound, period int64) int64 {

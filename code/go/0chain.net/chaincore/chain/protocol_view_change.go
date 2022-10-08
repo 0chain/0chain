@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/currency"
 
@@ -255,7 +255,7 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 
 	// miner SC configurations
 	mn.Settings.DelegateWallet = viper.GetString("delegate_wallet")
-	mn.Settings.ServiceChargeRatio = viper.GetFloat64("service_charge")
+	mn.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(viper.GetFloat64("service_charge"))
 	mn.Settings.MaxNumDelegates = viper.GetInt("number_of_delegates")
 
 	var err error
@@ -268,8 +268,8 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 		return nil, err
 	}
 	mn.Geolocation = minersc.SimpleNodeGeolocation{
-		Latitude:  *dbs.NewBigRat(viper.GetFloat64("latitude")),
-		Longitude: *dbs.NewBigRat(viper.GetFloat64("longitude")),
+		Latitude:  viper.GetFloat64("latitude"),
+		Longitude: viper.GetFloat64("longitude"),
 	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {

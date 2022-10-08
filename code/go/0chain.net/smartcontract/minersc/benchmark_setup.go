@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"0chain.net/smartcontract/zbig"
@@ -54,21 +53,17 @@ func AddMockNodes(
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 		key = AllShardersKey
 	}
-	lat := zbig.BigRat{big.NewRat(103, 2)}
-	long := zbig.BigRat{big.NewRat(-1, 10)}
 	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
 		newNode.ID = GetMockNodeId(i, nodeType)
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 		newNode.PublicKey = "mockPublicKey"
-		newNode.Settings.ServiceChargeRatio = *zbig.BigRatFromFloat64(viper.GetFloat64(benchmark.MinerMaxCharge))
+		newNode.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(viper.GetFloat64(benchmark.MinerMaxCharge))
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
 		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
-		newNode.Geolocation.Latitude = lat
-		newNode.Geolocation.Longitude = long
 
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
@@ -104,8 +99,6 @@ func AddMockNodes(
 					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
 					MinStake:          newNode.Settings.MinStake,
 					MaxStake:          newNode.Settings.MaxStake,
-					Latitude:          lat,
-					Longitude:         long,
 				}
 				result := eventDb.Store.Get().Create(&minerDb)
 				fmt.Println("result put  in miner", result)
@@ -118,8 +111,6 @@ func AddMockNodes(
 					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
 					MinStake:          newNode.Settings.MinStake,
 					MaxStake:          newNode.Settings.MaxStake,
-					Latitude:          lat,
-					Longitude:         long,
 				}
 				_ = eventDb.Store.Get().Create(&sharderDb)
 			}

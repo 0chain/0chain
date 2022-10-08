@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -440,9 +439,9 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 			Max: int64(request.WritePriceRange.Max),
 		},
 		AllocationSize:     allocationSize,
-		AllocationSizeInGB: sizeInGB(allocationSize),
 		NumberOfDataShards: request.DataShards,
 	}
+	allocation.AllocationSizeInGB, _ = sizeInGB(allocationSize).Float64()
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
 		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
@@ -1707,25 +1706,22 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	cost64, err := cost.Float64()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
+	cc, err := currency.MultBigRat(cost, conf.CancellationCharge.Rat)
 	mld, err := sa.restMinLockDemand()
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	mld64, err := mld.Float64()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
+	costPlusMld, err := currency.AddCoin(mld, cc)
+	if cost > costPlusMld {
+		common.Respond(w, r, map[string]interface{}{
+			"min_lock_demand": cost,
+		}, nil)
+	} else {
+		common.Respond(w, r, map[string]interface{}{
+			"min_lock_demand": costPlusMld,
+		}, nil)
 	}
-
-	common.Respond(w, r, map[string]interface{}{
-		"min_lock_demand": math.Max(cost64, mld64+cost64*conf.CancellationCharge),
-	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations allocations

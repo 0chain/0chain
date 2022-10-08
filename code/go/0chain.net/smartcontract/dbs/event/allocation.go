@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 
@@ -61,7 +63,7 @@ type AllocationTerm struct {
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
-	MinLockDemand float64 `json:"min_lock_demand"`
+	MinLockDemand zbig.BigRat `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }

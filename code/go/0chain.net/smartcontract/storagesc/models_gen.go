@@ -2185,7 +2185,11 @@ func (z *Terms) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "MinLockDemand"
 	o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b, 0x44, 0x65, 0x6d, 0x61, 0x6e, 0x64)
-	o = msgp.AppendFloat64(o, z.MinLockDemand)
+	o, err = z.MinLockDemand.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MinLockDemand")
+		return
+	}
 	// string "MaxOfferDuration"
 	o = append(o, 0xb0, 0x4d, 0x61, 0x78, 0x4f, 0x66, 0x66, 0x65, 0x72, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
 	o = msgp.AppendDuration(o, z.MaxOfferDuration)
@@ -2223,7 +2227,7 @@ func (z *Terms) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MinLockDemand":
-			z.MinLockDemand, bts, err = msgp.ReadFloat64Bytes(bts)
+			bts, err = z.MinLockDemand.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinLockDemand")
 				return
@@ -2248,7 +2252,7 @@ func (z *Terms) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Terms) Msgsize() (s int) {
-	s = 1 + 10 + z.ReadPrice.Msgsize() + 11 + z.WritePrice.Msgsize() + 14 + msgp.Float64Size + 17 + msgp.DurationSize
+	s = 1 + 10 + z.ReadPrice.Msgsize() + 11 + z.WritePrice.Msgsize() + 14 + z.MinLockDemand.Msgsize() + 17 + msgp.DurationSize
 	return
 }
 

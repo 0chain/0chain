@@ -438,7 +438,7 @@ func (msc *MinerSmartContract) reduceShardersList(
 		}
 	}
 	logging.Logger.Debug("sharder keep before", zap.Int("num", len(simpleNodes)))
-	simpleNodes.reduce(gn.MaxS, gn.XPercent, pmbrss, pmbnp)
+	simpleNodes.reduce(gn.MaxS, gn.XPercent.Rat, pmbrss, pmbnp)
 	logging.Logger.Debug("sharder keep after", zap.Int("num", len(simpleNodes)))
 
 	nodes = make([]*MinerNode, 0, len(simpleNodes))

@@ -38,8 +38,8 @@ type Miner struct {
 	TotalReward       currency.Coin
 	Fees              currency.Coin
 	Active            bool
-	Longitude         zbig.BigRat
-	Latitude          zbig.BigRat
+	Longitude         float64
+	Latitude          float64
 }
 
 // swagger:model MinerGeolocation

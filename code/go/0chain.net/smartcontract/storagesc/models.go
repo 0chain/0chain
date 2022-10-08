@@ -256,7 +256,7 @@ type Terms struct {
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
-	MinLockDemand currency.Coin `json:"min_lock_demand"`
+	MinLockDemand zbig.BigRat `json:"min_lock_demand"`
 	// MaxOfferDuration with this prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }
@@ -293,24 +293,24 @@ func (t *Terms) validate(conf *Config) (err error) {
 }
 
 var (
-	MaxLatitude  = big.NewRat(90, 1)
-	MinLatitude  = big.NewRat(-90, 1)
-	MaxLongitude = big.NewRat(180, 1)
-	MinLongitude = big.NewRat(-180, 1)
+	MaxLatitude  = 90.0
+	MinLatitude  = -90.0
+	MaxLongitude = 180.0
+	MinLongitude = -180.0
 )
 
 // Move to the core, in case of multi-entity use of geo data
 type StorageNodeGeolocation struct {
-	Latitude  zbig.BigRat `json:"latitude" msg:"latitude,extension"`
-	Longitude zbig.BigRat `json:"longitude" msg:"longitude,extension"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 func (sng StorageNodeGeolocation) validate() error {
-	if sng.Latitude.Cmp(MinLatitude) < 0 || MaxLatitude.Cmp(sng.Latitude.Rat) < 0 {
+	if sng.Latitude < MinLatitude || MaxLatitude < sng.Latitude {
 		return common.NewErrorf("out_of_range_geolocation",
 			"latitude %f should be in range [-90, 90]", sng.Latitude)
 	}
-	if sng.Longitude.Cmp(MinLongitude) < 0 || MaxLongitude.Cmp(sng.Latitude.Rat) < 0 {
+	if sng.Longitude < MinLongitude || MaxLongitude < sng.Longitude {
 		return common.NewErrorf("out_of_range_geolocation",
 			"latitude %f should be in range [-180, 180]", sng.Longitude)
 	}
@@ -342,8 +342,8 @@ type StorageNode struct {
 	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
-	DataReadLastRewardRound float64                `json:"data_read_last_reward_round" msg:"data_read_last_reward_round,extension"` // in GB
-	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"`                                             // last round when data read was updated
+	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
 	RewardPartition   RewardPartitionLocation `json:"reward_partition"`

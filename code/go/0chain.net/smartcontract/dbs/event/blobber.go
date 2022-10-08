@@ -24,13 +24,13 @@ type Blobber struct {
 	BaseURL   string `json:"url" gorm:"uniqueIndex"`
 
 	// geolocation
-	Latitude  zbig.BigRat `json:"latitude"`
-	Longitude zbig.BigRat `json:"longitude"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 
 	// terms
 	ReadPrice        currency.Coin `json:"read_price"`
 	WritePrice       currency.Coin `json:"write_price"`
-	MinLockDemand    currency.Coin `json:"min_lock_demand"`
+	MinLockDemand    zbig.BigRat   `json:"min_lock_demand"`
 	MaxOfferDuration int64         `json:"max_offer_duration"`
 
 	Capacity        int64 `json:"capacity"`  // total blobber capacity

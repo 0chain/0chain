@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -218,22 +219,22 @@ func (gn *GlobalNode) setInt64(key string, change int64) error {
 	return nil
 }
 
-func (gn *GlobalNode) setFloat64(key string, change float64) error {
+func (gn *GlobalNode) setBigRational(key string, change *big.Rat) error {
 	switch Settings[key].Setting {
 	case TPercent:
-		gn.TPercent = change
+		gn.TPercent.Set(change)
 	case KPercent:
-		gn.KPercent = change
+		gn.KPercent.Set(change)
 	case XPercent:
-		gn.XPercent = change
+		gn.XPercent.Set(change)
 	case RewardRate:
-		gn.RewardRate = change
+		gn.RewardRate.Set(change)
 	case ShareRatio:
-		gn.ShareRatio = change
+		gn.ShareRatio.Set(change)
 	case MaxCharge:
-		gn.MaxCharge = change
+		gn.MaxCharge.Set(change)
 	case RewardDeclineRate:
-		gn.RewardDeclineRate = change
+		gn.RewardDeclineRate.Set(change)
 	default:
 		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
@@ -319,11 +320,11 @@ func (gn *GlobalNode) set(key string, change string) error {
 			return err
 		}
 	case smartcontract.BigRational:
-		value, err := strconv.ParseFloat(change, 64)
-		if err != nil {
-			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
+		var value *big.Rat
+		if _, ok := value.SetString(change); !ok {
+			return fmt.Errorf("cannot convert key %s value %v to big rational", key, change)
 		}
-		if err := gn.setFloat64(key, value); err != nil {
+		if err := gn.setBigRational(key, value); err != nil {
 			return err
 		}
 	case smartcontract.Key:

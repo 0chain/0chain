@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/currency"
 
 	common2 "0chain.net/smartcontract/common"
@@ -26,7 +28,7 @@ type Validator struct {
 	MinStake       currency.Coin `json:"min_stake"`
 	MaxStake       currency.Coin `json:"max_stake"`
 	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	ServiceCharge  zbig.BigRat   `json:"service_charge"`
 
 	Rewards     int64 `json:"rewards"`
 	TotalReward int64 `json:"total_reward"`

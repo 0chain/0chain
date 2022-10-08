@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/common"
@@ -171,6 +173,6 @@ func getMockStakePoolSettings(wallet string) stakepool.Settings {
 		MinStake:           currency.Coin(1 * 1e10),
 		MaxStake:           currency.Coin(100 * 1e10),
 		MaxNumDelegates:    10,
-		ServiceChargeRatio: 0.1,
+		ServiceChargeRatio: zbig.BigRatFromFloat64(0.1),
 	}
 }

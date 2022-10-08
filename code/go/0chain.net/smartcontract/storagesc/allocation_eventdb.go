@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
 
 	"0chain.net/chaincore/transaction"
@@ -25,6 +26,43 @@ type StorageAllocationBlobbers struct {
 }
 
 func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
+	sa := &StorageAllocation{
+		ID:             alloc.AllocationID,
+		Tx:             alloc.TransactionID,
+		Name:           alloc.AllocationName,
+		DataShards:     alloc.DataShards,
+		ParityShards:   alloc.ParityShards,
+		Size:           alloc.Size,
+		Expiration:     common.Timestamp(alloc.Expiration),
+		Owner:          alloc.Owner,
+		OwnerPublicKey: alloc.OwnerPublicKey,
+		WritePool:      alloc.WritePool,
+		Stats: &StorageAllocationStats{
+			UsedSize:                  alloc.UsedSize,
+			NumWrites:                 alloc.NumWrites,
+			NumReads:                  alloc.NumReads,
+			TotalChallenges:           alloc.TotalChallenges,
+			OpenChallenges:            alloc.OpenChallenges,
+			SuccessChallenges:         alloc.SuccessfulChallenges,
+			FailedChallenges:          alloc.FailedChallenges,
+			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
+		},
+		//BlobberAllocs:     blobberDetails,
+		//BlobberAllocsMap:  blobberMap,
+		IsImmutable:       alloc.IsImmutable,
+		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
+		WritePriceRange:   PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
+		StartTime:         common.Timestamp(alloc.StartTime),
+		Finalized:         alloc.Finalized,
+		Canceled:          alloc.Cancelled,
+		UsedSize:          alloc.UsedSize,
+		MovedToChallenge:  alloc.MovedToChallenge,
+		MovedBack:         alloc.MovedBack,
+		MovedToValidators: alloc.MovedToValidators,
+		TimeUnit:          time.Duration(alloc.TimeUnit),
+		//Curators:          curators,
+	}
+
 	storageNodes := make([]*StorageNode, 0)
 	blobberDetails := make([]*BlobberAllocation, 0)
 	blobberIDs := make([]string, 0)
@@ -65,17 +103,13 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
 
-	var dpsSze = alloc.DataShards + alloc.ParityShards
-	var gbSize = sizeInGB((alloc.Size + int64(dpsSze-1)) / int64(dpsSze))
-	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
-
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &StorageNode{
-			ID:          b.BlobberID,
-			BaseURL:     b.BaseURL,
+			ID:      b.BlobberID,
+			BaseURL: b.BaseURL,
 			Geolocation: StorageNodeGeolocation{
-				//Latitude:  b.Latitude,
-				//Longitude: b.Longitude,
+				Latitude:  b.Latitude,
+				Longitude: b.Longitude,
 			},
 			Terms:           blobberIDTermMapping[b.BlobberID].Terms,
 			Capacity:        b.Capacity,
@@ -84,73 +118,49 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     b.DelegateWallet,
-				MinStake:           currency.Coin(b.MinStake),
-				MaxStake:           currency.Coin(b.MaxStake),
+				MinStake:           b.MinStake,
+				MaxStake:           b.MaxStake,
 				MaxNumDelegates:    b.NumDelegates,
 				ServiceChargeRatio: b.ServiceCharge,
 			},
 		})
 
-		terms := blobberIDTermMapping[b.BlobberID].Terms
+		tempBA := &BlobberAllocation{
+			BlobberID:    b.BlobberID,
+			AllocationID: blobberIDTermMapping[b.BlobberID].AllocationID,
+			Size:         b.Allocated,
+			Terms:        blobberIDTermMapping[b.BlobberID].Terms,
+		}
 
-		bwF := gbSize * terms.MinLockDemand * rdtu
-		minLockDemand, err := currency.MultFloat64(terms.WritePrice, bwF)
+		tempBA.MinLockDemand, err = tempBA.Terms.minLockDemand(
+			sizeInGB(sa.bSize()), sa.restDurationInTimeUnits(sa.StartTime, sa.TimeUnit),
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		tempBlobberAllocation := &BlobberAllocation{
-			BlobberID:     b.BlobberID,
-			AllocationID:  blobberIDTermMapping[b.BlobberID].AllocationID,
-			Size:          b.Allocated,
-			Terms:         terms,
-			MinLockDemand: minLockDemand,
-		}
-		blobberDetails = append(blobberDetails, tempBlobberAllocation)
-		blobberMap[b.BlobberID] = tempBlobberAllocation
+		blobberDetails = append(blobberDetails, tempBA)
+		blobberMap[b.BlobberID] = tempBA
 	}
 
-	sa := &StorageAllocation{
-		ID:             alloc.AllocationID,
-		Tx:             alloc.TransactionID,
-		Name:           alloc.AllocationName,
-		DataShards:     alloc.DataShards,
-		ParityShards:   alloc.ParityShards,
-		Size:           alloc.Size,
-		Expiration:     common.Timestamp(alloc.Expiration),
-		Owner:          alloc.Owner,
-		OwnerPublicKey: alloc.OwnerPublicKey,
-		WritePool:      alloc.WritePool,
-		Stats: &StorageAllocationStats{
-			UsedSize:                  alloc.UsedSize,
-			NumWrites:                 alloc.NumWrites,
-			NumReads:                  alloc.NumReads,
-			TotalChallenges:           alloc.TotalChallenges,
-			OpenChallenges:            alloc.OpenChallenges,
-			SuccessChallenges:         alloc.SuccessfulChallenges,
-			FailedChallenges:          alloc.FailedChallenges,
-			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
-		},
-		BlobberAllocs:     blobberDetails,
-		BlobberAllocsMap:  blobberMap,
-		IsImmutable:       alloc.IsImmutable,
-		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
-		WritePriceRange:   PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
-		StartTime:         common.Timestamp(alloc.StartTime),
-		Finalized:         alloc.Finalized,
-		Canceled:          alloc.Cancelled,
-		UsedSize:          alloc.UsedSize,
-		MovedToChallenge:  alloc.MovedToChallenge,
-		MovedBack:         alloc.MovedBack,
-		MovedToValidators: alloc.MovedToValidators,
-		TimeUnit:          time.Duration(alloc.TimeUnit),
-		Curators:          curators,
-	}
+	sa.BlobberAllocs = blobberDetails
+	sa.BlobberAllocsMap = blobberMap
+	sa.Curators = curators
 
 	return &StorageAllocationBlobbers{
 		StorageAllocation: *sa,
 		Blobbers:          storageNodes,
 	}, nil
+}
+
+func calculateMinLockDemand(alloc *event.Allocation, terms Terms) (currency.Coin, error) {
+	shards := int64(alloc.DataShards + alloc.ParityShards)
+	gbSize := sizeInGB((alloc.Size + shards - 1) / shards)
+	rd := int64(time.Second * time.Duration(alloc.Expiration-alloc.StartTime))
+	rdTimeUnits := big.NewRat(rd, alloc.TimeUnit)
+	var bwF *big.Rat
+	_ = bwF.Mul(gbSize, bwF.Mul(terms.MinLockDemand.Rat, rdTimeUnits))
+	return currency.MultBigRat(terms.WritePrice, bwF)
 }
 
 func (sa *StorageAllocation) marshalTerms() ([]byte, error) {

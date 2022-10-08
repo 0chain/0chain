@@ -42,7 +42,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 				DelegateID: delegateId,
 				Balance:    arg.delegateBal[i],
 			}
-			sp.Settings.ServiceChargeRatio = arg.serviceChargeRatio
+			sp.Settings.ServiceChargeRatio.SetFloat64(arg.serviceChargeRatio)
 		}
 
 		return sp, balances

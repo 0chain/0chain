@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"math/rand"
 	"regexp"
 	"sort"
@@ -120,7 +121,7 @@ type Pooler interface {
 	HasNode(id string) bool
 }
 
-func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp Pooler) (maxNodes int) {
+func (sns SimpleNodes) reduce(limit int, xPercent *big.Rat, pmbrss int64, pmbnp Pooler) (maxNodes int) {
 	var pmbNodes, newNodes, selectedNodes []*SimpleNode
 
 	// separate previous mb miners and new miners from dkg miners list
@@ -143,9 +144,9 @@ func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp P
 
 	// calculate max nodes count for next mb
 	maxNodes = min(limit, len(sns))
-
+	xp, _ := xPercent.Float64()
 	// get number of nodes from previous mb that are required to be part of next mb
-	x := min(len(pmbNodes), int(math.Ceil(xPercent*float64(maxNodes))))
+	x := min(len(pmbNodes), int(math.Ceil(xp*float64(maxNodes))))
 	y := maxNodes - x
 
 	// select first x nodes from pmb miners
@@ -209,33 +210,33 @@ func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp P
 //
 
 type GlobalNode struct {
-	ViewChange   int64   `json:"view_change"`
-	MaxN         int     `json:"max_n"`         // } miners limits
-	MinN         int     `json:"min_n"`         // }
-	MaxS         int     `json:"max_s"`         // } sharders limits
-	MinS         int     `json:"min_s"`         // }
-	MaxDelegates int     `json:"max_delegates"` // } limited by the SC
-	TPercent     float64 `json:"t_percent"`
-	KPercent     float64 `json:"k_percent"`
-	XPercent     float64 `json:"x_percent"`
-	LastRound    int64   `json:"last_round"`
+	ViewChange   int64       `json:"view_change"`
+	MaxN         int         `json:"max_n"`         // } miners limits
+	MinN         int         `json:"min_n"`         // }
+	MaxS         int         `json:"max_s"`         // } sharders limits
+	MinS         int         `json:"min_s"`         // }
+	MaxDelegates int         `json:"max_delegates"` // } limited by the SC
+	TPercent     zbig.BigRat `json:"t_percent" msg:"t_percent,extension"`
+	KPercent     zbig.BigRat `json:"k_percent" msg:"k_percent,extension"`
+	XPercent     zbig.BigRat `json:"x_percent" msg:"x_percent,extension"`
+	LastRound    int64       `json:"last_round"`
 	// MaxStake boundary of SC.
 	MaxStake currency.Coin `json:"max_stake"`
 	// MinStake boundary of SC.
 	MinStake currency.Coin `json:"min_stake"`
 
 	// Reward rate.
-	RewardRate float64 `json:"reward_rate"`
+	RewardRate zbig.BigRat `json:"reward_rate" msg:"reward_rate,extension"`
 	// ShareRatio is miner/block sharders rewards ratio.
-	ShareRatio float64 `json:"share_ratio"`
+	ShareRatio zbig.BigRat `json:"share_ratio" msg:"share_ratio,extension"`
 	// BlockReward
 	BlockReward currency.Coin `json:"block_reward"`
 	// MaxCharge can be set by a generator.
-	MaxCharge zbig.BigRat `json:"max_charge"` // %
+	MaxCharge zbig.BigRat `json:"max_charge" msg:"max_chargemax_charge,extension"` // %
 	// Epoch is number of rounds to decline interests and rewards.
 	Epoch int64 `json:"epoch"`
 	// RewardDeclineRate is ratio of epoch rewards declining.
-	RewardDeclineRate float64 `json:"reward_decline_rate"`
+	RewardDeclineRate zbig.BigRat `json:"reward_decline_rate" msg:"reward_decline_rate,extension"`
 	// MaxMint is minting boundary for SC.
 	MaxMint currency.Coin `json:"max_mint"`
 
@@ -266,22 +267,22 @@ func (gn *GlobalNode) readConfig() (err error) {
 	}
 	gn.MaxN = config.SmartContractConfig.GetInt(pfx + SettingName[MaxN])
 	gn.MinN = config.SmartContractConfig.GetInt(pfx + SettingName[MinN])
-	gn.TPercent = config.SmartContractConfig.GetFloat64(pfx + SettingName[TPercent])
-	gn.KPercent = config.SmartContractConfig.GetFloat64(pfx + SettingName[KPercent])
-	gn.XPercent = config.SmartContractConfig.GetFloat64(pfx + SettingName[XPercent])
+	gn.TPercent = zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[TPercent]))
+	gn.KPercent = zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[KPercent]))
+	gn.XPercent = zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[XPercent]))
 	gn.MaxS = config.SmartContractConfig.GetInt(pfx + SettingName[MaxS])
 	gn.MinS = config.SmartContractConfig.GetInt(pfx + SettingName[MinS])
 	gn.MaxDelegates = config.SmartContractConfig.GetInt(pfx + SettingName[MaxDelegates])
 	gn.RewardRoundFrequency = config.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
-	gn.RewardRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
-	gn.ShareRatio = config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
+	gn.RewardRate = zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate]))
+	gn.ShareRatio = zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio]))
 	gn.BlockReward, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[BlockReward]))
 	if err != nil {
 		return
 	}
-	gn.MaxCharge = *zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge]))
+	gn.MaxCharge = zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge]))
 	gn.Epoch = config.SmartContractConfig.GetInt64(pfx + SettingName[Epoch])
-	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
+	gn.RewardDeclineRate = zbig.BigRatFromFloat64(config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate]))
 	gn.MaxMint, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxMint]))
 	if err != nil {
 		return
@@ -524,27 +525,23 @@ func (gn *GlobalNode) canMint() bool {
 func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
 	var rr = gn.RewardRate
+	var decline *big.Rat
 	// decline the value
-	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
+	gn.RewardRate.Mul(gn.RewardRate.Rat, decline.Sub(zbig.OneBigRat, gn.RewardDeclineRate.Rat))
 
 	// log about the epoch declining
 	logging.Logger.Info("miner sc: epoch decline",
 		zap.Int64("round", gn.LastRound),
-		zap.Float64("reward_decline_rate", gn.RewardDeclineRate),
-		zap.Float64("prev_reward_rate", rr),
-		zap.Float64("new_reward_rate", gn.RewardRate),
+		zap.Any("reward_decline_rate", gn.RewardDeclineRate),
+		zap.Any("prev_reward_rate", rr),
+		zap.Any("new_reward_rate", gn.RewardRate),
 	)
 }
 
 // calculate miner/block sharders fees
 func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 	miner, sharders currency.Coin, err error) {
-
-	fFees, err := fees.Float64()
-	if err != nil {
-		return 0, 0, err
-	}
-	miner, err = currency.Float64ToCoin(fFees * gn.ShareRatio)
+	miner, err = currency.MultBigRat(fees, gn.ShareRatio.Rat)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -634,8 +631,8 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 
 // swagger:model SimpleNodeGeolocation
 type SimpleNodeGeolocation struct {
-	Latitude  zbig.BigRat `json:"latitude" msg:"latitude,extension"`
-	Longitude zbig.BigRat `json:"longitude" msg:"longitude,extension"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 // swagger:model SimpleNode
@@ -769,16 +766,16 @@ func (pn *PhaseNode) Decode(input []byte) error {
 
 // swagger:model DKGMinerNodes
 type DKGMinerNodes struct {
-	MinN     int     `json:"min_n"`
-	MaxN     int     `json:"max_n"`
-	TPercent float64 `json:"t_percent"`
-	KPercent float64 `json:"k_percent"`
+	MinN     int         `json:"min_n"`
+	MaxN     int         `json:"max_n"`
+	TPercent zbig.BigRat `json:"t_percent" msg:"t_percent,extension"`
+	KPercent zbig.BigRat `json:"k_percent" msg:"k_percent,extension"`
 
 	SimpleNodes    `json:"simple_nodes"`
 	T              int             `json:"t"`
 	K              int             `json:"k"`
 	N              int             `json:"n"`
-	XPercent       float64         `json:"x_percent"`
+	XPercent       zbig.BigRat     `json:"x_percent" msg:"x_percent,extension"`
 	RevealedShares map[string]int  `json:"revealed_shares"`
 	Waited         map[string]bool `json:"waited"`
 
@@ -807,8 +804,8 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.setConfigs(gn)
 	var m = min(dkgmn.MaxN, n)
 	dkgmn.N = m
-	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
-	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
+	dkgmn.K = int(math.Ceil(dkgmn.KPercent.Float64() * float64(m)))
+	dkgmn.T = int(math.Ceil(dkgmn.TPercent.Float64() * float64(m)))
 }
 
 func simpleNodesKeys(sns SimpleNodes) (ks []string) {
@@ -851,7 +848,7 @@ func (dkgmn *DKGMinerNodes) reduceNodes(
 				pmbnp = pmb.MagicBlock.Miners
 			}
 		}
-		simpleNodes.reduce(gn.MaxN, gn.XPercent, pmbrss, pmbnp)
+		simpleNodes.reduce(gn.MaxN, gn.XPercent.Rat, pmbrss, pmbnp)
 		dkgmn.SimpleNodes = simpleNodes
 	}
 

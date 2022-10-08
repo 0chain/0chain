@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/smartcontract/zbig"
 	"log"
 	"math/rand"
 	"strconv"
@@ -130,7 +131,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 						MinStake:           currency.Coin(1.1 * 1e10),
 						MaxStake:           currency.Coin(103 * 1e10),
 						MaxNumDelegates:    7,
-						ServiceChargeRatio: 0.17,
+						ServiceChargeRatio: zbig.BigRatFromFloat64(0.17),
 					},
 				}).Encode(),
 			},

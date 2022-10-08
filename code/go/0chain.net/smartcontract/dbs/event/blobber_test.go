@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
@@ -37,7 +39,7 @@ func TestBlobbers(t *testing.T) {
 	type Terms struct {
 		ReadPrice        currency.Coin `json:"read_price"`
 		WritePrice       currency.Coin `json:"write_price"`
-		MinLockDemand    float64       `json:"min_lock_demand"`
+		MinLockDemand    zbig.BigRat   `json:"min_lock_demand"`
 		MaxOfferDuration time.Duration `json:"max_offer_duration"`
 	}
 	type stakePoolSettings struct {
@@ -45,7 +47,7 @@ func TestBlobbers(t *testing.T) {
 		MinStake       currency.Coin `json:"min_stake"`
 		MaxStake       currency.Coin `json:"max_stake"`
 		NumDelegates   int           `json:"num_delegates"`
-		ServiceCharge  float64       `json:"service_charge"`
+		ServiceCharge  zbig.BigRat   `json:"service_charge"`
 	}
 	type StorageNode struct {
 		ID              string                 `json:"id"`
@@ -112,7 +114,6 @@ func TestBlobbers(t *testing.T) {
 		Terms: Terms{
 			ReadPrice:        currency.Coin(29),
 			WritePrice:       currency.Coin(31),
-			MinLockDemand:    37.0,
 			MaxOfferDuration: 39 * time.Minute,
 		},
 		Capacity:        43,
@@ -124,10 +125,11 @@ func TestBlobbers(t *testing.T) {
 			MinStake:       currency.Coin(53),
 			MaxStake:       currency.Coin(57),
 			NumDelegates:   59,
-			ServiceCharge:  61.0,
 		},
 		SavedData: 10,
 	}
+	sn.Terms.MinLockDemand.SetFloat64(0.7)
+	sn.StakePoolSettings.ServiceCharge.SetFloat64(0.7)
 	SnBlobber := convertSn(sn)
 	data, err := json.Marshal(&SnBlobber)
 	require.NoError(t, err)

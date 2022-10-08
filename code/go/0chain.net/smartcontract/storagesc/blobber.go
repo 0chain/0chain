@@ -420,10 +420,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
-		value    = currency.Coin(float64(details.Terms.ReadPrice) * sizeRead)
 	)
+	value, err := currency.MultBigRat(details.Terms.ReadPrice, sizeRead)
+	if err != nil {
+		return "", common.NewErrorf("commit_blobber_read",
+			"multiplying %v and %v: %v", details.Terms.ReadPrice, sizeRead, err)
+	}
 
-	commitRead.ReadMarker.ReadSize = sizeRead
+	commitRead.ReadMarker.ReadSize, _ = sizeRead.Float64()
 
 	// move tokens from read pool to blobber
 	var rp *readPool
@@ -463,9 +467,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
 	if blobber.LastRewardDataReadRound >= rewardRound {
-		blobber.DataReadLastRewardRound += sizeRead
+		blobber.DataReadLastRewardRound += commitRead.ReadMarker.ReadSize
 	} else {
-		blobber.DataReadLastRewardRound = sizeRead
+		blobber.DataReadLastRewardRound = commitRead.ReadMarker.ReadSize
 	}
 	blobber.LastRewardDataReadRound = balances.GetBlock().Round
 
@@ -556,8 +560,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 
 	var move currency.Coin
 	if size > 0 {
-		move, err = details.upload(size, wmTime,
-			alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
+		move, err = details.upload(size, alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
@@ -579,7 +582,10 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		}
 		details.Spent = spent
 	} else {
-		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
+		move, err = details.delete(-size, alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
+		if err != nil {
+			return err
+		}
 		err = alloc.moveFromChallengePool(cp, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
@@ -712,7 +718,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
-	if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
+	if err := alloc.checkFunding(conf.CancellationCharge.Rat); err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"insufficient funds: %v", err)
 	}
@@ -745,7 +751,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
-		brn.TotalData = sizeInGB(blobber.SavedData)
+		brn.TotalData, _ = sizeInGB(blobber.SavedData).Float64()
 
 		err = parts.UpdateItem(balances, blobber.RewardPartition.Index, &brn)
 		if err != nil {

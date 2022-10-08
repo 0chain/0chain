@@ -39,8 +39,8 @@ type Sharder struct {
 	TotalReward       currency.Coin
 	Fees              currency.Coin
 	Active            bool
-	Longitude         zbig.BigRat
-	Latitude          zbig.BigRat
+	Latitude          float64
+	Longitude         float64
 }
 
 // swagger:model SharderGeolocation

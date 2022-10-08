@@ -17,12 +17,20 @@ func (z *DKGMinerNodes) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxN"
 	o = append(o, 0xa4, 0x4d, 0x61, 0x78, 0x4e)
 	o = msgp.AppendInt(o, z.MaxN)
-	// string "TPercent"
-	o = append(o, 0xa8, 0x54, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
-	o = msgp.AppendFloat64(o, z.TPercent)
-	// string "KPercent"
-	o = append(o, 0xa8, 0x4b, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
-	o = msgp.AppendFloat64(o, z.KPercent)
+	// string "t_percent"
+	o = append(o, 0xa9, 0x74, 0x5f, 0x70, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
+	o, err = msgp.AppendExtension(o, &z.TPercent)
+	if err != nil {
+		err = msgp.WrapError(err, "TPercent")
+		return
+	}
+	// string "k_percent"
+	o = append(o, 0xa9, 0x6b, 0x5f, 0x70, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
+	o, err = msgp.AppendExtension(o, &z.KPercent)
+	if err != nil {
+		err = msgp.WrapError(err, "KPercent")
+		return
+	}
 	// string "SimpleNodes"
 	o = append(o, 0xab, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x4e, 0x6f, 0x64, 0x65, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.SimpleNodes)))
@@ -53,9 +61,13 @@ func (z *DKGMinerNodes) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "N"
 	o = append(o, 0xa1, 0x4e)
 	o = msgp.AppendInt(o, z.N)
-	// string "XPercent"
-	o = append(o, 0xa8, 0x58, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
-	o = msgp.AppendFloat64(o, z.XPercent)
+	// string "x_percent"
+	o = append(o, 0xa9, 0x78, 0x5f, 0x70, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
+	o, err = msgp.AppendExtension(o, &z.XPercent)
+	if err != nil {
+		err = msgp.WrapError(err, "XPercent")
+		return
+	}
 	// string "RevealedShares"
 	o = append(o, 0xae, 0x52, 0x65, 0x76, 0x65, 0x61, 0x6c, 0x65, 0x64, 0x53, 0x68, 0x61, 0x72, 0x65, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.RevealedShares)))
@@ -118,14 +130,14 @@ func (z *DKGMinerNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxN")
 				return
 			}
-		case "TPercent":
-			z.TPercent, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "t_percent":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.TPercent)
 			if err != nil {
 				err = msgp.WrapError(err, "TPercent")
 				return
 			}
-		case "KPercent":
-			z.KPercent, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "k_percent":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.KPercent)
 			if err != nil {
 				err = msgp.WrapError(err, "KPercent")
 				return
@@ -189,8 +201,8 @@ func (z *DKGMinerNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "N")
 				return
 			}
-		case "XPercent":
-			z.XPercent, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "x_percent":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.XPercent)
 			if err != nil {
 				err = msgp.WrapError(err, "XPercent")
 				return
@@ -275,7 +287,7 @@ func (z *DKGMinerNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *DKGMinerNodes) Msgsize() (s int) {
-	s = 1 + 5 + msgp.IntSize + 5 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 12 + msgp.MapHeaderSize
+	s = 1 + 5 + msgp.IntSize + 5 + msgp.IntSize + 10 + msgp.ExtensionPrefixSize + z.TPercent.Len() + 10 + msgp.ExtensionPrefixSize + z.KPercent.Len() + 12 + msgp.MapHeaderSize
 	if z.SimpleNodes != nil {
 		for za0001, za0002 := range z.SimpleNodes {
 			_ = za0002
@@ -287,7 +299,7 @@ func (z *DKGMinerNodes) Msgsize() (s int) {
 			}
 		}
 	}
-	s += 2 + msgp.IntSize + 2 + msgp.IntSize + 2 + msgp.IntSize + 9 + msgp.Float64Size + 15 + msgp.MapHeaderSize
+	s += 2 + msgp.IntSize + 2 + msgp.IntSize + 2 + msgp.IntSize + 10 + msgp.ExtensionPrefixSize + z.XPercent.Len() + 15 + msgp.MapHeaderSize
 	if z.RevealedShares != nil {
 		for za0003, za0004 := range z.RevealedShares {
 			_ = za0004
@@ -327,15 +339,27 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxDelegates"
 	o = append(o, 0xac, 0x4d, 0x61, 0x78, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
 	o = msgp.AppendInt(o, z.MaxDelegates)
-	// string "TPercent"
-	o = append(o, 0xa8, 0x54, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
-	o = msgp.AppendFloat64(o, z.TPercent)
-	// string "KPercent"
-	o = append(o, 0xa8, 0x4b, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
-	o = msgp.AppendFloat64(o, z.KPercent)
-	// string "XPercent"
-	o = append(o, 0xa8, 0x58, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
-	o = msgp.AppendFloat64(o, z.XPercent)
+	// string "t_percent"
+	o = append(o, 0xa9, 0x74, 0x5f, 0x70, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
+	o, err = msgp.AppendExtension(o, &z.TPercent)
+	if err != nil {
+		err = msgp.WrapError(err, "TPercent")
+		return
+	}
+	// string "k_percent"
+	o = append(o, 0xa9, 0x6b, 0x5f, 0x70, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
+	o, err = msgp.AppendExtension(o, &z.KPercent)
+	if err != nil {
+		err = msgp.WrapError(err, "KPercent")
+		return
+	}
+	// string "x_percent"
+	o = append(o, 0xa9, 0x78, 0x5f, 0x70, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74)
+	o, err = msgp.AppendExtension(o, &z.XPercent)
+	if err != nil {
+		err = msgp.WrapError(err, "XPercent")
+		return
+	}
 	// string "LastRound"
 	o = append(o, 0xa9, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x6f, 0x75, 0x6e, 0x64)
 	o = msgp.AppendInt64(o, z.LastRound)
@@ -353,12 +377,20 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "MinStake")
 		return
 	}
-	// string "RewardRate"
-	o = append(o, 0xaa, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x61, 0x74, 0x65)
-	o = msgp.AppendFloat64(o, z.RewardRate)
-	// string "ShareRatio"
-	o = append(o, 0xaa, 0x53, 0x68, 0x61, 0x72, 0x65, 0x52, 0x61, 0x74, 0x69, 0x6f)
-	o = msgp.AppendFloat64(o, z.ShareRatio)
+	// string "reward_rate"
+	o = append(o, 0xab, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x5f, 0x72, 0x61, 0x74, 0x65)
+	o, err = msgp.AppendExtension(o, &z.RewardRate)
+	if err != nil {
+		err = msgp.WrapError(err, "RewardRate")
+		return
+	}
+	// string "share_ratio"
+	o = append(o, 0xab, 0x73, 0x68, 0x61, 0x72, 0x65, 0x5f, 0x72, 0x61, 0x74, 0x69, 0x6f)
+	o, err = msgp.AppendExtension(o, &z.ShareRatio)
+	if err != nil {
+		err = msgp.WrapError(err, "ShareRatio")
+		return
+	}
 	// string "BlockReward"
 	o = append(o, 0xab, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
 	o, err = z.BlockReward.MarshalMsg(o)
@@ -366,9 +398,9 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "BlockReward")
 		return
 	}
-	// string "MaxCharge"
-	o = append(o, 0xa9, 0x4d, 0x61, 0x78, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
-	o, err = z.MaxCharge.MarshalMsg(o)
+	// string "max_chargemax_charge"
+	o = append(o, 0xb4, 0x6d, 0x61, 0x78, 0x5f, 0x63, 0x68, 0x61, 0x72, 0x67, 0x65, 0x6d, 0x61, 0x78, 0x5f, 0x63, 0x68, 0x61, 0x72, 0x67, 0x65)
+	o, err = msgp.AppendExtension(o, &z.MaxCharge)
 	if err != nil {
 		err = msgp.WrapError(err, "MaxCharge")
 		return
@@ -376,9 +408,13 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Epoch"
 	o = append(o, 0xa5, 0x45, 0x70, 0x6f, 0x63, 0x68)
 	o = msgp.AppendInt64(o, z.Epoch)
-	// string "RewardDeclineRate"
-	o = append(o, 0xb1, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x44, 0x65, 0x63, 0x6c, 0x69, 0x6e, 0x65, 0x52, 0x61, 0x74, 0x65)
-	o = msgp.AppendFloat64(o, z.RewardDeclineRate)
+	// string "reward_decline_rate"
+	o = append(o, 0xb3, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x5f, 0x64, 0x65, 0x63, 0x6c, 0x69, 0x6e, 0x65, 0x5f, 0x72, 0x61, 0x74, 0x65)
+	o, err = msgp.AppendExtension(o, &z.RewardDeclineRate)
+	if err != nil {
+		err = msgp.WrapError(err, "RewardDeclineRate")
+		return
+	}
 	// string "MaxMint"
 	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
 	o, err = z.MaxMint.MarshalMsg(o)
@@ -483,20 +519,20 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxDelegates")
 				return
 			}
-		case "TPercent":
-			z.TPercent, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "t_percent":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.TPercent)
 			if err != nil {
 				err = msgp.WrapError(err, "TPercent")
 				return
 			}
-		case "KPercent":
-			z.KPercent, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "k_percent":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.KPercent)
 			if err != nil {
 				err = msgp.WrapError(err, "KPercent")
 				return
 			}
-		case "XPercent":
-			z.XPercent, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "x_percent":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.XPercent)
 			if err != nil {
 				err = msgp.WrapError(err, "XPercent")
 				return
@@ -519,14 +555,14 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MinStake")
 				return
 			}
-		case "RewardRate":
-			z.RewardRate, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "reward_rate":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.RewardRate)
 			if err != nil {
 				err = msgp.WrapError(err, "RewardRate")
 				return
 			}
-		case "ShareRatio":
-			z.ShareRatio, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "share_ratio":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.ShareRatio)
 			if err != nil {
 				err = msgp.WrapError(err, "ShareRatio")
 				return
@@ -537,8 +573,8 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BlockReward")
 				return
 			}
-		case "MaxCharge":
-			bts, err = z.MaxCharge.UnmarshalMsg(bts)
+		case "max_chargemax_charge":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.MaxCharge)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxCharge")
 				return
@@ -549,8 +585,8 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Epoch")
 				return
 			}
-		case "RewardDeclineRate":
-			z.RewardDeclineRate, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "reward_decline_rate":
+			bts, err = msgp.ReadExtensionBytes(bts, &z.RewardDeclineRate)
 			if err != nil {
 				err = msgp.WrapError(err, "RewardDeclineRate")
 				return
@@ -646,7 +682,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *GlobalNode) Msgsize() (s int) {
-	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + z.MaxCharge.Msgsize() + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 15
+	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 10 + msgp.ExtensionPrefixSize + z.TPercent.Len() + 10 + msgp.ExtensionPrefixSize + z.KPercent.Len() + 10 + msgp.ExtensionPrefixSize + z.XPercent.Len() + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 12 + msgp.ExtensionPrefixSize + z.RewardRate.Len() + 12 + msgp.ExtensionPrefixSize + z.ShareRatio.Len() + 12 + z.BlockReward.Msgsize() + 21 + msgp.ExtensionPrefixSize + z.MaxCharge.Len() + 6 + msgp.Int64Size + 20 + msgp.ExtensionPrefixSize + z.RewardDeclineRate.Len() + 8 + z.MaxMint.Msgsize() + 15
 	if z.PrevMagicBlock == nil {
 		s += msgp.NilSize
 	} else {
@@ -820,20 +856,12 @@ func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Geolocation"
 	o = append(o, 0xab, 0x47, 0x65, 0x6f, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e)
 	// map header, size 2
-	// string "latitude"
-	o = append(o, 0x82, 0xa8, 0x6c, 0x61, 0x74, 0x69, 0x74, 0x75, 0x64, 0x65)
-	o, err = msgp.AppendExtension(o, &z.Geolocation.Latitude)
-	if err != nil {
-		err = msgp.WrapError(err, "Geolocation", "Latitude")
-		return
-	}
-	// string "longitude"
-	o = append(o, 0xa9, 0x6c, 0x6f, 0x6e, 0x67, 0x69, 0x74, 0x75, 0x64, 0x65)
-	o, err = msgp.AppendExtension(o, &z.Geolocation.Longitude)
-	if err != nil {
-		err = msgp.WrapError(err, "Geolocation", "Longitude")
-		return
-	}
+	// string "Latitude"
+	o = append(o, 0x82, 0xa8, 0x4c, 0x61, 0x74, 0x69, 0x74, 0x75, 0x64, 0x65)
+	o = msgp.AppendFloat64(o, z.Geolocation.Latitude)
+	// string "Longitude"
+	o = append(o, 0xa9, 0x4c, 0x6f, 0x6e, 0x67, 0x69, 0x74, 0x75, 0x64, 0x65)
+	o = msgp.AppendFloat64(o, z.Geolocation.Longitude)
 	// string "Path"
 	o = append(o, 0xa4, 0x50, 0x61, 0x74, 0x68)
 	o = msgp.AppendString(o, z.Path)
@@ -929,14 +957,14 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 				switch msgp.UnsafeString(field) {
-				case "latitude":
-					bts, err = msgp.ReadExtensionBytes(bts, &z.Geolocation.Latitude)
+				case "Latitude":
+					z.Geolocation.Latitude, bts, err = msgp.ReadFloat64Bytes(bts)
 					if err != nil {
 						err = msgp.WrapError(err, "Geolocation", "Latitude")
 						return
 					}
-				case "longitude":
-					bts, err = msgp.ReadExtensionBytes(bts, &z.Geolocation.Longitude)
+				case "Longitude":
+					z.Geolocation.Longitude, bts, err = msgp.ReadFloat64Bytes(bts)
 					if err != nil {
 						err = msgp.WrapError(err, "Geolocation", "Longitude")
 						return
@@ -1021,7 +1049,7 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SimpleNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.ExtensionPrefixSize + z.Geolocation.Latitude.Len() + 10 + msgp.ExtensionPrefixSize + z.Geolocation.Longitude.Len() + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
 	return
 }
 
@@ -1029,20 +1057,12 @@ func (z *SimpleNode) Msgsize() (s int) {
 func (z SimpleNodeGeolocation) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 2
-	// string "latitude"
-	o = append(o, 0x82, 0xa8, 0x6c, 0x61, 0x74, 0x69, 0x74, 0x75, 0x64, 0x65)
-	o, err = msgp.AppendExtension(o, &z.Latitude)
-	if err != nil {
-		err = msgp.WrapError(err, "Latitude")
-		return
-	}
-	// string "longitude"
-	o = append(o, 0xa9, 0x6c, 0x6f, 0x6e, 0x67, 0x69, 0x74, 0x75, 0x64, 0x65)
-	o, err = msgp.AppendExtension(o, &z.Longitude)
-	if err != nil {
-		err = msgp.WrapError(err, "Longitude")
-		return
-	}
+	// string "Latitude"
+	o = append(o, 0x82, 0xa8, 0x4c, 0x61, 0x74, 0x69, 0x74, 0x75, 0x64, 0x65)
+	o = msgp.AppendFloat64(o, z.Latitude)
+	// string "Longitude"
+	o = append(o, 0xa9, 0x4c, 0x6f, 0x6e, 0x67, 0x69, 0x74, 0x75, 0x64, 0x65)
+	o = msgp.AppendFloat64(o, z.Longitude)
 	return
 }
 
@@ -1064,14 +1084,14 @@ func (z *SimpleNodeGeolocation) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "latitude":
-			bts, err = msgp.ReadExtensionBytes(bts, &z.Latitude)
+		case "Latitude":
+			z.Latitude, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Latitude")
 				return
 			}
-		case "longitude":
-			bts, err = msgp.ReadExtensionBytes(bts, &z.Longitude)
+		case "Longitude":
+			z.Longitude, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Longitude")
 				return
@@ -1090,7 +1110,7 @@ func (z *SimpleNodeGeolocation) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z SimpleNodeGeolocation) Msgsize() (s int) {
-	s = 1 + 9 + msgp.ExtensionPrefixSize + z.Latitude.Len() + 10 + msgp.ExtensionPrefixSize + z.Longitude.Len()
+	s = 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size
 	return
 }
 

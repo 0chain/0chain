@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/smartcontract/zbig"
 	"errors"
 	"fmt"
 
@@ -30,7 +31,7 @@ type Authorizer struct {
 	MinStake       currency.Coin `json:"min_stake"`
 	MaxStake       currency.Coin `json:"max_stake"`
 	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	ServiceCharge  zbig.BigRat   `json:"service_charge" msg:"service_charge,extension"`
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {

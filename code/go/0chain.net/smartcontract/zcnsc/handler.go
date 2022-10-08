@@ -41,8 +41,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 // get authorizer nodes
 //
 // responses:
-//  200: authorizerNodesResponse
-//  404:
+//
+//	200: authorizerNodesResponse
+//	404:
 func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Request) {
 	var (
 		err    error
@@ -71,8 +72,9 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 // get zcn configuration settings
 //
 // responses:
-//  200: StringMap
-//  404:
+//
+//	200: StringMap
+//	404:
 func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
 	gn, err := GetGlobalNode(zrh.GetQueryStateContext())
 	if err != nil && err != util.ErrValueNotPresent {
@@ -87,8 +89,9 @@ func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Reques
 // get authorizer
 //
 // responses:
-//  200: authorizerResponse
-//  404:
+//
+//	200: authorizerResponse
+//	404:
 func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {
@@ -155,7 +158,7 @@ func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 		MinStake:        auth.MinStake,
 		MaxStake:        auth.MaxStake,
 		NumDelegates:    auth.NumDelegates,
-		ServiceCharge:   auth.ServiceCharge,
+		ServiceCharge:   auth.ServiceCharge.Float64(),
 	}
 
 	return resp

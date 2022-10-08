@@ -70,17 +70,17 @@ type blockRewardZeta struct {
 	Mu zbig.BigRat `json:"mu" msg:"mu,extension"`
 }
 
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio zbig.BigRat) error {
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio *big.Rat) error {
 	var total *big.Rat
-	_ = total.Add(sharderRatio.Rat, total.Add(minerRatio.Rat, bRatio.Rat))
+	_ = total.Add(sharderRatio, total.Add(minerRatio, bRatio))
 	if total.Cmp(zbig.ZeroBigRat) == 0 {
 		br.SharderWeight.Rat.Set(zbig.ZeroBigRat)
 		br.MinerWeight.Set(zbig.ZeroBigRat)
 		br.BlobberWeight.Set(zbig.ZeroBigRat)
 	} else {
-		br.SharderWeight.Quo(sharderRatio.Rat, total)
-		br.MinerWeight.Quo(minerRatio.Rat, total)
-		br.BlobberWeight.Quo(bRatio.Rat, total)
+		br.SharderWeight.Quo(sharderRatio, total)
+		br.MinerWeight.Quo(minerRatio, total)
+		br.BlobberWeight.Quo(bRatio, total)
 	}
 	var totalWeight *big.Rat
 	_ = totalWeight.Add(br.SharderWeight.Rat, totalWeight.Add(br.MinerWeight.Rat, br.BlobberWeight.Rat))
@@ -188,7 +188,7 @@ type Config struct {
 	MaxDelegates int `json:"max_delegates"`
 
 	// MaxCharge that blobber gets from rewards to its delegate_wallet.
-	MaxCharge zbig.BigRat `json:"max_charge" msg:"max_charge,extension"`
+	MaxCharge zbig.BigRat `json:"max_charge"`
 
 	BlockReward *blockReward `json:"block_reward"`
 
@@ -303,10 +303,10 @@ func (conf *Config) validate() (err error) {
 	if conf.MaxDelegates < 1 {
 		return fmt.Errorf("max_delegates is too small %v", conf.MaxDelegates)
 	}
-	if conf.MaxCharge.Cmp(zbig.ZeroBigRat) == -1 {
+	if conf.MaxCharge.Cmp(zbig.ZeroBigRat) < 0 {
 		return fmt.Errorf("negative max_charge: %v", conf.MaxCharge)
 	}
-	if conf.MaxCharge.Cmp(zbig.OneBigRat) == 1 {
+	if conf.MaxCharge.Cmp(zbig.OneBigRat) > 0 {
 		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
 			conf.MaxCharge)
 	}
@@ -518,9 +518,9 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
 	err = conf.BlockReward.setWeightsFromRatio(
-		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.sharder_ratio")),
-		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.miner_ratio")),
-		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.blobber_ratio")),
+		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.sharder_ratio")).Rat,
+		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.miner_ratio")).Rat,
+		zbig.BigRatFromFloat64(scc.GetFloat64(pfx+"block_reward.blobber_ratio")).Rat,
 	)
 	if err != nil {
 		return nil, err

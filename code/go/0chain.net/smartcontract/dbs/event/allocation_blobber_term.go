@@ -1,9 +1,11 @@
 package event
 
 import (
-	common2 "0chain.net/smartcontract/common"
-	"gorm.io/gorm/clause"
 	"time"
+
+	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/zbig"
+	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
 )
@@ -14,7 +16,7 @@ type AllocationBlobberTerm struct {
 	BlobberID               string        `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`    // Foreign Key
 	ReadPrice               int64         `json:"read_price"`
 	WritePrice              int64         `json:"write_price"`
-	MinLockDemand           float64       `json:"min_lock_demand"`
+	MinLockDemand           zbig.BigRat   `json:"min_lock_demand"`
 	MaxOfferDuration        time.Duration `json:"max_offer_duration"`
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	Allocation              Allocation    `json:"-" gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`

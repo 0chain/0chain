@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -173,7 +175,7 @@ func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode
 	if err != nil {
 		return err
 	}
-	if poolSettings.ServiceChargeRatio < 0.0 {
+	if poolSettings.ServiceChargeRatio.Cmp(zbig.ZeroBigRat) < 0 {
 		return errors.New("negative service charge")
 	}
 	if poolSettings.MaxNumDelegates <= 0 {
