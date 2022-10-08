@@ -110,20 +110,20 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 			logging.Logger.Error("converting coin to int64", zap.Error(err))
 		}
 		gs.TotalStaked = ts
-		gs.SuccessfulChallenges += int64(aggregate.ChallengesPassed)
-		gs.TotalChallenges += int64(aggregate.ChallengesCompleted)
-		gs.AllocatedStorage += aggregate.Allocated
-		gs.MaxCapacityStorage += aggregate.Capacity
-		gs.UsedStorage += aggregate.SavedData
+		gs.SuccessfulChallenges += int64(aggregate.ChallengesPassed - old.ChallengesPassed)
+		gs.TotalChallenges += int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
+		gs.AllocatedStorage += aggregate.Allocated - old.Allocated
+		gs.MaxCapacityStorage += aggregate.Capacity - old.Capacity
+		gs.UsedStorage += aggregate.SavedData - old.SavedData
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
-		ss, err := (aggregate.TotalStake * (GB / aggregate.WritePrice)).Int64()
+		ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
 		if err != nil {
 			logging.Logger.Error("converting coin to int64", zap.Error(err))
 		}
 		gs.StakedStorage += ss
 
-		gs.blobberCount++
+		gs.blobberCount++ //todo figure out why we increment blobberCount on every update
 	}
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
