@@ -896,7 +896,7 @@ func (c *Chain) GetBlockSharders(b *block.Block) ([]string, error) {
 			return nil, err
 		}
 		logging.Logger.Error("Failed to get Sharders", zap.Error(err))
-		return nil, nil
+		return []string{}, nil
 	}
 
 	sharders := make([]string, 0, len(sharderNodes.Nodes))

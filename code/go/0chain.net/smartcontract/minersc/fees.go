@@ -377,8 +377,17 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	// pay and mint rest for mb sharders
-	if err := msc.payShardersAndDelegates(sharderFees, sharderRewards, mb, gn, balances); err != nil {
-		return "", err
+	sharders, err := msc.getBlockSharders(mb, balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return "", err
+		}
+	}
+
+	if len(sharders) > 0 {
+		if err := msc.payShardersAndDelegates(sharders, sharderFees, sharderRewards, balances); err != nil {
+			return "", err
+		}
 	}
 
 	// save node first, for the VC pools work
@@ -451,7 +460,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 
 	sids, err := balances.GetBlockSharders(block.PrevBlock)
 	if err != nil {
-		return nil, fmt.Errorf("could not get sharders: %v", err)
+		return nil, err
 	}
 
 	sort.Strings(sids)
@@ -477,14 +486,8 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
-	fee, mint currency.Coin, block *block.Block, gn *GlobalNode, balances cstate.StateContextI,
+	sharders []*MinerNode, fee, mint currency.Coin, balances cstate.StateContextI,
 ) error {
-	var err error
-	var sharders []*MinerNode
-	if sharders, err = msc.getBlockSharders(block, balances); err != nil {
-		return err
-	}
-
 	sn := len(sharders)
 	if sn <= 0 {
 		return errors.New("no sharders to pay")
