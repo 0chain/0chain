@@ -103,23 +103,19 @@ func (msc *MinerSmartContract) unlockOffline(
 	return nil
 }
 
-func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
-	mb *block.MagicBlock, round int64, balances cstate.StateContextI) (
-	err error) {
-
-	var miners, sharders *MinerNodes
-	if miners, err = getMinersList(balances); err != nil {
-		return fmt.Errorf("getting all miners list: %v", err)
-	}
-	sharders, err = getAllShardersList(balances)
+func (msc *MinerSmartContract) viewChangePoolsWork(
+	mb *block.MagicBlock,
+	round int64,
+	sharders *MinerNodes,
+	balances cstate.StateContextI) error {
+	miners, err := getMinersList(balances)
 	if err != nil {
-		return fmt.Errorf("getting all sharders list: %v", err)
+		return fmt.Errorf("getting all miners list: %v", err)
 	}
 
 	var (
-		mbMiners   = make(map[string]struct{}, mb.Miners.Size())
-		mbSharders = make(map[string]struct{}, mb.Miners.Size())
-
+		mbMiners                       = make(map[string]struct{}, mb.Miners.Size())
+		mbSharders                     = make(map[string]struct{}, mb.Miners.Size())
 		minersOffline, shardersOffline []*MinerNode
 	)
 
@@ -149,7 +145,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 
 		if err = msc.unlockDeleted(mn, round, balances); err != nil {
-			return
+			return err
 		}
 		if mn.Delete {
 			miners.Nodes = append(miners.Nodes[:i], miners.Nodes[i+1:]...)
@@ -160,7 +156,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			continue
 		}
 		if err = msc.activatePending(mn); err != nil {
-			return
+			return err
 		}
 		if _, ok := mbMiners[mn.ID]; !ok {
 			minersOffline = append(minersOffline, mn)
@@ -168,7 +164,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 		// save excluding offline nodes
 		if err = mn.save(balances); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -187,18 +183,18 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 
 		if err = msc.unlockDeleted(sn, round, balances); err != nil {
-			return
+			return err
 		}
 		if sn.Delete {
 			sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
 			if err = sn.save(balances); err != nil {
-				return
+				return err
 			}
 			sharderDelete = true
 			continue
 		}
 		if err = msc.activatePending(sn); err != nil {
-			return
+			return err
 		}
 		if _, ok := mbSharders[sn.ID]; !ok {
 			shardersOffline = append(shardersOffline, sn)
@@ -206,20 +202,20 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 		// save excluding offline nodes
 		if err = sn.save(balances); err != nil {
-			return
+			return err
 		}
 	}
 
 	// unlockOffline
 	for _, mn := range minersOffline {
 		if err = msc.unlockOffline(mn, balances); err != nil {
-			return
+			return err
 		}
 	}
 
 	for _, mn := range shardersOffline {
 		if err = msc.unlockOffline(mn, balances); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -236,7 +232,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 				"failed saving all sharder list: %v", err)
 		}
 	}
-	return
+	return nil
 }
 
 func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
@@ -377,15 +373,15 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	// pay and mint rest for mb sharders
-	sharders, err := msc.getBlockSharders(mb, balances)
+	sharders, err := getAllShardersList(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", err
 		}
 	}
 
-	if len(sharders) > 0 {
-		if err := msc.payShardersAndDelegates(sharders, sharderFees, sharderRewards, balances); err != nil {
+	if len(sharders.Nodes) > 0 {
+		if err := msc.payShardersAndDelegates(sharders.Nodes, sharderFees, sharderRewards, balances); err != nil {
 			return "", err
 		}
 	}
@@ -403,7 +399,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {
 		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 		if lfmb != nil {
-			err = msc.viewChangePoolsWork(gn, lfmb, mb.Round, balances)
+			err = msc.viewChangePoolsWork(lfmb, mb.Round, sharders, balances)
 			if err != nil {
 				return "", err
 			}
