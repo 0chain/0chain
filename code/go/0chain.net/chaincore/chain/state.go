@@ -30,7 +30,7 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
-//SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
+// SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
 var SmartContractExecutionTimer metrics.Timer
 
 func init() {
@@ -80,7 +80,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	return b.ComputeState(ctx, c)
 }
 
-//SaveChanges - persist the state changes
+// SaveChanges - persist the state changes
 func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	if !b.IsStateComputed() {
 		err := errors.New("block state not computed")
@@ -109,7 +109,7 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	}
 }
 
-//ExecuteSmartContract - executes the smart contract for the transaction
+// ExecuteSmartContract - executes the smart contract for the transaction
 func (c *Chain) ExecuteSmartContract(
 	ctx context.Context,
 	t *transaction.Transaction,
@@ -209,7 +209,7 @@ func (c *Chain) NewStateContext(
 	eventDb *event.EventDb,
 ) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, txn,
-		c.GetBlockSharders,
+		c.GetMagicBlock,
 		func() *block.Block {
 			return c.GetLatestFinalizedMagicBlock(context.Background())
 		},
@@ -701,9 +701,11 @@ func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID stri
 	return s, nil
 }
 
-/*GetState - Get the state of a client w.r.t a block. Note, don't call this from within state computation logic
+/*
+GetState - Get the state of a client w.r.t a block. Note, don't call this from within state computation logic
 since block.GetStateValue uses a RLock on the StateMutex. This API is for someone reading the state from outside
-the protocol without already holding a lock on StateMutex */
+the protocol without already holding a lock on StateMutex
+*/
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()

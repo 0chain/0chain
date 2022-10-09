@@ -3,7 +3,6 @@ package minersc
 import (
 	"errors"
 	"fmt"
-	"sort"
 
 	"0chain.net/chaincore/currency"
 
@@ -381,7 +380,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	if len(sharders.Nodes) > 0 {
-		if err := msc.payShardersAndDelegates(sharders.Nodes, sharderFees, sharderRewards, balances); err != nil {
+		mbSharders := getRegisterShardersInMagicBlock(balances, sharders)
+		if err := msc.payShardersAndDelegates(mbSharders, sharderFees, sharderRewards, balances); err != nil {
 			return "", err
 		}
 	}
@@ -417,6 +417,41 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	return resp, nil
 }
 
+func getRegisterShardersInMagicBlock(balances cstate.StateContextI, sharders *MinerNodes) []*MinerNode {
+	var (
+		shardersKeys = getMagicBlockSharders(balances)
+		smap         = make(map[string]struct{}, len(shardersKeys))
+	)
+
+	for _, key := range shardersKeys {
+		smap[key] = struct{}{}
+	}
+
+	retSharders := make([]*MinerNode, 0, len(shardersKeys))
+	for i, s := range sharders.Nodes {
+		if _, ok := smap[s.GetKey()]; ok {
+			retSharders = append(retSharders, sharders.Nodes[i])
+			continue
+		}
+	}
+	return retSharders
+}
+
+// getMagicBlockSharders - list the sharders in magic block
+func getMagicBlockSharders(balances cstate.StateContextI) []string {
+	var (
+		pool  = balances.GetMagicBlock(balances.GetBlock().Round).Sharders
+		nodes = pool.CopyNodes()
+	)
+
+	sharderKeys := make([]string, 0, len(nodes))
+	for _, sharder := range nodes {
+		sharderKeys = append(sharderKeys, sharder.GetKey())
+	}
+
+	return sharderKeys
+}
+
 func (msc *MinerSmartContract) sumFee(b *block.Block,
 	updateStats bool) (currency.Coin, error) {
 
@@ -443,41 +478,6 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 		feeStats.Inc(intTotalMaxFee)
 	}
 	return totalMaxFee, nil
-}
-
-// gets sharders from a block
-func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
-	balances cstate.StateContextI) (sharders []*MinerNode, err error) {
-
-	if block.PrevBlock == nil {
-		return nil, fmt.Errorf("missing previous block in state context %d, %s",
-			block.Round, block.Hash)
-	}
-
-	sids, err := balances.GetBlockSharders(block.PrevBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	sort.Strings(sids)
-
-	sharders = make([]*MinerNode, 0, len(sids))
-
-	for _, sid := range sids {
-		var sn *MinerNode
-		sn, err = msc.getSharderNode(sid, balances)
-		switch err {
-		case nil:
-		case util.ErrValueNotPresent:
-			sn = NewMinerNode()
-			sn.ID = sid
-		default:
-			return nil, fmt.Errorf("unexpected error: %v", err)
-		}
-		sharders, err = append(sharders, sn), nil // even if it's nil, reset err
-	}
-
-	return
 }
 
 // pay fees and mint sharders
