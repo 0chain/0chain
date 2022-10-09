@@ -446,7 +446,7 @@ func getMagicBlockSharders(balances cstate.StateContextI) []string {
 
 	sharderKeys := make([]string, 0, len(nodes))
 	for _, sharder := range nodes {
-		sharderKeys = append(sharderKeys, sharder.GetKey())
+		sharderKeys = append(sharderKeys, GetSharderKey(sharder.GetKey()))
 	}
 
 	return sharderKeys

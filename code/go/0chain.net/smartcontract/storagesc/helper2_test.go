@@ -40,6 +40,9 @@ var (
 	storageScId = approvedMinters[2]
 )
 
+func (sc *mockStateContext) GetMagicBlock(round int64) *block.MagicBlock {
+	return sc.ctx.GetMagicBlock(round)
+}
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)           {}
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI          { return nil }
 func (sc *mockStateContext) GetTransaction() *transaction.Transaction    { return nil }
@@ -71,10 +74,6 @@ func (sc *mockStateContext) GetMints() []*state.Mint {
 }
 
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
-	return nil
-}
-
-func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string {
 	return nil
 }
 

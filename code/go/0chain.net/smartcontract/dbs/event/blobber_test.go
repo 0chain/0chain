@@ -304,6 +304,7 @@ func TestBlobberIds(t *testing.T) {
 }
 
 func TestBlobberLatLong(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
 	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),

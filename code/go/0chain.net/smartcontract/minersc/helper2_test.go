@@ -24,11 +24,13 @@ type mockStateContext struct {
 	ctx                        cstate.StateContext
 	block                      *block.Block
 	store                      map[datastore.Key]util.MPTSerializable
-	sharders                   []string
 	events                     []event.Event
 	LastestFinalizedMagicBlock *block.Block
 }
 
+func (sc *mockStateContext) GetMagicBlock(round int64) *block.MagicBlock {
+	return sc.ctx.GetMagicBlock(round)
+}
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     {}
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                    { return nil }
 func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return nil }
@@ -64,10 +66,6 @@ func (sc *mockStateContext) GetMints() []*state.Mint {
 
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return sc.LastestFinalizedMagicBlock
-}
-
-func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string {
-	return sc.sharders
 }
 
 func (sc *mockStateContext) GetBlock() *block.Block {
@@ -156,7 +154,6 @@ const (
 // logs and cli input parameters.
 // sc = sc.yaml
 // lockFlags input to ./zwallet lock
-//
 type formulae struct {
 	zChain           mock0ChainYaml
 	sc               mockScYaml
