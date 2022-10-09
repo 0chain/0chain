@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"encoding/hex"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,21 +54,21 @@ func TestSimpleNodesReduce(t *testing.T) {
 
 	// select up to 5 of the existing nodes
 	sn, np := createTestSimpleNodesAndNodePool()
-	sn.reduce(7, 0.7, pmbrss, np)
+	sn.reduce(7, new(big.Rat).SetFloat64(0.7), pmbrss, np)
 	for _, n := range sn {
 		assert.Contains(t, []string{"2", "4", "6", "9", "0", "1", "3"}, n.ID)
 	}
 
 	// select up to 3 nodes from previous set and rest by desc stake
 	sn, np = createTestSimpleNodesAndNodePool()
-	sn.reduce(5, 0.6, pmbrss, np)
+	sn.reduce(5, new(big.Rat).SetFloat64(0.6), pmbrss, np)
 	for _, n := range sn {
 		assert.Contains(t, []string{"2", "4", "6", "0", "1"}, n.ID)
 	}
 
 	// select up to 5 nodes from previous set and rest by desc stake
 	sn, np = createTestSimpleNodesAndNodePool()
-	sn.reduce(8, 0.6, pmbrss, np)
+	sn.reduce(8, new(big.Rat).SetFloat64(0.6), pmbrss, np)
 	for _, n := range sn {
 		assert.Contains(t, []string{"2", "4", "6", "9", "0", "1", "3", "5"}, n.ID)
 	}
@@ -75,7 +76,7 @@ func TestSimpleNodesReduce(t *testing.T) {
 	// select up to 6 nodes form previous set (4), and rest by desc stake
 	// resolve equal stake (7:2, 8:2) using pmbrss
 	sn, np = createTestSimpleNodesAndNodePool()
-	sn.reduce(9, 0.6, pmbrss, np)
+	sn.reduce(9, new(big.Rat).SetFloat64(0.6), pmbrss, np)
 	for _, n := range sn {
 		assert.Contains(t, []string{"2", "4", "6", "9", "0", "1", "3", "5", "8"}, n.ID)
 	}
@@ -83,7 +84,7 @@ func TestSimpleNodesReduce(t *testing.T) {
 	// select up to 6 nodes form previous set (4), and rest by desc stake
 	// resolve equal stake (7:2, 8:2) using pmbrss+2
 	sn, np = createTestSimpleNodesAndNodePool()
-	sn.reduce(9, 0.6, pmbrss+2, np)
+	sn.reduce(9, new(big.Rat).SetFloat64(0.6), pmbrss+2, np)
 	for _, n := range sn {
 		assert.Contains(t, []string{"2", "4", "6", "9", "0", "1", "3", "5", "7"}, n.ID)
 	}

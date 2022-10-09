@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/currency"
 
@@ -117,8 +119,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var scYaml = Config{
 		MaxMint:                         zcnToBalance(4000000.0),
 		StakePool:                       &stakePoolConfig{},
-		BlobberSlash:                    0.1,
-		ValidatorReward:                 0.025,
+		BlobberSlash:                    zbig.BigRatFromFloat64(0.1),
+		ValidatorReward:                 zbig.BigRatFromFloat64(0.025),
 		MaxChallengeCompletionTime:      30 * time.Minute,
 		TimeUnit:                        720 * time.Hour,
 		FailedChallengesToRevokeMinLock: 10,
@@ -236,8 +238,8 @@ func TestFinalizeAllocation(t *testing.T) {
 	var blobberStakePools = [][]mockStakePool{}
 	var scYaml = Config{
 		MaxMint:                         zcnToBalance(4000000.0),
-		BlobberSlash:                    0.1,
-		ValidatorReward:                 0.025,
+		BlobberSlash:                    zbig.BigRatFromFloat64(0.1),
+		ValidatorReward:                 zbig.BigRatFromFloat64(0.025),
 		MaxChallengeCompletionTime:      30 * time.Minute,
 		TimeUnit:                        720 * time.Hour,
 		FailedChallengesToRevokeMinLock: 10,
@@ -539,7 +541,7 @@ func setupMocksFinishAllocation(
 	for i, blobber := range blobbers {
 		var id = strconv.Itoa(i)
 		var sp = newStakePool()
-		sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
+		sp.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(blobberYaml.serviceCharge)
 		for j, stake := range bStakes[i] {
 			var jd = strconv.Itoa(j)
 			var delegatePool = &stakepool.DelegatePool{}

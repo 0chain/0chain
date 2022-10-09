@@ -654,7 +654,7 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	if err != nil {
 		return err
 	}
-	conf.GeneratorsPercent, err = cf.GetFloat64(minersc.BlockGeneratorsPercent)
+	conf.GeneratorsPercent, err = cf.GetBigRat(minersc.BlockGeneratorsPercent)
 	if err != nil {
 		return err
 	}

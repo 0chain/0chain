@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
@@ -49,7 +51,7 @@ func TestValidatorNode(t *testing.T) {
 		MinStake:       currency.Coin(53),
 		MaxStake:       currency.Coin(57),
 		NumDelegates:   59,
-		ServiceCharge:  61.0,
+		ServiceCharge:  zbig.BigRatFromFloat64(61.0),
 	}
 
 	err = eventDb.addValidator(vn)

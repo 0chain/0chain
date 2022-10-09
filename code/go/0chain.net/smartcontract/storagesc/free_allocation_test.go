@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
@@ -210,14 +212,14 @@ func TestFreeAllocationRequest(t *testing.T) {
 		mockTimestamp            = 7000
 		mockUserPublicKey        = "mock user public key"
 		mockTransactionHash      = "12345678"
-		mockReadPoolFraction     = 0.2
-		mockMinLock              = 10
-		mockFreeTokens           = 5 * mockMinLock
+		mockFreeTokens           = 50
 		mockIndividualTokenLimit = mockFreeTokens + 1
 		mockTotalTokenLimit      = mockIndividualTokenLimit * 300
 		newSaSaved               = "new storage allocation saved"
 	)
 	var (
+		mockMinLock                 = zbig.BigRatFromFloat64(10)
+		mockReadPoolFraction        = zbig.BigRatFromFloat64(0.2)
 		mockMaxAnnualFreeAllocation = zcnToBalance(100354)
 		mockFreeAllocationSettings  = freeAllocationSettings{
 			DataShards:       5,
@@ -237,7 +239,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			FreeAllocationSettings:     mockFreeAllocationSettings,
 			TimeUnit:                   time.Hour,
 			ReadPool: &readPoolConfig{
-				MinLock: mockMinLock,
+				MinLock: 10,
 			},
 			MaxBlobbersPerAllocation: 40,
 		}
@@ -279,7 +281,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		var err error
 		var balances = &mocks.StateContextI{}
 		balances.TestData()[newSaSaved] = false
-		var readPoolLocked = zcnToInt64(mockFreeTokens * mockReadPoolFraction)
+		var readPoolLocked = zcnToInt64(mockFreeTokens) * int64(mockReadPoolFraction.Float64())
 		var writePoolLocked = zcnToInt64(mockFreeTokens) - readPoolLocked
 
 		var txn = &transaction.Transaction{

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/config"
@@ -102,7 +104,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.StakePoolSettings.MaxNumDelegates = 100
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
-	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
+	sn.StakePoolSettings.ServiceChargeRatio = zbig.BigRatFromFloat64(0.30) // 30%
 	return mustEncode(t, &sn)
 }
 
@@ -137,8 +139,8 @@ func newTransaction(f, t string, val currency.Coin, now int64) (tx *transaction.
 
 func (c *Client) callAddBlobber(t testing.TB, ssc *StorageSmartContract,
 	now int64, balances chainState.StateContextI) (resp string, err error) {
-
-	txVal, err := currency.Float64ToCoin(float64(c.terms.WritePrice) * sizeInGB(c.cap))
+	fSize, _ := sizeInGB(c.cap).Float64()
+	txVal, err := currency.Float64ToCoin(float64(c.terms.WritePrice) * fSize)
 	require.NoError(t, err)
 	var tx = newTransaction(c.id, ADDRESS, txVal, now)
 	balances.(*testBalances).setTransaction(t, tx)
@@ -205,8 +207,8 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 
 	var _, err = blob.callAddBlobber(t, ssc, now, balances)
 	require.NoError(t, err)
-
-	txVal, err := currency.Float64ToCoin(float64(terms.WritePrice) * sizeInGB(cap))
+	gSize, _ := sizeInGB(cap).Float64()
+	txVal, err := currency.Float64ToCoin(float64(terms.WritePrice) * gSize)
 	require.NoError(t, err)
 	// add stake for the blobber as blobber owner
 	var tx = newTransaction(blob.id, ADDRESS, txVal, now)
@@ -285,7 +287,7 @@ func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
 var avgTerms = Terms{
 	ReadPrice:        1 * x10,
 	WritePrice:       5 * x10,
-	MinLockDemand:    0.1,
+	MinLockDemand:    zbig.BigRatFromFloat64(0.1),
 	MaxOfferDuration: 1 * time.Hour,
 }
 
@@ -340,7 +342,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
-	conf.ChallengeGenerationRate = 1
+	conf.ChallengeGenerationRate = zbig.BigRatFromFloat64(1.0)
 	conf.MaxChallengesPerGeneration = 100
 	conf.ValidatorsPerChallenge = 10
 	conf.MaxBlobbersPerAllocation = 10
@@ -350,8 +352,8 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MinAllocDuration = 1 * time.Minute
 	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = 1 * GB
-	conf.ValidatorReward = 0.025
-	conf.BlobberSlash = 0.1
+	conf.ValidatorReward = zbig.BigRatFromFloat64(0.025)
+	conf.BlobberSlash = zbig.BigRatFromFloat64(0.1)
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0      // 100 tokens per GB max allowed
@@ -359,9 +361,9 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxChallengeCompletionTime = 5 * time.Minute
 	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "5m")
 
-	conf.MaxCharge = 0.50   // 50%
-	conf.MinStake = 0.0     // 0 toks
-	conf.MaxStake = 1000e10 // 100 toks
+	conf.MaxCharge = zbig.BigRatFromFloat64(0.50) // 50%
+	conf.MinStake = 0.0                           // 0 toks
+	conf.MaxStake = 1000e10                       // 100 toks
 	conf.MaxMint = 100e10
 	conf.MaxBlobbersPerAllocation = 50
 
@@ -379,18 +381,18 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.BlockReward = &blockReward{
 		BlockReward:             1000,
 		BlockRewardChangePeriod: 1000,
-		BlockRewardChangeRatio:  0.1,
+		BlockRewardChangeRatio:  zbig.BigRatFromFloat64(0.1),
 		TriggerPeriod:           30,
-		BlobberWeight:           0.5,
+		BlobberWeight:           zbig.BigRatFromFloat64(0.5),
 		Gamma: blockRewardGamma{
-			Alpha: 0.2,
-			A:     10,
-			B:     9,
+			Alpha: zbig.BigRatFromFloat64(0.2),
+			A:     zbig.BigRatFromFloat64(10),
+			B:     zbig.BigRatFromFloat64(9),
 		},
 		Zeta: blockRewardZeta{
-			Mu: 0.2,
-			I:  1,
-			K:  0.9,
+			Mu: zbig.BigRatFromFloat64(0.2),
+			I:  zbig.BigRatFromFloat64(1),
+			K:  zbig.BigRatFromFloat64(0.9),
 		},
 	}
 

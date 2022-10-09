@@ -41,6 +41,15 @@ func NewBigRat() *BigRat {
 var ZeroBigRat = big.NewRat(0, 1)
 var OneBigRat = big.NewRat(1, 1)
 
+func BigRatToInt(rat *big.Rat, down bool) int64 {
+	var div, mod *big.Int
+	div, mod = div.DivMod(rat.Num(), rat.Denom(), mod)
+	if down || mod.Int64() == 0 {
+		return div.Int64()
+	}
+	return div.Int64() + 1
+}
+
 func (br *BigRat) Float64() float64 {
 	if br.Rat == nil {
 		return 0.0

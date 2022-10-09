@@ -1,13 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/currency"
 
@@ -275,7 +278,7 @@ func TestBlobberReward(t *testing.T) {
 	var writePoolBalance currency.Coin = 23423 + 33333333 + 234234234
 	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
-		ValidatorReward:            0.025,
+		ValidatorReward:            zbig.BigRatFromFloat64(0.025),
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
 	}
@@ -346,8 +349,8 @@ func TestBlobberPenalty(t *testing.T) {
 	var size = int64(123000)
 	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
-		BlobberSlash:               0.1,
-		ValidatorReward:            0.025,
+		BlobberSlash:               zbig.BigRatFromFloat64(0.1),
+		ValidatorReward:            zbig.BigRatFromFloat64(0.025),
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
 	}
@@ -438,7 +441,7 @@ func testBlobberPenalty(
 		wpBalance, challengePoolIntegralValue,
 		challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(allocation, previous, challenge, details, validators, ctx)
+	err = ssc.blobberPenalty(txn, allocation, previous, challenge, details, validators, ctx)
 	if err != nil {
 		return err
 	}
@@ -493,7 +496,7 @@ func testBlobberReward(
 		wpBalance, challengePoolIntegralValue,
 		challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, challenge, details, validators, partial, ctx)
+	err = ssc.blobberReward(txn, allocation, previous, challenge, details, validators, partial, ctx)
 	if err != nil {
 		return err
 	}
@@ -590,7 +593,7 @@ func setupChallengeMocks(
 	require.NoError(t, cPool.save(ssc.ID, allocation, ctx))
 
 	var sp = newStakePool()
-	sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
+	sp.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(blobberYaml.serviceCharge)
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
 		sp.Pools["paula"+id] = &stakepool.DelegatePool{}
@@ -603,7 +606,7 @@ func setupChallengeMocks(
 	var validatorsSPs []*stakePool
 	for i, validator := range validators {
 		var sPool = newStakePool()
-		sPool.Settings.ServiceChargeRatio = validatorYamls[i].serviceCharge
+		sPool.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(validatorYamls[i].serviceCharge)
 		for j, stake := range validatorStakes[i] {
 			var pool = &stakepool.DelegatePool{}
 			pool.Balance = currency.Coin(stake)
@@ -648,9 +651,10 @@ func (f formulaeBlobberReward) reward() int64 {
 
 func (f formulaeBlobberReward) validatorsReward() int64 {
 	var validatorCut = f.scYaml.ValidatorReward
-	var totalReward = float64(f.reward())
+	var totalReward = f.reward()
+	reward := validatorCut.Mul(validatorCut.Rat, big.NewRat(totalReward, 1))
 
-	return int64(totalReward * validatorCut)
+	return zbig.BigRatToInt(reward, true)
 }
 
 func (f formulaeBlobberReward) blobberReward() int64 {
@@ -719,9 +723,9 @@ func (f formulaeBlobberReward) delegatePenalty(index int) int64 {
 	var totalAction = float64(f.reward())
 	var validatorReward = float64(f.validatorsReward())
 	var blobberRisk = totalAction - validatorReward
-	var slashedAmount = int64(blobberRisk * slash)
-	var offer = int64(sizeInGB(f.size) * float64(zcnToInt64(f.blobberYaml.writePrice)))
-
+	var slashedAmount = int64(blobberRisk * slash.Float64())
+	gSize, _ := sizeInGB(f.size).Float64()
+	var offer = int64(gSize * float64(zcnToInt64(f.blobberYaml.writePrice)))
 	if offer <= slashedAmount {
 		return int64(float64(offer) * delegateStake / totalStake)
 	} else {
@@ -752,7 +756,7 @@ func confirmBlobberPenalty(
 		}
 	}
 
-	if f.scYaml.BlobberSlash > 0.0 {
+	if f.scYaml.BlobberSlash.Cmp(zbig.ZeroBigRat) > 0 {
 		for _, pool := range blobber.Pools {
 			var delegate = strings.Split(pool.DelegateID, " ")
 			index, err := strconv.Atoi(delegate[1])

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/threshold/bls"
 
@@ -94,7 +96,7 @@ func newClient(balance currency.Coin, balances cstate.StateContextI) (
 	return
 }
 
-const minerServiceCharge = 0.5
+var minerServiceCharge = zbig.BigRatFromFloat64(0.5)
 
 // add_miner or add_sharder transaction data
 func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
@@ -220,18 +222,18 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.MinN = 3
 	gn.MaxS = 30
 	gn.MinS = 1
-	gn.MaxDelegates = 10 // for tests
-	gn.TPercent = 0.51   // %
-	gn.KPercent = 0.75   // %
+	gn.MaxDelegates = 10                       // for tests
+	gn.TPercent = zbig.BigRatFromFloat64(0.51) // %
+	gn.KPercent = zbig.BigRatFromFloat64(0.75) // %
 	gn.LastRound = 0
 	gn.MaxStake = currency.Coin(100.0e10)
 	gn.MinStake = currency.Coin(0.01e10)
-	gn.RewardRate = 1.0
-	gn.ShareRatio = 0.10
+	gn.RewardRate = zbig.BigRatFromFloat64(1.0)
+	gn.ShareRatio = zbig.BigRatFromFloat64(0.10)
 	gn.BlockReward = currency.Coin(0.7e10)
-	gn.MaxCharge = 0.5 // %
-	gn.Epoch = 15e6    // 15M
-	gn.RewardDeclineRate = 0.1
+	gn.MaxCharge = zbig.BigRatFromFloat64(0.5) // %
+	gn.Epoch = 15e6                            // 15M
+	gn.RewardDeclineRate = zbig.BigRatFromFloat64(0.1)
 	gn.MaxMint = currency.Coin(4e6 * 1e10)
 	gn.Minted = 0
 

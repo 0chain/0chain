@@ -184,7 +184,7 @@ func TestBlobbers(t *testing.T) {
 		Terms: Terms{
 			ReadPrice:        currency.Coin(97),
 			WritePrice:       currency.Coin(101),
-			MinLockDemand:    103.0,
+			MinLockDemand:    zbig.BigRatFromFloat64(103.0),
 			MaxOfferDuration: 107 * time.Minute,
 		},
 		Capacity:        119,
@@ -196,7 +196,7 @@ func TestBlobbers(t *testing.T) {
 			MinStake:       currency.Coin(137),
 			MaxStake:       currency.Coin(139),
 			NumDelegates:   143,
-			ServiceCharge:  149.0,
+			ServiceCharge:  zbig.BigRatFromFloat64(149.0),
 		},
 		SavedData: 10,
 	}

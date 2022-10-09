@@ -1,10 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
+	"math/big"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -353,11 +355,12 @@ func Test_flow_reward(t *testing.T) {
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var moved = int64(sizeInGB(cc.WriteMarker.Size) *
-			float64(avgTerms.WritePrice) *
-			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit))
-
-		require.EqualValues(t, moved, cp.Balance)
+		var movedRat = new(big.Rat)
+		movedRat = movedRat.Mul(sizeInGB(cc.WriteMarker.Size),
+			movedRat.Mul(big.NewRat(int64(avgTerms.WritePrice), 1),
+				alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit)))
+		movedCoin, err := currency.BigRatToCoin(movedRat)
+		require.EqualValues(t, movedCoin, cp.Balance)
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)

@@ -1,7 +1,10 @@
 package storagesc
 
 import (
+	"math/big"
 	"testing"
+
+	"0chain.net/smartcontract/zbig"
 
 	"github.com/stretchr/testify/require"
 )
@@ -30,9 +33,9 @@ func TestGetBlockPayments(t *testing.T) {
 
 			want: want{
 				blockReward{
-					SharderWeight: 0.1,
-					MinerWeight:   0.2,
-					BlobberWeight: 0.7,
+					SharderWeight: zbig.BigRatFromFloat64(0.1),
+					MinerWeight:   zbig.BigRatFromFloat64(0.2),
+					BlobberWeight: zbig.BigRatFromFloat64(0.7),
 				},
 			},
 		},
@@ -44,7 +47,11 @@ func TestGetBlockPayments(t *testing.T) {
 			t.Parallel()
 
 			var br = newBlocReward()
-			err := br.setWeightsFromRatio(tt.SharderRatio, tt.MinerRatio, tt.BlobberCapacityRatio)
+			err := br.setWeightsFromRatio(
+				new(big.Rat).SetFloat64(tt.SharderRatio),
+				new(big.Rat).SetFloat64(tt.MinerRatio),
+				new(big.Rat).SetFloat64(tt.BlobberCapacityRatio),
+			)
 			require.NoError(t, err)
 			require.EqualValues(t, br, tt.want.reward)
 		})

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 	"0chain.net/core/encryption"
@@ -46,7 +48,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 			BlobberID:               encryption.Hash("mockBlobber_" + strconv.Itoa(0)),
 			ReadPrice:               int64(currency.Coin(29)),
 			WritePrice:              int64(currency.Coin(31)),
-			MinLockDemand:           37.0,
+			MinLockDemand:           zbig.BigRatFromFloat64(37.0),
 			MaxOfferDuration:        39 * time.Minute,
 			ChallengeCompletionTime: 41 * time.Minute,
 		},
@@ -55,7 +57,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 			BlobberID:               encryption.Hash("mockBlobber_" + strconv.Itoa(1)),
 			ReadPrice:               int64(currency.Coin(41)),
 			WritePrice:              int64(currency.Coin(43)),
-			MinLockDemand:           47.0,
+			MinLockDemand:           zbig.BigRatFromFloat64(47.0),
 			MaxOfferDuration:        49 * time.Minute,
 			ChallengeCompletionTime: 51 * time.Minute,
 		},
@@ -77,7 +79,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 	res, err = eventDb.GetAllocationBlobberTerms(terms[0].AllocationID, "", limit)
 	require.Equal(t, int64(2), len(res), "AllocationBlobberTerm not getting inserted")
 
-	terms[1].MinLockDemand = 70.0
+	terms[1].MinLockDemand = zbig.BigRatFromFloat64(70.0)
 	err = eventDb.addOrOverwriteAllocationBlobberTerms(terms)
 	require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
 

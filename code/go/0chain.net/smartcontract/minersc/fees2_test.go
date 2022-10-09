@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/config/mocks"
 	"0chain.net/chaincore/currency"
@@ -243,10 +245,10 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	var globalNode = &GlobalNode{
 		//ViewChange:           runtime.nextViewChange,
 		LastRound:            runtime.lastRound,
-		RewardRate:           scYaml.rewardRate,
+		RewardRate:           zbig.BigRatFromFloat64(scYaml.rewardRate),
 		BlockReward:          zcnToBalance(scYaml.blockReward),
 		Epoch:                scYaml.epoch,
-		ShareRatio:           scYaml.shareRatio,
+		ShareRatio:           zbig.BigRatFromFloat64(scYaml.shareRatio),
 		MaxMint:              zcnToBalance(scYaml.maxMint),
 		Minted:               runtime.minted,
 		RewardRoundFrequency: scYaml.rewardRoundPeriod,
@@ -320,9 +322,9 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		},
 		StakePool: stakepool.NewStakePool(),
 	}
-	miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+	miner.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(zChainYaml.ServiceCharge)
 	miner.Settings.DelegateWallet = minerID
-	miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+	miner.StakePool.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(zChainYaml.ServiceCharge)
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
 	}
@@ -339,9 +341,9 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			},
 			StakePool: stakepool.NewStakePool(),
 		}
-		miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+		miner.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(zChainYaml.ServiceCharge)
 		miner.Settings.DelegateWallet = minerID
-		miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+		miner.StakePool.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(zChainYaml.ServiceCharge)
 		sharders = append(sharders, sharder)
 	}
 

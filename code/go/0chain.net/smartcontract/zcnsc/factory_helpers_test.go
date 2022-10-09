@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/chaincore/chain/state"
@@ -142,7 +144,7 @@ func CreateAuthorizerParam(delegateWalletID string, publicKey string) *AddAuthor
 			MinStake:           12345678,
 			MaxStake:           12345678,
 			MaxNumDelegates:    12345678,
-			ServiceChargeRatio: 12345678,
+			ServiceChargeRatio: zbig.BigRatFromFloat64(12345678),
 		},
 	}
 }
@@ -154,7 +156,7 @@ func CreateAuthorizerStakingPoolParam(delegateWalletID string) *UpdateAuthorizer
 			MinStake:           100,
 			MaxStake:           100,
 			MaxNumDelegates:    100,
-			ServiceChargeRatio: 100,
+			ServiceChargeRatio: zbig.BigRatFromFloat64(100),
 		},
 	}
 }

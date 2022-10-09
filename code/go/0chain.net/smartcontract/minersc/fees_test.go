@@ -567,7 +567,7 @@ func Test_payFees(t *testing.T) {
 		require.NoError(t, err)
 		var rr = gn.RewardRate
 		gn.epochDecline()
-		assert.True(t, gn.RewardRate < rr)
+		assert.True(t, gn.RewardRate.Cmp(rr.Rat) < 0)
 	})
 
 }

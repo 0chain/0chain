@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
@@ -189,7 +191,7 @@ func TestAllocations(t *testing.T) {
 				AllocationID:     b.AllocationID,
 				ReadPrice:        b.Terms.ReadPrice,
 				WritePrice:       b.Terms.WritePrice,
-				MinLockDemand:    b.Terms.MinLockDemand,
+				MinLockDemand:    zbig.BigRatFromFloat64(b.Terms.MinLockDemand),
 				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}

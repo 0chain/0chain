@@ -1,12 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"math/rand"
 	"os"
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/chaincore/currency"
 
@@ -53,7 +55,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 			sp := newStakePool()
 			sp.Settings.DelegateWallet = bID
-			sp.Settings.ServiceChargeRatio = p.serviceCharge[i]
+			sp.Settings.ServiceChargeRatio = zbig.BigRatFromFloat64(p.serviceCharge[i])
 			for j, bal := range p.delegatesBal[i] {
 				dID := "delegate" + strconv.Itoa(j)
 				dp := new(stakepool.DelegatePool)

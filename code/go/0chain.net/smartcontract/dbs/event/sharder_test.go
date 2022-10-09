@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
@@ -57,7 +59,7 @@ func TestSharders(t *testing.T) {
 		// then node ID used (for genesis nodes, for example).
 		DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
 		// ServiceChange is % that miner node grabs where it's generator.
-		ServiceCharge float64 `json:"service_charge"` // %
+		ServiceCharge zbig.BigRat `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
 		// MinStake allowed by node.
@@ -138,7 +140,7 @@ func TestSharders(t *testing.T) {
 			TotalStaked:       51,
 			Delete:            false,
 			DelegateWallet:    "delegate wallet",
-			ServiceCharge:     10.6,
+			ServiceCharge:     zbig.BigRatFromFloat64(10.6),
 			NumberOfDelegates: 6,
 			MinStake:          15,
 			MaxStake:          100,

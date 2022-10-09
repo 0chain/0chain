@@ -1,6 +1,12 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
@@ -12,13 +18,9 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
+	"0chain.net/smartcontract/zbig"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -320,7 +322,7 @@ func testCommitBlobberRead(
 		StakePool: stakepool.StakePool{
 			Pools: make(map[string]*stakepool.DelegatePool),
 			Settings: stakepool.Settings{
-				ServiceChargeRatio: blobberYaml.serviceCharge,
+				ServiceChargeRatio: zbig.BigRatFromFloat64(blobberYaml.serviceCharge),
 				DelegateWallet:     delegateWallet,
 			},
 		},

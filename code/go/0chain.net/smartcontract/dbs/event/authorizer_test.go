@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
@@ -50,7 +52,7 @@ func TestAuthorizers(t *testing.T) {
 		MinStake:        currency.Coin(53),
 		MaxStake:        currency.Coin(57),
 		NumDelegates:    59,
-		ServiceCharge:   61.0,
+		ServiceCharge:   zbig.BigRatFromFloat64(61.0),
 	}
 
 	authorizer_2 := Authorizer{
@@ -63,7 +65,7 @@ func TestAuthorizers(t *testing.T) {
 		MinStake:        currency.Coin(52),
 		MaxStake:        currency.Coin(57),
 		NumDelegates:    60,
-		ServiceCharge:   50.0,
+		ServiceCharge:   zbig.BigRatFromFloat64(50.0),
 	}
 
 	err = eventDb.AddAuthorizer(&authorizer_1)

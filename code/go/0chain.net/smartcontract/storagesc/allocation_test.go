@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/zbig"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -695,10 +698,13 @@ func TestExtendAllocation(t *testing.T) {
 				for _, blobber := range sa.BlobberAllocs {
 					size += blobber.Stats.UsedSize
 				}
-				newFunds := sizeInGB(size) *
-					float64(mockWritePrice) *
-					float64(sa.durationInTimeUnits(args.request.Expiration, confTimeUnit))
-				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
+				var fundsRat *big.Rat
+				fundsRat = fundsRat.Mul(sizeInGB(size),
+					fundsRat.Mul(big.NewRat(int64(mockWritePrice), 10),
+						sa.durationInTimeUnits(args.request.Expiration, confTimeUnit)))
+				fundsCoin, err := currency.BigRatToCoin(fundsRat)
+				require.NoError(t, err)
+				return cp.Balance/10 == fundsCoin
 			}),
 		).Return("", nil).Once()
 
@@ -1021,7 +1027,7 @@ func Test_toSeconds(t *testing.T) {
 }
 
 func Test_sizeInGB(t *testing.T) {
-	if sizeInGB(12345*1024*1024*1024) != 12345.0 {
+	if sizeInGB(12345*1024*1024*1024).Cmp(big.NewRat(12345, 1)) != 0 {
 		t.Error("wrong")
 	}
 }
@@ -1035,7 +1041,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			Terms: Terms{
 				ReadPrice:        20,
 				WritePrice:       200,
-				MinLockDemand:    0.1,
+				MinLockDemand:    zbig.BigRatFromFloat64(0.1),
 				MaxOfferDuration: 200 * time.Second,
 			},
 			Capacity:        25 * GB, // 20 GB
@@ -1048,7 +1054,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			Terms: Terms{
 				ReadPrice:        25,
 				WritePrice:       250,
-				MinLockDemand:    0.05,
+				MinLockDemand:    zbig.BigRatFromFloat64(0.05),
 				MaxOfferDuration: 250 * time.Second,
 			},
 			Capacity:        20 * GB, // 20 GB
