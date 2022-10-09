@@ -4,7 +4,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/util"
 
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 )
 
@@ -78,4 +80,21 @@ func getFaucetConfig() (conf *FaucetConfig, err error) {
 	conf.OwnerId = config.SmartContractConfig.GetString("smart_contracts.faucetsc.owner_id")
 	conf.Cost = config.SmartContractConfig.GetStringMapInt("smart_contracts.faucetsc.cost")
 	return
+}
+
+func InitConfig(balances cstate.CommonStateContextI) error {
+	gn := new(GlobalNode)
+	err := balances.GetTrieNode(globalNodeKey, gn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return err
+		}
+		gn.FaucetConfig, err = getFaucetConfig()
+		if err != nil {
+			return err
+		}
+		_, err = balances.InsertTrieNode(globalNodeKey, gn)
+		return err
+	}
+	return nil
 }

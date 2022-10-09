@@ -249,7 +249,7 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
 	gn := &GlobalNode{ID: fc.ID}
-	err := balances.GetTrieNode(gn.GetKey(), gn)
+	err := balances.GetTrieNode(globalNodeKey, gn)
 	switch err {
 	case nil, util.ErrValueNotPresent:
 		var err2 error

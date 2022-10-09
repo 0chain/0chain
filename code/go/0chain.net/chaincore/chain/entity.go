@@ -15,6 +15,7 @@ import (
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"github.com/herumi/bls/ffi/go/bls"
@@ -407,7 +408,7 @@ func (c *Chain) Delete(ctx context.Context) error {
 // DefaultSmartContractTimeout represents the default smart contract execution timeout
 const DefaultSmartContractTimeout = time.Second
 
-//NewChainFromConfig - create a new chain from config
+// NewChainFromConfig - create a new chain from config
 func NewChainFromConfig() *Chain {
 	chain := Provider().(*Chain)
 	chain.ID = datastore.ToKey(config.Configuration().ChainID)
@@ -508,7 +509,7 @@ func SetupEntity(store datastore.Store, workdir string) {
 
 var stateDB *util.PNodeDB
 
-//SetupStateDB - setup the state db
+// SetupStateDB - setup the state db
 func SetupStateDB(workdir string) {
 
 	datadir := "data/rocksdb/state"
@@ -571,7 +572,13 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(state)
 
-	err := minersc.InitConfig(state)
+	err := faucetsc.InitConfig(state)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB faucetsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = minersc.InitConfig(state)
 	if err != nil {
 		logging.Logger.Error("chain.stateDB minersc InitConfig failed", zap.Error(err))
 		panic(err)
@@ -657,8 +664,10 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	return c.addBlock(b)
 }
 
-/*AddNotarizedBlockToRound - adds notarized block to round, sets RRS with block's if needed.
-Client should check if block is valid notarized block, round should be created*/
+/*
+AddNotarizedBlockToRound - adds notarized block to round, sets RRS with block's if needed.
+Client should check if block is valid notarized block, round should be created
+*/
 func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
@@ -976,7 +985,7 @@ func (c *Chain) getMiningStake(minerID datastore.Key) uint64 {
 	return c.minersStake[minerID]
 }
 
-//InitializeMinerPool - initialize the miners after their configuration is read
+// InitializeMinerPool - initialize the miners after their configuration is read
 func (c *Chain) InitializeMinerPool(mb *block.MagicBlock) {
 	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	for _, nd := range mb.Miners.CopyNodes() {
@@ -1173,22 +1182,22 @@ func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block
 	return blocks
 }
 
-//ResetRoundTimeoutCount - reset the counter
+// ResetRoundTimeoutCount - reset the counter
 func (c *Chain) ResetRoundTimeoutCount() {
 	atomic.SwapInt64(&c.crtCount, 0)
 }
 
-//IncrementRoundTimeoutCount - increment the counter
+// IncrementRoundTimeoutCount - increment the counter
 func (c *Chain) IncrementRoundTimeoutCount() {
 	atomic.AddInt64(&c.crtCount, 1)
 }
 
-//GetRoundTimeoutCount - get the counter
+// GetRoundTimeoutCount - get the counter
 func (c *Chain) GetRoundTimeoutCount() int64 {
 	return atomic.LoadInt64(&c.crtCount)
 }
 
-//GetSignatureScheme - get the signature scheme used by this chain
+// GetSignatureScheme - get the signature scheme used by this chain
 func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.GetSignatureScheme(c.ClientSignatureScheme())
 }
@@ -1253,7 +1262,7 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 	return false
 }
 
-//SetFetchedNotarizedBlockHandler - setter for FetchedNotarizedBlockHandler
+// SetFetchedNotarizedBlockHandler - setter for FetchedNotarizedBlockHandler
 func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandler) {
 	c.fetchedNotarizedBlockHandler = fnbh
 }
@@ -1270,7 +1279,7 @@ func (c *Chain) SetMagicBlockSaver(mbs MagicBlockSaver) {
 	c.magicBlockSaver = mbs
 }
 
-//GetPruneStats - get the current prune stats
+// GetPruneStats - get the current prune stats
 func (c *Chain) GetPruneStats() *util.PruneStats {
 	return c.pruneStats
 }

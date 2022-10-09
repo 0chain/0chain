@@ -27,6 +27,8 @@ type periodicResponse struct {
 	Allowed currency.Coin `json:"tokens_allowed"`
 }
 
+var globalNodeKey = ADDRESS + encryption.Hash("faucetsc_config")
+
 type GlobalNode struct {
 	*FaucetConfig `json:"faucet_config"`
 	ID            string        `json:"id"`
