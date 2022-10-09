@@ -265,7 +265,7 @@ type Terms struct {
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
 func (t *Terms) minLockDemand(gbSize, rdtu *big.Rat) (currency.Coin, error) {
-	var mldf *big.Rat
+	var mldf = new(big.Rat)
 	mldf = mldf.Mul(t.WritePrice.BigRat(), mldf.Mul(gbSize, t.MinLockDemand.Rat))
 	return currency.BigRatToCoin(mldf.Mul(mldf, rdtu))
 }
@@ -574,7 +574,7 @@ func newBlobberAllocation(
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
 func (d *BlobberAllocation) upload(size int64, rdtu *big.Rat) (currency.Coin, error) {
-	var rMove *big.Rat
+	var rMove = new(big.Rat)
 	rMove = rMove.Mul(sizeInGB(size), rMove.Mul(d.Terms.WritePrice.BigRat(), rdtu))
 	move, err := currency.BigRatToCoin(rMove)
 	if err != nil {
@@ -589,7 +589,7 @@ func (d *BlobberAllocation) upload(size int64, rdtu *big.Rat) (currency.Coin, er
 }
 
 func (d *BlobberAllocation) Offer() (currency.Coin, error) {
-	var offer *big.Rat
+	var offer = new(big.Rat)
 	offer = offer.Mul(sizeInGB(d.Size), d.Terms.WritePrice.BigRat())
 	return currency.BigRatToCoin(offer)
 }
@@ -598,7 +598,7 @@ func (d *BlobberAllocation) Offer() (currency.Coin, error) {
 // internal integral value. The size argument expected to be positive (not
 // negative).
 func (d *BlobberAllocation) delete(size int64, rdtu *big.Rat) (currency.Coin, error) {
-	var rMove *big.Rat
+	var rMove = new(big.Rat)
 	rMove = rMove.Mul(sizeInGB(size), rMove.Mul(d.Terms.WritePrice.BigRat(), rdtu))
 	move, err := currency.BigRatToCoin(rMove)
 	if err != nil {
@@ -617,7 +617,7 @@ func (d *BlobberAllocation) challenge(dtu, rdtu *big.Rat) (currency.Coin, error)
 	if rdtu.Cmp(big.NewRat(0, 1)) == 0 {
 		return 0, fmt.Errorf("callucatlion internalintegral value; divison by zero")
 	}
-	var rMove *big.Rat
+	var rMove = new(big.Rat)
 	move, err := currency.BigRatToCoin(rMove.Mul(d.ChallengePoolIntegralValue.BigRat(), rMove.Quo(dtu, rdtu)))
 	if err != nil {
 		return 0, err
@@ -918,8 +918,12 @@ func (sa *StorageAllocation) bSize() int64 {
 }
 
 func bSize(size int64, dataShards int) int64 {
-	var iSize, bDataShards, div, remainder *big.Int
-	iSize = big.NewInt(size)
+	var (
+		iSize       = big.NewInt(size)
+		bDataShards = new(big.Int)
+		div         = new(big.Int)
+		remainder   = new(big.Int)
+	)
 	bDataShards = big.NewInt(int64(dataShards))
 	div, remainder = div.QuoRem(iSize, bDataShards, remainder)
 	if remainder.Cmp(big.NewInt(0)) > 0 {
@@ -1271,9 +1275,11 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 		var (
 			size = sizeInGB(d.Stats.UsedSize) // in GB
 			nwp  = d.Terms.WritePrice         // new write price
-			owp  *big.Rat                     // original write price
+			owp  = new(big.Rat)               // original write price
 
-			originalValue, newValue, diff *big.Rat // original value, new value, value difference
+			originalValue = new(big.Rat)
+			newValue      = new(big.Rat)
+			diff          = new(big.Rat) // original value, new value, value difference
 		)
 
 		if oterms != nil {

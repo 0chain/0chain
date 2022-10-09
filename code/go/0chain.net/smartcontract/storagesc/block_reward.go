@@ -252,7 +252,11 @@ func getBlockReward(
 	if brChangeRatio.Cmp(zbig.ZeroBigRat) <= 0 || brChangeRatio.Cmp(zbig.OneBigRat) >= 0 {
 		return 0, fmt.Errorf("unexpected block reward change ratio: %f", brChangeRatio)
 	}
-	var changeBalance, changePeriods, factor *big.Rat
+	var (
+		changeBalance = new(big.Rat)
+		changePeriods = new(big.Rat)
+		factor        = new(big.Rat)
+	)
 	_ = changeBalance.Sub(zbig.OneBigRat, brChangeRatio)
 	changePeriods = big.NewRat(currentRound, brChangePeriod)
 

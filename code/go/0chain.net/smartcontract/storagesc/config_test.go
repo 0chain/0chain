@@ -43,7 +43,7 @@ func TestGetBlockPayments(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			var br = blockReward{}
+			var br = newBlocReward()
 			err := br.setWeightsFromRatio(tt.SharderRatio, tt.MinerRatio, tt.BlobberCapacityRatio)
 			require.NoError(t, err)
 			require.EqualValues(t, br, tt.want.reward)

@@ -167,7 +167,7 @@ func MultInt64(c Coin, i int64) (Coin, error) {
 }
 
 func MultBigRat(c Coin, r *big.Rat) (Coin, error) {
-	var ratCoin *big.Rat
+	var ratCoin = new(big.Rat)
 	ratCoin = ratCoin.Mul(c.BigRat(), r)
 	return BigRatToCoin(ratCoin)
 }

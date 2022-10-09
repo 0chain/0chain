@@ -281,7 +281,7 @@ func (sp *stakePool) slash(
 	// offer ratio of entire stake; we are slashing only part of the offer
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
-	var ratio *big.Rat
+	var ratio = new(big.Rat)
 	ratio = ratio.Quo(slash.BigRat(), staked.BigRat())
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
 	for id, dp := range sp.Pools {

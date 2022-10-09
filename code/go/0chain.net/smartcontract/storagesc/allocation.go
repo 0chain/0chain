@@ -812,8 +812,11 @@ func (ap *allocPeriod) weight() *big.Rat {
 // returns weighted average read and write prices
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
-		apw, npw        = ap.weight(), np.weight() // weights
-		ws, div, rp, wp *big.Rat                   // read sum, write sum (weighted)
+		apw, npw = ap.weight(), np.weight() // weights
+		ws       = new(big.Rat)
+		div      = new(big.Rat)
+		rp       = new(big.Rat)
+		wp       = new(big.Rat)
 	)
 
 	ws = ws.Add(apw, npw)

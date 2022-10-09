@@ -47,8 +47,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
-		//BlobberAllocs:     blobberDetails,
-		//BlobberAllocsMap:  blobberMap,
 		IsImmutable:       alloc.IsImmutable,
 		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
 		WritePriceRange:   PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
@@ -60,7 +58,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		MovedBack:         alloc.MovedBack,
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
-		//Curators:          curators,
 	}
 
 	storageNodes := make([]*StorageNode, 0)
@@ -158,7 +155,7 @@ func calculateMinLockDemand(alloc *event.Allocation, terms Terms) (currency.Coin
 	gbSize := sizeInGB((alloc.Size + shards - 1) / shards)
 	rd := int64(time.Second * time.Duration(alloc.Expiration-alloc.StartTime))
 	rdTimeUnits := big.NewRat(rd, alloc.TimeUnit)
-	var bwF *big.Rat
+	var bwF = new(big.Rat)
 	_ = bwF.Mul(gbSize, bwF.Mul(terms.MinLockDemand.Rat, rdTimeUnits))
 	return currency.MultBigRat(terms.WritePrice, bwF)
 }

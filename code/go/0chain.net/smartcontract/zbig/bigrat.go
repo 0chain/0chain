@@ -28,6 +28,16 @@ func BigRatFromFloat64(f float64) BigRat {
 	}
 }
 
+func BigRatFromRat(r *big.Rat) BigRat {
+	br := BigRat{Rat: new(big.Rat)}
+	br.Set(r)
+	return br
+}
+
+func NewBigRat() *BigRat {
+	return &BigRat{Rat: new(big.Rat)}
+}
+
 var ZeroBigRat = big.NewRat(0, 1)
 var OneBigRat = big.NewRat(1, 1)
 

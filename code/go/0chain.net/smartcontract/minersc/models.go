@@ -525,7 +525,7 @@ func (gn *GlobalNode) canMint() bool {
 func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
 	var rr = gn.RewardRate
-	var decline *big.Rat
+	var decline = new(big.Rat)
 	// decline the value
 	gn.RewardRate.Mul(gn.RewardRate.Rat, decline.Sub(zbig.OneBigRat, gn.RewardDeclineRate.Rat))
 

@@ -320,7 +320,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 			return err
 		}
 	case smartcontract.BigRational:
-		var value *big.Rat
+		var value = new(big.Rat)
 		if _, ok := value.SetString(change); !ok {
 			return fmt.Errorf("cannot convert key %s value %v to big rational", key, change)
 		}

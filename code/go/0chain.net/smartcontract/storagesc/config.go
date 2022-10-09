@@ -58,6 +58,15 @@ type blockReward struct {
 	Zeta                    blockRewardZeta  `json:"zeta"`
 }
 
+func newBlocReward() *blockReward {
+	return &blockReward{
+		BlockRewardChangeRatio: *zbig.NewBigRat(),
+		SharderWeight:          *zbig.NewBigRat(),
+		MinerWeight:            *zbig.NewBigRat(),
+		BlobberWeight:          *zbig.NewBigRat(),
+	}
+}
+
 type blockRewardGamma struct {
 	Alpha zbig.BigRat `json:"alpha" msg:"alpha,extension"`
 	A     zbig.BigRat `json:"a" msg:"a,extension"`
@@ -71,18 +80,18 @@ type blockRewardZeta struct {
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio *big.Rat) error {
-	var total *big.Rat
+	var total = new(big.Rat)
 	_ = total.Add(sharderRatio, total.Add(minerRatio, bRatio))
 	if total.Cmp(zbig.ZeroBigRat) == 0 {
-		br.SharderWeight.Rat.Set(zbig.ZeroBigRat)
-		br.MinerWeight.Set(zbig.ZeroBigRat)
-		br.BlobberWeight.Set(zbig.ZeroBigRat)
+		br.SharderWeight = zbig.BigRatFromRat(zbig.ZeroBigRat)
+		br.MinerWeight = zbig.BigRatFromRat(zbig.ZeroBigRat)
+		br.BlobberWeight = zbig.BigRatFromRat(zbig.ZeroBigRat)
 	} else {
 		br.SharderWeight.Quo(sharderRatio, total)
 		br.MinerWeight.Quo(minerRatio, total)
 		br.BlobberWeight.Quo(bRatio, total)
 	}
-	var totalWeight *big.Rat
+	var totalWeight = new(big.Rat)
 	_ = totalWeight.Add(br.SharderWeight.Rat, totalWeight.Add(br.MinerWeight.Rat, br.BlobberWeight.Rat))
 	if totalWeight.Cmp(zbig.ZeroBigRat) == 0 || totalWeight.Cmp(zbig.OneBigRat) == 0 {
 		return nil
@@ -505,7 +514,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = zbig.BigRatFromFloat64(scc.GetFloat64(pfx + "max_charge"))
 
-	conf.BlockReward = new(blockReward)
+	conf.BlockReward = newBlocReward()
 	conf.BlockReward.BlockReward, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.block_reward"))
 	if err != nil {
 		return nil, err
