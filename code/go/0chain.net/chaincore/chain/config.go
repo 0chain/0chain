@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 
@@ -43,12 +45,12 @@ type ConfigImpl struct {
 	guard sync.RWMutex
 }
 
-//FOR TEST PURPOSE ONLY
+// FOR TEST PURPOSE ONLY
 func (c *ConfigImpl) ConfDataForTest() *ConfigData {
 	return c.conf
 }
 
-//TODO: for test usage only, extend with more fields
+// TODO: for test usage only, extend with more fields
 func UpdateConfigImpl(conf *ConfigImpl, data *ConfigData) {
 	if data.BlockSize != 0 {
 		conf.conf.BlockSize = data.BlockSize
@@ -160,7 +162,7 @@ func (c *ConfigImpl) MinGenerators() int {
 	return c.conf.MinGenerators
 }
 
-func (c *ConfigImpl) GeneratorsPercent() float64 {
+func (c *ConfigImpl) GeneratorsPercent() zbig.BigRat {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
 
@@ -356,7 +358,7 @@ func (c *ConfigImpl) TxnTransferCost() int {
 	return c.conf.TxnTransferCost
 }
 
-//ConfigData - chain Configuration
+// ConfigData - chain Configuration
 type ConfigData struct {
 	version               int64         `json:"-"` //version of config to track updates
 	IsStateEnabled        bool          `json:"state"`
@@ -370,22 +372,22 @@ type ConfigData struct {
 	IsMultisigEnabled     bool          `json:"multisig"`
 	IsVestingEnabled      bool          `json:"vesting"`
 	IsZcnEnabled          bool          `json:"zcn"`
-	OwnerID               datastore.Key `json:"owner_id"`                  // Client who created this chain
-	BlockSize             int32         `json:"block_size"`                // Number of transactions in a block
-	MinBlockSize          int32         `json:"min_block_size"`            // Number of transactions a block needs to have
-	MaxBlockCost          int           `json:"max_block_cost"`            // multiplier of soft timeouts to restart a round
-	MaxByteSize           int64         `json:"max_byte_size"`             // Max number of bytes a block can have
-	MinGenerators         int           `json:"min_generators"`            // Min number of block generators.
-	GeneratorsPercent     float64       `json:"generators_percent"`        // Percentage of all miners
-	NumReplicators        int           `json:"num_replicators"`           // Number of sharders that can store the block
-	ThresholdByCount      int           `json:"threshold_by_count"`        // Threshold count for a block to be notarized
-	ThresholdByStake      int           `json:"threshold_by_stake"`        // Stake threshold for a block to be notarized
-	ValidationBatchSize   int           `json:"validation_size"`           // Batch size of txns for crypto verification
-	TxnMaxPayload         int           `json:"transaction_max_payload"`   // Max payload allowed in the transaction
-	TxnTransferCost       int           `json:"transaction_transfer_cost"` // Transaction transfer cost
-	MinTxnFee             currency.Coin `json:"min_txn_fee"`               // Minimum txn fee allowed
-	PruneStateBelowCount  int           `json:"prune_state_below_count"`   // Prune state below these many rounds
-	RoundRange            int64         `json:"round_range"`               // blocks are stored in separate directory for each range of rounds
+	OwnerID               datastore.Key `json:"owner_id"`                                              // Client who created this chain
+	BlockSize             int32         `json:"block_size"`                                            // Number of transactions in a block
+	MinBlockSize          int32         `json:"min_block_size"`                                        // Number of transactions a block needs to have
+	MaxBlockCost          int           `json:"max_block_cost"`                                        // multiplier of soft timeouts to restart a round
+	MaxByteSize           int64         `json:"max_byte_size"`                                         // Max number of bytes a block can have
+	MinGenerators         int           `json:"min_generators"`                                        // Min number of block generators.
+	GeneratorsPercent     zbig.BigRat   `json:"generators_percent" msg:"generators_percent,extension"` // Percentage of all miners
+	NumReplicators        int           `json:"num_replicators"`                                       // Number of sharders that can store the block
+	ThresholdByCount      int           `json:"threshold_by_count"`                                    // Threshold count for a block to be notarized
+	ThresholdByStake      int           `json:"threshold_by_stake"`                                    // Stake threshold for a block to be notarized
+	ValidationBatchSize   int           `json:"validation_size"`                                       // Batch size of txns for crypto verification
+	TxnMaxPayload         int           `json:"transaction_max_payload"`                               // Max payload allowed in the transaction
+	TxnTransferCost       int           `json:"transaction_transfer_cost"`                             // Transaction transfer cost
+	MinTxnFee             currency.Coin `json:"min_txn_fee"`                                           // Minimum txn fee allowed
+	PruneStateBelowCount  int           `json:"prune_state_below_count"`                               // Prune state below these many rounds
+	RoundRange            int64         `json:"round_range"`                                           // blocks are stored in separate directory for each range of rounds
 
 	// todo move BlocksToSharder out of ConfigData
 	BlocksToSharder       int `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
@@ -444,7 +446,7 @@ func (c *ConfigImpl) FromViper() error {
 	conf.MaxBlockCost = viper.GetInt("server_chain.block.max_block_cost")
 	conf.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
 	conf.MinGenerators = viper.GetInt("server_chain.block.min_generators")
-	conf.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
+	conf.GeneratorsPercent = zbig.BigRatFromFloat64(viper.GetFloat64("server_chain.block.generators_percent"))
 	conf.NumReplicators = viper.GetInt("server_chain.block.replicators")
 	conf.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	conf.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
@@ -534,7 +536,7 @@ func (c *ConfigImpl) FromViper() error {
 	return nil
 }
 
-//Updates the config fields from GlobalSettings fields
+// Updates the config fields from GlobalSettings fields
 func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	c.guard.Lock()
 	defer c.guard.Unlock()

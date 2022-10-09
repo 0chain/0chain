@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/chaincore/smartcontractinterface"
@@ -442,23 +444,23 @@ func (gl *GlobalSettings) GetCoin(field GlobalSetting) (currency.Coin, error) {
 }
 
 // GetFloat64 returns a global setting as a float64, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetFloat64(field GlobalSetting) (float64, error) {
+func (gl *GlobalSettings) GetBigRat(field GlobalSetting) (zbig.BigRat, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
-		return 0, err
+		return zbig.BigRat{}, err
 	}
 
 	sValue, found := gl.Fields[key]
 	if !found {
-		return viper.GetFloat64(key), nil
+		return zbig.BigRatFromFloat64(viper.GetFloat64(key)), nil
 	}
 	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.BigRational)
 	if err != nil {
-		return viper.GetFloat64(key), nil
+		return zbig.BigRatFromFloat64(viper.GetFloat64(key)), nil
 	}
-	value, ok := iValue.(float64)
+	value, ok := iValue.(zbig.BigRat)
 	if !ok {
-		return 0.0, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
+		return zbig.BigRat{}, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
 	return value, nil
 }

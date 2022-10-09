@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/block"
@@ -148,7 +150,7 @@ func setupMinerChain() (*Chain, func()) {
 		mc.Chain = chain.Provider().(*chain.Chain)
 	}
 
-	mc.ChainConfig = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
+	mc.ChainConfig = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: zbig.BigRatFromFloat64(33.0), MinGenerators: 1})
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {

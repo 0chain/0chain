@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"0chain.net/smartcontract/zbig"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/datastore"
@@ -17,7 +19,7 @@ var (
 	SmartContractConfig = viper.New()
 )
 
-//SetupDefaultConfig - setup the default config options that can be overridden via the config file
+// SetupDefaultConfig - setup the default config options that can be overridden via the config file
 func SetupDefaultConfig() {
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("network.relay_time", 200)
@@ -157,7 +159,7 @@ type ChainConfig interface {
 	MaxBlockCost() int
 	MaxByteSize() int64
 	MinGenerators() int
-	GeneratorsPercent() float64
+	GeneratorsPercent() zbig.BigRat
 	NumReplicators() int
 	ThresholdByCount() int
 	ThresholdByStake() int
