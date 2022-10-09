@@ -1,8 +1,8 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
@@ -36,27 +36,42 @@ func getValidators(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode
 	return vNodes, nil
 }
 
-func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
-	data := &dbs.DbUpdates{
-		Id: vn.ID,
-		Updates: map[string]interface{}{
-			"base_url":        vn.BaseURL,
-			"delegate_wallet": vn.StakePoolSettings.DelegateWallet,
-			"min_stake":       vn.StakePoolSettings.MinStake,
-			"max_stake":       vn.StakePoolSettings.MaxStake,
-			"num_delegates":   vn.StakePoolSettings.MaxNumDelegates,
-			"service_charge":  vn.StakePoolSettings.ServiceChargeRatio,
-		},
+func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContextI) error {
+	staked, err := sp.stake()
+	if err != nil {
+		return err
+	}
+
+	logging.Logger.Info("emitting validator update event")
+
+	data := &event.Validator{
+		ValidatorID:    vn.ID,
+		BaseUrl:        vn.BaseURL,
+		StakeTotal:     staked,
+		UnstakeTotal:   sp.TotalUnStake,
+		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
+		MinStake:       vn.StakePoolSettings.MinStake,
+		MaxStake:       vn.StakePoolSettings.MaxStake,
+		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
+		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
 	return nil
 }
 
-func (vn *ValidationNode) emitAddOrOverwrite(balances cstate.StateContextI) error {
+func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.StateContextI) error {
+	staked, err := sp.stake()
+	if err != nil {
+		return err
+	}
+
+	logging.Logger.Info("emitting validator add or overwrite event")
 	data := &event.Validator{
 		ValidatorID:    vn.ID,
 		BaseUrl:        vn.BaseURL,
+		StakeTotal:     staked,
+		UnstakeTotal:   sp.TotalUnStake,
 		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
 		MinStake:       vn.StakePoolSettings.MinStake,
 		MaxStake:       vn.StakePoolSettings.MaxStake,
