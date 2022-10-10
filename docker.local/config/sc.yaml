@@ -142,7 +142,7 @@ smart_contracts:
       data_shards: 2
       duration: 50h
       parity_shards: 2
-      read_pool_fraction: 0
+      read_pool_fraction: 0.2
       mint_amount: 0.5
       read_price_range:
         max: 1
