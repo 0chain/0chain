@@ -28,9 +28,6 @@ type mockStateContext struct {
 	LastestFinalizedMagicBlock *block.Block
 }
 
-func (sc *mockStateContext) GetMagicBlock(round int64) *block.MagicBlock {
-	return sc.ctx.GetMagicBlock(round)
-}
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     {}
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                    { return nil }
 func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return nil }
