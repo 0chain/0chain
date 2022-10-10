@@ -339,7 +339,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	m.tick("create_write_pool")
 
-	if err = sc.createChallengePool(txn, sa, balances); err != nil {
+	if err = sc.createChallengePool(txn, sa, balances, conf); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
 			zap.String("txn", txn.Hash),
 			zap.Error(err))
@@ -1483,8 +1483,12 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		}
 		sps = append(sps, sp)
 	}
+	conf, err := getConfig(balances)
+	if err != nil {
+		return "", common.NewError("can't get config", err.Error())
+	}
 
-	err = sc.finishAllocation(t, alloc, passRates, sps, balances)
+	err = sc.finishAllocation(t, alloc, passRates, sps, balances, conf)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
@@ -1570,7 +1574,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 		sps = append(sps, sp)
 	}
 
-	err = sc.finishAllocation(t, alloc, passRates, sps, balances)
+	err = sc.finishAllocation(t, alloc, passRates, sps, balances, conf)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
@@ -1598,6 +1602,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	passRates []float64,
 	sps []*stakePool,
 	balances chainstate.StateContextI,
+	conf *Config,
 ) (err error) {
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
@@ -1728,12 +1733,6 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"moving challenge pool rest back to write pool: "+err.Error())
 		}
-	}
-
-	conf, err := sc.getConfig(balances, true)
-	if err != nil {
-		return common.NewErrorf("allocation_creation_failed",
-			"can't get config: %v", err)
 	}
 
 	cancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
