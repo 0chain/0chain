@@ -107,7 +107,7 @@ func postfix(section string) string {
 	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
 
-func loadGlobalNode() (conf *ZCNSConfig) {
+func getConfig() (conf *ZCNSConfig) {
 	conf = new(ZCNSConfig)
 	conf.MinMintAmount = currency.Coin(cfg.GetInt(postfix(MinMintAmount)))
 	conf.MinBurnAmount = currency.Coin(cfg.GetInt64(postfix(MinBurnAmount)))
