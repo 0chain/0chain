@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"sort"
 
 	"0chain.net/chaincore/currency"
 
@@ -315,36 +314,36 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		}
 	}
 
-	var mb = balances.GetBlock()
-	if mb.Round == gn.ViewChange {
+	b := balances.GetBlock()
+	if b.Round == gn.ViewChange {
 		if err := msc.SetMagicBlock(gn, balances); err != nil {
 			return "", common.NewErrorf("pay_fee",
-				"can't set magic mb round=%d viewChange=%d, %v",
-				mb.Round, gn.ViewChange, err)
+				"can't set magic b round=%d viewChange=%d, %v",
+				b.Round, gn.ViewChange, err)
 		}
 	}
 
-	if t.ClientID != mb.MinerID {
-		return "", common.NewError("pay_fee", "not mb generator")
+	if t.ClientID != b.MinerID {
+		return "", common.NewError("pay_fee", "not block generator")
 	}
 
-	if mb.Round <= gn.LastRound {
+	if b.Round <= gn.LastRound {
 		return "", common.NewError("pay_fee", "jumped back in time?")
 	}
 
-	// the mb generator
+	// the b generator
 	var mn *MinerNode
-	if mn, err = getMinerNode(mb.MinerID, balances); err != nil {
+	if mn, err = getMinerNode(b.MinerID, balances); err != nil {
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
-			mb.MinerID, err)
+			b.MinerID, err)
 	}
 
 	Logger.Debug("Pay fees, get miner id successfully",
-		zap.String("miner id", mb.MinerID),
-		zap.Int64("round", mb.Round),
-		zap.String("block", mb.Hash))
+		zap.String("miner id", b.MinerID),
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash))
 
-	fees, err := msc.sumFee(mb, true)
+	fees, err := msc.sumFee(b, true)
 	if err != nil {
 		return "", err
 	}
@@ -369,12 +368,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	// pay random N miners
 	if err := mn.StakePool.DistributeRewardsRandN(
-		moveValue, mn.ID, spenum.Miner, mb.GetRoundRandomSeed(), 10, "fee", balances,
+		moveValue, mn.ID, spenum.Miner, b.GetRoundRandomSeed(), 10, "fee", balances,
 	); err != nil {
 		return "", err
 	}
 
-	// pay and mint rest for mb sharders
+	// pay and mint rest for block sharders
 	sharders, err := getAllShardersList(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -384,7 +383,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	if len(sharders.Nodes) > 0 {
 		mbSharders := getRegisterShardersInMagicBlock(balances, sharders)
-		if err := msc.payShardersAndDelegates(mbSharders, sharderFees, sharderRewards, 5, balances); err != nil {
+		if err := msc.payShardersAndDelegates(mbSharders, sharderFees, sharderRewards,
+			5, b.GetRoundRandomSeed(), balances); err != nil {
 			return "", err
 		}
 	}
@@ -395,10 +395,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
-	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {
+	if gn.RewardRoundFrequency != 0 && b.Round%gn.RewardRoundFrequency == 0 {
 		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 		if lfmb != nil {
-			err = msc.viewChangePoolsWork(lfmb, mb.Round, sharders, balances)
+			err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
 			if err != nil {
 				return "", err
 			}
@@ -407,7 +407,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		}
 	}
 
-	gn.setLastRound(mb.Round)
+	gn.setLastRound(b.Round)
 	if err = gn.save(balances); err != nil {
 		return "", common.NewErrorf("pay_fees",
 			"saving global node: %v", err)
@@ -481,7 +481,7 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
-	sharders []*MinerNode, fee, mint currency.Coin, randN int,
+	sharders []*MinerNode, fee, mint currency.Coin, randN int, seed int64,
 	balances cstate.StateContextI) error {
 	sn := len(sharders)
 	if sn <= 0 {
@@ -522,7 +522,6 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	}
 
 	var (
-		seed  = block.GetRoundRandomSeed()
 		randS = rand.New(rand.NewSource(seed))
 	)
 
