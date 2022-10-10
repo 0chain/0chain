@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -103,23 +104,19 @@ func (msc *MinerSmartContract) unlockOffline(
 	return nil
 }
 
-func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
-	mb *block.MagicBlock, round int64, balances cstate.StateContextI) (
-	err error) {
-
-	var miners, sharders *MinerNodes
-	if miners, err = getMinersList(balances); err != nil {
-		return fmt.Errorf("getting all miners list: %v", err)
-	}
-	sharders, err = getAllShardersList(balances)
+func (msc *MinerSmartContract) viewChangePoolsWork(
+	mb *block.MagicBlock,
+	round int64,
+	sharders *MinerNodes,
+	balances cstate.StateContextI) error {
+	miners, err := getMinersList(balances)
 	if err != nil {
-		return fmt.Errorf("getting all sharders list: %v", err)
+		return fmt.Errorf("getting all miners list: %v", err)
 	}
 
 	var (
-		mbMiners   = make(map[string]struct{}, mb.Miners.Size())
-		mbSharders = make(map[string]struct{}, mb.Miners.Size())
-
+		mbMiners                       = make(map[string]struct{}, mb.Miners.Size())
+		mbSharders                     = make(map[string]struct{}, mb.Miners.Size())
 		minersOffline, shardersOffline []*MinerNode
 	)
 
@@ -149,7 +146,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 
 		if err = msc.unlockDeleted(mn, round, balances); err != nil {
-			return
+			return err
 		}
 		if mn.Delete {
 			miners.Nodes = append(miners.Nodes[:i], miners.Nodes[i+1:]...)
@@ -160,7 +157,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			continue
 		}
 		if err = msc.activatePending(mn); err != nil {
-			return
+			return err
 		}
 		if _, ok := mbMiners[mn.ID]; !ok {
 			minersOffline = append(minersOffline, mn)
@@ -168,7 +165,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 		// save excluding offline nodes
 		if err = mn.save(balances); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -187,18 +184,18 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 
 		if err = msc.unlockDeleted(sn, round, balances); err != nil {
-			return
+			return err
 		}
 		if sn.Delete {
 			sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
 			if err = sn.save(balances); err != nil {
-				return
+				return err
 			}
 			sharderDelete = true
 			continue
 		}
 		if err = msc.activatePending(sn); err != nil {
-			return
+			return err
 		}
 		if _, ok := mbSharders[sn.ID]; !ok {
 			shardersOffline = append(shardersOffline, sn)
@@ -206,20 +203,20 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 		// save excluding offline nodes
 		if err = sn.save(balances); err != nil {
-			return
+			return err
 		}
 	}
 
 	// unlockOffline
 	for _, mn := range minersOffline {
 		if err = msc.unlockOffline(mn, balances); err != nil {
-			return
+			return err
 		}
 	}
 
 	for _, mn := range shardersOffline {
 		if err = msc.unlockOffline(mn, balances); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -236,7 +233,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 				"failed saving all sharder list: %v", err)
 		}
 	}
-	return
+	return nil
 }
 
 func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
@@ -378,8 +375,18 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	// pay and mint rest for mb sharders
-	if err := msc.payShardersAndDelegates(sharderFees, sharderRewards, mb, 5, balances); err != nil {
-		return "", err
+	sharders, err := getAllShardersList(balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return "", err
+		}
+	}
+
+	if len(sharders.Nodes) > 0 {
+		mbSharders := getRegisterShardersInMagicBlock(balances, sharders)
+		if err := msc.payShardersAndDelegates(mbSharders, sharderFees, sharderRewards, 5, balances); err != nil {
+			return "", err
+		}
 	}
 
 	// save node first, for the VC pools work
@@ -391,7 +398,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {
 		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 		if lfmb != nil {
-			err = msc.viewChangePoolsWork(gn, lfmb, mb.Round, balances)
+			err = msc.viewChangePoolsWork(lfmb, mb.Round, sharders, balances)
 			if err != nil {
 				return "", err
 			}
@@ -407,6 +414,41 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	return resp, nil
+}
+
+func getRegisterShardersInMagicBlock(balances cstate.StateContextI, sharders *MinerNodes) []*MinerNode {
+	var (
+		shardersKeys = getMagicBlockSharders(balances)
+		smap         = make(map[string]struct{}, len(shardersKeys))
+	)
+
+	for _, key := range shardersKeys {
+		smap[key] = struct{}{}
+	}
+
+	retSharders := make([]*MinerNode, 0, len(shardersKeys))
+	for i, s := range sharders.Nodes {
+		if _, ok := smap[s.GetKey()]; ok {
+			retSharders = append(retSharders, sharders.Nodes[i])
+			continue
+		}
+	}
+	return retSharders
+}
+
+// getMagicBlockSharders - list the sharders in magic block
+func getMagicBlockSharders(balances cstate.StateContextI) []string {
+	var (
+		pool  = balances.GetMagicBlock(balances.GetBlock().Round).Sharders
+		nodes = pool.CopyNodes()
+	)
+
+	sharderKeys := make([]string, 0, len(nodes))
+	for _, sharder := range nodes {
+		sharderKeys = append(sharderKeys, GetSharderKey(sharder.GetKey()))
+	}
+
+	return sharderKeys
 }
 
 func (msc *MinerSmartContract) sumFee(b *block.Block,
@@ -437,48 +479,15 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 	return totalMaxFee, nil
 }
 
-func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
-	balances cstate.StateContextI) (sharders []*MinerNode, err error) {
-
-	if block.PrevBlock == nil {
-		return nil, fmt.Errorf("missing previous block in state context %d, %s",
-			block.Round, block.Hash)
-	}
-
-	var sids = balances.GetBlockSharders(block.PrevBlock)
-	sort.Strings(sids)
-
-	sharders = make([]*MinerNode, 0, len(sids))
-
-	for _, sid := range sids {
-		var sn *MinerNode
-		sn, err = msc.getSharderNode(sid, balances)
-		switch err {
-		case nil:
-		case util.ErrValueNotPresent:
-			sn = NewMinerNode()
-			sn.ID = sid
-		default:
-			return nil, fmt.Errorf("unexpected error: %v", err)
-		}
-		sharders, err = append(sharders, sn), nil // even if it's nil, reset err
-	}
-
-	return
-}
-
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
-	fee, mint currency.Coin, block *block.Block, randN int,
-	balances cstate.StateContextI,
-) error {
-	var err error
-	var sharders []*MinerNode
-	if sharders, err = msc.getBlockSharders(block, balances); err != nil {
-		return err
+	sharders []*MinerNode, fee, mint currency.Coin, randN int,
+	balances cstate.StateContextI) error {
+	sn := len(sharders)
+	if sn <= 0 {
+		return errors.New("no sharders to pay")
 	}
 
-	sn := len(sharders)
 	// fess and mint
 	feeShare, feeLeft, err := currency.DistributeCoin(fee, int64(sn))
 	if err != nil {

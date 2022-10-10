@@ -226,7 +226,7 @@ func (c *Chain) NewStateContext(
 	eventDb *event.EventDb,
 ) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, txn,
-		c.GetBlockSharders,
+		c.GetMagicBlock,
 		func() *block.Block {
 			return c.GetLatestFinalizedMagicBlock(context.Background())
 		},

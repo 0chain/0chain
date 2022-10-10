@@ -20,7 +20,7 @@ func init() {
 }
 
 func TestReadMarkersPaginated(t *testing.T) {
-	t.Skip("only for local debugging, requires local")
+	t.Skip("only for local debugging, requires local postgresql")
 	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
