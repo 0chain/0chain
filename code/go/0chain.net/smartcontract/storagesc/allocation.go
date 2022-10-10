@@ -1542,11 +1542,12 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"allocation already finalized")
 	}
 
-	var until common.Timestamp
-	until, err = alloc.Until(balances)
+	conf, err := getConfig(balances)
 	if err != nil {
 		return "", common.NewError("can't get config", err.Error())
 	}
+
+	var until = alloc.Until(conf)
 
 	// should be expired
 	if until > t.CreationDate {

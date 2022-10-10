@@ -388,11 +388,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related allocation: %v", err)
 	}
 
-	var until common.Timestamp
-	until, err = alloc.Until(balances)
+	conf, err = getConfig(balances)
 	if err != nil {
 		return "", common.NewError("can't get config", err.Error())
 	}
+
+	var until = alloc.Until(conf)
 
 	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_blobber_read",

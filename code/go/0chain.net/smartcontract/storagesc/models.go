@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -1172,12 +1171,8 @@ func (sa *StorageAllocation) validateEachBlobber(
 }
 
 // Until returns allocation expiration.
-func (sa *StorageAllocation) Until(balances chainstate.StateContextI) (common.Timestamp, error) {
-	conf, err := getConfig(balances)
-	if err != nil {
-		return 0, err
-	}
-	return sa.Expiration + toSeconds(conf.MaxChallengeCompletionTime), nil
+func (sa *StorageAllocation) Until(conf *Config) common.Timestamp {
+	return sa.Expiration + toSeconds(conf.MaxChallengeCompletionTime)
 }
 
 // The durationInTimeUnits returns given duration (represented as

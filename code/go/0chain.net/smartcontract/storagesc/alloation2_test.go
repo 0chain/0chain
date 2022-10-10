@@ -238,7 +238,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		MaxMint:                         zcnToBalance(4000000.0),
 		BlobberSlash:                    0.1,
 		ValidatorReward:                 0.025,
-		MaxChallengeCompletionTime:      30 * time.Minute,
+		MaxChallengeCompletionTime:      0,
 		TimeUnit:                        720 * time.Hour,
 		FailedChallengesToRevokeMinLock: 10,
 		MaxStake:                        zcnToBalance(100.0),
@@ -262,7 +262,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		ID:            ownerId,
 		BlobberAllocs: []*BlobberAllocation{},
 		Owner:         ownerId,
-		Expiration:    now,
+		Expiration:    now - toSeconds(100),
 		Stats: &StorageAllocationStats{
 			OpenChallenges: 3,
 		},

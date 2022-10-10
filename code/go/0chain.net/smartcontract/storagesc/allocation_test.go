@@ -2051,8 +2051,12 @@ func Test_finalize_allocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// expire the allocation
-	var until common.Timestamp
-	until, err = alloc.Until(balances)
+	var conf *Config
+	conf, err = getConfig(balances)
+	require.NoError(t, err)
+
+	var until = alloc.Until(conf)
+
 	require.NoError(t, err)
 	tp += int64(until)
 
@@ -2069,10 +2073,6 @@ func Test_finalize_allocation(t *testing.T) {
 	// check out all the balances
 
 	cp, err = ssc.getChallengePool(allocID, balances)
-	require.NoError(t, err)
-
-	var conf *Config
-	conf, err = getConfig(balances)
 	require.NoError(t, err)
 
 	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))
