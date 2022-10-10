@@ -66,10 +66,6 @@ func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
 }
 
-func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string {
-	return nil
-}
-
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
 func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {

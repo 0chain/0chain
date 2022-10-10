@@ -24,7 +24,6 @@ type mockStateContext struct {
 	cstate.StateContext
 	block                      *block.Block
 	store                      map[datastore.Key]util.MPTSerializable
-	sharders                   []string
 	events                     []event.Event
 	LastestFinalizedMagicBlock *block.Block
 }
@@ -56,10 +55,6 @@ func (sc *mockStateContext) GetEventDB() *event.EventDb            { return nil 
 func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block { return nil }
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return sc.LastestFinalizedMagicBlock
-}
-
-func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string {
-	return sc.sharders
 }
 
 func (sc *mockStateContext) GetBlock() *block.Block {

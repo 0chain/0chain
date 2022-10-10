@@ -86,6 +86,7 @@ type StateContextI interface {
 	QueryStateContextI
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
+	GetMagicBlock(round int64) *block.MagicBlock
 	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
@@ -100,7 +101,6 @@ type StateContextI interface {
 	GetSignedTransfers() []*state.SignedTransfer
 	GetMints() []*state.Mint // cannot use in smart contracts or REST endpoints
 	Validate() error
-	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
 	EmitEvent(event.EventType, event.EventTag, string, interface{}, ...Appender)
@@ -118,9 +118,9 @@ type StateContext struct {
 	signedTransfers               []*state.SignedTransfer
 	mints                         []*state.Mint
 	events                        []event.Event
-	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
 	getLatestFinalizedBlock       func() *block.Block
+	getMagicBlock                 func(round int64) *block.MagicBlock
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
@@ -151,7 +151,7 @@ func NewStateContext(
 	b *block.Block,
 	s util.MerklePatriciaTrieI,
 	t *transaction.Transaction,
-	getSharderFunc func(*block.Block) []string,
+	getMagicBlock func(int64) *block.MagicBlock,
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
@@ -164,7 +164,7 @@ func NewStateContext(
 		block:                         b,
 		state:                         s,
 		txn:                           t,
-		getSharders:                   getSharderFunc,
+		getMagicBlock:                 getMagicBlock,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
 		getLatestFinalizedBlock:       getLatestFinalizedBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
@@ -365,8 +365,8 @@ func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
 	return s.Nonce, nil
 }
 
-func (sc *StateContext) GetBlockSharders(b *block.Block) []string {
-	return sc.getSharders(b)
+func (sc *StateContext) GetMagicBlock(round int64) *block.MagicBlock {
+	return sc.getMagicBlock(round)
 }
 
 func (sc *StateContext) GetLastestFinalizedMagicBlock() *block.Block {

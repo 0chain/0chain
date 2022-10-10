@@ -51,7 +51,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	// ClientID - is a client who broadcasts this transaction to mint token
 	// ToClientID - is an address of the smart contract
 	if payload.ReceivingClientID != trans.ClientID {
-		msg := fmt.Sprintf("transaction made from different account who made burn,  Oririnal: %s, Current: %s",
+		msg := fmt.Sprintf("transaction made from different account who made burn,  Original: %s, Current: %s",
 			payload.ReceivingClientID, trans.ClientID)
 		err = common.NewError(code, msg)
 		return
