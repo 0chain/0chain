@@ -38,7 +38,7 @@ require (
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	gorm.io/driver/postgres v1.3.10
+	gorm.io/driver/postgres v1.4.4
 	gorm.io/gorm v1.24.0
 )
 
