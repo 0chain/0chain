@@ -2055,10 +2055,8 @@ func Test_finalize_allocation(t *testing.T) {
 	conf, err = getConfig(balances)
 	require.NoError(t, err)
 
-	var until = alloc.Until(conf)
-
 	require.NoError(t, err)
-	tp += int64(until)
+	tp += int64(alloc.Until(conf))
 
 	// finalize it
 
