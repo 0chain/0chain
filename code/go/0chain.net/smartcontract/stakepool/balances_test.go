@@ -176,6 +176,8 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	return nil
 }
 
+func (tb *testBalances) GetInvalidStateErrors() []error { return nil }
+
 type mptStore struct {
 	mpt  util.MerklePatriciaTrieI
 	mndb *util.MemoryNodeDB

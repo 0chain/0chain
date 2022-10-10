@@ -926,7 +926,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		})
 
 		events, err := c.UpdateState(ctx, b, bState, txn)
-		b.Events = append(b.Events, events...)
 		switch err {
 		case context.Canceled:
 			b.SetStateStatus(StateCancelled)
@@ -981,6 +980,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				return common.NewError("state_update_error", err.Error())
 			}
 		}
+		b.Events = append(b.Events, events...)
 	}
 
 	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {

@@ -21,7 +21,7 @@ import (
 )
 
 type mockStateContext struct {
-	ctx                        cstate.StateContext
+	cstate.StateContext
 	block                      *block.Block
 	store                      map[datastore.Key]util.MPTSerializable
 	sharders                   []string
@@ -54,14 +54,6 @@ func (sc *mockStateContext) EmitError(error)                       {}
 func (sc *mockStateContext) GetEvents() []event.Event              { return nil }
 func (sc *mockStateContext) GetEventDB() *event.EventDb            { return nil }
 func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block { return nil }
-func (sc *mockStateContext) GetTransfers() []*state.Transfer {
-	return sc.ctx.GetTransfers()
-}
-
-func (sc *mockStateContext) GetMints() []*state.Mint {
-	return sc.ctx.GetMints()
-}
-
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return sc.LastestFinalizedMagicBlock
 }
@@ -90,15 +82,6 @@ func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializabl
 func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
-}
-
-func (sc *mockStateContext) AddTransfer(t *state.Transfer) error {
-	return sc.ctx.AddTransfer(t)
-}
-
-func (sc *mockStateContext) AddMint(m *state.Mint) error {
-
-	return sc.ctx.AddMint(m)
 }
 
 func zcnToBalance(token float64) currency.Coin {
@@ -156,7 +139,6 @@ const (
 // logs and cli input parameters.
 // sc = sc.yaml
 // lockFlags input to ./zwallet lock
-//
 type formulae struct {
 	zChain           mock0ChainYaml
 	sc               mockScYaml

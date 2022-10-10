@@ -13,7 +13,7 @@ const (
 type (
 	// CollectionIteratorHandler describes the signature of
 	// the collection iterator handler function.
-	CollectionIteratorHandler func(ctx context.Context, ce CollectionEntity) bool
+	CollectionIteratorHandler func(ctx context.Context, ce CollectionEntity) (bool, error)
 
 	// Order describes ordering enum.
 	Order int8

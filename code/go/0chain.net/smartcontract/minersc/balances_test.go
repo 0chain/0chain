@@ -107,6 +107,10 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	return
 }
 
+func (tb *testBalances) GetInvalidStateErrors() []error {
+	return nil
+}
+
 func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 	if encryption.IsHash(key) {
 		return common.NewError("failed to get trie node",
