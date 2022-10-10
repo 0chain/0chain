@@ -16,7 +16,7 @@ import (
 )
 
 type mockStateContext struct {
-	ctx           cstate.StateContext
+	cstate.StateContext
 	clientBalance currency.Coin
 	store         map[datastore.Key]util.MPTSerializable
 }
@@ -65,14 +65,6 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, er
 	return sc.clientBalance, nil
 }
 
-func (sc *mockStateContext) GetTransfers() []*state.Transfer {
-	return sc.ctx.GetTransfers()
-}
-
-func (sc *mockStateContext) GetMints() []*state.Mint {
-	return sc.ctx.GetMints()
-}
-
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
 }
@@ -100,14 +92,6 @@ func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializabl
 func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
-}
-
-func (sc *mockStateContext) AddTransfer(t *state.Transfer) error {
-	return sc.ctx.AddTransfer(t)
-}
-
-func (sc *mockStateContext) AddMint(m *state.Mint) error {
-	return sc.ctx.AddMint(m)
 }
 
 func zcnToInt64(token float64) int64 {

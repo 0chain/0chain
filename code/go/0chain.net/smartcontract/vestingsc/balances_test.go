@@ -122,3 +122,5 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	tb.transfers = append(tb.transfers, t)
 	return nil
 }
+
+func (tb *testBalances) GetInvalidStateErrors() []error { return nil }

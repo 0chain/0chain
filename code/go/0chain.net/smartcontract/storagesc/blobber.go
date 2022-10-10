@@ -36,7 +36,7 @@ func getBlobber(
 
 func (_ *StorageSmartContract) getBlobber(
 	blobberID string,
-	balances cstate.StateContextI,
+	balances cstate.CommonStateContextI,
 ) (blobber *StorageNode, err error) {
 	return getBlobber(blobberID, balances)
 }
@@ -867,7 +867,12 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 ) (err error) {
 	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err == nil {
+		// already exist, update it
 		return sc.updateBlobber(t, conf, blobber, savedBlobber, balances)
+	}
+
+	if err != util.ErrValueNotPresent {
+		return err
 	}
 
 	has, err := sc.hasBlobberUrl(blobber.BaseURL, balances)

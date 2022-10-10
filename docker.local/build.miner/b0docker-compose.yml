@@ -48,6 +48,7 @@ services:
       - ../miner${MINER}/log:/0chain/log
     ports:
       - "707${MINER}:707${MINER}"
+      - "607${MINER}:607${MINER}"
     networks:
       default:
       testnet0:

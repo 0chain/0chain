@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/chaincore/state"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -246,6 +248,42 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>Health Summary</div>")
 	c.healthSummaryInTables(w, r)
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
+}
+
+func (c *Chain) txnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
+	//Row start
+	fmt.Fprintf(w, "<tr>")
+
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, txn.ClientID)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", txn.Value)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", txn.CreationDate)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", txn.Fee)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", txn.Nonce)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", s.Nonce)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", s.Balance)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "</tr>")
+	//Row end
 }
 
 func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
@@ -488,7 +526,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 			if ok {
 				fmt.Fprintf(w, "<tr class='active'>")
 				fmt.Fprintf(w, "<td>")
-				fmt.Fprintf(w, "Redis Collection")
+				fmt.Fprintf(w, "<a href='_diagnostics/txns_in_pool'>Redis Collection</a>")
 				fmt.Fprintf(w, "</td>")
 				fmt.Fprintf(w, "<td class='number'>")
 				fmt.Fprintf(w, "%v", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName))
@@ -1241,7 +1279,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-//N2NStatsWriter - writes the n2n stats of all the nodes
+// N2NStatsWriter - writes the n2n stats of all the nodes
 func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
@@ -1334,7 +1372,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	return transaction.PutTransaction(ctx, txn)
 }
 
-//RoundInfoHandler collects and writes information about current round
+// RoundInfoHandler collects and writes information about current round
 func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -1585,6 +1623,63 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(context.Context, datastore.CollectionEntity) (bool, error) {
+	return func(ctx context.Context, ce datastore.CollectionEntity) (bool, error) {
+		txn, ok := ce.(*transaction.Transaction)
+		if !ok {
+			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", ce))
+			return false, nil
+		}
+
+		c.txnsInPoolTableRows(w, txn, s)
+		return true, nil
+	}
+}
+
+func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if recover() != nil {
+			http.Error(w, fmt.Sprintf("<pre>%s</pre>", string(debug.Stack())), http.StatusInternalServerError)
+		}
+	}()
+
+	// Print Styles and miner info
+	PrintCSS(w)
+	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
+		node.Self.Underlying().Description)
+
+	// Print page title
+	fmt.Fprintf(w, "<div>Transation Pool Summary</div>")
+
+	// Print table and heading
+	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<th align='center' colspan='7'>Transactions in pool</th>")
+	fmt.Fprintf(w, "<tr class='header'><td>Client ID</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
+
+	ctx := common.GetRootContext()
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
+	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
+	collectionName := txn.GetCollectionName()
+
+	s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
+	if !isValid(err) {
+		logging.Logger.Error(err.Error(), zap.Any("clientState", s))
+	}
+
+	var txnIterHandler = txnIterHandlerFunc(c, w, s)
+
+	_ = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
+
+	// End table
+	fmt.Fprintf(w, "</table>")
+
+	fmt.Fprintf(w, "<div>&nbsp;</div>")
+
+}
+
 func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	mb := c.GetCurrentMagicBlock()
 	generatorsNum := c.GetGeneratorsNumOfMagicBlock(mb)
@@ -1692,7 +1787,7 @@ func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter, numGenerators i
 	fmt.Fprintf(w, "</table>")
 }
 
-//PrintCSS - print the common css elements
+// PrintCSS - print the common css elements
 func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
@@ -1711,7 +1806,7 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</style>")
 }
 
-//StateDumpHandler - a handler to dump the state
+// StateDumpHandler - a handler to dump the state
 func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 	c := GetServerChain()
 	lfb := c.GetLatestFinalizedBlock()
