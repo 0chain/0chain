@@ -2051,7 +2051,10 @@ func Test_finalize_allocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// expire the allocation
-	tp += int64(alloc.Until())
+	var until common.Timestamp
+	until, err = alloc.Until(balances)
+	require.NoError(t, err)
+	tp += int64(until)
 
 	// finalize it
 

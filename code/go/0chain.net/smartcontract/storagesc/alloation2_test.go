@@ -307,13 +307,11 @@ func TestFinalizeAllocation(t *testing.T) {
 		}
 	}
 	var challengePoolBalance = int64(700000)
-	var thisExpires = common.Timestamp(222)
 
-	var blobberOffer = int64(123000)
 	allocation.WritePool = currency.Coin(777777)
 
 	t.Run("finalize allocation", func(t *testing.T) {
-		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml, challengePoolBalance, blobberOffer, thisExpires, now)
+		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml, challengePoolBalance, now)
 		require.NoError(t, err)
 	})
 
@@ -321,8 +319,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		var allocationExpired = allocation
 		allocationExpired.Expiration = now - toSeconds(0) + 1
 
-		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml,
-			challengePoolBalance, blobberOffer, thisExpires, now)
+		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml, challengePoolBalance, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrFinalizedFailed))
 		require.True(t, strings.Contains(err.Error(), ErrFinalizedTooSoon))
@@ -396,16 +393,7 @@ func testCancelAllocation(
 	return nil
 }
 
-func testFinalizeAllocation(
-	t *testing.T,
-	sAllocation StorageAllocation,
-	blobbers SortedBlobbers,
-	bStakes [][]mockStakePool,
-	scYaml Config,
-	challengePoolBalance int64,
-	blobberOffer int64,
-	thisExpires, now common.Timestamp,
-) error {
+func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, scYaml Config, challengePoolBalance int64, now common.Timestamp) error {
 
 	var f = formulaeFinalizeAllocation{
 		t:                    t,
@@ -422,7 +410,6 @@ func testFinalizeAllocation(
 		t, sAllocation, blobbers, bStakes, scYaml,
 		currency.Coin(challengePoolBalance), now,
 	)
-
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
 	if err != nil {
 		return err
