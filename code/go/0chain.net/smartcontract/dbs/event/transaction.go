@@ -101,7 +101,7 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 	tr := []Transaction{}
 	res := edb.Store.Get().
 		Model(Transaction{}).
-		Where("round >= ? AND round < ?", blockStart, blockEnd).
+		Where("round >= ? AND round <= ?", blockStart, blockEnd).
 		Order("round asc").
 		Find(&tr)
 	return tr, res.Error

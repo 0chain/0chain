@@ -989,10 +989,10 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 	}
 	var fullBlocks []fullBlock
 	txs, err := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
-	var txnIndex int
-	for i, b := range blocks {
-		fBlock := fullBlock{Block: blocks[i]}
-		for ; txnIndex < len(txs) && txs[txnIndex].Round == b.Round; txnIndex++ {
+
+	for _, b := range blocks {
+		fBlock := fullBlock{Block: b}
+		for txnIndex := 0; txnIndex < len(txs) && txs[txnIndex].Round == b.Round; txnIndex++ {
 			fBlock.Transactions = append(fBlock.Transactions, txs[txnIndex])
 		}
 		fullBlocks = append(fullBlocks, fBlock)
