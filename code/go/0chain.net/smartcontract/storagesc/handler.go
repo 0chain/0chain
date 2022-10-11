@@ -990,10 +990,13 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 	var fullBlocks []fullBlock
 	txs, err := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
 
+	var txnIndex int
 	for _, b := range blocks {
 		fBlock := fullBlock{Block: b}
-		for txnIndex := 0; txnIndex < len(txs); txnIndex++ {
-			fBlock.Transactions = append(fBlock.Transactions, txs[txnIndex])
+		for ; txnIndex < len(txs); txnIndex++ {
+			if (txs[txnIndex].Round == b.Round) {
+				fBlock.Transactions = append(fBlock.Transactions, txs[txnIndex])
+			}
 		}
 		fullBlocks = append(fullBlocks, fBlock)
 	}
