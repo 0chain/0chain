@@ -864,11 +864,14 @@ func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
 	if balances.GetConfig() == nil {
 		return nil, util.ErrValueNotPresent
 	}
-	var ret Config
-	var conf = balances.GetConfig()
-	ret = (*conf).(Config)
-	panic("reached here!!")
-	return &ret, nil
+
+	var conf = *balances.GetConfig()
+	ret, ok := conf.(*Config)
+	if !ok {
+		panic("can't convert conf to *Config")
+	}
+
+	return ret, nil
 }
 
 func updateConfig(balances cstate.CommonStateContextI) error {

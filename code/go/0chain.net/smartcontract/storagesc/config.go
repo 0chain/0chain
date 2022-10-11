@@ -101,6 +101,10 @@ func newConfig() *Config {
 	}
 }
 
+func convertConfigType(c chainState.StoragescConfig) *chainState.StoragescConfig {
+	return &c
+}
+
 // Config represents SC configurations ('storagesc:' from sc.yaml).
 type Config struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
