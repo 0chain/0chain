@@ -135,7 +135,7 @@ func TestSelectBlobbers(t *testing.T) {
 
 		config, _ := getConfiguredConfig()
 		var scConfig chainState.StoragescConfig
-		scConfig = *config
+		scConfig = config
 
 		balances.On("GetConfig", mock.Anything).Return(&scConfig, nil)
 		balances.On("SetConfig", mock.Anything, mock.Anything).Return(nil).Once()
