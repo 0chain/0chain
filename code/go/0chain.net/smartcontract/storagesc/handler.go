@@ -868,7 +868,7 @@ func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
 	var conf = *balances.GetConfig()
 	ret, ok := conf.(*Config)
 	if !ok {
-		panic("can't convert conf to *Config")
+		panic(conf)
 	}
 
 	return ret, nil
