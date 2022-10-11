@@ -1552,7 +1552,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	// should be expired
-	if alloc.Until(conf) > t.CreationDate {
+	if alloc.Until(conf.MaxChallengeCompletionTime) > t.CreationDate {
 		return "", common.NewError("fini_alloc_failed",
 			"allocation is not expired yet, or waiting a challenge completion")
 	}

@@ -2056,7 +2056,7 @@ func Test_finalize_allocation(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, err)
-	tp += int64(alloc.Until(conf))
+	tp += int64(alloc.Until(conf.MaxChallengeCompletionTime))
 
 	// finalize it
 

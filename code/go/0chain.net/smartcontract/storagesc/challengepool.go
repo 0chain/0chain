@@ -190,7 +190,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	// completion time
 	var cp *challengePool
 
-	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(conf),
+	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(conf.MaxChallengeCompletionTime),
 		balances)
 	if err != nil {
 		return fmt.Errorf("can't create challenge pool: %v", err)
