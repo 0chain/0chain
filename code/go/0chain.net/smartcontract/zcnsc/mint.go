@@ -51,7 +51,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	// ClientID - is a client who broadcasts this transaction to mint token
 	// ToClientID - is an address of the smart contract
 	if payload.ReceivingClientID != trans.ClientID {
-		msg := fmt.Sprintf("transaction made from different account who made burn,  Oririnal: %s, Current: %s",
+		msg := fmt.Sprintf("transaction made from different account who made burn,  Original: %s, Current: %s",
 			payload.ReceivingClientID, trans.ClientID)
 		err = common.NewError(code, msg)
 		return
@@ -89,14 +89,16 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 
 	numAuth, err := getAuthorizerCount(ctx)
 
+	uniqueSignatures := payload.getUniqueSignatures()
+
 	// verify signatures of authorizers
-	err = payload.verifySignatures(ctx)
+	err = payload.verifySignatures(uniqueSignatures, ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to verify signatures with error: %v, %s", err, info)
 		err = common.NewError(code, msg)
 	}
 
-	if payload.countUniqueSignatures() < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
+	if len(uniqueSignatures) < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
 		err = common.NewError(
 			code,
 			"not enough valid signatures for minting",

@@ -1079,7 +1079,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"invalid character '}' looking for beginning of value"
 		errMsg6 = "allocation_creation_failed: " +
 			"invalid request: blobbers provided are not enough to honour the allocation"
-		errMsg7 = "allocation_creation_failed: " + "getting stake pools: value not present"
+		errMsg7 = "allocation_creation_failed: " + "getting stake pools: could not get item \"b1\": value not present"
 		errMsg8 = "allocation_creation_failed: " +
 			"no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
@@ -1661,9 +1661,13 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 	_, err = ssc.closeAllocation(&tx, alloc, balances)
 	requireErrMsg(t, err, errMsg1)
 
+	var conf = Config{
+		MaxChallengeCompletionTime: 30 * time.Minute,
+	}
+
 	// 2. close (all related pools has created)
 	alloc.Expiration = tx.CreationDate +
-		toSeconds(alloc.ChallengeCompletionTime) + 20
+		toSeconds(conf.MaxChallengeCompletionTime) + 20
 	resp, err = ssc.closeAllocation(&tx, alloc, balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
@@ -2018,8 +2022,8 @@ func Test_finalize_allocation(t *testing.T) {
 
 	//
 	var (
-		step            = (int64(alloc.Expiration) - tp) / 10
-		challID, prevID string
+		step    = (int64(alloc.Expiration) - tp) / 10
+		challID string
 	)
 
 	// expire the allocation challenging it (+ last challenge)
@@ -2027,8 +2031,7 @@ func Test_finalize_allocation(t *testing.T) {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
-		genChall(t, ssc, b1.id, tp, prevID, challID, i, validators,
-			alloc.ID, blobber, allocRoot, balances)
+		genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
 
 		var chall = new(ChallengeResponse)
 		chall.ID = challID
@@ -2047,8 +2050,6 @@ func Test_finalize_allocation(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
 		require.Zero(t, resp)
-		// next stage
-		prevID = challID
 	}
 
 	// balances
@@ -2074,7 +2075,11 @@ func Test_finalize_allocation(t *testing.T) {
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
-	tp += int64(toSeconds(alloc.ChallengeCompletionTime))
+	var conf *Config
+	conf, err = getConfig(balances)
+	require.NoError(t, err)
+
+	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))
 	assert.Zero(t, cp.Balance, "should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)

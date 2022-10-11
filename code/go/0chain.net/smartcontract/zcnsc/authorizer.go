@@ -1,7 +1,10 @@
 package zcnsc
 
 import (
+	"encoding/hex"
 	"fmt"
+
+	"0chain.net/core/encryption"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -31,15 +34,9 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	)
 
 	var (
-		authorizerID = tran.ClientID // sender address
+		authorizerID string
+		clientId     string
 	)
-
-	if authorizerID == "" {
-		msg := "authorizerID is empty"
-		err = common.NewError(code, msg)
-		Logger.Error(msg, zap.Error(err))
-		return "", err
-	}
 
 	if input == nil {
 		msg := "input data is nil"
@@ -57,19 +54,20 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		Logger.Error("public key error", zap.Error(err))
 		return "", err
 	}
-
 	if params.PublicKey == "" {
 		err = common.NewError(code, "public key was not included with transaction")
 		Logger.Error("public key error", zap.Error(err))
 		return "", err
 	}
 
+	publicKeyBytes, err := hex.DecodeString(params.PublicKey)
+	if err != nil {
+		return "", err
+	}
+	authorizerID = encryption.Hash(publicKeyBytes)
+	clientId = tran.ClientID
 	if params.StakePoolSettings.DelegateWallet == "" {
 		return "", common.NewError(code, "authorizer's delegate_wallet not set")
-	}
-
-	if authorizerID != params.StakePoolSettings.DelegateWallet {
-		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
 	}
 
 	globalNode, err := GetGlobalNode(ctx)
@@ -80,15 +78,23 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	// Validating StakePoolSettings against GlobalNode settings
+	// only sc owner can add new authorizer
+	if err := smartcontractinterface.AuthorizeWithOwner("register-authorizer", func() bool {
+		return globalNode.ZCNSConfig.OwnerId == clientId
+	}); err != nil {
+		return "", err
+	}
 
 	// Check existing Authorizer
-
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
-	if err == nil && authorizer != nil {
+	switch err {
+	case util.ErrValueNotPresent:
+	case nil:
 		err = fmt.Errorf("authorizer(authorizerID: %v) already exists", authorizerID)
 		Logger.Error(code, zap.Error(err))
 		return "", err
+	default:
+		return "", common.NewErrorf(code, "error checking authorizer existence: %v", err)
 	}
 
 	// Create Authorizer instance
@@ -206,8 +212,12 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 
 	// StakePool may be updated only if authorizer exists/not deleted
 
-	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
-	if err == nil && authorizer != nil {
+	_, err = GetAuthorizerNode(authorizerID, ctx)
+	switch err {
+	case util.ErrValueNotPresent:
+		return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
+	case nil:
+		// existing
 		var sp *StakePool
 		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, poolSettings, ctx)
 		if err != nil {
@@ -220,9 +230,9 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 		Logger.Info("create or update stake pool completed successfully")
 
 		return string(sp.Encode()), nil
+	default:
+		return "", common.NewErrorf(code, "error checking authorizer existence: %v", err)
 	}
-
-	return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
 }
 
 func (zcn *ZCNSmartContract) CollectRewards(
@@ -242,38 +252,50 @@ func (zcn *ZCNSmartContract) CollectRewards(
 		return "", common.NewErrorf(code, "can't get related user stake pools: %v", err)
 	}
 
-	providerId := usp.FindProvider(prr.PoolId)
-	if len(providerId) == 0 {
-		return "", common.NewErrorf(code, "user %v does not own stake pool %v", tran.ClientID, prr.PoolId)
+	providers := usp.Providers
+	if len(providers) == 0 {
+		return "", common.NewErrorf(code, "user %v does not own stake pool", tran.ClientID)
 	}
 
-	sp, err := zcn.getStakePool(providerId, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
-	}
+	for _, providerId := range providers {
+		sp, err := zcn.getStakePool(providerId, ctx)
+		if err != nil {
+			return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
+		}
 
-	_, err = sp.MintRewards(tran.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "error emptying account, %v", err)
+		_, err = sp.MintRewards(tran.ClientID, providerId, prr.ProviderType, usp, ctx)
+		if err != nil {
+			return "", common.NewErrorf(code, "error emptying account, %v", err)
+		}
+
+		if err := sp.save(zcn.ID, providerId, ctx); err != nil {
+			return "", common.NewErrorf(code, "error saving stake pool, %v", err)
+		}
 	}
 
 	if err := usp.Save(spenum.Authorizer, tran.ClientID, ctx); err != nil {
 		return "", common.NewErrorf(code, "error saving user stake pool, %v", err)
 	}
 
-	if err := sp.save(zcn.ID, providerId, ctx); err != nil {
-		return "", common.NewErrorf(code, "error saving stake pool, %v", err)
-	}
-
 	return "", nil
 }
 
-func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, input []byte, ctx cstate.StateContextI) (string, error) {
 	var (
-		authorizerID = tran.ClientID
 		errorCode    = "failed to delete authorizer"
 		err          error
+		authorizerID string
 	)
+
+	payload := DeleteAuthorizerPayload{}
+	err = payload.Decode(input)
+	if err != nil {
+		err = common.NewError(errorCode, "failed to decode AddAuthorizerPayload")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+
+	authorizerID = payload.ID
 
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
 	if err != nil {

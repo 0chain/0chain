@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 35
+	// map header, size 34
 	// string "TimeUnit"
-	o = append(o, 0xde, 0x0, 0x23, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
+	o = append(o, 0xde, 0x0, 0x22, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
 	o = msgp.AppendDuration(o, z.TimeUnit)
 	// string "MaxMint"
 	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
@@ -190,9 +190,6 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
-	// string "ExposeMpt"
-	o = append(o, 0xa9, 0x45, 0x78, 0x70, 0x6f, 0x73, 0x65, 0x4d, 0x70, 0x74)
-	o = msgp.AppendBool(o, z.ExposeMpt)
 	// string "OwnerId"
 	o = append(o, 0xa7, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x49, 0x64)
 	o = msgp.AppendString(o, z.OwnerId)
@@ -541,12 +538,6 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
-		case "ExposeMpt":
-			z.ExposeMpt, bts, err = msgp.ReadBoolBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ExposeMpt")
-				return
-			}
 		case "OwnerId":
 			z.OwnerId, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -621,7 +612,7 @@ func (z *Config) Msgsize() (s int) {
 	} else {
 		s += z.BlockReward.Msgsize()
 	}
-	s += 10 + msgp.BoolSize + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	s += 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002

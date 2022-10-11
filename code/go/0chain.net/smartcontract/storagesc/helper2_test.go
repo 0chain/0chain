@@ -1,8 +1,6 @@
 package storagesc
 
 import (
-	"time"
-
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -18,7 +16,7 @@ import (
 )
 
 type mockStateContext struct {
-	ctx           cstate.StateContext
+	cstate.StateContext
 	clientBalance currency.Coin
 	store         map[datastore.Key]util.MPTSerializable
 	config        *cstate.StoragescConfig
@@ -35,12 +33,11 @@ func (sc *mockStateContext) SetConfig(config cstate.StoragescConfig) {
 }
 
 type mockBlobberYaml struct {
-	serviceCharge           float64
-	readPrice               float64
-	writePrice              float64
-	challengeCompletionTime time.Duration
-	MaxOfferDuration        int64
-	minLockDemand           float64
+	serviceCharge    float64
+	readPrice        float64
+	writePrice       float64
+	MaxOfferDuration int64
+	minLockDemand    float64
 }
 
 var (
@@ -76,24 +73,8 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, er
 	return sc.clientBalance, nil
 }
 
-func (sc *mockStateContext) GetTransfers() []*state.Transfer {
-	return sc.ctx.GetTransfers()
-}
-
-func (sc *mockStateContext) GetMints() []*state.Mint {
-	return sc.ctx.GetMints()
-}
-
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
-}
-
-func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string {
-	return nil
-}
-
-func (sc *mockStateContext) GetBlock() *block.Block {
-	return sc.ctx.GetBlock()
 }
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
@@ -115,14 +96,6 @@ func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializabl
 func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
 	return key, nil
-}
-
-func (sc *mockStateContext) AddTransfer(t *state.Transfer) error {
-	return sc.ctx.AddTransfer(t)
-}
-
-func (sc *mockStateContext) AddMint(m *state.Mint) error {
-	return sc.ctx.AddMint(m)
 }
 
 func zcnToInt64(token float64) int64 {

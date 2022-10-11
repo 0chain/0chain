@@ -107,7 +107,11 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 			} else {
 				ckeys[bucket[i].GetKey()] = e
 			}
-			proceed = handler(ctx, bucket[i].(datastore.CollectionEntity))
+			proceed, err = handler(ctx, bucket[i].(datastore.CollectionEntity))
+			if err != nil {
+				return err
+			}
+
 			if !proceed {
 				break
 			}

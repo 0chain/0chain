@@ -1,8 +1,8 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -25,7 +25,7 @@ func TestSettings(t *testing.T) {
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[strings.ToLower(name)].setting])
+		require.EqualValues(t, name, SettingName[Settings[name].setting])
 	}
 }
 
@@ -159,20 +159,50 @@ func TestUpdateSettings(t *testing.T) {
 					"max_challenges_per_generation":        "100",
 					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
-
-					"block_reward.block_reward":     "1000",
-					"block_reward.qualifying_stake": "1",
-					"block_reward.sharder_ratio":    "80.0",
-					"block_reward.miner_ratio":      "20.0",
-					"block_reward.blobber_ratio":    "20.0",
-					"block_reward.gamma.alpha":      "0.2",
-					"block_reward.gamma.a":          "10",
-					"block_reward.gamma.b":          "9",
-					"block_reward.zeta.i":           "1",
-					"block_reward.zeta.k":           "0.9",
-					"block_reward.zeta.mu":          "0.2",
-
-					"expose_mpt": "false",
+					"owner_id":                             "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
+					"block_reward.block_reward":            "1000",
+					"block_reward.qualifying_stake":        "1",
+					"block_reward.sharder_ratio":           "80.0",
+					"block_reward.miner_ratio":             "20.0",
+					"block_reward.blobber_ratio":           "20.0",
+					"block_reward.gamma.alpha":             "0.2",
+					"block_reward.gamma.a":                 "10",
+					"block_reward.gamma.b":                 "9",
+					"block_reward.zeta.i":                  "1",
+					"block_reward.zeta.k":                  "0.9",
+					"block_reward.zeta.mu":                 "0.2",
+					"cost.update_settings":                 "105",
+					"cost.read_redeem":                     "105",
+					"cost.commit_connection":               "105",
+					"cost.new_allocation_request":          "105",
+					"cost.update_allocation_request":       "105",
+					"cost.finalize_allocation":             "105",
+					"cost.cancel_allocation":               "105",
+					"cost.add_free_storage_assigner":       "105",
+					"cost.free_allocation_request":         "105",
+					"cost.free_update_allocation":          "105",
+					"cost.add_curator":                     "105",
+					"cost.remove_curator":                  "105",
+					"cost.blobber_health_check":            "105",
+					"cost.update_blobber_settings":         "105",
+					"cost.pay_blobber_block_rewards":       "105",
+					"cost.curator_transfer_allocation":     "105",
+					"cost.challenge_request":               "105",
+					"cost.challenge_response":              "105",
+					"cost.generate_challenges":             "105",
+					"cost.add_validator":                   "105",
+					"cost.update_validator_settings":       "105",
+					"cost.add_blobber":                     "105",
+					"cost.new_read_pool":                   "105",
+					"cost.read_pool_lock":                  "105",
+					"cost.read_pool_unlock":                "105",
+					"cost.write_pool_lock":                 "105",
+					"cost.write_pool_unlock":               "105",
+					"cost.stake_pool_lock":                 "105",
+					"cost.stake_pool_unlock":               "105",
+					"cost.stake_pool_pay_interests":        "105",
+					"cost.commit_settings_changes":         "105",
+					"cost.collect_reward":                  "105",
 				},
 			},
 		},
@@ -219,11 +249,10 @@ func TestCommitSettingChanges(t *testing.T) {
 		}
 		var thisBlock = block.Block{}
 		thisBlock.MinerID = mockMinerId
-
+		conf := newConfig()
+		conf.OwnerId = owner
 		balances.On("GetTrieNode", scConfigKey(ssc.ID),
-			mockSetValue(&Config{
-				OwnerId: owner,
-			})).Return(nil).Once()
+			mockSetValue(conf)).Return(nil).Once()
 		balances.On("GetTrieNode", settingChangesKey,
 			mockSetValue(&smartcontract.StringMap{
 				Fields: p.inputMap,
@@ -297,6 +326,28 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
+					case smartcontract.Cost:
+						{
+							expected, err := strconv.Atoi(value)
+							require.NoError(t, err)
+							actual, ok := setting.(int)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Key:
+						{
+							_, err := hex.DecodeString(value)
+							require.NoError(t, err)
+							actual, ok := setting.(string)
+							require.True(t, ok)
+							if value != actual {
+								return false
+							}
+						}
+					default:
+						return false
 					}
 				}
 				return true
@@ -364,19 +415,50 @@ func TestCommitSettingChanges(t *testing.T) {
 					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
-					"block_reward.block_reward":     "1000",
-					"block_reward.qualifying_stake": "1",
-					"block_reward.sharder_ratio":    "80.0",
-					"block_reward.miner_ratio":      "20.0",
-					"block_reward.blobber_ratio":    "100.0",
-					"block_reward.gamma.alpha":      "0.2",
-					"block_reward.gamma.a":          "10",
-					"block_reward.gamma.b":          "9",
-					"block_reward.zeta.i":           "1",
-					"block_reward.zeta.k":           "0.9",
-					"block_reward.zeta.mu":          "0.2",
-
-					"expose_mpt": "false",
+					"block_reward.block_reward":        "1000",
+					"block_reward.qualifying_stake":    "1",
+					"block_reward.sharder_ratio":       "80.0",
+					"block_reward.miner_ratio":         "20.0",
+					"block_reward.blobber_ratio":       "100.0",
+					"block_reward.gamma.alpha":         "0.2",
+					"block_reward.gamma.a":             "10",
+					"block_reward.gamma.b":             "9",
+					"block_reward.zeta.i":              "1",
+					"block_reward.zeta.k":              "0.9",
+					"block_reward.zeta.mu":             "0.2",
+					"owner_id":                         "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
+					"cost.update_settings":             "105",
+					"cost.read_redeem":                 "105",
+					"cost.commit_connection":           "105",
+					"cost.new_allocation_request":      "105",
+					"cost.update_allocation_request":   "105",
+					"cost.finalize_allocation":         "105",
+					"cost.cancel_allocation":           "105",
+					"cost.add_free_storage_assigner":   "105",
+					"cost.free_allocation_request":     "105",
+					"cost.free_update_allocation":      "105",
+					"cost.add_curator":                 "105",
+					"cost.remove_curator":              "105",
+					"cost.blobber_health_check":        "105",
+					"cost.update_blobber_settings":     "105",
+					"cost.pay_blobber_block_rewards":   "105",
+					"cost.curator_transfer_allocation": "105",
+					"cost.challenge_request":           "105",
+					"cost.challenge_response":          "105",
+					"cost.generate_challenges":         "105",
+					"cost.add_validator":               "105",
+					"cost.update_validator_settings":   "105",
+					"cost.add_blobber":                 "105",
+					"cost.new_read_pool":               "105",
+					"cost.read_pool_lock":              "105",
+					"cost.read_pool_unlock":            "105",
+					"cost.write_pool_lock":             "105",
+					"cost.write_pool_unlock":           "105",
+					"cost.stake_pool_lock":             "105",
+					"cost.stake_pool_unlock":           "105",
+					"cost.stake_pool_pay_interests":    "105",
+					"cost.commit_settings_changes":     "105",
+					"cost.collect_reward":              "105",
 				},
 			},
 		},
@@ -384,21 +466,22 @@ func TestCommitSettingChanges(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.title, func(t *testing.T) {
 			test := test
-			//t.Parallel()
 			args := setExpectations(t, test.parameters)
-
 			_, err := args.ssc.commitSettingChanges(args.txn, args.input, args.balances)
-			//require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
 				t.Fatal("commitSettingChanges err: ", err.Error())
 				return
 			}
-			//require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
 }
 
 func getConfField(conf Config, field string) interface{} {
+	if isCost(field) {
+		value, _ := conf.getCost(field)
+		return value
+	}
+
 	switch Settings[field].setting {
 	case MaxMint:
 		return conf.MaxMint
@@ -497,9 +580,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.Zeta.K
 	case BlockRewardZetaMu:
 		return conf.BlockReward.Zeta.Mu
-
-	case ExposeMpt:
-		return conf.ExposeMpt
+	case OwnerId:
+		return conf.OwnerId
 	default:
 		panic("unknown field: " + field)
 	}

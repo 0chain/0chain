@@ -211,7 +211,6 @@ func TestAllocations(t *testing.T) {
 			ReadPriceMax:             sa.ReadPriceRange.Max,
 			WritePriceMin:            sa.WritePriceRange.Min,
 			WritePriceMax:            sa.WritePriceRange.Max,
-			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
 			StartTime:                int64(sa.StartTime),
 			Finalized:                sa.Finalized,
 			Cancelled:                sa.Canceled,
@@ -357,7 +356,7 @@ func TestAllocations(t *testing.T) {
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventAddSa})
+	eventDb.AddEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10)
 	time.Sleep(100 * time.Millisecond)
 	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
@@ -377,7 +376,7 @@ func TestAllocations(t *testing.T) {
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventOverwriteSa})
+	eventDb.AddEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10)
 
 	alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)

@@ -673,9 +673,6 @@ type StorageAllocation struct {
 	ReadPriceRange  PriceRange `json:"read_price_range"`
 	WritePriceRange PriceRange `json:"write_price_range"`
 
-	// ChallengeCompletionTime is max challenge completion time of
-	// all blobbers of the allocation.
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	// StartTime is time when the allocation has been created. We will
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
@@ -1105,11 +1102,11 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error)
 	return
 }
 
-type filterBlobberFunc func(blobber *StorageNode) (kick bool)
+type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
-	filtered []*StorageNode) {
+	filtered []*StorageNode, err error) {
 
 	var (
 		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
@@ -1136,7 +1133,12 @@ List:
 		}
 
 		for _, filter := range filters {
-			if filter(b) {
+			kick, err := filter(b)
+			if err != nil {
+				return nil, err
+			}
+
+			if kick {
 				continue List
 			}
 		}
@@ -1144,7 +1146,7 @@ List:
 		i++
 	}
 
-	return list[:i]
+	return list[:i], nil
 }
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
@@ -1153,24 +1155,25 @@ func (sa *StorageAllocation) validateEachBlobber(
 	creationDate common.Timestamp,
 ) ([]*StorageNode, []string) {
 	var (
-		errors   = make([]string, 0, len(blobbers))
+		errs     = make([]string, 0, len(blobbers))
 		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
 		err := sa.validateAllocationBlobber(b.StorageNode, b.TotalStake, b.TotalOffers, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
-			errors = append(errors, err.Error())
+			errs = append(errs, err.Error())
 			continue
 		}
 		filtered = append(filtered, b.StorageNode)
 	}
-	return filtered, errors
+	return filtered, errs
 }
 
 // Until returns allocation expiration.
 func (sa *StorageAllocation) Until() common.Timestamp {
-	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
+	var conf = Config{}
+	return sa.Expiration + toSeconds(conf.MaxChallengeCompletionTime)
 }
 
 // The durationInTimeUnits returns given duration (represented as
@@ -1194,8 +1197,8 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // 1 GB of stored files. For the 1GB related challenge pool originally filled
 // up with
 //
-//     (integral): write_price * size * duration
-//     e.g.: (integral) write_price * 1 GB * 1 month
+//	(integral): write_price * size * duration
+//	e.g.: (integral) write_price * 1 GB * 1 month
 //
 // After some time (a half or the month, for example) some tokens from the
 // challenge pool moved back to write_pool. Some tokens moved to blobbers. And
@@ -1209,12 +1212,12 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // For (1) case, we should move more tokens to the challenge pool. The
 // difference is
 //
-//     a = old_write_price * size * old_duration_remaining (old expiration)
-//     b = new_write_price * size * new_duration_remaining (new expiration)
+//	   a = old_write_price * size * old_duration_remaining (old expiration)
+//	   b = new_write_price * size * new_duration_remaining (new expiration)
 //
-//  And the difference is
+//	And the difference is
 //
-//     b - a (move to challenge pool, or move back from challenge pool)
+//	   b - a (move to challenge pool, or move back from challenge pool)
 //
 // This movement should be performed during allocation extension or reduction.
 // So, if positive, then we should add more tokens to related challenge pool.

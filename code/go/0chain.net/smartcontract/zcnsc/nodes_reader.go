@@ -52,14 +52,5 @@ func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
 }
 
 func GetGlobalNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
-	gn, err := GetGlobalSavedNode(ctx)
-	if err == nil {
-		return gn, nil
-	}
-
-	if gn == nil {
-		return nil, err
-	}
-
-	return gn, nil
+	return GetGlobalSavedNode(ctx)
 }

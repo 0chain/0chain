@@ -74,7 +74,9 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	// 1. filter all by max offer duration
 
 	alloc.Expiration = now + 10 // one second duration
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err := alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 2. filter all by read price range
 	alloc.Expiration = now + 5
@@ -82,7 +84,9 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	list[0].Terms.ReadPrice = 100
 	list[1].Terms.ReadPrice = 150
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 3. filter all by write price range
 	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 200}
@@ -90,21 +94,27 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 40}
 	list[0].Terms.WritePrice = 100
 	list[1].Terms.WritePrice = 150
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 4. filter all by size
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 200}
 	list[0].Capacity, list[0].Allocated = 100, 90
 	list[1].Capacity, list[1].Allocated = 100, 50
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// accept one
 	list[0].Capacity, list[0].Allocated = 330, 100
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bs, 1)
 
 	// accept all
 	list[1].Capacity, list[1].Allocated = 330, 100
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 2)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bs, 2)
 }
 
 func TestVerifyClientID(t *testing.T) {

@@ -629,7 +629,7 @@ func (b *Block) GetReceiptsMerkleTree() *util.MerkleTree {
 	return &mt
 }
 
-//GetTransaction - get the transaction from the block
+// GetTransaction - get the transaction from the block
 func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 	for _, txn := range b.Txns {
 		if txn.GetKey() == hash {
@@ -639,14 +639,14 @@ func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 	return nil
 }
 
-//SetBlockNotarized - set the block as notarized
+// SetBlockNotarized - set the block as notarized
 func (b *Block) SetBlockNotarized() {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
 	b.isNotarized = true
 }
 
-//IsBlockNotarized - is block notarized?
+// IsBlockNotarized - is block notarized?
 func (b *Block) IsBlockNotarized() bool {
 	b.ticketsMutex.RLock()
 	defer b.ticketsMutex.RUnlock()
@@ -654,14 +654,14 @@ func (b *Block) IsBlockNotarized() bool {
 	return b.isNotarized
 }
 
-//SetBlockFinalised - set the block as finalised
+// SetBlockFinalised - set the block as finalised
 func (b *Block) SetBlockFinalised() {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
 	b.isFinalised = true
 }
 
-//IsBlockFinalised - is block notarized?
+// IsBlockFinalised - is block notarized?
 func (b *Block) IsBlockFinalised() bool {
 	b.ticketsMutex.RLock()
 	defer b.ticketsMutex.RUnlock()
@@ -769,6 +769,7 @@ func (b *Block) Clone() *Block {
 		blockState:          b.blockState,
 		isNotarized:         b.isNotarized,
 		verificationStatus:  b.verificationStatus,
+		StateChangesCount:   b.StateChangesCount,
 	}
 	if b.MagicBlock != nil {
 		clone.MagicBlock = b.MagicBlock.Clone()
@@ -925,7 +926,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		})
 
 		events, err := c.UpdateState(ctx, b, bState, txn)
-		b.Events = append(b.Events, events...)
 		switch err {
 		case context.Canceled:
 			b.SetStateStatus(StateCancelled)
@@ -980,6 +980,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				return common.NewError("state_update_error", err.Error())
 			}
 		}
+		b.Events = append(b.Events, events...)
 	}
 
 	if !bytes.Equal(b.ClientStateHash, bState.GetRoot()) {
