@@ -852,7 +852,6 @@ func txnIterHandlerFunc(mc *Chain,
 			return true, nil
 		}
 
-
 		success, err := txnProcessor(ctx, bState, txn, tii)
 		if err != nil {
 			return false, err
@@ -863,17 +862,17 @@ func txnIterHandlerFunc(mc *Chain,
 			return true, nil
 		}
 
-	  tii.cost += cost
-			if tii.byteSize >= mc.MaxByteSize() {
-				logging.Logger.Debug("generate block (too big block size)",
-					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.ChainConfig.MaxByteSize()),
-					zap.Int32("idx", tii.idx),
-					zap.Int64("byte size", tii.byteSize),
-					zap.Int64("max byte size", mc.ChainConfig.MaxByteSize()),
-					zap.Int32("count", tii.count),
-					zap.Int("txns", len(b.Txns)))
-				return false, nil
-			}
+		tii.cost += cost
+		if tii.byteSize >= mc.MaxByteSize() {
+			logging.Logger.Debug("generate block (too big block size)",
+				zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.ChainConfig.MaxByteSize()),
+				zap.Int32("idx", tii.idx),
+				zap.Int64("byte size", tii.byteSize),
+				zap.Int64("max byte size", mc.ChainConfig.MaxByteSize()),
+				zap.Int32("count", tii.count),
+				zap.Int("txns", len(b.Txns)))
+			return false, nil
+		}
 		return true, nil
 	}
 }
@@ -896,7 +895,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	b.Txns = make([]*transaction.Transaction, 0, 100)
 
 	var (
-		iterInfo       = newTxnIterInfo(int32(len(b.Txns)))
+		iterInfo       = newTxnIterInfo(int32(cap(b.Txns)))
 		txnProcessor   = txnProcessorHandlerFunc(mc, b)
 		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		beginState     = blockState.GetRoot()
