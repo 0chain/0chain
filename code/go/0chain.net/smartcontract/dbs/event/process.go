@@ -185,7 +185,8 @@ func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
 			if round+1 != e.events[0].BlockNumber {
 				logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
 					"events for round %v recieved instead", round+1, e.events[0].BlockNumber))
-				continue
+				//TODO return this check, when the cause of restart will be clear
+				//continue
 			}
 
 			round = e.events[0].BlockNumber
