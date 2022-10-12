@@ -21,6 +21,7 @@ func SetupHandlers() {
 	sc := chain.GetServerChain()
 	http.HandleFunc("/_diagnostics/n2n/info", common.UserRateLimit(sc.N2NStatsWriter))
 	http.HandleFunc("/_diagnostics/miner_stats", common.UserRateLimit(sc.MinerStatsHandler))
+	http.HandleFunc("/_diagnostics/txns_in_pool", common.UserRateLimit(sc.TxnsInPoolHandler))
 	http.HandleFunc("/_diagnostics/block_chain", common.UserRateLimit(sc.WIPBlockChainHandler))
 }
 

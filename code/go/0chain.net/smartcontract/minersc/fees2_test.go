@@ -263,11 +263,15 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		ToClientID: minerScId,
 	}
 	var ctx = &mockStateContext{
-		ctx: *cstate.NewStateContext(
+		StateContext: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
-			nil,
+			func(round int64) *block.MagicBlock {
+				return &block.MagicBlock{
+					Sharders: shardersPool,
+				}
+			},
 			nil,
 			nil,
 			nil,
@@ -285,8 +289,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			},
 			PrevBlock: &block.Block{},
 		},
-		sharders: sharderIDs,
-		store:    make(map[datastore.Key]util.MPTSerializable),
+		store: make(map[datastore.Key]util.MPTSerializable),
 		LastestFinalizedMagicBlock: &block.Block{
 			MagicBlock: &block.MagicBlock{
 				Miners:   minersPool,

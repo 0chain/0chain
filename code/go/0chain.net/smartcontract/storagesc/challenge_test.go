@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -559,7 +560,7 @@ func setupChallengeMocks(
 		CreationDate: now,
 	}
 	var ctx = &mockStateContext{
-		ctx: *cstate.NewStateContext(
+		StateContext: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,

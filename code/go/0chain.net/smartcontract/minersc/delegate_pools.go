@@ -55,7 +55,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"stake is greater than max allowed: %d > %d", t.Value, mn.Settings.MaxStake)
 	}
 
-	if err := mn.LockPool(t, spenum.Miner, mn.ID, spenum.Pending, balances); err != nil {
+	if err := mn.LockPool(t, spenum.Provider(mn.NodeType), mn.ID, spenum.Pending, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"digging delegate pool: %v", err)
 	}

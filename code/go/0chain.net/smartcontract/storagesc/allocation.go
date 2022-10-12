@@ -7,7 +7,6 @@ import (
 	"math"
 	"math/rand"
 	"strings"
-	"sync"
 	"time"
 
 	"0chain.net/chaincore/currency"
@@ -598,86 +597,39 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 
 // get blobbers by IDs concurrently, return error if any of them could not be acquired.
 func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]*StorageNode, error) {
-	type blobberResp struct {
-		index   int
-		blobber *StorageNode
-	}
-
-	blobberCh := make(chan blobberResp, len(ids))
-	stateErrC := make(chan error, len(ids))
-	var wg sync.WaitGroup
-	for i, details := range ids {
-		wg.Add(1)
-		go func(index int, blobberId string) {
-			defer wg.Done()
-			blobber, err := getBlobber(blobberId, balances)
-			if err != nil {
-				stateErrC <- fmt.Errorf("could not get blobber %s: %v", blobberId, err)
-				logging.Logger.Debug("could not get blobber", zap.String("blobberId", blobberId), zap.Error(err))
-				return
-			}
-
-			blobberCh <- blobberResp{
-				index:   index,
-				blobber: blobber,
-			}
-		}(i, details)
-	}
-	wg.Wait()
-	close(blobberCh)
-
-	// return if got state error
-	select {
-	case err := <-stateErrC:
-		return nil, err
-	default:
-	}
-
-	//ensure original ordering
-	blobbers := make([]*StorageNode, len(ids))
-	for resp := range blobberCh {
-		blobbers[resp.index] = resp.blobber
-	}
-
-	return blobbers, nil
+	return chainstate.GetItemsByIDs(ids,
+		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
+			return getBlobber(id, balances)
+		},
+		balances)
 }
 
 func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances chainstate.CommonStateContextI) (map[string]*stakePool, error) {
-	type spResp struct {
-		providerID string
-		sp         *stakePool
+	type stakePoolPID struct {
+		pid  string
+		pool *stakePool
 	}
 
-	poolC := make(chan spResp, len(ids))
-	errC := make(chan error, len(ids))
-	var wg sync.WaitGroup
-	for i, id := range ids {
-		wg.Add(1)
-		go func(i int, pid string) {
-			defer wg.Done()
-			sp, err := getStakePool(providerType, pid, balances)
+	stakePools, err := chainstate.GetItemsByIDs(ids,
+		func(id string, balances chainstate.CommonStateContextI) (*stakePoolPID, error) {
+			sp, err := getStakePool(providerType, id, balances)
 			if err != nil {
-				errC <- err
-				return
+				return nil, err
 			}
-			poolC <- spResp{
-				providerID: pid,
-				sp:         sp,
-			}
-		}(i, id)
-	}
-	wg.Wait()
-	close(poolC)
 
-	select {
-	case err := <-errC:
+			return &stakePoolPID{
+				pid:  id,
+				pool: sp,
+			}, nil
+		},
+		balances)
+	if err != nil {
 		return nil, err
-	default:
 	}
-	//ensure original ordering
+
 	stakePoolMap := make(map[string]*stakePool, len(ids))
-	for resp := range poolC {
-		stakePoolMap[resp.providerID] = resp.sp
+	for _, sp := range stakePools {
+		stakePoolMap[sp.pid] = sp.pool
 	}
 
 	return stakePoolMap, nil
@@ -686,46 +638,16 @@ func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances cha
 // getAllocationBlobbers loads blobbers of an allocation from store
 func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (blobbers []*StorageNode, err error) {
-
-	blobbers = make([]*StorageNode, len(alloc.BlobberAllocs))
-	type blobberResp struct {
-		index   int
-		blobber *StorageNode
+	ids := make([]string, 0, len(alloc.BlobberAllocs))
+	for _, ba := range alloc.BlobberAllocs {
+		ids = append(ids, ba.BlobberID)
 	}
 
-	blobberCh := make(chan blobberResp, len(alloc.BlobberAllocs))
-	errorCh := make(chan error, len(alloc.BlobberAllocs))
-	var wg sync.WaitGroup
-	for i, details := range alloc.BlobberAllocs {
-		wg.Add(1)
-		go func(index int, blobberId string) {
-			defer wg.Done()
-			var blobber *StorageNode
-			blobber, err = sc.getBlobber(blobberId, balances)
-			if err != nil {
-				errorCh <- fmt.Errorf("can't get blobber %q: %v", blobberId, err)
-				return
-			}
-			blobberCh <- blobberResp{
-				index:   index,
-				blobber: blobber,
-			}
-		}(i, details.BlobberID)
-	}
-	wg.Wait()
-	close(blobberCh)
-
-	select {
-	case err := <-errorCh:
-		return nil, err
-	default:
-	}
-
-	for resp := range blobberCh {
-		blobbers[resp.index] = resp.blobber
-	}
-
-	return
+	return chainstate.GetItemsByIDs(ids,
+		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
+			return sc.getBlobber(id, balances)
+		},
+		balances)
 }
 
 // closeAllocation making it expired; the allocation will be alive the
