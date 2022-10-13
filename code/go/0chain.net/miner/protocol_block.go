@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	cstate "0chain.net/chaincore/chain/state"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
@@ -28,7 +29,7 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
-//InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
+// InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
 // ErrLFBClientStateNil is returned when client state of latest finalized block is nil
@@ -56,13 +57,13 @@ func init() {
 func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
 	clients[txn.ClientID] = nil
 	events, err := mc.UpdateState(ctx, b, bState, txn)
-	b.Events = append(b.Events, events...)
 	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
 			zap.String("txn_object", datastore.ToJSON(txn).String()),
 			zap.Error(err))
 		return err
 	}
+	b.Events = append(b.Events, events...)
 	b.Txns = append(b.Txns, txn)
 	b.AddTransaction(txn)
 	return nil
@@ -79,14 +80,18 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	return feeTxn
 }
 
-func (mc *Chain) getCurrentSelfNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) int64 {
+func (mc *Chain) getCurrentSelfNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
 	s, err := mc.GetStateById(bState, minerId)
 	if err != nil {
-		logging.Logger.Error("can't get nonce", zap.Error(err))
-		return 1
+		if err != util.ErrValueNotPresent {
+			logging.Logger.Error("can't get nonce", zap.Error(err))
+			return 0, err
+		}
+
+		return 1, nil
 	}
 	node.Self.SetNonce(s.Nonce)
-	return node.Self.GetNextNonce()
+	return node.Self.GetNextNonce(), nil
 }
 
 func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Transaction {
@@ -579,10 +584,12 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	tii := newTxnIterInfo(mc.BlockSize())
 	invalidTxns := tii.checkForInvalidTxns(b.Txns)
 
-	transaction.RemoveFromPool(ctx, txns)
+	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	transaction.RemoveFromPool(cleanPoolCtx, txns)
 
 	if len(invalidTxns) > 0 {
-		transaction.RemoveFromPool(ctx, invalidTxns)
+		transaction.RemoveFromPool(cleanPoolCtx, invalidTxns)
 	}
 }
 
@@ -626,17 +633,20 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	return nil
 }
 
-//NotarizedBlockFetched - handler to process fetched notarized block
+// NotarizedBlockFetched - handler to process fetched notarized block
 func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 	// mc.SendNotarization(ctx, b)
 }
 
-type txnProcessorHandler func(context.Context, util.MerklePatriciaTrieI, *transaction.Transaction, *TxnIterInfo) bool
+// txnProcessorHandler process transaction and return bool and error to indicate
+// whether processed successfully, or error if any
+type txnProcessorHandler func(context.Context, util.MerklePatriciaTrieI, *transaction.Transaction, *TxnIterInfo) (bool, error)
 
 func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
-	return func(ctx context.Context, bState util.MerklePatriciaTrieI, txn *transaction.Transaction, tii *TxnIterInfo) bool {
+	return func(ctx context.Context, bState util.MerklePatriciaTrieI,
+		txn *transaction.Transaction, tii *TxnIterInfo) (bool, error) {
 		if _, ok := tii.txnMap[txn.GetKey()]; ok {
-			return false
+			return false, nil
 		}
 		var debugTxn = txn.DebugTxn()
 
@@ -649,7 +659,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 					zap.Any("now", common.Now()), zap.Int64("nonce", txn.Nonce))
 			}
-			return false
+			return false, nil
 		case FutureTransaction:
 			list := tii.futureTxns[txn.ClientID]
 			list = append(list, txn)
@@ -661,7 +671,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 				return list[i].Nonce < list[j].Nonce
 			})
 			tii.futureTxns[txn.ClientID] = list
-			return false
+			return false, nil
 		case ErrNotTimeTolerant:
 			tii.invalidTxns = append(tii.invalidTxns, txn)
 			if debugTxn {
@@ -670,7 +680,11 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 					zap.Any("now", common.Now()))
 			}
-			return false
+			return false, nil
+		default:
+			if err != nil && cstate.ErrInvalidState(err) {
+				return false, err // return err to break the txns pool iteration
+			}
 		}
 
 		if debugTxn {
@@ -678,8 +692,8 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 				zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 				zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
+
 		events, err := mc.UpdateState(ctx, b, bState, txn)
-		b.Events = append(b.Events, events...)
 		if err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state",
@@ -688,8 +702,13 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 					zap.Error(err))
 			}
 			tii.failedStateCount++
-			return false
+			if cstate.ErrInvalidState(err) {
+				return false, err // return err to break the txns pool iteration
+			}
+			return false, nil
 		}
+
+		b.Events = append(b.Events, events...)
 
 		// Setting the score lower so the next time blocks are generated
 		// these transactions don't show up at the top.
@@ -707,7 +726,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		tii.idx++
 		tii.checkForCurrent(txn)
 
-		return true
+		return true, nil
 	}
 }
 
@@ -780,29 +799,32 @@ func newTxnIterInfo(blockSize int32) *TxnIterInfo {
 	}
 }
 
+// txns iterate handler, the function will return bool and error to indicate
+// whether the iteration should continue or not, or error if any to stop the iteration
 func txnIterHandlerFunc(mc *Chain,
 	b *block.Block,
 	lfb *block.Block,
 	bState util.MerklePatriciaTrieI,
 	txnProcessor txnProcessorHandler,
-	tii *TxnIterInfo) func(context.Context, datastore.CollectionEntity) bool {
-	return func(ctx context.Context, qe datastore.CollectionEntity) bool {
+	tii *TxnIterInfo) func(context.Context, datastore.CollectionEntity) (bool, error) {
+	return func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
 		tii.count++
 		if ctx.Err() != nil {
-			return false
+			return false, ctx.Err()
 		}
 		if mc.GetCurrentRound() > b.Round {
 			tii.roundMismatch = true
-			return false
+			return false, nil
 		}
 		if tii.roundTimeoutCount != mc.GetRoundTimeoutCount() {
 			tii.roundTimeout = true
-			return false
+			return false, nil
 		}
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
-			return true
+			// continue iteration to process next transaction
+			return true, nil
 		}
 
 		if lfb.ClientState == nil {
@@ -810,35 +832,52 @@ func txnIterHandlerFunc(mc *Chain,
 				zap.Int64("round", b.Round),
 				zap.String("hash", b.Hash),
 				zap.Error(ErrLFBClientStateNil))
-			return false
+			return false, nil
 		}
 
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
-			return true
+
+			// return error to break iteration due to the invalid state error
+			if cstate.ErrInvalidState(err) {
+				return false, err
+			}
+
+			// skipping and continue
+			return true, nil
 		}
 		if tii.cost+cost >= mc.ChainConfig.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
-			return true
+			return true, nil
 		}
 
-		if txnProcessor(ctx, bState, txn, tii) {
-			tii.cost += cost
-			if tii.idx >= mc.ChainConfig.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
-				logging.Logger.Debug("generate block (too big block size)",
-					zap.Bool("idx >= block size", tii.idx >= mc.ChainConfig.BlockSize()),
-					zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.ChainConfig.MaxByteSize()),
-					zap.Int32("idx", tii.idx),
-					zap.Int32("block size", mc.ChainConfig.BlockSize()),
-					zap.Int64("byte size", tii.byteSize),
-					zap.Int64("max byte size", mc.ChainConfig.MaxByteSize()),
-					zap.Int32("count", tii.count),
-					zap.Int("txns", len(b.Txns)))
-				return false
-			}
+		success, err := txnProcessor(ctx, bState, txn, tii)
+		if err != nil {
+			return false, err
 		}
-		return true
+
+		if !success {
+			// skipping and continue to check the next transaction
+			return true, nil
+		}
+
+		tii.cost += cost
+		if tii.idx >= mc.ChainConfig.BlockSize() || tii.byteSize >= mc.MaxByteSize() {
+			logging.Logger.Debug("generate block (too big block size)",
+				zap.Bool("idx >= block size", tii.idx >= mc.ChainConfig.BlockSize()),
+				zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.ChainConfig.MaxByteSize()),
+				zap.Int32("idx", tii.idx),
+				zap.Int32("block size", mc.ChainConfig.BlockSize()),
+				zap.Int64("byte size", tii.byteSize),
+				zap.Int64("max byte size", mc.ChainConfig.MaxByteSize()),
+				zap.Int32("count", tii.count),
+				zap.Int("txns", len(b.Txns)))
+			// break the iteration as the max block size reached
+			return false, nil
+		}
+
+		return true, nil
 	}
 }
 
@@ -945,6 +984,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		txn := iterInfo.currentTxns[i]
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 		if err != nil {
+			// Note: optimistic block generation
+			// we would just skip the error so that the work on txns collection and state computation above
+			// would not be wasted. Therefore, we will pack the block anyway.
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			break
 		}
@@ -952,7 +994,15 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			break
 		}
-		if txnProcessor(ctx, blockState, txn, iterInfo) {
+
+		success, err := txnProcessor(ctx, blockState, txn, iterInfo)
+		if err != nil {
+			// optimistic block generation. Same as EstimateTransactionCost above
+			logging.Logger.Debug("generate block - process failed and ignored", zap.Error(err))
+			break
+		}
+
+		if success {
 			rcount++
 			iterInfo.cost += cost
 			if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
@@ -980,7 +1030,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	for _, biTxn := range buildInTxns {
-		biTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, blockState)
+		biTxn.Nonce, err = mc.getCurrentSelfNonce(b.MinerID, blockState)
+		if err != nil {
+			logging.Logger.Error("generate block - could not get miner nonce",
+				zap.Error(err),
+				zap.String("miner", b.MinerID))
+			return fmt.Errorf("could not get miner nonce of %v: %v", b.MinerID, err)
+		}
+
 		_, err := biTxn.Sign(node.Self.GetSignatureScheme())
 		if err != nil {
 			panic(err)
