@@ -101,7 +101,7 @@ func newConfig() *Config {
 	}
 }
 
-func convertConfigType(c chainState.StoragescConfig) *chainState.StoragescConfig {
+func convertConfigType(c chainState.SCConfig) *chainState.SCConfig {
 	return &c
 }
 

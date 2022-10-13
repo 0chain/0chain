@@ -19,16 +19,16 @@ type mockStateContext struct {
 	cstate.StateContext
 	clientBalance currency.Coin
 	store         map[datastore.Key]util.MPTSerializable
-	config        *cstate.StoragescConfig
+	config        *cstate.SCConfig
 }
 
 // GetConfig implements state.StateContextI
-func (sc *mockStateContext) GetConfig() *cstate.StoragescConfig {
+func (sc *mockStateContext) GetConfig() *cstate.SCConfig {
 	return sc.config
 }
 
 // SetConfig implements state.StateContextI
-func (sc *mockStateContext) SetConfig(config cstate.StoragescConfig) {
+func (sc *mockStateContext) SetConfig(config cstate.SCConfig) {
 	sc.config = &config
 }
 

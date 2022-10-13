@@ -26,16 +26,16 @@ type mockStateContext struct {
 	store                      map[datastore.Key]util.MPTSerializable
 	events                     []event.Event
 	LastestFinalizedMagicBlock *block.Block
-	config                     *cstate.StoragescConfig
+	config                     *cstate.SCConfig
 }
 
 // GetConfig implements state.CommonStateContextI
-func (sc *mockStateContext) GetConfig() *cstate.StoragescConfig {
+func (sc *mockStateContext) GetConfig() *cstate.SCConfig {
 	return sc.config
 }
 
 // SetConfig implements state.CommonStateContextI
-func (sc *mockStateContext) SetConfig(config cstate.StoragescConfig) {
+func (sc *mockStateContext) SetConfig(config cstate.SCConfig) {
 	sc.config = &config
 }
 

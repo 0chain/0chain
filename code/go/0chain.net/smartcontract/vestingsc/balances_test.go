@@ -22,16 +22,16 @@ type testBalances struct {
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
-	config    *cstate.StoragescConfig
+	config    *cstate.SCConfig
 }
 
 // GetConfig implements state.CommonStateContextI
-func (tb *testBalances) GetConfig() *cstate.StoragescConfig {
+func (tb *testBalances) GetConfig() *cstate.SCConfig {
 	return tb.config
 }
 
 // SetConfig implements state.CommonStateContextI
-func (tb *testBalances) SetConfig(config cstate.StoragescConfig) {
+func (tb *testBalances) SetConfig(config cstate.SCConfig) {
 	tb.config = &config
 }
 

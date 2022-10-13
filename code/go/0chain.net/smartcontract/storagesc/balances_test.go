@@ -32,16 +32,16 @@ type testBalances struct {
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
 
-	config *cstate.StoragescConfig
+	config *cstate.SCConfig
 }
 
 // GetConfig implements state.StateContextI
-func (tb *testBalances) GetConfig() *cstate.StoragescConfig {
+func (tb *testBalances) GetConfig() *cstate.SCConfig {
 	return tb.config
 }
 
 // SetConfig implements state.StateContextI
-func (tb *testBalances) SetConfig(config cstate.StoragescConfig) {
+func (tb *testBalances) SetConfig(config cstate.SCConfig) {
 	tb.config = &config
 }
 
