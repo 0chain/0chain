@@ -70,8 +70,6 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 
 1.1) First build the base containers, zchain_build_base and zchain_run_base
 
-Use **-m1** flag to build for Apple m1 chip
-
 ```
 ./docker.local/bin/build.base.sh
 ```
