@@ -112,6 +112,6 @@ func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
 func (edb *EventDb) addOrOverwriteDelegatePools(dps []DelegatePool) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"provider_id", "provider_type"}),
+		UpdateAll: true,
 	}).Create(&dps).Error
 }

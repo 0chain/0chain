@@ -36,6 +36,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 			mn.TotalStaked = newTotalStaked
 		}
 	}
+	//TODO: emit delegate pool status update events
 	return nil
 }
 
