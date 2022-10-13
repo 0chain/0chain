@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-//SetupWorkers - setup workers */
+// SetupWorkers - setup workers */
 func SetupWorkers(ctx context.Context) {
 	go CleanupWorker(ctx)
 }
@@ -33,7 +33,7 @@ func CleanupWorker(ctx context.Context) {
 	txn := transactionEntityMetadata.Instance().(*Transaction)
 	collectionName := txn.GetCollectionName()
 
-	var handler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+	var handler = func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
 		txn, ok := qe.(*Transaction)
 		if !ok {
 			err := qe.Delete(ctx)
@@ -49,7 +49,7 @@ func CleanupWorker(ctx context.Context) {
 		if ok && cerr.Code == datastore.EntityNotFound {
 			invalidHashes = append(invalidHashes, txn)
 		}
-		return true
+		return true, nil
 	}
 
 	for {
@@ -107,18 +107,18 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 
 	var past []datastore.Entity
 	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName,
-		func(ctx context.Context, qe datastore.CollectionEntity) bool {
+		func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
 			current, ok := qe.(*Transaction)
 			if !ok {
 				logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
-				return true
+				return true, nil
 			}
 
 			maxNonce := clientMaxNonce[current.ClientID]
 			if current.Nonce <= maxNonce {
 				past = append(past, current)
 			}
-			return true
+			return true, nil
 		})
 	if err != nil {
 		logging.Logger.Error("error finding past transactions", zap.Error(err))

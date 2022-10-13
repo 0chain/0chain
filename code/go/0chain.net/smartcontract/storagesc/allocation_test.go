@@ -1072,7 +1072,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"invalid character '}' looking for beginning of value"
 		errMsg6 = "allocation_creation_failed: " +
 			"invalid request: blobbers provided are not enough to honour the allocation"
-		errMsg7 = "allocation_creation_failed: " + "getting stake pools: value not present"
+		errMsg7 = "allocation_creation_failed: " + "getting stake pools: could not get item \"b1\": value not present"
 		errMsg8 = "allocation_creation_failed: " +
 			"no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
