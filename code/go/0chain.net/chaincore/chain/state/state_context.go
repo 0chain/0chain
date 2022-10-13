@@ -63,8 +63,8 @@ type CommonStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
 	GetBlock() *block.Block
 	GetLatestFinalizedBlock() *block.Block
-	GetConfig() *SCConfig
-	SetConfig(config SCConfig)
+	GetConfig(smartcontract string) (*SCConfig, error)
+	SetConfig(smartcontract string, config SCConfig) error
 }
 
 //go:generate mockery --case underscore --name=QueryStateContextI --output=./mocks
@@ -408,12 +408,25 @@ func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 	return sc.getLatestFinalizedBlock()
 }
 
-func (sc *StateContext) GetConfig() *SCConfig {
-	return sc.storagescConfig
+func (sc *StateContext) GetConfig(smartcontract string) (*SCConfig, error) {
+	switch smartcontract {
+	case "storagesc":
+		return sc.storagescConfig, nil
+	default:
+		return nil, nil
+		// return nil, errors.New("smartcontract not found")
+	}
 }
 
-func (sc *StateContext) SetConfig(config SCConfig) {
-	sc.storagescConfig = &config
+func (sc *StateContext) SetConfig(smartcontract string, config SCConfig) error {
+	switch smartcontract {
+	case "storagesc":
+		sc.storagescConfig = &config
+	default:
+		return nil
+		// return errors.New("smartcontract not found")
+	}
+	return nil
 }
 
 func (sc *StateContext) getNodeValue(key datastore.Key, v util.MPTSerializable) error {
