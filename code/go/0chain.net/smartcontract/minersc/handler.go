@@ -3,6 +3,7 @@ package minersc
 import (
 	"errors"
 	"fmt"
+	"github.com/0chain/common/core/logging"
 	"net/http"
 	"strconv"
 
@@ -58,6 +59,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/configs", mrh.getConfigs),
 		rest.MakeEndpoint(miner+"/get_miner_geolocations", mrh.getMinerGeolocations),
 		rest.MakeEndpoint(miner+"/get_sharder_geolocations", mrh.getSharderGeolocations),
+		rest.MakeEndpoint(miner+"/default_pagination_settings", mrh.getDefaultPaginationSettings),
 	}
 }
 
@@ -861,6 +863,25 @@ func (mrh *MinerRestHandler) getGlobalSettings(w http.ResponseWriter, r *http.Re
 		return
 	}
 	common.Respond(w, r, globals, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/default_pagination_settings
+// default pagination settings
+//
+// responses:
+//
+//	200: Pagination
+func (mrh *MinerRestHandler) getDefaultPaginationSettings(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("In the API Layer")
+	logging.Logger.Info("In the API Layer")
+	comm := common2.Pagination{
+		Offset:       0,
+		Limit:        common2.DefaultQueryLimit,
+		IsDescending: false,
+	}
+
+	common.Respond(w, r, comm, nil)
+	return
 }
 
 // swagger:model eventList
