@@ -538,26 +538,18 @@ func getConfiguredConfig() (conf *Config, err error) {
 	return
 }
 
-func InitConfig(balances chainState.StateContextI) (*Config, error) {
+func InitConfig(balances chainState.StateContextI) error {
 	var conf *Config
-
 	err := balances.GetTrieNode(STORAGESC_CONFIG_KEY, conf)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-			conf, err := getConfiguredConfig()
-			if err != nil {
-				return nil, err
-			}
-			_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
-			if err != nil {
-				return nil, err
-			}
-			return conf, nil
+	if err == util.ErrValueNotPresent {
+		conf, err = getConfiguredConfig()
+		if err != nil {
+			return err
 		}
-		return nil, err
+		_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
+		return err
 	}
-	return conf, nil
-
+	return err
 }
 
 // getConfig
@@ -567,17 +559,10 @@ func (ssc *StorageSmartContract) getConfig(
 
 	conf = newConfig()
 	err = balances.GetTrieNode(STORAGESC_CONFIG_KEY, conf)
-	switch err {
-	case util.ErrValueNotPresent:
-		if !setup {
-			return // value not present
-		}
-		return InitConfig(balances)
-	case nil:
-		return conf, nil
-	default:
+	if err != nil {
 		return nil, err
 	}
+	return conf, nil
 }
 
 // getReadPoolConfig

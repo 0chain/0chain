@@ -585,7 +585,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 		panic(err)
 	}
 
-	_, err = storagesc.InitConfig(state)
+	err = storagesc.InitConfig(state)
 	if err != nil {
 		logging.Logger.Error("chain.stateDB storagesc InitConfig failed", zap.Error(err))
 		panic(err)
