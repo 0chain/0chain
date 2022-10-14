@@ -538,17 +538,18 @@ func getConfiguredConfig() (conf *Config, err error) {
 	return
 }
 
-func InitConfig(
-	balances chainState.StateContextI) (conf *Config, err error) {
-
-	if conf, err = getConfiguredConfig(); err != nil {
-		return
-	}
-	_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
+func InitConfig(balances chainState.StateContextI) error {
+	conf, err := getConfiguredConfig()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return
+
+	err = balances.GetTrieNode(STORAGESC_CONFIG_KEY, conf)
+	if err == util.ErrValueNotPresent {
+		_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
+		return err
+	}
+	return err
 }
 
 // getConfig
