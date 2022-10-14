@@ -1500,6 +1500,7 @@ type ReadMarker struct {
 	ReadCounter     int64            `json:"counter"`
 	Signature       string           `json:"signature"`
 	ReadSize        float64          `json:"read_size"`
+	AuthTicket      string           `json:"auth_ticket"`
 }
 
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances cstate.StateContextI) bool {
