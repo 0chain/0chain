@@ -104,17 +104,6 @@ func addMockAllocation(
 			AllocationRoot: encryption.Hash("allocation root"),
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
-		if viper.GetBool(sc.EventDbEnabled) {
-			terms := event.AllocationBlobberTerm{
-				BlobberID:        bId,
-				AllocationID:     sa.ID,
-				ReadPrice:        int64(ba.Terms.ReadPrice),
-				WritePrice:       int64(ba.Terms.WritePrice),
-				MinLockDemand:    ba.Terms.MinLockDemand,
-				MaxOfferDuration: ba.Terms.MaxOfferDuration,
-			}
-			_ = eventDb.Store.Get().Create(&terms)
-		}
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
@@ -429,6 +418,7 @@ func AddMockBlobbers(
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
+				Rewards:             event.ProviderRewards{ProviderID: blobber.ID},
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
@@ -503,6 +493,7 @@ func AddMockValidators(
 				MaxStake:       validator.StakePoolSettings.MaxStake,
 				NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
 				ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
+				Rewards:        event.ProviderRewards{ProviderID: validator.ID},
 			}
 			_ = eventDb.Store.Get().Create(&validators)
 		}
@@ -668,12 +659,14 @@ func AddMockWriteRedeems(
 				panic(err)
 			}
 			if viper.GetBool(sc.EventDbEnabled) {
-				mockBlockNumber := int64((i + 1) % viper.GetInt(sc.NumBlocks))
+				numBlocks := viper.GetInt(sc.NumBlocks)
+				mockBlockNumber := int64((i + 1) % numBlocks)
+				txnNum := (i + 1) / numBlocks
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
 					AllocationID:  rm.AllocationID,
-					TransactionID: benchmark.GetMockTransactionHash(mockBlockNumber, 1),
+					TransactionID: benchmark.GetMockTransactionHash(mockBlockNumber, txnNum),
 					OwnerID:       rm.OwnerID,
 					ReadCounter:   rm.ReadCounter,
 					ReadSize:      100,
@@ -687,7 +680,7 @@ func AddMockWriteRedeems(
 					ClientID:       rm.ClientID,
 					BlobberID:      rm.BlobberID,
 					AllocationID:   rm.AllocationID,
-					TransactionID:  benchmark.GetMockTransactionHash(mockBlockNumber, 1),
+					TransactionID:  benchmark.GetMockTransactionHash(mockBlockNumber, txnNum),
 					AllocationRoot: "mock allocation root",
 					BlockNumber:    mockBlockNumber,
 					Size:           100,
