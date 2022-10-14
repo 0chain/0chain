@@ -30,13 +30,14 @@ type mockStateContext struct {
 }
 
 // GetConfig implements state.CommonStateContextI
-func (sc *mockStateContext) GetConfig() *cstate.SCConfig {
-	return sc.config
+func (sc *mockStateContext) GetConfig(smartcontract string) (*cstate.SCConfig, error) {
+	return sc.config, nil
 }
 
 // SetConfig implements state.CommonStateContextI
-func (sc *mockStateContext) SetConfig(config cstate.SCConfig) {
+func (sc *mockStateContext) SetConfig(smartcontract string, config cstate.SCConfig) error {
 	sc.config = &config
+	return nil
 }
 
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     {}

@@ -36,13 +36,14 @@ type testBalances struct {
 }
 
 // GetConfig implements state.StateContextI
-func (tb *testBalances) GetConfig() *cstate.SCConfig {
-	return tb.config
+func (tb *testBalances) GetConfig(smartcontract string) (*cstate.SCConfig, error) {
+	return tb.config, nil
 }
 
 // SetConfig implements state.StateContextI
-func (tb *testBalances) SetConfig(config cstate.SCConfig) {
+func (tb *testBalances) SetConfig(smartcontract string, config cstate.SCConfig) error {
 	tb.config = &config
+	return nil
 }
 
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {

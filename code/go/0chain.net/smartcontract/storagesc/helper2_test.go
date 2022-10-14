@@ -23,13 +23,14 @@ type mockStateContext struct {
 }
 
 // GetConfig implements state.StateContextI
-func (sc *mockStateContext) GetConfig() *cstate.SCConfig {
-	return sc.config
+func (sc *mockStateContext) GetConfig(smartcontract string) (*cstate.SCConfig, error) {
+	return sc.config, nil
 }
 
 // SetConfig implements state.StateContextI
-func (sc *mockStateContext) SetConfig(config cstate.SCConfig) {
+func (sc *mockStateContext) SetConfig(smartcontract string, config cstate.SCConfig) error {
 	sc.config = &config
+	return nil
 }
 
 type mockBlobberYaml struct {
