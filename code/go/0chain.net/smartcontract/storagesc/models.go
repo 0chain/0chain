@@ -578,6 +578,8 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
+		logging.Logger.Error("debug uint64 overflow: upload", zap.Uint64("move", uint64(move)), zap.Uint64("d.ChallengePoolIntegralValue", uint64(d.ChallengePoolIntegralValue)))
+		logging.Logger.Error("debug uint64 overflow: upload", zap.Float64("rdtu", float64(rdtu)), zap.Float64("d.Terms.WritePrice", float64(d.Terms.WritePrice)))
 		return
 	}
 	d.ChallengePoolIntegralValue = challengePoolIntegralValue
@@ -776,6 +778,7 @@ func (sa *StorageAllocation) moveToChallengePool(
 	}
 
 	if balance, err := currency.AddCoin(cp.Balance, value); err != nil {
+		logging.Logger.Error("debug uint64 overflow: moveToChallengePool", zap.Uint64("cp.Balance", uint64(cp.Balance)), zap.Uint64("value", uint64(value)))
 		return err
 	} else {
 		cp.Balance = balance
@@ -1029,8 +1032,8 @@ func removeAllocationFromBlobber(
 
 	blobberID := blobAlloc.BlobberID
 	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
-		logging.Logger.Error("skipping removing allocation from blobber partition" +
-			"empty blobber allocation partition location")
+		logging.Logger.Error("skipping removing allocation from blobber partition." +
+			" empty blobber allocation partition location")
 		return nil
 	}
 
