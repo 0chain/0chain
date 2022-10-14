@@ -591,7 +591,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 		panic(err)
 	}
 
-	_, err = vestingsc.InitConfig(state)
+	err = vestingsc.InitConfig(state)
 	if err != nil {
 		logging.Logger.Error("chain.stateDB vestingsc InitConfig failed", zap.Error(err))
 		panic(err)

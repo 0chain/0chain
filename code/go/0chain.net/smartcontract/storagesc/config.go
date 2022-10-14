@@ -539,10 +539,9 @@ func getConfiguredConfig() (conf *Config, err error) {
 }
 
 func InitConfig(balances chainState.StateContextI) error {
-	var conf *Config
-	err := balances.GetTrieNode(STORAGESC_CONFIG_KEY, conf)
+	err := balances.GetTrieNode(STORAGESC_CONFIG_KEY, &Config{})
 	if err == util.ErrValueNotPresent {
-		conf, err = getConfiguredConfig()
+		conf, err := getConfiguredConfig()
 		if err != nil {
 			return err
 		}

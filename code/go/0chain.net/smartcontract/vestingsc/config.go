@@ -296,28 +296,23 @@ func (vsc *VestingSmartContract) getConfig(
 ) (conf *config, err error) {
 	conf = new(config)
 	err = balances.GetTrieNode(VESTINGSC_CONFIG_KEY, conf)
-	switch err {
-	case nil:
-		return conf, nil
-	case util.ErrValueNotPresent:
-		return InitConfig(balances)
-	default:
-		return nil, err
-	}
-}
-
-func InitConfig(
-	balances chainstate.StateContextI,
-) (conf *config, err error) {
-
-	if conf, err = getConfiguredConfig(); err != nil {
-		return
-	}
-	_, err = balances.InsertTrieNode(VESTINGSC_CONFIG_KEY, conf)
 	if err != nil {
 		return nil, err
 	}
-	return
+	return conf, nil
+}
+
+func InitConfig(balances chainstate.StateContextI) error {
+	err := balances.GetTrieNode(VESTINGSC_CONFIG_KEY, &config{})
+	if err == util.ErrValueNotPresent {
+		conf, err := getConfiguredConfig()
+		if err != nil {
+			return err
+		}
+		_, err = balances.InsertTrieNode(VESTINGSC_CONFIG_KEY, conf)
+		return err
+	}
+	return err
 }
 
 //
