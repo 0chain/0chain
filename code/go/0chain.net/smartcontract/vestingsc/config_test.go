@@ -84,9 +84,11 @@ func TestVestingSmartContract_getConfigHandler(t *testing.T) {
 		vsc        = newTestVestingSC()
 		balances   = newTestBalances()
 		ctx        = context.Background()
+		err        = InitConfig(balances)
 		configured = configureConfig()
-		resp, err  = vsc.getConfigHandler(ctx, nil, balances)
 	)
+	require.NoError(t, err)
+	resp, err := vsc.getConfigHandler(ctx, nil, balances)
 	require.NoError(t, err)
 	require.EqualValues(t, configured.getConfigMap(), resp)
 }
