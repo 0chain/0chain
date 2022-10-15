@@ -68,6 +68,9 @@ func PrintStates(cstate util.MerklePatriciaTrieI, pstate util.MerklePatriciaTrie
 }
 
 func ValidateState(ctx context.Context, b *Block, priorRoot util.Key) error {
+	if b.ClientState == nil {
+		return nil
+	}
 	if b.ClientState.GetChangeCount() > 0 {
 		changes, err := NewBlockStateChange(b)
 		if err != nil {
