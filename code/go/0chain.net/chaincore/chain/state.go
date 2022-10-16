@@ -457,13 +457,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	if state.DebugTxn() {
 		// TODO: fix me, the b does not has the state changes
 		if err = block.ValidateState(context.TODO(), b, startRoot); err != nil {
-			logging.Logger.DPanic("update state - state validation failure",
+			logging.Logger.Error("update state - state validation failure",
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
 		os, err = c.GetStateById(bState, c.OwnerID())
 		if err != nil || os == nil || os.Balance == 0 {
-			logging.Logger.DPanic("update state - owner account",
+			logging.Logger.Error("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
 		}
