@@ -88,7 +88,7 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 			zap.String("hash", b.Hash))
 		return err
 	}
-	cctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	cctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	return b.SaveChanges(cctx, c)
 }
@@ -508,6 +508,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return nil, err
 	}
+
 	if fs.Balance < amount {
 		logging.Logger.Error("transfer amount - insufficient balance",
 			zap.Any("balance", fs.Balance),
@@ -606,6 +607,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return nil, common.NewError("mint_amount - get state", err.Error())
 	}
+
 	if err := sctx.SetStateContext(ts); err != nil {
 		logging.Logger.Error("transfer amount - set state context failed",
 			zap.String("txn hash", ts.TxnHash),
@@ -670,6 +672,7 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	if !isValid(err) {
 		return nil, err
 	}
+
 	if s == nil {
 		s = &state.State{}
 	}

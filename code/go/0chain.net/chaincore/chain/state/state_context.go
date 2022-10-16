@@ -103,7 +103,7 @@ type StateContextI interface {
 	Validate() error
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
-	EmitEvent(event.EventType, event.EventTag, string, interface{}, ...Appender)
+	EmitEvent(eventType event.EventType, eventTag event.EventTag, index string, data interface{}, appender ...Appender)
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetInvalidStateErrors() []error

@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"golang.org/x/net/context"
@@ -26,50 +27,180 @@ const (
 )
 
 const (
-	TagNone EventTag = iota
-	TagAddOrOverwriteBlobber
-	TagUpdateBlobber
+	TagNone                         EventTag = iota
+	TagAddBlobber                            // 1
+	TagUpdateBlobber                         // 2
+	TagUpdateBlobberAllocatedHealth          // 3
+	TagUpdateBlobberTotalStake               // 4
+	TagUpdateBlobberTotalOffers              // 5
 	TagDeleteBlobber
 	TagAddAuthorizer
 	TagUpdateAuthorizer
 	TagDeleteAuthorizer
-	TagAddTransaction
-	TagAddOrOverwriteUser
-	TagAddWriteMarker
-	TagAddBlock
-	TagAddValidator
+	TagAddTransactions        // 10
+	TagAddOrOverwriteUser     // 11
+	TagAddWriteMarker         // 12
+	TagAddBlock               // 13
+	TagAddOrOverwiteValidator // 14
 	TagUpdateValidator
 	TagAddReadMarker
-	TagAddMiner
 	TagAddOrOverwriteMiner
-	TagUpdateMiner
+	TagUpdateMiner // 18
 	TagDeleteMiner
-	TagAddSharder
 	TagAddOrOverwriteSharder
 	TagUpdateSharder
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagAddOrOverwriteDelegatePool
-	TagStakePoolReward
-	TagUpdateDelegatePool
-	TagAddAllocation
-	TagUpdateAllocation
-	TagAddReward
-	TagAddChallenge
-	TagUpdateChallenge
-	TagUpdateBlobberChallenge
+	TagStakePoolReward                     // 26
+	TagUpdateDelegatePool                  // 27
+	TagAddAllocation                       // 28
+	TagUpdateAllocationStakes              // 29
+	TagUpdateAllocation                    // 30
+	TagAddReward                           // 31
+	TagAddChallenge                        // 32
+	TagUpdateChallenge                     // 33
+	TagUpdateBlobberChallenge              // 34
+	TagUpdateAllocationChallenge           // 35
+	TagAddChallengeToAllocation            // 36
+	TagAddOrOverwriteAllocationBlobberTerm // 37
+	TagUpdateAllocationBlobberTerm         // 38
+	TagDeleteAllocationBlobberTerm         // 39
+	TagAddOrUpdateChallengePool            // 40
+	TagUpdateAllocationStat                // 41
+	TagUpdateBlobberStat                   // 42
 	NumberOfTags
-	TagAddOrOverwriteAllocationBlobberTerm
-	TagUpdateAllocationBlobberTerm
-	TagDeleteAllocationBlobberTerm
-	TagAddOrUpdateChallengePool
 )
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-func (edb *EventDb) AddEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) {
-	edb.eventsChannel <- blockEvents{events: events, round: round, block: block, blockSize: blockSize}
+func (edb *EventDb) ProcessEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) error {
+	ts := time.Now()
+	es, err := mergeEvents(round, block, events)
+	if err != nil {
+		return err
+	}
+
+	pdu := time.Since(ts)
+
+	event := blockEvents{
+		events:    es,
+		round:     round,
+		block:     block,
+		blockSize: blockSize,
+		doneC:     make(chan struct{}, 1),
+	}
+
+	select {
+	case edb.eventsChannel <- event:
+	case <-ctx.Done():
+		logging.Logger.Warn("process events - context done",
+			zap.Error(ctx.Err()),
+			zap.Int64("round", round),
+			zap.String("block", block),
+			zap.Int("block size", blockSize))
+		return fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
+	}
+
+	select {
+	case <-event.doneC:
+		du := time.Since(ts)
+		if du.Milliseconds() > 200 {
+			logging.Logger.Warn("process events slow",
+				zap.Any("duration", du),
+				zap.Any("merge events duration", pdu),
+				zap.Int64("round", round),
+				zap.String("block", block),
+				zap.Int("block size", blockSize))
+		}
+	case <-ctx.Done():
+		du := time.Since(ts)
+		logging.Logger.Warn("process events - context done",
+			zap.Error(ctx.Err()),
+			zap.Any("duration", du),
+			zap.Int64("round", round),
+			zap.String("block", block),
+			zap.Int("block size", blockSize))
+	}
+
+	return nil
+}
+
+func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
+	var (
+		mergers = []eventsMerger{
+			mergeAddUsersEvents(),
+			mergeAddProviderEvents[Miner](TagAddOrOverwriteMiner, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
+
+			mergeAddAllocationEvents(),
+			mergeUpdateAllocEvents(),
+			mergeUpdateAllocStatsEvents(),
+			mergeUpdateAllocBlobbersTermsEvents(),
+			mergeAddOrOverwriteAllocBlobbersTermsEvents(),
+			mergeDeleteAllocBlobbersTermsEvents(),
+
+			mergeAddChallengesEvents(),
+			mergeAddChallengesToAllocsEvents(),
+
+			mergeUpdateChallengesEvents(),
+			mergeAddChallengePoolsEvents(),
+			mergeUpdateBlobberChallengesEvents(),
+			mergeUpdateAllocChallengesEvents(),
+
+			mergeUpdateBlobbersEvents(),
+			mergeUpdateBlobberTotalStakesEvents(),
+			mergeUpdateBlobberTotalOffersEvents(),
+			mergeStakePoolRewardsEvents(),
+			mergeAddDelegatePoolsEvents(),
+
+			mergeAddTransactionsEvents(),
+			mergeAddWriteMarkerEvents(),
+			mergeAddReadMarkerEvents(),
+			mergeAllocationStatsEvents(),
+			mergeUpdateBlobberStatsEvents(),
+		}
+
+		others = make([]Event, 0, len(events))
+	)
+
+	for _, e := range events {
+		if e.Type != int(TypeStats) {
+			continue
+		}
+
+		var matched bool
+		for _, em := range mergers {
+			if em.filter(e) {
+				matched = true
+				break
+			}
+		}
+
+		if matched {
+			continue
+		}
+
+		others = append(others, e)
+	}
+
+	mergedEvents := make([]Event, 0, len(mergers))
+	for _, em := range mergers {
+		e, err := em.merge(round, block)
+		if err != nil {
+			return nil, err
+		}
+
+		if e != nil {
+			mergedEvents = append(mergedEvents, *e)
+		}
+	}
+
+	return append(mergedEvents, others...), nil
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
@@ -77,20 +208,22 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		es := <-edb.eventsChannel
 		edb.addEvents(ctx, es)
 		tse := time.Now()
+		tags := make([]int, 0, len(es.events))
 		for _, event := range es.events {
 			var err error = nil
 			switch EventType(event.Type) {
 			case TypeStats:
+				tags = append(tags, event.Tag)
 				ts := time.Now()
 				err = edb.addStat(event)
 				du := time.Since(ts)
 				if du.Milliseconds() > 50 {
 					logging.Logger.Warn("event db save slow - addStat",
 						zap.Any("duration", du),
+						zap.Int("event tag", event.Tag),
 						zap.Int64("round", es.round),
 						zap.String("block", es.block),
 						zap.Int("block size", es.blockSize),
-						zap.Any("event", event),
 					)
 				}
 			case TypeError:
@@ -106,38 +239,69 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 					zap.Int64("round", es.round),
 					zap.String("block", es.block),
 					zap.Int("block size", es.blockSize),
-					zap.Any("event", event),
+					zap.Any("event type", event.Type),
+					zap.Any("event tag", event.Tag),
 					zap.Error(err),
 				)
 			}
 		}
 		due := time.Since(tse)
-		if due.Milliseconds() > 500 {
+		logging.Logger.Debug("event db process",
+			zap.Any("duration", due),
+			zap.Int("events number", len(es.events)),
+			zap.Ints("tags", tags),
+			zap.Int64("round", es.round),
+			zap.String("block", es.block),
+			zap.Int("block size", es.blockSize))
+
+		if due.Milliseconds() > 200 {
 			logging.Logger.Warn("event db work slow",
 				zap.Any("duration", due),
 				zap.Int("events number", len(es.events)),
+				zap.Ints("tags", tags),
 				zap.Int64("round", es.round),
 				zap.String("block", es.block),
 				zap.Int("block size", es.blockSize))
 		}
+		es.doneC <- struct{}{}
 	}
 }
 
 func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
 	// blobber
-	case TagAddOrOverwriteBlobber:
-		blobber, ok := fromEvent[Blobber](event.Data)
+	case TagAddBlobber:
+		blobbers, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteBlobber(*blobber)
+		return edb.addBlobbers(*blobbers)
 	case TagUpdateBlobber:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		blobbers, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobber(*updates)
+		return edb.addOrOverwriteBlobber(*blobbers)
+	case TagUpdateBlobberAllocatedHealth:
+		blobbers, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateBlobbersAllocatedAndHealth(*blobbers)
+	case TagUpdateBlobberTotalStake:
+		bs, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateBlobbersTotalStakes(*bs)
+	case TagUpdateBlobberTotalOffers:
+		bs, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateBlobbersTotalOffers(*bs)
 	case TagDeleteBlobber:
 		blobberID, ok := fromEvent[string](event.Data)
 
@@ -160,70 +324,66 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.DeleteAuthorizer(id)
 	case TagAddWriteMarker:
-		wm, ok := fromEvent[WriteMarker](event.Data)
+		wms, ok := fromEvent[[]WriteMarker](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		wm.TransactionID = event.TxHash
-		wm.BlockNumber = event.BlockNumber
-		if err := edb.addWriteMarker(*wm); err != nil {
+		for i := range *wms {
+			(*wms)[i].BlockNumber = event.BlockNumber
+		}
+
+		if err := edb.addWriteMarkers(*wms); err != nil {
 			return err
 		}
-		return edb.IncrementDataStored(wm.BlobberID, wm.Size)
+		return nil
 	case TagAddReadMarker:
-		rm, ok := fromEvent[ReadMarker](event.Data)
+		rms, ok := fromEvent[[]ReadMarker](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		rm.TransactionID = event.TxHash
-		rm.BlockNumber = event.BlockNumber
-		return edb.addOrOverwriteReadMarker(*rm)
+		for i := range *rms {
+			(*rms)[i].BlockNumber = event.BlockNumber
+		}
+
+		return edb.addOrOverwriteReadMarker(*rms)
 	case TagAddOrOverwriteUser:
-		usr, ok := fromEvent[User](event.Data)
+		users, ok := fromEvent[[]User](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteUser(*usr)
-	case TagAddTransaction:
-		transaction, ok := fromEvent[Transaction](event.Data)
-
+		return edb.addOrUpdateUsers(*users)
+	case TagAddTransactions:
+		txns, ok := fromEvent[[]Transaction](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addTransaction(*transaction)
+		return edb.addTransactions(*txns)
 	case TagAddBlock:
 		block, ok := fromEvent[Block](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 		return edb.addBlock(*block)
-	case TagAddValidator:
-		vn, ok := fromEvent[Validator](event.Data)
+	case TagAddOrOverwiteValidator:
+		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addValidator(*vn)
+		return edb.addOrOverwriteValidators(*vns)
 	case TagUpdateValidator:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 		return edb.updateValidator(*updates)
-	case TagAddMiner:
-		miner, ok := fromEvent[Miner](event.Data)
-
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addMiner(*miner)
 	case TagAddOrOverwriteMiner:
-		miner, ok := fromEvent[Miner](event.Data)
+		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteMiner(*miner)
+		return edb.addOrOverwriteMiner(*miners)
 	case TagUpdateMiner:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -236,19 +396,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteMiner(*minerID)
-	case TagAddSharder:
-		sharder, ok := fromEvent[Sharder](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addSharder(*sharder)
 	case TagAddOrOverwriteSharder:
-		sharder, ok := fromEvent[Sharder](event.Data)
+		sharders, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		return edb.addOrOverwriteSharder(*sharder)
+		return edb.addOrOverwriteSharders(*sharders)
 	case TagUpdateSharder:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -276,11 +430,11 @@ func (edb *EventDb) addStat(event Event) error {
 
 	//stake pool
 	case TagAddOrOverwriteDelegatePool:
-		sp, ok := fromEvent[DelegatePool](event.Data)
+		dps, ok := fromEvent[[]DelegatePool](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteDelegatePool(*sp)
+		return edb.addOrOverwriteDelegatePools(*dps)
 	case TagUpdateDelegatePool:
 		spUpdate, ok := fromEvent[dbs.DelegatePoolUpdate](event.Data)
 		if !ok {
@@ -288,23 +442,29 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.updateDelegatePool(*spUpdate)
 	case TagStakePoolReward:
-		spu, ok := fromEvent[dbs.StakePoolReward](event.Data)
+		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.rewardUpdate(*spu)
+		return edb.rewardUpdate(*spus, event.BlockNumber)
 	case TagAddAllocation:
-		alloc, ok := fromEvent[Allocation](event.Data)
+		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addAllocation(alloc)
+		return edb.addAllocations(*allocs)
 	case TagUpdateAllocation:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateAllocation(updates)
+		return edb.updateAllocations(*allocs)
+	case TagUpdateAllocationStakes:
+		allocs, ok := fromEvent[[]Allocation](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateAllocationStakes(*allocs)
 	case TagAddReward:
 		reward, ok := fromEvent[Reward](event.Data)
 		if !ok {
@@ -312,24 +472,38 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addReward(*reward)
 	case TagAddChallenge:
-		chall, ok := fromEvent[Challenge](event.Data)
+		challenges, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addChallenge(chall)
+		return edb.addChallenges(*challenges)
+	case TagAddChallengeToAllocation:
+		as, ok := fromEvent[[]Allocation](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.addChallengesToAllocations(*as)
 	case TagUpdateChallenge:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		chs, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateChallenge(*updates)
+		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
-		challenge, ok := fromEvent[dbs.ChallengeResult](event.Data)
+		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobberChallenges(*challenge)
-		// allocation blobber term
+
+		return edb.updateBlobberChallenges(*bs)
+
+	case TagUpdateAllocationChallenge:
+		as, ok := fromEvent[[]Allocation](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateAllocationChallenges(*as)
 	case TagAddOrOverwriteAllocationBlobberTerm:
 		updates, ok := fromEvent[[]AllocationBlobberTerm](event.Data)
 		if !ok {
@@ -348,13 +522,25 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.deleteAllocationBlobberTerms(*updates)
-		// challenge pool
-	case TagAddOrUpdateChallengePool:
-		updates, ok := fromEvent[ChallengePool](event.Data)
+	case TagUpdateAllocationStat:
+		stats, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrUpdateChallengePool(*updates)
+		return edb.updateAllocationsStats(*stats)
+	case TagUpdateBlobberStat:
+		stats, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateBlobbersStats(*stats)
+	case TagAddOrUpdateChallengePool:
+		// challenge pool
+		cps, ok := fromEvent[[]ChallengePool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateChallengePools(*cps)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
@@ -375,5 +561,28 @@ func fromEvent[T any](eventData interface{}) (*T, bool) {
 		return t2, true
 	}
 
+	logging.Logger.Error("fromEvent invalid data type",
+		zap.Any("expect", reflect.TypeOf(new(T))),
+		zap.Any("got", reflect.TypeOf(eventData)))
 	return nil, false
+}
+
+func setEventData[T any](e *Event, data interface{}) error {
+	if data == nil {
+		return nil
+	}
+
+	_, ok := e.Data.(T)
+	if ok {
+		e.Data = data
+		return nil
+	}
+
+	tp, ok := e.Data.(*T)
+	if ok {
+		*(tp) = data.(T)
+		return nil
+	}
+
+	return ErrInvalidEventData
 }

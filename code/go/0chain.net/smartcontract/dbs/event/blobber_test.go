@@ -136,11 +136,11 @@ func TestBlobbers(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Tag:         int(TagAddBlobber),
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.AddEvents(context.TODO(), events, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 
 	blobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestBlobbers(t *testing.T) {
 		Tag:         int(TagUpdateBlobber),
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
@@ -205,10 +205,10 @@ func TestBlobbers(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Tag:         int(TagUpdateBlobber),
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventOverwrite}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwrite}, 100, "hash", 10)
 	overWrittenBlobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, sn2.BaseURL, overWrittenBlobber.BaseURL)
@@ -220,56 +220,10 @@ func TestBlobbers(t *testing.T) {
 		Tag:         int(TagDeleteBlobber),
 		Data:        blobber.BlobberID,
 	}
-	eventDb.AddEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.Error(t, err)
-}
-
-func TestBlobberExists(t *testing.T) {
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
-	if err != nil {
-		return
-	}
-	defer eventDb.Close()
-
-	err = eventDb.AutoMigrate()
-	require.NoError(t, err)
-	bl := Blobber{
-		BlobberID: "something",
-	}
-	res := eventDb.Store.Get().Create(&bl)
-	if res.Error != nil {
-		t.Errorf("Error while inserting blobber %v", bl)
-		return
-	}
-	gotExists, err := bl.exists(eventDb)
-
-	if !gotExists || err != nil {
-		t.Errorf("Exists function did not work want true got %v and err was %v", gotExists, err)
-	}
-	b2 := Blobber{
-		BlobberID: "somethingNew",
-	}
-	gotExists, err = b2.exists(eventDb)
-	if gotExists || err != nil {
-		t.Errorf("Exists function did not work want false got %v and err was %v", gotExists, err)
-	}
-	err = eventDb.Drop()
-	require.NoError(t, err)
 }
 
 func TestBlobberIds(t *testing.T) {

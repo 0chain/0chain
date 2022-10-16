@@ -598,6 +598,7 @@ func setupChallengeMocks(
 		sp.Pools["paula"+id].Balance = currency.Coin(stake)
 		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
+	sp.TotalOffers = 100e10
 	sp.Settings.DelegateWallet = blobberId + " wallet"
 	require.NoError(t, sp.save(spenum.Blobber, blobberId, ctx))
 

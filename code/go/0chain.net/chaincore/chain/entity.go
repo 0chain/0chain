@@ -729,6 +729,17 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 	return c.getBlock(ctx, hash)
 }
 
+func (c *Chain) GetBlockClone(ctx context.Context, hash string) (*block.Block, error) {
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
+	b, err := c.getBlock(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.Clone(), nil
+}
+
 func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error) {
 	if b, ok := c.blocks[datastore.ToKey(hash)]; ok {
 		return b, nil
