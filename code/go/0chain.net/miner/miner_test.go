@@ -400,6 +400,14 @@ func SetupGenesisBlock() *block.Block {
 }
 
 func SetUpSingleSelf() func() {
+	viper.Set("server_chain.smart_contract.faucet", true)
+	viper.Set("server_chain.smart_contract.storage", true)
+	viper.Set("server_chain.smart_contract.zcn", true)
+	viper.Set("server_chain.smart_contract.multisig", true)
+	viper.Set("server_chain.smart_contract.miner", true)
+	viper.Set("server_chain.smart_contract.vesting", true)
+	setupsc.SetupSmartContracts()
+
 	// create rocksdb state dir
 	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
@@ -512,14 +520,6 @@ func SetUpSingleSelf() func() {
 }
 
 func setupSelf() func() { //nolint
-	viper.Set("server_chain.smart_contract.faucet", true)
-	viper.Set("server_chain.smart_contract.storage", true)
-	viper.Set("server_chain.smart_contract.zcn", true)
-	viper.Set("server_chain.smart_contract.multisig", true)
-	viper.Set("server_chain.smart_contract.miner", true)
-	viper.Set("server_chain.smart_contract.vesting", true)
-	setupsc.SetupSmartContracts()
-
 	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
 	if err != nil {
