@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/setupsc"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -25,6 +26,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
 	"0chain.net/sharder/blockstore"
 	"github.com/0chain/common/core/logging"
 	"github.com/gomodule/redigo/redis"
@@ -236,6 +238,14 @@ func TestBlockVerification(t *testing.T) {
 }
 
 func TestTwoCorrectBlocks(t *testing.T) {
+	viper.Set("server_chain.smart_contract.faucet", true)
+	viper.Set("server_chain.smart_contract.storage", true)
+	viper.Set("server_chain.smart_contract.zcn", true)
+	viper.Set("server_chain.smart_contract.multisig", true)
+	viper.Set("server_chain.smart_contract.miner", true)
+	viper.Set("server_chain.smart_contract.vesting", true)
+	setupsc.SetupSmartContracts()
+
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx := context.Background()
