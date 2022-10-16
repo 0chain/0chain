@@ -46,9 +46,10 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 	viper.SetDefault("development.txn_generation.min_txn_value", 100)
 	minValue = viper.GetInt64("development.txn_generation.min_txn_value")
 
-	txnCost := viper.GetInt("server_chain.transaction.transfer_cost")
-	maxBlockCost := viper.GetInt("server_chain.block.max_block_cost")
-	blockSize := int32(maxBlockCost / txnCost)
+	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
+	if blockSize <= 0 {
+		return
+	}
 
 	numClients := viper.GetInt("development.txn_generation.wallets")
 
