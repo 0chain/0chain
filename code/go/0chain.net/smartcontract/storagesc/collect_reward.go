@@ -5,8 +5,6 @@ import (
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
@@ -84,13 +82,7 @@ func (ssc *StorageSmartContract) collectReward(
 				"can't get stake: %v", err)
 		}
 
-		data := dbs.DbUpdates{
-			Id: providerID,
-			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
-			},
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
+		sp.emitStakeEvent(prr.ProviderType, providerID, staked, balances)
 
 		err = emitAddOrOverwriteReward(reward, providerID, prr, balances, txn)
 		if err != nil {
