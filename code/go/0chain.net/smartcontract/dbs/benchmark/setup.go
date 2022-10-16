@@ -81,7 +81,10 @@ func AddMockTransactions(
 				if err != nil {
 					panic(err)
 				}
-				_ = eventDb.Store.Get().Create(&transaction)
+				err = eventDb.Store.Get().Create(&transaction).Error
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 	}

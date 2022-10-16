@@ -427,6 +427,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"EmitEvent",
 			event.TypeSmartContract, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
 		).Return().Maybe()
+		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobberTotalOffers,
+			mock.Anything, mock.Anything).Return().Maybe()
 
 		balances.On(
 			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
@@ -761,6 +763,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"EmitEvent",
 			event.TypeSmartContract, event.TagUpdateAllocationBlobberTerm, mock.Anything, mock.Anything,
 		).Return().Maybe()
+
+		balances.On(
+			"EmitEvent", event.TypeStats, event.TagUpdateBlobberAllocatedHealth,
+			mock.Anything, mock.Anything).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}

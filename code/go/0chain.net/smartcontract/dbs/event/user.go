@@ -1,8 +1,12 @@
 package event
 
 import (
+	"time"
+
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -29,18 +33,21 @@ func (edb *EventDb) GetUser(userID string) (*User, error) {
 	return &user, nil
 }
 
-func (edb *EventDb) addOrOverwriteUser(u User) error {
-	result := edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "user_id"}},
-		DoUpdates: clause.Assignments(map[string]interface{}{
-			"txn_hash": u.TxnHash,
-			"balance":  u.Balance,
-			"round":    u.Round,
-			"nonce":    u.Nonce,
-		}),
-	}).Create(&u)
+// update or create users
+func (edb *EventDb) addOrUpdateUsers(users []User) error {
+	ts := time.Now()
+	defer func() {
+		logging.Logger.Debug("event db - upsert users ", zap.Any("duration", time.Since(ts)),
+			zap.Int("num", len(users)))
+	}()
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce"}),
+	}).Create(&users).Error
+}
 
-	return result.Error
+func mergeAddUsersEvents() *eventsMergerImpl[User] {
+	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) GetUserFromId(userId string) (User, error) {

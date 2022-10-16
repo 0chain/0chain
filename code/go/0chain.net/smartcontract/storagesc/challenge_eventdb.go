@@ -5,16 +5,13 @@ import (
 	"strings"
 	"time"
 
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
-
-	"0chain.net/smartcontract/dbs"
-
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func storageChallengeToChallengeTable(ch *StorageChallengeResponse) *event.Challenge {
+func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge {
 	var validators = make([]string, 0, len(ch.Validators))
 	for _, v := range ch.Validators {
 		validators = append(validators, v.ID)
@@ -29,6 +26,7 @@ func storageChallengeToChallengeTable(ch *StorageChallengeResponse) *event.Chall
 		Seed:           ch.Seed,
 		AllocationRoot: ch.AllocationRoot,
 		Responded:      ch.Responded,
+		ExpiredN:       expiredN,
 	}
 }
 
@@ -56,31 +54,46 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	}, nil
 }
 
-func emitAddChallenge(ch *StorageChallengeResponse, balances cstate.StateContextI) {
-
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch))
-	return
+func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
+	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
+		AllocationID:    ch.AllocationID,
+		OpenChallenges:  int64(1 - expiredN), // increase one challenge and remove expired ones
+		TotalChallenges: int64(1),
+	})
 }
 
-func emitUpdateChallengeResponse(chID string, responded bool, passed bool, balances cstate.StateContextI) {
-	data := &dbs.DbUpdates{
-		Id: chID,
-		Updates: map[string]interface{}{
-			"responded":       responded,
-			"passed":          passed,
-			"round_responded": balances.GetBlock().Round,
-		},
+func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI) {
+	clg := event.Challenge{
+		ChallengeID:  sc.ID,
+		AllocationID: sc.AllocationID,
+		BlobberID:    sc.BlobberID,
+		Responded:    sc.Responded,
+		RoundResponded: balances.GetBlock().Round,
+		Passed:       passed,
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateChallenge, chID, data)
-}
-
-func emitUpdateBlobberChallengeStats(blobberId string, passed bool, balances cstate.StateContextI) {
-	data := dbs.ChallengeResult{
-		BlobberId: blobberId,
-		Passed:    passed,
+	a := event.Allocation{
+		AllocationID:             sc.AllocationID,
+		OpenChallenges:           1,
+		LatestClosedChallengeTxn: sc.ID,
 	}
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobberChallenge, blobberId, data)
+
+	b := event.Blobber{
+		BlobberID:           sc.BlobberID,
+		ChallengesCompleted: 1,
+	}
+
+	if passed {
+		a.SuccessfulChallenges = 1
+		b.ChallengesPassed = 1
+	} else {
+		a.FailedChallenges = 1
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.AllocationID, a)
+	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {

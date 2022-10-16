@@ -44,6 +44,7 @@ type blockEvents struct {
 	blockSize int
 	round     int64
 	events    []Event
+	doneC     chan struct{}
 }
 
 func (edb *EventDb) AutoMigrate() error {
@@ -62,7 +63,6 @@ func (edb *EventDb) AutoMigrate() error {
 		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
-		&AllocationTerm{},
 		&Reward{},
 		&Authorizer{},
 		&Challenge{},
@@ -70,7 +70,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&BlobberSnapshot{},
 		&BlobberAggregate{},
 		&AllocationBlobberTerm{},
-		ChallengePool{},
+		&ProviderRewards{},
+		&ChallengePool{},
 	); err != nil {
 		return err
 	}

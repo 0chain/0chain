@@ -13,7 +13,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
@@ -229,13 +228,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 				"getting stake pool stake: "+err.Error())
 		}
 
-		data := dbs.DbUpdates{
-			Id: qualifyingBlobberIds[i],
-			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
-			},
-		}
-		balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, qualifyingBlobberIds[i], data)
+		bid := qualifyingBlobberIds[i]
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(bid, staked)
+		balances.EmitEvent(event.TypeSmartContract, tag, bid, data)
 		if blobberRewards[i].WritePrice > 0 {
 			stake, err := qsp.stake()
 			if err != nil {

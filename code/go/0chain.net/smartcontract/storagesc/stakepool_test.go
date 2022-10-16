@@ -125,7 +125,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 		CreationDate: creationDate,
 	}
 	var ctx = &mockStateContext{
-		ctx: *cstate.NewStateContext(
+		StateContext: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,

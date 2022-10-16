@@ -952,7 +952,6 @@ type fullBlock struct {
 //	400:
 //	500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
-
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
@@ -1153,7 +1152,7 @@ func spStats(
 		MaxNumDelegates:    blobber.NumDelegates,
 		ServiceChargeRatio: blobber.ServiceCharge,
 	}
-	stat.Rewards = blobber.Reward
+	stat.Rewards = blobber.Rewards.Rewards
 	for _, dp := range delegatePools {
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,
@@ -1466,10 +1465,42 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	common.Respond(w, r, validator, nil)
+	common.Respond(w, r, newValidatorNodeResponse(validator), nil)
 }
 
-// validators swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators validators
+type validatorNodeResponse struct {
+	ValidatorID string `json:"validator_id"`
+	BaseUrl     string `json:"url"`
+	Stake       int64  `json:"stake"`
+	PublicKey   string `json:"public_key"`
+
+	// StakePoolSettings
+	DelegateWallet string        `json:"delegate_wallet"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
+	NumDelegates   int           `json:"num_delegates"`
+	ServiceCharge  float64       `json:"service_charge"`
+
+	Rewards     currency.Coin `json:"rewards"`
+	TotalReward currency.Coin `json:"total_reward"`
+}
+
+func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
+	return &validatorNodeResponse{
+		ValidatorID:    v.ValidatorID,
+		BaseUrl:        v.BaseUrl,
+		Stake:          v.Stake,
+		PublicKey:      v.PublicKey,
+		DelegateWallet: v.DelegateWallet,
+		MinStake:       v.MinStake,
+		MaxStake:       v.MaxStake,
+		NumDelegates:   v.NumDelegates,
+		ServiceCharge:  v.ServiceCharge,
+		Rewards:        v.Rewards.Rewards,
+		TotalReward:    v.Rewards.TotalRewards,
+	}
+}
+
 // Gets list of all validators alive (e.g. excluding blobbers with zero capacity).
 //
 // responses:
@@ -1491,7 +1522,12 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	common.Respond(w, r, validators, nil)
+	vns := make([]*validatorNodeResponse, len(validators))
+	for i, v := range validators {
+		vns[i] = newValidatorNodeResponse(v)
+	}
+
+	common.Respond(w, r, vns, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers
@@ -2299,7 +2335,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				ServiceChargeRatio: blobber.ServiceCharge,
 			},
 		},
-		TotalServiceCharge: blobber.TotalServiceCharge,
+		TotalServiceCharge: blobber.Rewards.TotalRewards,
 		TotalStake:         blobber.TotalStake,
 		CreationRound:      blobber.CreationRound,
 		ReadData:           blobber.ReadData,
@@ -2342,6 +2378,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
+
 	blobbers, err := edb.GetBlobbers(limit)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber list" + err.Error())
@@ -2357,6 +2394,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		sn := blobberTableToStorageNode(blobber)
 		sns.Nodes = append(sns.Nodes, sn)
 	}
+
 	common.Respond(w, r, sns, nil)
 }
 
@@ -2680,8 +2718,13 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 	}
 
 	var resp interface{}
-	if allocationID == "" || blobberID == "" {
-		resp, err = edb.GetAllocationBlobberTerms(allocationID, blobberID, limit)
+	if allocationID == "" {
+		common.Respond(w, r, nil, common.NewErrBadRequest("missing allocation id"))
+		return
+	}
+
+	if blobberID == "" {
+		resp, err = edb.GetAllocationBlobberTerms(allocationID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("error finding terms: "+err.Error()))
 			return

@@ -660,25 +660,19 @@ func TestExtendAllocation(t *testing.T) {
 					},
 				}
 				sp.Pools[mockPoolId].Balance = zcnToBalance(mockStake)
-				balances.On(
-					"GetTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
+				balances.On("GetTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
 					mock.MatchedBy(func(s *stakePool) bool {
 						*s = sp
 						return true
 					})).Return(nil).Once()
-				balances.On(
-					"InsertTrieNode",
-					stakePoolKey(spenum.Blobber, mockBlobber.ID),
-					mock.Anything,
-				).Return("", nil).Once()
-				balances.On(
-					"EmitEvent",
-					event.TypeSmartContract, event.TagUpdateBlobber, mock.Anything, mock.Anything,
-				).Return().Maybe()
-				balances.On(
-					"EmitEvent",
-					event.TypeSmartContract, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
-				).Return().Maybe()
+				balances.On("InsertTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
+					mock.Anything).Return("", nil).Once()
+				balances.On("EmitEvent", event.TypeSmartContract,
+					event.TagUpdateBlobber, mock.Anything, mock.Anything).Return().Maybe()
+				balances.On("EmitEvent", event.TypeSmartContract,
+					event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything).Return().Maybe()
+				balances.On("EmitEvent", event.TypeStats,
+					event.TagUpdateBlobberTotalOffers, mock.Anything, mock.Anything).Return().Maybe()
 			}
 		}
 
@@ -1084,7 +1078,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"invalid character '}' looking for beginning of value"
 		errMsg6 = "allocation_creation_failed: " +
 			"invalid request: blobbers provided are not enough to honour the allocation"
-		errMsg7 = "allocation_creation_failed: " + "getting stake pools: value not present"
+		errMsg7 = "allocation_creation_failed: " + "getting stake pools: could not get item \"b1\": value not present"
 		errMsg8 = "allocation_creation_failed: " +
 			"no tokens to lock"
 		errMsg9 = "allocation_creation_failed: " +
@@ -2065,7 +2059,12 @@ func Test_finalize_allocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// expire the allocation
-	tp += int64(alloc.Until())
+	var conf *Config
+	conf, err = getConfig(balances)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+	tp += int64(alloc.Until(conf.MaxChallengeCompletionTime))
 
 	// finalize it
 
@@ -2080,10 +2079,6 @@ func Test_finalize_allocation(t *testing.T) {
 	// check out all the balances
 
 	cp, err = ssc.getChallengePool(allocID, balances)
-	require.NoError(t, err)
-
-	var conf *Config
-	conf, err = getConfig(balances)
 	require.NoError(t, err)
 
 	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))

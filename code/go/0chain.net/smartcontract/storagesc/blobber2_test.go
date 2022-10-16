@@ -235,7 +235,7 @@ func testCommitBlobberRead(
 		CreationDate: creationDate,
 	}
 	var ctx = &mockStateContext{
-		ctx: *cstate.NewStateContext(
+		StateContext: *cstate.NewStateContext(
 			&block.Block{},
 			&util.MerklePatriciaTrie{},
 			txn,

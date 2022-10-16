@@ -1015,7 +1015,19 @@ func getNodesList(balances cstate.CommonStateContextI, key datastore.Key) (*Mine
 		return nil, err
 	}
 
-	return nodesList, nil
+	ids := make([]string, 0, len(nodesList.Nodes))
+	for _, sh := range nodesList.Nodes {
+		ids = append(ids, sh.ID)
+	}
+
+	// TODO: replace AllShardersKey data in MPT with keys only or use partitions to
+	// avoid sync issue
+	ss, err := cstate.GetItemsByIDs(ids, getMinerNode, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MinerNodes{ss}, nil
 }
 
 // quick fix: localhost check + duplicate check

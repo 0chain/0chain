@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	common2 "0chain.net/smartcontract/common"
-	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -24,8 +23,9 @@ type Challenge struct {
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
 	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
-	RoundResponded int64            `json:"round_responded" gorm:"index"`
 	Passed         bool             `json:"passed"`
+	RoundResponded int64            `json:"round_responded" gorm:"index"`
+	ExpiredN       int              `json:"expired_n" gorm:"-"`
 }
 
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
@@ -86,16 +86,21 @@ func (edb *EventDb) GetChallengeForBlobber(blobberID, challengeID string) (*Chal
 	return ch, nil
 }
 
-func (edb *EventDb) addChallenge(ch *Challenge) error {
-	result := edb.Store.Get().Create(&ch)
-
-	return result.Error
+func (edb *EventDb) addChallenges(chlgs []Challenge) error {
+	return edb.Store.Get().Create(&chlgs).Error
 }
 
-func (edb *EventDb) updateChallenge(updates dbs.DbUpdates) error {
-	result := edb.Store.Get().
-		Model(&Challenge{}).
-		Where(&Challenge{ChallengeID: updates.Id}).
-		Updates(updates.Updates)
-	return result.Error
+func (edb *EventDb) updateChallenges(chs []Challenge) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "challenge_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"responded", "passed"}),
+	}).Create(chs).Error
+}
+
+func mergeAddChallengesEvents() *eventsMergerImpl[Challenge] {
+	return newEventsMerger[Challenge](TagAddChallenge, withUniqueEventOverwrite())
+}
+
+func mergeUpdateChallengesEvents() *eventsMergerImpl[Challenge] {
+	return newEventsMerger[Challenge](TagUpdateChallenge, withUniqueEventOverwrite())
 }

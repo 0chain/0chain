@@ -86,7 +86,7 @@ func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllo
 		Finalized:    alloc.Finalized,
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrUpdateChallengePool, "", data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrUpdateChallengePool, id, data)
 
 	return
 }
@@ -184,12 +184,13 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 
 // create, fill and save challenge pool for new allocation
 func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
-	alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
+	alloc *StorageAllocation, balances cstate.StateContextI, conf *Config) (err error) {
 
 	// create related challenge_pool expires with the allocation + challenge
 	// completion time
 	var cp *challengePool
-	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(),
+
+	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(conf.MaxChallengeCompletionTime),
 		balances)
 	if err != nil {
 		return fmt.Errorf("can't create challenge pool: %v", err)

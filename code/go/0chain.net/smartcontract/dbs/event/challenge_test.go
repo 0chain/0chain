@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/dbs"
 )
 
 func TestChallengeEvent(t *testing.T) {
@@ -43,18 +42,14 @@ func TestChallengeEvent(t *testing.T) {
 		Responded:      false,
 	}
 
-	err = eventDb.addChallenge(&c)
+	err = eventDb.addChallenges([]Challenge{c})
 	require.NoError(t, err, "Error while inserting Challenge to event Database")
 
 	var count int64
 	eventDb.Get().Table("curators").Count(&count)
 	require.Equal(t, int64(1), count, "Challenge not getting inserted")
 
-	update := dbs.DbUpdates{
-		Id:      c.ChallengeID,
-		Updates: map[string]interface{}{"responded": true},
-	}
-	err = eventDb.updateChallenge(update)
+	err = eventDb.updateChallenges([]Challenge{{ChallengeID: c.ChallengeID, Responded: true}})
 	require.NoError(t, err, "Error while updating challenge to event Database")
 
 	challenge, err := eventDb.GetChallenge(c.ChallengeID)

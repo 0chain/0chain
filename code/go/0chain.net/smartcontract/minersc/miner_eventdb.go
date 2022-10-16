@@ -37,7 +37,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 	return MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
-			Reward: edbMiner.Rewards,
+			Reward: edbMiner.Rewards.Rewards,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbMiner.DelegateWallet,
 				ServiceChargeRatio: edbMiner.ServiceCharge,
@@ -68,19 +68,25 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		MinStake:          mn.Settings.MinStake,
 		MaxStake:          mn.Settings.MaxStake,
 		LastHealthCheck:   mn.LastHealthCheck,
-		Rewards:           mn.Reward,
-		Active:            mn.Status == node.NodeStatusActive,
-		Longitude:         mn.Geolocation.Longitude,
-		Latitude:          mn.Geolocation.Latitude,
+		Rewards: event.ProviderRewards{
+			ProviderID:   mn.ID,
+			Rewards:      mn.Reward,
+			TotalRewards: mn.Reward,
+		},
+		Active:    mn.Status == node.NodeStatusActive,
+		Longitude: mn.Geolocation.Longitude,
+		Latitude:  mn.Geolocation.Latitude,
 	}
 }
 
-func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
-
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
-
-	return nil
-}
+//func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
+//
+//	logging.Logger.Info("emitting add miner event")
+//
+//	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
+//
+//	return nil
+//}
 
 func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
@@ -115,7 +121,6 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"last_health_check":   mn.LastHealthCheck,
 			"longitude":           mn.SimpleNode.Geolocation.Longitude,
 			"latitude":            mn.SimpleNode.Geolocation.Latitude,
-			"rewards":             mn.Reward,
 		},
 	}
 

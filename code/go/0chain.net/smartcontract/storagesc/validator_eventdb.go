@@ -53,7 +53,7 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 	return nil
 }
 
-func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
+func (vn *ValidationNode) emitAddOrOverwrite(balances cstate.StateContextI) error {
 	data := &event.Validator{
 		ValidatorID:    vn.ID,
 		BaseUrl:        vn.BaseURL,
@@ -62,8 +62,9 @@ func (vn *ValidationNode) emitAdd(balances cstate.StateContextI) error {
 		MaxStake:       vn.StakePoolSettings.MaxStake,
 		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
 		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+		Rewards:        event.ProviderRewards{ProviderID: vn.ID},
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrOverwiteValidator, vn.ID, data)
 	return nil
 }

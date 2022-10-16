@@ -1,6 +1,8 @@
 package stakepool
 
 import (
+	"fmt"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -38,7 +40,7 @@ func (dp DelegatePool) emitNew(
 	balances.EmitEvent(
 		event.TypeSmartContract,
 		event.TagAddOrOverwriteDelegatePool,
-		providerId,
+		fmt.Sprintf("%d:%s:%s", providerType, providerId, poolId),
 		data,
 	)
 }

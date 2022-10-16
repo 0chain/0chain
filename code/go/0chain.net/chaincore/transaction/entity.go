@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"0chain.net/core/viper"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"0chain.net/core/viper"
 
 	"github.com/0chain/common/core/currency"
 

@@ -48,10 +48,25 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	numAuth, err := getAuthorizerCount(ctx)
+	threshold := int(math.RoundToEven(gn.PercentAuthorizers * float64(numAuth)))
+
+	// if number of slices exceeds limits the check only withing required range
+	if len(payload.Signatures) < threshold {
+		msg := fmt.Sprintf("no of signatures lesser than threshold %d: %v, %s", threshold, err, info)
+		err = common.NewError(code, msg)
+		return
+	}
+
+	if len(payload.Signatures) > numAuth {
+		logging.Logger.Info("no of signatures execeed the no of available authorizers", zap.Int("available", numAuth))
+		payload.Signatures = payload.Signatures[0:numAuth]
+	}
+
 	// ClientID - is a client who broadcasts this transaction to mint token
 	// ToClientID - is an address of the smart contract
 	if payload.ReceivingClientID != trans.ClientID {
-		msg := fmt.Sprintf("transaction made from different account who made burn,  Oririnal: %s, Current: %s",
+		msg := fmt.Sprintf("transaction made from different account who made burn,  Original: %s, Current: %s",
 			payload.ReceivingClientID, trans.ClientID)
 		err = common.NewError(code, msg)
 		return
@@ -87,8 +102,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	numAuth, err := getAuthorizerCount(ctx)
-
 	uniqueSignatures := payload.getUniqueSignatures()
 
 	// verify signatures of authorizers
@@ -98,7 +111,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = common.NewError(code, msg)
 	}
 
-	if len(uniqueSignatures) < int(math.RoundToEven(gn.PercentAuthorizers*float64(numAuth))) {
+	if len(uniqueSignatures) < threshold {
 		err = common.NewError(
 			code,
 			"not enough valid signatures for minting",

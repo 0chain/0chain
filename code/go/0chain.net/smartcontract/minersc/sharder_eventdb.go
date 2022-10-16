@@ -1,12 +1,12 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/stakepool"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/logging"
 )
 
 func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
@@ -39,7 +39,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 	return MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
-			Reward: edbSharder.Rewards,
+			Reward: edbSharder.Rewards.Rewards,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbSharder.DelegateWallet,
 				ServiceChargeRatio: edbSharder.ServiceCharge,
@@ -71,24 +71,27 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		MinStake:          sn.Settings.MinStake,
 		MaxStake:          sn.Settings.MaxStake,
 		LastHealthCheck:   sn.LastHealthCheck,
-		Rewards:           sn.Reward,
-		Active:            sn.Status == node.NodeStatusActive,
-		Longitude:         sn.Geolocation.Longitude,
-		Latitude:          sn.Geolocation.Latitude,
+		Rewards: event.ProviderRewards{
+			ProviderID:   sn.ID,
+			Rewards:      sn.Reward,
+			TotalRewards: sn.Reward,
+		},
+		Active:    sn.Status == node.NodeStatusActive,
+		Longitude: sn.Geolocation.Longitude,
+		Latitude:  sn.Geolocation.Latitude,
 	}
 }
 
-func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) error {
-
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
-
-	return nil
-}
+//func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) error {
+//
+//	balances.EmitEvent(event.TypeSmartContract, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
+//
+//	logging.Logger.Warn("emit sharder - add sharder", zap.String("id", sn.ID))
+//	return nil
+//}
 
 func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) error {
-
 	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrOverwriteSharder, sn.ID, sharderNodeToSharderTable(sn))
-
 	return nil
 }
 
@@ -114,7 +117,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"last_health_check":   sn.LastHealthCheck,
 			"longitude":           sn.SimpleNode.Geolocation.Longitude,
 			"latitude":            sn.SimpleNode.Geolocation.Latitude,
-			"rewards":             sn.Reward,
 		},
 	}
 
@@ -123,6 +125,7 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 	}
 
 	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateSharder, sn.ID, dbUpdates)
+	logging.Logger.Warn("emit sharder - update sharder")
 	return nil
 }
 

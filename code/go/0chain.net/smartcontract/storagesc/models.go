@@ -1036,7 +1036,7 @@ func removeAllocationFromBlobber(
 
 	blobberID := blobAlloc.BlobberID
 	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
-		logging.Logger.Error("skipping removing allocation from blobber partition" +
+		logging.Logger.Warn("skipping removing allocation from blobber partition, " +
 			"empty blobber allocation partition location")
 		return nil
 	}
@@ -1178,9 +1178,8 @@ func (sa *StorageAllocation) validateEachBlobber(
 }
 
 // Until returns allocation expiration.
-func (sa *StorageAllocation) Until() common.Timestamp {
-	var conf = Config{}
-	return sa.Expiration + toSeconds(conf.MaxChallengeCompletionTime)
+func (sa *StorageAllocation) Until(maxChallengeCompletionTime time.Duration) common.Timestamp {
+	return sa.Expiration + toSeconds(maxChallengeCompletionTime)
 }
 
 // The durationInTimeUnits returns given duration (represented as

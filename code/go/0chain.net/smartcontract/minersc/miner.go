@@ -110,7 +110,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 				"saving all miners list: %v", err)
 		}
 
-		err = emitAddMiner(newMiner, balances)
+		err = emitAddOrOverwriteMiner(newMiner, balances)
 		if err != nil {
 			return "", common.NewErrorf("add_miner",
 				"insert new miner: %v", err)
@@ -310,7 +310,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	return string(mn.Encode()), nil
 }
 
-//------------- local functions ---------------------
+// ------------- local functions ---------------------
 // TODO: remove this or return error and do real checking
 func (msc *MinerSmartContract) verifyMinerState(allMinersList *MinerNodes, balances cstate.StateContextI,
 	msg string) {
