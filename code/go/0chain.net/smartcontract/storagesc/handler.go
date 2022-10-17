@@ -2277,13 +2277,21 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	values := r.URL.Query()
+	active := values.Get("active")
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	blobbers, err := edb.GetBlobbers(limit)
+	var blobbers []event.Blobber
+	if active == "true" {
+		blobbers, err = edb.GetActiveBlobbers(limit)
+	} else {
+		blobbers, err = edb.GetBlobbers(limit)
+	}
+
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber list" + err.Error())
 		common.Respond(w, r, nil, err)
