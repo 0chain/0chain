@@ -100,6 +100,11 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/round_info": common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
+		"/v1/estimate_tx_cost": common.UserRateLimit(
+			common.ToJSONResponse(
+				nil, // TODO
+			),
+		),
 		"/v1/transaction/put": common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
