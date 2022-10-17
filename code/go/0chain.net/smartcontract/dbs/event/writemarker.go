@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm"

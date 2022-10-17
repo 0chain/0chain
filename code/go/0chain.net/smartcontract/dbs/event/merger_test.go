@@ -3,8 +3,8 @@ package event
 import (
 	"testing"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/currency"
 	"github.com/stretchr/testify/require"
 )
 

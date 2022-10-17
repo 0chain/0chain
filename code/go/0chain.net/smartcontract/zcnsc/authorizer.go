@@ -123,7 +123,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	}
 
 	// Events emission
-	ctx.EmitEvent(event.TypeSmartContract, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent())
+	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent())
 
 	err = increaseAuthorizerCount(ctx)
 
@@ -347,7 +347,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 		return "", err
 	}
 
-	ctx.EmitEvent(event.TypeSmartContract, event.TagDeleteAuthorizer, authorizerID, authorizerID)
+	ctx.EmitEvent(event.TypeStats, event.TagDeleteAuthorizer, authorizerID, authorizerID)
 
 	Logger.Info(
 		"Successfully deleted authorizer",
@@ -423,7 +423,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		return "", err
 	}
 
-	ctx.EmitEvent(event.TypeSmartContract, event.TagUpdateAuthorizer, authorizer.ID, authorizer.ToEvent())
+	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, authorizer.ID, authorizer.ToEvent())
 
 	return string(authorizer.Encode()), nil
 }

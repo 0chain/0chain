@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -56,7 +55,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	}
 
 	err = alloc.emitAdd(balances)
-	balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
+	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: alloc.ID,
 		Delta:        alloc.Size,
@@ -292,7 +291,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	for _, b := range blobberNodes {
 		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
-		balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, b.ID, event.AllocationValueChanged{
+		balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, b.ID, event.AllocationValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: sa.ID,
 			Delta:        bSize(request.Size, request.DataShards),
@@ -661,7 +660,7 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 // closeAllocation making it expired; the allocation will be alive the
 // challenge_completion_time and be closed then
 func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
-	alloc *StorageAllocation, table *event.Allocation, balances chainstate.StateContextI) (
+	alloc *StorageAllocation, balances chainstate.StateContextI) (
 	resp string, err error) {
 
 	if alloc.Expiration-t.CreationDate <
@@ -697,7 +696,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			"can't save allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return string(alloc.Encode()), nil // closing
 }
@@ -718,7 +717,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		return
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
 	return
 }
 
@@ -855,7 +854,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 			if err != nil {
 				return
 			}
-			balances.EmitEvent(event.TypeSmartContract, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+			balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
 				Client:       alloc.Owner,
 				AllocationId: alloc.ID,
 				Amount:       i,
@@ -891,7 +890,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	var prevExpiration = alloc.Expiration
 	alloc.Expiration += req.Expiration // new expiration
 	alloc.Size += req.Size             // new size
-	balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
+	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: alloc.ID,
 		Delta:        req.Size,
@@ -919,7 +918,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		b.Allocated += diff // new capacity used
-		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: alloc.ID,
 			BlobberId:    b.ID,
@@ -1028,7 +1027,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 	// adjust the expiration if changed, boundaries has already checked
 	alloc.Expiration += req.Expiration
 	alloc.Size += req.Size
-	balances.EmitEvent(event.TypeSmartContract, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
+	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: alloc.ID,
 		Delta:        req.Size,
@@ -1039,7 +1038,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 		var b = blobbers[i]
 		oldOffer := ba.Offer()
 		b.Allocated += diff // new capacity used
-		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: alloc.ID,
 			BlobberId:    b.ID,
@@ -1134,7 +1133,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get existing allocation: "+err.Error())
 	}
-	table, err := storageAllocationToAllocationTable(alloc)
+	_, err = storageAllocationToAllocationTable(alloc)
 	if err != nil {
 		return "", err
 	}
@@ -1480,7 +1479,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"saving allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	emitDeleteAllocationBlobberTerms(alloc, balances, t)
 
@@ -1563,7 +1562,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"saving allocation: "+err.Error())
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 
@@ -1674,13 +1673,13 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 
 		tag, data := event.NewUpdateBlobberTotalStakeEvent(d.BlobberID, staked)
-		balances.EmitEvent(event.TypeSmartContract, tag, d.BlobberID, data)
+		balances.EmitEvent(event.TypeStats, tag, d.BlobberID, data)
 		if d.Terms.WritePrice > 0 {
 			stake, err := sps[i].stake()
 			if err != nil {
 				return err
 			}
-			balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, d.BlobberID, event.AllocationBlobberValueChanged{
+			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, d.BlobberID, event.AllocationBlobberValueChanged{
 				FieldType:    event.Staked,
 				AllocationId: "",
 				BlobberId:    d.BlobberID,
@@ -1749,7 +1748,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return common.NewError("fini_alloc_failed",
 			"emitting pool change "+err.Error())
 	}
-	balances.EmitEvent(event.TypeSmartContract, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 		Client:       alloc.Owner,
 		AllocationId: alloc.ID,
 		Amount:       i,
@@ -1800,7 +1799,7 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"saving new allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	// txn.Hash is the id of the new token pool
 	return txn.Hash, nil

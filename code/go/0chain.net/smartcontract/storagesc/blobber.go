@@ -104,7 +104,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	blobber.LastHealthCheck = t.CreationDate
 	aDelta := blobber.Allocated - savedBlobber.Allocated
 	if aDelta != 0 {
-		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: "",
 			BlobberId:    blobber.ID,
@@ -129,10 +129,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	var sp *stakePool
 	if sp, err = sc.getStakePool(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
-	}
-	before, err := sp.stake()
-	if err != nil {
-		return err
 	}
 	stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
 	if err != nil {
@@ -162,35 +158,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
-
-	//data := dbs.DbUpdates{
-	//	Id: blobber.ID,
-	//	Updates: map[string]interface{}{
-	//		"total_stake": int64(staked),
-	//	},
-	//}
-	//balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobber, blobber.ID, data)
-	//if blobber.Terms.WritePrice > 0 {
-	//	stake, err := sp.stake()
-	//	if err != nil {
-	//		return err
-	//	}
-	//	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
-	//		FieldType:    event.Staked,
-	//		AllocationId: "",
-	//		BlobberId:    blobber.ID,
-	//		Delta:        int64((stake - before) / blobber.Terms.WritePrice),
-	//	})
-	//}
-	//
-	//cDelta := blobber.Capacity - savedBlobber.Capacity
-	//balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
-	//	FieldType:    event.MaxCapacity,
-	//	AllocationId: "",
-	//	BlobberId:    blobber.ID,
-	//	Delta:        cDelta,
-	//})
-
 	return
 }
 
@@ -204,7 +171,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Used,
 		AllocationId: "",
 		BlobberId:    blobber.ID,
@@ -220,7 +187,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 		sc.statDecr(statNumberOfBlobbers)
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagDeleteBlobber, blobber.ID, blobber.ID)
+	balances.EmitEvent(event.TypeStats, event.TagDeleteBlobber, blobber.ID, blobber.ID)
 
 	return // opened offers are still opened
 }
@@ -274,7 +241,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		}
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.MaxCapacity,
 		AllocationId: "",
 		BlobberId:    blobber.ID,
@@ -326,7 +293,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
-	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Used,
 		AllocationId: "",
 		BlobberId:    blobber.ID,
@@ -565,7 +532,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("saving read marker", err.Error())
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	err = emitAddOrOverwriteReadMarker(commitRead.ReadMarker, balances, t)
 	if err != nil {
@@ -600,7 +567,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
-		balances.EmitEvent(event.TypeSmartContract, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
 			AllocationId: alloc.ID,
 			Amount:       coin,
@@ -624,7 +591,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
 		err = alloc.moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
-		balances.EmitEvent(event.TypeSmartContract, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
 			AllocationId: alloc.ID,
 			Amount:       coin,
@@ -740,7 +707,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
+	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Used,
 		AllocationId: alloc.ID,
 		BlobberId:    blobber.ID,
@@ -957,7 +924,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	}
 
 	tag, data := event.NewUpdateBlobberTotalStakeEvent(t.ClientID, staked)
-	balances.EmitEvent(event.TypeSmartContract, tag, t.ClientID, data)
+	balances.EmitEvent(event.TypeStats, tag, t.ClientID, data)
 
 	// update the list
 	if err := emitAddBlobber(blobber, sp, balances); err != nil {

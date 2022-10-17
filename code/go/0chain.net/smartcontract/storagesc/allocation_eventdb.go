@@ -248,7 +248,7 @@ func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 		return err
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddAllocation, alloc.AllocationID, alloc)
+	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil
 }

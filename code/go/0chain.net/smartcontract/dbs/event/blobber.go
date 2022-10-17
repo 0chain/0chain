@@ -9,8 +9,6 @@ import (
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -35,6 +33,7 @@ type Blobber struct {
 
 	Capacity        int64 `json:"capacity"`  // total blobber capacity
 	Allocated       int64 `json:"allocated"` // allocated capacity
+	Used            int64 `json:"used"`      // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
 	ReadData        int64 `json:"read_data"`
@@ -49,6 +48,8 @@ type Blobber struct {
 	OffersTotal  currency.Coin `json:"offers_total"`
 	UnstakeTotal currency.Coin `json:"unstake_total"`
 	TotalStake   currency.Coin `json:"total_stake"`
+	//todo update
+	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 
 	Name        string `json:"name" gorm:"name"`
 	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
@@ -329,6 +330,7 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
 		a.Used += b.Used
 		a.SavedData += b.SavedData
+		a.ReadData += b.ReadData
 		return a, nil
 	})
 }
@@ -341,6 +343,7 @@ func withBlobberChallengesMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
 		a.ChallengesCompleted += b.ChallengesCompleted
 		a.ChallengesPassed += b.ChallengesPassed
+		a.OpenChallenges += b.OpenChallenges
 		return a, nil
 	})
 }

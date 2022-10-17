@@ -84,14 +84,14 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 
 //func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) error {
 //
-//	balances.EmitEvent(event.TypeSmartContract, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
+//	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
 //
 //	logging.Logger.Warn("emit sharder - add sharder", zap.String("id", sn.ID))
 //	return nil
 //}
 
 func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) error {
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrOverwriteSharder, sn.ID, sharderNodeToSharderTable(sn))
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sn.ID, sharderNodeToSharderTable(sn))
 	return nil
 }
 
@@ -124,13 +124,13 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 		dbUpdates.Updates["active"] = sn.Status == node.NodeStatusActive
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateSharder, sn.ID, dbUpdates)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateSharder, sn.ID, dbUpdates)
 	logging.Logger.Warn("emit sharder - update sharder")
 	return nil
 }
 
 func emitDeleteSharder(id string, balances cstate.StateContextI) error {
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagDeleteSharder, id, id)
+	balances.EmitEvent(event.TypeStats, event.TagDeleteSharder, id, id)
 	return nil
 }

@@ -407,25 +407,25 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAddAllocation, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAddAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagLockReadPool, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagLockReadPool, mock.Anything, mock.Anything,
 		).Return().Maybe()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAddOrOverwriteAllocationBlobberTerm, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
 		).Return().Maybe()
 		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobberTotalOffers,
 			mock.Anything, mock.Anything).Return().Maybe()
@@ -440,11 +440,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 			})).Return("", nil).Once()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAllocValueChange, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
@@ -743,25 +743,25 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagUpdateAllocation, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagUpdateAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
 		).Return().Maybe()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAllocValueChange, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagUpdateAllocationBlobberTerm, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagUpdateAllocationBlobberTerm, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(

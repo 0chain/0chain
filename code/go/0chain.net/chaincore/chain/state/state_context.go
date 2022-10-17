@@ -215,7 +215,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 			sc.events = append(sc.events, event.Event{
 				BlockNumber: sc.block.Round,
 				TxHash:      sc.txn.Hash,
-				Type:        int(event.TypeSmartContract),
+				Type:        int(event.TypeStats),
 				Tag:         int(event.TagBurn),
 				Index:       sc.txn.Hash,
 				Data:        t,
@@ -228,7 +228,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 			sc.events = append(sc.events, event.Event{
 				BlockNumber: sc.block.Round,
 				TxHash:      sc.txn.Hash,
-				Type:        int(event.TypeSmartContract),
+				Type:        int(event.TypeStats),
 				Tag:         int(event.TagAddMint),
 				Index:       sc.txn.Hash,
 				Data: state.Mint{
@@ -261,7 +261,7 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
-		Type:        int(event.TypeSmartContract),
+		Type:        int(event.TypeStats),
 		Tag:         int(event.TagAddMint),
 		Index:       sc.txn.Hash,
 		Data:        m,

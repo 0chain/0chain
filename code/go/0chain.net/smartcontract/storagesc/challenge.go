@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -157,7 +158,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		blobAlloc.Returned = newReturned
 
 		coin, _ := move.Int64()
-		balances.EmitEvent(event.TypeSmartContract, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
 			AllocationId: alloc.ID,
 			Amount:       coin,
@@ -213,7 +214,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		if err != nil {
 			return err
 		}
-		balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",
 			BlobberId:    blobAlloc.BlobberID,
@@ -343,7 +344,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	err = alloc.moveFromChallengePool(cp, move)
 	coin, _ := move.Int64()
-	balances.EmitEvent(event.TypeSmartContract, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 		Client:       alloc.Owner,
 		AllocationId: alloc.ID,
 		Amount:       coin,
@@ -396,7 +397,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		}
 		blobAlloc.Penalty = penalty
 		if blobAlloc.Terms.WritePrice > 0 {
-			balances.EmitEvent(event.TypeSmartContract, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
+			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
 				FieldType:    event.Staked,
 				AllocationId: "",
 				BlobberId:    blobAlloc.BlobberID,
@@ -661,7 +662,6 @@ func (sc *StorageSmartContract) challengePassed(
 	}
 
 	emitUpdateChallenge(challenge, true, balances)
-	emitUpdateBlobberChallengeStats(challenge.BlobberID, true, balances)
 
 	err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
 	if err != nil {
@@ -731,7 +731,6 @@ func (sc *StorageSmartContract) challengeFailed(
 	blobAlloc.Stats.OpenChallenges--
 
 	emitUpdateChallenge(challenge, false, balances)
-	emitUpdateBlobberChallengeStats(challenge.BlobberID, false, balances)
 
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
@@ -751,7 +750,7 @@ func (sc *StorageSmartContract) challengeFailed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
-	//balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	//balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	if pass && !fresh {
 		return "late challenge (failed)", nil
 	}
@@ -1123,7 +1122,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			"error storing allocation: %v", err)
 	}
 
-	//balances.EmitEvent(event.TypeSmartContract, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
+	//balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
 
 	emitAddChallenge(challInfo, len(expiredIDs), balances)
 	return nil

@@ -23,7 +23,6 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 		roundEventsChan: make(chan blockEvents, 10),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
-	go eventDb.addRoundEventsWorker(common.GetRootContext(), config.AggregatePeriod)
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}

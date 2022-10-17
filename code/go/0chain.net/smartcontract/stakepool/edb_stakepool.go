@@ -26,7 +26,7 @@ func (spu StakePoolReward) Emit(
 ) error {
 
 	balances.EmitEvent(
-		event.TypeSmartContract,
+		event.TypeStats,
 		tag,
 		spu.ProviderId,
 		stakePoolRewardToStakePoolRewardEvent(spu),

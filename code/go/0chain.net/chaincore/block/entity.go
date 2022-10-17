@@ -919,7 +919,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.Events = append(b.Events, event.Event{
 			BlockNumber: b.Round,
 			TxHash:      txn.Hash,
-			Type:        int(event.TypeSmartContract),
+			Type:        int(event.TypeStats),
 			Tag:         int(event.TagAddTransactions),
 			Index:       txn.Hash,
 			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),

@@ -776,7 +776,7 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) error {
 		return nil
 	}
 
-	sc.EmitEvent(event.TypeSmartContract, event.TagAddOrOverwriteUser, usr.UserID, usr,
+	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, usr.UserID, usr,
 		func(events []event.Event, current event.Event) []event.Event {
 			return append([]event.Event{current}, events...)
 		})
@@ -787,7 +787,7 @@ func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) error {
 		return nil
 	}
 
-	sc.EmitEvent(event.TypeSmartContract, event.TagAddMint, "", usr)
+	sc.EmitEvent(event.TypeStats, event.TagAddMint, "", usr)
 
 	return nil
 }
@@ -796,7 +796,7 @@ func (c *Chain) emitSendTransferEvent(sc bcstate.StateContextI, usr *event.User)
 		return nil
 	}
 
-	sc.EmitEvent(event.TypeSmartContract, event.TagSendTransfer, "", usr)
+	sc.EmitEvent(event.TypeStats, event.TagSendTransfer, "", usr)
 
 	return nil
 }
@@ -805,7 +805,7 @@ func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.Us
 		return nil
 	}
 
-	sc.EmitEvent(event.TypeSmartContract, event.TagReceiveTransfer, "", usr)
+	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, "", usr)
 
 	return nil
 }

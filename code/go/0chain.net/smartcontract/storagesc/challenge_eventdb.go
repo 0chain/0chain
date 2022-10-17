@@ -55,7 +55,6 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 }
 
 func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
 		AllocationID:    ch.AllocationID,
 		OpenChallenges:  int64(1 - expiredN), // increase one challenge and remove expired ones
@@ -65,12 +64,12 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstat
 
 func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI) {
 	clg := event.Challenge{
-		ChallengeID:  sc.ID,
-		AllocationID: sc.AllocationID,
-		BlobberID:    sc.BlobberID,
-		Responded:    sc.Responded,
+		ChallengeID:    sc.ID,
+		AllocationID:   sc.AllocationID,
+		BlobberID:      sc.BlobberID,
+		Responded:      sc.Responded,
 		RoundResponded: balances.GetBlock().Round,
-		Passed:       passed,
+		Passed:         passed,
 	}
 
 	a := event.Allocation{
@@ -82,6 +81,7 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	b := event.Blobber{
 		BlobberID:           sc.BlobberID,
 		ChallengesCompleted: 1,
+		OpenChallenges:      1,
 	}
 
 	if passed {
@@ -93,7 +93,7 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.AllocationID, a)
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {

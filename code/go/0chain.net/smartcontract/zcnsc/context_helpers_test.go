@@ -203,7 +203,7 @@ func MakeMockStateContext() *mockStateContext {
 		})
 
 	ctx.On("EmitEvent",
-		event.TypeSmartContract,
+		event.TypeStats,
 		event.TagAddAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID
 		mock.Anything,                 // authorizer payload
@@ -220,7 +220,7 @@ func MakeMockStateContext() *mockStateContext {
 		})
 
 	ctx.On("EmitEvent",
-		event.TypeSmartContract,
+		event.TypeStats,
 		event.TagUpdateAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID
 		mock.Anything,                 // authorizer payload

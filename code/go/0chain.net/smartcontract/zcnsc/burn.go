@@ -101,7 +101,7 @@ func (zcn *ZCNSmartContract) Burn(
 		EthereumAddress: payload.EthereumAddress,
 	}
 
-	ctx.EmitEvent(event.TypeSmartContract, event.TagBurn, "", trans.Value)
+	ctx.EmitEvent(event.TypeStats, event.TagBurn, "", trans.Value)
 
 	resp = string(response.Encode())
 	return

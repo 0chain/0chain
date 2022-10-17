@@ -95,7 +95,7 @@ func (sp *StakePool) LockPool(
 
 	usp.Add(providerId)
 	i, _ := txn.Value.Int64()
-	balances.EmitEvent(event.TypeSmartContract, event.TagLockStakePool, newPoolId, event.DelegatePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, event.DelegatePoolLock{
 		Client:       txn.ClientID,
 		ProviderId:   providerId,
 		ProviderType: providerType,

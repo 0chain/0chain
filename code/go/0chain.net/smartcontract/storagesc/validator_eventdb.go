@@ -49,7 +49,7 @@ func (vn *ValidationNode) emitUpdate(balances cstate.StateContextI) error {
 		},
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
 	return nil
 }
 
@@ -65,6 +65,6 @@ func (vn *ValidationNode) emitAddOrOverwrite(balances cstate.StateContextI) erro
 		Rewards:        event.ProviderRewards{ProviderID: vn.ID},
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrOverwiteValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwiteValidator, vn.ID, data)
 	return nil
 }

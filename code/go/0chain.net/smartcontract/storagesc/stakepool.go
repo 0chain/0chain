@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"github.com/0chain/common/core/currency"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -95,7 +95,7 @@ func (sp *stakePool) save(providerType spenum.Provider, providerID string,
 		switch providerType {
 		case spenum.Blobber:
 			tag, data := event.NewUpdateBlobberTotalOffersEvent(providerID, sp.TotalOffers)
-			balances.EmitEvent(event.TypeSmartContract, tag, providerID, data)
+			balances.EmitEvent(event.TypeStats, tag, providerID, data)
 			sp.isOfferChanged = false
 		case spenum.Validator:
 			// TODO: perhaps implement validator stake update events
@@ -566,7 +566,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)
 	}
-	sp.emitSaveEvent(spr.ProviderType, spr.ProviderID, balances)
+	//todo merge problem
+	//sp.emitSaveEvent(spr.ProviderType, spr.ProviderID, balances)
 
 	switch spr.ProviderType {
 	case spenum.Blobber:

@@ -667,9 +667,9 @@ func TestExtendAllocation(t *testing.T) {
 					})).Return(nil).Once()
 				balances.On("InsertTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
 					mock.Anything).Return("", nil).Once()
-				balances.On("EmitEvent", event.TypeSmartContract,
+				balances.On("EmitEvent", event.TypeStats,
 					event.TagUpdateBlobber, mock.Anything, mock.Anything).Return().Maybe()
-				balances.On("EmitEvent", event.TypeSmartContract,
+				balances.On("EmitEvent", event.TypeStats,
 					event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything).Return().Maybe()
 				balances.On("EmitEvent", event.TypeStats,
 					event.TagUpdateBlobberTotalOffers, mock.Anything, mock.Anything).Return().Maybe()
@@ -697,11 +697,11 @@ func TestExtendAllocation(t *testing.T) {
 		).Return("", nil).Once()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAllocValueChange, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return ssc, &txn, sa, blobbers, balances
@@ -874,11 +874,11 @@ func TestTransferAllocation(t *testing.T) {
 
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagUpdateAllocation, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagUpdateAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
 		balances.On(
 			"EmitEvent",
-			event.TypeSmartContract, event.TagAllocValueChange, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}

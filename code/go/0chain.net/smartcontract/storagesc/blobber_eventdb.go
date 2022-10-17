@@ -5,7 +5,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
+func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
@@ -74,11 +74,11 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			Rewards:      sp.Reward,
 			TotalRewards: sp.Reward,
 		},
-		TotalStake: staked,
+		TotalStake:    staked,
 		CreationRound: balances.GetBlock().Round,
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddBlobber, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)
 	return nil
 }
 

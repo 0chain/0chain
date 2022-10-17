@@ -24,7 +24,7 @@ const (
 	TypeNone EventType = iota
 	TypeError
 	TypeChain
-	TypeSmartContract
+	TypeStats
 )
 
 const GB = 1024 * 1024 * 1024
@@ -221,13 +221,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
-	logging.Logger.Info("events worker started")
-	var round int64
 	for {
 		es := <-edb.eventsChannel
-		if len(es.events) == 0 {
-			continue
-		}
 		edb.addEvents(ctx, es)
 		tse := time.Now()
 		tags := make([]int, 0, len(es.events))
@@ -288,67 +283,66 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
-	logging.Logger.Info("round events worker started")
-	var round int64
+//
+//func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
+//	logging.Logger.Info("round events worker started")
+//	var round int64
+//
+//	var gs = newGlobalSnapshot()
+//	for {
+//		select {
+//		case e := <-edb.roundEventsChan:
+//			if len(e.events) == 0 {
+//				round = e.round
+//				continue
+//			}
+//			//init round with event's if not ran far away
+//			if round == 0 {
+//				global, _ := edb.GetGlobal()
+//				round = global.Round
+//				//if good start (not missed period)
+//				if global.Round+period > e.events[0].BlockNumber {
+//					round = e.events[0].BlockNumber - 1
+//				}
+//			}
+//			if round > e.events[0].BlockNumber {
+//				logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
+//					"events for round %v recieved after events for ruond %v", e.events[0].BlockNumber, round))
+//				continue
+//			}
+//			if round+1 != e.events[0].BlockNumber {
+//				logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
+//					"events for round %v recieved instead", round+1, e.events[0].BlockNumber))
+//				//TODO return this check, when the cause of restart will be clear
+//				//continue
+//			}
+//
+//			round = e.events[0].BlockNumber
+//			edb.updateBlobberAggregate(round, period, gs)
+//			gs.update(e.events)
+//
+//			if round%period == 0 {
+//				gs.Round = round
+//				if err := edb.addSnapshot(gs.Snapshot); err != nil {
+//					logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
+//				}
+//				gs = &globalSnapshot{
+//					Snapshot: Snapshot{
+//						TotalMint:           gs.TotalMint,
+//						ZCNSupply:           gs.ZCNSupply,
+//						TotalValueLocked:    gs.TotalValueLocked,
+//						ClientLocks:         gs.ClientLocks,
+//						TotalChallengePools: gs.TotalChallengePools, // todo is this total or delta
+//					},
+//				}
+//			}
+//		case <-ctx.Done():
+//			return
+//		}
+//	}
+//}
 
-	var gs = newGlobalSnapshot()
-	for {
-		select {
-		case e := <-edb.roundEventsChan:
-			if len(e.events) == 0 {
-				round = e.round
-				continue
-			}
-			//init round with event's if not ran far away
-			if round == 0 {
-				global, _ := edb.GetGlobal()
-				round = global.Round
-				//if good start (not missed period)
-				if global.Round+period > e.events[0].BlockNumber {
-					round = e.events[0].BlockNumber - 1
-				}
-			}
-			if round > e.events[0].BlockNumber {
-				logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
-					"events for round %v recieved after events for ruond %v", e.events[0].BlockNumber, round))
-				continue
-			}
-			if round+1 != e.events[0].BlockNumber {
-				logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
-					"events for round %v recieved instead", round+1, e.events[0].BlockNumber))
-				//TODO return this check, when the cause of restart will be clear
-				//continue
-			}
-
-			round = e.events[0].BlockNumber
-			edb.updateBlobberAggregate(round, period, gs)
-			gs.update(e.events)
-
-			if round%period == 0 {
-				gs.Round = round
-				if err := edb.addSnapshot(gs.Snapshot); err != nil {
-					logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
-				}
-				gs = &globalSnapshot{
-					Snapshot: Snapshot{
-						TotalMint:           gs.TotalMint,
-						ZCNSupply:           gs.ZCNSupply,
-						TotalValueLocked:    gs.TotalValueLocked,
-						ClientLocks:         gs.ClientLocks,
-						TotalChallengePools: gs.TotalChallengePools, // todo is this total or delta
-					},
-				}
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func (edb *EventDb) addSmartContractEvent(event Event) error {
-	edb.copyToRoundChan(event)
-
+func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
 	// blobber
 	case TagAddBlobber:
@@ -417,7 +411,7 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 		if err := edb.addWriteMarkers(*wms); err != nil {
 			return err
 		}
-		return edb.IncrementDataSaved(wm.BlobberID, wm.Size)
+		return nil
 	case TagAddReadMarker:
 		rms, ok := fromEvent[[]ReadMarker](event.Data)
 		if !ok {
@@ -429,8 +423,6 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 			(*rms)[i].TransactionID = event.TxHash
 
 		}
-		err := edb.IncrementDataRead(rm.BlobberID, int64(rm.ReadSize)*GB)
-
 		return edb.addOrOverwriteReadMarker(*rms)
 	case TagAddOrOverwriteUser:
 		users, ok := fromEvent[[]User](event.Data)
@@ -559,9 +551,6 @@ func (edb *EventDb) addSmartContractEvent(event Event) error {
 		challenges, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
 			return ErrInvalidEventData
-		}
-		if err := edb.incrementOpenChallenges(chall.BlobberID); err != nil {
-			return err
 		}
 		return edb.addChallenges(*challenges)
 	case TagAddChallengeToAllocation:

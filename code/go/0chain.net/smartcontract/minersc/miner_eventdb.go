@@ -5,8 +5,8 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
-	"github.com/0chain/common/core/logging"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/logging"
 )
 
 func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
@@ -92,7 +92,7 @@ func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error
 
 	logging.Logger.Info("emitting add or overwrite miner event")
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagAddOrOverwriteMiner, mn.ID, minerNodeToMinerTable(mn))
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, mn.ID, minerNodeToMinerTable(mn))
 
 	return nil
 }
@@ -128,7 +128,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 		dbUpdates.Updates["active"] = mn.Status == node.NodeStatusActive
 	}
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagUpdateMiner, mn.ID, dbUpdates)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, dbUpdates)
 	return nil
 }
 
@@ -136,6 +136,6 @@ func emitDeleteMiner(id string, balances cstate.StateContextI) error {
 
 	logging.Logger.Info("emitting delete miner event")
 
-	balances.EmitEvent(event.TypeSmartContract, event.TagDeleteMiner, id, id)
+	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, id)
 	return nil
 }
