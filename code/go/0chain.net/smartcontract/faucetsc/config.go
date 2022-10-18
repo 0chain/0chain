@@ -3,11 +3,10 @@ package faucetsc
 import (
 	"time"
 
-	"0chain.net/chaincore/currency"
-	"github.com/0chain/common/core/util"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -93,6 +92,7 @@ func InitConfig(balances cstate.CommonStateContextI) error {
 		if err != nil {
 			return err
 		}
+		gn.ID = ADDRESS
 		_, err = balances.InsertTrieNode(globalNodeKey, gn)
 		return err
 	}
