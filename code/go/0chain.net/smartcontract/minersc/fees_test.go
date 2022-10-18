@@ -289,13 +289,13 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		blockSharders, err := msc.getBlockSharders(b, balances)
-		require.NoError(t, err)
+		blockSharders, err := getAllShardersList(balances)
+		require.NoError(t, err, "getShardersList error")
 		for _, sh := range sharders {
-			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
+			if existInDelegatesOfNodes(sh.delegate.id, blockSharders.Nodes) {
 				shP, err := computeShardersPayments(gn, msc, b)
 				require.NoError(t, err)
-				shP = shP / currency.Coin(len(blockSharders))
+				shP = shP / currency.Coin(len(blockSharders.Nodes))
 
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
@@ -376,13 +376,13 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		blockSharders, err := msc.getBlockSharders(b, balances)
+		blockSharders, err := getAllShardersList(balances)
 		require.NoError(t, err)
 		sharderPayments, err := computeShardersPayments(gn, msc, b)
 		require.NoError(t, err)
-		sharderPayments = sharderPayments / currency.Coin(len(blockSharders))
+		sharderPayments = sharderPayments / currency.Coin(len(blockSharders.Nodes))
 		for _, sh := range sharders {
-			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
+			if existInDelegatesOfNodes(sh.delegate.id, blockSharders.Nodes) {
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					sharderPayments,
@@ -456,13 +456,13 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		blockSharders, err := msc.getBlockSharders(b, balances)
+		blockSharders, err := getAllShardersList(balances)
 		require.NoError(t, err)
 		for _, sh := range sharders {
-			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
+			if existInDelegatesOfNodes(sh.delegate.id, blockSharders.Nodes) {
 				shP, err := computeShardersPayments(gn, msc, b)
 				require.NoError(t, err)
-				shP = shP / currency.Coin(len(blockSharders))
+				shP = shP / currency.Coin(len(blockSharders.Nodes))
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,
@@ -535,13 +535,13 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		blockSharders, err := msc.getBlockSharders(b, balances)
+		blockSharders, err := getAllShardersList(balances)
 		require.NoError(t, err)
 		for _, sh := range sharders {
-			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
+			if existInDelegatesOfNodes(sh.delegate.id, blockSharders.Nodes) {
 				shP, err := computeShardersPayments(gn, msc, b)
 				require.NoError(t, err)
-				shP = shP / currency.Coin(len(blockSharders))
+				shP = shP / currency.Coin(len(blockSharders.Nodes))
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,

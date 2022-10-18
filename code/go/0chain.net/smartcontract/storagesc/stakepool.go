@@ -8,12 +8,8 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
-
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/0chain/common/core/logging"
-
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -55,7 +51,8 @@ type stakePool struct {
 	stakepool.StakePool
 	// TotalOffers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
-	TotalOffers currency.Coin `json:"total_offers"`
+	TotalOffers    currency.Coin `json:"total_offers"`
+	isOfferChanged bool          `json:"-" msg:"-"`
 	// Total amount to be un staked
 	TotalUnStake currency.Coin `json:"total_un_stake"`
 }
@@ -94,24 +91,18 @@ func (sp *stakePool) save(providerType spenum.Provider, providerID string,
 		return err
 	}
 
-	sp.emitSaveEvent(providerType, providerID, balances)
-	return nil
-}
+	if sp.isOfferChanged {
+		switch providerType {
+		case spenum.Blobber:
+			tag, data := event.NewUpdateBlobberTotalOffersEvent(providerID, sp.TotalOffers)
+			balances.EmitEvent(event.TypeStats, tag, providerID, data)
+			sp.isOfferChanged = false
+		case spenum.Validator:
+			// TODO: perhaps implement validator stake update events
+		}
+	}
 
-func (sp *stakePool) emitSaveEvent(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) {
-	data := dbs.DbUpdates{
-		Id:      providerID,
-		Updates: map[string]interface{}{},
-	}
-	switch providerType {
-	case spenum.Blobber:
-		data.Updates["offers_total"] = int64(sp.TotalOffers)
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
-	case spenum.Validator:
-		//todo: emit validator event
-	default:
-		logging.Logger.Error("invalid providerType in stakepool SaveEvent")
-	}
+	return nil
 }
 
 // The cleanStake() is stake amount without delegate pools want to unstake.
@@ -122,16 +113,6 @@ func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
 	}
 
 	return staked - sp.TotalUnStake, nil
-}
-
-func (sp *stakePool) stakeByProvider(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) error {
-	staked, err := sp.stake()
-	if err != nil {
-		return err
-	}
-	sp.emitStakeEvent(providerType, providerID, staked, balances)
-
-	return nil
 }
 
 // The stake() returns total stake size including delegate pools want to unstake.
@@ -145,24 +126,6 @@ func (sp *stakePool) stake() (stake currency.Coin, err error) {
 		stake = newStake
 	}
 	return
-}
-
-func (sp *stakePool) emitStakeEvent(providerType spenum.Provider, providerID string, staked currency.Coin, balances chainstate.StateContextI) {
-	logging.Logger.Info("emitting stake event")
-	data := dbs.DbUpdates{
-		Id:      providerID,
-		Updates: map[string]interface{}{},
-	}
-	switch providerType {
-	case spenum.Blobber:
-		data.Updates["total_stake"] = int64(staked)
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
-	case spenum.Validator:
-		data.Updates["stake"] = int64(staked)
-		balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, providerID, data)
-	default:
-		logging.Logger.Error("invalid providerType in stakepool StakeEvent")
-	}
 }
 
 // empty a delegate pool if possible, call update before the empty
@@ -233,6 +196,7 @@ func (sp *stakePool) addOffer(amount currency.Coin) error {
 		return err
 	}
 	sp.TotalOffers = newTotalOffers
+	sp.isOfferChanged = true
 	return nil
 }
 
@@ -243,15 +207,7 @@ func (sp *stakePool) reduceOffer(amount currency.Coin) error {
 		return err
 	}
 	sp.TotalOffers = newTotalOffers
-	return nil
-}
-
-// remove offer of an allocation related to blobber owns this stake pool
-func (sp *stakePool) removeOffer(amount currency.Coin) error {
-	if amount > sp.TotalOffers {
-		return fmt.Errorf("amount to be removed %v > total offer present %v", amount, sp.TotalOffers)
-	}
-	sp.TotalOffers -= amount
+	sp.isOfferChanged = true
 	return nil
 }
 
@@ -299,7 +255,7 @@ func (sp *stakePool) slash(
 		if err != nil {
 			return 0, err
 		}
-		edbSlash.DelegateRewards[id] = -1 * int64(dpSlash)
+		edbSlash.DelegatePenalties[id] = int64(dpSlash)
 	}
 	// todo we should slash from stake pools not rewards. 0chain issue 1495
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
@@ -491,12 +447,19 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
-	err = sp.stakeByProvider(spr.ProviderType, spr.ProviderID, balances)
+	staked, err := sp.stake()
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool staking error: %v", err)
 	}
 
+	switch spr.ProviderType {
+	case spenum.Blobber:
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
+		balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
+	case spenum.Validator:
+		// TODO: implement validator stake update events
+	}
 	return
 }
 
@@ -545,10 +508,18 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
-		err = sp.stakeByProvider(spr.ProviderType, spr.ProviderID, balances)
+		staked, err := sp.stake()
 		if err != nil {
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"stake pool staking error: %v", err)
+		}
+
+		switch spr.ProviderType {
+		case spenum.Blobber:
+			tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
+			balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
+		case spenum.Validator:
+			// TODO: implement validator stake update events
 		}
 
 		return toJson(&unlockResponse{Unstake: false}), nil
@@ -565,10 +536,18 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"saving stake pool: %v", err)
 	}
 
-	err = sp.stakeByProvider(spr.ProviderType, spr.ProviderID, balances)
+	staked, err := sp.stake()
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)
+	}
+
+	switch spr.ProviderType {
+	case spenum.Blobber:
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
+		balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
+	case spenum.Validator:
+		// TODO: implement validator stake update events
 	}
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil

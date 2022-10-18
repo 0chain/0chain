@@ -356,7 +356,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	c.rebaseState(fb)
-	wg.Run("finalize block - record dead nodess", fb.Round, func() {
+	wg.Run("finalize block - record dead nodes", fb.Round, func() {
 		err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 		if err != nil {
 			logging.Logger.Panic("finalize block - record dead nodes failed",
@@ -379,7 +379,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() {
-			c.GetEventDb().AddEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
+			if err := c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns)); err != nil {
+				logging.Logger.Error("finalize block - add events failed",
+					zap.Error(err),
+					zap.Int64("round", fb.Round),
+					zap.String("hash", fb.Hash))
+			}
 			fb.Events = nil
 		})
 	}

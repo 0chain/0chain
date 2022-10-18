@@ -39,7 +39,6 @@ func (tb *testBalances) setBalance(key datastore.Key, b currency.Coin) { //nolin
 func (tb *testBalances) GetBlock() *block.Block                       { return nil }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI           { return nil }
 func (tb *testBalances) GetTransaction() *transaction.Transaction     { return nil }
-func (tb *testBalances) GetBlockSharders(b *block.Block) []string     { return nil }
 func (tb *testBalances) Validate() error                              { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                      { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error           { return nil }
@@ -50,10 +49,11 @@ func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)   {}
 func (tb *testBalances) GetEventDB() *event.EventDb                   { return nil }
 func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, interface{}, ...cstate.Appender) {
 }
-func (tb *testBalances) EmitError(error)                       {}
-func (tb *testBalances) GetEvents() []event.Event              { return nil }
-func (tb *testBalances) GetLatestFinalizedBlock() *block.Block { return nil }
-func (tb *testBalances) SetMagicBlock(block *block.MagicBlock) {}
+func (tb *testBalances) EmitError(error)                             {}
+func (tb *testBalances) GetEvents() []event.Event                    { return nil }
+func (tb *testBalances) GetLatestFinalizedBlock() *block.Block       { return nil }
+func (tb *testBalances) GetMagicBlock(round int64) *block.MagicBlock { return nil }
+func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)       {}
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
 }
@@ -122,3 +122,5 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	tb.transfers = append(tb.transfers, t)
 	return nil
 }
+
+func (tb *testBalances) GetInvalidStateErrors() []error { return nil }

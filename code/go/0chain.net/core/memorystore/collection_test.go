@@ -52,16 +52,16 @@ func addTxnsToCollection(t *testing.T, txns ...*transaction.Transaction) {
 }
 
 func makeTestCollectionIterationHandler() datastore.CollectionIteratorHandler {
-	return func(ctx context.Context, ce datastore.CollectionEntity) bool {
+	return func(ctx context.Context, ce datastore.CollectionEntity) (bool, error) {
 		if ce.GetEntityMetadata().GetName() == "txn" {
 			ent := ce.(*transaction.Transaction)
 			if ent.Value > 5 {
 				ent.Value++
-				return true
+				return true, nil
 			}
-			return false
+			return false, nil
 		}
-		return false
+		return false, nil
 	}
 }
 
