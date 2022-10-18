@@ -15,7 +15,7 @@ import (
 	"github.com/guregu/null"
 )
 
-const ActiveBlobbersTimeLimit = 60 * 60 // 1 hour
+const ActiveBlobbersTimeLimit = 5 * time.Minute // 5 Minutes
 
 type Blobber struct {
 	gorm.Model
@@ -133,7 +133,7 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination) ([]Blobber, erro
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Blobber{}).Offset(limit.Offset).
-		Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix()).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix()).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
 	}).Find(&blobbers)
