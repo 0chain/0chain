@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -102,7 +103,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		),
 		"/v1/estimate_tx_cost": common.UserRateLimit(
 			common.ToJSONResponse(
-				nil, // TODO
+				SuggestedFeeHandler,
 			),
 		),
 		"/v1/transaction/put": common.UserRateLimit(
@@ -1869,4 +1870,36 @@ func SetupMinerHandlers(c Chainer) {
 // SetupHandlers sets up the necessary API end points for sharders
 func SetupSharderHandlers(c Chainer) {
 	setupHandlers(handlersMap(c))
+}
+
+func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	// Tx fee = cost * coeff + fix
+
+	txData, err := io.ReadAll(r.Body)
+	if err != nil {
+		logging.Logger.Error("failed to get transaction data from request body",
+			zap.Error(err))
+		return nil, err
+	}
+	defer r.Body.Close()
+
+	var tx transaction.Transaction
+	if err := json.Unmarshal(txData, &tx); err != nil {
+		return nil, err
+	}
+
+	c := GetServerChain()
+	lfb := c.GetLatestFinalizedBlock()
+
+	cost, err := c.EstimateTransactionCost(ctx, lfb, lfb.ClientState, &tx)
+	if err != nil {
+		logging.Logger.Error("failed to calculate the transaction cost",
+			zap.Int("tx-type", tx.TransactionType), zap.Error(err))
+		return nil, err
+	}
+
+	return map[string]float64{
+		// TODO: add coeff
+		"fee": float64(cost),
+	}, nil
 }

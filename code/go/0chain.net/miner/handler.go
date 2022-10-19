@@ -2,15 +2,9 @@ package miner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
-
-	"0chain.net/chaincore/transaction"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -29,7 +23,6 @@ func SetupHandlers() {
 	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
 	http.HandleFunc("/_diagnostics/wallet_stats", common.UserRateLimit(GetWalletStats))
 	http.HandleFunc("/v1/miner/get/stats", common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
-	http.HandleFunc("/v1/chain/get/suggested_fee", common.UserRateLimit(common.ToJSONResponse(SuggestedFeeHandler)))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */
@@ -205,51 +198,5 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 		Timeouts:           c.RoundTimeoutsCount,
 		AverageBlockSize:   node.Self.Underlying().Info.AvgBlockTxns,
 		NetworkTime:        networkTimes,
-	}, nil
-}
-
-func calculateCoeff(velocity string) float64 {
-	// TODO: make it dynamic
-	switch velocity {
-	case "fast":
-		return 1
-	case "faster":
-		return 1.3
-	case "fastest":
-		return 1.6
-	default:
-		return 1
-	}
-}
-
-func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	// Tx fee = cost * coeff + f	// find the execution velocity. One Of ["fast", "faster", "fastest"]
-
-	txData, err := io.ReadAll(r.Body)
-	if err != nil {
-		logging.Logger.Error("failed to get transaction data from request body",
-			zap.Error(err))
-		return nil, err
-	}
-	defer r.Body.Close()
-
-	var tx transaction.Transaction
-	if err := json.Unmarshal(txData, &tx); err != nil {
-		return nil, err
-	}
-
-	c := GetMinerChain().Chain
-	lfb := c.GetLatestFinalizedBlock()
-
-	cost, err := c.EstimateTransactionCost(ctx, lfb, lfb.ClientState, &tx)
-	if err != nil {
-		logging.Logger.Error("failed to calculate the transaction cost",
-			zap.Int("tx-type", tx.TransactionType), zap.Error(err))
-		return nil, err
-	}
-
-	return map[string]float64{
-		// find the execution velocity. One Of ["fast", "faster", "fastest"]
-		"fee": float64(cost) * calculateCoeff(r.URL.Query().Get("velocity")),
 	}, nil
 }
