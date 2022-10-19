@@ -64,7 +64,7 @@ var (
 )
 
 func scConfigKey(scKey string) datastore.Key {
-	return scKey + ":configurations"
+	return scKey + "vestingsc_config"
 }
 
 // config represents SC configurations ('vestingsc:' from sc.yaml)
