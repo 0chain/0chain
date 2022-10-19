@@ -23,6 +23,8 @@ do
   rm -rf ./sharder$i/data/rocksdb/*
   echo "deleting sharder$i blocks on the file system"
   rm -rf ./sharder$i/data/blocks/*
+  echo "deleting sharder$i postgresql db"
+  rm -rf ./sharder$i/data/postgresql/*
 done
 
 echo "cleaned up"

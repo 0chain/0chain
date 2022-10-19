@@ -42,7 +42,7 @@ var (
 // NewHalfNodesDown creates initialised HalfNodesDown.
 func NewHalfNodesDown(minersNum int) *HalfNodesDown {
 	wg := new(sync.WaitGroup)
-	wg.Add(minersNum)
+	wg.Add(minersNum + 1)
 	return &HalfNodesDown{
 		minersNum: minersNum,
 		wg:        wg,
@@ -87,22 +87,32 @@ func (n *HalfNodesDown) check() (bool, error) {
 
 // Configure implements TestCase interface.
 func (n *HalfNodesDown) Configure(blob []byte) (err error) {
-	defer n.wg.Done()
 	n.roundRandomSeedFromStartMu.Lock()
+	defer n.roundRandomSeedFromStartMu.Unlock()
+
+	if n.roundRandomSeedFromStart != 0 {
+		return nil
+	}
+
+	defer n.wg.Done()
 	n.roundRandomSeedFromStart, err = strconv.Atoi(string(blob))
-	n.roundRandomSeedFromStartMu.Unlock()
 	return err
 }
 
 // AddResult implements TestCase interface.
 func (n *HalfNodesDown) AddResult(blob []byte) error {
+	n.resultsMu.Lock()
+	defer n.resultsMu.Unlock()
+
+	if len(n.results) == n.minersNum {
+		return nil
+	}
+
 	defer n.wg.Done()
 	res := new(RoundInfo)
 	if err := res.Decode(blob); err != nil {
 		return err
 	}
-	n.resultsMu.Lock()
 	n.results = append(n.results, res)
-	n.resultsMu.Unlock()
 	return nil
 }

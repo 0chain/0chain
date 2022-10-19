@@ -158,10 +158,10 @@ func isTestingHalfNodesDown(minerRound *Round) bool {
 func isTestingSendDifferentBlocks(minerRound *Round) bool {
 	var (
 		cfgFromFirstGen        = crpc.Client().State().SendDifferentBlocksFromFirstGenerator
-		shouldTestFromFirstGen = cfgFromFirstGen != nil && cfgFromFirstGen.OnRound == minerRound.Number
+		shouldTestFromFirstGen = cfgFromFirstGen != nil && int64(cfgFromFirstGen.Round) == minerRound.Number
 
 		cfgFromAllGen        = crpc.Client().State().SendDifferentBlocksFromAllGenerators
-		shouldTestFromAllGen = cfgFromAllGen != nil && cfgFromAllGen.OnRound == minerRound.Number
+		shouldTestFromAllGen = cfgFromAllGen != nil && int64(cfgFromAllGen.Round) == minerRound.Number
 	)
 	return (shouldTestFromAllGen || shouldTestFromFirstGen) &&
 		minerRound.GetTimeoutCount() == 1 &&

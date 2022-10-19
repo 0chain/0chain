@@ -21,6 +21,8 @@ type (
 		caseType BlockStateChangeRequestorCaseType
 
 		wg *sync.WaitGroup
+
+		resultLocker sync.RWMutex
 	}
 
 	// BlockStateChangeRequestorCaseType represents type that determines test behavior.
@@ -180,6 +182,13 @@ func (n *BlockStateChangeRequestor) Configure(blob []byte) error {
 
 // AddResult implements TestCase interface.
 func (n *BlockStateChangeRequestor) AddResult(blob []byte) error {
+	n.resultLocker.Lock()
+	defer n.resultLocker.Unlock()
+
+	if n.roundInfo != nil {
+		return nil
+	}
+
 	defer n.wg.Done()
 	n.roundInfo = new(RoundInfo)
 	return n.roundInfo.Decode(blob)
