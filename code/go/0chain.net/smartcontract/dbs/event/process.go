@@ -28,6 +28,7 @@ const (
 )
 
 const GB = 1024 * 1024 * 1024
+const period = 100
 
 const (
 	TagNone                         EventTag = iota
@@ -221,6 +222,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
+	var gs *Snapshot
 	for {
 		es := <-edb.eventsChannel
 		edb.addEvents(ctx, es)
@@ -261,6 +263,33 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				)
 			}
 		}
+
+		ts := time.Now()
+		if gs == nil && es.round > 0 {
+			g, err := edb.GetGlobal()
+			if err != nil {
+				logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round))
+			}
+			gs = &g
+		}
+		err := edb.addSnapshots(es, gs)
+		if err != nil {
+			logging.Logger.Error("event could not be processed",
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize),
+				zap.Error(err),
+			)
+		}
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Warn("event db save slow - addSnapshots",
+				zap.Any("duration", du),
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize),
+			)
+		}
 		due := time.Since(tse)
 		logging.Logger.Debug("event db process",
 			zap.Any("duration", due),
@@ -283,64 +312,35 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-//
-//func (edb *EventDb) addRoundEventsWorker(ctx context.Context, period int64) {
-//	logging.Logger.Info("round events worker started")
-//	var round int64
-//
-//	var gs = newGlobalSnapshot()
-//	for {
-//		select {
-//		case e := <-edb.roundEventsChan:
-//			if len(e.events) == 0 {
-//				round = e.round
-//				continue
-//			}
-//			//init round with event's if not ran far away
-//			if round == 0 {
-//				global, _ := edb.GetGlobal()
-//				round = global.Round
-//				//if good start (not missed period)
-//				if global.Round+period > e.events[0].BlockNumber {
-//					round = e.events[0].BlockNumber - 1
-//				}
-//			}
-//			if round > e.events[0].BlockNumber {
-//				logging.Logger.Error(fmt.Sprintf("events received in wrong order, "+
-//					"events for round %v recieved after events for ruond %v", e.events[0].BlockNumber, round))
-//				continue
-//			}
-//			if round+1 != e.events[0].BlockNumber {
-//				logging.Logger.Error(fmt.Sprintf("events for round %v skipped,"+
-//					"events for round %v recieved instead", round+1, e.events[0].BlockNumber))
-//				//TODO return this check, when the cause of restart will be clear
-//				//continue
-//			}
-//
-//			round = e.events[0].BlockNumber
-//			edb.updateBlobberAggregate(round, period, gs)
-//			gs.update(e.events)
-//
-//			if round%period == 0 {
-//				gs.Round = round
-//				if err := edb.addSnapshot(gs.Snapshot); err != nil {
-//					logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
-//				}
-//				gs = &globalSnapshot{
-//					Snapshot: Snapshot{
-//						TotalMint:           gs.TotalMint,
-//						ZCNSupply:           gs.ZCNSupply,
-//						TotalValueLocked:    gs.TotalValueLocked,
-//						ClientLocks:         gs.ClientLocks,
-//						TotalChallengePools: gs.TotalChallengePools, // todo is this total or delta
-//					},
-//				}
-//			}
-//		case <-ctx.Done():
-//			return
-//		}
-//	}
-//}
+func (edb *EventDb) addSnapshots(e blockEvents, s *Snapshot) error {
+	round := e.round
+	if len(e.events) == 0 {
+		return nil
+	}
+	gs := &globalSnapshot{
+		Snapshot: *s,
+	}
+
+	round = e.events[0].BlockNumber
+	edb.updateBlobberAggregate(round, period, gs)
+	gs.update(e.events)
+
+	gs.Round = round
+	if err := edb.addSnapshot(gs.Snapshot); err != nil {
+		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
+	}
+	gs = &globalSnapshot{
+		Snapshot: Snapshot{
+			TotalMint:           gs.TotalMint,
+			ZCNSupply:           gs.ZCNSupply,
+			TotalValueLocked:    gs.TotalValueLocked,
+			ClientLocks:         gs.ClientLocks,
+			TotalChallengePools: gs.TotalChallengePools, // todo is this total or delta
+		},
+	}
+
+	return nil
+}
 
 func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
