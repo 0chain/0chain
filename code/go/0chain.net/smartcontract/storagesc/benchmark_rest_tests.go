@@ -4,8 +4,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/core/encryption"
-
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/chaincore/currency"
@@ -205,7 +203,8 @@ func BenchmarkRestTests(
 				FuncName: "getchallenge",
 				Params: map[string]string{
 					"blobber":   getMockBlobberId(0),
-					"challenge": getMockChallengeId(encryption.Hash("0"), encryption.Hash("0")),
+					"challenge": getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
+//					"challenge": getMockChallengeId(encryption.Hash("0"), encryption.Hash("0")),
 				},
 				Endpoint: srh.getChallenge,
 			},
@@ -407,7 +406,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getSearchHandler",
 				Params: map[string]string{
-					"query": benchmark.GetMockTransactionHash(3, 3),
+					"searchString": benchmark.GetMockTransactionHash(3, 3),
 				},
 				Endpoint: srh.getSearchHandler,
 			},

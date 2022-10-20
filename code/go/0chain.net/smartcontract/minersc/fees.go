@@ -439,10 +439,12 @@ func getRegisterShardersInMagicBlock(balances cstate.StateContextI, sharders *Mi
 
 // getMagicBlockSharders - list the sharders in magic block
 func getMagicBlockSharders(balances cstate.StateContextI) []string {
-	var (
-		pool  = balances.GetMagicBlock(balances.GetBlock().Round).Sharders
-		nodes = pool.CopyNodes()
-	)
+	pool  := balances.GetMagicBlock(balances.GetBlock().Round).Sharders
+	if pool == nil {
+		return []string{}
+	}
+
+	nodes := pool.CopyNodes()
 
 	sharderKeys := make([]string, 0, len(nodes))
 	for _, sharder := range nodes {

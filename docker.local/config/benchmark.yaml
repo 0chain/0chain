@@ -27,12 +27,14 @@ simulation:
 options:
   verbose: true
   test_suites:
+    - "miner"
+    - "storage"
     - "storage_rest"
     - "miner_rest"
     - "faucet_rest"
     - "vesting_rest"
     - "zcnscbridge_rest"
-  omitted_tests:
+  omitted_tessts:
   save_path: /saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
 

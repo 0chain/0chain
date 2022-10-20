@@ -311,7 +311,7 @@ func BenchmarkTests(
 					FreeTokens float64          `json:"free_tokens"`
 					Timestamp  common.Timestamp `json:"timestamp"`
 				}{
-					data.Clients[0],
+					data.Clients[1],
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
 					1,
 				}
@@ -361,7 +361,7 @@ func BenchmarkTests(
 					FreeTokens float64          `json:"free_tokens"`
 					Timestamp  common.Timestamp `json:"timestamp"`
 				}{
-					data.Clients[0],
+					data.Clients[1],
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
 					1,
 				}
@@ -377,7 +377,7 @@ func BenchmarkTests(
 					Signature:  signature,
 				})
 				bytes, _ := json.Marshal(&freeStorageUpgradeInput{
-					AllocationId: getMockAllocationId(0),
+					AllocationId: getMockAllocationId(1),
 					Marker:       string(fsmBytes),
 				})
 				return bytes
@@ -401,7 +401,7 @@ func BenchmarkTests(
 					ID:                encryption.Hash("my_new_blobber"),
 					BaseURL:           "my_new_blobber.com",
 					Terms:             getMockBlobberTerms(),
-					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
+					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000 * 1e10,
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_blobber")),
 				})
 				return bytes
@@ -455,7 +455,7 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&StorageNode{
 					ID:                getMockBlobberId(0),
 					Terms:             getMockBlobberTerms(),
-					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
+					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000 * 1e10,
 					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
 				})
 				return bytes

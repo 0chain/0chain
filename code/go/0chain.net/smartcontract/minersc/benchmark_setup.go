@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/client"
+	"0chain.net/core/datastore"
 	"strconv"
 
 	"0chain.net/chaincore/currency"
@@ -19,6 +21,25 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
 )
+
+func AddMockMagicBlock() *block.MagicBlock {
+	numNodes := viper.GetInt(benchmark.NumSharders)
+
+	mb := &block.MagicBlock{
+		Sharders: &node.Pool{
+			Type:  node.NodeTypeSharder,
+			Nodes: make([]*node.Node, 0, numNodes),
+		},
+	}
+
+	for i := 0; i < numNodes; i++ {
+		mb.Sharders.Nodes = append(mb.Sharders.Nodes, &node.Node{
+			Client: client.Client{IDField: datastore.IDField{ID: GetMockNodeId(i, spenum.Sharder)}},
+	})
+}
+
+return mb
+}
 
 func AddMockNodes(
 	clients []string,
@@ -70,10 +91,10 @@ func AddMockNodes(
 			}
 			if i < numActive {
 				pool.Status = spenum.Active
-				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+				newNode.Pools[clients[dId]] = &pool
 			} else {
 				pool.Status = spenum.Pending
-				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+				newNode.Pools[clients[dId]] = &pool
 			}
 		}
 		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)

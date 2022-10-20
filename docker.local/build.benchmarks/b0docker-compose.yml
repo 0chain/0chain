@@ -27,7 +27,7 @@ services:
     volumes:
       - ../config:/config
       - ../benchmarks/saved_data:/saved_data
-    command: ./bin/main  benchmark
+    command: ./bin/main benchmark
     depends_on:
       - postgres
     links:

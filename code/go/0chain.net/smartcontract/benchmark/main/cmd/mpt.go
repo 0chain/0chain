@@ -310,7 +310,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockChallengePools(balances)
+		storagesc.AddMockChallengePools(eventDb, balances)
 		log.Println("added challenge pools\t", time.Since(timer))
 	}()
 

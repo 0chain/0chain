@@ -286,13 +286,26 @@ func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
 	}
 }
 
-func AddMockChallengePools(balances cstate.StateContextI) {
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
+func AddMockChallengePools(	eventDb *event.EventDb,	balances cstate.StateContextI) {
+	allocNum := viper.GetInt(sc.NumAllocations)
+	cps := make([]event.ChallengePool, 0, allocNum)
+	for i := 0; i < allocNum; i++ {
 		allocationId := getMockAllocationId(i)
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(ADDRESS, allocationId)
 		cp.Balance = mockMinLockDemand * 100
+		cps = append(cps, event.ChallengePool {
+			ID: cp.TokenPool.ID,
+			AllocationID: allocationId,
+			Balance: int64(cp.Balance),
+		})
 		if _, err := balances.InsertTrieNode(challengePoolKey(ADDRESS, allocationId), cp); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if viper.GetBool(sc.EventDbEnabled) {
+		if err := eventDb.Store.Get().Create(&cps).Error; err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -761,7 +774,7 @@ func getMockBlobberBlockFromAllocationIndex(i int) int {
 }
 
 func getMockChallengeId(blobberId, allocationId string) string {
-	return encryption.Hash("challenge" + allocationId)
+	return "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" + "allocation_challenges:" + allocationId + blobberId
 }
 
 func SetMockConfig(
