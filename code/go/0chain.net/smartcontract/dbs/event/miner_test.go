@@ -186,7 +186,7 @@ func TestMiners(t *testing.T) {
 	eventAddOrOverwriteMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        int(TypeSmartContract),
+		Type:        int(TypeStats),
 		Tag:         int(TagAddOrOverwriteMiner),
 		Data:        string(data),
 	}
@@ -210,7 +210,7 @@ func TestMiners(t *testing.T) {
 	eventUpdateMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
-		Type:        int(TypeSmartContract),
+		Type:        int(TypeStats),
 		Tag:         int(TagUpdateMiner),
 		Data:        string(data),
 	}
@@ -225,7 +225,7 @@ func TestMiners(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
-		Type:        int(TypeSmartContract),
+		Type:        int(TypeStats),
 		Tag:         int(TagDeleteMiner),
 		Data:        mn.ID,
 	}

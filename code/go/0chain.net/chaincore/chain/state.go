@@ -177,7 +177,7 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 
 	switch txn.TransactionType {
 
-	case transaction.TxnTypeSmartContract:
+	case transaction.TxnTypeStats:
 		var scData sci.SmartContractTransactionData
 		dataBytes := []byte(txn.TransactionData)
 		err := json.Unmarshal(dataBytes, &scData)
@@ -262,7 +262,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	switch txn.TransactionType {
-	case transaction.TxnTypeSmartContract:
+	case transaction.TxnTypeStats:
 		var (
 			scData    sci.SmartContractTransactionData
 			dataBytes = []byte(txn.TransactionData)

@@ -194,7 +194,7 @@ func executeSCTransaction(from mptwallet.Wallet, scAddress string, value int64, 
 		Logger.Fatal("Failed to marshal data", zap.Error(err))
 	}
 
-	return executeTransaction(from, scAddress, value, httpclientutil.TxnTypeSmartContract, string(dataBytes))
+	return executeTransaction(from, scAddress, value, httpclientutil.TxnTypeStats, string(dataBytes))
 }
 
 func airdrop(owner mptwallet.Wallet, recipientClientID string) {

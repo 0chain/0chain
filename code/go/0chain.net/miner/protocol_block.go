@@ -74,7 +74,7 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn.ClientID = b.MinerID
 	feeTxn.ToClientID = minersc.ADDRESS
 	feeTxn.CreationDate = b.CreationDate
-	feeTxn.TransactionType = transaction.TxnTypeSmartContract
+	feeTxn.TransactionType = transaction.TxnTypeStats
 	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
 	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
 	return feeTxn
@@ -99,7 +99,7 @@ func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Tr
 	scTxn.ClientID = b.MinerID
 	scTxn.ToClientID = storagesc.ADDRESS
 	scTxn.CreationDate = b.CreationDate
-	scTxn.TransactionType = transaction.TxnTypeSmartContract
+	scTxn.TransactionType = transaction.TxnTypeStats
 	scTxn.TransactionData = fmt.Sprintf(`{"name":"commit_settings_changes","input":{"round":%v}}`, b.Round)
 	scTxn.Fee = 0
 	return scTxn
@@ -110,7 +110,7 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn.ClientID = b.MinerID
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
-	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionType = transaction.TxnTypeStats
 	brTxn.TransactionData = fmt.Sprintf(`{"name":"blobber_block_rewards","input":{"round":%v}}`, b.Round)
 	brTxn.Fee = 0
 	return brTxn
@@ -121,7 +121,7 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transac
 	brTxn.ClientID = b.MinerID
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
-	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionType = transaction.TxnTypeStats
 	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
 	brTxn.Fee = 0
 	return brTxn
@@ -176,7 +176,7 @@ func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 
 func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error {
 	for _, txn := range b.Txns {
-		if txn.TransactionType == transaction.TxnTypeSmartContract {
+		if txn.TransactionType == transaction.TxnTypeStats {
 			err := txn.VerifyOutputHash(ctx)
 			if err != nil {
 				logging.Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("output", txn.TransactionOutput))

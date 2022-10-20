@@ -53,7 +53,7 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	if err != nil {
 		panic(fmt.Sprintf("create smart contract failed due to invalid data. %s", err.Error()))
 	}
-	tr.TransactionType = transaction.TxnTypeSmartContract
+	tr.TransactionType = transaction.TxnTypeStats
 	tr.TransactionData = string(snBytes)
 }
 
@@ -74,7 +74,7 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 		TransactionData:   "",
 		Signature:         "",
 		Fee:               0,
-		TransactionType:   transaction.TxnTypeSmartContract,
+		TransactionType:   transaction.TxnTypeStats,
 		TransactionOutput: "",
 		OutputHash:        "",
 	}
@@ -95,7 +95,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 		TransactionData:   "",
 		Signature:         "",
 		Fee:               0,
-		TransactionType:   transaction.TxnTypeSmartContract,
+		TransactionType:   transaction.TxnTypeStats,
 		TransactionOutput: "",
 		OutputHash:        "",
 	}
@@ -123,7 +123,7 @@ func CreateTransaction(fromClient, method string, payload []byte, ctx state.Stat
 		TransactionData:   "",
 		Signature:         "",
 		Fee:               0,
-		TransactionType:   transaction.TxnTypeSmartContract,
+		TransactionType:   transaction.TxnTypeStats,
 		TransactionOutput: "",
 		OutputHash:        "",
 	}
