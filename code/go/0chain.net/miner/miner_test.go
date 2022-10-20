@@ -173,7 +173,7 @@ func TestBlockGeneration(t *testing.T) {
 	mc, stopAndClean := setupMinerChain()
 	defer stopAndClean()
 
-	config.SetupSmartContractConfig("")
+	config.SetupSmartContractConfig("testdata")
 
 	gb := SetupGenesisBlock()
 	mc.AddGenesisBlock(gb)
