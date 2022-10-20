@@ -22,7 +22,6 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
-	"github.com/0chain/common/core/logging"
 	"0chain.net/smartcontract/storagesc"
 )
 
@@ -139,7 +138,7 @@ func addResultIfAdversarialValidatorTest(b *block.Block) {
 	}
 }
 
-func (mc *Chain) isTestingOnUpdateFinalizedBlock(round int64) bool {
+func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	s := crpc.Client().State()
 	var isTestingFunc func(round int64, generator bool, typeRank int) bool
 	switch {
