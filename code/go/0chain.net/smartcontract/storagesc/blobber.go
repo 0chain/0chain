@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -939,11 +940,21 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	return
 }
 
-func emitUpdateBlobberStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
+func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
 	bb := event.Blobber{
 		BlobberID: w.BlobberID,
 		Used:      w.Size,
 		SavedData: w.Size,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.BlobberID, bb)
+}
+
+func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI) {
+	i, _ := big.NewFloat(r.ReadSize).Int64()
+	bb := event.Blobber{
+		BlobberID: r.BlobberID,
+		ReadData:  i,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.BlobberID, bb)
