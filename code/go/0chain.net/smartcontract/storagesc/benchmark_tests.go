@@ -690,7 +690,7 @@ func BenchmarkTests(
 					//startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 
 					vt := &ValidationTicket{
-						ChallengeID:  getMockChallengeId(encryption.Hash("0"), getMockAllocationId(0)),
+						ChallengeID:  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 						BlobberID:    getMockBlobberId(0),
 						ValidatorID:  getMockValidatorId(i),
 						ValidatorKey: data.PublicKeys[0],
@@ -708,7 +708,7 @@ func BenchmarkTests(
 					validationTickets = append(validationTickets, vt)
 				}
 				bytes, _ := json.Marshal(&ChallengeResponse{
-					ID:                getMockChallengeId(encryption.Hash("0"), getMockAllocationId(0)),
+					ID:                getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 					ValidationTickets: validationTickets,
 				})
 				return bytes

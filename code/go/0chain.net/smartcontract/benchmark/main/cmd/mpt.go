@@ -64,17 +64,15 @@ func getBalances(
 	mpt *util.MerklePatriciaTrie,
 	data benchmark.BenchData,
 ) (*util.MerklePatriciaTrie, cstate.StateContextI) {
+	magicBlock := minersc.AddMockMagicBlock()
 	bk := &block.Block{
-		MagicBlock: &block.MagicBlock{
-			StartingRound: 0,
-		},
-		PrevBlock: &block.Block{},
+		MagicBlock: magicBlock,
+		PrevBlock:  &block.Block{},
 	}
 	bk.Round = 2
 	bk.CreationDate = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 	bk.MinerID = minersc.GetMockNodeId(0, spenum.Miner)
 	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, spenum.Miner))
-	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
 		bk,
@@ -190,7 +188,7 @@ func setUpMpt(
 	timer = time.Now()
 
 	bk := &block.Block{}
-	magicBlock := &block.MagicBlock{}
+	magicBlock := minersc.AddMockMagicBlock()
 	signatureScheme := &encryption.BLS0ChainScheme{}
 
 	balances := cstate.NewStateContext(
