@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/core/viper"
 )
@@ -381,12 +382,17 @@ func (store *blockStore) readFromCache(hash string) (b *block.Block, err error) 
 	if err != nil {
 		return nil, err
 	}
+	logging.Logger.Info("Successfully read from cache. ", zap.String("hash", hash))
 	return
 }
 
 func (store *blockStore) addToCache(b *block.Block) {
-	data, _ := getBlockData(b)
-	err := store.cache.Write(b.Hash, data)
+	data, err := getBlockData(b)
+	if err != nil {
+		logging.Logger.Error(err.Error())
+		return
+	}
+	err = store.cache.Write(b.Hash, data)
 	if err != nil {
 		logging.Logger.Error(err.Error())
 	}

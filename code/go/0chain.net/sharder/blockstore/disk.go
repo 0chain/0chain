@@ -15,6 +15,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/core/viper"
 	"golang.org/x/sys/unix"
@@ -114,6 +115,8 @@ func (dTier *diskTier) read(bPath string) (b *block.Block, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	logging.Logger.Info("Successfully read block from disk. ", zap.String("hash", b.Hash))
 
 	return
 }
