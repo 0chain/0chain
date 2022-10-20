@@ -50,18 +50,3 @@ func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
 		return nil, err
 	}
 }
-
-func InitConfig(ctx state.StateContextI) error {
-	node := &GlobalNode{ID: ADDRESS}
-	err := ctx.GetTrieNode(node.GetKey(), node)
-	if err == util.ErrValueNotPresent {
-		node.ZCNSConfig = getConfig()
-		_, err := ctx.InsertTrieNode(node.GetKey(), node)
-		return err
-	}
-	return err
-}
-
-func GetGlobalNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
-	return GetGlobalSavedNode(ctx)
-}

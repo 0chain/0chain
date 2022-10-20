@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -615,7 +616,7 @@ func setupChallengeMocks(
 	}
 	require.NoError(t, ssc.saveStakePools(validators, validatorsSPs, ctx))
 
-	_, err = ctx.InsertTrieNode(STORAGESC_CONFIG_KEY, &scYaml)
+	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
 	return txn, ssc, allocation, allocChallenges, details, ctx

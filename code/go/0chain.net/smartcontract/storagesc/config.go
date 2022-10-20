@@ -539,13 +539,13 @@ func getConfiguredConfig() (conf *Config, err error) {
 }
 
 func InitConfig(balances chainState.StateContextI) error {
-	err := balances.GetTrieNode(STORAGESC_CONFIG_KEY, &Config{})
+	err := balances.GetTrieNode(scConfigKey(ADDRESS), &Config{})
 	if err == util.ErrValueNotPresent {
 		conf, err := getConfiguredConfig()
 		if err != nil {
 			return err
 		}
-		_, err = balances.InsertTrieNode(STORAGESC_CONFIG_KEY, conf)
+		_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 		return err
 	}
 	return err
@@ -557,7 +557,7 @@ func (ssc *StorageSmartContract) getConfig(
 	conf *Config, err error) {
 
 	conf = newConfig()
-	err = balances.GetTrieNode(STORAGESC_CONFIG_KEY, conf)
+	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		return nil, err
 	}

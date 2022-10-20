@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -556,7 +557,7 @@ func setupMocksFinishAllocation(
 		require.NoError(t, err)
 	}
 
-	_, err = ctx.InsertTrieNode(STORAGESC_CONFIG_KEY, &scYaml)
+	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
 	var request = lockRequest{
@@ -773,7 +774,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		require.NoError(t, stakePool.save(spenum.Blobber, blobber.ID, ctx))
 	}
 
-	_, err = ctx.InsertTrieNode(STORAGESC_CONFIG_KEY, &scYaml)
+	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
 	for _, blobber := range blobbers {

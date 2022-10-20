@@ -59,12 +59,10 @@ var (
 		"unlock",
 		"vestingsc-update-settings",
 	}
-
-	VESTINGSC_CONFIG_KEY = ADDRESS + encryption.Hash("vestingsc_config")
 )
 
 func scConfigKey(scKey string) datastore.Key {
-	return scKey + "vestingsc_config"
+	return scKey + encryption.Hash("vestingsc_config")
 }
 
 // config represents SC configurations ('vestingsc:' from sc.yaml)
@@ -235,7 +233,7 @@ func (vsc *VestingSmartContract) updateConfig(
 		return "", common.NewError("update_config", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(VESTINGSC_CONFIG_KEY, conf)
+	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
@@ -295,7 +293,7 @@ func (vsc *VestingSmartContract) getConfig(
 	balances chainstate.StateContextI,
 ) (conf *config, err error) {
 	conf = new(config)
-	err = balances.GetTrieNode(VESTINGSC_CONFIG_KEY, conf)
+	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		return nil, err
 	}
@@ -303,13 +301,13 @@ func (vsc *VestingSmartContract) getConfig(
 }
 
 func InitConfig(balances chainstate.StateContextI) error {
-	err := balances.GetTrieNode(VESTINGSC_CONFIG_KEY, &config{})
+	err := balances.GetTrieNode(scConfigKey(ADDRESS), &config{})
 	if err == util.ErrValueNotPresent {
 		conf, err := getConfiguredConfig()
 		if err != nil {
 			return err
 		}
-		_, err = balances.InsertTrieNode(VESTINGSC_CONFIG_KEY, conf)
+		_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 		return err
 	}
 	return err
