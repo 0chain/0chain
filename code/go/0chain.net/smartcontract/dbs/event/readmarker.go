@@ -2,7 +2,6 @@ package event
 
 import (
 	"errors"
-	"fmt"
 
 	common2 "0chain.net/smartcontract/common"
 	"gorm.io/gorm"
@@ -17,7 +16,7 @@ type ReadMarker struct {
 	ClientID      string  `json:"client_id"`
 	BlobberID     string  `json:"blobber_id"`
 	AllocationID  string  `json:"allocation_id" gorm:"index:idx_ralloc_block,priority:1;index:idx_rauth_alloc,priority:2"` //used in alloc_read_size, used in readmarkers
-	TransactionID string  `json:"transaction_id"`
+	TransactionID string  `json:"transaction_id" gorm:"uniqueIndex"`
 	OwnerID       string  `json:"owner_id"`
 	Timestamp     int64   `json:"timestamp"`
 	ReadCounter   int64   `json:"read_counter"`
@@ -74,38 +73,13 @@ func (edb *EventDb) CountReadMarkersFromQuery(query *ReadMarker) (count int64, e
 	return
 }
 
-func (edb *EventDb) overwriteReadMarker(rm ReadMarker) error {
-	result := edb.Store.Get().
-		Model(&ReadMarker{}).
-		Where(&ReadMarker{TransactionID: rm.TransactionID}).
-		Updates(&rm)
-	return result.Error
+func (edb *EventDb) addOrOverwriteReadMarker(rms []ReadMarker) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "transaction_id"}},
+		UpdateAll: true,
+	}).Create(&rms).Error
 }
 
-func (edb *EventDb) addOrOverwriteReadMarker(rm ReadMarker) error {
-	exists, err := rm.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteReadMarker(rm)
-	}
-
-	result := edb.Store.Get().Create(&rm)
-	return result.Error
-}
-
-func (rm *ReadMarker) exists(edb *EventDb) (bool, error) {
-	var readMarker ReadMarker
-	result := edb.Get().
-		Model(&ReadMarker{}).
-		Where(&ReadMarker{TransactionID: rm.TransactionID}).
-		Take(&readMarker)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
-	} else if result.Error != nil {
-		return false, fmt.Errorf("error searching for read marker txn: %v, error %v",
-			rm.TransactionID, result.Error)
-	}
-	return true, nil
+func mergeAddReadMarkerEvents() *eventsMergerImpl[ReadMarker] {
+	return newEventsMerger[ReadMarker](TagAddReadMarker)
 }

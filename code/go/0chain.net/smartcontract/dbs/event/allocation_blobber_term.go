@@ -1,24 +1,22 @@
 package event
 
 import (
+	"time"
+
 	common2 "0chain.net/smartcontract/common"
 	"gorm.io/gorm/clause"
-	"time"
 
 	"gorm.io/gorm"
 )
 
 type AllocationBlobberTerm struct {
 	gorm.Model
-	AllocationID            string        `json:"allocation_id" gorm:"uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first
-	BlobberID               string        `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`    // Foreign Key
-	ReadPrice               int64         `json:"read_price"`
-	WritePrice              int64         `json:"write_price"`
-	MinLockDemand           float64       `json:"min_lock_demand"`
-	MaxOfferDuration        time.Duration `json:"max_offer_duration"`
-	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
-	Allocation              Allocation    `json:"-" gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Blobber                 Blobber       `json:"-" gorm:"references:BlobberID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	AllocationID     string        `json:"allocation_id" gorm:"uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first
+	BlobberID        string        `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`    // Foreign Key
+	ReadPrice        int64         `json:"read_price"`
+	WritePrice       int64         `json:"write_price"`
+	MinLockDemand    float64       `json:"min_lock_demand"`
+	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }
 
 func (edb *EventDb) GetAllocationBlobberTerm(allocationID string, blobberID string) (*AllocationBlobberTerm, error) {
@@ -28,10 +26,10 @@ func (edb *EventDb) GetAllocationBlobberTerm(allocationID string, blobberID stri
 		Take(&term).Error
 }
 
-func (edb *EventDb) GetAllocationBlobberTerms(allocationID, blobberID string, limit common2.Pagination) ([]AllocationBlobberTerm, error) {
+func (edb *EventDb) GetAllocationBlobberTerms(allocationID string, limit common2.Pagination) ([]AllocationBlobberTerm, error) {
 	var terms []AllocationBlobberTerm
 	return terms, edb.Store.Get().Model(&AllocationBlobberTerm{}).
-		Where(AllocationBlobberTerm{AllocationID: allocationID, BlobberID: blobberID}).
+		Where(AllocationBlobberTerm{AllocationID: allocationID}).
 		Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
 		Desc:   limit.IsDescending,
@@ -82,7 +80,7 @@ func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 
 func (edb *EventDb) addOrOverwriteAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
 	updateFields := []string{"read_price", "write_price", "min_lock_demand",
-		"max_offer_duration", "challenge_completion_time"}
+		"max_offer_duration"}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "allocation_id"}, {Name: "blobber_id"}},

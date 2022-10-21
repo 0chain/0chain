@@ -763,6 +763,17 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 	return c.getBlock(ctx, hash)
 }
 
+func (c *Chain) GetBlockClone(ctx context.Context, hash string) (*block.Block, error) {
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
+	b, err := c.getBlock(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.Clone(), nil
+}
+
 func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error) {
 	if b, ok := c.blocks[datastore.ToKey(hash)]; ok {
 		return b, nil
@@ -919,23 +930,6 @@ func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder 
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(nRound).Sharders, hash)
 	return sharder.IsInTopWithNodes(scores, c.NumReplicators())
-}
-
-// GetBlockSharders - get the list of sharders who would be replicating the block.
-func (c *Chain) GetBlockSharders(b *block.Block) (sharders []string) {
-	//TODO: sharders list needs to get resolved per the magic block of the block
-	var (
-		sharderPool  = c.GetMagicBlock(b.Round).Sharders
-		sharderNodes = sharderPool.CopyNodes()
-	)
-	if c.NumReplicators() > 0 {
-		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)
-		sharderNodes = node.GetTopNNodes(scores, c.NumReplicators())
-	}
-	for _, sharder := range sharderNodes {
-		sharders = append(sharders, sharder.GetKey())
-	}
-	return sharders
 }
 
 /*ValidGenerator - check whether this block is from a valid generator */

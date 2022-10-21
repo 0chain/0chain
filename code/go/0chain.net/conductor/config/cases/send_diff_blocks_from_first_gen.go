@@ -8,7 +8,7 @@ import (
 type (
 	// SendDifferentBlocksFromFirstGenerator represents TestCaseConfigurator implementation.
 	SendDifferentBlocksFromFirstGenerator struct {
-		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
+		Round int `json:"round" yaml:"round" mapstructure:"round"`
 
 		minersNum int
 	}
@@ -43,4 +43,8 @@ func (n *SendDifferentBlocksFromFirstGenerator) Name() string {
 // Decode implements MapDecoder interface.
 func (n *SendDifferentBlocksFromFirstGenerator) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
+}
+
+func (n *SendDifferentBlocksFromFirstGenerator) IsTesting(round int64, generator bool, nodeTypeRank int) bool {
+	return int64(n.Round) == round && generator && nodeTypeRank == 0
 }

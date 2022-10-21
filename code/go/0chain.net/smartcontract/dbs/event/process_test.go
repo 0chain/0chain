@@ -29,7 +29,7 @@ func TestAddEvents(t *testing.T) {
 	eventDb.AutoMigrate()
 	defer eventDb.Drop()
 
-	eventDb.AddEvents(context.Background(), []Event{
+	eventDb.ProcessEvents(context.Background(), []Event{
 		{
 			TxHash: "somehash",
 			Type:   int(TypeError),

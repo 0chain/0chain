@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"0chain.net/chaincore/state"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -17,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
@@ -182,11 +183,13 @@ func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 	if content == "" {
 		content = "header"
 	}
-	parts := strings.Split(content, ",")
-	b, err := GetServerChain().GetBlock(ctx, hash)
+
+	b, err := GetServerChain().GetBlockClone(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
+
+	parts := strings.Split(content, ",")
 	return GetBlockResponse(b, parts)
 }
 
@@ -1622,16 +1625,16 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(context.Context, datastore.CollectionEntity) bool {
-	return func(ctx context.Context, ce datastore.CollectionEntity) bool {
+func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(context.Context, datastore.CollectionEntity) (bool, error) {
+	return func(ctx context.Context, ce datastore.CollectionEntity) (bool, error) {
 		txn, ok := ce.(*transaction.Transaction)
 		if !ok {
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", ce))
-			return false
+			return false, nil
 		}
 
 		c.txnsInPoolTableRows(w, txn, s)
-		return true
+		return true, nil
 	}
 }
 

@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"0chain.net/core/viper"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"0chain.net/core/viper"
 
 	"0chain.net/chaincore/currency"
 
@@ -409,7 +410,8 @@ func (t *Transaction) GetSummary() *TransactionSummary {
 	return summary
 }
 
-/*DebugTxn - is this a transaction that needs being debugged
+/*
+DebugTxn - is this a transaction that needs being debugged
 - applicable only when running in test mode and the transaction_data string contains debug keyword somewhere in it
 */
 func (t *Transaction) DebugTxn() bool {
