@@ -37,7 +37,7 @@ type GlobalNode struct {
 }
 
 func (gn *GlobalNode) GetKey() datastore.Key {
-	return datastore.Key(gn.ID + gn.ID)
+	return globalNodeKey
 }
 
 func (gn *GlobalNode) GetHash() string {

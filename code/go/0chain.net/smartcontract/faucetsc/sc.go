@@ -130,11 +130,6 @@ func (fc *FaucetSmartContract) updateSettings(
 	gn *GlobalNode,
 ) (string, error) {
 	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
-		if gn.FaucetConfig.OwnerId != t.ClientID {
-			logging.Logger.Error("no auth",
-				zap.String("owner id", gn.FaucetConfig.OwnerId),
-				zap.String("client id", t.ClientID))
-		}
 		return gn.FaucetConfig.OwnerId == t.ClientID
 	}); err != nil {
 		return "", err
@@ -256,36 +251,24 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
 	gn := &GlobalNode{ID: fc.ID}
 	err := balances.GetTrieNode(globalNodeKey, gn)
-	switch err {
-	case nil, util.ErrValueNotPresent:
-		var err2 error
-		if gn.FaucetConfig == nil {
-			gn.FaucetConfig, err2 = getFaucetConfig()
-			if err2 != nil {
-				return nil, err2
-			}
-		}
-		return gn, err
-	default:
+	if err != nil {
 		return nil, err
 	}
+
+	return gn, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) (*GlobalNode, error) {
 	gn, err := fc.getGlobalNode(balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil {
 		return nil, err
 	}
 
-	if err == nil {
-		if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
-			gn.StartTime = common.ToTime(t.CreationDate)
-			gn.Used = 0
-		}
-		return gn, nil
+	if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
+		gn.StartTime = common.ToTime(t.CreationDate)
+		gn.Used = 0
 	}
-	gn.Used = 0
-	gn.StartTime = common.ToTime(t.CreationDate)
+
 	return gn, nil
 }
 
