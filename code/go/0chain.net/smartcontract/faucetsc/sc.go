@@ -130,6 +130,11 @@ func (fc *FaucetSmartContract) updateSettings(
 	gn *GlobalNode,
 ) (string, error) {
 	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+		if gn.FaucetConfig.OwnerId != t.ClientID {
+			logging.Logger.Error("no auth",
+				zap.String("owner id", gn.FaucetConfig.OwnerId),
+				zap.String("client id", t.ClientID))
+		}
 		return gn.FaucetConfig.OwnerId == t.ClientID
 	}); err != nil {
 		return "", err
