@@ -150,7 +150,7 @@ type Block struct {
 	ChainID   datastore.Key `json:"chain_id"`
 	RoundRank int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
 	PrevBlock *Block        `json:"-" msgpack:"-"`
-	Events    []event.Event
+	Events    []event.Event `json:"-" msgpack:"-"`
 
 	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
 	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
@@ -920,7 +920,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			BlockNumber: b.Round,
 			TxHash:      txn.Hash,
 			Type:        int(event.TypeStats),
-			Tag:         int(event.TagAddTransaction),
+			Tag:         int(event.TagAddTransactions),
 			Index:       txn.Hash,
 			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),
 		})

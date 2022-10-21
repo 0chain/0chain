@@ -265,7 +265,7 @@ func isSendingDifferentBlocksFromFirstGenerator(r int64) bool {
 	isGenerator0 := currRound.GetMinerRank(node.Self.Node) == 0
 	testCfg := crpc.Client().State().SendDifferentBlocksFromFirstGenerator
 	// we need to send different blocks on configured round with 0 timeout count from the Generator0
-	return testCfg != nil && testCfg.OnRound == r && isGenerator0 && currRound.GetTimeoutCount() == 0
+	return testCfg != nil && int64(testCfg.Round) == r && isGenerator0 && currRound.GetTimeoutCount() == 0
 }
 
 func isSendingDifferentBlocksFromAllGenerators(r int64) bool {
@@ -275,7 +275,7 @@ func isSendingDifferentBlocksFromAllGenerators(r int64) bool {
 	isGenerator := mc.IsRoundGenerator(mc.GetRound(r), node.Self.Node)
 	testCfg := crpc.Client().State().SendDifferentBlocksFromAllGenerators
 	// we need to send different blocks on configured round with 0 timeout count from all generators
-	return testCfg != nil && testCfg.OnRound == r && isGenerator && currRound.GetTimeoutCount() == 0
+	return testCfg != nil && int64(testCfg.Round) == r && isGenerator && currRound.GetTimeoutCount() == 0
 }
 
 func sendDifferentBlocks(ctx context.Context, b *block.Block) {
@@ -292,6 +292,9 @@ func sendDifferentBlocks(ctx context.Context, b *block.Block) {
 		}
 
 		b := blocks[ind]
+		if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
+			log.Panicf("Conductor: error while configuring test case: %v", err)
+		}
 		handler := VerifyBlockSender(b)
 		ok := handler(ctx, n)
 		if !ok {

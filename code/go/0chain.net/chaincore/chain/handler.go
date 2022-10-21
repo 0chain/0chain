@@ -183,11 +183,13 @@ func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 	if content == "" {
 		content = "header"
 	}
-	parts := strings.Split(content, ",")
-	b, err := GetServerChain().GetBlock(ctx, hash)
+
+	b, err := GetServerChain().GetBlockClone(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
+
+	parts := strings.Split(content, ",")
 	return GetBlockResponse(b, parts)
 }
 

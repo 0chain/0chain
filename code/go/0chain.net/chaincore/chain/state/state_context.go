@@ -61,6 +61,7 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 
 type CommonStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
+	InsertTrieNode(key datastore.Key, v util.MPTSerializable) (datastore.Key, error)
 	GetBlock() *block.Block
 	GetLatestFinalizedBlock() *block.Block
 	GetConfig(smartcontract string) (*SCConfig, error)
@@ -96,7 +97,6 @@ type StateContextI interface {
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientBalance(clientID datastore.Key) (currency.Coin, error)
 	SetStateContext(st *state.State) error // cannot use in smart contracts or REST endpoints
-	InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error)
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	AddTransfer(t *state.Transfer) error
 	AddSignedTransfer(st *state.SignedTransfer)
@@ -107,7 +107,7 @@ type StateContextI interface {
 	Validate() error
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
-	EmitEvent(event.EventType, event.EventTag, string, interface{}, ...Appender)
+	EmitEvent(eventType event.EventType, eventTag event.EventTag, index string, data interface{}, appender ...Appender)
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetInvalidStateErrors() []error

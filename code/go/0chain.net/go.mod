@@ -6,7 +6,7 @@ require (
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
 	github.com/alicebob/miniredis/v2 v2.23.0
 	github.com/didip/tollbooth v4.0.2+incompatible
-	github.com/go-openapi/runtime v0.24.1
+	github.com/go-openapi/runtime v0.24.2
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/gocql/gocql v1.2.1
 	github.com/golang/snappy v0.0.4
@@ -24,7 +24,7 @@ require (
 	github.com/selvatico/go-mocket v1.0.7
 	github.com/shopspring/decimal v1.3.1
 	github.com/spf13/cast v1.5.0
-	github.com/spf13/cobra v1.5.0
+	github.com/spf13/cobra v1.6.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.0
@@ -66,7 +66,7 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.13.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect

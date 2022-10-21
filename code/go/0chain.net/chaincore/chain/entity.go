@@ -15,7 +15,10 @@ import (
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/storagesc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"github.com/herumi/bls/ffi/go/bls"
 	"go.uber.org/zap"
 
@@ -563,15 +566,46 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
 		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
-			logging.Logger.Error("chain.stateDB insert failed", zap.Error(err))
+			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
 		}
+		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
 	}
 
-	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
-	mustInitPartitions(state)
+	stateCtx := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
+	mustInitPartitions(stateCtx)
+
+	err := faucetsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB faucetsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = minersc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB minersc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = storagesc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB storagesc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = vestingsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB vestingsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = zcnsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB zcnsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
 
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
-		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
+		logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
 	}
 	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
@@ -727,6 +761,17 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 	c.blocksMutex.RLock()
 	defer c.blocksMutex.RUnlock()
 	return c.getBlock(ctx, hash)
+}
+
+func (c *Chain) GetBlockClone(ctx context.Context, hash string) (*block.Block, error) {
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
+	b, err := c.getBlock(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.Clone(), nil
 }
 
 func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error) {

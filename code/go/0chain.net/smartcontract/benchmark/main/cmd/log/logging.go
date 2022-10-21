@@ -2,6 +2,7 @@ package log
 
 import (
 	"log"
+	"runtime/debug"
 
 	bk "0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"
@@ -18,6 +19,8 @@ func Println(v ...interface{}) {
 }
 
 func Fatal(v ...interface{}) {
+	debug.PrintStack()
+	log.Println("fatal debug")
 	log.Fatal(v...)
 }
 

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 
@@ -41,7 +42,8 @@ func GetOffsetLimitOrderParam(values url.Values) (Pagination, error) {
 		}
 
 		if limit > DefaultQueryLimit {
-			limit = DefaultQueryLimit
+			msg := fmt.Sprintf("limit %d too high, cannot exceed %d", limit, DefaultQueryLimit)
+			return Pagination{Limit: DefaultQueryLimit}, common.NewErrBadRequest(msg)
 		}
 	}
 

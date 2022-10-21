@@ -97,10 +97,13 @@ func TestSharders(t *testing.T) {
 			MinStake:          sn.MinStake,
 			MaxStake:          sn.MaxStake,
 			LastHealthCheck:   sn.LastHealthCheck,
-			Rewards:           sn.Stat.GeneratorRewards,
-			Fees:              sn.Stat.GeneratorFees,
-			Longitude:         0,
-			Latitude:          0,
+			Rewards: ProviderRewards{
+				ProviderID: sn.ID,
+				Rewards:    sn.Stat.GeneratorRewards,
+			},
+			Fees:      sn.Stat.GeneratorFees,
+			Longitude: 0,
+			Latitude:  0,
 		}
 	}
 
@@ -161,11 +164,11 @@ func TestSharders(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddSharder),
+		Tag:         int(TagAddOrOverwriteSharder),
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.AddEvents(context.TODO(), events, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 
 	sharder, err := eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -185,7 +188,7 @@ func TestSharders(t *testing.T) {
 		Tag:         int(TagAddOrOverwriteSharder),
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -209,7 +212,7 @@ func TestSharders(t *testing.T) {
 		Tag:         int(TagUpdateSharder),
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -224,7 +227,7 @@ func TestSharders(t *testing.T) {
 		Tag:         int(TagDeleteSharder),
 		Data:        sn.ID,
 	}
-	eventDb.AddEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.Error(t, err)
@@ -337,7 +340,7 @@ func TestGetSharderLocations(t *testing.T) {
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i)}
-		err := eventDb.addSharder(s)
+		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }
@@ -345,7 +348,7 @@ func createSharders(t *testing.T, eventDb *EventDb, count int) {
 func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
-		err := eventDb.addSharder(s)
+		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }
