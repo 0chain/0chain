@@ -29,35 +29,34 @@ func (bc *ChallengeReadyBlobber) GetID() string {
 }
 
 func partitionsChallengeReadyBlobbersAdd(state state.StateContextI,
-	blobberID string, weight uint64) (*partitions.PartitionLocation, error) {
+	blobberID string, weight uint64) error {
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
-		return nil, fmt.Errorf("could not get challenge ready partitions, %v", err)
+		return fmt.Errorf("could not get challenge ready partitions, %v", err)
 	}
 
-	partIdx, err := challengeReadyParts.AddItem(state, &ChallengeReadyBlobber{
+	err = challengeReadyParts.AddItem(state, &ChallengeReadyBlobber{
 		BlobberID: blobberID,
 		Weight:    weight,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not add blobber to challenge ready partition, %v", err)
+		return fmt.Errorf("could not add blobber to challenge ready partition, %v", err)
 	}
 
 	if err := challengeReadyParts.Save(state); err != nil {
-		return nil, fmt.Errorf("could not update challenge ready partitions: %v", err)
+		return fmt.Errorf("could not update challenge ready partitions: %v", err)
 	}
 
-	return &partitions.PartitionLocation{Location: partIdx}, nil
+	return nil
 }
 
-func partitionsChallengeReadyBlobbersRemove(state state.StateContextI,
-	pl *partitions.PartitionLocation, blobberID string) error {
+func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID string) error {
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return fmt.Errorf("could not get blobber challenge ready partitions: %v", err)
 	}
 
-	err = challengeReadyParts.RemoveItem(state, pl.Location, blobberID)
+	err = challengeReadyParts.RemoveItem(state, blobberID)
 	if err != nil {
 		return fmt.Errorf("could not remove blobber from challenge partitions: %v", err)
 	}

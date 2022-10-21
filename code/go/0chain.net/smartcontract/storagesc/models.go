@@ -317,8 +317,7 @@ func (sng StorageNodeGeolocation) validate() error {
 	return nil
 }
 
-type RewardPartitionLocation struct {
-	Index      int              `json:"index"`
+type RewardRound struct {
 	StartRound int64            `json:"start_round"`
 	Timestamp  common.Timestamp `json:"timestamp"`
 }
@@ -345,8 +344,8 @@ type StorageNode struct {
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
-	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	RewardRound       RewardRound        `json:"reward_round"`
 }
 
 // validate the blobber configurations
@@ -526,29 +525,6 @@ type BlobberAllocation struct {
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
 	ChallengePoolIntegralValue currency.Coin `json:"challenge_pool_integral_value"`
-	// BlobberAllocationsPartitionLoc indicates the partition location for the allocation that
-	// saved in blobber allocations partitions.
-	BlobberAllocationsPartitionLoc *partitions.PartitionLocation `json:"blobber_allocs_partition_loc"`
-}
-
-// blobberPartitionsLocations that any blobber related partition locations could be
-// stored in this node
-type blobberPartitionsLocations struct {
-	ID                         string // blobber id
-	ChallengeReadyPartitionLoc *partitions.PartitionLocation
-}
-
-func (bpl *blobberPartitionsLocations) getKey(scAddress string) datastore.Key {
-	return fmt.Sprintf("%s:blobber_partitions_locations:%s", scAddress, bpl.ID)
-}
-
-func (bpl *blobberPartitionsLocations) save(state cstate.StateContextI, scAddress string) error {
-	_, err := state.InsertTrieNode(bpl.getKey(scAddress), bpl)
-	return err
-}
-
-func (bpl *blobberPartitionsLocations) load(state cstate.StateContextI, scAddress string) error {
-	return state.GetTrieNode(bpl.getKey(scAddress), bpl)
 }
 
 func newBlobberAllocation(
@@ -1035,26 +1011,23 @@ func removeAllocationFromBlobber(
 	balances cstate.StateContextI) error {
 
 	blobberID := blobAlloc.BlobberID
-	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
-		logging.Logger.Warn("skipping removing allocation from blobber partition, " +
-			"empty blobber allocation partition location")
-		return nil
-	}
 
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
 		return fmt.Errorf("cannot fetch blobber allocation partition: %v", err)
 	}
 
-	if err := blobAllocsParts.RemoveItem(balances, blobAlloc.BlobberAllocationsPartitionLoc.Location, allocID); err != nil {
+	if err := blobAllocsParts.RemoveItem(balances, allocID); err != nil {
+		if partitions.ErrItemNotFound(err) {
+			logging.Logger.Warn("empty blobber allocation partition location")
+			return nil
+		}
 		return fmt.Errorf("could not remove allocation from blobber allocations partitions: %v", err)
 	}
 
 	if err := blobAllocsParts.Save(balances); err != nil {
 		return fmt.Errorf("could not update blobber allocation partitions: %v", err)
 	}
-	// nullifying the blobber alloc challenge pasrtition location
-	blobAlloc.BlobberAllocationsPartitionLoc = nil
 
 	allocNum, err := blobAllocsParts.Size(balances)
 	if err != nil {
@@ -1065,24 +1038,8 @@ func removeAllocationFromBlobber(
 		return nil
 	}
 
-	// remove the blobber related resources fom MPT when there's no allocation attached to it
-	blobPartsLocs := &blobberPartitionsLocations{ID: blobberID}
-	if err := blobPartsLocs.load(balances, ssc.ID); err != nil {
-		return fmt.Errorf("could not load blobber patitions locations: %v", err)
-	}
-
-	if blobPartsLocs.ChallengeReadyPartitionLoc == nil {
-		return fmt.Errorf("challenge ready partition location is empty")
-	}
-
-	if err := partitionsChallengeReadyBlobbersRemove(balances,
-		blobPartsLocs.ChallengeReadyPartitionLoc, blobberID); err != nil {
+	if err := partitionsChallengeReadyBlobbersRemove(balances, blobberID); err != nil {
 		return fmt.Errorf("could not remove blobber from challenge ready partitions: %v", err)
-	}
-
-	blobPartsLocs.ChallengeReadyPartitionLoc = nil
-	if err := blobPartsLocs.save(balances, ssc.ID); err != nil {
-		return fmt.Errorf("could not update blobber partitions locations node: %v", err)
 	}
 
 	return nil

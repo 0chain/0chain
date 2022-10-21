@@ -18,7 +18,7 @@ func TestPartitionsSave(t *testing.T) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 		it := testItem{ID: k, V: v}
-		_, err = parts.AddItem(balances, &it)
+		err = parts.AddItem(balances, &it)
 		require.NoError(t, err)
 	}
 
@@ -29,7 +29,7 @@ func TestPartitionsSave(t *testing.T) {
 	require.NoError(t, err)
 
 	var v testItem
-	err = p1.GetItem(balances, 1, "k15", &v)
+	err = p1.GetItem(balances, "k15", &v)
 	require.NoError(t, err)
 	require.Equal(t, "v15", v.V)
 
@@ -38,7 +38,7 @@ func TestPartitionsSave(t *testing.T) {
 	require.Equal(t, 2, p2.rs.NumPartitions)
 
 	// update item
-	err = p1.UpdateItem(balances, 1, &testItem{"k10", "vv10"})
+	err = p1.UpdateItem(balances, &testItem{"k10", "vv10"})
 	require.NoError(t, err)
 	require.NoError(t, p1.Save(balances))
 
@@ -47,7 +47,7 @@ func TestPartitionsSave(t *testing.T) {
 	require.Equal(t, 2, p3.rs.NumPartitions)
 
 	var vv testItem
-	err = p3.GetItem(balances, 1, "k10", &vv)
+	err = p3.GetItem(balances, "k10", &vv)
 	require.NoError(t, err)
 	require.Equal(t, "vv10", vv.V)
 }
