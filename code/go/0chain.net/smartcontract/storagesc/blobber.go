@@ -10,6 +10,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -448,7 +449,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 	blobber.LastRewardDataReadRound = balances.GetBlock().Round
 
-	if blobber.RewardPartition.StartRound >= rewardRound && blobber.RewardPartition.Timestamp > 0 {
+	if blobber.RewardRound.StartRound >= rewardRound && blobber.RewardRound.Timestamp > 0 {
 		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
@@ -456,14 +457,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		}
 
 		var brn BlobberRewardNode
-		if err := parts.GetItem(balances, blobber.RewardPartition.Index, blobber.ID, &brn); err != nil {
+		if err := parts.GetItem(balances, blobber.ID, &brn); err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
 		brn.DataRead = blobber.DataReadLastRewardRound
 
-		err = parts.UpdateItem(balances, blobber.RewardPartition.Index, &brn)
+		err = parts.UpdateItem(balances, &brn)
 		if err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
 				"error updating blobber reward item: %v", err)
@@ -696,12 +697,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	// the first time the allocation is added  to the blobber, created related resources
 	if blobAlloc.Stats.UsedSize == 0 {
+		// remove allocation from blobber when there's no data stored
 		err = removeAllocationFromBlobber(sc, blobAlloc, alloc.ID, balances)
 		if err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"removing allocation from blobAlloc partition: %v", err)
 		}
-	} else if blobAlloc.BlobberAllocationsPartitionLoc == nil {
+	} else {
 		if err := sc.blobberAddAllocation(t, blobAlloc, uint64(blobber.SavedData), balances); err != nil {
 			return "", common.NewErrorf("commit_connection_failed", err.Error())
 		}
@@ -709,7 +711,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
-	if blobber.RewardPartition.StartRound >= startRound && blobber.RewardPartition.Timestamp > 0 {
+	if blobber.RewardRound.StartRound >= startRound && blobber.RewardRound.Timestamp > 0 {
 		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
@@ -717,14 +719,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 
 		var brn BlobberRewardNode
-		if err := parts.GetItem(balances, blobber.RewardPartition.Index, blobber.ID, &brn); err != nil {
+		if err := parts.GetItem(balances, blobber.ID, &brn); err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
 		brn.TotalData = sizeInGB(blobber.SavedData)
 
-		err = parts.UpdateItem(balances, blobber.RewardPartition.Index, &brn)
+		err = parts.UpdateItem(balances, &brn)
 		if err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"error updating blobber reward item: %v", err)
@@ -767,16 +769,19 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 //     update blobber partitions locations
 func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transaction,
 	blobAlloc *BlobberAllocation, blobUsedCapacity uint64, balances cstate.StateContextI) error {
+	blobAllocsParts, err := partitionsBlobberAllocationsAdd(balances, txn.ClientID, blobAlloc.AllocationID)
+	if err != nil {
+		if partitions.ErrItemExist(err) {
+			// allocation already added to blobber
+			return nil
+		}
+
+		return common.NewError("could not add allocation to blobber", err.Error())
+	}
+
 	logging.Logger.Info("commit_connection, add allocation to blobber",
 		zap.String("blobber", txn.ClientID),
 		zap.String("allocation", blobAlloc.AllocationID))
-
-	blobAllocsParts, loc, err := partitionsBlobberAllocationsAdd(balances, txn.ClientID, blobAlloc.AllocationID)
-	if err != nil {
-		return err
-	}
-
-	blobAlloc.BlobberAllocationsPartitionLoc = loc
 
 	// there are more than one partition, so the blobber should have already been added to
 	// the challenge ready partition
@@ -813,19 +818,8 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 	}
 	weight := uint64(stakedAmount) * blobUsedCapacity
 
-	crbLoc, err := partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight)
-	if err != nil {
+	if err = partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight); err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions: %v", err)
-	}
-
-	// add the challenge ready partition location to blobber partition locations
-	bpl := &blobberPartitionsLocations{
-		ID:                         txn.ClientID,
-		ChallengeReadyPartitionLoc: crbLoc,
-	}
-
-	if err := bpl.save(balances, sc.ID); err != nil {
-		return fmt.Errorf("could not add challenge ready partition location: %v", err)
 	}
 
 	return nil

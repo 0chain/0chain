@@ -72,7 +72,7 @@ if err := parts.GetRandomItems(state, rand, &foos); err != nil {
 
 ```
 
-## Get item of given partition index and id
+## Get item of by id from partition
 ```go
 parts, err := partitions.GetPartitions(state, "foo_partition")
 if err != nil {
@@ -80,7 +80,7 @@ if err != nil {
 }
 
 var foo Foo
-if err := parts.GetItem(state, partIndex, "f1", &foo); err != nil {
+if err := parts.GetItem(state, "f1", &foo); err != nil {
 	return err
 }
 

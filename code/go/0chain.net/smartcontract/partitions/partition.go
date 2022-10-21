@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/core/common"
-
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/util"
@@ -152,15 +150,6 @@ func (p *partition) findIndex(id string) int {
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-type PartitionLocation struct {
-	Location  int
-	Timestamp common.Timestamp
-}
-
-func NewPartitionLocation(location int, timestamp common.Timestamp) *PartitionLocation {
-	pl := new(PartitionLocation)
-	pl.Location = location
-	pl.Timestamp = timestamp
-
-	return pl
+type location struct {
+	Location int
 }

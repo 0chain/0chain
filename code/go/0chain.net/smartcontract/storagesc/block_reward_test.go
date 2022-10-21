@@ -1,12 +1,13 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"math/rand"
 	"os"
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -41,7 +42,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
-			_, err = allBR.AddItem(balances, &BlobberRewardNode{
+			err = allBR.AddItem(balances, &BlobberRewardNode{
 				ID:                bID,
 				SuccessChallenges: p.successChallenges[i],
 				WritePrice:        p.wp[i],
@@ -178,7 +179,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 			DataRead:          float64(i),
 		}
 		//bs[i] = b
-		if _, err := part.AddItem(sctx, &br); err != nil {
+		if err := part.AddItem(sctx, &br); err != nil {
 			panic(err)
 		}
 	}
@@ -200,7 +201,7 @@ func BenchmarkPartitionsGetItem(b *testing.B) {
 	id := strconv.Itoa(10)
 	for i := 0; i < b.N; i++ {
 		var br BlobberRewardNode
-		_ = part.GetItem(ps, 0, id, &br)
+		_ = part.GetItem(ps, id, &br)
 	}
 }
 
@@ -254,7 +255,7 @@ func BenchmarkGetUpdateItem(b *testing.B) {
 	require.NoError(b, err)
 
 	for i := 0; i < b.N; i++ {
-		_ = part.UpdateItem(ps, 0, &BlobberRewardNode{ID: "100"})
+		_ = part.UpdateItem(ps, &BlobberRewardNode{ID: "100"})
 	}
 
 	_ = part.Save(ps)
@@ -290,7 +291,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	p, err := partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 
-	_, err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_1"})
+	err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_1"})
 	require.NoError(t, err)
 	err = p.Save(state)
 	require.NoError(t, err)
@@ -301,7 +302,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, s)
 
-	_, err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_2"})
+	err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_2"})
 	require.NoError(t, err)
 
 	err = p.Save(state)

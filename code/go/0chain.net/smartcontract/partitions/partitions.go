@@ -4,11 +4,17 @@ import (
 	"fmt"
 	"math/rand"
 
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/chain/state"
+)
+
+const (
+	errItemNotFoundCode = "item not found"
+	errItemExistCode    = "item already exist"
 )
 
 // APIs
@@ -58,23 +64,53 @@ func GetPartitions(state state.StateContextI, name string) (*Partitions, error) 
 	return &Partitions{rs: &rs}, nil
 }
 
+// ErrItemNotFound checks if error is common.Error and code is 'item not found'
+func ErrItemNotFound(err error) bool {
+	cErr, ok := err.(*common.Error)
+	if !ok {
+		return false
+	}
+
+	return cErr.Code == errItemNotFoundCode
+}
+
+// ErrItemExist checks if error is common.Error and code is 'item already exist'
+func ErrItemExist(err error) bool {
+	cErr, ok := err.(*common.Error)
+	if !ok {
+		return false
+	}
+
+	return cErr.Code == errItemExistCode
+}
+
 // GetName returns the partitions name
 func (p *Partitions) GetName() string {
 	return p.rs.Name
 }
 
 // AddItem adds a partition item to parititons
-func (p *Partitions) AddItem(state state.StateContextI, item PartitionItem) (int, error) {
+func (p *Partitions) AddItem(state state.StateContextI, item PartitionItem) error {
+	// duplicate item checking
+	_, ok, err := p.getItemPartIndex(state, item.GetID())
+	if err != nil {
+		return err
+	}
+
+	if ok {
+		return common.NewError(errItemExistCode, item.GetID())
+	}
+
 	idx, err := p.rs.Add(state, item)
 	if err != nil {
-		return -1, err
+		return err
 	}
 
 	if err := p.saveItemLoc(state, item.GetID(), idx); err != nil {
-		return -1, err
+		return err
 	}
 
-	return idx, nil
+	return nil
 }
 
 // Save saves the partitions data into state
@@ -90,7 +126,7 @@ func (p *Partitions) GetItem(state state.StateContextI, id string, v PartitionIt
 	}
 
 	if !ok {
-		return fmt.Errorf("partition %s not found", id)
+		return common.NewError(errItemNotFoundCode, id)
 	}
 
 	return p.rs.GetItem(state, loc, id, v)
@@ -104,7 +140,7 @@ func (p *Partitions) UpdateItem(state state.StateContextI, item PartitionItem) e
 	}
 
 	if !ok {
-		return fmt.Errorf("partition %s not found", item.GetID())
+		return common.NewError(errItemNotFoundCode, item.GetID())
 	}
 
 	return p.rs.UpdateItem(state, loc, item)
@@ -128,7 +164,7 @@ func (p *Partitions) RemoveItem(state state.StateContextI, id string) error {
 	}
 
 	if !ok {
-		return fmt.Errorf("partition %s not found", id)
+		return common.NewError(errItemNotFoundCode, id)
 	}
 
 	if err := p.rs.RemoveItem(state, id, loc); err != nil {
@@ -145,6 +181,15 @@ func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, v i
 	return p.rs.GetRandomItems(state, r, v)
 }
 
+func (p *Partitions) Exist(state state.StateContextI, id string) (bool, error) {
+	_, ok, err := p.getItemPartIndex(state, id)
+	if err != nil {
+		return false, err
+	}
+
+	return ok, nil
+}
+
 type ChangePartitionCallback = func(string, []byte, int, int, state.StateContextI) error
 
 func (p *Partitions) getLocKey(id string) datastore.Key {
@@ -152,7 +197,7 @@ func (p *Partitions) getLocKey(id string) datastore.Key {
 }
 
 func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int, bool, error) {
-	var pl PartitionLocation
+	var pl location
 	if err := state.GetTrieNode(p.getLocKey(id), &pl); err != nil {
 		if err == util.ErrValueNotPresent {
 			return -1, false, nil
@@ -165,7 +210,7 @@ func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int
 }
 
 func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex int) error {
-	_, err := state.InsertTrieNode(p.getLocKey(id), &PartitionLocation{Location: partIndex})
+	_, err := state.InsertTrieNode(p.getLocKey(id), &location{Location: partIndex})
 	return err
 }
 
