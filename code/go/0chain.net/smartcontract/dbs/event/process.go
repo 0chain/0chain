@@ -265,7 +265,10 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		}
 
 		ts := time.Now()
-		if gs == nil && es.round > 0 {
+		if gs == nil && es.round == 1 {
+			gs = &Snapshot{Round: 1}
+		}
+		if gs == nil && es.round > 1 {
 			g, err := edb.GetGlobal()
 			if err != nil {
 				logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round))
