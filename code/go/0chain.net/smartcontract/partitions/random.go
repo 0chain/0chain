@@ -220,6 +220,23 @@ func (rs *randomSelector) GetRandomItems(state state.StateContextI, r *rand.Rand
 	return setPartitionItems(rtv, vs)
 }
 
+func (rs *randomSelector) foreach(state state.StateContextI, f func(string, []byte) error) error {
+	for i := 0; i < rs.NumPartitions; i++ {
+		part, err := rs.getPartition(state, i)
+		if err != nil {
+			return fmt.Errorf("could not get partition: name:%s, index: %d", rs.Name, i)
+		}
+
+		for _, v := range part.Items {
+			if err := f(v.ID, v.Data); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func setPartitionItems(rtv []item, vs interface{}) error {
 	// slice type
 	vst := reflect.TypeOf(vs)

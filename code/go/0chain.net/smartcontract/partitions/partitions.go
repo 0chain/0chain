@@ -181,6 +181,12 @@ func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, v i
 	return p.rs.GetRandomItems(state, r, v)
 }
 
+// Foreach loads all partitions and iterate through one by one
+// break whenever the callback function returns error
+func (p *Partitions) Foreach(state state.StateContextI, f func(key string, data []byte) error) error {
+	return p.rs.foreach(state, f)
+}
+
 func (p *Partitions) Exist(state state.StateContextI, id string) (bool, error) {
 	_, ok, err := p.getItemPartIndex(state, id)
 	if err != nil {
