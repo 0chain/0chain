@@ -102,7 +102,7 @@ type (
 )
 
 func globalKeyHash(name string) datastore.Key {
-	return datastore.Key(ADDRESS + encryption.Hash(name))
+	return ADDRESS + encryption.Hash(name)
 }
 
 func NewSimpleNodes() SimpleNodes {

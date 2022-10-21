@@ -138,18 +138,30 @@ func getGlobalNode(
 	gn = new(GlobalNode)
 	err = balances.GetTrieNode(GlobalNodeKey, gn)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		err = gn.readConfig()
-		if err != nil {
-			return nil, fmt.Errorf("error reading config: %v", err)
-		}
-		if err := gn.validate(); err != nil {
-			return nil, fmt.Errorf("validating global node: %v", err)
-		}
-		return gn, nil
+		return nil, err
 	}
 
 	return gn, nil
+}
+
+func InitConfig(
+	balances cstate.CommonStateContextI,
+) (err error) {
+	gn := new(GlobalNode)
+	err = balances.GetTrieNode(GlobalNodeKey, gn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return err
+		}
+		err = gn.readConfig()
+		if err != nil {
+			return fmt.Errorf("error reading config: %v", err)
+		}
+		if err := gn.validate(); err != nil {
+			return fmt.Errorf("validating global node: %v", err)
+		}
+		_, err = balances.InsertTrieNode(GlobalNodeKey, gn)
+		return err
+	}
+	return nil
 }

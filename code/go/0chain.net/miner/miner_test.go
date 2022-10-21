@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/setupsc"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -26,6 +27,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
 	"0chain.net/sharder/blockstore"
 	"github.com/0chain/common/core/logging"
 	"github.com/gomodule/redigo/redis"
@@ -169,6 +171,8 @@ func TestBlockGeneration(t *testing.T) {
 
 	mc, stopAndClean := setupMinerChain()
 	defer stopAndClean()
+
+	config.SetupSmartContractConfig("testdata")
 
 	gb := SetupGenesisBlock()
 	mc.AddGenesisBlock(gb)
@@ -395,6 +399,14 @@ func SetupGenesisBlock() *block.Block {
 }
 
 func SetUpSingleSelf() func() {
+	viper.Set("server_chain.smart_contract.faucet", true)
+	viper.Set("server_chain.smart_contract.storage", true)
+	viper.Set("server_chain.smart_contract.zcn", true)
+	viper.Set("server_chain.smart_contract.multisig", true)
+	viper.Set("server_chain.smart_contract.miner", true)
+	viper.Set("server_chain.smart_contract.vesting", true)
+	setupsc.SetupSmartContracts()
+
 	// create rocksdb state dir
 	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
@@ -408,6 +420,18 @@ func SetUpSingleSelf() func() {
 	memorystore.InitDefaultPool(s.Host(), p)
 
 	memorystore.AddPool("txndb", &redis.Pool{
+		MaxIdle:   80,
+		MaxActive: 1000, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", s.Addr())
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	})
+
+	memorystore.AddPool("clientdb", &redis.Pool{
 		MaxIdle:   80,
 		MaxActive: 1000, // max number of connections
 		Dial: func() (redis.Conn, error) {

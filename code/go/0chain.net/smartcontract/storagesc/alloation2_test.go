@@ -544,7 +544,7 @@ func setupMocksFinishAllocation(
 		require.NoError(t, err)
 	}
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
 	var request = lockRequest{
@@ -761,7 +761,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		require.NoError(t, stakePool.save(spenum.Blobber, blobber.ID, ctx))
 	}
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
 	for _, blobber := range blobbers {

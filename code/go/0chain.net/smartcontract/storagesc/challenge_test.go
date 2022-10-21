@@ -617,7 +617,7 @@ func setupChallengeMocks(
 	}
 	require.NoError(t, ssc.saveStakePools(validators, validatorsSPs, ctx))
 
-	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)
+	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
 	return txn, ssc, allocation, allocChallenges, details, ctx

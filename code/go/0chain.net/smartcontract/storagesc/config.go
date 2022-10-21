@@ -10,13 +10,14 @@ import (
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 func scConfigKey(scKey string) datastore.Key {
-	return scKey + ":configurations"
+	return scKey + encryption.Hash("storagesc_config")
 }
 
 type freeAllocationSettings struct {
@@ -537,17 +538,17 @@ func getConfiguredConfig() (conf *Config, err error) {
 	return
 }
 
-func (ssc *StorageSmartContract) setupConfig(
-	balances chainState.StateContextI) (conf *Config, err error) {
-
-	if conf, err = getConfiguredConfig(); err != nil {
-		return
+func InitConfig(balances chainState.StateContextI) error {
+	err := balances.GetTrieNode(scConfigKey(ADDRESS), &Config{})
+	if err == util.ErrValueNotPresent {
+		conf, err := getConfiguredConfig()
+		if err != nil {
+			return err
+		}
+		_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+		return err
 	}
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
-	if err != nil {
-		return nil, err
-	}
-	return
+	return err
 }
 
 // getConfig
@@ -556,18 +557,11 @@ func (ssc *StorageSmartContract) getConfig(
 	conf *Config, err error) {
 
 	conf = newConfig()
-	err = balances.GetTrieNode(scConfigKey(ssc.ID), conf)
-	switch err {
-	case util.ErrValueNotPresent:
-		if !setup {
-			return // value not present
-		}
-		return ssc.setupConfig(balances)
-	case nil:
-		return conf, nil
-	default:
+	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
+	if err != nil {
 		return nil, err
 	}
+	return conf, nil
 }
 
 // getReadPoolConfig
