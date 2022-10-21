@@ -266,3 +266,39 @@ func Test_randomSelector_Save(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "vv10", vv.V)
 }
+
+func Test_randomSelector_Foreach(t *testing.T) {
+	balances := &mockStateContextI{data: make(map[string][]byte)}
+	rs, err := newRandomSelector("test_rs", 10, nil)
+
+	items := make([]testItem, 0, 20)
+	for i := 0; i < 20; i++ {
+		k := fmt.Sprintf("k%d", i)
+		v := fmt.Sprintf("v%d", i)
+		it := testItem{ID: k, V: v}
+		items = append(items, it)
+		_, err = rs.Add(balances, &it)
+		require.NoError(t, err)
+	}
+
+	err = rs.Save(balances)
+	require.NoError(t, err)
+
+	var loadRs randomSelector
+	err = balances.GetTrieNode("test_rs", &loadRs)
+	require.NoError(t, err)
+
+	retItems := make([]testItem, 0, 20)
+	err = loadRs.foreach(balances, func(id string, data []byte) error {
+		var it testItem
+		_, err := it.UnmarshalMsg(data)
+		if err != nil {
+			return err
+		}
+		retItems = append(retItems, it)
+		return nil
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, items, retItems)
+}
