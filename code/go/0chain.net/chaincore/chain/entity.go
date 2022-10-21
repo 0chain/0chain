@@ -578,6 +578,10 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 }
 
 func mustInitPartitions(state cstate.StateContextI) {
+	if err := minersc.InitPartitions(state); err != nil {
+		logging.Logger.Panic("minersc init partitions failed", zap.Error(err))
+	}
+
 	if err := storagesc.InitPartitions(state); err != nil {
 		logging.Logger.Panic("storagesc init partitions failed", zap.Error(err))
 	}

@@ -1,12 +1,13 @@
 package minersc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"fmt"
 )
 
 //go:generate msgp -io=false -tests=false -unexported -v
@@ -37,6 +38,11 @@ func GetSharderKey(sid string) datastore.Key {
 
 func (mn *MinerNode) GetKey() datastore.Key {
 	return ADDRESS + mn.ID
+}
+
+// GetID implements partitions.Item interface.
+func (mn *MinerNode) GetID() string {
+	return mn.GetKey()
 }
 
 func (mn *MinerNode) numDelegates() int {
