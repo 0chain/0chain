@@ -369,6 +369,7 @@ func (store *blockStore) readFromColdTier(hash, coldPath string) (b *block.Block
 	if err != nil {
 		return nil, err
 	}
+	logging.Logger.Info("Successfully read from cold tier. ", zap.String("hash", hash))
 	return b, nil
 }
 
