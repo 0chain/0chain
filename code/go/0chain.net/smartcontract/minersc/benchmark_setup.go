@@ -29,7 +29,6 @@ func AddMockGlobalNode(balances cstate.StateContextI) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 func AddMockNodes(
