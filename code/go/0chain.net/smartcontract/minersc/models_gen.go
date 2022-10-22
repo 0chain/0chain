@@ -308,9 +308,9 @@ func (z *DKGMinerNodes) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 25
+	// map header, size 28
 	// string "ViewChange"
-	o = append(o, 0xde, 0x0, 0x19, 0xaa, 0x56, 0x69, 0x65, 0x77, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65)
+	o = append(o, 0xde, 0x0, 0x1c, 0xaa, 0x56, 0x69, 0x65, 0x77, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65)
 	o = msgp.AppendInt64(o, z.ViewChange)
 	// string "MaxN"
 	o = append(o, 0xa4, 0x4d, 0x61, 0x78, 0x4e)
@@ -382,6 +382,15 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "MaxMint")
 		return
 	}
+	// string "NumMinerDelegatesRewarded"
+	o = append(o, 0xb9, 0x4e, 0x75, 0x6d, 0x4d, 0x69, 0x6e, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x65, 0x64)
+	o = msgp.AppendInt(o, z.NumMinerDelegatesRewarded)
+	// string "NumShardersRewarded"
+	o = append(o, 0xb3, 0x4e, 0x75, 0x6d, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72, 0x73, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x65, 0x64)
+	o = msgp.AppendInt(o, z.NumShardersRewarded)
+	// string "NumSharderDelegatesRewarded"
+	o = append(o, 0xbb, 0x4e, 0x75, 0x6d, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x65, 0x64)
+	o = msgp.AppendInt(o, z.NumSharderDelegatesRewarded)
 	// string "PrevMagicBlock"
 	o = append(o, 0xae, 0x50, 0x72, 0x65, 0x76, 0x4d, 0x61, 0x67, 0x69, 0x63, 0x42, 0x6c, 0x6f, 0x63, 0x6b)
 	if z.PrevMagicBlock == nil {
@@ -557,6 +566,24 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxMint")
 				return
 			}
+		case "NumMinerDelegatesRewarded":
+			z.NumMinerDelegatesRewarded, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "NumMinerDelegatesRewarded")
+				return
+			}
+		case "NumShardersRewarded":
+			z.NumShardersRewarded, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "NumShardersRewarded")
+				return
+			}
+		case "NumSharderDelegatesRewarded":
+			z.NumSharderDelegatesRewarded, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "NumSharderDelegatesRewarded")
+				return
+			}
 		case "PrevMagicBlock":
 			if msgp.IsNil(bts) {
 				bts, err = msgp.ReadNilBytes(bts)
@@ -642,7 +669,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *GlobalNode) Msgsize() (s int) {
-	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 15
+	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 26 + msgp.IntSize + 20 + msgp.IntSize + 28 + msgp.IntSize + 15
 	if z.PrevMagicBlock == nil {
 		s += msgp.NilSize
 	} else {

@@ -382,10 +382,18 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
+	GlobalNodeKey := "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9" + encryption.Hash("global_node")
+	if key == GlobalNodeKey {
+		fmt.Println(key)
+	}
 	return sc.getNodeValue(key, v)
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
+	GlobalNodeKey := "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9" + encryption.Hash("global_node")
+	if key == GlobalNodeKey {
+		fmt.Println(key)
+	}
 	return sc.setNodeValue(key, node)
 }
 

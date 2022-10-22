@@ -55,7 +55,7 @@ smart_contracts:
     # gives 10% for miner and rest for block sharders
     share_ratio: 0.8 # [0; 1)
     # reward for a block
-    block_reward: 0.21 # tokens
+    block_reward: 0.2129 # tokens
     # max service charge can be set by a generator
     max_charge: 0.5 # %
     # epoch is number of rounds before rewards and interest are decreased
@@ -68,6 +68,12 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
+    # miner delegates to get paid each round when paying fees and rewards
+    num_miner_delegates_rewarded: 10
+    # sharders rewarded each round
+    num_sharders_rewarded: 5
+    # sharder delegates to get paid each round when paying fees and rewards
+    num_sharder_delegates_rewarded: 1
     cooldown_period: 100
     cost:
       add_miner: 100

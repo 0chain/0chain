@@ -3,6 +3,8 @@ package minersc
 import (
 	"strconv"
 
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
+
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -19,6 +21,16 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
 )
+
+func AddMockGlobalNode(balances cstate.StateContextI) {
+	var gn GlobalNode
+	gn.readConfig()
+	_, err := balances.InsertTrieNode(GlobalNodeKey, &gn)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
 
 func AddMockNodes(
 	clients []string,

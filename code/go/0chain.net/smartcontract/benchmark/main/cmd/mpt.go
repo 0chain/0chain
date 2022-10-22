@@ -252,6 +252,14 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
+		minersc.AddMockGlobalNode(balances)
+		log.Println("added minersc global node\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer := time.Now()
 		miners = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
 		log.Println("added miners\t", time.Since(timer))
 	}()

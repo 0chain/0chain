@@ -69,12 +69,15 @@ smart_contracts:
     interest_rate: 0.0 # [0; 1)
     reward_rate: 1.0 # [0; 1)
     share_ratio: 0.8 # [0; 1)
-    block_reward: 0.21 # tokens
+    block_reward: 0.2123 # tokens
     max_charge: 0.5 # %
     epoch: 15000000 # rounds
     reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     max_mint: 1500000.0 # tokens
+    num_miner_delegates_rewarded: 10
+    num_sharders_rewarded: 5
+    num_sharder_delegates_rewarded: 1
     cost:
       add_miner: 100
       add_sharder: 100
