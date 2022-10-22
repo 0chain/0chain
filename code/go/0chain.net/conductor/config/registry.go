@@ -609,4 +609,9 @@ func init() {
 
 		return ex.SetServerState(cfg)
 	})
+
+	register("magic_block", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := val.(string)
+		return ex.SetMagicBlock(cfg)
+	})
 }

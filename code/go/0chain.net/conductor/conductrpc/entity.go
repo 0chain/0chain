@@ -29,6 +29,18 @@ func (e *Entity) State() (state *State) {
 	return e.state
 }
 
+// MagicBlock returns the location path of the magic block configuration.
+func (e *Entity) MagicBlock() (magicBlock string) {
+	magicBlockPtr, err := e.client.magicBlock()
+	if err != nil {
+		log.Fatalf("failed getting magic block: %v", err)
+	}
+
+	magicBlock = *magicBlockPtr
+
+	return
+}
+
 // SetState sets current state.
 func (e *Entity) SetState(state *State) {
 	e.stateMu.Lock()
@@ -37,27 +49,18 @@ func (e *Entity) SetState(state *State) {
 	e.state = state
 }
 
-// NewEntity creates RPC client for integration tests.
-func NewEntity(id string) (e *Entity) {
-
+// Register registers node in conductor server
+func (e *Entity) Register(id string) {
 	var (
-		client, err = newClient(viper.GetString("integration_tests.address"))
-		interval    = viper.GetDuration("integration_tests.lock_interval")
-		state       *State
+		interval = viper.GetDuration("integration_tests.lock_interval")
 	)
-	if err != nil {
-		log.Fatalf("creating RPC client: %v", err)
-	}
 
-	e = new(Entity)
 	e.id = NodeID(id)
-	e.client = client
-	e.quit = make(chan struct{})
 
 	// initial state polling and wait node unlock
 	for {
 		// state polling can't return nil-State if err is nil
-		state, err = client.state(NodeID(id))
+		state, err := e.client.state(NodeID(id))
 		if err != nil {
 			panic("requesting RPC (State): " + err.Error())
 		}
@@ -74,6 +77,21 @@ func NewEntity(id string) (e *Entity) {
 
 	// start state polling
 	go e.pollState()
+}
+
+// NewEntity creates RPC client for integration tests.
+func NewEntity() (e *Entity) {
+	var (
+		client, err = newClient(viper.GetString("integration_tests.address"))
+	)
+	if err != nil {
+		log.Fatalf("creating RPC client: %v", err)
+	}
+
+	e = new(Entity)
+	e.client = client
+	e.quit = make(chan struct{})
+
 	return
 }
 
@@ -210,8 +228,8 @@ func (e *Entity) AddBlockClientStats(rs *stats.BlockRequest, reqType stats.Block
 var global *Entity
 
 // Init creates global Entity and locks until unlocked.
-func Init(id string) {
-	global = NewEntity(id)
+func Init() {
+	global = NewEntity()
 }
 
 // Shutdown the global Entity.
