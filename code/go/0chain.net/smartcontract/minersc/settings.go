@@ -153,7 +153,7 @@ func initSettings() {
 		Epoch.String():                       {Epoch, smartcontract.Int64},
 		RewardDeclineRate.String():           {RewardDeclineRate, smartcontract.Float64},
 		NumMinerDelegatesRewarded.String():   {NumMinerDelegatesRewarded, smartcontract.Int},
-		NumShardersRewarded.String():         {NumSharderDelegatesRewarded, smartcontract.Int},
+		NumShardersRewarded.String():         {NumShardersRewarded, smartcontract.Int},
 		NumSharderDelegatesRewarded.String(): {NumSharderDelegatesRewarded, smartcontract.Int},
 		MaxMint.String():                     {MaxMint, smartcontract.CurrencyCoin},
 		OwnerId.String():                     {OwnerId, smartcontract.Key},
