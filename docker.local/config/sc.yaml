@@ -55,7 +55,7 @@ smart_contracts:
     # gives 10% for miner and rest for block sharders
     share_ratio: 0.8 # [0; 1)
     # reward for a block
-    block_reward: 0.213 # tokens
+    block_reward: 0.21 # tokens
     # max service charge can be set by a generator
     max_charge: 0.5 # %
     # epoch is number of rounds before rewards and interest are decreased
