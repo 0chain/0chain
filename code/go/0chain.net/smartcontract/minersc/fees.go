@@ -369,7 +369,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	// pay random N miners
 	if err := mn.StakePool.DistributeRewardsRandN(
-		moveValue, mn.ID, spenum.Miner, b.GetRoundRandomSeed(), gn.NumMinerDelegatesRewarded, "fee", balances,
+		moveValue,
+		mn.ID,
+		spenum.Miner,
+		b.GetRoundRandomSeed(),
+		gn.NumMinerDelegatesRewarded,
+		"fee",
+		balances,
 	); err != nil {
 		return "", err
 	}
