@@ -24,6 +24,12 @@ type mockStateContext struct {
 
 // GetConfig implements state.StateContextI
 func (sc *mockStateContext) GetConfig(smartcontract string) (*cstate.SCConfig, error) {
+	if smartcontract != "storagesc" {
+		return nil, common.NewError("invalid_smart_contract", "smartcontract not implemented")
+	}
+	if sc.config == nil {
+		return nil, util.ErrValueNotPresent
+	}
 	return sc.config, nil
 }
 

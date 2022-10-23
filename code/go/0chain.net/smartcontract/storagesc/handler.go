@@ -854,28 +854,21 @@ const cantGetConfigErrMsg = "can't get config"
 func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
 	conf, err := balances.GetConfig("storagesc")
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", cantGetConfigErrMsg, err)
-	}
-	if conf == nil {
-		return updateConfig(balances)
+		if err == util.ErrValueNotPresent {
+			return getConfigFromMPT(balances)
+		}
+		return nil, err
 	}
 	return (*conf).(*Config), nil
 }
 
-func updateConfig(balances cstate.CommonStateContextI) (*Config, error) {
+func getConfigFromMPT(balances cstate.CommonStateContextI) (*Config, error) {
 	var conf = &Config{}
 	err := balances.GetTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		conf, err = getConfiguredConfig()
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 	balances.SetConfig("storagesc", conf)
-
 	return conf, nil
 }
 

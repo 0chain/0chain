@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -409,13 +410,18 @@ func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 }
 
 func (sc *StateContext) GetConfig(smartcontract string) (*SCConfig, error) {
+	var config *SCConfig
 	switch smartcontract {
 	case "storagesc":
-		return sc.storagescConfig, nil
+		config = sc.storagescConfig
+		break
 	default:
-		return nil, nil
-		// return nil, errors.New("smartcontract not found")
+		return nil, errors.New("invalid smart contract")
 	}
+	if config == nil {
+		return nil, util.ErrValueNotPresent
+	}
+	return config, nil
 }
 
 func (sc *StateContext) SetConfig(smartcontract string, config SCConfig) error {
