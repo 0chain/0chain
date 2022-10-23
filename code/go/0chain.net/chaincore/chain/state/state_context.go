@@ -414,7 +414,6 @@ func (sc *StateContext) GetConfig(smartcontract string) (*SCConfig, error) {
 	switch smartcontract {
 	case "storagesc":
 		config = sc.storagescConfig
-		break
 	default:
 		return nil, errors.New("invalid smart contract")
 	}
