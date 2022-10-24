@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 5
+	// map header, size 7
 	// string "Clients"
-	o = append(o, 0x85, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
+	o = append(o, 0x87, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Clients)))
 	for za0001 := range z.Clients {
 		o = msgp.AppendString(o, z.Clients[za0001])
@@ -28,11 +28,23 @@ func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	for za0003 := range z.PrivateKeys {
 		o = msgp.AppendString(o, z.PrivateKeys[za0003])
 	}
+	// string "Miners"
+	o = append(o, 0xa6, 0x4d, 0x69, 0x6e, 0x65, 0x72, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Miners)))
+	for za0004 := range z.Miners {
+		o = msgp.AppendString(o, z.Miners[za0004])
+	}
 	// string "Sharders"
 	o = append(o, 0xa8, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Sharders)))
-	for za0004 := range z.Sharders {
-		o = msgp.AppendString(o, z.Sharders[za0004])
+	for za0005 := range z.Sharders {
+		o = msgp.AppendString(o, z.Sharders[za0005])
+	}
+	// string "SharderKeys"
+	o = append(o, 0xab, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72, 0x4b, 0x65, 0x79, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.SharderKeys)))
+	for za0006 := range z.SharderKeys {
+		o = msgp.AppendString(o, z.SharderKeys[za0006])
 	}
 	// string "Now"
 	o = append(o, 0xa3, 0x4e, 0x6f, 0x77)
@@ -119,22 +131,60 @@ func (z *BenchDataMpt) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
-		case "Sharders":
+		case "Miners":
 			var zb0005 uint32
 			zb0005, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Miners")
+				return
+			}
+			if cap(z.Miners) >= int(zb0005) {
+				z.Miners = (z.Miners)[:zb0005]
+			} else {
+				z.Miners = make([]string, zb0005)
+			}
+			for za0004 := range z.Miners {
+				z.Miners[za0004], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Miners", za0004)
+					return
+				}
+			}
+		case "Sharders":
+			var zb0006 uint32
+			zb0006, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Sharders")
 				return
 			}
-			if cap(z.Sharders) >= int(zb0005) {
-				z.Sharders = (z.Sharders)[:zb0005]
+			if cap(z.Sharders) >= int(zb0006) {
+				z.Sharders = (z.Sharders)[:zb0006]
 			} else {
-				z.Sharders = make([]string, zb0005)
+				z.Sharders = make([]string, zb0006)
 			}
-			for za0004 := range z.Sharders {
-				z.Sharders[za0004], bts, err = msgp.ReadStringBytes(bts)
+			for za0005 := range z.Sharders {
+				z.Sharders[za0005], bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "Sharders", za0004)
+					err = msgp.WrapError(err, "Sharders", za0005)
+					return
+				}
+			}
+		case "SharderKeys":
+			var zb0007 uint32
+			zb0007, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "SharderKeys")
+				return
+			}
+			if cap(z.SharderKeys) >= int(zb0007) {
+				z.SharderKeys = (z.SharderKeys)[:zb0007]
+			} else {
+				z.SharderKeys = make([]string, zb0007)
+			}
+			for za0006 := range z.SharderKeys {
+				z.SharderKeys[za0006], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "SharderKeys", za0006)
 					return
 				}
 			}
@@ -170,9 +220,17 @@ func (z *BenchDataMpt) Msgsize() (s int) {
 	for za0003 := range z.PrivateKeys {
 		s += msgp.StringPrefixSize + len(z.PrivateKeys[za0003])
 	}
+	s += 7 + msgp.ArrayHeaderSize
+	for za0004 := range z.Miners {
+		s += msgp.StringPrefixSize + len(z.Miners[za0004])
+	}
 	s += 9 + msgp.ArrayHeaderSize
-	for za0004 := range z.Sharders {
-		s += msgp.StringPrefixSize + len(z.Sharders[za0004])
+	for za0005 := range z.Sharders {
+		s += msgp.StringPrefixSize + len(z.Sharders[za0005])
+	}
+	s += 12 + msgp.ArrayHeaderSize
+	for za0006 := range z.SharderKeys {
+		s += msgp.StringPrefixSize + len(z.SharderKeys[za0006])
 	}
 	s += 4 + z.Now.Msgsize()
 	return
