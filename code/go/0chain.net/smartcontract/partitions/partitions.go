@@ -20,7 +20,14 @@ const (
 // APIs
 
 type Partitions struct {
-	rs *randomSelector
+	rs       *randomSelector
+	toRemove []string
+	toAdd    []idIndex
+}
+
+type idIndex struct {
+	ID  string
+	Idx int
 }
 
 type PartitionItem interface {
@@ -105,17 +112,36 @@ func (p *Partitions) AddItem(state state.StateContextI, item PartitionItem) erro
 	if err != nil {
 		return err
 	}
-
-	if err := p.saveItemLoc(state, item.GetID(), idx); err != nil {
-		return err
-	}
+	p.toAdd = append(p.toAdd, idIndex{
+		ID:  item.GetID(),
+		Idx: idx,
+	})
 
 	return nil
 }
 
 // Save saves the partitions data into state
 func (p *Partitions) Save(state state.StateContextI) error {
-	return p.rs.Save(state)
+	if err := p.rs.Save(state); err != nil {
+		return err
+	}
+
+	for _, k := range p.toRemove {
+		if err := p.removeItemLoc(state, k); err != nil {
+			return err
+		}
+	}
+
+	p.toRemove = p.toRemove[:0]
+
+	for _, k := range p.toAdd {
+		if err := p.saveItemLoc(state, k.ID, k.Idx); err != nil {
+			return err
+		}
+	}
+
+	p.toAdd = p.toAdd[:0]
+	return nil
 }
 
 // GetItem returns partition item of given partition index and id
@@ -171,7 +197,21 @@ func (p *Partitions) RemoveItem(state state.StateContextI, id string) error {
 		return err
 	}
 
-	return p.removeItemLoc(state, id)
+	p.toRemove = append(p.toRemove, id)
+
+	return nil
+}
+
+// RemoveItems removes items by keys from the same partition of partIndex
+func (p *Partitions) RemoveItems(state state.StateContextI, partIndex int, keys []string) error {
+	for _, k := range keys {
+		if err := p.rs.RemoveItem(state, k, partIndex); err != nil {
+			return err
+		}
+		p.toRemove = append(p.toRemove, k)
+	}
+
+	return nil
 }
 
 // GetRandomItems returns items of partition size number from random partition,
@@ -181,9 +221,17 @@ func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, v i
 	return p.rs.GetRandomItems(state, r, v)
 }
 
+type RandMatchFunc func(key string, data []byte) bool
+
+func (p *Partitions) UpdateRandomItems(state state.StateContextI, r *rand.Rand, randN int, f func(string, []byte) ([]byte, error)) error {
+	return p.rs.UpdateRandomItems(state, r, randN, f)
+}
+
 // Foreach loads all partitions and iterate through one by one
 // break whenever the callback function returns error
-func (p *Partitions) Foreach(state state.StateContextI, f func(key string, data []byte) error) error {
+// for the callback function, if it returns bytes different from the input data, then the
+// changes of items will be saved to partitions.
+func (p *Partitions) Foreach(state state.StateContextI, f func(key string, data []byte, partIndex int) ([]byte, bool, error)) error {
 	return p.rs.foreach(state, f)
 }
 
@@ -223,4 +271,35 @@ func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex
 func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
 	_, err := state.DeleteTrieNode(p.getLocKey(id))
 	return err
+}
+
+func (p *Partitions) Update(state state.StateContextI, key string, f func(data []byte) ([]byte, error)) error {
+	l, ok, err := p.getItemPartIndex(state, key)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return common.NewError(errItemNotFoundCode, key)
+	}
+
+	part, err := p.rs.getPartition(state, l)
+	if err != nil {
+		return err
+	}
+
+	v, idx, ok := part.find(key)
+	if !ok {
+		return common.NewError(errItemNotFoundCode, key)
+	}
+
+	nData, err := f(v.Data)
+	if err != nil {
+		return err
+	}
+	v.Data = nData
+	part.Items[idx] = v
+	part.Changed = true
+
+	return nil
 }

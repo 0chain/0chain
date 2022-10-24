@@ -289,14 +289,14 @@ func Test_randomSelector_Foreach(t *testing.T) {
 	require.NoError(t, err)
 
 	retItems := make([]testItem, 0, 20)
-	err = loadRs.foreach(balances, func(id string, data []byte) error {
+	err = loadRs.foreach(balances, func(id string, data []byte, idx int) ([]byte, bool, error) {
 		var it testItem
 		_, err := it.UnmarshalMsg(data)
 		if err != nil {
-			return err
+			return nil, false, err
 		}
 		retItems = append(retItems, it)
-		return nil
+		return data, false, nil
 	})
 
 	require.NoError(t, err)

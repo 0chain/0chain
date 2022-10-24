@@ -1,6 +1,7 @@
 package partitions
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -220,7 +221,68 @@ func (rs *randomSelector) GetRandomItems(state state.StateContextI, r *rand.Rand
 	return setPartitionItems(rtv, vs)
 }
 
-func (rs *randomSelector) foreach(state state.StateContextI, f func(string, []byte) error) error {
+// UpdateRandomItems similar to GetRandomItems() but the changes will be saved
+func (rs *randomSelector) UpdateRandomItems(state state.StateContextI, r *rand.Rand, randN int,
+	f func(key string, data []byte) ([]byte, error)) error {
+	if rs.NumPartitions == 0 {
+		return nil
+	}
+
+	if randN > rs.PartitionSize {
+		return errors.New("randN can not be greater than partition size")
+	}
+
+	index := r.Intn(rs.NumPartitions)
+	part, err := rs.getPartition(state, index)
+	if err != nil {
+		return err
+	}
+
+	var secondLast *partition
+	if index == rs.NumPartitions-1 && len(part.Items) < rs.PartitionSize && rs.NumPartitions > 1 {
+		var err error
+		secondLast, err = rs.getPartition(state, index-1)
+		if err != nil {
+			return err
+		}
+		want := rs.PartitionSize - len(part.Items)
+		if secondLast.length() < want {
+			return fmt.Errorf("second last part too small %d instead of %d",
+				secondLast.length(), rs.NumPartitions)
+		}
+	}
+
+	if secondLast != nil {
+		num := part.length() + secondLast.length()
+		if num < randN {
+			randN = num
+		}
+	}
+
+	for _, i := range rand.Perm(randN) {
+		if i < part.length() {
+			nData, err := f(part.Items[i].ID, part.Items[i].Data)
+			if err != nil {
+				return err
+			}
+
+			part.Items[i].Data = nData
+			part.Changed = true
+		} else {
+			nData, err := f(secondLast.Items[i].ID, secondLast.Items[i].Data)
+			if err != nil {
+				return err
+			}
+
+			secondLast.Items[i].Data = nData
+			secondLast.Changed = true
+		}
+	}
+
+	return nil
+}
+
+func (rs *randomSelector) foreach(state state.StateContextI, f func(string, []byte, int) ([]byte, bool, error)) error {
 	for i := 0; i < rs.NumPartitions; i++ {
 		part, err := rs.getPartition(state, i)
 		if err != nil {
@@ -228,8 +290,16 @@ func (rs *randomSelector) foreach(state state.StateContextI, f func(string, []by
 		}
 
 		for _, v := range part.Items {
-			if err := f(v.ID, v.Data); err != nil {
+			ret, bk, err := f(v.ID, v.Data, i)
+			if err != nil {
 				return err
+			}
+			if !bytes.Equal(ret, v.Data) {
+				part.Changed = true
+			}
+
+			if bk {
+				return nil
 			}
 		}
 	}
@@ -396,7 +466,7 @@ func (rs *randomSelector) GetItem(
 		return err
 	}
 
-	item, ok := pt.find(id)
+	item, _, ok := pt.find(id)
 	if !ok {
 		return errors.New("item not present")
 	}

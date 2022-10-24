@@ -129,14 +129,14 @@ func (p *partition) itemRange(start, end int) ([]item, error) {
 	return p.Items[start:end], nil
 }
 
-func (p *partition) find(id string) (item, bool) {
-	for _, v := range p.Items {
+func (p *partition) find(id string) (item, int, bool) {
+	for i, v := range p.Items {
 		if v.ID == id {
-			return v, true
+			return v, i, true
 		}
 	}
 
-	return item{}, false
+	return item{}, -1, false
 }
 
 func (p *partition) findIndex(id string) int {
