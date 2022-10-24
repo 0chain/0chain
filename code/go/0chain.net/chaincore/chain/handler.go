@@ -958,8 +958,8 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 
 	for _, ks := range []keySeri{
 		{"phase", minersc.PhaseKey, dkgi.Phase},
-		{"all_miners", minersc.AllMinersKey, dkgi.AllMiners},
-		{"all_shardres", minersc.AllShardersKey, dkgi.AllSharders},
+		//{"all_miners", minersc.AllMinersKey, dkgi.AllMiners},
+		//{"all_shardres", minersc.AllShardersKey, dkgi.AllSharders},
 		{"dkg_miners", minersc.DKGMinersKey, dkgi.DKGMiners},
 		{"sharder_keep", minersc.ShardersKeepKey, dkgi.ShardersKeep},
 		{"mpks", minersc.MinersMPKKey, dkgi.MPKs},
