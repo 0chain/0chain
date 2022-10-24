@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -282,9 +283,25 @@ func AddMockChallengePools(eventDb *event.EventDb, balances cstate.StateContextI
 	}
 
 	if viper.GetBool(sc.EventDbEnabled) {
+		idm := make(map[string]struct{})
+		for _, cp := range cps {
+			if _, ok := idm[cp.ID]; !ok {
+				idm[cp.ID] = struct{}{}
+			} else {
+				log.Fatal("duplicate challenge pool", cp.ID)
+			}
+		}
+		var c int64
+		if err := eventDb.Store.Get().Model(&event.ChallengePool{}).Count(&c).Error; err != nil {
+			panic(err)
+		}
+
+		fmt.Println("###### challenge pools num:", c)
+
 		if err := eventDb.Store.Get().Create(&cps).Error; err != nil {
 			log.Fatal(err)
 		}
+		log.Println("added challenge pool")
 	}
 }
 

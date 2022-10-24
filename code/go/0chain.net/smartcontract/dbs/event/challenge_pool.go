@@ -1,6 +1,9 @@
 package event
 
 import (
+	"log"
+	"runtime/debug"
+
 	"gorm.io/gorm/clause"
 )
 
@@ -14,6 +17,8 @@ type ChallengePool struct {
 }
 
 func (edb *EventDb) addOrUpdateChallengePools(cps []ChallengePool) error {
+	log.Println("add or update challenge pools")
+	debug.PrintStack()
 	updateFields := []string{"balance", "start_time", "expiration", "finalized"}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{

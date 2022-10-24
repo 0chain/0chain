@@ -4,9 +4,8 @@ import (
 	"strconv"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/core/datastore"
-
 	"0chain.net/chaincore/currency"
+	"0chain.net/core/datastore"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -68,6 +67,11 @@ func AddMockNodes(
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 	}
 
+	mp, err := GetPartitions(balances, toNodeType(nodeType))
+	if err != nil {
+		panic(err)
+	}
+
 	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
 		newNode.ID = GetMockNodeId(i, nodeType)
@@ -79,11 +83,6 @@ func AddMockNodes(
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
-
-		mp, err := GetPartitions(balances, toNodeType(nodeType))
-		if err != nil {
-			panic(err)
-		}
 
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
@@ -138,6 +137,11 @@ func AddMockNodes(
 			}
 		}
 	}
+
+	if err := mp.Save(balances); err != nil {
+		panic(err)
+	}
+
 	if nodeType == spenum.Miner {
 		dkgMiners := NewDKGMinerNodes()
 		dkgMiners.SimpleNodes = nodeMap
