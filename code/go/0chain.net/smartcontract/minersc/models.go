@@ -921,7 +921,11 @@ func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
 }
 
 func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
-	if _, err := state.InsertTrieNode(AllMinersKey, miners); err != nil {
+	nodeIDs := make(NodeIDs, len(miners.Nodes))
+	for i, m := range miners.Nodes {
+		nodeIDs[i] = m.ID
+	}
+	if _, err := state.InsertTrieNode(AllMinersKey, &nodeIDs); err != nil {
 		return common.NewError("update_all_miners_list_failed", err.Error())
 	}
 	return nil
@@ -1008,7 +1012,11 @@ func getShardersKeepList(balances cstate.CommonStateContextI) (*MinerNodes, erro
 }
 
 func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
-	_, err := state.InsertTrieNode(ShardersKeepKey, sharders)
+	nodeIDs := make(NodeIDs, len(sharders.Nodes))
+	for i, n := range sharders.Nodes {
+		nodeIDs[i] = n.ID
+	}
+	_, err := state.InsertTrieNode(ShardersKeepKey, &nodeIDs)
 	return err
 }
 
@@ -1025,8 +1033,41 @@ func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 }
 
 func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
-	_, err := state.InsertTrieNode(AllShardersKey, sharders)
+	nodeIDs := make(NodeIDs, len(sharders.Nodes))
+	for i, n := range sharders.Nodes {
+		nodeIDs[i] = n.ID
+	}
+
+	_, err := state.InsertTrieNode(AllShardersKey, &nodeIDs)
 	return err
+}
+
+// NodeIDs stores all the node IDs for miners or sharders
+// We will refactor to store it to partitions later, but for now, it should be fine
+// to store in a single MPT node as the data size is small.
+type NodeIDs []string
+
+func getNodeIDs(state cstate.CommonStateContextI, key string) (NodeIDs, error) {
+	var nIDs NodeIDs
+	err := state.GetTrieNode(key, &nIDs)
+	if err != nil {
+		return nil, err
+	}
+	return nIDs, nil
+}
+
+func (n *NodeIDs) save(state cstate.StateContextI, key string) error {
+	_, err := state.InsertTrieNode(key, n)
+	return err
+}
+
+func (n *NodeIDs) find(id string) bool {
+	for _, nID := range *n {
+		if nID == id {
+			return true
+		}
+	}
+	return false
 }
 
 func getNodesList(
@@ -1034,19 +1075,16 @@ func getNodesList(
 	balances cstate.CommonStateContextI,
 	key datastore.Key,
 ) (*MinerNodes, error) {
-	nodesList := &MinerNodes{}
-	err := balances.GetTrieNode(key, nodesList)
+	nIDs, err := getNodeIDs(balances, key)
 	if err != nil {
 		return nil, err
 	}
 
-	ids := make([]string, 0, len(nodesList.Nodes))
-	for _, sh := range nodesList.Nodes {
-		ids = append(ids, sh.ID)
+	ids := make([]string, 0, len(nIDs))
+	for _, id := range nIDs {
+		ids = append(ids, id)
 	}
 
-	// TODO: replace AllShardersKey data in MPT with keys only or use partitions to
-	// avoid sync issue
 	ss, err := cstate.GetItemsByIDs(ids, getNode, balances)
 	if err != nil {
 		return nil, err
