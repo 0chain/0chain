@@ -343,13 +343,19 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			continue // we are interesting in contribute phase only on sharders
 		}
 
-		if sc.IsRegisteredSharderKeep(context.Background(), false) {
+		reged, err := sc.IsRegisteredSharderKeep()
+		if err != nil {
+			logging.Logger.Warn("error checking sharder registering", zap.Error(err))
+			continue
+		}
+
+		if reged {
 			phaseRound = pe.Phase.StartRound // already registered
 			continue
 		}
 
 		logging.Logger.Debug("Start to register to sharder keep list")
-		var txn, err = sc.RegisterSharderKeep()
+		txn, err := sc.RegisterSharderKeep()
 		if err != nil {
 			logging.Logger.Error("Register sharder keep failed",
 				zap.Int64("phase start round", pe.Phase.StartRound),

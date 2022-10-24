@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/partitions"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 
@@ -30,66 +31,99 @@ var moveFunctions = make(map[Phase]movePhaseFunctions)
 
 func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 	pn *PhaseNode, gn *GlobalNode) error {
-
-	var (
-		allMinersList *MinerNodes
-		dkgMinersList *DKGMinerNodes
-
-		allShardersList *MinerNodes
-
-		err error
-	)
-
-	if allMinersList, err = msc.getMinersList(balances); err != nil {
-		return common.NewError("move_to_contribute_failed", err.Error())
+	pmb := gn.prevMagicBlock(balances)
+	if err := msc.minersMoveToContribute(balances, pmb, gn); err != nil {
+		return err
 	}
 
-	if dkgMinersList, err = getDKGMinersList(balances); err != nil {
-		return common.NewError("move_to_contribute_failed", err.Error())
-	}
-	allShardersList, err = getAllShardersList(balances)
+	return msc.shardersMoveToContribute(balances, pmb, gn)
+}
+
+func (msc *MinerSmartContract) minersMoveToContribute(balances cstate.StateContextI, pmb *block.MagicBlock, gn *GlobalNode) error {
+	minersPart, err := minersPartitions.getPart(balances)
 	if err != nil {
 		return common.NewError("move_to_contribute_failed", err.Error())
 	}
 
-	if len(allShardersList.Nodes) < gn.MinS {
-		return common.NewErrorf("move_to_contribute_failed",
-			"not enough sharders in all sharders list to move phase, all: %d, min_s: %d",
-			len(allShardersList.Nodes), gn.MinS)
+	mSize, err := minersPart.Size(balances)
+	if err != nil {
+		return common.NewError("move_to_contribute_failed", err.Error())
 	}
 
-	if !gn.hasPrevShader(allShardersList, balances) {
-		return common.NewErrorf("move_to_contribute_failed",
-			"invalid state: all sharders list hasn't a sharder from previous VC set, "+
-				"all: %d, min_s: %d", len(allShardersList.Nodes), gn.MinS)
-	}
-
-	if !gn.hasPrevMiner(allMinersList, balances) {
-		return common.NewErrorf("move_to_contribute_failed",
-			"invalid state: all miners list hasn't a miner from previous VC set, "+
-				"all: %d, min_n: %d", len(allMinersList.Nodes), gn.MinN)
-	}
-
-	if allMinersList == nil {
+	if mSize == 0 {
 		return common.NewError("move_to_contribute_failed", "allMinersList is nil")
 	}
 
-	if len(allMinersList.Nodes) < dkgMinersList.K {
+	dkgMinersList, err := getDKGMinersList(balances)
+	if err != nil {
+		return common.NewError("move_to_contribute_failed", err.Error())
+	}
+
+	if mSize < dkgMinersList.K {
 		return common.NewErrorf("move_to_contribute_failed",
 			"len(allMinersList.Nodes) < dkgMinersList.K, l_miners: %d, K: %d",
-			len(allMinersList.Nodes), dkgMinersList.K)
+			mSize, dkgMinersList.K)
 	}
 
-	if len(allShardersList.Nodes) < gn.MinS {
+	var hasMinerInMB bool
+	err = forEachNodesWithPart(balances, minersPart, func(_ int, mn *MinerNode, _ *changesCount) (bool, error) {
+		if pmb.Miners.HasNode(mn.ID) {
+			hasMinerInMB = true
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return common.NewError("move_to_contribute_failed", err.Error())
+	}
+
+	if !hasMinerInMB {
 		return common.NewErrorf("move_to_contribute_failed",
-			"len(allShardersList.Nodes) < gn.MinS, l_shards: %d, min_s: %d",
-			len(allShardersList.Nodes), gn.MinS)
+			"invalid state: no miner from previous VC set, all: %d, min_n: %d", mSize, gn.MinN)
 	}
 
-	Logger.Debug("miner sc: move phase to contribute",
-		zap.Int("miners", len(allMinersList.Nodes)),
-		zap.Int("K", dkgMinersList.K),
-		zap.Int("sharders", len(allShardersList.Nodes)),
+	Logger.Debug("miner sc: miners move phase to contribute",
+		zap.Int("miners", mSize),
+		zap.Int("K", dkgMinersList.K))
+	return nil
+}
+
+func (msc *MinerSmartContract) shardersMoveToContribute(balances cstate.StateContextI, pmb *block.MagicBlock, gn *GlobalNode) error {
+	shardersPart, err := shardersPartitions.getPart(balances)
+	if err != nil {
+		return common.NewError("move_to_contribute_failed", err.Error())
+	}
+
+	sSize, err := shardersPart.Size(balances)
+	if err != nil {
+		return common.NewError("sharders_to_contribute_failed", err.Error())
+	}
+
+	if sSize < gn.MinS {
+		return common.NewErrorf("move_to_contribute_failed",
+			"not enough sharders in all sharders list to move phase, all: %d, min_s: %d",
+			sSize, gn.MinS)
+	}
+
+	var hasNodeInMB bool
+	if err := forEachNodesWithPart(balances, shardersPart, func(_ int, sn *MinerNode, _ *changesCount) (bool, error) {
+		if pmb.Sharders.HasNode(sn.ID) {
+			hasNodeInMB = true
+			return true, nil
+		}
+
+		return false, nil
+	}); err != nil {
+		return common.NewError("sharders_to_contribute_failed", err.Error())
+	}
+
+	if !hasNodeInMB {
+		return common.NewErrorf("move_to_contribute_failed",
+			"invalid state: no sharder from previous VC set, all: %d, min_s: %d", sSize, gn.MinS)
+	}
+
+	Logger.Debug("miner sc: sharders move phase to contribute",
+		zap.Int("sharders", sSize),
 		zap.Int("min_s", gn.MinS))
 	return nil
 }
@@ -318,19 +352,31 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 
 func (msc *MinerSmartContract) createDKGMinersForContribute(
 	balances cstate.StateContextI, gn *GlobalNode) error {
+	var (
+		mSize     int
+		dkgMiners = NewDKGMinerNodes()
+	)
 
-	allMinersList, err := msc.getMinersList(balances)
-	if err != nil {
-		Logger.Error("createDKGMinersForContribute -- failed to get miner list",
-			zap.Any("error", err))
+	if err := minersPartitions.view(balances, func(part *partitions.Partitions) error {
+		var err error
+		mSize, err = part.Size(balances)
+		if err != nil {
+			return err
+		}
+
+		if mSize < gn.MinN {
+			return common.NewErrorf("failed to create dkg miners",
+				"too few miners for dkg, l_all_miners: %d, N: %d", mSize, gn.MinN)
+		}
+
+		return forEachNodesWithPart(balances, part, func(_ int, m *MinerNode, _ *changesCount) (bool, error) {
+			dkgMiners.SimpleNodes[m.ID] = m.SimpleNode
+			return false, nil
+		})
+	}); err != nil {
 		return err
 	}
 
-	if len(allMinersList.Nodes) < gn.MinN {
-		return common.NewErrorf("failed to create dkg miners", "too few miners for dkg, l_all_miners: %d, N: %d", len(allMinersList.Nodes), gn.MinN)
-	}
-
-	dkgMiners := NewDKGMinerNodes()
 	if lmb := balances.GetChainCurrentMagicBlock(); lmb != nil {
 		num := lmb.Miners.Size()
 		Logger.Debug("Calculate TKN from lmb",
@@ -340,19 +386,15 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 			dkgMiners.calculateTKN(gn, num)
 		} else {
 			Logger.Debug("Calculate TKN from all miner list",
-				zap.Int("all count", len(allMinersList.Nodes)),
+				zap.Int("all count", mSize),
 				zap.Int64("gn.LastRound", gn.LastRound))
-			dkgMiners.calculateTKN(gn, len(allMinersList.Nodes))
+			dkgMiners.calculateTKN(gn, mSize)
 		}
 	} else {
 		Logger.Debug("Calculate TKN from all miner list",
-			zap.Int("all count", len(allMinersList.Nodes)),
+			zap.Int("all count", mSize),
 			zap.Int64("gn.LastRound", gn.LastRound))
-		dkgMiners.calculateTKN(gn, len(allMinersList.Nodes))
-	}
-
-	for _, nd := range allMinersList.Nodes {
-		dkgMiners.SimpleNodes[nd.ID] = nd.SimpleNode
+		dkgMiners.calculateTKN(gn, mSize)
 	}
 
 	dkgMiners.StartRound = gn.LastRound
@@ -405,8 +447,8 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 }
 
 func (msc *MinerSmartContract) reduceShardersList(
-	keep,
-	all *MinerNodes,
+	keep *MinerNodes,
+	shardersPart *partitions.Partitions,
 	gn *GlobalNode,
 	balances cstate.StateContextI) (nodes []*MinerNode, err error) {
 
@@ -415,13 +457,14 @@ func (msc *MinerSmartContract) reduceShardersList(
 	tmpMinerNodes := make([]*MinerNode, 0, len(keep.Nodes))
 
 	for _, keepNode := range keep.Nodes {
-		var found = all.FindNodeById(keepNode.ID)
-		if found == nil {
-			return nil, common.NewErrorf("invalid state", "a sharder exists in"+
-				" keep list doesn't exists in all sharders list: %s", keepNode.ID)
+		sn := NewMinerNode()
+		sn.ID = keepNode.ID
+		if err := shardersPart.GetItem(balances, sn.GetKey(), sn); err != nil {
+			return nil, common.NewErrorf("reduce sharders", "could not find sharder: %v", err)
 		}
-		tmpMinerNodes = append(tmpMinerNodes, found)
-		simpleNodes[found.ID] = found.SimpleNode
+
+		tmpMinerNodes = append(tmpMinerNodes, sn)
+		simpleNodes[sn.ID] = sn.SimpleNode
 	}
 
 	if len(simpleNodes) < gn.MinS {
@@ -516,18 +559,28 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	if err != nil {
 		return err
 	}
-	allSharderList, err := getAllShardersList(balances)
-	if err != nil {
-		return err
-	}
 
-	if sharders == nil || len(sharders.Nodes) == 0 {
-		sharders = allSharderList
-	} else {
-		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
+	if err := shardersPartitions.view(balances, func(part *partitions.Partitions) error {
+		if sharders == nil || len(sharders.Nodes) == 0 {
+			return part.Foreach(balances, func(key string, data []byte, _ int) ([]byte, bool, error) {
+				sn := NewMinerNode()
+				_, err := sn.UnmarshalMsg(data)
+				if err != nil {
+					return nil, false, err
+				}
+
+				sharders.Nodes = append(sharders.Nodes, sn)
+				return data, false, nil
+			})
+		}
+
+		sharders.Nodes, err = msc.reduceShardersList(sharders, part, gn, balances)
 		if err != nil {
 			return err
 		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	if err = dkgMinersList.reduceNodes(true, gn, balances); err != nil {

@@ -6,7 +6,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"github.com/0chain/common/core/util"
+	"0chain.net/smartcontract/partitions"
 
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -27,37 +27,32 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 		return "", err
 	}
 
-	var sn *MinerNode
-	sn, err = msc.getSharderNode(update.ID, balances)
-	if err != nil {
-		return "", common.NewError("update_sharder_settings", err.Error())
+	if err := shardersPartitions.updateNode(balances, GetNodeKey(update.ID), func(sn *MinerNode) error {
+		if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
+			return errors.New("block round is in cooldown period")
+		}
+
+		if sn.Delete {
+			return errors.New("can't update settings of sharder being deleted")
+		}
+		if sn.Settings.DelegateWallet != t.ClientID {
+			return errors.New("access denied")
+		}
+
+		sn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
+		sn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
+		sn.Settings.MinStake = update.Settings.MinStake
+		sn.Settings.MaxStake = update.Settings.MaxStake
+
+		emitUpdateSharder(sn, balances, false)
+
+		resp = string(sn.Encode())
+		return nil
+	}); err != nil {
+		return "", common.NewErrorf("update_sharder_settings", err.Error())
 	}
 
-	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
-		return "", common.NewError("update_sharder_settings", "block round is in cooldown period")
-	}
-
-	if sn.Delete {
-		return "", common.NewError("update_sharder_settings", "can't update settings of sharder being deleted")
-	}
-	if sn.Settings.DelegateWallet != t.ClientID {
-		return "", common.NewError("update_sharder_settings", "access denied")
-	}
-
-	sn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
-	sn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
-	sn.Settings.MinStake = update.Settings.MinStake
-	sn.Settings.MaxStake = update.Settings.MaxStake
-
-	if err = sn.save(balances); err != nil {
-		return "", common.NewErrorf("update_sharder_settings", "saving: %v", err)
-	}
-
-	if err = emitUpdateSharder(sn, balances, false); err != nil {
-		return "", common.NewErrorf("update_sharder_settings", "saving(event): %v", err)
-	}
-
-	return string(sn.Encode()), nil
+	return resp, nil
 }
 
 // AddSharder function to handle miner register
@@ -80,19 +75,18 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder", "invalid input: %v", err)
 	}
 
-	allSharders, err := getAllShardersList(balances)
-	if err != nil {
-		logging.Logger.Error("add_sharder: failed to get sharders list", zap.Error(err))
-		return "", common.NewErrorf("add_sharder", "getting all sharders list: %v", err)
-	}
-
-	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
+	newSharder.LastHealthCheck = t.CreationDate
+	newSharder.NodeType = NodeTypeSharder // set node type
 
 	if newSharder.Settings.DelegateWallet == "" {
 		newSharder.Settings.DelegateWallet = newSharder.ID
 	}
 
-	newSharder.LastHealthCheck = t.CreationDate
+	if newSharder.PublicKey == "" || newSharder.ID == "" {
+		logging.Logger.Error("public key or ID is empty")
+		return "", common.NewError("add_sharder",
+			"PublicKey or the ID is empty. Cannot proceed")
+	}
 
 	logging.Logger.Info("The new sharder info",
 		zap.String("base URL", newSharder.N2NHost),
@@ -107,63 +101,25 @@ func (msc *MinerSmartContract) AddSharder(
 
 	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 
-	if newSharder.PublicKey == "" || newSharder.ID == "" {
-		logging.Logger.Error("public key or ID is empty")
-		return "", common.NewError("add_sharder",
-			"PublicKey or the ID is empty. Cannot proceed")
-	}
-
 	err = validateNodeSettings(newSharder, gn, "add_sharder")
 	if err != nil {
-		return "", common.NewErrorf("add_sharder", "validate node setting failed: %v", zap.Error(err))
+		return "", common.NewErrorf("add_sharder", "validate node setting failed: %v", err)
 	}
 
-	existing, err := msc.getSharderNode(newSharder.ID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewErrorf("add_sharder", "unexpected error: %v", err)
-	}
+	// TODO: save host:port for duplication checking
+	//if err = quickFixDuplicateHosts(newSharder, allSharders.Nodes); err != nil {
+	//	return "", common.NewError("add_sharder", err.Error())
+	//}
 
-	// if found
-	if err == nil {
-		// and found in all
-		if allSharders.FindNodeById(newSharder.ID) != nil {
-			logging.Logger.Info("add_sharder: found node by id")
+	if err := shardersPartitions.add(balances, newSharder); err != nil {
+		if partitions.ErrItemExist(err) {
+			logging.Logger.Info("add_sharder: sharder already exist", zap.String("ID", newSharder.ID))
 			return string(newSharder.Encode()), nil
 		}
-		// otherwise the sharder has saved by block sharders reward
-		newSharder.Reward = existing.Reward
+		return "", common.NewErrorf("add_sharder", "adding sharder failed: %v", err)
 	}
 
-	newSharder.NodeType = NodeTypeSharder // set node type
-
-	if err = quickFixDuplicateHosts(newSharder, allSharders.Nodes); err != nil {
-		return "", common.NewError("add_sharder", err.Error())
-	}
-
-	allSharders.Nodes = append(allSharders.Nodes, newSharder)
-
-	// save the added sharder
-	_, err = balances.InsertTrieNode(newSharder.GetKey(), newSharder)
-	if err != nil {
-		return "", common.NewErrorf("add_sharder", "saving sharder: %v", err)
-	}
-
-	//err = emitAddSharder(newSharder, balances)
 	emitAddOrOverwriteSharder(newSharder, balances)
-
-	// save all sharders list
-	if err = updateAllShardersList(balances, allSharders); err != nil {
-		return "", common.NewErrorf("add_sharder", "saving all sharders list: %v", err)
-	}
-
-	allMiners, err := getMinersList(balances)
-	if err != nil {
-		logging.Logger.Error("add_miner: Error in getting list from the DB",
-			zap.Error(err))
-		return "", common.NewErrorf("add_miner",
-			"failed to get miner list: %v", err)
-	}
-	msc.verifyMinerState(allMiners, balances, "checking all sharders list after insert")
 
 	return string(newSharder.Encode()), nil
 }
@@ -175,26 +131,25 @@ func (msc *MinerSmartContract) DeleteSharder(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	var err error
 	var deleteSharder = NewMinerNode()
-	if err = deleteSharder.Decode(inputData); err != nil {
+	if err := deleteSharder.Decode(inputData); err != nil {
 		return "", common.NewErrorf("delete_sharder",
 			"decoding request: %v", err)
 	}
 
-	var sn *MinerNode
-	sn, err = msc.getSharderNode(deleteSharder.ID, balances)
-	if err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
+	if err := shardersPartitions.updateNode(balances, GetNodeKey(deleteSharder.ID), func(sn *MinerNode) error {
+		updatedSn, err := msc.deleteNode(sn, balances)
+		if err != nil {
+			return err
+		}
 
-	updatedSn, err := msc.deleteNode(gn, sn, balances)
-	if err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
+		if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
+			return err
+		}
 
-	if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
+		return nil
+	}); err != nil {
+		return "", common.NewErrorf("delete_sharder", err.Error())
 	}
 
 	return "", nil
@@ -237,23 +192,23 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 }
 
 // ------------- local functions ---------------------
-func verifyAllShardersState(balances cstate.StateContextI, msg string) {
-	shardersList, err := getAllShardersList(balances)
-	if err != nil {
-		logging.Logger.Error("verify_all_sharder_state_failed", zap.Error(err))
-		return
-	}
-
-	if shardersList == nil || len(shardersList.Nodes) == 0 {
-		logging.Logger.Info(msg + " shardersList is empty")
-		return
-	}
-
-	logging.Logger.Info(msg)
-	for _, sharder := range shardersList.Nodes {
-		logging.Logger.Info("shardersList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
-	}
-}
+//func verifyAllShardersState(balances cstate.StateContextI, msg string) {
+//	shardersList, err := getAllShardersList(balances)
+//	if err != nil {
+//		logging.Logger.Error("verify_all_sharder_state_failed", zap.Error(err))
+//		return
+//	}
+//
+//	if shardersList == nil || len(shardersList.Nodes) == 0 {
+//		logging.Logger.Info(msg + " shardersList is empty")
+//		return
+//	}
+//
+//	logging.Logger.Info(msg)
+//	for _, sharder := range shardersList.Nodes {
+//		logging.Logger.Info("shardersList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
+//	}
+//}
 
 func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
 	shardersList, err := getShardersKeepList(balances)
@@ -271,19 +226,6 @@ func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
 	for _, sharder := range shardersList.Nodes {
 		logging.Logger.Info("shardersList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
 	}
-}
-
-func (msc *MinerSmartContract) getSharderNode(sid string,
-	balances cstate.StateContextI) (*MinerNode, error) {
-
-	sn := NewMinerNode()
-	sn.ID = sid
-	err := balances.GetTrieNode(sn.GetKey(), sn)
-	if err != nil {
-		return nil, err
-	}
-
-	return sn, nil
 }
 
 func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
@@ -333,13 +275,12 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 	}
 
 	//check new sharder
-	allShardersList, err := getAllShardersList(balances)
+	found, err := shardersPartitions.exist(balances, newSharder.GetKey())
 	if err != nil {
-		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", common.NewErrorf("sharder_keep",
-			"Failed to get miner list: %v", err)
+		return "", common.NewErrorf("sharder_keep", "failed to get sharder: %v, %v", newSharder.ID, err)
 	}
-	if allShardersList.FindNodeById(newSharder.ID) == nil {
+
+	if !found {
 		return "", common.NewErrorf("sharder_keep", "unknown sharder: %v", newSharder.ID)
 	}
 
@@ -353,15 +294,7 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 	if err := updateShardersKeepList(balances, sharderKeepList); err != nil {
 		return "", err
 	}
-	allMiners, err := getMinersList(balances)
-	if err != nil {
-		logging.Logger.Error("add_miner: Error in getting list from the DB",
-			zap.Error(err))
-		return "", common.NewErrorf("add_miner",
-			"failed to get miner list: %v", err)
-	}
 
-	msc.verifyMinerState(allMiners, balances, "Checking allsharderslist afterInsert")
 	buff := newSharder.Encode()
 	return string(buff), nil
 }

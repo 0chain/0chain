@@ -885,27 +885,6 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(dmn.Encode())
 }
 
-// getMinersList returns miners list
-func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
-	minerNodes, err := getNodesList(state, AllMinersKey)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-
-		return &MinerNodes{}, nil
-	}
-
-	return minerNodes, nil
-}
-
-func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
-	if _, err := state.InsertTrieNode(AllMinersKey, miners); err != nil {
-		return common.NewError("update_all_miners_list_failed", err.Error())
-	}
-	return nil
-}
-
 // getDKGMinersList gets dkg miners list
 func getDKGMinersList(state cstate.CommonStateContextI) (*DKGMinerNodes, error) {
 	dkgMiners := NewDKGMinerNodes()
@@ -988,23 +967,6 @@ func getShardersKeepList(balances cstate.CommonStateContextI) (*MinerNodes, erro
 
 func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
 	_, err := state.InsertTrieNode(ShardersKeepKey, sharders)
-	return err
-}
-
-// getAllShardersKeepList returns the sharder list
-func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
-	sharders, err := getNodesList(balances, AllShardersKey)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		return &MinerNodes{}, nil
-	}
-	return sharders, nil
-}
-
-func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
-	_, err := state.InsertTrieNode(AllShardersKey, sharders)
 	return err
 }
 

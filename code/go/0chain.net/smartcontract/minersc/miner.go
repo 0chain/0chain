@@ -1,8 +1,10 @@
 package minersc
 
 import (
+	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -11,61 +13,45 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
-func doesMinerExist(pkey datastore.Key,
-	balances cstate.CommonStateContextI) (bool, error) {
-
-	mn := NewMinerNode()
-	err := balances.GetTrieNode(pkey, mn)
-	switch err {
-	case nil:
-		return true, nil
-	case util.ErrValueNotPresent:
-		return false, nil
-	default:
-		return false, err
-	}
+// GetNodeKey converts node ID to node Key
+func GetNodeKey(id string) datastore.Key {
+	return ADDRESS + id
 }
 
 // AddMiner Function to handle miner register
 func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
-
-	var newMiner = NewMinerNode()
+	newMiner := NewMinerNode()
 	if err = newMiner.Decode(inputData); err != nil {
 		return "", common.NewErrorf("add_miner",
 			"decoding request: %v", err)
 	}
 
+	newMiner.NodeType = NodeTypeMiner // set node type
+	newMiner.LastHealthCheck = t.CreationDate
+
 	if err = newMiner.Validate(); err != nil {
 		return "", common.NewErrorf("add_miner", "invalid input: %v", err)
 	}
 
-	lockAllMiners.Lock()
-	defer lockAllMiners.Unlock()
-
-	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
-
-	allMiners, err := getMinersList(balances)
-	if err != nil {
-		logging.Logger.Error("add_miner: Error in getting list from the DB",
-			zap.Error(err))
-		return "", common.NewErrorf("add_miner",
-			"failed to get miner list: %v", err)
+	if newMiner.PublicKey == "" || newMiner.ID == "" {
+		logging.Logger.Error("public key or ID is empty")
+		return "", common.NewError("add_miner",
+			"PublicKey or the ID is empty. Cannot proceed")
 	}
-
-	msc.verifyMinerState(allMiners, balances,
-		"add_miner: checking all miners list in the beginning")
 
 	if newMiner.Settings.DelegateWallet == "" {
 		newMiner.Settings.DelegateWallet = newMiner.ID
 	}
 
-	newMiner.LastHealthCheck = t.CreationDate
+	err = validateNodeSettings(newMiner, gn, "add_miner")
+	if err != nil {
+		return "", err
+	}
 
 	logging.Logger.Info("add_miner: The new miner info",
 		zap.String("base URL", newMiner.N2NHost),
@@ -78,65 +64,26 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.Int64("min_stake", int64(newMiner.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newMiner.Settings.MaxStake)),
 	)
-	logging.Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
 
-	if newMiner.PublicKey == "" || newMiner.ID == "" {
-		logging.Logger.Error("public key or ID is empty")
-		return "", common.NewError("add_miner",
-			"PublicKey or the ID is empty. Cannot proceed")
-	}
+	// TODO: save host:port to separte MPT nodes for duplication checking
+	//if err = quickFixDuplicateHosts(newMiner, allMiners.Nodes); err != nil {
+	//	return "", common.NewError("add_miner", err.Error())
+	//}
 
-	err = validateNodeSettings(newMiner, gn, "add_miner")
-	if err != nil {
-		return "", err
-	}
+	if err := minersPartitions.add(balances, newMiner); err != nil {
+		if partitions.ErrItemExist(err) {
+			logging.Logger.Debug("add_miner - miner already exist", zap.String("ID", newMiner.ID))
+			// return new miner encoded string to make it align with the old logic
+			return string(newMiner.Encode()), nil
+		}
 
-	newMiner.NodeType = NodeTypeMiner // set node type
-
-	if err = quickFixDuplicateHosts(newMiner, allMiners.Nodes); err != nil {
 		return "", common.NewError("add_miner", err.Error())
 	}
 
-	allMap := make(map[string]struct{}, len(allMiners.Nodes))
-	for _, n := range allMiners.Nodes {
-		allMap[n.GetKey()] = struct{}{}
-	}
-
-	var update bool
-	if _, ok := allMap[newMiner.GetKey()]; !ok {
-		allMiners.Nodes = append(allMiners.Nodes, newMiner)
-
-		if err = updateMinersList(balances, allMiners); err != nil {
-			return "", common.NewErrorf("add_miner",
-				"saving all miners list: %v", err)
-		}
-
-		err = emitAddOrOverwriteMiner(newMiner, balances)
-		if err != nil {
-			return "", common.NewErrorf("add_miner",
-				"insert new miner: %v", err)
-		}
-
-		update = true
-	}
-
-	exist, err := doesMinerExist(newMiner.GetKey(), balances)
+	err = emitAddOrOverwriteMiner(newMiner, balances)
 	if err != nil {
-		return "", common.NewErrorf("add_miner", "error checking miner existence: %v", err)
-	}
-
-	if !exist {
-		if err = newMiner.save(balances); err != nil {
-			return "", common.NewError("add_miner", err.Error())
-		}
-
-		msc.verifyMinerState(allMiners, balances, "add_miner: Checking all miners list afterInsert")
-
-		update = true
-	}
-
-	if !update {
-		logging.Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
+		return "", common.NewErrorf("add_miner",
+			"insert new miner: %v", err)
 	}
 
 	return string(newMiner.Encode()), nil
@@ -156,31 +103,25 @@ func (msc *MinerSmartContract) DeleteMiner(
 			"decoding request: %v", err)
 	}
 
-	var mn *MinerNode
-	mn, err = getMinerNode(deleteMiner.ID, balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		mn = NewMinerNode()
-		mn.ID = deleteMiner.ID
-	default:
-		return "", common.NewError("delete_miner", err.Error())
-	}
+	if err := minersPartitions.updateNode(balances, GetNodeKey(deleteMiner.ID), func(mn *MinerNode) error {
+		updatedMn, err := msc.deleteNode(mn, balances)
+		if err != nil {
+			return err
+		}
 
-	updatedMn, err := msc.deleteNode(gn, mn, balances)
-	if err != nil {
-		return "", common.NewError("delete_miner", err.Error())
-	}
+		if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
+			return err
+		}
 
-	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
-		return "", common.NewError("delete_miner", err.Error())
+		return nil
+	}); err != nil {
+		return "", common.NewErrorf("delete_miner", err.Error())
 	}
 
 	return "", nil
 }
 
 func (msc *MinerSmartContract) deleteNode(
-	gn *GlobalNode,
 	deleteNode *MinerNode,
 	balances cstate.StateContextI,
 ) (*MinerNode, error) {
@@ -217,10 +158,6 @@ func (msc *MinerSmartContract) deleteNode(
 			return nil, fmt.Errorf(
 				"unrecognised stakepool status: %v", pool.Status.String())
 		}
-	}
-
-	if err = deleteNode.save(balances); err != nil {
-		return nil, fmt.Errorf("saving node %v", err.Error())
 	}
 
 	return deleteNode, nil
@@ -260,7 +197,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	var update = NewMinerNode()
+	update := NewMinerNode()
 	if err = update.Decode(inputData); err != nil {
 		return "", common.NewErrorf("update_miner_settings",
 			"decoding request: %v", err)
@@ -271,63 +208,46 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", err
 	}
 
-	var mn *MinerNode
-	mn, err = getMinerNode(update.ID, balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		mn = NewMinerNode()
-		mn.ID = update.ID
-	default:
-		return "", common.NewError("update_miner_settings", err.Error())
+	if err := minersPartitions.updateNode(balances, GetNodeKey(update.ID), func(mn *MinerNode) error {
+		if mn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-mn.LastSettingUpdateRound < gn.CooldownPeriod {
+			return errors.New("block round is in cool down period")
+		}
+
+		if mn.Delete {
+			return errors.New("can't update settings of miner being deleted")
+		}
+
+		if mn.Settings.DelegateWallet != t.ClientID {
+			logging.Logger.Debug("delegate wallet is not equal to one set in config",
+				zap.String("delegate", t.ClientID),
+				zap.String("config", mn.Settings.DelegateWallet))
+			return errors.New("access denied")
+		}
+
+		mn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
+		mn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
+		mn.Settings.MinStake = update.Settings.MinStake
+		mn.Settings.MaxStake = update.Settings.MaxStake
+
+		emitUpdateMiner(mn, balances, false)
+		resp = string(mn.Encode())
+		return nil
+	}); err != nil {
+		return "", common.NewErrorf("update_miner_settings", err.Error())
 	}
 
-	if mn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-mn.LastSettingUpdateRound < gn.CooldownPeriod {
-		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
-	}
-
-	if mn.Delete {
-		return "", common.NewError("update_miner_settings", "can't update settings of miner being deleted")
-	}
-
-	if mn.Settings.DelegateWallet != t.ClientID {
-		logging.Logger.Debug("delegate wallet is not equal to one set in config", zap.String("delegate", t.ClientID), zap.String("config", mn.Settings.DelegateWallet))
-		return "", common.NewError("update_miner_settings", "access denied")
-	}
-
-	mn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
-	mn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
-	mn.Settings.MinStake = update.Settings.MinStake
-	mn.Settings.MaxStake = update.Settings.MaxStake
-
-	if err = mn.save(balances); err != nil {
-		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
-	}
-
-	if err = emitUpdateMiner(mn, balances, false); err != nil {
-		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
-	}
-
-	return string(mn.Encode()), nil
+	return resp, nil
 }
 
 // ------------- local functions ---------------------
 // TODO: remove this or return error and do real checking
-func (msc *MinerSmartContract) verifyMinerState(allMinersList *MinerNodes, balances cstate.StateContextI,
-	msg string) {
-	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
-		logging.Logger.Info(msg + " allminerslist is empty")
-		return
-	}
-}
-
-func (msc *MinerSmartContract) getMinersList(balances cstate.QueryStateContextI) (
-	all *MinerNodes, err error) {
-
-	lockAllMiners.Lock()
-	defer lockAllMiners.Unlock()
-	return getMinersList(balances)
-}
+//func (msc *MinerSmartContract) verifyMinerState(allMinersList *MinerNodes, balances cstate.StateContextI,
+//	msg string) {
+//	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
+//		logging.Logger.Info(msg + " allminerslist is empty")
+//		return
+//	}
+//}
 
 func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, error) {
 	mn := NewMinerNode()

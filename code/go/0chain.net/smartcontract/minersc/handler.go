@@ -229,21 +229,26 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 		id     = r.URL.Query().Get("id")
 		poolID = r.URL.Query().Get("pool_id")
 		status = r.URL.Query().Get("status")
-		sn     *MinerNode
-		err    error
 	)
 
-	if sn, err = getMinerNode(id, mrh.GetQueryStateContext()); err != nil {
-		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
+	part, err := getNodePartition(mrh.GetStateContextI(), id)
+	if err != nil {
+		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get node"))
+		return
+	}
+
+	nd := NewMinerNode()
+	if err := part.GetItem(mrh.GetStateContextI(), GetNodeKey(id), nd); err != nil {
+		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get node"))
 		return
 	}
 
 	if poolID == "" {
-		common.Respond(w, r, sn.GetNodePools(status), nil)
+		common.Respond(w, r, nd.GetNodePools(status), nil)
 		return
 	}
 
-	if pool := sn.GetNodePool(poolID); pool != nil {
+	if pool := nd.GetNodePool(poolID); pool != nil {
 		common.Respond(w, r, pool, nil)
 		return
 	}

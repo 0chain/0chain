@@ -98,10 +98,7 @@ func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error
 	return nil
 }
 
-func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
-
-	logging.Logger.Info("emitting update miner event")
-
+func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) {
 	dbUpdates := dbs.DbUpdates{
 		Id: mn.ID,
 		Updates: map[string]interface{}{
@@ -130,7 +127,6 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, dbUpdates)
-	return nil
 }
 
 func emitDeleteMiner(id string, balances cstate.StateContextI) error {

@@ -95,7 +95,7 @@ func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) err
 	return nil
 }
 
-func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
+func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatus bool) {
 
 	dbUpdates := dbs.DbUpdates{
 		Id: sn.ID,
@@ -126,7 +126,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateSharder, sn.ID, dbUpdates)
 	logging.Logger.Warn("emit sharder - update sharder")
-	return nil
 }
 
 func emitDeleteSharder(id string, balances cstate.StateContextI) error {

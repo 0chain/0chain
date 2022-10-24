@@ -5,6 +5,7 @@ package chain
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/0chain/common/core/logging"
@@ -24,21 +25,27 @@ func (c *Chain) SetupSC(ctx context.Context) {
 			tm.Reset(30 * time.Second)
 			logging.Logger.Debug("SetupSC - check if node is registered")
 			func() {
-				isRegisteredC := make(chan bool)
+				isRegisteredC := make(chan bool, 1)
 				cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-				defer func() {
-					logging.Logger.Info("cancelling setup sc context")
-					cancel()
-				}()
+				defer cancel()
+				wg := sync.WaitGroup{}
 
+				wg.Add(1)
 				go func() {
-					isRegistered := c.isRegistered(cctx)
+					defer wg.Done()
+					isRegistered, err := c.isRegistered()
+					if err != nil {
+						logging.Logger.Warn("SetupSC - check if node is registered failed", zap.Error(err))
+						return
+					}
 
 					select {
 					case isRegisteredC <- isRegistered:
 					default:
 					}
 				}()
+
+				wg.Wait()
 
 				select {
 				case reg := <-isRegisteredC:
@@ -48,7 +55,8 @@ func (c *Chain) SetupSC(ctx context.Context) {
 					}
 				case <-cctx.Done():
 					logging.Logger.Debug("SetupSC - check node registered timeout")
-					cancel()
+					return
+				default:
 				}
 
 				logging.Logger.Debug("Request to register node")

@@ -2,9 +2,8 @@ package minersc
 
 import (
 	"encoding/json"
-	"fmt"
 
-	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -55,13 +54,6 @@ func (mn *MinerNode) numDelegates() int {
 	return count
 }
 
-func (mn *MinerNode) save(balances cstate.StateContextI) error {
-	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
-		return fmt.Errorf("saving miner node: %v", err)
-	}
-	return nil
-}
-
 // Encode implements util.Serializable interface.
 func (mn *MinerNode) Encode() []byte {
 	var b, err = json.Marshal(mn)
@@ -95,4 +87,8 @@ func (mn *MinerNode) GetNodePool(poolID string) *NodePool {
 	}
 
 	return &NodePool{poolID, dp}
+}
+
+func toNodeType(pt spenum.Provider) node.NodeType {
+	return node.NodeType(pt - 1)
 }

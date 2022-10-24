@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -102,85 +101,40 @@ func (c *Chain) RegisterClient() {
 		zap.Int("consensus", consensus))
 }
 
-func (c *Chain) isRegistered(ctx context.Context) (is bool) {
-	getStatePathFunc := func(n *node.Node) string {
-		switch n.Type {
-		case node.NodeTypeMiner:
-			return minersc.AllMinersKey
-		case node.NodeTypeSharder:
-			return minersc.AllShardersKey
-		default:
-			logging.Logger.Error("isRegistered.getStatePath unknown node type",
-				zap.String("type", node.NodeTypeNames[n.Type].Value))
-		}
-
-		return ""
-	}
-	getAPIPathFunc := func(n *node.Node) string {
-		switch n.Type {
-		case node.NodeTypeMiner:
-			return scRestAPIGetMinerList
-		case node.NodeTypeSharder:
-			return scRestAPIGetSharderList
-		default:
-			logging.Logger.Error("isRegistered.getAPIPath unknown node type",
-				zap.String("type", node.NodeTypeNames[n.Type].Value))
-		}
-		return ""
-	}
-	return c.isRegisteredEx(ctx, getStatePathFunc, getAPIPathFunc, false)
+func (c *Chain) isRegistered() (bool, error) {
+	selfNode := node.Self.Underlying()
+	return c.isRegisteredEx(selfNode.Type, selfNode.GetKey())
 }
 
-func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
-	getAPIPath func(n *node.Node) string, remote bool) bool {
-
-	var (
-		allNodesList = &minersc.MinerNodes{}
-		selfNode     = node.Self.Underlying()
-		selfNodeKey  = selfNode.GetKey()
-	)
-
-	if c.IsActiveInChain() && !remote {
-
-		var (
-			sp  = getStatePath(selfNode)
-			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, allNodesList)
-		)
-
-		if err != nil {
-			logging.Logger.Error("failed to get block state node",
-				zap.Any("error", err), zap.String("path", sp))
-			return false
-		}
-
-	} else {
-
-		var (
-			mb       = c.GetCurrentMagicBlock()
-			sharders = mb.Sharders.N2NURLs()
-			relPath  = getAPIPath(selfNode)
-			err      error
-		)
-
-		err = httpclientutil.MakeSCRestAPICall(ctx, minersc.ADDRESS, relPath, nil,
-			sharders, allNodesList, 1)
-		if err != nil {
-			logging.Logger.Error("is registered", zap.Any("error", err))
-			return false
-		}
+func (c *Chain) isRegisteredEx(nodeType node.NodeType, id string) (bool, error) {
+	if !c.IsActiveInChain() {
+		return false, nil
 	}
 
-	for _, miner := range allNodesList.Nodes {
-		if miner == nil {
-			continue
-		}
-
-		if miner.ID == selfNodeKey {
-			return true
-		}
+	state := c.GetStateContextI()
+	if state == nil {
+		logging.Logger.Error("could not get latest finalized block state")
+		return false, nil
 	}
 
-	return false
+	part, err := minersc.GetPartitions(state, nodeType)
+	if err != nil {
+		logging.Logger.Error("could not get partitions",
+			zap.Error(err),
+			zap.Any("node type", nodeType))
+		return false, err
+	}
+
+	ok, err := part.Exist(state, minersc.GetNodeKey(id))
+	if err != nil {
+		logging.Logger.Error("could not node check existence",
+			zap.Error(err),
+			zap.Any("node type", nodeType),
+			zap.String("ID", id))
+		return false, err
+	}
+
+	return ok, nil
 }
 
 // ConfirmTransaction adding a new parameter timeout as we're not sure what all it can break
@@ -318,20 +272,9 @@ func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 
 	return txn, err
 }
 
-func (c *Chain) IsRegisteredSharderKeep(ctx context.Context, remote bool) bool {
-	return c.isRegisteredEx(ctx,
-		func(n *node.Node) string {
-			if typ := n.Type; typ == node.NodeTypeSharder {
-				return minersc.ShardersKeepKey
-			}
-			return ""
-		},
-		func(n *node.Node) string {
-			if typ := n.Type; typ == node.NodeTypeSharder {
-				return scRestAPIGetSharderKeepList
-			}
-			return ""
-		}, remote)
+func (c *Chain) IsRegisteredSharderKeep() (bool, error) {
+	selfNode := node.Self.Underlying()
+	return c.isRegisteredEx(selfNode.Type, selfNode.GetKey())
 }
 
 //
@@ -477,14 +420,14 @@ func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder st
 // The GetFromSharders used to obtains an information from sharders using REST
 // API interface of a SC. About the arguments:
 //
-//     - address    -- SC address
-//     - relative   -- REST API relative path (e.g. handler name)
-//     - sharders   -- list of sharders to request from (N2N URLs)
-//     - newFunc    -- factory to create new value of type you want to request
-//     - rejectFunc -- filter to reject some values, can't be nil (feel free
-//                     to modify)
-//     - highFunc   -- function that returns value highness; used to choose
-//                     highest values
+//   - address    -- SC address
+//   - relative   -- REST API relative path (e.g. handler name)
+//   - sharders   -- list of sharders to request from (N2N URLs)
+//   - newFunc    -- factory to create new value of type you want to request
+//   - rejectFunc -- filter to reject some values, can't be nil (feel free
+//     to modify)
+//   - highFunc   -- function that returns value highness; used to choose
+//     highest values
 //
 // TODO (sfxdx): to trust or not to trust, that is the question
 //
