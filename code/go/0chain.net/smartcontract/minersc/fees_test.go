@@ -289,13 +289,25 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		blockSharders, err := getAllShardersList(balances)
-		require.NoError(t, err, "getShardersList error")
+		err = InitPartitions(balances)
+		require.NoError(t, err, "init partitions")
+		sPart, err := shardersPartitions.getPart(balances)
+		require.NoError(t, err, "getPart error")
+		var sharderNodes []*MinerNode
+		err = sPart.Foreach(balances, func(key string, data []byte, partIndex int) ([]byte, bool, error) {
+			sn := NewMinerNode()
+			_, err := sn.UnmarshalMsg(data)
+			require.NoError(t, err, "UnmarshalMsg error")
+			sharderNodes = append(sharderNodes, sn)
+			return data, false, nil
+		})
+		require.NoError(t, err, "Foreach error")
+
 		for _, sh := range sharders {
-			if existInDelegatesOfNodes(sh.delegate.id, blockSharders.Nodes) {
+			if existInDelegatesOfNodes(sh.delegate.id, sharderNodes) {
 				shP, err := computeShardersPayments(gn, msc, b)
 				require.NoError(t, err)
-				shP = shP / currency.Coin(len(blockSharders.Nodes))
+				shP = shP / currency.Coin(len(sharderNodes))
 
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
@@ -376,13 +388,25 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		blockSharders, err := getAllShardersList(balances)
-		require.NoError(t, err)
+		err = InitPartitions(balances)
+		require.NoError(t, err, "init partitions")
+		sPart, err := shardersPartitions.getPart(balances)
+		require.NoError(t, err, "getPart error")
+		var sharderNodes []*MinerNode
+		err = sPart.Foreach(balances, func(key string, data []byte, partIndex int) ([]byte, bool, error) {
+			sn := NewMinerNode()
+			_, err := sn.UnmarshalMsg(data)
+			require.NoError(t, err, "UnmarshalMsg error")
+			sharderNodes = append(sharderNodes, sn)
+			return data, false, nil
+		})
+		require.NoError(t, err, "Foreach error")
+
 		sharderPayments, err := computeShardersPayments(gn, msc, b)
 		require.NoError(t, err)
-		sharderPayments = sharderPayments / currency.Coin(len(blockSharders.Nodes))
+		sharderPayments = sharderPayments / currency.Coin(len(sharderNodes))
 		for _, sh := range sharders {
-			if existInDelegatesOfNodes(sh.delegate.id, blockSharders.Nodes) {
+			if existInDelegatesOfNodes(sh.delegate.id, sharderNodes) {
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					sharderPayments,
@@ -456,13 +480,25 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		blockSharders, err := getAllShardersList(balances)
-		require.NoError(t, err)
+		err = InitPartitions(balances)
+		require.NoError(t, err, "init partitions")
+		sPart, err := shardersPartitions.getPart(balances)
+		require.NoError(t, err, "getPart error")
+		var sharderNodes []*MinerNode
+		err = sPart.Foreach(balances, func(key string, data []byte, partIndex int) ([]byte, bool, error) {
+			sn := NewMinerNode()
+			_, err := sn.UnmarshalMsg(data)
+			require.NoError(t, err, "UnmarshalMsg error")
+			sharderNodes = append(sharderNodes, sn)
+			return data, false, nil
+		})
+		require.NoError(t, err, "Foreach error")
+
 		for _, sh := range sharders {
-			if existInDelegatesOfNodes(sh.delegate.id, blockSharders.Nodes) {
+			if existInDelegatesOfNodes(sh.delegate.id, sharderNodes) {
 				shP, err := computeShardersPayments(gn, msc, b)
 				require.NoError(t, err)
-				shP = shP / currency.Coin(len(blockSharders.Nodes))
+				shP = shP / currency.Coin(len(sharderNodes))
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,
@@ -535,13 +571,25 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		blockSharders, err := getAllShardersList(balances)
-		require.NoError(t, err)
+		err = InitPartitions(balances)
+		require.NoError(t, err, "init partitions")
+		sPart, err := shardersPartitions.getPart(balances)
+		require.NoError(t, err, "getPart error")
+		var sharderNodes []*MinerNode
+		err = sPart.Foreach(balances, func(key string, data []byte, partIndex int) ([]byte, bool, error) {
+			sn := NewMinerNode()
+			_, err := sn.UnmarshalMsg(data)
+			require.NoError(t, err, "UnmarshalMsg error")
+			sharderNodes = append(sharderNodes, sn)
+			return data, false, nil
+		})
+		require.NoError(t, err, "Foreach error")
+
 		for _, sh := range sharders {
-			if existInDelegatesOfNodes(sh.delegate.id, blockSharders.Nodes) {
+			if existInDelegatesOfNodes(sh.delegate.id, sharderNodes) {
 				shP, err := computeShardersPayments(gn, msc, b)
 				require.NoError(t, err)
-				shP = shP / currency.Coin(len(blockSharders.Nodes))
+				shP = shP / currency.Coin(len(sharderNodes))
 				assert.Equal(t,
 					balances.balances[sh.delegate.id],
 					shP,

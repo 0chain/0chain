@@ -316,50 +316,44 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	_, err = ctx.InsertTrieNode(self.GetKey(), self)
 	require.NoError(t, err)
 
-	var miner = &MinerNode{
+	var mn = &MinerNode{
 		SimpleNode: &SimpleNode{
 			ID:          minerID,
 			TotalStaked: 100,
 		},
 		StakePool: stakepool.NewStakePool(),
 	}
-	miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
-	miner.Settings.DelegateWallet = minerID
-	miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
-	var allMiners = &MinerNodes{
-		Nodes: []*MinerNode{miner},
-	}
-
-	err = updateMinersList(ctx, allMiners)
+	mn.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+	mn.Settings.DelegateWallet = minerID
+	mn.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+	err = InitPartitions(ctx)
 	require.NoError(t, err)
 
 	var sharders []*MinerNode
 	for i := 0; i < numberOfSharders; i++ {
-		sharder := &MinerNode{
+		sn := &MinerNode{
 			SimpleNode: &SimpleNode{
 				ID:          sharderIDs[i],
 				TotalStaked: 100,
 			},
 			StakePool: stakepool.NewStakePool(),
 		}
-		miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
-		miner.Settings.DelegateWallet = minerID
-		miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
-		sharders = append(sharders, sharder)
+		sn.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+		sn.Settings.DelegateWallet = minerID
+		sn.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+		sharders = append(sharders, sn)
 	}
 
-	populateDelegates(t, append([]*MinerNode{miner}, sharders...), minerStakes, sharderStakes)
-	_, err = ctx.InsertTrieNode(miner.GetKey(), miner)
+	populateDelegates(t, append([]*MinerNode{mn}, sharders...), minerStakes, sharderStakes)
 	require.NoError(t, err)
+
+	err = minersPartitions.add(ctx, mn)
+	require.NoError(t, err)
+
 	for i := 0; i < numberOfSharders; i++ {
-		_, err = ctx.InsertTrieNode(sharders[i].GetKey(), sharders[i])
+		err = shardersPartitions.add(ctx, sharders[i])
 		require.NoError(t, err)
 	}
-	var allSharders = &MinerNodes{
-		Nodes: sharders,
-	}
-	err = updateAllShardersList(ctx, allSharders)
-	require.NoError(t, err)
 
 	mockChainConfig := mocks.NewChainConfig(t)
 	mockChainConfig.On("IsViewChangeEnabled").Return(true)
@@ -368,8 +362,16 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	globalNode.ViewChange = 100
 	if runValues.blockRound == runValues.nextViewChange {
-		var allMinersList = &MinerNodes{}
-		err = updateAllShardersList(ctx, allMinersList)
+
+		sPart, err := shardersPartitions.getPart(ctx)
+		require.NoError(t, err)
+		// remove all sharder nodes
+		for i := 0; i < numberOfSharders; i++ {
+			err = sPart.RemoveItem(ctx, sharders[i].GetKey())
+			require.NoError(t, err)
+		}
+		err = sPart.Save(ctx)
+		require.NoError(t, err)
 	}
 
 	_, err = msc.payFees(txn, nil, globalNode, ctx)
@@ -379,7 +381,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	require.NoError(t, err)
 
-	mn, err := getMinerNode(txn.ClientID, ctx)
+	mn, err = minersPartitions.get(ctx, GetNodeKey(txn.ClientID))
 	require.NoError(t, err)
 
 	confirmResults(t, *globalNode, runtime, f, mn, ctx)

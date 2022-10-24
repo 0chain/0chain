@@ -4,8 +4,6 @@ import (
 	"strconv"
 	"testing"
 
-	"0chain.net/smartcontract/minersc"
-
 	"github.com/spf13/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -53,10 +51,10 @@ func BenchmarkTests(
 			name:     "control.update_individual." + strconv.Itoa(viper.GetInt(bk.ControlN)),
 			endpoint: controlUpdateIndividual,
 		},
-		{
-			name:     "control.all_miners." + strconv.Itoa(viper.GetInt(bk.NumMiners)),
-			endpoint: allMiners,
-		},
+		//{
+		//	name:     "control.all_miners." + strconv.Itoa(viper.GetInt(bk.NumMiners)),
+		//	endpoint: allMiners,
+		//},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
@@ -148,8 +146,8 @@ func controlUpdateArray(balances cstate.StateContextI) error {
 	return nil
 }
 
-func allMiners(balances cstate.StateContextI) error {
-	nodesList := &minersc.MinerNodes{}
-	err := balances.GetTrieNode(minersc.AllMinersKey, nodesList)
-	return err
-}
+//func allMiners(balances cstate.StateContextI) error {
+//	nodesList := &minersc.MinerNodes{}
+//	err := balances.GetTrieNode(minersc.AllMinersKey, nodesList)
+//	return err
+//}

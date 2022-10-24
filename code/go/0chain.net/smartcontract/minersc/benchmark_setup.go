@@ -1,9 +1,10 @@
 package minersc
 
 import (
+	"strconv"
+
 	"0chain.net/chaincore/client"
 	"0chain.net/core/datastore"
-	"strconv"
 
 	"0chain.net/chaincore/currency"
 
@@ -35,10 +36,10 @@ func AddMockMagicBlock() *block.MagicBlock {
 	for i := 0; i < numNodes; i++ {
 		mb.Sharders.Nodes = append(mb.Sharders.Nodes, &node.Node{
 			Client: client.Client{IDField: datastore.IDField{ID: GetMockNodeId(i, spenum.Sharder)}},
-	})
-}
+		})
+	}
 
-return mb
+	return mb
 }
 
 func AddMockNodes(
@@ -55,19 +56,16 @@ func AddMockNodes(
 		numNodes     int
 		numActive    int
 		numDelegates int
-		key          string
 	)
 
 	if nodeType == spenum.Miner {
 		numActive = viper.GetInt(benchmark.NumActiveMiners)
 		numNodes = viper.GetInt(benchmark.NumMiners)
 		numDelegates = viper.GetInt(benchmark.NumMinerDelegates)
-		key = AllMinersKey
 	} else {
 		numActive = viper.GetInt(benchmark.NumActiveSharders)
 		numNodes = viper.GetInt(benchmark.NumSharders)
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
-		key = AllShardersKey
 	}
 
 	for i := 0; i < numNodes; i++ {
@@ -81,6 +79,11 @@ func AddMockNodes(
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
+
+		mp, err := GetPartitions(balances, toNodeType(nodeType))
+		if err != nil {
+			panic(err)
+		}
 
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
@@ -97,10 +100,12 @@ func AddMockNodes(
 				newNode.Pools[clients[dId]] = &pool
 			}
 		}
-		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)
+
+		err = mp.AddItem(balances, newNode)
 		if err != nil {
 			panic(err)
 		}
+
 		nodes = append(nodes, newNode.ID)
 		nodeMap[newNode.ID] = newNode.SimpleNode
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
@@ -162,10 +167,7 @@ func AddMockNodes(
 			panic(err)
 		}
 	}
-	_, err = balances.InsertTrieNode(key, &allNodes)
-	if err != nil {
-		panic(err)
-	}
+
 	return nodes
 }
 

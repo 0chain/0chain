@@ -39,6 +39,10 @@ type TestQueryChainer struct {
 	sctx state.TimedQueryStateContextI
 }
 
+func (qc *TestQueryChainer) GetStateContextI() state.StateContextI {
+	return qc.sctx
+}
+
 func (qc *TestQueryChainer) GetQueryStateContext() state.TimedQueryStateContextI {
 	return qc.sctx
 }

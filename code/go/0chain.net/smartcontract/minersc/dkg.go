@@ -357,7 +357,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		dkgMiners = NewDKGMinerNodes()
 	)
 
-	if err := minersPartitions.view(balances, func(part *partitions.Partitions) error {
+	if err := partitions.View(balances, minersPartitions.name, func(part *partitions.Partitions) error {
 		var err error
 		mSize, err = part.Size(balances)
 		if err != nil {
@@ -560,7 +560,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
-	if err := shardersPartitions.view(balances, func(part *partitions.Partitions) error {
+	if err := partitions.View(balances, shardersPartitions.name, func(part *partitions.Partitions) error {
 		if sharders == nil || len(sharders.Nodes) == 0 {
 			return part.Foreach(balances, func(key string, data []byte, _ int) ([]byte, bool, error) {
 				sn := NewMinerNode()

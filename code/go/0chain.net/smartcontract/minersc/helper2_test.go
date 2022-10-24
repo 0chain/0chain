@@ -64,7 +64,11 @@ func (sc *mockStateContext) GetBlock() *block.Block {
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 
 func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	vv := sc.store[key]
+	vv, ok := sc.store[key]
+	if !ok {
+		return util.ErrValueNotPresent
+	}
+
 	d, err := vv.MarshalMsg(nil)
 	if err != nil {
 		return err

@@ -340,11 +340,11 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	if err := mPart.Save(balances); err != nil {
-		return "", common.NewErrorf("pay_fees", "saving miners changes failed", zap.Error(err))
+		return "", common.NewErrorf("pay_fees", "saving miners changes failed: %v", err)
 	}
 
 	if err := sPart.Save(balances); err != nil {
-		return "", common.NewErrorf("pay_fees", "saving sharders changes failed", zap.Error(err))
+		return "", common.NewErrorf("pay_fees", "saving sharders changes failed: %v", err)
 	}
 
 	return resp, nil

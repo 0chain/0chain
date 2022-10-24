@@ -20,7 +20,6 @@ func Println(v ...interface{}) {
 
 func Fatal(v ...interface{}) {
 	debug.PrintStack()
-	log.Println("fatal debug")
 	log.Fatal(v...)
 }
 

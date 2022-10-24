@@ -39,6 +39,10 @@ type chainer struct {
 	qsc cstate.TimedQueryStateContextI
 }
 
+func (ch *chainer) GetStateContextI() cstate.StateContextI {
+	return ch.qsc
+}
+
 func (ch *chainer) GetQueryStateContext() cstate.TimedQueryStateContextI {
 	return ch.qsc
 }

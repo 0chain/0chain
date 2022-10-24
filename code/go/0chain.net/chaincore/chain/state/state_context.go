@@ -73,7 +73,7 @@ type QueryStateContextI interface {
 
 //go:generate mockery --case underscore --name=QueryStateContextI --output=./mocks
 type TimedQueryStateContextI interface {
-	QueryStateContextI
+	StateContextI
 	Now() common.Timestamp
 }
 
