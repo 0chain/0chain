@@ -228,10 +228,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
+	m.tick("decode")
 	if err := request.validate(common.ToTime(txn.CreationDate), conf); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "invalid request: "+err.Error())
 	}
 
+	m.tick("validate")
 	if request.Owner == "" {
 		request.Owner = txn.ClientID
 		request.OwnerPublicKey = txn.PublicKey
@@ -242,6 +244,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed", "get blobbers failed: %v", err)
 	}
 
+	m.tick("get blobbers")
 	if len(blobbers) < (request.DataShards + request.ParityShards) {
 		logging.Logger.Error("new_allocation_request_failed: blobbers fetched are less than requested blobbers",
 			zap.String("txn", txn.Hash),
@@ -263,6 +266,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
 	}
+	m.tick("get stake pools")
 	if len(spMap) != len(blobbers) {
 		return "", common.NewErrorf("allocation_creation_failed", "missing blobber's stake pool: %v", err)
 	}
@@ -284,6 +288,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", err
 	}
 
+	m.tick("setup new allocation")
 	for _, b := range blobberNodes {
 		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
 		if err != nil {
@@ -310,6 +315,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
 	}
+	m.tick("add offer")
 
 	var options []WithOption
 	if mintNewTokens > 0 {
@@ -368,7 +374,6 @@ func setupNewAllocation(
 	allocId string,
 ) (*StorageAllocation, []*StorageNode, error) {
 	var err error
-	m.tick("decode")
 	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {
 		logging.Logger.Error("new_allocation_request_failed: input blobbers less than requirement",
 			zap.Int("request blobbers", len(request.Blobbers)),
@@ -389,7 +394,6 @@ func setupNewAllocation(
 
 	logging.Logger.Debug("new_allocation_request", zap.Strings("blobbers", request.Blobbers))
 	var sa = request.storageAllocation() // (set fields, including expiration)
-	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
 	sa.ID = allocId
 	sa.Tx = allocId

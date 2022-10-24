@@ -210,23 +210,23 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 //	}
 //}
 
-func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
-	shardersList, err := getShardersKeepList(balances)
-	if err != nil {
-		logging.Logger.Error("verify_sharder_keep_state_failed", zap.Error(err))
-		return
-	}
-
-	if shardersList == nil || len(shardersList.Nodes) == 0 {
-		logging.Logger.Info(msg + " shardersList is empty")
-		return
-	}
-
-	logging.Logger.Info(msg)
-	for _, sharder := range shardersList.Nodes {
-		logging.Logger.Info("shardersList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
-	}
-}
+//func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
+//	shardersList, err := getShardersKeepList(balances)
+//	if err != nil {
+//		logging.Logger.Error("verify_sharder_keep_state_failed", zap.Error(err))
+//		return
+//	}
+//
+//	if shardersList == nil || len(shardersList.Nodes) == 0 {
+//		logging.Logger.Info(msg + " shardersList is empty")
+//		return
+//	}
+//
+//	logging.Logger.Info(msg)
+//	for _, sharder := range shardersList.Nodes {
+//		logging.Logger.Info("shardersList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
+//	}
+//}
 
 func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 	input []byte, _ *GlobalNode, balances cstate.StateContextI) (
@@ -258,7 +258,7 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 		return "", common.NewErrorf("sharder_keep",
 			"Failed to get miner list: %v", err)
 	}
-	verifyShardersKeepState(balances, "Checking sharderKeepList in the beginning")
+	//verifyShardersKeepState(balances, "Checking sharderKeepList in the beginning")
 
 	logging.Logger.Info("The new sharder info",
 		zap.String("base URL", newSharder.N2NHost),

@@ -30,7 +30,7 @@ options:
     - "miner"
 #    - "storage"
 #    - "storage_rest"
-#    - "miner_rest"
+    - "miner_rest"
 #    - "faucet_rest"
 #    - "vesting_rest"
 #    - "zcnscbridge_rest"

@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"fmt"
 	"strconv"
 
 	"0chain.net/chaincore/client"
@@ -164,7 +163,6 @@ func AddMockNodes(
 			panic(err)
 		}
 	} else {
-		fmt.Println("######## save sharders keep nodes", len(allNodes.Nodes[1:]))
 		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
 			Nodes: allNodes.Nodes[1:],
 		})
