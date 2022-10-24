@@ -24,7 +24,7 @@ func (ssc *MinerSmartContract) collectReward(
 			"can't decode request: %v", err)
 	}
 
-	part, err := GetPartitions(balances, toNodeType(prr.ProviderType))
+	part, err := GetPartitions(balances, NodeType(prr.ProviderType))
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed", err.Error())
 	}

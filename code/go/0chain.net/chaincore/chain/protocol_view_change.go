@@ -117,7 +117,7 @@ func (c *Chain) isRegisteredEx(nodeType node.NodeType, id string) (bool, error) 
 		return false, nil
 	}
 
-	part, err := minersc.GetPartitions(state, nodeType)
+	part, err := minersc.GetPartitions(state, minersc.NodeType(nodeType))
 	if err != nil {
 		logging.Logger.Error("could not get partitions",
 			zap.Error(err),

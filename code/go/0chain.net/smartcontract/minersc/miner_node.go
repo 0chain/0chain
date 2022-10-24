@@ -3,7 +3,6 @@ package minersc
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -87,8 +86,4 @@ func (mn *MinerNode) GetNodePool(poolID string) *NodePool {
 	}
 
 	return &NodePool{poolID, dp}
-}
-
-func toNodeType(pt spenum.Provider) node.NodeType {
-	return node.NodeType(pt - 1)
 }

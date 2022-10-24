@@ -174,7 +174,7 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 		logging.Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB",
 			zap.Error(err))
 		return common.NewErrorf("delete_sharder_from_view_change",
-			"failed to get sharders list: %v", err)
+			"failed to get sharders keep list: %v", err)
 	}
 	for i, v := range sharders.Nodes {
 		if v.ID == sn.ID {

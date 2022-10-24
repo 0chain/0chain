@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/node"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/partitions"
 )
@@ -33,11 +32,11 @@ func InitPartitions(balances state.StateContextI) error {
 }
 
 // GetPartitions returns partitions of given node type
-func GetPartitions(balances state.StateContextI, nodeType node.NodeType) (*partitions.Partitions, error) {
+func GetPartitions(balances state.StateContextI, nodeType NodeType) (*partitions.Partitions, error) {
 	switch nodeType {
-	case node.NodeTypeMiner:
+	case NodeTypeMiner:
 		return minersPartitions.getPart(balances)
-	case node.NodeTypeSharder:
+	case NodeTypeSharder:
 		return shardersPartitions.getPart(balances)
 	default:
 		return nil, errors.New("unknown node type of partitions")

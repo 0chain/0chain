@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"fmt"
 	"strconv"
 
 	"0chain.net/chaincore/client"
@@ -67,7 +68,7 @@ func AddMockNodes(
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 	}
 
-	mp, err := GetPartitions(balances, toNodeType(nodeType))
+	mp, err := GetPartitions(balances, NodeType(nodeType))
 	if err != nil {
 		panic(err)
 	}
@@ -164,6 +165,7 @@ func AddMockNodes(
 			panic(err)
 		}
 	} else {
+		fmt.Println("######## save sharders keep nodes", len(allNodes.Nodes[1:]))
 		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
 			Nodes: allNodes.Nodes[1:],
 		})
