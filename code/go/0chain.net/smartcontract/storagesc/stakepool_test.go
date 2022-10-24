@@ -169,7 +169,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 		return err
 	}
 
-	newStakePool, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
+	newStakePool, err := blobberStakePoolPartitions.get(ctx, spenum.Blobber, blobberId)
 	require.NoError(t, err)
 	var newUsp *stakepool.UserStakePools
 	newUsp, err = stakepool.GetUserStakePools(spenum.Blobber, txn.ClientID, ctx)

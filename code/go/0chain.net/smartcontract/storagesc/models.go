@@ -976,14 +976,16 @@ func (sa *StorageAllocation) changeBlobbers(
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
-		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
+	sp, err := blobberStakePoolPartitions.get(balances, spenum.Blobber, addedBlobber.ID)
+	if err != nil {
+		return nil, fmt.Errorf("can't get blobber stake pool: %v", err)
 	}
+
 	staked, err := sp.stake()
 	if err != nil {
 		return nil, err
 	}
+
 	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now); err != nil {
 		return nil, err
 	}

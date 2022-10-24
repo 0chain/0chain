@@ -74,7 +74,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
-			sp, err := ssc.getStakePool(spenum.Blobber, bID, balances)
+			sp, err := blobberStakePoolPartitions.get(balances, spenum.Blobber, bID)
 			require.NoError(t, err)
 
 			require.EqualValues(t, r.blobberRewards[i], sp.Reward)

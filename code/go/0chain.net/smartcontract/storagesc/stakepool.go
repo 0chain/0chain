@@ -9,6 +9,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/stakepool"
@@ -18,7 +19,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"github.com/0chain/common/core/util"
 )
 
 //msgp:ignore unlockResponse stakePoolStat stakePoolRequest delegatePoolStat rewardsStat
@@ -49,6 +49,7 @@ func validateStakePoolSettings(
 
 type stakePool struct {
 	stakepool.StakePool
+	ID string `json:"id"`
 	// TotalOffers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	TotalOffers    currency.Coin `json:"total_offers"`
@@ -62,6 +63,10 @@ func newStakePool() *stakePool {
 	return &stakePool{
 		StakePool: *bsp,
 	}
+}
+
+func (sp *stakePool) GetID() string {
+	return sp.ID
 }
 
 // stake pool key for the storage SC and  blobber
@@ -334,21 +339,21 @@ type stakePoolStat struct {
 //
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
-	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
-	return getStakePool(providerType, providerID, balances)
-}
+//func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
+//	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
+//	return getStakePool(providerType, providerID, balances)
+//}
 
-func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (
-	sp *stakePool, err error) {
-	sp = newStakePool()
-	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
-	if err != nil {
-		return nil, err
-	}
-
-	return sp, nil
-}
+//func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (
+//	sp *stakePool, err error) {
+//	sp = newStakePool()
+//	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return sp, nil
+//}
 
 // initial or successive method should be used by add_blobber/add_validator
 // SC functions
@@ -365,21 +370,45 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
 	}
 
-	// the stake pool can be created by related validator
-	sp, err := ssc.getStakePool(providerType, providerId, balances)
+	sPart, err := getStakePoolPartition(providerType)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, fmt.Errorf("unexpected error: %v", err)
+		return nil, err
+	}
+
+	part, err := sPart.getPart(balances)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		spKey = stakePoolKey(providerType, providerId)
+		sp    = newStakePool()
+	)
+	if err := part.GetItem(balances, spKey, sp); err != nil {
+		if !partitions.ErrItemNotFound(err) {
+			return nil, err
 		}
-		sp = newStakePool()
+
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 		sp.Minter = chainstate.MinterStorage
+		sp.ID = stakePoolKey(providerType, providerId)
 	}
 
 	sp.Settings.MinStake = settings.MinStake
 	sp.Settings.MaxStake = settings.MaxStake
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+
+	if err := part.UpdateItem(balances, sp); err != nil {
+		return nil, err
+	}
+
+	// TODO: emit sp.Save events
+
+	if err := part.Save(balances); err != nil {
+		return nil, err
+	}
+
 	return sp, nil
 }
 
@@ -424,42 +453,46 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"invalid request: %v", err)
 	}
 
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(spr.ProviderType, spr.ProviderID, balances); err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"can't get stake pool: %v", err)
-	}
-
-	if len(sp.Pools) >= conf.MaxDelegates {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"max_delegates reached: %v, no more stake pools allowed",
-			conf.MaxDelegates)
-	}
-
-	err = sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
+	part, err := getStakePoolPartition(spr.ProviderType)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
-			"stake pool digging error: %v", err)
+			"could not get stake pool partition: %v", err)
 	}
 
-	if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"saving stake pool: %v", err)
+	spKey := stakePoolKey(spr.ProviderType, spr.ProviderID)
+	if err := part.update(balances, spKey, func(sp *stakePool) error {
+		if len(sp.Pools) >= conf.MaxDelegates {
+			return fmt.Errorf("max_delegates reached: %v, no more stake pools allowed",
+				conf.MaxDelegates)
+		}
+
+		err = sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
+		if err != nil {
+			return fmt.Errorf("stake pool digging error: %v", err)
+		}
+
+		if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
+			return fmt.Errorf("saving stake pool: %v", err)
+		}
+
+		staked, err := sp.stake()
+		if err != nil {
+			return fmt.Errorf("stake pool staking error: %v", err)
+		}
+
+		switch spr.ProviderType {
+		case spenum.Blobber:
+			tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
+			balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
+		case spenum.Validator:
+			// TODO: implement validator stake update events
+		}
+
+		return nil
+	}); err != nil {
+		return "", common.NewError("stake_pool_lock_failed", err.Error())
 	}
 
-	staked, err := sp.stake()
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"stake pool staking error: %v", err)
-	}
-
-	switch spr.ProviderType {
-	case spenum.Blobber:
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
-		balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
-	case spenum.Validator:
-		// TODO: implement validator stake update events
-	}
 	return
 }
 
@@ -474,44 +507,63 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)
 	}
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(spr.ProviderType, spr.ProviderID, balances); err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"can't get related stake pool: %v", err)
-	}
 
-	dp, ok := sp.Pools[t.ClientID]
-	if !ok {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
-	}
-
-	// if StakeAt has valid value and lock period is less than MinLockPeriod
-	if dp.StakedAt > 0 {
-		stakedAt := common.ToTime(dp.StakedAt)
-		minLockPeriod := config.SmartContractConfig.GetDuration("stakepool.min_lock_period")
-		if !stakedAt.Add(minLockPeriod).Before(time.Now()) {
-			return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(minLockPeriod))
-		}
-	}
-
-	unstake, err := sp.empty(ssc.ID, t.ClientID, t.ClientID, balances)
+	part, err := getStakePoolPartition(spr.ProviderType)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"unlocking tokens: %v", err)
+			"could not get stake pool partition: %v", err)
 	}
 
-	// the tokens can't be unlocked due to opened offers, but we mark it
-	// as 'unstake' and returns maximal time to wait to unlock the pool
-	if !unstake {
-		// save the pool and return special result
-		if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
-			return "", common.NewErrorf("stake_pool_unlock_failed",
-				"saving stake pool: %v", err)
+	spKey := stakePoolKey(spr.ProviderType, spr.ProviderID)
+	if err := part.update(balances, spKey, func(sp *stakePool) error {
+		dp, ok := sp.Pools[t.ClientID]
+		if !ok {
+			return fmt.Errorf("no such delegate pool: %v ", t.ClientID)
 		}
+
+		// if StakeAt has valid value and lock period is less than MinLockPeriod
+		if dp.StakedAt > 0 {
+			stakedAt := common.ToTime(dp.StakedAt)
+			minLockPeriod := config.SmartContractConfig.GetDuration("stakepool.min_lock_period")
+			if !stakedAt.Add(minLockPeriod).Before(time.Now()) {
+				return fmt.Errorf("token can only be unstaked till: %s", stakedAt.Add(minLockPeriod))
+			}
+		}
+
+		unstake, err := sp.empty(ssc.ID, t.ClientID, t.ClientID, balances)
+		if err != nil {
+			return fmt.Errorf("unlocking tokens: %v", err)
+		}
+
+		// the tokens can't be unlocked due to opened offers, but we mark it
+		// as 'unstake' and returns maximal time to wait to unlock the pool
+		if !unstake {
+			staked, err := sp.stake()
+			if err != nil {
+				return fmt.Errorf("stake pool staking error: %v", err)
+			}
+
+			switch spr.ProviderType {
+			case spenum.Blobber:
+				tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
+				balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
+			case spenum.Validator:
+				// TODO: implement validator stake update events
+			}
+
+			resp = toJson(&unlockResponse{Unstake: false})
+			return nil
+		}
+
+		amount, err := sp.UnlockClientStakePool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+		if err != nil {
+			return err
+		}
+
+		// save the pool
 		staked, err := sp.stake()
 		if err != nil {
-			return "", common.NewErrorf("stake_pool_unlock_failed",
-				"stake pool staking error: %v", err)
+			return fmt.Errorf("stake pool staking error: %v", err)
 		}
 
 		switch spr.ProviderType {
@@ -521,34 +573,11 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		case spenum.Validator:
 			// TODO: implement validator stake update events
 		}
-
-		return toJson(&unlockResponse{Unstake: false}), nil
+		resp = toJson(&unlockResponse{Unstake: true, Balance: amount})
+		return nil
+	}); err != nil {
+		return "", common.NewError("stake_pool_unlock_failed", err.Error())
 	}
 
-	amount, err := sp.UnlockClientStakePool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
-	}
-
-	// save the pool
-	if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"saving stake pool: %v", err)
-	}
-
-	staked, err := sp.stake()
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"stake pool staking error: %v", err)
-	}
-
-	switch spr.ProviderType {
-	case spenum.Blobber:
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(spr.ProviderID, staked)
-		balances.EmitEvent(event.TypeStats, tag, spr.ProviderID, data)
-	case spenum.Validator:
-		// TODO: implement validator stake update events
-	}
-
-	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
+	return resp, nil
 }

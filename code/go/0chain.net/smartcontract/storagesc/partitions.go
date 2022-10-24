@@ -3,7 +3,7 @@ package storagesc
 import "0chain.net/chaincore/chain/state"
 
 var (
-	initPartitionsFuncs = []initPartitionFunc{}
+	initPartitionsFuncs []initPartitionFunc
 )
 
 type initPartitionFunc func(state.StateContextI) error

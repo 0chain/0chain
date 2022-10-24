@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -58,7 +59,7 @@ func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	conf *Config, blobber *StorageNode, savedBlobber *StorageNode,
+	conf *Config, sp *stakePool, blobber *StorageNode, savedBlobber *StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check terms
@@ -118,9 +119,9 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// update stake pool settings
-	var sp *stakePool
-	if sp, err = sc.getStakePool(spenum.Blobber, blobber.ID, balances); err != nil {
-		return fmt.Errorf("can't get stake pool:  %v", err)
+	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	if err != nil {
+		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
 
 	stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
@@ -144,9 +145,9 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
 	// save stake pool
-	if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
-		return fmt.Errorf("saving stake pool: %v", err)
-	}
+	//if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
+	//	return fmt.Errorf("saving stake pool: %v", err)
+	//}
 
 	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
@@ -254,25 +255,25 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"can't get the blobber: "+err.Error())
 	}
 
-	var sp *stakePool
-	if sp, err = sc.getStakePool(spenum.Blobber, updatedBlobber.ID, balances); err != nil {
-		return "", common.NewError("update_blobber_settings_failed",
-			"can't get related stake pool: "+err.Error())
-	}
+	spKey := stakePoolKey(spenum.Blobber, updatedBlobber.ID)
+	if err := blobberStakePoolPartitions.update(balances, spKey, func(sp *stakePool) error {
+		if sp.Settings.DelegateWallet == "" {
+			return errors.New("blobber delegate_wallet is not set")
+		}
 
-	if sp.Settings.DelegateWallet == "" {
-		return "", common.NewError("update_blobber_settings_failed",
-			"blobber's delegate_wallet is not set")
-	}
+		if t.ClientID != sp.Settings.DelegateWallet {
+			return errors.New("access denied, allowed for delegate_wallet owner only")
+		}
 
-	if t.ClientID != sp.Settings.DelegateWallet {
-		return "", common.NewError("update_blobber_settings_failed",
-			"access denied, allowed for delegate_wallet owner only")
-	}
+		if err = sc.updateBlobber(t, conf, sp, updatedBlobber, blobber, balances); err != nil {
+			return err
+		}
 
-	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
+		return nil
+	}); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
+
 	blobber.Terms = updatedBlobber.Terms
 	blobber.Capacity = updatedBlobber.Capacity
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
@@ -300,10 +301,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 	blobber.LastHealthCheck = t.CreationDate
 
-	err = emitUpdateBlobber(blobber, balances)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed", err.Error())
-	}
+	emitUpdateBlobber(blobber, balances)
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)
 	if err != nil {
@@ -412,22 +410,21 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related read pool: %v", err)
 	}
 
-	var sp *stakePool
-	sp, err = sc.getStakePool(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't get related stake pool: %v", err)
+	spKey := stakePoolKey(spenum.Blobber, commitRead.ReadMarker.BlobberID)
+	if err := blobberStakePoolPartitions.update(balances, spKey, func(sp *stakePool) error {
+		details.Stats.NumReads++
+		alloc.Stats.NumReads++
+
+		resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
+			commitRead.ReadMarker.BlobberID, sp, value, balances)
+		if err != nil {
+			return fmt.Errorf("can't transfer tokens from read pool to stake pool: %v", err)
+		}
+		return nil
+	}); err != nil {
+		return "", common.NewError("commit_blobber_read", err.Error())
 	}
 
-	details.Stats.NumReads++
-	alloc.Stats.NumReads++
-
-	resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
-		commitRead.ReadMarker.BlobberID, sp, value, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't transfer tokens from read pool to stake pool: %v", err)
-	}
 	readReward, err := currency.AddCoin(details.ReadReward, value) // stat
 	if err != nil {
 		return "", err
@@ -475,13 +472,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			return "", common.NewErrorf("commit_blobber_read",
 				"error saving ongoing blobber reward partition: %v", err)
 		}
-	}
-
-	// save pools
-	err = sp.save(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't save stake pool: %v", err)
 	}
 
 	if err = rp.save(sc.ID, commitRead.ReadMarker.ClientID, balances); err != nil {
@@ -806,17 +796,33 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 	logging.Logger.Info("commit_connection, add blobber to challenge ready partitions",
 		zap.String("blobber", txn.ClientID))
 
-	sp, err := getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances)
+	spPart, err := blobberStakePoolPartitions.getPart(balances)
 	if err != nil {
-		return common.NewErrorf("blobber_add_allocation",
-			"unable to fetch blobbers stake pool: %v", err)
+		return err
 	}
-	stakedAmount, err := sp.cleanStake()
-	if err != nil {
-		return common.NewErrorf("blobber_add_allocation",
-			"unable to clean stake pool: %v", err)
+
+	var weight uint64
+	if err := spPart.Update(balances, stakePoolKey(spenum.Blobber, blobAlloc.BlobberID), func(data []byte) ([]byte, error) {
+		sp := newStakePool()
+		_, err := sp.UnmarshalMsg(data)
+		if err != nil {
+			return nil, err
+		}
+
+		stakedAmount, err := sp.cleanStake()
+		if err != nil {
+			return nil, fmt.Errorf("unable to clean stake pool: %v", err)
+		}
+
+		weight = uint64(stakedAmount) * blobUsedCapacity
+		return sp.MarshalMsg(nil)
+	}); err != nil {
+		return common.NewError("commit_connection_failed", err.Error())
 	}
-	weight := uint64(stakedAmount) * blobUsedCapacity
+
+	if err := spPart.Save(balances); err != nil {
+		return common.NewError("commit_connection_failed", err.Error())
+	}
 
 	if err = partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight); err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions: %v", err)
@@ -833,7 +839,9 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err == nil {
 		// already exist, update it
-		return sc.updateBlobber(t, conf, blobber, savedBlobber, balances)
+		return blobberStakePoolPartitions.update(balances, stakePoolKey(spenum.Blobber, blobber.ID), func(sp *stakePool) error {
+			return sc.updateBlobber(t, conf, sp, blobber, savedBlobber, balances)
+		})
 	}
 
 	if err != util.ErrValueNotPresent {
@@ -857,15 +865,10 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	blobber.LastHealthCheck = t.CreationDate // set to now
 
 	// create stake pool
-	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, spenum.Blobber, blobber.ID,
+	sp, err := sc.getOrCreateStakePool(conf, spenum.Blobber, blobber.ID,
 		blobber.StakePoolSettings, balances)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
-	}
-
-	if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
-		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
 	staked, err := sp.stake()

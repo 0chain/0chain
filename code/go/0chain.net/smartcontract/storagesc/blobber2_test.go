@@ -345,7 +345,7 @@ func testCommitBlobberRead(
 
 	require.NotEqualValues(t, rPool.Balance, newRp.Balance)
 
-	newSp, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
+	newSp, err := blobberStakePoolPartitions.get(ctx, spenum.Blobber, blobberId)
 	require.NoError(t, err)
 
 	confirmCommitBlobberRead(t, f, resp, newSp)

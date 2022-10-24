@@ -28,9 +28,9 @@ options:
   verbose: true
   test_suites:
     - "miner"
-#    - "storage"
+    - "storage"
 #    - "storage_rest"
-    - "miner_rest"
+#    - "miner_rest"
 #    - "faucet_rest"
 #    - "vesting_rest"
 #    - "zcnscbridge_rest"

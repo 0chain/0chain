@@ -2496,15 +2496,22 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 		common.Respond(w, r, nil, err)
 		return
 	}
+
+	spPart, err := blobberStakePoolPartitions.getPart(sctx)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("could not get blobber stakepool partition"))
+		return
+	}
+
 	var total int64
 	for _, blobber := range blobbers {
-		var sp *stakePool
-		sp, err := getStakePool(spenum.Blobber, blobber, sctx)
-		if err != nil {
+		sp := newStakePool()
+		if err := spPart.GetItem(sctx, stakePoolKey(spenum.Blobber, blobber), sp); err != nil {
 			err := common.NewErrInternal("cannot get stake pool" + err.Error())
 			common.Respond(w, r, nil, err)
 			return
 		}
+
 		staked, err := sp.stake()
 		if err != nil {
 			err := common.NewErrInternal("cannot get stake" + err.Error())

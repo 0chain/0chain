@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"errors"
 	"fmt"
 
 	state "0chain.net/chaincore/chain/state"
@@ -65,17 +66,16 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 
 	// create stake pool for the validator to count its rewards
-	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, spenum.Validator, t.ClientID,
+	_, err = sc.getOrCreateStakePool(conf, spenum.Validator, t.ClientID,
 		newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
 	}
-	if err = sp.save(spenum.Validator, t.ClientID, balances); err != nil {
-		return "", common.NewError("add_validator_failed",
-			"saving stake pool error: "+err.Error())
-	}
+	//if err = sp.save(spenum.Validator, t.ClientID, balances); err != nil {
+	//	return "", common.NewError("add_validator_failed",
+	//		"saving stake pool error: "+err.Error())
+	//}
 
 	if err = newValidator.emitAddOrOverwrite(balances); err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
@@ -125,23 +125,18 @@ func (sc *StorageSmartContract) updateValidatorSettings(t *transaction.Transacti
 			"can't get the validator: "+err.Error())
 	}
 
-	var sp *stakePool
-	if sp, err = sc.getStakePool(spenum.Validator, updatedValidator.ID, balances); err != nil {
-		return "", common.NewError("update_validator_settings_failed",
-			"can't get related stake pool: "+err.Error())
-	}
+	spKey := stakePoolKey(spenum.Validator, updatedValidator.ID)
+	if err := validatorStakePoolPartitions.update(balances, spKey, func(sp *stakePool) error {
+		if sp.Settings.DelegateWallet == "" {
+			return errors.New("validator's delegate_wallet is not set")
+		}
 
-	if sp.Settings.DelegateWallet == "" {
-		return "", common.NewError("update_validator_settings_failed",
-			"validator's delegate_wallet is not set")
-	}
+		if t.ClientID != sp.Settings.DelegateWallet {
+			return errors.New("access denied, allowed for delegate_wallet owner only")
+		}
 
-	if t.ClientID != sp.Settings.DelegateWallet {
-		return "", common.NewError("update_validator_settings_failed",
-			"access denied, allowed for delegate_wallet owner only")
-	}
-
-	if err = sc.updateValidator(t, conf, updatedValidator, validator, balances); err != nil {
+		return sc.updateValidator(t, conf, sp, updatedValidator, validator, balances)
+	}); err != nil {
 		return "", common.NewError("update_validator_settings_failed", err.Error())
 	}
 
@@ -172,7 +167,7 @@ func (sc *StorageSmartContract) hasValidatorUrl(validatorURL string,
 
 // update existing validator, or reborn a deleted one
 func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
-	conf *Config, inputValidator *ValidationNode, savedValidator *ValidationNode,
+	conf *Config, sp *stakePool, inputValidator *ValidationNode, savedValidator *ValidationNode,
 	balances state.StateContextI,
 ) (err error) {
 	// check params
@@ -211,12 +206,6 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 	// update statistics
 	sc.statIncr(statUpdateValidator)
 
-	// update stake pool settings
-	var sp *stakePool
-	if sp, err = sc.getStakePool(spenum.Validator, inputValidator.ID, balances); err != nil {
-		return fmt.Errorf("can't get stake pool:  %v", err)
-	}
-
 	if err = validateStakePoolSettings(inputValidator.StakePoolSettings, conf); err != nil {
 		return fmt.Errorf("invalid new stake pool settings:  %v", err)
 	}
@@ -225,11 +214,6 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 	sp.Settings.MaxStake = inputValidator.StakePoolSettings.MaxStake
 	sp.Settings.ServiceChargeRatio = inputValidator.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = inputValidator.StakePoolSettings.MaxNumDelegates
-
-	// save stake pool
-	if err = sp.save(spenum.Validator, inputValidator.ID, balances); err != nil {
-		return fmt.Errorf("saving stake pool: %v", err)
-	}
 
 	if err := inputValidator.emitUpdate(balances); err != nil {
 		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)

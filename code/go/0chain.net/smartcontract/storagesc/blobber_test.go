@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/currency"
 
@@ -649,7 +650,7 @@ func Test_flow_penalty(t *testing.T) {
 		require.NoError(t, err)
 
 		//var sp *stakePool
-		_, err = ssc.getStakePool(spenum.Blobber, b4.id, balances)
+		_, err = blobberStakePoolPartitions.get(balances, spenum.Blobber, b4.id)
 		require.NoError(t, err)
 
 		// until the end
@@ -936,7 +937,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 				continue
 			}
 			var sp *stakePool
-			sp, err = ssc.getStakePool(spenum.Blobber, b.id, balances)
+			sp, err = blobberStakePoolPartitions.get(balances, spenum.Blobber, b.id)
 			require.NoError(t, err)
 			spTotal, err := stakePoolTotal(sp)
 			require.NoError(t, err)
@@ -966,7 +967,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		// no rewards for validators
 		for _, val := range valids {
 			var vsp *stakePool
-			vsp, err = ssc.getStakePool(spenum.Blobber, val.id, balances)
+			vsp, err = blobberStakePoolPartitions.get(balances, spenum.Blobber, val.id)
 			require.NoError(t, err)
 			assert.Zero(t, vsp.Reward)
 			assert.Zero(t, balances.balances[val.id])
@@ -1070,7 +1071,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 				continue
 			}
 			var sp *stakePool
-			sp, err = ssc.getStakePool(spenum.Blobber, b.id, balances)
+			sp, err = blobberStakePoolPartitions.get(balances, spenum.Blobber, b.id)
 			require.NoError(t, err)
 			spTotal, err := stakePoolTotal(sp)
 			require.NoError(t, err)
@@ -1146,7 +1147,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 				continue
 			}
 			var sp *stakePool
-			sp, err = ssc.getStakePool(spenum.Blobber, b.id, balances)
+			sp, err = blobberStakePoolPartitions.get(balances, spenum.Blobber, b.id)
 			require.NoError(t, err)
 			spTotal, err := stakePoolTotal(sp)
 			require.NoError(t, err)
@@ -1175,7 +1176,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		// no rewards for validators
 		for _, val := range valids {
 			var vsp *stakePool
-			vsp, err = ssc.getStakePool(spenum.Validator, val.id, balances)
+			vsp, err = blobberStakePoolPartitions.get(balances, spenum.Validator, val.id)
 			require.NoError(t, err)
 			assert.Zero(t, vsp.Reward)
 			assert.Zero(t, balances.balances[val.id])

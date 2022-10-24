@@ -5,7 +5,6 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
-	"sync"
 
 	"0chain.net/chaincore/currency"
 
@@ -76,46 +75,54 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		return nil
 	}
 
-	type spResp struct {
-		index int
-		sp    *stakePool
+	bspPart, err := blobberStakePoolPartitions.getPart(balances)
+	if err != nil {
+		return common.NewError("blobber_block_rewards_failed", err.Error())
 	}
 
-	var wg sync.WaitGroup
-	errC := make(chan error, len(blobberRewards))
-	spC := make(chan spResp, len(blobberRewards))
-	for i, br := range blobberRewards {
-		wg.Add(1)
-		go func(b BlobberRewardNode, i int) {
-			defer wg.Done()
-			if sp, err := ssc.getStakePool(spenum.Blobber, b.ID, balances); err != nil {
-				errC <- err
-			} else {
-				spC <- spResp{
-					index: i,
-					sp:    sp,
-				}
-			}
-		}(br, i)
-	}
-	wg.Wait()
-	close(spC)
-
-	select {
-	case err := <-errC:
-		return err
-	default:
-	}
+	//type spResp struct {
+	//	index int
+	//	sp    *stakePool
+	//}
+	//
+	//var wg sync.WaitGroup
+	//errC := make(chan error, len(blobberRewards))
+	//spC := make(chan spResp, len(blobberRewards))
+	//for i, br := range blobberRewards {
+	//	wg.Add(1)
+	//	go func(b BlobberRewardNode, i int) {
+	//		defer wg.Done()
+	//		if sp, err := ssc.getStakePool(spenum.Blobber, b.ID, balances); err != nil {
+	//			errC <- err
+	//		} else {
+	//			spC <- spResp{
+	//				index: i,
+	//				sp:    sp,
+	//			}
+	//		}
+	//	}(br, i)
+	//}
+	//wg.Wait()
+	//close(spC)
+	//
+	//select {
+	//case err := <-errC:
+	//	return err
+	//default:
+	//}
 
 	stakePools := make([]*stakePool, len(blobberRewards))
-	for resp := range spC {
-		stakePools[resp.index] = resp.sp
-	}
+	//for resp := range spC {
+	//	stakePools[resp.index] = resp.sp
+	//}
 
 	qualifyingBlobberIds := make([]string, len(blobberRewards))
 
 	for i, br := range blobberRewards {
-		sp := stakePools[i]
+		sp := newStakePool()
+		if err := bspPart.GetItem(balances, stakePoolKey(spenum.Blobber, br.ID), sp); err != nil {
+			return common.NewError("blobber_block_rewards_failed", err.Error())
+		}
 
 		staked, err := sp.stake()
 		if err != nil {
@@ -143,6 +150,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		blobberWeight := ((gamma * zeta) + 1) * stake * float64(br.SuccessChallenges)
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
+
+		stakePools[i] = sp
 	}
 
 	if totalWeight == 0 {
@@ -212,10 +221,11 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	for i, qsp := range stakePools {
-		if err = qsp.save(spenum.Blobber, qualifyingBlobberIds[i], balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed",
-				"saving stake pool: "+err.Error())
+		// TODO: emit sp.Save events
+		if err := bspPart.UpdateItem(balances, qsp); err != nil {
+			return common.NewErrorf("blobber_block_rewards_failed", "saving blobber stake pool: %v", err)
 		}
+
 		staked, err := qsp.stake()
 		if err != nil {
 			return common.NewError("blobber_block_rewards_failed",
@@ -225,7 +235,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		bid := qualifyingBlobberIds[i]
 		tag, data := event.NewUpdateBlobberTotalStakeEvent(bid, staked)
 		balances.EmitEvent(event.TypeStats, tag, bid, data)
+	}
 
+	if err := bspPart.Save(balances); err != nil {
+		return common.NewErrorf("blobber_block_rewards_failed", "saving blobber stake pools: %v", err)
 	}
 
 	return nil

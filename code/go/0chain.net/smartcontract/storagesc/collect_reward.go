@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
@@ -47,58 +49,65 @@ func (ssc *StorageSmartContract) collectReward(
 	}
 
 	totalMinted := conf.Minted
-	for _, providerID := range providers {
-		sp, err := ssc.getStakePool(prr.ProviderType, providerID, balances)
-		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"can't get related stake pool: %v", err)
+	var part *stakePoolPartition
+	switch prr.ProviderType {
+	case spenum.Blobber:
+		part = blobberStakePoolPartitions
+	case spenum.Validator:
+		part = validatorStakePoolPartitions
+	default:
+		return "", common.NewErrorf("collect_reward_failed",
+			"invalid provider type: %s", prr.ProviderType.String())
+	}
+
+	spKeys := make([]string, 0, len(providers))
+	for _, p := range providers {
+		spKeys = append(spKeys, stakePoolKey(prr.ProviderType, p))
+	}
+
+	if err := part.updateArray(balances, spKeys, func(sps []*stakePool) error {
+		for i, sp := range sps {
+			reward, err := sp.MintRewards(txn.ClientID, providers[i], prr.ProviderType, usp, balances)
+			if err != nil {
+				return fmt.Errorf("error emptying account, %v", err)
+			}
+
+			tm, err := currency.AddCoin(totalMinted, reward)
+			if err != nil {
+				return fmt.Errorf("error adding reward: %v", err)
+			}
+
+			if tm > conf.MaxMint {
+				return fmt.Errorf("max min %v exceeded: %v", conf.MaxMint, conf.Minted)
+			}
+
+			totalMinted = tm
+
+			staked, err := sp.stake()
+			if err != nil {
+				return fmt.Errorf("can't get stake: %v", err)
+			}
+
+			tag, data := event.NewUpdateBlobberTotalStakeEvent(providers[i], staked)
+			balances.EmitEvent(event.TypeStats, tag, providers[i], data)
+
+			switch prr.ProviderType {
+			case spenum.Blobber:
+				tag, data := event.NewUpdateBlobberTotalStakeEvent(providers[i], staked)
+				balances.EmitEvent(event.TypeStats, tag, providers[i], data)
+			case spenum.Validator:
+				// TODO: implement validator stake update events
+			}
+
+			err = emitAddOrOverwriteReward(reward, providers[i], prr, balances, txn)
+			if err != nil {
+				return fmt.Errorf("emitting reward event: %v", err)
+			}
 		}
 
-		reward, err := sp.MintRewards(txn.ClientID, providerID, prr.ProviderType, usp, balances)
-		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"error emptying account, %v", err)
-		}
-
-		tm, err := currency.AddCoin(totalMinted, reward)
-		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed", "error adding reward: %v", err)
-		}
-
-		if tm > conf.MaxMint {
-			return "", common.NewErrorf("collect_reward_failed",
-				"max min %v exceeded: %v", conf.MaxMint, conf.Minted)
-		}
-
-		totalMinted = tm
-
-		if err := sp.save(prr.ProviderType, providerID, balances); err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"error saving stake pool, %v", err)
-		}
-
-		staked, err := sp.stake()
-		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"can't get stake: %v", err)
-		}
-
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-
-		switch prr.ProviderType {
-		case spenum.Blobber:
-			tag, data := event.NewUpdateBlobberTotalStakeEvent(providerID, staked)
-			balances.EmitEvent(event.TypeStats, tag, providerID, data)
-		case spenum.Validator:
-			// TODO: implement validator stake update events
-		}
-
-		err = emitAddOrOverwriteReward(reward, providerID, prr, balances, txn)
-		if err != nil {
-			return "", common.NewErrorf("pay_reward_failed",
-				"emitting reward event: %v", err)
-		}
+		return nil
+	}); err != nil {
+		return "", common.NewErrorf("collect_reward_failed", err.Error())
 	}
 
 	if err := usp.Save(prr.ProviderType, txn.ClientID, balances); err != nil {

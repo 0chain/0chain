@@ -385,7 +385,7 @@ func testCancelAllocation(
 	require.NoError(t, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
-		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
+		sp, err := blobberStakePoolPartitions.get(ctx, spenum.Blobber, blobber.ID)
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
@@ -422,7 +422,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 	require.NoError(t, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
-		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
+		sp, err := blobberStakePoolPartitions.get(ctx, spenum.Blobber, blobber.ID)
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
@@ -791,7 +791,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	var newStakePools = []*stakePool{}
 	for _, blobber := range individualBlobbers {
-		var sp, err = ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
+		sp, err := blobberStakePoolPartitions.get(ctx, spenum.Blobber, blobber.ID)
 		require.NoError(t, err)
 		newStakePools = append(newStakePools, sp)
 	}

@@ -447,13 +447,20 @@ func testBlobberPenalty(
 	newCP, err := ssc.getChallengePool(allocation.ID, ctx)
 	require.NoError(t, err)
 
-	newVSp, err := ssc.validatorsStakePools(validators, ctx)
+	spKeys := make([]string, 0, len(validators))
+	for _, v := range validators {
+		spKeys = append(spKeys, stakePoolKey(spenum.Validator, v))
+	}
+
+	afterBlobber, err := blobberStakePoolPartitions.get(ctx, spenum.Blobber, blobberId)
 	require.NoError(t, err)
 
-	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
+	err = validatorStakePoolPartitions.updateArray(ctx, spKeys, func(newVSp []*stakePool) error {
+		confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, ctx)
+		return nil
+	})
 	require.NoError(t, err)
 
-	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, ctx)
 	return nil
 }
 
@@ -502,13 +509,19 @@ func testBlobberReward(
 	newCP, err := ssc.getChallengePool(allocation.ID, ctx)
 	require.NoError(t, err)
 
-	newVSp, err := ssc.validatorsStakePools(validators, ctx)
+	afterBlobber, err := blobberStakePoolPartitions.get(ctx, spenum.Blobber, blobberId)
 	require.NoError(t, err)
 
-	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
+	spKeys := make([]string, 0, len(validators))
+	for _, v := range validators {
+		spKeys = append(spKeys, stakePoolKey(spenum.Validator, v))
+	}
+	err = validatorStakePoolPartitions.updateArray(ctx, spKeys, func(newVSp []*stakePool) error {
+		confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber, ctx)
+		return nil
+	})
 	require.NoError(t, err)
 
-	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber, ctx)
 	return nil
 }
 
