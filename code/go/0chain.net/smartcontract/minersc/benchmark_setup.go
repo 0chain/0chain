@@ -7,7 +7,6 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/currency"
 	"0chain.net/core/datastore"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/stakepool"
@@ -169,6 +168,13 @@ func AddMockNodes(
 		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
 			Nodes: allNodes.Nodes[1:],
 		})
+
+		for _, n := range allNodes.Nodes {
+			_, err = balances.InsertTrieNode(n.GetKey(), n)
+			if err != nil {
+				panic(err)
+			}
+		}
 		if err != nil {
 			panic(err)
 		}
