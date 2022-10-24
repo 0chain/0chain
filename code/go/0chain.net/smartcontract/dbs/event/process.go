@@ -275,7 +275,8 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			}
 			gs = &g
 		}
-		err := edb.addSnapshots(es, gs)
+		var err error
+		gs, err = edb.updateSnapshots(es, gs)
 		if err != nil {
 			logging.Logger.Error("event could not be processed",
 				zap.Int64("round", es.round),
@@ -286,7 +287,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		}
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
-			logging.Logger.Warn("event db save slow - addSnapshots",
+			logging.Logger.Warn("event db save slow - updateSnapshots",
 				zap.Any("duration", du),
 				zap.Int64("round", es.round),
 				zap.String("block", es.block),
@@ -315,10 +316,10 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) addSnapshots(e blockEvents, s *Snapshot) error {
+func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, error) {
 	round := e.round
 	if len(e.events) == 0 {
-		return nil
+		return s, nil
 	}
 	gs := &globalSnapshot{
 		Snapshot: *s,
@@ -332,17 +333,8 @@ func (edb *EventDb) addSnapshots(e blockEvents, s *Snapshot) error {
 	if err := edb.addSnapshot(gs.Snapshot); err != nil {
 		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
 	}
-	gs = &globalSnapshot{
-		Snapshot: Snapshot{
-			TotalMint:           gs.TotalMint,
-			ZCNSupply:           gs.ZCNSupply,
-			TotalValueLocked:    gs.TotalValueLocked,
-			ClientLocks:         gs.ClientLocks,
-			TotalChallengePools: gs.TotalChallengePools, // todo is this total or delta
-		},
-	}
 
-	return nil
+	return &gs.Snapshot, nil
 }
 
 func (edb *EventDb) addStat(event Event) error {
