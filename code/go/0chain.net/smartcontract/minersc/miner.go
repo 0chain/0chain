@@ -103,7 +103,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 			"decoding request: %v", err)
 	}
 
-	if err := minersPartitions.updateNode(balances, GetNodeKey(deleteMiner.ID), func(mn *MinerNode) error {
+	if err := minersPartitions.update(balances, deleteMiner.ID, func(mn *MinerNode) error {
 		updatedMn, err := msc.deleteNode(mn, balances)
 		if err != nil {
 			return err
@@ -208,7 +208,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", err
 	}
 
-	if err := minersPartitions.updateNode(balances, GetNodeKey(update.ID), func(mn *MinerNode) error {
+	if err := minersPartitions.update(balances, update.ID, func(mn *MinerNode) error {
 		if mn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-mn.LastSettingUpdateRound < gn.CooldownPeriod {
 			return errors.New("block round is in cool down period")
 		}

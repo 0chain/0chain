@@ -54,30 +54,8 @@ func newNodePartition(name string) *nodePartition {
 	}
 }
 
-func (np *nodePartition) update(balances state.StateContextI, f func(part *partitions.Partitions) error) error {
-	part, err := partitions.GetPartitions(balances, np.name)
-	if err != nil {
-		return err
-	}
-
-	if err := f(part); err != nil {
-		return err
-	}
-
-	return part.Save(balances)
-}
-
-func (np *nodePartition) view(balances state.StateContextI, f func(part *partitions.Partitions) error) error {
-	part, err := partitions.GetPartitions(balances, np.name)
-	if err != nil {
-		return err
-	}
-
-	return f(part)
-}
-
 func (np *nodePartition) add(balances state.StateContextI, n *MinerNode) error {
-	return np.update(balances, func(part *partitions.Partitions) error {
+	return partitions.Update(balances, np.name, func(part *partitions.Partitions) error {
 		return part.AddItem(balances, n)
 	})
 
@@ -85,7 +63,7 @@ func (np *nodePartition) add(balances state.StateContextI, n *MinerNode) error {
 
 func (np *nodePartition) get(balances state.StateContextI, key string) (*MinerNode, error) {
 	var n MinerNode
-	if err := np.view(balances, func(part *partitions.Partitions) error {
+	if err := partitions.View(balances, np.name, func(part *partitions.Partitions) error {
 		return part.GetItem(balances, key, &n)
 	}); err != nil {
 		return nil, err
@@ -95,14 +73,14 @@ func (np *nodePartition) get(balances state.StateContextI, key string) (*MinerNo
 }
 
 func (np *nodePartition) remove(balances state.StateContextI, key string) error {
-	return np.update(balances, func(part *partitions.Partitions) error {
+	return partitions.Update(balances, np.name, func(part *partitions.Partitions) error {
 		return part.RemoveItem(balances, key)
 	})
 }
 
 func (np *nodePartition) exist(balances state.StateContextI, key string) (bool, error) {
 	var exist bool
-	if err := np.view(balances, func(part *partitions.Partitions) error {
+	if err := partitions.View(balances, np.name, func(part *partitions.Partitions) error {
 		var err error
 		exist, err = part.Exist(balances, key)
 		return err
@@ -152,9 +130,9 @@ func forEachNodesWithPart(balances state.StateContextI, part *partitions.Partiti
 	})
 }
 
-func (np *nodePartition) updateNode(balances state.StateContextI, key string, f func(n *MinerNode) error) error {
-	return np.update(balances, func(part *partitions.Partitions) error {
-		return part.Update(balances, key, func(data []byte) ([]byte, error) {
+func (np *nodePartition) update(balances state.StateContextI, id string, f func(n *MinerNode) error) error {
+	return partitions.Update(balances, np.name, func(part *partitions.Partitions) error {
+		return part.Update(balances, GetNodeKey(id), func(data []byte) ([]byte, error) {
 			n := NewMinerNode()
 			_, err := n.UnmarshalMsg(data)
 			if err != nil {

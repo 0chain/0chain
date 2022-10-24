@@ -303,3 +303,27 @@ func (p *Partitions) Update(state state.StateContextI, key string, f func(data [
 
 	return nil
 }
+
+// Update updates partition of given name, the changes will be saved
+func Update(balances state.StateContextI, name string, f func(part *Partitions) error) error {
+	part, err := GetPartitions(balances, name)
+	if err != nil {
+		return err
+	}
+
+	if err := f(part); err != nil {
+		return err
+	}
+
+	return part.Save(balances)
+}
+
+// View get partitions of given name, changes will be ignored
+func View(balances state.StateContextI, name string, f func(part *Partitions) error) error {
+	part, err := GetPartitions(balances, name)
+	if err != nil {
+		return err
+	}
+
+	return f(part)
+}

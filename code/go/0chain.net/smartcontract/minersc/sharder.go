@@ -27,7 +27,7 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 		return "", err
 	}
 
-	if err := shardersPartitions.updateNode(balances, GetNodeKey(update.ID), func(sn *MinerNode) error {
+	if err := shardersPartitions.update(balances, update.ID, func(sn *MinerNode) error {
 		if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
 			return errors.New("block round is in cooldown period")
 		}
@@ -137,7 +137,7 @@ func (msc *MinerSmartContract) DeleteSharder(
 			"decoding request: %v", err)
 	}
 
-	if err := shardersPartitions.updateNode(balances, GetNodeKey(deleteSharder.ID), func(sn *MinerNode) error {
+	if err := shardersPartitions.update(balances, deleteSharder.ID, func(sn *MinerNode) error {
 		updatedSn, err := msc.deleteNode(sn, balances)
 		if err != nil {
 			return err
