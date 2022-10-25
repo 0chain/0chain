@@ -895,3 +895,14 @@ func (r *Runner) SetServerState(update interface{}) error {
 
 	return err
 }
+
+// SetMagicBlock implements config.Executor interface.
+func (r *Runner) SetMagicBlock(configFile string) error {
+	if r.verbose {
+		log.Print(" [INF] Setting magic block configuration file ", configFile)
+	}
+
+	r.server.SetMagicBlock(configFile)
+
+	return nil
+}

@@ -14,7 +14,7 @@ import (
 type Executor interface {
 
 	// common setups
-
+	SetMagicBlock(configFile string) (err error)
 	SetMonitor(name NodeName) (err error)
 	CleanupBC(timeout time.Duration) (err error)
 	SetEnv(map[string]string) (err error)
