@@ -30,15 +30,13 @@ func (e *Entity) State() (state *State) {
 }
 
 // MagicBlock returns the location path of the magic block configuration.
-func (e *Entity) MagicBlock() (magicBlock string) {
-	magicBlockPtr, err := e.client.magicBlock()
+func (e *Entity) MagicBlock() string {
+	magicBlock, err := e.client.magicBlock()
 	if err != nil {
 		log.Fatalf("failed getting magic block: %v", err)
 	}
 
-	magicBlock = *magicBlockPtr
-
-	return
+	return *magicBlock
 }
 
 // SetState sets current state.
