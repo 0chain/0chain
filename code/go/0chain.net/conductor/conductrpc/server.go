@@ -408,11 +408,11 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 				break
 			}
 		}
-		var ns *nodeState
-		if ns = s.nodes[name]; err != nil {
-			return
+
+		if ns, ok := s.nodes[name]; ok {
+			*state = *ns.state
 		}
-		*state = *ns.state
+
 		return
 	}
 

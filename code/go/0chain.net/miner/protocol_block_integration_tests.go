@@ -107,14 +107,11 @@ func addResultIfAdversarialValidatorTest(b *block.Block) {
 	}
 
 	for _, tx := range b.Txns {
-		var txParsed map[string]interface{}
-		err := json.Unmarshal([]byte(tx.TransactionData), &txParsed)
+		var transactionData ChallengeResponseTxData
+		err := json.Unmarshal([]byte(tx.TransactionData), &transactionData)
 		if err != nil {
 			return
 		}
-
-		var transactionData ChallengeResponseTxData
-		json.Unmarshal([]byte(tx.TransactionData), &transactionData)
 
 		if (s.AdversarialValidator.DenialOfService || s.AdversarialValidator.FailValidChallenge) && tx.TransactionOutput == "challenge passed by blobber" {
 			if len(transactionData.Input.ValidationTickets) > 2 {
