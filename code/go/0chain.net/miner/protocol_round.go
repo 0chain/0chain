@@ -368,8 +368,8 @@ func (mc *Chain) getBlockToExtend(ctx context.Context, r round.RoundI) (
 	return // bnb
 }
 
-// GenerateRoundBlock - given a round number generates a block.
-func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
+// generateRoundBlock - given a round number generates a block.
+func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
 	var ts = time.Now()
 	defer func() { rbgTimer.UpdateSince(ts) }()
 

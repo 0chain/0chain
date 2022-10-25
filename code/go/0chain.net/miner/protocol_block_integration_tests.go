@@ -19,6 +19,7 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -46,8 +47,8 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	b.HashBlock()
 
 	switch {
-	case state.WrongBlockHash != nil:
-		b.Hash = revertString(b.Hash) // just wrong block hash
+	case state.WrongBlockHash != nil || state.WrongBlockDDoS != nil:
+		b.Hash = util.ShuffleString(b.Hash)
 		b.Signature, err = self.Sign(b.Hash)
 	case state.WrongBlockRandomSeed != nil:
 		b.RoundRandomSeed = b.RoundRandomSeed - 1
