@@ -381,8 +381,9 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	}
 
 	var (
-		spKey = stakePoolKey(providerType, providerId)
-		sp    = newStakePool()
+		spKey        = stakePoolKey(providerType, providerId)
+		sp           = newStakePool()
+		addStakePool bool
 	)
 	if err := part.GetItem(balances, spKey, sp); err != nil {
 		if !partitions.ErrItemNotFound(err) {
@@ -392,6 +393,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 		sp.Minter = chainstate.MinterStorage
 		sp.ID = stakePoolKey(providerType, providerId)
+		addStakePool = true
 	}
 
 	sp.Settings.MinStake = settings.MinStake
@@ -399,8 +401,14 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 
-	if err := part.UpdateItem(balances, sp); err != nil {
-		return nil, err
+	if addStakePool {
+		if err := part.AddItem(balances, sp); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := part.UpdateItem(balances, sp); err != nil {
+			return nil, err
+		}
 	}
 
 	// TODO: emit sp.Save events
