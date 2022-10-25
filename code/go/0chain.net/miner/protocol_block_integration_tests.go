@@ -22,6 +22,7 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/storagesc"
 )
 
@@ -50,10 +51,10 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 
 	switch {
 	case state.WrongBlockHash != nil:
-		b.Hash = revertString(b.Hash) // just wrong block hash
+		b.Hash = util.RevertString(b.Hash) // just wrong block hash
 		b.Signature, err = self.Sign(b.Hash)
 	case state.WrongBlockSignHash != nil:
-		b.Signature, err = self.Sign(revertString(b.Hash)) // sign another hash
+		b.Signature, err = self.Sign(util.RevertString(b.Hash)) // sign another hash
 	case state.WrongBlockSignKey != nil:
 		b.Signature, err = crpcutils.Sign(b.Hash) // wrong secret key
 	default:

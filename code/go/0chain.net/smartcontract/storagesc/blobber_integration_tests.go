@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/node"
+	"0chain.net/core/util"
 
 	crpc "0chain.net/conductor/conductrpc"
 )
@@ -37,6 +38,7 @@ func beforeEmitAddChallenge(challenge *StorageChallengeResponse) {
 
 	if state.AdversarialValidator != nil && state.AdversarialValidator.PassAllChallenges && containsString(challenge.ValidatorIDs, state.AdversarialValidator.ID) {
 		// any challenge adulteration produces an invalid challenge
+		challenge.AllocationRoot = util.RevertString(challenge.AllocationRoot)
 		challenge.AllocationRoot = strings.ReplaceAll(challenge.AllocationRoot, "1", "0")
 		challenge.AllocationRoot = strings.ReplaceAll(challenge.AllocationRoot, "a", "b")
 	}

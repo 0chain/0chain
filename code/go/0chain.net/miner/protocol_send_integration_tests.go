@@ -21,12 +21,13 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
 func getBadVRFS(vrfs *round.VRFShare) (bad *round.VRFShare) {
 	bad = new(round.VRFShare)
 	*bad = *vrfs
-	bad.Share = revertString(bad.Share) // bad share
+	bad.Share = util.RevertString(bad.Share) // bad share
 	return
 }
 
@@ -116,7 +117,7 @@ func getBadBVTHash(ctx context.Context, b *block.Block) (
 		err  error
 	)
 	bad.VerifierID = self.Underlying().GetKey()
-	bad.Signature, err = self.Sign(revertString(b.Hash)) // wrong hash
+	bad.Signature, err = self.Sign(util.RevertString(b.Hash)) // wrong hash
 	if err != nil {
 		panic(err)
 	}
