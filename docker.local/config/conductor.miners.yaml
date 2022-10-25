@@ -5,12 +5,12 @@
 ---
 # enabled test cases sets
 enable:
-  - "VRF"
-  - "Round timeout"
-  - "Verification tickets"
+  # - "VRF"
+  # - "Round timeout"
+  # - "Verification tickets"
   - "Bad block"
-  - "Notarized block"
-  - "Double spend transaction"
+  # - "Notarized block"
+  # - "Double spend transaction"
 
 # sets of test cases
 sets:
@@ -34,12 +34,13 @@ sets:
       - "Send bad verification ticket with wrong hash"
   - name: "Bad block"
     tests:
-      - "Create competing block when not a generator"
-      - "Group only signs the competing blocks"
-      - "Send a transaction from an earlier block to create a double spend"
-      - "Sign a different hash than the block hash"
-      - "Use a different private key to sign the block"
-      - "Hash the block incorrectly"
+      # - "Create competing block when not a generator"
+      # - "Group only signs the competing blocks"
+      # - "Send a transaction from an earlier block to create a double spend"
+      # - "Sign a different hash than the block hash"
+      # - "Use a different private key to sign the block"
+      # - "Hash the block incorrectly"
+      - "Use a different random seed"
   - name: "Double spend transaction"
     tests:
       - "Double spend transaction: 1/3"
@@ -292,6 +293,19 @@ tests:
       - wait_round:
           round: 10
       - wrong_block_hash:
+          by: ["miner-3"]
+      - wait_round:
+          round: 20 # it keeps going
+          timeout: "5m"
+  - name: "Use a different random seed"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - wrong_block_random_seed:
           by: ["miner-3"]
       - wait_round:
           round: 20 # it keeps going

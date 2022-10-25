@@ -522,7 +522,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 
 		//todo actually it is not a problem, since RRS can be changed only during timeout and this block can be reused
-		if r.GetRandomSeed() != b.GetRoundRandomSeed() {
+		if !areRoundAndBlockSeedsEqual(r, b) {
 			logging.Logger.Error("round random seed mismatch",
 				zap.Int64("round", b.Round),
 				zap.Int64("round_rrs", r.GetRandomSeed()),
@@ -1008,7 +1008,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 		return nil, common.NewErrorf("verify_round_block", "block with no RRS, %d, %s", b.Round, b.Hash)
 	}
 
-	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
+	if !areRoundAndBlockSeedsEqual(r, b) {
 		return nil, common.NewError("seed_mismatch", "block RRS mismatch")
 	}
 

@@ -442,6 +442,18 @@ func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
 	return
 }
 
+func (r *Runner) WrongBlockRandomSeed(wb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong block random seed", wb)
+
+	err = r.server.UpdateStates(wb.By, func(state *conductrpc.State) {
+		state.WrongBlockRandomSeed = wb
+	})
+	if err != nil {
+		return fmt.Errorf("setting 'wrong block random seed': %v", err)
+	}
+	return
+}
+
 func (r *Runner) VerificationTicketGroup(vtg *config.Bad) (err error) {
 	r.verbosePrintByGoodBad("verification ticket group", vtg)
 

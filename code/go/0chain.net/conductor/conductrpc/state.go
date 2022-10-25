@@ -32,6 +32,7 @@ type State struct {
 	WrongBlockSignHash          *config.Bad
 	WrongBlockSignKey           *config.Bad
 	WrongBlockHash              *config.Bad
+	WrongBlockRandomSeed        *config.Bad
 	VerificationTicketGroup     *config.Bad
 	WrongVerificationTicketHash *config.Bad
 	WrongVerificationTicketKey  *config.Bad

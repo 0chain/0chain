@@ -190,3 +190,11 @@ func lockChainIfConfigured() {
 		<-time.NewTimer(time.Microsecond * 200).C
 	}
 }
+
+func areRoundAndBlockSeedsEqual(r round.RoundI, b *block.Block) bool {
+	if crpc.Client().State().WrongBlockRandomSeed != nil {
+		return true
+	}
+
+	return r.GetRandomSeed() == b.GetRoundRandomSeed()
+}

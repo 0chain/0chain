@@ -49,6 +49,10 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	case state.WrongBlockHash != nil:
 		b.Hash = revertString(b.Hash) // just wrong block hash
 		b.Signature, err = self.Sign(b.Hash)
+	case state.WrongBlockRandomSeed != nil:
+		b.RoundRandomSeed = b.RoundRandomSeed - 1
+		b.HashBlock()
+		b.Signature, err = self.Sign(b.Hash)
 	case state.WrongBlockSignHash != nil:
 		b.Signature, err = self.Sign(revertString(b.Hash)) // sign another hash
 	case state.WrongBlockSignKey != nil:

@@ -26,3 +26,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
 	mc.moveToNextRoundNotAheadImpl(ctx, r, func() {})
 }
+
+func areRoundAndBlockSeedsEqual(r round.RoundI, b *block.Block) bool {
+	return r.GetRandomSeed() == b.GetRoundRandomSeed()
+}
