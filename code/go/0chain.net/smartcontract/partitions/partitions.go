@@ -20,9 +20,10 @@ const (
 // APIs
 
 type Partitions struct {
-	rs       *randomSelector
-	toRemove []string
-	toAdd    []idIndex
+	rs        *randomSelector
+	toRemove  []string
+	toAdd     []idIndex
+	locations map[string]int
 }
 
 type idIndex struct {
@@ -117,7 +118,23 @@ func (p *Partitions) AddItem(state state.StateContextI, item PartitionItem) erro
 		Idx: idx,
 	})
 
+	p.loadLocations(idx)
 	return nil
+}
+
+func (p *Partitions) loadLocations(idx int) {
+	if p.locations == nil {
+		p.locations = make(map[string]int)
+	}
+	part := p.rs.Partitions[idx]
+	for _, it := range part.Items {
+		kid := p.getLocKey(it.ID)
+		if _, ok := p.locations[kid]; ok {
+			return
+		}
+
+		p.locations[kid] = idx
+	}
 }
 
 // Save saves the partitions data into state
@@ -155,7 +172,13 @@ func (p *Partitions) GetItem(state state.StateContextI, id string, v PartitionIt
 		return common.NewError(errItemNotFoundCode, id)
 	}
 
-	return p.rs.GetItem(state, loc, id, v)
+	if err := p.rs.GetItem(state, loc, id, v); err != nil {
+		return err
+	}
+
+	p.loadLocations(loc)
+
+	return nil
 }
 
 // UpdateItem updates item on given partition index
@@ -169,7 +192,12 @@ func (p *Partitions) UpdateItem(state state.StateContextI, item PartitionItem) e
 		return common.NewError(errItemNotFoundCode, item.GetID())
 	}
 
-	return p.rs.UpdateItem(state, loc, item)
+	if err := p.rs.UpdateItem(state, loc, item); err != nil {
+		return err
+	}
+
+	p.loadLocations(loc)
+	return nil
 }
 
 // Size returns the total item number in partitions
@@ -199,6 +227,8 @@ func (p *Partitions) RemoveItem(state state.StateContextI, id string) error {
 
 	p.toRemove = append(p.toRemove, id)
 
+	p.loadLocations(loc)
+	delete(p.locations, p.getLocKey(id))
 	return nil
 }
 
@@ -209,6 +239,7 @@ func (p *Partitions) RemoveItems(state state.StateContextI, partIndex int, keys 
 			return err
 		}
 		p.toRemove = append(p.toRemove, k)
+		delete(p.locations, p.getLocKey(k))
 	}
 
 	return nil
@@ -252,7 +283,14 @@ func (p *Partitions) getLocKey(id string) datastore.Key {
 
 func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int, bool, error) {
 	var pl location
-	if err := state.GetTrieNode(p.getLocKey(id), &pl); err != nil {
+
+	kid := p.getLocKey(id)
+	loc, ok := p.locations[kid]
+	if ok {
+		return loc, true, nil
+	}
+
+	if err := state.GetTrieNode(kid, &pl); err != nil {
 		if err == util.ErrValueNotPresent {
 			return -1, false, nil
 		}
@@ -301,6 +339,7 @@ func (p *Partitions) Update(state state.StateContextI, key string, f func(data [
 	part.Items[idx] = v
 	part.Changed = true
 
+	p.loadLocations(l)
 	return nil
 }
 
