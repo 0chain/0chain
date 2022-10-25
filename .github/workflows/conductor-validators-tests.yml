@@ -1,19 +1,13 @@
-name: Conductor Blobber Tests
+name: Conductor Validator Tests
 
 on:
   schedule:
-    # Runs everyday at 02:00 am
-    - cron: '0 2 * * * '
-  workflow_dispatch:
-    inputs:
-      view_change:
-        description: 'Type true/false for setting view change.'
-        default: 'false'
-        required: true
+    # Runs everyday at 03:00 am
+    - cron: '0 3 * * * '
 
 jobs:
-  conductor_blobbers_tests:
-    name: CONDUCTOR-BLOBBERS-TESTS
+  conductor_validators_tests:
+    name: CONDUCTOR-VALIDATORS-TESTS
     runs-on: [self-hosted, conductor-test01]
 
     steps:
@@ -22,10 +16,15 @@ jobs:
       with:
         go-version: '1.18'
 
+    - name: Clean up job.
+      run: |
+        rm -rf ./*
+
     - name: Get Branch
       id: get_branch
       run: |
         BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        BRANCH=add-blobber-test-send-wrong-data
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 
@@ -67,6 +66,7 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
+        cd blobber && git checkout add-send-wrong-bad-data-behaviour
 
     - name: Git clone zboxcli
       run: |
@@ -102,10 +102,6 @@ jobs:
     - name: Blobbers Patching
       run: |
         cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
-
-    - name: 0chain configuration Patching
-      run: |
-        sed -i 's/magic_block_file: config\/b0magicBlock_4_miners_2_sharders.json/magic_block_file: config\/b0magicBlock_4_miners_1_sharder.json/' docker.local/config/0chain.yaml
 
     - name: Build 0dns
       run: |
@@ -146,19 +142,16 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    - name: Starting blobber Tests.
+    - name: Starting validator Tests.
       run: |
-        cd 0chain
-        ./docker.local/bin/start.conductor.sh blobber-1
-        ./docker.local/bin/start.conductor.sh blobber-2
-        ./docker.local/bin/start.conductor.sh blobber-3
+        cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
 
   upload_artifacts:
     name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test01]
+    runs-on: [self-hosted, conductor-test02]
 
     if: always()
-    needs: [conductor_blobbers_tests]
+    needs: [conductor_validators_tests]
 
     steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.
