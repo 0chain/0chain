@@ -510,6 +510,7 @@ func GetMockBlobberStakePools(
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		bId := getMockBlobberId(i)
 		sp := &stakePool{
+			ID: stakePoolKey(spenum.Blobber, bId),
 			StakePool: stakepool.StakePool{
 				Pools:    make(map[string]*stakepool.DelegatePool),
 				Reward:   0,
@@ -565,9 +566,15 @@ func GetMockValidatorStakePools(
 	clients []string,
 	balances cstate.StateContextI,
 ) {
+	part, err := validatorStakePoolPartitions.getPart(balances)
+	if err != nil {
+		panic(err)
+	}
+
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		bId := getMockValidatorId(i)
 		sp := &stakePool{
+			ID: stakePoolKey(spenum.Validator, bId),
 			StakePool: stakepool.StakePool{
 				Pools:    make(map[string]*stakepool.DelegatePool),
 				Reward:   0,
@@ -578,11 +585,16 @@ func GetMockValidatorStakePools(
 			id := getMockValidatorStakePoolId(i, j)
 			sp.Pools[id] = &stakepool.DelegatePool{}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-			err := sp.save(spenum.Validator, getMockValidatorId(i), balances)
-			if err != nil {
-				panic(err)
-			}
 		}
+
+		err := part.AddItem(balances, sp)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if err := part.Save(balances); err != nil {
+		panic(err)
 	}
 }
 
@@ -590,12 +602,20 @@ func SaveMockStakePools(
 	sps []*stakePool,
 	balances cstate.StateContextI,
 ) {
-	for i, sp := range sps {
-		bId := getMockBlobberId(i)
-		err := sp.save(spenum.Blobber, bId, balances)
+	part, err := blobberStakePoolPartitions.getPart(balances)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, sp := range sps {
+		err := part.AddItem(balances, sp)
 		if err != nil {
 			panic(err)
 		}
+	}
+
+	if err := part.Save(balances); err != nil {
+		panic(err)
 	}
 }
 

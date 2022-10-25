@@ -212,6 +212,10 @@ func setUpMpt(
 		log.Fatal("init minersc partitions failed", err)
 	}
 
+	if err := storagesc.InitPartitions(balances); err != nil {
+		log.Fatal("init storages partitions failed", err)
+	}
+
 	log.Println("created balances\t", time.Since(timer))
 
 	var eventDb *event.EventDb
