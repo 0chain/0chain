@@ -962,12 +962,12 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 	}
 	start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("start block number is not valid"))
+		common.Respond(w, r, nil, common.NewErrBadRequest("start block number is not valid"))
 		return
 	}
 	end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("end block number is not valid"))
+		common.Respond(w, r, nil, common.NewErrBadRequest("end block number is not valid"))
 		return
 	}
 
