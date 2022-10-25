@@ -84,7 +84,6 @@ jobs:
 
   sharder:
     runs-on: [self-hosted, build]
-    neers: [miner]
     steps:
 
     - name: Set docker image tag
