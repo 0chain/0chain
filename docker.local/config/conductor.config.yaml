@@ -186,6 +186,22 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list.sh"
     should_fail: false # consensus
+  list_and_verify:
+    work_dir: "../"
+    exec: "bash -x 0chain/docker.local/bin/conductor/list_and_verify.sh"
+    should_fail: false
+  download_and_verify:
+    work_dir: "../"
+    exec: "bash -x 0chain/docker.local/bin/conductor/download_and_verify.sh"
+    should_fail: false
+  upload_and_verify:
+    work_dir: "../"
+    exec: "bash -x 0chain/docker.local/bin/conductor/upload_and_verify.sh"
+    should_fail: false
+  delete_and_verify:
+    work_dir: "../"
+    exec: "bash -x 0chain/docker.local/bin/conductor/delete_and_verify.sh"
+    should_fail: false
   download:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/download.sh"
