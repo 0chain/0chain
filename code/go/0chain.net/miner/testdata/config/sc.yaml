@@ -1,0 +1,277 @@
+smart_contracts:
+  faucetsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    pour_limit: 1
+    pour_amount: 1
+    max_pour_amount: 10
+    periodic_limit: 1000
+    global_limit: 100000
+    individual_reset: 3h # in hours
+    global_reset: 48h # in hours
+    cost:
+      update-settings: 100
+      pour: 100
+      refill: 100
+  interestpoolsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_lock: 10
+    interest_rate: 0.0
+    apr: 0.1
+    min_lock_period: 1m
+    max_lock_period: 8760h
+    max_mint: 1500000.0
+    cost:
+      lock: 100
+      unlock: 100
+      updateVariables: 100
+
+  minersc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    # miners
+    max_n: 7 # 100
+    min_n: 3 # 3
+    # sharders
+    max_s: 2 # 30
+    min_s: 1 # 1
+    # max delegates allowed by SC
+    max_delegates: 200 #
+    # DKG
+    t_percent: .66 # of active
+    k_percent: .75 # of registered
+    x_percent: 0.70 # percentage of prev mb miners required to be part of next mb
+    # etc
+    min_stake: 0.0 # min stake can be set by a node (boundary for all nodes)
+    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
+    start_rounds: 50
+    contribute_rounds: 50
+    share_rounds: 50
+    publish_rounds: 50
+    wait_rounds: 50
+    # stake interests, will be declined every epoch
+    interest_rate: 0.0 # [0; 1)
+    # reward rate for generators, will be declined every epoch
+    reward_rate: 1.0 # [0; 1)
+    # share ratio is miner/block sharders rewards ratio, for example 0.1
+    # gives 10% for miner and rest for block sharders
+    share_ratio: 0.8 # [0; 1)
+    # reward for a block
+    block_reward: 0.21 # tokens
+    # max service charge can be set by a generator
+    max_charge: 0.5 # %
+    # epoch is number of rounds before rewards and interest are decreased
+    epoch: 15000000 # rounds
+    # decline rewards every new epoch by this value (the block_reward)
+    reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    # decline interests every new epoch by this value (the interest_rate)
+    interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    # no mints after miner SC total mints reaches this boundary
+    max_mint: 1500000.0 # tokens
+    # if view change is false then reward round frequency is used to send rewards and interests
+    reward_round_frequency: 250
+    # miner delegates to get paid each round when paying fees and rewards
+    num_miner_delegates_rewarded: 10
+    # sharders rewarded each round
+    num_sharders_rewarded: 5
+    # sharder delegates to get paid each round when paying fees and rewards
+    num_sharder_delegates_rewarded: 1
+    cooldown_period: 100
+    cost:
+      add_miner: 100
+      add_sharder: 100
+      delete_miner: 100
+      delete_sharder: 100
+      miner_health_check: 100
+      sharder_health_check: 100
+      contributeMpk: 100
+      shareSignsOrShares: 100
+      wait: 100
+      update_globals: 100
+      update_settings: 100
+      update_miner_settings: 100
+      update_sharder_settings: 100
+      payFees: 0
+      feesPaid: 100
+      mintedTokens: 100
+      addToDelegatePool: 100
+      deleteFromDelegatePool: 100
+      sharder_keep: 100
+      collect_reward: 100
+  storagesc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    # the time_unit is a duration used as divider for a write price; a write
+    # price measured in tok / GB / time_unit, where the time_unit is this
+    # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
+    time_unit: "720h"
+    min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
+    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
+    # max_mint
+    max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
+    # min possible allocations size in bytes allowed by the SC
+    min_alloc_size: 1024
+    # min possible allocation duration allowed by the SC
+    min_alloc_duration: "5m"
+    # max challenge completion time of a blobber allowed by the SC
+    max_challenge_completion_time: "3m"
+    # min blobber's offer duration allowed by the SC
+    min_offer_duration: "10h"
+    # min blobber capacity allowed by the SC
+    min_blobber_capacity: 1024
+    # users' read pool related configurations
+    readpool:
+      min_lock: 0.1 # tokens
+    # users' write pool related configurations
+    writepool:
+      min_lock: 0.1 # tokens
+    # stake pool configurations
+    stakepool:
+      # minimal lock for a delegate pool
+      min_lock: 0.1 # tokens
+      # interest_rate is tokens earned by a blobber for its stake
+      interest_rate: 0.0
+      # interest_interval is interval to pay interests for a stake
+      interest_interval: 1m
+      # min_lock_period is min lock period. Default lock period is 3 years worth of blocks.
+      min_lock_period: 36m
+    # following settings are for free storage rewards
+    #
+    # largest value you can have for the total allowed free storage
+    # that a single user can assign
+    max_total_free_allocation: 10000
+    # maximum setting for the largest number of tokens permitted in
+    # a free storage allocation
+    max_individual_free_allocation: 100
+    # allocation settings for free storage
+    # these values are applied to all free allocations
+    free_allocation_settings:
+      data_shards: 2
+      duration: 50h
+      parity_shards: 2
+      read_pool_fraction: 0.2
+      mint_amount: 0.5
+      read_price_range:
+        max: 1
+        min: 0
+      size: 10000000
+      write_price_range:
+        max: 1
+        min: 0
+    validator_reward: 0.025
+    # blobber_slash represents blobber's stake penalty when a challenge not
+    # passed
+    blobber_slash: 0.10
+    # max prices for blobbers (tokens per GB)
+    max_read_price: 100.0
+    max_write_price: 100.0
+    # min_write_price: 0.1
+    max_blobbers_per_allocation: 40
+    # allocation cancellation
+    #
+    # failed_challenges_to_cancel is number of failed challenges of an
+    # allocation to be able to cancel an allocation
+    failed_challenges_to_cancel: 20
+    # failed_challenges_to_revoke_min_lock is number of failed challenges
+    # of a blobber to revoke its min_lock demand back to user; only part
+    # not paid yet can go back
+    failed_challenges_to_revoke_min_lock: 10
+    #
+    # challenges
+    #
+    # enable challenges
+    challenge_enabled: true
+    # number of challenges for MB per minute
+    challenge_rate_per_mb_min: 1
+    # max number of challenges can be generated at once
+    max_challenges_per_generation: 100
+    # number of validators per challenge
+    validators_per_challenge: 2
+    # max delegates per stake pool allowed by SC
+    max_delegates: 200
+    # max_charge allowed for blobbers; the charge is part of blobber rewards
+    # goes to blobber's delegate wallets, other part goes to related stake
+    # holders
+    max_charge: 0.50
+    # reward paid out every block
+    block_reward:
+      block_reward: 1
+      block_reward_change_period: 10000
+      block_reward_change_ratio: 0.1
+      qualifying_stake: 1
+      sharder_ratio: 10
+      miner_ratio: 40
+      blobber_ratio: 50
+      trigger_period: 30
+      blobber_capacity_ratio: 10
+      blobber_usage_ratio: 40
+      gamma:
+        alpha: 0.2
+        a: 10
+        b: 9
+      zeta:
+        i: 1
+        k: 0.9
+        mu: 0.2
+    expose_mpt: true
+    cost:
+      update_settings: 100
+      read_redeem: 100
+      commit_connection: 100
+      new_allocation_request: 3000
+      update_allocation_request: 2500
+      finalize_allocation: 9500
+      cancel_allocation: 8400
+      add_free_storage_assigner: 100
+      free_allocation_request: 1500
+      free_update_allocation: 2500
+      add_curator: 100
+      remove_curator: 100
+      blobber_health_check: 100
+      update_blobber_settings: 100
+      update_validator_settings: 100
+      pay_blobber_block_rewards: 100
+      curator_transfer_allocation: 100
+      challenge_request: 100
+      challenge_response: 1600
+      add_validator: 100
+      add_blobber: 100
+      new_read_pool: 100
+      read_pool_lock: 100
+      read_pool_unlock: 100
+      write_pool_lock: 100
+      write_pool_unlock: 100
+      stake_pool_lock: 100
+      stake_pool_unlock: 100
+      stake_pool_pay_interests: 100
+      commit_settings_changes: 0
+      generate_challenge: 100
+      blobber_block_rewards: 0
+      collect_reward: 100
+  vestingsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_lock: 0.01
+    min_duration: "2m"
+    max_duration: "2h"
+    max_destinations: 3
+    max_description_length: 20
+    cost:
+      trigger: 100
+      unlock: 100
+      add: 100
+      stop: 100
+      delete: 100
+      vestingsc-update-settings: 100
+  zcnsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_mint: 1
+    min_burn: 1
+    min_stake: 0
+    min_lock: 0
+    min_authorizers: 1
+    percent_authorizers: 0.7
+    max_delegates: 10
+    max_fee: 100
+    burn_address: "0000000000000000000000000000000000000000000000000000000000000000"
+    cost:
+      mint: 100
+      burn: 100
+      add-authorizer: 100
+      delete-authorizer: 100

@@ -13,7 +13,6 @@ import (
 	"0chain.net/core/viper"
 
 	"github.com/0chain/common/core/currency"
-
 	"encoding/json"
 
 	"0chain.net/chaincore/client"

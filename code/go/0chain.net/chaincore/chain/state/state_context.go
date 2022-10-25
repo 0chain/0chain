@@ -70,6 +70,7 @@ func isMinter(id string) bool {
 
 type CommonStateContextI interface {
 	GetTrieNode(key datastore.Key, v util.MPTSerializable) error
+	InsertTrieNode(key datastore.Key, v util.MPTSerializable) (datastore.Key, error)
 	GetBlock() *block.Block
 	GetLatestFinalizedBlock() *block.Block
 }
@@ -101,7 +102,6 @@ type StateContextI interface {
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientBalance(clientID datastore.Key) (currency.Coin, error)
 	SetStateContext(st *state.State) error // cannot use in smart contracts or REST endpoints
-	InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error)
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	AddTransfer(t *state.Transfer) error
 	AddSignedTransfer(st *state.SignedTransfer)

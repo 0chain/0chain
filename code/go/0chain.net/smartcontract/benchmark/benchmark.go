@@ -362,7 +362,9 @@ var MockBenchData = BenchData{
 		Clients:     make([]string, 100),
 		PublicKeys:  make([]string, 100),
 		PrivateKeys: make([]string, 100),
+		Miners:      make([]string, 100),
 		Sharders:    make([]string, 100),
+		SharderKeys: make([]string, 100),
 		Now:         common.Now(),
 	},
 }

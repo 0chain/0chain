@@ -1,0 +1,104 @@
+# enabled test cases sets
+enable:
+  - "Bad Validators"
+
+# sets of test cases
+sets:
+  - name: "Bad Validators"
+    tests:
+    - "Failing valid challenges of blobber"
+    - "Emulate denial of service having a validator not responding"
+    - "Passing invalid challenges of blobber"
+
+# test cases
+tests:
+  - name: "Failing valid challenges of blobber"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc:
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - configure_check_challenge_is_valid_test_case:
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      # setup blobbers and create allocation with minimum write pool lock
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          start: true
+      - adversarial_validator:
+          fail_valid_challenge: true
+          id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
+      - command:
+          name: 'list_and_verify'
+          timeout: '25m'
+      - wait_round:
+          shift: 100
+      - make_test_case_check:
+          wait_time: 1m
+  - name: "Emulate denial of service having a validator not responding"
+    flow:
+      - cleanup_bc:
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - set_monitor: "sharder-1"
+      - configure_check_challenge_is_valid_test_case:
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      # setup blobbers and create allocation with minimum write pool lock
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          start: true
+      - adversarial_validator:
+          denial_of_service: true
+          id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
+      - command:
+          name: 'list_and_verify'
+          timeout: '25m'
+      - wait_round:
+          shift: 100
+      - make_test_case_check:
+          wait_time: 1m
+  - name: "Passing invalid challenges of blobber"
+    flow:
+      - cleanup_bc:
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - set_monitor: "sharder-1"
+      - configure_check_challenge_is_valid_test_case:
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      # setup blobbers and create allocation with minimum write pool lock
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          start: true
+      - adversarial_validator:
+          pass_all_challenges: true
+          id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
+      - command:
+          name: 'list_and_verify'
+          timeout: '25m'
+      - wait_round:
+          shift: 100
+      - make_test_case_check:
+          wait_time: 1m

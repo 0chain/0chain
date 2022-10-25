@@ -152,7 +152,6 @@ type ChainConfig interface {
 	IsVestingEnabled() bool
 	IsZcnEnabled() bool
 	OwnerID() datastore.Key
-	BlockSize() int32
 	MinBlockSize() int32
 	MaxBlockCost() int
 	MaxByteSize() int64

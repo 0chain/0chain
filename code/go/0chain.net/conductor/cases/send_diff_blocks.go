@@ -2,7 +2,6 @@ package cases
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 )
@@ -37,6 +36,8 @@ type (
 
 		resultsMu sync.Mutex
 		results   []*RoundInfo
+
+		randomBlocks []string
 	}
 )
 
@@ -64,7 +65,7 @@ func NewSendDifferentBlocksFromFirstGenerator(minersNum int) *SendDifferentBlock
 
 func newSendDiffBlocksBase(minersNum int) *sendDiffBlocksBase {
 	wg := new(sync.WaitGroup)
-	wg.Add(minersNum)
+	wg.Add(1)
 	return &sendDiffBlocksBase{
 		minersNum: minersNum,
 		wg:        wg,
@@ -72,8 +73,10 @@ func newSendDiffBlocksBase(minersNum int) *sendDiffBlocksBase {
 }
 
 // Configure implements TestCase interface.
-func (s *sendDiffBlocksBase) Configure(_ []byte) error {
-	return errors.New("configuration for this test is not allowed")
+func (s *sendDiffBlocksBase) Configure(blob []byte) error {
+	blockHash := string(blob)
+	s.randomBlocks = append(s.randomBlocks, blockHash)
+	return nil
 }
 
 // AddResult implements TestCase interface.
@@ -99,10 +102,8 @@ func (s *sendDiffBlocksBase) Check(ctx context.Context) (success bool, err error
 
 	select {
 	case <-ctx.Done():
-		// miners should send only first round restart reports, so if there no reports
-		// it means that round has not restarted.
-		if len(s.results) != s.minersNum {
-			return false, fmt.Errorf("unexpected number of reports: %d, expected %d", len(s.results), s.minersNum)
+		if len(s.results) == 0 {
+			return false, fmt.Errorf("unexpected number of results: %d, expected %d", len(s.results), 1)
 		}
 
 		return false, ctx.Err()
@@ -113,13 +114,15 @@ func (s *sendDiffBlocksBase) Check(ctx context.Context) (success bool, err error
 }
 
 func (s *sendDiffBlocksBase) check() (success bool, err error) {
-	if len(s.results) != s.minersNum {
-		return false, errors.New("unexpected reports count")
+	if len(s.results) == 0 {
+		return false, fmt.Errorf("expected a result")
 	}
 
 	for _, roundInfo := range s.results {
-		if roundInfo.TimeoutCount != 1 {
-			return false, fmt.Errorf("found unexpected timeout count: %d", roundInfo.TimeoutCount)
+		for _, blockHash := range s.randomBlocks {
+			if roundInfo.FinalisedBlockHash == blockHash {
+				return false, fmt.Errorf("unexpected finalized block")
+			}
 		}
 	}
 	return true, nil

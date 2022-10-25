@@ -85,8 +85,11 @@ func TestVestingSmartContract_getConfigHandler(t *testing.T) {
 		balances   = newTestBalances()
 		ctx        = context.Background()
 		configured = configureConfig()
-		resp, err  = vsc.getConfigHandler(ctx, nil, balances)
+		err        = InitConfig(balances)
 	)
+	require.NoError(t, err)
+
+	resp, err := vsc.getConfigHandler(ctx, nil, balances)
 	require.NoError(t, err)
 	require.EqualValues(t, configured.getConfigMap(), resp)
 }
@@ -128,7 +131,7 @@ func TestUpdateConfig(t *testing.T) {
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
 		prevConf := configureConfig()
-		balances.On("GetTrieNode", scConfigKey(vsc.ID),
+		balances.On("GetTrieNode", scConfigKey(ADDRESS),
 			mockSetValue(prevConf)).Return(nil).Once()
 		var conf config
 		// not testing for error here to allow entering bad data
@@ -156,7 +159,7 @@ func TestUpdateConfig(t *testing.T) {
 		fmt.Println("setExpectations conf", conf)
 		balances.On(
 			"InsertTrieNode",
-			scConfigKey(vsc.ID),
+			scConfigKey(ADDRESS),
 			mock.Anything,
 		).Return("", nil).Once()
 

@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/core/common"
 
-	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract"
@@ -41,7 +42,23 @@ var CostFunctions = []string{
 	AddAuthorizerFunc,
 }
 
-func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx chain.StateContextI) (string, error) {
+// InitConfig initializes global node config to MPT
+func InitConfig(ctx state.StateContextI) error {
+	node := &GlobalNode{ID: ADDRESS}
+	err := ctx.GetTrieNode(node.GetKey(), node)
+	if err == util.ErrValueNotPresent {
+		node.ZCNSConfig = getConfig()
+		_, err := ctx.InsertTrieNode(node.GetKey(), node)
+		return err
+	}
+	return err
+}
+
+func GetGlobalNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
+	return GetGlobalSavedNode(ctx)
+}
+
+func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx state.StateContextI) (string, error) {
 	const (
 		Code     = "failed to update configuration"
 		FuncName = "UpdateGlobalConfig"
@@ -107,7 +124,7 @@ func postfix(section string) string {
 	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
 
-func loadGlobalNode() (conf *ZCNSConfig) {
+func getConfig() (conf *ZCNSConfig) {
 	conf = new(ZCNSConfig)
 	conf.MinMintAmount = currency.Coin(cfg.GetInt(postfix(MinMintAmount)))
 	conf.MinBurnAmount = currency.Coin(cfg.GetInt64(postfix(MinBurnAmount)))

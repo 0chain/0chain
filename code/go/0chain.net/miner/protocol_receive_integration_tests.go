@@ -138,7 +138,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		return
 	}
 
-	resendProposedBlockIfNeeded(msg.Block)
+	resendProposedBlockIfNeeded(ctx, msg.Block, mc)
 
 	mc.handleVerifyBlockMessage(ctx, msg)
 }
@@ -172,15 +172,15 @@ func isIgnoringProposal(round int64) bool {
 	return testCfg.IsOnRound(round) && nodeType == replica && typeRank == 0
 }
 
-func resendProposedBlockIfNeeded(b *block.Block) {
-	testCfg := crpc.Client().State().ResendProposedBlock
+func resendProposedBlockIfNeeded(ctx context.Context, b *block.Block, mc *Chain) {
+	resendProposedBlockTestCfg := crpc.Client().State().ResendProposedBlock
 
-	testCfg.Lock()
-	defer testCfg.Unlock()
+	resendProposedBlockTestCfg.Lock()
+	defer resendProposedBlockTestCfg.Unlock()
 
 	var (
 		nodeType, typeRank = chain.GetNodeTypeAndTypeRank(b.Round)
-		resending          = testCfg != nil && testCfg.IsTesting(b.Round, nodeType == generator, typeRank) && !testCfg.Resent
+		resending          = resendProposedBlockTestCfg != nil && resendProposedBlockTestCfg.IsTesting(b.Round, nodeType == generator, typeRank) && !resendProposedBlockTestCfg.Resent
 	)
 	if !resending {
 		return
@@ -189,7 +189,7 @@ func resendProposedBlockIfNeeded(b *block.Block) {
 	miners := GetMinerChain().GetMiners(b.Round)
 	miners.SendAll(context.Background(), VerifyBlockSender(b))
 
-	crpc.Client().State().ResendProposedBlock.Resent = true
+	resendProposedBlockTestCfg.Resent = true
 
 	if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
 		log.Panicf("Conductor: error while configuring test case: %#v", err)

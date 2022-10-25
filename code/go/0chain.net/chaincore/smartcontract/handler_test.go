@@ -226,7 +226,9 @@ func TestExecuteWithStats(t *testing.T) {
 	smcoi.SmartContract.SmartContractExecutionStats["token refills"] = metrics.NewHistogram(metrics.NilSample{})
 	smcoi.SmartContract.SmartContractExecutionStats["refill"] = metrics.NewTimer()
 
-	gn := &faucetsc.GlobalNode{}
+	gn := &faucetsc.GlobalNode{
+		FaucetConfig: &faucetsc.FaucetConfig{},
+	}
 	blob, err := gn.MarshalMsg(nil)
 	require.NoError(t, err)
 
@@ -338,7 +340,9 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *faucetsc.GlobalNode) bool {
-			gn := &faucetsc.GlobalNode{}
+			gn := &faucetsc.GlobalNode{
+				FaucetConfig: &faucetsc.FaucetConfig{},
+			}
 			blob, err := gn.MarshalMsg(nil)
 			require.NoError(t, err)
 

@@ -242,14 +242,17 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var globalNode = &GlobalNode{
 		//ViewChange:           runtime.nextViewChange,
-		LastRound:            runtime.lastRound,
-		RewardRate:           scYaml.rewardRate,
-		BlockReward:          zcnToBalance(scYaml.blockReward),
-		Epoch:                scYaml.epoch,
-		ShareRatio:           scYaml.shareRatio,
-		MaxMint:              zcnToBalance(scYaml.maxMint),
-		Minted:               runtime.minted,
-		RewardRoundFrequency: scYaml.rewardRoundPeriod,
+		LastRound:                   runtime.lastRound,
+		RewardRate:                  scYaml.rewardRate,
+		BlockReward:                 zcnToBalance(scYaml.blockReward),
+		Epoch:                       scYaml.epoch,
+		ShareRatio:                  scYaml.shareRatio,
+		MaxMint:                     zcnToBalance(scYaml.maxMint),
+		Minted:                      runtime.minted,
+		RewardRoundFrequency:        scYaml.rewardRoundPeriod,
+		NumShardersRewarded:         5,
+		NumSharderDelegatesRewarded: 1,
+		NumMinerDelegatesRewarded:   10,
 	}
 	var msc = &MinerSmartContract{
 		SmartContract: &sci.SmartContract{

@@ -3,9 +3,10 @@ package faucetsc
 import (
 	"time"
 
-	"github.com/0chain/common/core/currency"
-
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -78,4 +79,22 @@ func getFaucetConfig() (conf *FaucetConfig, err error) {
 	conf.OwnerId = config.SmartContractConfig.GetString("smart_contracts.faucetsc.owner_id")
 	conf.Cost = config.SmartContractConfig.GetStringMapInt("smart_contracts.faucetsc.cost")
 	return
+}
+
+func InitConfig(balances cstate.CommonStateContextI) error {
+	gn := new(GlobalNode)
+	err := balances.GetTrieNode(globalNodeKey, gn)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return err
+		}
+		gn.FaucetConfig, err = getFaucetConfig()
+		if err != nil {
+			return err
+		}
+		gn.ID = ADDRESS
+		_, err = balances.InsertTrieNode(globalNodeKey, gn)
+		return err
+	}
+	return nil
 }

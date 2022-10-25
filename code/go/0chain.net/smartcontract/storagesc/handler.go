@@ -952,19 +952,14 @@ type fullBlock struct {
 //	400:
 //	500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
+	var (
+		startBlockNum = r.URL.Query().Get("start")
+		endBlockNum   = r.URL.Query().Get("end")
+	)
+
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
-		return
-	}
-	start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
-		return
-	}
-	end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
 		return
 	}
 
@@ -973,10 +968,35 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blocks, err := edb.GetBlocks(start, end, limit)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
-		return
+	var blocks []event.Block
+	if startBlockNum != "" && endBlockNum != "" {
+		start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("start block number is not valid"))
+			return
+		}
+		end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("end block number is not valid"))
+			return
+		}
+
+		if start > end {
+			common.Respond(w, r, nil, common.NewErrBadRequest("start block number is greater than end block number"))
+			return
+		}
+
+		blocks, err = edb.GetBlocksByBlockNumbers(start, end, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+			return
+		}
+	} else {
+		blocks, err = edb.GetBlocks(limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+			return
+		}
 	}
 
 	if r.URL.Query().Get("content") != "full" {
@@ -2373,13 +2393,21 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	values := r.URL.Query()
+	active := values.Get("active")
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	blobbers, err := edb.GetBlobbers(limit)
+	var blobbers []event.Blobber
+	if active == "true" {
+		blobbers, err = edb.GetActiveBlobbers(limit)
+	} else {
+		blobbers, err = edb.GetBlobbers(limit)
+	}
+
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber list" + err.Error())
 		common.Respond(w, r, nil, err)

@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
+	"0chain.net/core/util"
 )
 
 // SetupHandlers sets up the necessary API end points.
@@ -26,14 +27,6 @@ func SetupHandlers() {
 	)
 
 	setupHandlers(handlers)
-}
-
-func revertString(s string) string {
-	r := []rune(s)
-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
-		r[i], r[j] = r[j], r[i]
-	}
-	return string(r)
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */
@@ -64,8 +57,8 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (
 	)
 
 	if confirmation != nil && state.VerifyTransaction != nil {
-		confirmation.Hash = revertString(confirmation.Hash)
-		confirmation.BlockHash = revertString(confirmation.BlockHash)
+		confirmation.Hash = util.RevertString(confirmation.Hash)
+		confirmation.BlockHash = util.RevertString(confirmation.BlockHash)
 		confirmation.Round = confirmation.Round - 10
 	}
 
@@ -82,7 +75,7 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (
 
 	if lfbSummary := sc.GetLatestFinalizedBlockSummary(); lfbSummary != nil {
 		if state.VerifyTransaction != nil {
-			lfbSummary.Hash = revertString(lfbSummary.Hash)
+			lfbSummary.Hash = util.RevertString(lfbSummary.Hash)
 			lfbSummary.Round = lfbSummary.Round - 10
 		}
 		data["latest_finalized_block"] = lfbSummary

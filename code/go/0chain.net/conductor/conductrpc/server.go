@@ -397,10 +397,30 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 	// node name is not known by the node requesting the State
 	// and thus, NodeID used here
 
-	var name, ok = s.names[id]
+	var name NodeName
+
+	// Validator does not need to change the state generated while reading conductor test configuration,
+	// so we can return	an existing state of a different node.
+	if strings.Contains(string(id), "validator-") {
+		for _, k := range s.names {
+			if strings.Contains(string(k), "blobber-") {
+				name = k
+				break
+			}
+		}
+
+		if ns, ok := s.nodes[name]; ok {
+			*state = *ns.state
+		}
+
+		return
+	}
+
+	var nodeName, ok = s.names[id]
 	if !ok {
 		return fmt.Errorf("unknown node ID: %s", id)
 	}
+	name = nodeName
 
 	var ns *nodeState
 	if ns, err = s.nodeState(name); err != nil {

@@ -16,8 +16,9 @@ sets:
       - "missing lfb tickets"
   - name: "resend past messages"
     tests:
-      - "resend proposed block"
-      - "resend notarisation"
+      # TODO: Review tests specification.
+      #- "resend proposed block"
+      #- "resend notarisation"
   - name: "restart"
     tests:
       - "bad timeout VRF share"
@@ -55,7 +56,7 @@ tests:
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
           round: 70
-- make_test_case_check:
+      - make_test_case_check:
           wait_time: 5m
       - save_logs: {}
 
@@ -65,13 +66,12 @@ tests:
       - cleanup_bc: { }
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_first_generator_test_case:
-          test_report:
-            round: 50
+          round: 50
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70      
+          round: 70
       - make_test_case_check:
-          wait_time: 5m
+          wait_time: 1m
       - save_logs: { }
 
   - name: "send different blocks from all generators"
@@ -80,13 +80,12 @@ tests:
       - cleanup_bc: { }
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_all_generators_test_case:
-          test_report:
-            round: 50
+          round: 50
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
-          wait_time: 5m
+          wait_time: 2m
       - save_logs: { }
 
   - name: "breaking single block"
@@ -101,7 +100,7 @@ tests:
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -118,7 +117,7 @@ tests:
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -134,7 +133,7 @@ tests:
           hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -152,7 +151,7 @@ tests:
           hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -181,13 +180,13 @@ tests:
       - configure_resend_proposed_block_test_case:
           test_report:
             round: 50
-            by_generator: true
-            by_node_with_type_rank: 1
+            by_generator: false
+            by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
-          wait_time: 5m
+          wait_time: 1m
       - save_logs: { }
 
   - name: "resend notarisation"
@@ -202,7 +201,7 @@ tests:
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -219,7 +218,7 @@ tests:
             by_node_with_type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -268,7 +267,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -306,7 +305,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -344,7 +343,7 @@ tests:
 
         - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
         - wait_round:
-            round: 70      
+            round: 70
         - make_test_case_check:
             wait_time: 5m
         - save_logs: { }
@@ -382,7 +381,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -420,7 +419,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -458,7 +457,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -494,7 +493,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -531,7 +530,7 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -569,7 +568,7 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -606,7 +605,7 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
       - save_logs: { }
@@ -643,7 +642,7 @@ tests:
                 type_rank: 0
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 5m
 
@@ -665,7 +664,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
@@ -691,7 +690,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
@@ -718,7 +717,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
@@ -744,7 +743,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
@@ -770,7 +769,7 @@ tests:
 
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
-          round: 70    
+          round: 70
       - make_test_case_check:
           wait_time: 3m
       - save_logs: { }
