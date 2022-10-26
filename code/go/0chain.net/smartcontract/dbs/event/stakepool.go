@@ -78,7 +78,7 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 		for id, penalty := range sp.DelegatePenalties {
 			dp, ok := delegateMap[id]
 			if ok {
-				dp.TotalPenalty, err = currency.AddCoin(dp.Reward, penalty)
+				dp.TotalPenalty, err = currency.AddCoin(dp.TotalPenalty, penalty)
 				if err != nil {
 					return nil, err
 				}
@@ -145,17 +145,25 @@ func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 }
 
 func (edb *EventDb) processRewerdUpdate(spus []dbs.StakePoolReward, round int64) error {
-	if err := edb.NewTransaction(); err != nil {
+	if err := edb.BeginTransaction(); err != nil {
 		return err
 	}
-
+	defer func() {
+		if r := recover(); r != nil {
+			_ = edb.RollbackTransaction()
+		}
+	}()
 	if err := edb.providerReward(spus, round); err != nil {
 		return err
 	}
-	if err := edb.delegateRerward(spus, round); err != nil {
+
+	if err := edb.rewardUpdate(spus, round); err != nil {
 		return err
 	}
-	return edb.rewardUpdate(spus, round)
+
+	if err := edb.delegateReward(spus, round); err != nil {
+		return err
+	}
 
 	return edb.CommitTransaction()
 }

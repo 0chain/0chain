@@ -21,6 +21,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	eventDb := &EventDb{
 		Store:         db,
 		eventsChannel: make(chan blockEvents, 1),
+		settings:      *newSettings(config),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 
@@ -34,19 +35,28 @@ type EventDb struct {
 	dbs.Store
 	eventsChannel chan blockEvents
 	tx            *gorm.DB
+	settings      Settings
 }
 
 func (edb *EventDb) Tx() *gorm.DB {
+	//return edb.Store.Get()
 	return edb.tx
 }
 
-func (edb *EventDb) NewTransaction() error {
+func (edb *EventDb) BeginTransaction() error {
+	//return nil
 	edb.tx = edb.Store.Get().Begin()
 	return edb.tx.Error
 }
 
 func (edb *EventDb) CommitTransaction() error {
+	//return nil
 	return edb.tx.Commit().Error
+}
+
+func (edb *EventDb) RollbackTransaction() error {
+	//return nil
+	return edb.tx.Rollback().Error
 }
 
 type blockEvents struct {
@@ -79,6 +89,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&AllocationBlobberTerm{},
 		&ProviderRewards{},
 		&ChallengePool{},
+		&RewardDelegate{},
+		&RewardProvider{},
 	); err != nil {
 		return err
 	}
