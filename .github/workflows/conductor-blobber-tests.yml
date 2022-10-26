@@ -5,11 +5,6 @@ on:
     # Runs everyday at 02:00 am
     - cron: '0 2 * * * '
   workflow_dispatch:
-    inputs:
-      view_change:
-        description: 'Type true/false for setting view change.'
-        default: 'false'
-        required: true
 
 jobs:
   conductor_blobbers_tests:
@@ -103,10 +98,6 @@ jobs:
       run: |
         cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
 
-    - name: 0chain configuration Patching
-      run: |
-        sed -i 's/magic_block_file: config\/b0magicBlock_4_miners_2_sharders.json/magic_block_file: config\/b0magicBlock_4_miners_1_sharder.json/' docker.local/config/0chain.yaml
-
     - name: Build 0dns
       run: |
         cd 0dns
@@ -123,7 +114,10 @@ jobs:
 
     - name: Build blobber
       run: |
-        cd blobber && ./docker.local/bin/build.blobber-integration-tests.sh
+        cd blobber
+        chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
+        ./docker.local/bin/build.blobber-integration-tests.sh
+
 
     - name: Add ZCN config
       run: |

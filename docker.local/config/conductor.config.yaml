@@ -47,7 +47,7 @@ nodes:
     start_command: "docker-compose -p sharder4 -f ../build.sharder/b0docker-compose.yml up"
     stop_command: "docker-compose -p sharder4 -f ../build.sharder/b0docker-compose.yml down"
 
-    
+
   # miners
   - name: "miner-1"
     id: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
@@ -179,6 +179,9 @@ commands:
   sleep_3m:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/sleep_3m.sh"
+  sleep_30m:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/sleep_30m.sh"
   list:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list.sh"
@@ -210,7 +213,7 @@ commands:
   upload:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh"
-    should_fail: true # should fail, consensus 66.6%, but expected is 76.6%
+    should_fail: false
   unverified_transaction:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/unverified_transaction.sh"

@@ -13,6 +13,7 @@ sets:
   - name: "Upload/Download"
     tests:
       - "Error on upload/download"
+      - "Error on simultaneous uploads"
   - name: "Repair"
     tests:
       - "Repair after blobber comes back online"
@@ -79,24 +80,9 @@ tests:
       - command:
           name: "markers_out_of_order"
           timeout: '5m'
-      # simultaneous (new allocation to avoid conflict with markers_out_of_order)
-      - command:
-          name: 'init_pour_allocation'
-          timeout: '35m'
-      - command:
-          name: 'simultaneous'
-          timeout: '5m'
-      # service
-      #- command:
-      #    name: "sleep_1m"
-      #    timeout: '100h'
 
-  # This test verifies `zbox start-repair` is working.
-  # The test uploads when a blobber node is not available and then use the repair to fix the data on that blobber.
-  - name: "Repair after blobber comes back online"
+  - name: "Error on simultaneous uploads"
     flow:
-      - command:
-          name: 'build_test_blobbers'
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
@@ -114,10 +100,39 @@ tests:
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
           timeout: '15m'
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'init_pour_allocation'
+          timeout: '35m'
+      - command:
+          name: 'simultaneous'
+          timeout: '5m'
+
+  # This test verifies `zbox start-repair` is working.
+  # The test uploads when a blobber node is not available and then use the repair to fix the data on that blobber.
+  - name: "Repair after blobber comes back online"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2']
+          timeout: '5m'
       - start: ['blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-3', 'blobber-4']
-          timeout: '15m'
+          timeout: '5m'
       - command:
           name: 'repair_allocation'
           timeout: '15m'
@@ -129,12 +144,12 @@ tests:
           timeout: '5m'
       - start: ['blobber-4']
       - wait_round:
-          shift: 30
+          shift: 200
       - command:
           name: 'list_repair'
           timeout: '5m'
       - command:
           name: 'repair'
-          timeout: '5m'
+          timeout: '20m'
 
 ...

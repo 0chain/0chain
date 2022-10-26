@@ -37,7 +37,7 @@ BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 # create allocation
 ./zboxcli/zbox --wallet testing.json newallocation \
     --read_price 0.001-10 --write_price 0.01-10 --size 104857600 \
-    --lock 0.0097656250 --data 1 --parity 1 --expire 48h
+    --lock 0.01953125 --data 1 --parity 1 --expire 48h
 
 # create random file
 head -c 52428800 < /dev/urandom > random.bin
