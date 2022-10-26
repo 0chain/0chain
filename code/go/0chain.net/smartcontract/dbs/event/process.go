@@ -226,7 +226,7 @@ func (edb *EventDb) parseBlockEvents(es blockEvents) {
 	tse := time.Now()
 	tags := make([]int, 0, len(es.events))
 	for _, event := range es.events {
-		edb.parseBlockEvent(event, tags, es.round, es.block, es.blockSize)
+		tags = edb.parseBlockEvent(event, tags, es.round, es.block, es.blockSize)
 	}
 	due := time.Since(tse)
 	logging.Logger.Debug("event db process",
@@ -252,7 +252,7 @@ func (edb *EventDb) parseBlockEvent(
 	event Event,
 	tags []int,
 	round int64, block string, blockSize int,
-) {
+) []int {
 	edb.Store.Get().SavePoint(event.Index)
 	defer func() {
 		if r := recover(); r != nil {
@@ -298,6 +298,7 @@ func (edb *EventDb) parseBlockEvent(
 			zap.Error(err),
 		)
 	}
+	return tags
 }
 
 func (edb *EventDb) addStat(event Event) error {
