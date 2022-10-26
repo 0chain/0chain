@@ -95,6 +95,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/alloc-blobber-term", srh.getAllocBlobberTerms),
 		rest.MakeEndpoint(storage+"/replicate-snapshots", srh.replicateSnapshots),
 		rest.MakeEndpoint(storage+"/replicate-blobber-aggregates", srh.replicateBlobberAggregates),
+		rest.MakeEndpoint(storage+"/timestamp-to-round", srh.timestampToRound),
 	}
 }
 
@@ -2702,6 +2703,77 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 
 	sn := blobberTableToStorageNode(*blobber)
 	common.Respond(w, r, sn, nil)
+}
+
+func (srh *StorageRestHandler) timestampToRound(w http.ResponseWriter, r *http.Request) {
+	var (
+		from      = r.URL.Query().Get("from")
+		to        = r.URL.Query().Get("to")
+		timestamp = r.URL.Query().Get("timestamp")
+	)
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	if timestamp != "" {
+		t, err := strconv.ParseInt(timestamp, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("timestamp is not valid"))
+			return
+		}
+		round, err := edb.GetRoundFromTime(time.Unix(t, 0), true)
+		if err != nil {
+			err := common.NewErrNoResource(err.Error())
+			common.Respond(w, r, nil, err)
+			return
+		}
+		common.Respond(w, r, rest.Int64Map{
+			"round": round,
+		}, nil)
+		return
+	}
+
+	if to == "" || from == "" {
+		err := common.NewErrBadRequest("missing to/from or timestamp URL query parameter")
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	fromTime, err := strconv.ParseInt(from, 10, 64)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("from timestamp is not valid"))
+		return
+	}
+	toTime, err := strconv.ParseInt(to, 10, 64)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("to timestamp is not valid"))
+		return
+	}
+
+	if fromTime >= toTime {
+		common.Respond(w, r, nil, common.NewErrBadRequest("from timestamp is greater than to timestamp"))
+		return
+	}
+	fromRound, err := edb.GetRoundFromTime(time.Unix(fromTime, 0), true)
+	if err != nil {
+		err := common.NewErrNoResource(err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	toRound, err := edb.GetRoundFromTime(time.Unix(toTime, 0), false)
+	if err != nil {
+		err := common.NewErrNoResource(err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, rest.Int64Map{
+		"from": fromRound,
+		"to":   toRound,
+	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms
