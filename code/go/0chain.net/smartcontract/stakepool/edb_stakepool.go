@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -15,8 +16,8 @@ func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Rew
 	var spu StakePoolReward
 	spu.ProviderId = pId
 	spu.ProviderType = int(pType)
-	spu.DelegateRewards = make(map[string]int64)
-	spu.DelegatePenalties = make(map[string]int64)
+	spu.DelegateRewards = make(map[string]currency.Coin)
+	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
 	return &spu
 }

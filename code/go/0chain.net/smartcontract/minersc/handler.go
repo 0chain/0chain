@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/0chain/common/core/logging"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -87,6 +89,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //	400:
 //	500:
 func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.Request) {
+	logging.Logger.Info("piers getDelegateRewards")
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
@@ -130,6 +133,7 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 //	400:
 //	500:
 func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.Request) {
+	logging.Logger.Info("piers getProviderRewards")
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
