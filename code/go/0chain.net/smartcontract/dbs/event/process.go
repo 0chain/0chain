@@ -423,7 +423,17 @@ func (edb *EventDb) addStat(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrUpdateUsers(*users)
+		err := edb.addOrUpdateUsers(*users)
+		if err != nil {
+			for _, u := range *users {
+				b, _ := u.Balance.Int64()
+				c, _ := u.Change.Int64()
+				logging.Logger.Debug("saving user", zap.String("id", u.UserID),
+					zap.Int64("nonce", u.Nonce), zap.Int64("balance", b), zap.Int64("change", c),
+					zap.Int64("round", u.Round))
+			}
+		}
+		return err
 	case TagAddTransactions:
 		txns, ok := fromEvent[[]Transaction](event.Data)
 		if !ok {
