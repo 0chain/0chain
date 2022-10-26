@@ -20,6 +20,7 @@ sets:
 tests:
   - name: "Send bad FB to miners when all miners are down and then they are brought up"
     flow:
+      - magic_block: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1", "sharder-2"]
@@ -38,6 +39,7 @@ tests:
 
   - name: "Send bad MB to miners when all miners are down and then they are brought up"
     flow:
+      - magic_block: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]

@@ -94,7 +94,7 @@ server_chain:
     prune_below_count: 100 # rounds
     sync:
       timeout: 10 # seconds
-  block_rewards: true  
+  block_rewards: true
   stuck:
     check_interval: 10 # seconds
     time_threshold: 60 #seconds

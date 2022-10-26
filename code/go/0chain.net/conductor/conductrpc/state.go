@@ -32,6 +32,8 @@ type State struct {
 	WrongBlockSignHash          *config.Bad
 	WrongBlockSignKey           *config.Bad
 	WrongBlockHash              *config.Bad
+	WrongBlockRandomSeed        *config.Bad
+	WrongBlockDDoS              *config.Bad
 	VerificationTicketGroup     *config.Bad
 	WrongVerificationTicketHash *config.Bad
 	WrongVerificationTicketKey  *config.Bad
@@ -66,9 +68,17 @@ type State struct {
 	MissingLFBTicket                      *cases.MissingLFBTickets
 
 	// Blobbers related states
-	StorageTree    *config.Bad // blobber sends bad files/tree responses
-	ValidatorProof *config.Bad // blobber sends invalid proof to validators
-	Challenges     *config.Bad // blobber ignores challenges
+	StorageTree          *config.Bad // blobber sends bad files/tree responses
+	ValidatorProof       *config.Bad // blobber sends invalid proof to validators
+	Challenges           *config.Bad // blobber ignores challenges
+	BlobberList          *config.BlobberList
+	BlobberDownload      *config.BlobberDownload
+	BlobberUpload        *config.BlobberUpload
+	BlobberDelete        *config.BlobberDelete
+	AdversarialValidator *config.AdversarialValidator
+
+	// Validators related states
+	CheckChallengeIsValid *cases.CheckChallengeIsValid
 
 	ServerStatsCollectorEnabled bool
 	ClientStatsCollectorEnabled bool

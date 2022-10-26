@@ -37,6 +37,7 @@ import (
 )
 
 func main() {
+
 	var (
 		workdir       string
 		redisHost     string
@@ -63,6 +64,7 @@ func main() {
 	config.SetupDefaultConfig()
 	config.SetupConfig(workdir)
 	config.SetupSmartContractConfig(workdir)
+	initIntegrationsTests()
 
 	if config.Development() {
 		logging.InitLogging("development", workdir)
@@ -126,7 +128,7 @@ func main() {
 	var magicBlock *block.MagicBlock
 	dnsURL := viper.GetString("network.dns_url")
 	if dnsURL == "" {
-		magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
+		magicBlock, err = readMagicBlock(*magicBlockFile)
 		if err != nil {
 			logging.Logger.Panic("can't read magic block file", zap.Error(err))
 			return
@@ -201,7 +203,7 @@ func main() {
 	logging.Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	logging.Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
 
-	initIntegrationsTests(node.Self.Underlying().GetKey())
+	registerInConductor(node.Self.Underlying().GetKey())
 
 	var server *http.Server
 	var profServer *http.Server
