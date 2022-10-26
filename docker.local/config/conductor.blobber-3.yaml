@@ -1,0 +1,283 @@
+# enabled test cases sets
+enable:
+  - "Bad Blobbers"
+
+# sets of test cases
+sets:
+  - name: "Bad Blobbers"
+    tests:
+    - "Send wrong data to the client on listing directory"
+    - "Send wrong metadata to the client on listing directory"
+    - "Not respond to the client on listing directory"
+    - "Not respond to the client on downloading file"
+    - "Not respond to the client on uploading file"
+    - "Not respond to the client on deleting file"
+    - "Return error to the client on listing file"
+    # next test must be uncommented after https://github.com/0chain/blobber/issues/810 has been resolved
+    # - "Return error to the client on downloading file"
+    - "Return error to the client on uploading file"
+    - "Return error to the client on deleting file"
+
+# test cases
+tests:
+  - name: "Send wrong data to the client on listing directory"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_list:
+          send_wrong_data: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'list_and_verify'
+          timeout: '25m'
+  - name: "Send wrong metadata to the client on listing directory"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_list:
+          send_wrong_metadata: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'list_and_verify'
+          timeout: '25m'
+  - name: "Not respond to the client on listing directory"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_list:
+          not_respond: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'list_and_verify'
+          timeout: '25m'
+  - name: "Not respond to the client on downloading file"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_download:
+          not_respond: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'download_and_verify'
+          timeout: '25m'
+  - name: "Not respond to the client on uploading file"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_upload:
+          not_respond: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'upload_and_verify'
+          timeout: '25m'
+  - name: "Not respond to the client on deleting file"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_delete:
+          not_respond: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'delete_and_verify'
+          timeout: '25m'
+  - name: "Return error to the client on listing file"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_list:
+          return_error: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'list_and_verify'
+          timeout: '25m'
+  - name: "Return error to the client on downloading file"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_download:
+          return_error: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'download_and_verify'
+          timeout: '25m'
+  - name: "Return error to the client on uploading file"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_upload:
+          return_error: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'upload_and_verify'
+          timeout: '25m'
+  - name: "Return error to the client on deleting file"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          timeout: '15m'
+      - blobber_delete:
+          return_error: true
+          adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'delete_and_verify'
+          timeout: '25m'
+...

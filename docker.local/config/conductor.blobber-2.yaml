@@ -29,18 +29,6 @@ tests:
   # - Simulatenous `zbox upload`, `zbox download`, and `zbox delete`
   - name: "Error on upload/download"
     flow:
-      - command:
-          name: 'build_base'
-          timeout: '15m'
-      - command:
-          name: 'build_sharder'
-          timeout: '15m'
-      - command:
-          name: 'build_miner'
-          timeout: '15m'
-      - command:
-          name: 'build_test_blobbers'
-          timeout: '10m'
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:

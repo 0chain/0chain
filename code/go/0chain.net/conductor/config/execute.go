@@ -14,7 +14,7 @@ import (
 type Executor interface {
 
 	// common setups
-
+	SetMagicBlock(configFile string) (err error)
 	SetMonitor(name NodeName) (err error)
 	CleanupBC(timeout time.Duration) (err error)
 	SetEnv(map[string]string) (err error)
@@ -109,6 +109,9 @@ type Executor interface {
 
 	// MakeTestCaseCheck runs cases.TestCase's final check with TestCaseCheck configuration.
 	MakeTestCaseCheck(*TestCaseCheck) error
+
+	// SetServerState updates state.
+	SetServerState(interface{}) error
 }
 
 //

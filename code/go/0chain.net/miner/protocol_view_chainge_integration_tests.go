@@ -14,6 +14,7 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
 	"github.com/0chain/common/core/logging"
@@ -22,14 +23,6 @@ import (
 	crpc "0chain.net/conductor/conductrpc" // integration tests
 	crpcutils "0chain.net/conductor/utils"
 )
-
-func revertString(s string) string {
-	r := []rune(s)
-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
-		r[i], r[j] = r[j], r[i]
-	}
-	return string(r)
-}
 
 // The sendDKGShare sends the generated secShare to the given node.
 func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
@@ -64,7 +57,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	case state.Shares.IsGood(state, nodeID):
 		params.Add("secret_share", secShare.GetHexString())
 	case state.Shares.IsBad(state, nodeID):
-		params.Add("secret_share", revertString(secShare.GetHexString()))
+		params.Add("secret_share", util.RevertString(secShare.GetHexString()))
 	default:
 		return common.NewError("failed to send DKG share", "skipped by tests")
 	}
@@ -174,9 +167,9 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	for id, share := range clone.ShareOrSigns {
 		switch {
 		case state.Publish.IsBad(state, id):
-			share.Sign = revertString(share.Sign)
-			share.Share = revertString(share.Share)
-			share.Message = revertString(share.Message)
+			share.Sign = util.RevertString(share.Sign)
+			share.Share = util.RevertString(share.Share)
+			share.Message = util.RevertString(share.Message)
 		case state.Publish.IsGood(state, id):
 			// keep as is
 		default:
@@ -212,7 +205,7 @@ func getBadMPK(mpk *block.MPK) (bad *block.MPK) {
 	bad.ID = mpk.ID
 	bad.Mpk = make([]string, 0, len(mpk.Mpk))
 	for _, x := range mpk.Mpk {
-		bad.Mpk = append(bad.Mpk, revertString(x))
+		bad.Mpk = append(bad.Mpk, util.RevertString(x))
 	}
 	return
 }
@@ -310,7 +303,7 @@ func afterSignShareRequestHandler(message *bls.DKGKeyShare, nodeID string) (mess
 
 	switch {
 	case state.Signatures.IsBad(state, nodeID):
-		message.Sign = revertString(message.Sign)
+		message.Sign = util.RevertString(message.Sign)
 	default:
 		return nil, common.NewError("integration_tests", "send_no_signatures")
 	case state.Signatures.IsGood(state, nodeID):

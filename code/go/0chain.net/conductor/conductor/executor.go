@@ -861,6 +861,9 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 		case *cases.MissingLFBTickets:
 			state.MissingLFBTicket = cfg
 
+		case *cases.CheckChallengeIsValid:
+			state.CheckChallengeIsValid = cfg
+
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())
 		}
@@ -894,5 +897,36 @@ func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	if !success {
 		return errors.New("check failed")
 	}
+	return nil
+}
+
+// SetServerState implements config.Executor interface.
+func (r *Runner) SetServerState(update interface{}) error {
+	err := r.server.UpdateAllStates(func(state *conductrpc.State) {
+		switch update := update.(type) {
+		case *config.BlobberList:
+			state.BlobberList = update
+		case *config.BlobberDownload:
+			state.BlobberDownload = update
+		case *config.BlobberUpload:
+			state.BlobberUpload = update
+		case *config.BlobberDelete:
+			state.BlobberDelete = update
+		case *config.AdversarialValidator:
+			state.AdversarialValidator = update
+		}
+	})
+
+	return err
+}
+
+// SetMagicBlock implements config.Executor interface.
+func (r *Runner) SetMagicBlock(configFile string) error {
+	if r.verbose {
+		log.Print(" [INF] Setting magic block configuration file ", configFile)
+	}
+
+	r.server.SetMagicBlock(configFile)
+
 	return nil
 }

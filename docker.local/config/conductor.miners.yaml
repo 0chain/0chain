@@ -55,6 +55,9 @@ tests:
   # VRF
   - name: "Send bad VRFS to everyone"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -71,6 +74,7 @@ tests:
           must_fail: true
   - name: "Send VRFS only to group"
     flow:
+      - magic_block: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -85,6 +89,7 @@ tests:
           round: 20
   - name: "Send only the group the correct VRFS (bad VRFS for everyone else)"
     flow:
+      - magic_block: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -99,6 +104,9 @@ tests:
           round: 20
   - name: "Send no vrfs"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -117,6 +125,9 @@ tests:
   # Round timeout
   - name: "Don't send a round timeout"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -131,6 +142,7 @@ tests:
           timeout: "2m"
   - name: "Send timeouts only to group"
     flow:
+      - magic_block: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -145,6 +157,9 @@ tests:
           round: 20
   - name: "Send wrong timeout to everyone"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -159,6 +174,7 @@ tests:
           timeout: "2m"
   - name: "Send correct timeout only to group"
     flow:
+      - magic_block: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -174,6 +190,9 @@ tests:
 
   - name: "Send no tickets to slow down or stall the chain"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -188,6 +207,7 @@ tests:
           round: 20 # it keeps going
   - name: "Group send no tickets to slow down or stall the chain"
     flow:
+      - magic_block: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -202,6 +222,8 @@ tests:
           timeout: "30s" # setting greater waiting time will cause eventual notarization via a different route
   - name: "Send bad verification ticket with wrong key"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -217,6 +239,9 @@ tests:
           timeout: "15s" # fast
   - name: "Send bad verification ticket with wrong hash"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -234,6 +259,9 @@ tests:
   # Bad block
   - name: "Create competing block when not a generator"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -246,6 +274,7 @@ tests:
           round: 20 # it keeps going
   - name: "Group only signs the competing blocks"
     flow:
+      - magic_block: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -261,6 +290,9 @@ tests:
 
   - name: "Sign a different hash than the block hash"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -274,6 +306,9 @@ tests:
           timeout: "5m"
   - name: "Use a different private key to sign the block"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -287,6 +322,9 @@ tests:
           timeout: "5m"
   - name: "Hash the block incorrectly"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -329,6 +367,9 @@ tests:
 
   - name: "Double spend transaction: 1/3"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -343,6 +384,9 @@ tests:
 
   - name: "Double spend transaction: 2/3"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
@@ -358,6 +402,9 @@ tests:
 
   - name: "Double spend transaction: 3/3"
     flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
