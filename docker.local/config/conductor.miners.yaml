@@ -355,7 +355,7 @@ tests:
           timeout: "5m"
   - name: "Send multiple invalid blocks (DDoS)"
     flow:
-       - env:
+      - env:
           DKG_CONFIG_PATH: "/3_miners_1_sharder"
       - magic_block: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
