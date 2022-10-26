@@ -2,6 +2,7 @@ package event
 
 import (
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -45,4 +46,12 @@ func (edb *EventDb) delegateReward(updates []dbs.StakePoolReward, round int64) e
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&drs).Error
+}
+
+func (edb *EventDb) GetDelegateRewards(limit common.Pagination) ([]RewardDelegate, error) {
+	var wm []RewardDelegate
+	return wm, edb.Get().Model(&WriteMarker{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   limit.IsDescending,
+	}).Scan(&wm).Error
 }

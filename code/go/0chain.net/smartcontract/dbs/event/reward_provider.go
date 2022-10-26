@@ -2,6 +2,7 @@ package event
 
 import (
 	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -29,12 +30,16 @@ func (edb *EventDb) providerReward(updates []dbs.StakePoolReward, round int64) e
 		}
 		prs = append(prs, pr)
 	}
-	//return edb.Store.Get().Clauses(clause.OnConflict{
-	//	Columns:   []clause.Column{{Name: "id"}},
-	//	UpdateAll: true,
-	//}).Create(&prs).Error
 	return edb.Tx().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&prs).Error
+}
+
+func (edb *EventDb) GetProviderRewards(limit common.Pagination) ([]RewardProvider, error) {
+	var wm []RewardProvider
+	return wm, edb.Get().Model(&WriteMarker{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "id"},
+		Desc:   limit.IsDescending,
+	}).Scan(&wm).Error
 }
