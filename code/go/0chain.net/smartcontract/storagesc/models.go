@@ -376,6 +376,11 @@ func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey + sn.BaseURL)
 }
 
+// GetID implements partition.PartitionItem interface
+func (sn *StorageNode) GetID() string {
+	return sn.GetKey(ADDRESS)
+}
+
 func (sn *StorageNode) Encode() []byte {
 	buff, _ := json.Marshal(sn)
 	return buff
@@ -938,12 +943,13 @@ func (sa *StorageAllocation) removeBlobber(
 }
 
 func (sa *StorageAllocation) changeBlobbers(
+	balances cstate.StateContextI,
+	part *partitions.Partitions,
 	conf *Config,
 	blobbers []*StorageNode,
 	addId, removeId string,
 	ssc *StorageSmartContract,
 	now common.Timestamp,
-	balances cstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
 	if len(removeId) > 0 {
@@ -960,7 +966,7 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, fmt.Errorf("allocation already has blobber %s", addId)
 	}
 
-	addedBlobber, err := ssc.getBlobber(addId, balances)
+	addedBlobber, err := ssc.getBlobber(balances, part, addId)
 	if err != nil {
 		return nil, err
 	}

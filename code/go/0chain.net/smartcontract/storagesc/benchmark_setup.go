@@ -358,6 +358,12 @@ func AddMockBlobbers(
 	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
 	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
+
+	bPart, err := blobbersPartition.getPart(balances)
+	if err != nil {
+		panic(err)
+	}
+
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
@@ -378,10 +384,10 @@ func AddMockBlobbers(
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
-		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
-		if err != nil {
+		if err := bPart.AddItem(balances, blobber); err != nil {
 			panic(err)
 		}
+
 		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sscId), &datastore.NOIDField{})
 		if err != nil {
 			panic(err)
@@ -437,6 +443,11 @@ func AddMockBlobbers(
 	if err != nil {
 		panic(err)
 	}
+
+	if err := bPart.Save(balances); err != nil {
+		panic(err)
+	}
+
 	return rtvBlobbers
 }
 

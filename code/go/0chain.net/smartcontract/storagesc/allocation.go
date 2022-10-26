@@ -240,7 +240,13 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		request.OwnerPublicKey = txn.PublicKey
 	}
 
-	blobbers, err := getBlobbersByIDs(request.Blobbers, balances)
+	bPart, err := blobbersPartition.getPart(balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"could not get blobbers partition: %v", err)
+	}
+
+	blobbers, err := getBlobbersByIDs(balances, bPart, request.Blobbers)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "get blobbers failed: %v", err)
 	}
@@ -298,15 +304,15 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	m.tick("setup new allocation")
 	for _, b := range blobberNodes {
-		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
-		if err != nil {
-			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
-				zap.String("txn", txn.Hash),
-				zap.String("blobber", b.ID),
-				zap.Error(err))
-			return "", fmt.Errorf("can't save blobber: %v", err)
-		}
-
+		//_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		//if err != nil {
+		//	logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
+		//		zap.String("txn", txn.Hash),
+		//		zap.String("blobber", b.ID),
+		//		zap.Error(err))
+		//	return "", fmt.Errorf("can't save blobber: %v", err)
+		//}
+		//
 		if err := spMap[b.ID].addOffer(sa.BlobberAllocsMap[b.ID].Offer()); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error adding offer to blobber",
 				zap.String("txn", txn.Hash),
@@ -331,9 +337,19 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		}
 	}
 
+	m.tick("update stake pool items")
+
 	if err := spPart.Save(balances); err != nil {
 		return "", err
 	}
+
+	m.tick("save stake pool parts")
+
+	if err := bPart.Save(balances); err != nil {
+		return "", err
+	}
+
+	m.tick("save blobber parts")
 
 	var options []WithOption
 	if mintNewTokens > 0 {
@@ -614,12 +630,18 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 }
 
 // get blobbers by IDs concurrently, return error if any of them could not be acquired.
-func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]*StorageNode, error) {
-	return chainstate.GetItemsByIDs(ids,
-		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
-			return getBlobber(id, balances)
-		},
-		balances)
+func getBlobbersByIDs(balances chainstate.StateContextI, part *partitions.Partitions, ids []string) ([]*StorageNode, error) {
+	blobbers := make([]*StorageNode, 0, len(ids))
+	for _, id := range ids {
+		b := new(StorageNode)
+		if err := part.GetItem(balances, providerKey(id), b); err != nil {
+			return nil, err
+		}
+
+		blobbers = append(blobbers, b)
+	}
+
+	return blobbers, nil
 }
 
 func getStakePoolsByIDs(balances chainstate.StateContextI, part *partitions.Partitions, ids []string, providerType spenum.Provider) (map[string]*stakePool, error) {
@@ -664,18 +686,14 @@ func getStakePoolsByIDs(balances chainstate.StateContextI, part *partitions.Part
 }
 
 // getAllocationBlobbers loads blobbers of an allocation from store
-func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
-	balances chainstate.StateContextI) (blobbers []*StorageNode, err error) {
+func (sc *StorageSmartContract) getAllocationBlobbers(balances chainstate.StateContextI, bPart *partitions.Partitions,
+	alloc *StorageAllocation) (blobbers []*StorageNode, err error) {
 	ids := make([]string, 0, len(alloc.BlobberAllocs))
 	for _, ba := range alloc.BlobberAllocs {
 		ids = append(ids, ba.BlobberID)
 	}
 
-	return chainstate.GetItemsByIDs(ids,
-		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
-			return sc.getBlobber(id, balances)
-		},
-		balances)
+	return getBlobbersByIDs(balances, bPart, ids)
 }
 
 // closeAllocation making it expired; the allocation will be alive the
@@ -741,9 +759,6 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 	balances chainstate.StateContextI,
 ) (err error) {
 	for _, b := range blobbers {
-		if _, err = balances.InsertTrieNode(b.GetKey(ADDRESS), b); err != nil {
-			return
-		}
 		emitUpdateBlobber(b, balances)
 	}
 
@@ -1208,16 +1223,22 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"allocation size becomes too small")
 	}
 
+	bPart, err := blobbersPartition.getPart(balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_updating_failed",
+			"could get blobbers partition: %v", err)
+	}
+
 	// get blobber of the allocation to update them
 	var blobbers []*StorageNode
-	if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
+	if blobbers, err = sc.getAllocationBlobbers(balances, bPart, alloc); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			err.Error())
 	}
 
 	if len(request.AddBlobberId) > 0 {
-		blobbers, err = alloc.changeBlobbers(
-			conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
+		blobbers, err = alloc.changeBlobbers(balances, bPart,
+			conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate,
 		)
 		if err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1265,6 +1286,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)
 	if err != nil {
+		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
+	}
+
+	if err := bPart.Save(balances); err != nil {
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
@@ -1658,8 +1683,13 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
-	var blobbers []*StorageNode
-	if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
+	bPart, err := blobbersPartition.getPart(balances)
+	if err != nil {
+		return common.NewError("fini_alloc_failed", err.Error())
+	}
+
+	blobbers, err := sc.getAllocationBlobbers(balances, bPart, alloc)
+	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"invalid state: can't get related blobbers: "+err.Error())
 	}
@@ -1778,7 +1808,7 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	alloc.Finalized = true
 
-	return nil
+	return bPart.Save(balances)
 }
 
 type transferAllocationInput struct {

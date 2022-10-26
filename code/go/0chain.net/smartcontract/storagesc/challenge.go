@@ -544,16 +544,18 @@ func (sc *StorageSmartContract) challengePassed(
 	ongoingParts *partitions.Partitions,
 	latestCompletedChallTime common.Timestamp,
 	balances cstate.StateContextI) (string, error) {
-	blobber, err := sc.getBlobber(t.ClientID, balances)
-	if err != nil {
-		return "", common.NewError("verify_challenge",
-			"can't get blobber"+err.Error())
-	}
+	if err := blobbersPartition.update(balances, providerKey(t.ClientID), func(data []byte) ([]byte, error) {
+		blobber := new(StorageNode)
+		if _, err := blobber.UnmarshalMsg(data); err != nil {
+			return nil, err
+		}
 
-	// this expiry of blobber needs to be corrected once logic is finalized
-	if blobber.RewardRound.StartRound != rewardRound ||
-		balances.GetBlock().Round == 0 {
+		if blobber.RewardRound.StartRound == rewardRound && balances.GetBlock().Round != 0 {
+			// not the rewarding round
+			return data, nil
+		}
 
+		// this expiry of blobber needs to be corrected once logic is finalized
 		var dataRead float64 = 0
 		if blobber.LastRewardDataReadRound >= rewardRound {
 			dataRead = blobber.DataReadLastRewardRound
@@ -570,8 +572,7 @@ func (sc *StorageSmartContract) challengePassed(
 				DataRead:          dataRead,
 			})
 		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"can't add to ongoing partition list "+err.Error())
+			return nil, fmt.Errorf("can't add to ongoing partition list: %v", err)
 		}
 
 		blobber.RewardRound = RewardRound{
@@ -579,17 +580,15 @@ func (sc *StorageSmartContract) challengePassed(
 			Timestamp:  t.CreationDate,
 		}
 
-		_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
-		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"error inserting blobber to chain"+err.Error())
-		}
+		return blobber.MarshalMsg(nil)
+	}); err != nil {
+		return "", common.NewError("verify_challenge", err.Error())
 	}
 
 	var brStats BlobberRewardNode
-	if err := ongoingParts.GetItem(balances, blobber.ID, &brStats); err != nil {
-		return "", common.NewError("verify_challenge",
-			"can't get blobber reward from partition list: "+err.Error())
+	if err := ongoingParts.GetItem(balances, t.ClientID, &brStats); err != nil {
+		return "", common.NewErrorf("verify_challenge",
+			"can't get blobber reward from partition list: %v", err.Error())
 	}
 
 	brStats.SuccessChallenges++
@@ -613,7 +612,7 @@ func (sc *StorageSmartContract) challengePassed(
 
 	emitUpdateChallenge(challenge, true, balances)
 
-	err = ongoingParts.UpdateItem(balances, &brStats)
+	err := ongoingParts.UpdateItem(balances, &brStats)
 	if err != nil {
 		return "", common.NewErrorf("verify_challenge",
 			"error updating blobber reward item: %v", err)
