@@ -325,7 +325,6 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 		Snapshot: *s,
 	}
 
-	round = e.events[0].BlockNumber
 	edb.updateBlobberAggregate(round, period, gs)
 	gs.update(e.events)
 

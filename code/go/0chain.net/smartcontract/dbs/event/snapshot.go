@@ -132,7 +132,7 @@ func (gs *globalSnapshot) update(e []Event) {
 			logging.Logger.Info("snapshot update TagAddMint",
 				zap.Any("total mint and zcn mint", gs))
 		case TagBurn:
-			m, ok := fromEvent[state.Mint](event.Data)
+			m, ok := fromEvent[state.Burn](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))

@@ -218,7 +218,10 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 				Type:        int(event.TypeStats),
 				Tag:         int(event.TagBurn),
 				Index:       sc.txn.Hash,
-				Data:        t,
+				Data: state.Burn{
+					Burner: t.ClientID,
+					Amount: t.Amount,
+				},
 			})
 		}
 		return nil
