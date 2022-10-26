@@ -51,7 +51,7 @@ func (edb *EventDb) delegateReward(updates []dbs.StakePoolReward, round int64) e
 func (edb *EventDb) GetDelegateRewards(limit common.Pagination) ([]RewardDelegate, error) {
 	var wm []RewardDelegate
 	return wm, edb.Get().Model(&RewardDelegate{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
+		Column: clause.Column{Name: "block_number"},
 		Desc:   limit.IsDescending,
 	}).Scan(&wm).Error
 }

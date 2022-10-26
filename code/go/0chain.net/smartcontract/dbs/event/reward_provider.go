@@ -39,7 +39,7 @@ func (edb *EventDb) providerReward(updates []dbs.StakePoolReward, round int64) e
 func (edb *EventDb) GetProviderRewards(limit common.Pagination) ([]RewardProvider, error) {
 	var wm []RewardProvider
 	return wm, edb.Get().Model(&RewardProvider{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
+		Column: clause.Column{Name: "block_number"},
 		Desc:   limit.IsDescending,
 	}).Scan(&wm).Error
 }
