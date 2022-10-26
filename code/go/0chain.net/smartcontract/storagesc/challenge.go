@@ -984,7 +984,7 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 
 	// Check if the length of the list of validators is higher than the lower bound of validators
 	minValidators  := conf.ValidatorsPerChallenge
-	currentValidatorsCount, err := validators.Size(balances);
+	currentValidatorsCount, err := validators.Size(balances)
 	
 	if err != nil {
 		return fmt.Errorf("can't get validators partition size: %v", err.Error())
