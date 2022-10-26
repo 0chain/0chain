@@ -207,63 +207,96 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		es := <-edb.eventsChannel
 		edb.addEvents(ctx, es)
-		tse := time.Now()
-		tags := make([]int, 0, len(es.events))
-		for _, event := range es.events {
-			var err error = nil
-			switch EventType(event.Type) {
-			case TypeStats:
-				tags = append(tags, event.Tag)
-				ts := time.Now()
-				err = edb.addStat(event)
-				du := time.Since(ts)
-				if du.Milliseconds() > 50 {
-					logging.Logger.Warn("event db save slow - addStat",
-						zap.Any("duration", du),
-						zap.Int("event tag", event.Tag),
-						zap.Int64("round", es.round),
-						zap.String("block", es.block),
-						zap.Int("block size", es.blockSize),
-					)
-				}
-			case TypeError:
-				err = edb.addError(Error{
-					TransactionID: event.TxHash,
-					Error:         fmt.Sprintf("%v", event.Data),
-				})
-
-			default:
-			}
-			if err != nil {
-				logging.Logger.Error("event could not be processed",
-					zap.Int64("round", es.round),
-					zap.String("block", es.block),
-					zap.Int("block size", es.blockSize),
-					zap.Any("event type", event.Type),
-					zap.Any("event tag", event.Tag),
-					zap.Error(err),
-				)
-			}
+		tx, err := edb.BeginTransaction()
+		if err != nil {
+			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
-		due := time.Since(tse)
-		logging.Logger.Debug("event db process",
+		tx.parseBlockEvents(es)
+		if err := tx.CommitTransaction(); err != nil {
+			logging.Logger.Error("error commiting block events",
+				zap.Int64("block", es.round),
+				zap.Error(err),
+			)
+		}
+		es.doneC <- struct{}{}
+	}
+}
+
+func (edb *EventDb) parseBlockEvents(es blockEvents) {
+	tse := time.Now()
+	tags := make([]int, 0, len(es.events))
+	for _, event := range es.events {
+		edb.parseBlockEvent(event, tags, es.round, es.block, es.blockSize)
+	}
+	due := time.Since(tse)
+	logging.Logger.Debug("event db process",
+		zap.Any("duration", due),
+		zap.Int("events number", len(es.events)),
+		zap.Ints("tags", tags),
+		zap.Int64("round", es.round),
+		zap.String("block", es.block),
+		zap.Int("block size", es.blockSize))
+
+	if due.Milliseconds() > 200 {
+		logging.Logger.Warn("event db work slow",
 			zap.Any("duration", due),
 			zap.Int("events number", len(es.events)),
 			zap.Ints("tags", tags),
 			zap.Int64("round", es.round),
 			zap.String("block", es.block),
 			zap.Int("block size", es.blockSize))
+	}
+}
 
-		if due.Milliseconds() > 200 {
-			logging.Logger.Warn("event db work slow",
-				zap.Any("duration", due),
-				zap.Int("events number", len(es.events)),
-				zap.Ints("tags", tags),
-				zap.Int64("round", es.round),
-				zap.String("block", es.block),
-				zap.Int("block size", es.blockSize))
+func (edb *EventDb) parseBlockEvent(
+	event Event,
+	tags []int,
+	round int64, block string, blockSize int,
+) {
+	edb.Store.Get().SavePoint(event.Index)
+	defer func() {
+		if r := recover(); r != nil {
+			edb.Store.Get().RollbackTo(event.Index)
+			logging.Logger.Error("panic processing events",
+				zap.Any("event", event),
+				zap.Any("", r),
+			)
 		}
-		es.doneC <- struct{}{}
+	}()
+
+	var err error = nil
+	switch EventType(event.Type) {
+	case TypeStats:
+		tags = append(tags, event.Tag)
+		ts := time.Now()
+		err = edb.addStat(event)
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Warn("event db save slow - addStat",
+				zap.Any("duration", du),
+				zap.Int("event tag", event.Tag),
+				zap.Int64("round", round),
+				zap.String("block", block),
+				zap.Int("block size", blockSize),
+			)
+		}
+	case TypeError:
+		err = edb.addError(Error{
+			TransactionID: event.TxHash,
+			Error:         fmt.Sprintf("%v", event.Data),
+		})
+
+	default:
+	}
+	if err != nil {
+		logging.Logger.Error("event could not be processed",
+			zap.Int64("round", round),
+			zap.String("block", block),
+			zap.Int("block size", blockSize),
+			zap.Any("event type", event.Type),
+			zap.Any("event tag", event.Tag),
+			zap.Error(err),
+		)
 	}
 }
 
