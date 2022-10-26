@@ -217,7 +217,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 				TxHash:      sc.txn.Hash,
 				Type:        int(event.TypeStats),
 				Tag:         int(event.TagBurn),
-				Index:       sc.txn.Hash,
+				Index:       sc.txn.ClientID,
 				Data: state.Burn{
 					Burner: t.ClientID,
 					Amount: t.Amount,
@@ -233,7 +233,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 				TxHash:      sc.txn.Hash,
 				Type:        int(event.TypeStats),
 				Tag:         int(event.TagAddMint),
-				Index:       sc.txn.Hash,
+				Index:       sc.txn.ClientID,
 				Data: state.Mint{
 					Minter:     t.ClientID,
 					ToClientID: t.ToClientID,
@@ -266,7 +266,7 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		TxHash:      sc.txn.Hash,
 		Type:        int(event.TypeStats),
 		Tag:         int(event.TagAddMint),
-		Index:       sc.txn.Hash,
+		Index:       sc.txn.ClientID,
 		Data:        m,
 	})
 
