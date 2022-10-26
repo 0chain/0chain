@@ -430,7 +430,7 @@ func (edb *EventDb) addStat(event Event) error {
 				c, _ := u.Change.Int64()
 				logging.Logger.Debug("saving user", zap.String("id", u.UserID),
 					zap.Int64("nonce", u.Nonce), zap.Int64("balance", b), zap.Int64("change", c),
-					zap.Int64("round", u.Round))
+					zap.Int64("round", u.Round), zap.Error(err))
 			}
 		}
 		return err
