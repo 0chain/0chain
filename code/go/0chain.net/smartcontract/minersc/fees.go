@@ -362,19 +362,26 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", fmt.Errorf("error splitting fees by ratio: %v", err)
 	}
 
-	moveValue, err := currency.AddCoin(minerRewards, minerFees)
-	if err != nil {
-		return "", err
-	}
-
 	// pay random N miners
 	if err := mn.StakePool.DistributeRewardsRandN(
-		moveValue,
+		minerRewards,
 		mn.ID,
 		spenum.Miner,
 		b.GetRoundRandomSeed(),
 		gn.NumMinerDelegatesRewarded,
-		"fee",
+		spenum.BlockReward,
+		balances,
+	); err != nil {
+		return "", err
+	}
+
+	if err := mn.StakePool.DistributeRewardsRandN(
+		minerFees,
+		mn.ID,
+		spenum.Miner,
+		b.GetRoundRandomSeed(),
+		gn.NumMinerDelegatesRewarded,
+		spenum.Fees,
 		balances,
 	); err != nil {
 		return "", err
@@ -391,8 +398,18 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if len(sharders.Nodes) > 0 {
 		mbSharders := getRegisterShardersInMagicBlock(balances, sharders)
 		if err := msc.payShardersAndDelegates(
-			gn, mbSharders, sharderFees, sharderRewards,
-			gn.NumShardersRewarded, b.GetRoundRandomSeed(), balances,
+			gn, mbSharders, sharderFees,
+			gn.NumShardersRewarded, b.GetRoundRandomSeed(),
+			spenum.Fees,
+			balances,
+		); err != nil {
+			return "", err
+		}
+		if err := msc.payShardersAndDelegates(
+			gn, mbSharders, sharderRewards,
+			gn.NumShardersRewarded, b.GetRoundRandomSeed(),
+			spenum.BlockReward,
+			balances,
 		); err != nil {
 			return "", err
 		}
@@ -492,9 +509,10 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 func (msc *MinerSmartContract) payShardersAndDelegates(
 	gn *GlobalNode,
 	sharders []*MinerNode,
-	fee, mint currency.Coin,
+	reward currency.Coin,
 	randN int,
 	seed int64,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) error {
 	sn := len(sharders)
@@ -503,24 +521,28 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	}
 
 	// fess and mint
-	feeShare, feeLeft, err := currency.DistributeCoin(fee, int64(sn))
-	if err != nil {
-		return err
-	}
-	mintShare, mintLeft, err := currency.DistributeCoin(mint, int64(sn))
+	//feeShare, feeLeft, err := currency.DistributeCoin(fee, int64(sn))
+	//if err != nil {
+	//	return err
+	//}
+	//mintShare, mintLeft, err := currency.DistributeCoin(mint, int64(sn))
+	//if err != nil {
+	//	return err
+	//}
+	sharderShare, totalCoinLeft, err := currency.DistributeCoin(reward, int64(sn))
 	if err != nil {
 		return err
 	}
 
-	sharderShare, err := currency.AddCoin(feeShare, mintShare)
-	if err != nil {
-		return err
-	}
+	//sharderShare, err := currency.AddCoin(feeShare, mintShare)
+	//if err != nil {
+	//	return err
+	//}
 
-	totalCoinLeft, err := currency.AddCoin(feeLeft, mintLeft)
-	if err != nil {
-		return err
-	}
+	//totalCoinLeft, err := currency.AddCoin(feeLeft, mintLeft)
+	//if err != nil {
+	//	return err
+	//}
 
 	if totalCoinLeft > currency.Coin(sn) {
 		clShare, cl, err := currency.DistributeCoin(totalCoinLeft, int64(sn))
@@ -551,7 +573,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 			return err
 		}
 		if err = sh.StakePool.DistributeRewardsRandN(
-			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, "pay sharders", balances,
+			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, rewardType, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)

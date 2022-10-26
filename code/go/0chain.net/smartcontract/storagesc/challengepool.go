@@ -110,7 +110,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	}
 
 	for i, sp := range vSPs {
-		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, balances)
+		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, spenum.Validation, balances)
 		if err != nil {
 			return fmt.Errorf("moving to validator %s: %v",
 				validators[i], err)
@@ -118,7 +118,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	}
 	if bal > 0 {
 		for i := 0; i < int(bal); i++ {
-			err := vSPs[i].DistributeRewards(1, validators[i], spenum.Validator, balances)
+			err := vSPs[i].DistributeRewards(1, validators[i], spenum.Validator, spenum.Validation, balances)
 			if err != nil {
 				return fmt.Errorf("moving to validator %s: %v",
 					validators[i], err)

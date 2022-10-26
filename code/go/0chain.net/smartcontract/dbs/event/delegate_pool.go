@@ -27,6 +27,8 @@ type DelegatePool struct {
 	TotalPenalty currency.Coin `json:"total_penalty"`
 	Status       int           `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3"`
 	RoundCreated int64         `json:"round_created"`
+
+	DelegateReward []DelegateReward `gorm:"foreignKey:PoolID;references:ID"`
 }
 
 func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {

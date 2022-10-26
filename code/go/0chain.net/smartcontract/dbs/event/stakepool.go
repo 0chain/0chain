@@ -18,54 +18,93 @@ import (
 type providerRewardsDelegates struct {
 	rewards       []ProviderRewards
 	delegatePools []DelegatePool
-	desc          [][]string
 }
 
 func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
 	var (
 		rewards       = make([]ProviderRewards, 0, len(spus))
+		providerMap   = make(map[string]ProviderRewards)
 		delegatePools = make([]DelegatePool, 0, len(spus))
-		descs         = make([][]string, 0, len(spus))
+		delegateMap   = make(map[string]DelegatePool)
+		err           error
 	)
 
-	for i, sp := range spus {
+	for _, sp := range spus {
 		if sp.Reward != 0 {
-			rewards = append(rewards, ProviderRewards{
-				ProviderID:   sp.ProviderId,
-				Rewards:      sp.Reward,
-				TotalRewards: sp.Reward,
-			})
+			reward, ok := providerMap[sp.ProviderId]
+			if ok {
+				reward.Rewards, err = currency.AddCoin(reward.Rewards, sp.Reward)
+				if err != nil {
+					return nil, err
+				}
+				reward.TotalRewards, err = currency.AddCoin(reward.TotalRewards, sp.Reward)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				reward = ProviderRewards{
+					ProviderID:   sp.ProviderId,
+					Rewards:      sp.Reward,
+					TotalRewards: sp.Reward,
+				}
+			}
+			providerMap[sp.ProviderId] = reward
 		}
 
 		// merge delegate rewards and penalties
-		for k, v := range spus[i].DelegateRewards {
-			delegatePools = append(delegatePools, DelegatePool{
-				ProviderID:   sp.ProviderId,
-				ProviderType: sp.ProviderType,
-				PoolID:       k,
-				Reward:       currency.Coin(v),
-				TotalReward:  currency.Coin(v),
-				TotalPenalty: currency.Coin(spus[i].DelegatePenalties[k]),
-			})
-		}
-
-		// append remaining penalties if any
-		for k, v := range spus[i].DelegatePenalties {
-			if _, ok := sp.DelegateRewards[k]; !ok {
-				delegatePools = append(delegatePools, DelegatePool{
+		for id, amount := range sp.DelegateRewards {
+			dp, ok := delegateMap[id]
+			if ok {
+				dp.Reward, err = currency.AddCoin(dp.Reward, amount)
+				if err != nil {
+					return nil, err
+				}
+				dp.TotalReward, err = currency.AddCoin(dp.TotalReward, amount)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				dp = DelegatePool{
 					ProviderID:   sp.ProviderId,
 					ProviderType: sp.ProviderType,
-					PoolID:       k,
-					TotalPenalty: currency.Coin(v),
-				})
+					PoolID:       id,
+					Reward:       amount,
+					TotalReward:  amount,
+				}
 			}
+			delegateMap[id] = dp
 		}
+
+		for id, penalty := range sp.DelegatePenalties {
+			dp, ok := delegateMap[id]
+			if ok {
+				dp.TotalPenalty, err = currency.AddCoin(dp.Reward, penalty)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				dp = DelegatePool{
+					ProviderID:   sp.ProviderId,
+					ProviderType: sp.ProviderType,
+					PoolID:       id,
+					TotalPenalty: penalty,
+				}
+			}
+			delegateMap[id] = dp
+		}
+	}
+
+	for _, r := range providerMap {
+		rewards = append(rewards, r)
+	}
+
+	for _, dp := range delegateMap {
+		delegatePools = append(delegatePools, dp)
 	}
 
 	return &providerRewardsDelegates{
 		rewards:       rewards,
 		delegatePools: delegatePools,
-		desc:          descs,
 	}, nil
 }
 
@@ -105,6 +144,22 @@ func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 	})
 }
 
+func (edb *EventDb) processRewerdUpdate(spus []dbs.StakePoolReward, round int64) error {
+	if err := edb.NewTransaction(); err != nil {
+		return err
+	}
+
+	if err := edb.providerReward(spus, round); err != nil {
+		return err
+	}
+	if err := edb.delegateRerward(spus, round); err != nil {
+		return err
+	}
+	return edb.rewardUpdate(spus, round)
+
+	return edb.CommitTransaction()
+}
+
 func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error {
 	if len(spus) == 0 {
 		return nil
@@ -126,7 +181,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 				zap.Int("total update items", n),
 				zap.Int("rewards num", len(rewards.rewards)),
 				zap.Int("delegate pools num", len(rewards.delegatePools)),
-				zap.Any("desc", rewards.desc))
+			)
 		}
 	}()
 
@@ -144,7 +199,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	if len(rewards.delegatePools) > 0 {
-		if err := rewardProviderDelegates(edb, rewards.delegatePools); err != nil {
+		if err := rewardProviderDelegates(edb.Tx(), rewards.delegatePools); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
 	}
@@ -170,20 +225,20 @@ func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
 		"total_rewards": gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
+	return edb.Tx().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "provider_id"}},
 		DoUpdates: clause.Assignments(vs),
 	}).Create(rewards).Error
 }
 
-func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
+func rewardProviderDelegates(tx *gorm.DB, rewards []DelegatePool) error {
 	vs := map[string]interface{}{
 		"reward":        gorm.Expr("delegate_pools.reward + excluded.reward"),
 		"total_reward":  gorm.Expr("delegate_pools.total_reward + excluded.total_reward"),
 		"total_penalty": gorm.Expr("delegate_pools.total_penalty + excluded.total_penalty"),
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
+	return tx.Clauses(clause.OnConflict{
 		Where: clause.Where{
 			Exprs: []clause.Expression{gorm.Expr("delegate_pools.status != ?", spenum.Deleted)},
 		},

@@ -3,6 +3,8 @@ package event
 import (
 	"time"
 
+	"gorm.io/gorm"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
@@ -31,6 +33,20 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 type EventDb struct {
 	dbs.Store
 	eventsChannel chan blockEvents
+	tx            *gorm.DB
+}
+
+func (edb *EventDb) Tx() *gorm.DB {
+	return edb.tx
+}
+
+func (edb *EventDb) NewTransaction() error {
+	edb.tx = edb.Store.Get().Begin()
+	return edb.tx.Error
+}
+
+func (edb *EventDb) CommitTransaction() error {
+	return edb.tx.Commit().Error
 }
 
 type blockEvents struct {

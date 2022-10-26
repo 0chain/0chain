@@ -188,13 +188,13 @@ func (sp *StakePool) DistributeRewardsRandN(
 	providerType spenum.Provider,
 	seed int64,
 	randN int,
-	desc string,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -332,12 +332,13 @@ func (sp *StakePool) DistributeRewards(
 	value currency.Coin,
 	providerId string,
 	providerType spenum.Provider,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {

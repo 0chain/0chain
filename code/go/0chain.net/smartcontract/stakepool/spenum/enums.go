@@ -34,3 +34,22 @@ var poolString = []string{"active", "pending", "inactive", "unstaking", "deletin
 func (p PoolStatus) String() string {
 	return poolString[p]
 }
+
+type Reward int
+
+const (
+	BlockReward Reward = iota
+	Fees
+	Validation
+	FileDownload
+	ChallengePass
+	ChallengeSlash
+	CancellationCharge
+	MinLockDemand
+)
+
+var rewardString = []string{"block_reward", "fees", "validation", "read_file", "write_file"}
+
+func (r Reward) String() string {
+	return rewardString[r]
+}

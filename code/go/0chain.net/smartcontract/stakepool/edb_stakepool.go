@@ -11,12 +11,13 @@ import (
 
 type StakePoolReward dbs.StakePoolReward
 
-func NewStakePoolReward(pId string, pType spenum.Provider) *StakePoolReward {
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ProviderId = pId
 	spu.ProviderType = int(pType)
 	spu.DelegateRewards = make(map[string]int64)
 	spu.DelegatePenalties = make(map[string]int64)
+	spu.RewardType = rewardType
 	return &spu
 }
 
@@ -28,7 +29,7 @@ func (spu StakePoolReward) Emit(
 	balances.EmitEvent(
 		event.TypeStats,
 		tag,
-		spu.ProviderId,
+		spu.RewardType.String()+spu.ProviderId,
 		stakePoolRewardToStakePoolRewardEvent(spu),
 	)
 	return nil
