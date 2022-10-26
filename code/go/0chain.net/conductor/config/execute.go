@@ -62,6 +62,8 @@ type Executor interface {
 	WrongBlockSignHash(wbsh *Bad) (err error)
 	WrongBlockSignKey(wbsk *Bad) (err error)
 	WrongBlockHash(wbh *Bad) (err error)
+	WrongBlockRandomSeed(wb *Bad) (err error)
+	WrongBlockDDoS(wb *Bad) (err error)
 	VerificationTicketGroup(vtg *Bad) (err error)
 	WrongVerificationTicketHash(wvth *Bad) (err error)
 	WrongVerificationTicketKey(wvtk *Bad) (err error)

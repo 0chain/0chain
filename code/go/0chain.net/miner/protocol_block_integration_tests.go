@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -23,6 +22,7 @@ import (
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
 	"0chain.net/smartcontract/storagesc"
 )
 
@@ -50,8 +50,12 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	b.HashBlock()
 
 	switch {
-	case state.WrongBlockHash != nil:
-		b.Hash = util.RevertString(b.Hash) // just wrong block hash
+	case state.WrongBlockHash != nil || state.WrongBlockDDoS != nil:
+		b.Hash = util.ShuffleString(b.Hash)
+		b.Signature, err = self.Sign(b.Hash)
+	case state.WrongBlockRandomSeed != nil:
+		b.RoundRandomSeed = b.RoundRandomSeed - 1
+		b.HashBlock()
 		b.Signature, err = self.Sign(b.Hash)
 	case state.WrongBlockSignHash != nil:
 		b.Signature, err = self.Sign(util.RevertString(b.Hash)) // sign another hash

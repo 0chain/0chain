@@ -190,6 +190,24 @@ func init() {
 		return ex.WrongBlockHash(&wbh)
 	})
 
+	register("wrong_block_random_seed", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wb Bad
+		if err = wb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockRandomSeed(&wb)
+	})
+
+	register("wrong_block_ddos", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wb Bad
+		if err = wb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockDDoS(&wb)
+	})
+
 	register("verification_ticket_group", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var vtg Bad
