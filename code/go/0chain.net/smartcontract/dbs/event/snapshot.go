@@ -103,6 +103,7 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 
 func (gs *globalSnapshot) update(e []Event) {
 	for _, event := range e {
+		logging.Logger.Debug("update snapshot", zap.Int("tag", event.Tag), zap.Int64("block_number", event.BlockNumber))
 		switch EventTag(event.Tag) {
 		case TagToChallengePool:
 			cp, ok := fromEvent[ChallengePoolLock](event.Data)

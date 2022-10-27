@@ -762,8 +762,8 @@ func userToState(u *event.User) *state.State {
 
 func stateToUser(clientID string, s *state.State, change currency.Coin) *event.User {
 	return &event.User{
-		UserID: clientID,
-		//		Change:  change,
+		UserID:  clientID,
+		Change:  change,
 		TxnHash: s.TxnHash,
 		Balance: s.Balance,
 		Round:   s.Round,
