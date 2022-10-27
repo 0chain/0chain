@@ -279,7 +279,7 @@ func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
 		tx    = newTransaction(clientID, ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
-	return ssc.updateAllocationRequest(tx, input, balances)
+	return ssc.updateAllocationRequest(tx, input, balances, nil)
 }
 
 var avgTerms = Terms{

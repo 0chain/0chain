@@ -121,6 +121,15 @@ func BenchmarkTests(
 		return ssc.newAllocationRequest(t, r, b, timings)
 	}
 
+	updateAllocTimings := make(map[string]time.Duration)
+	updateAllocationRequestF := func(
+		t *transaction.Transaction,
+		r []byte,
+		b cstate.StateContextI,
+	) (string, error) {
+		return ssc.updateAllocationRequest(t, r, b, updateAllocTimings)
+	}
+
 	var tests = []BenchTest{
 		// read/write markers
 		{
@@ -215,7 +224,7 @@ func BenchmarkTests(
 		},
 		{
 			name:     "storage.update_allocation_request",
-			endpoint: ssc.updateAllocationRequest,
+			endpoint: updateAllocationRequestF,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -237,6 +246,7 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&uar)
 				return bytes
 			}(),
+			timings: updateAllocTimings,
 		},
 		{
 			name:     "storage.finalize_allocation",

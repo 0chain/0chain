@@ -371,7 +371,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"marshal marker: %v", err)
 	}
 
-	resp, err := ssc.updateAllocationRequestInternal(txn, input, conf, balances)
+	resp, err := ssc.updateAllocationRequestInternal(txn, input, conf, balances, nil)
 	if err != nil {
 		return "", common.NewErrorf("update_free_storage_request", err.Error())
 	}

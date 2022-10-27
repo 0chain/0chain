@@ -27,7 +27,7 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "miner"
+#    - "miner"
     - "storage"
 #    - "storage_rest"
 #    - "miner_rest"

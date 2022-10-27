@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"strings"
@@ -470,6 +471,7 @@ func (t *Timings) tick(name string) {
 	if t.timings == nil {
 		return
 	}
+	log.Println("tick", name, "num:", len(t.timings))
 	t.timings[name] = time.Since(t.start)
 }
 
@@ -1150,13 +1152,14 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	txn *transaction.Transaction,
 	input []byte,
 	balances chainstate.StateContextI,
+	timings map[string]time.Duration,
 ) (resp string, err error) {
 	var conf *Config
 	if conf, err = sc.getConfig(balances, false); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			"can't get SC configurations: "+err.Error())
 	}
-	return sc.updateAllocationRequestInternal(txn, input, conf, balances)
+	return sc.updateAllocationRequestInternal(txn, input, conf, balances, timings)
 }
 
 func (sc *StorageSmartContract) updateAllocationRequestInternal(
@@ -1164,11 +1167,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	input []byte,
 	conf *Config,
 	balances chainstate.StateContextI,
+	timings map[string]time.Duration,
 ) (resp string, err error) {
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_updating_failed",
 			"missing client_id in transaction")
 	}
+	m := Timings{timings: timings, start: time.Now()}
 
 	var request updateAllocationRequest
 	if err = request.decode(input); err != nil {
@@ -1176,6 +1181,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"invalid request: "+err.Error())
 	}
 
+	m.tick("decode request")
 	if request.OwnerID == "" {
 		request.OwnerID = t.ClientID
 	}
@@ -1186,6 +1192,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"can't get existing allocation: "+err.Error())
 	}
 
+	m.tick("load allocation")
 	if t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner {
 		return "", common.NewError("allocation_updating_failed",
 			"only owner can update the allocation")
@@ -1195,6 +1202,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
+	m.tick("validate allocation")
 	// can't update expired allocation
 	if alloc.Expiration < t.CreationDate {
 		return "", common.NewError("allocation_updating_failed",
@@ -1227,6 +1235,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"allocation size becomes too small")
 	}
 
+	m.tick("chekcing allocation")
 	bPart, err := blobbersPartition.getPart(balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_updating_failed",
@@ -1240,6 +1249,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			err.Error())
 	}
 
+	m.tick("get blobbers")
+
 	if len(request.AddBlobberId) > 0 {
 		blobbers, err = alloc.changeBlobbers(balances, bPart,
 			conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate,
@@ -1247,6 +1258,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
 		}
+
+		m.tick("change blobbers")
 	}
 
 	if len(blobbers) != len(alloc.BlobberAllocs) {
@@ -1280,6 +1293,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
+	m.tick("extend or reduce allocation")
 	if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
@@ -1293,9 +1307,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
+	m.tick("save updated allocation")
+
 	if err := bPart.Save(balances); err != nil {
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
+
+	m.tick("save blobber parts")
 
 	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 	if len(request.RemoveBlobberId) > 0 {
