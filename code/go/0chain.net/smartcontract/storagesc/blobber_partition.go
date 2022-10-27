@@ -18,7 +18,7 @@ var (
 func init() {
 	// register blobber stake pool partitions
 	regInitPartsFunc(func(state state.StateContextI) error {
-		_, err := partitions.CreateIfNotExists(state, blobbersPartitionName, 20)
+		_, err := partitions.CreateIfNotExists(state, blobbersPartitionName, 40)
 		return err
 	})
 }

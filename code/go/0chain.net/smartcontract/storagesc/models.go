@@ -945,6 +945,7 @@ func (sa *StorageAllocation) removeBlobber(
 func (sa *StorageAllocation) changeBlobbers(
 	balances cstate.StateContextI,
 	part *partitions.Partitions,
+	spPart *partitions.Partitions,
 	conf *Config,
 	blobbers []*StorageNode,
 	addId, removeId string,
@@ -982,8 +983,8 @@ func (sa *StorageAllocation) changeBlobbers(
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 
-	sp, err := blobberStakePoolPartitions.get(balances, spenum.Blobber, addedBlobber.ID)
-	if err != nil {
+	sp := newStakePool()
+	if err := spPart.GetItem(balances, stakePoolKey(spenum.Blobber, addedBlobber.ID), sp); err != nil {
 		return nil, fmt.Errorf("can't get blobber stake pool: %v", err)
 	}
 

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 	"strings"
@@ -471,7 +470,6 @@ func (t *Timings) tick(name string) {
 	if t.timings == nil {
 		return
 	}
-	log.Println("tick", name, "num:", len(t.timings))
 	t.timings[name] = time.Since(t.start)
 }
 
@@ -912,12 +910,13 @@ func (sc *StorageSmartContract) adjustChallengePool(
 // extendAllocation extends size or/and expiration (one of them can be reduced);
 // here we use new terms of blobbers
 func (sc *StorageSmartContract) extendAllocation(
+	balances chainstate.StateContextI,
+	bspPart *partitions.Partitions,
 	txn *transaction.Transaction,
 	conf *Config,
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
 	req *updateAllocationRequest,
-	balances chainstate.StateContextI,
 ) (err error) {
 	var (
 		diff   = req.getBlobbersSizeDiff(alloc) // size difference
@@ -934,11 +933,6 @@ func (sc *StorageSmartContract) extendAllocation(
 	var prevExpiration = alloc.Expiration
 	alloc.Expiration += req.Expiration // new expiration
 	alloc.Size += req.Size             // new size
-
-	bspPart, err := blobberStakePoolPartitions.getPart(balances)
-	if err != nil {
-		return common.NewErrorf("allocation_extending_failed", err.Error())
-	}
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
@@ -1032,10 +1026,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 	}
 
-	if err := bspPart.Save(balances); err != nil {
-		return common.NewError("allocation_extending_failed", err.Error())
-	}
-
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
 		if err = alloc.addToWritePool(txn, balances); err != nil {
@@ -1055,12 +1045,13 @@ func (sc *StorageSmartContract) extendAllocation(
 // reduceAllocation reduces size or/and expiration (no one can be increased);
 // here we use the same terms of related blobbers
 func (sc *StorageSmartContract) reduceAllocation(
+	balances chainstate.StateContextI,
+	bspPart *partitions.Partitions,
 	txn *transaction.Transaction,
 	conf *Config,
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
 	req *updateAllocationRequest,
-	balances chainstate.StateContextI,
 ) (err error) {
 	var (
 		diff = req.getBlobbersSizeDiff(alloc) // size difference
@@ -1074,11 +1065,6 @@ func (sc *StorageSmartContract) reduceAllocation(
 	alloc.Expiration += req.Expiration
 	alloc.Size += req.Size
 
-	bspPart, err := blobberStakePoolPartitions.getPart(balances)
-	if err != nil {
-		return common.NewError("allocation_reducing_failed", err.Error())
-	}
-
 	// 1. update terms
 	for i, ba := range alloc.BlobberAllocs {
 		var b = blobbers[i]
@@ -1088,7 +1074,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 		// update stake pool
 		newOffer := ba.Offer()
 		if newOffer != oldOffer {
-			bspPart.Update(balances, stakePoolKey(spenum.Blobber, ba.BlobberID), func(data []byte) ([]byte, error) {
+			if err := bspPart.Update(balances, stakePoolKey(spenum.Blobber, ba.BlobberID), func(data []byte) ([]byte, error) {
 				sp := newStakePool()
 				_, err := sp.UnmarshalMsg(data)
 				if err != nil {
@@ -1116,13 +1102,9 @@ func (sc *StorageSmartContract) reduceAllocation(
 				emitUpdateBlobber(b, balances)
 
 				return sp.MarshalMsg(nil)
-			})
-
-			//var sp *stakePool
-			//if sp, err = sc.getStakePool(spenum.Blobber, ba.BlobberID, balances); err != nil {
-			//	return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
-			//		err)
-			//}
+			}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1251,8 +1233,14 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	m.tick("get blobbers")
 
+	bspPart, err := blobberStakePoolPartitions.getPart(balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_updating_failed",
+			"could get blobber stake pool partition: %v", err)
+	}
+
 	if len(request.AddBlobberId) > 0 {
-		blobbers, err = alloc.changeBlobbers(balances, bPart,
+		blobbers, err = alloc.changeBlobbers(balances, bPart, bspPart,
 			conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate,
 		)
 		if err != nil {
@@ -1283,17 +1271,19 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// if size or expiration increased, then we use new terms
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
-		err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(balances, bspPart, t, conf, alloc, blobbers, &request)
 	} else if request.Size < 0 || request.Expiration < 0 {
-		err = sc.reduceAllocation(t, conf, alloc, blobbers, &request, balances)
+		err = sc.reduceAllocation(balances, bspPart, t, conf, alloc, blobbers, &request)
 	} else if len(request.AddBlobberId) > 0 {
-		err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(balances, bspPart, t, conf, alloc, blobbers, &request)
 	}
+
 	if err != nil {
 		return "", err
 	}
 
 	m.tick("extend or reduce allocation")
+
 	if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
@@ -1314,6 +1304,11 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	m.tick("save blobber parts")
+
+	if err := bspPart.Save(balances); err != nil {
+		return "", common.NewError("alloc_cancel_failed", err.Error())
+	}
+	m.tick("save blobber stake pool partition")
 
 	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 	if len(request.RemoveBlobberId) > 0 {

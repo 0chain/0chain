@@ -138,7 +138,7 @@ func printTimings(results []suiteResults) {
 		for _, br := range r.results {
 			if br.timings != nil {
 				fmt.Printf(
-					"%v:\n",
+					"\n%v:\n",
 					br.test.Name(),
 				)
 
