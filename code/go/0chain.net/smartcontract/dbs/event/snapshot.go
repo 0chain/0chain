@@ -150,6 +150,8 @@ func (gs *globalSnapshot) update(e []Event) {
 				continue
 			}
 			gs.TotalValueLocked += d.Amount
+			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", d.Amount),
+				zap.Int64("total_amount", gs.TotalValueLocked))
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {
