@@ -12,10 +12,10 @@ import (
 )
 
 type User struct {
-	UserID  string        `json:"user_id" gorm:"primarykey"`
-	TxnHash string        `json:"txn_hash"`
+	gorm.Model
+	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
+	TxnHash string        `json:"txn"`
 	Balance currency.Coin `json:"balance"`
-	Change  currency.Coin `json:"change"`
 	Round   int64         `json:"round"`
 	Nonce   int64         `json:"nonce"`
 }
@@ -42,7 +42,7 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 	}()
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "nonce"}),
+		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce"}),
 	}).Create(&users).Error
 }
 
