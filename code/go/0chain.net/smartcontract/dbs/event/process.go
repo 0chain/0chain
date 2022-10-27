@@ -91,9 +91,9 @@ func (edb *EventDb) ProcessEvents(ctx context.Context, events []Event, round int
 		blockSize: blockSize,
 		doneC:     make(chan struct{}, 1),
 	}
-
+	//logging.Logger.Info("piers ProcessEvents", zap.Int64("round", event.round))
 	select {
-	case edb.eventsChannel <- event:
+	case edb.blockEventChannel <- event:
 	case <-ctx.Done():
 		logging.Logger.Warn("process events - context done",
 			zap.Error(ctx.Err()),
@@ -206,6 +206,9 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		es := <-edb.eventsChannel
+		logging.Logger.Info("piers addEventsWorker",
+			zap.Int64("round", es.round),
+		)
 		edb.addEvents(ctx, es)
 		tse := time.Now()
 		tags := make([]int, 0, len(es.events))

@@ -17,10 +17,12 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store:         db,
-		eventsChannel: make(chan blockEvents, 1),
+		Store:             db,
+		eventsChannel:     make(chan blockEvents, 1),
+		blockEventChannel: make(chan blockEvents),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
+	go eventDb.eventBlockController(common.GetRootContext())
 
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
@@ -30,7 +32,8 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
-	eventsChannel chan blockEvents
+	eventsChannel     chan blockEvents
+	blockEventChannel chan blockEvents
 }
 
 type blockEvents struct {
