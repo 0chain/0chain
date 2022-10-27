@@ -161,6 +161,10 @@ func (p *Partitions) Save(state state.StateContextI) error {
 	return nil
 }
 
+func (p *Partitions) GetChangedNum() int {
+	return p.rs.ChangedNum
+}
+
 // GetItem returns partition item of given partition index and id
 func (p *Partitions) GetItem(state state.StateContextI, id string, v PartitionItem) error {
 	loc, ok, err := p.getItemPartIndex(state, id)

@@ -130,6 +130,23 @@ func BenchmarkTests(
 		return ssc.updateAllocationRequest(t, r, b, updateAllocTimings)
 	}
 
+	updateAllocChangeBlobbersTimings := make(map[string]time.Duration)
+	updateAllocationRequestChangeBlobbersF := func(
+		t *transaction.Transaction,
+		r []byte,
+		b cstate.StateContextI,
+	) (string, error) {
+		return ssc.updateAllocationRequest(t, r, b, updateAllocChangeBlobbersTimings)
+	}
+
+	updateAllocDurationTimings := make(map[string]time.Duration)
+	updateAllocDurationRequestF := func(
+		t *transaction.Transaction,
+		r []byte,
+		b cstate.StateContextI,
+	) (string, error) {
+		return ssc.updateAllocationRequest(t, r, b, updateAllocDurationTimings)
+	}
 	var tests = []BenchTest{
 		// read/write markers
 		{
@@ -223,7 +240,7 @@ func BenchmarkTests(
 			timings: timings,
 		},
 		{
-			name:     "storage.update_allocation_request",
+			name:     "storage.update_allocation_request_full",
 			endpoint: updateAllocationRequestF,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -247,6 +264,56 @@ func BenchmarkTests(
 				return bytes
 			}(),
 			timings: updateAllocTimings,
+		},
+		{
+			name:     "storage.update_allocation_request_change_blobbers",
+			endpoint: updateAllocationRequestChangeBlobbersF,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				ClientID:     data.Clients[0],
+				CreationDate: creationTime - 1,
+				Value:        updateAllocVal,
+			},
+			input: func() []byte {
+				uar := updateAllocationRequest{
+					ID:              getMockAllocationId(0),
+					OwnerID:         data.Clients[0],
+					Size:            0,
+					Expiration:      0,
+					SetImmutable:    true,
+					RemoveBlobberId: getMockBlobberId(1),
+					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 2),
+				}
+				bytes, _ := json.Marshal(&uar)
+				return bytes
+			}(),
+			timings: updateAllocChangeBlobbersTimings,
+		},
+		{
+			name:     "storage.update_allocation_duration_request",
+			endpoint: updateAllocDurationRequestF,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				ClientID:     data.Clients[0],
+				CreationDate: creationTime - 1,
+				Value:        updateAllocVal,
+			},
+			input: func() []byte {
+				uar := updateAllocationRequest{
+					ID:           getMockAllocationId(0),
+					OwnerID:      data.Clients[0],
+					Size:         0,
+					Expiration:   common.Timestamp(50 * 60 * 60),
+					SetImmutable: true,
+				}
+				bytes, _ := json.Marshal(&uar)
+				return bytes
+			}(),
+			timings: updateAllocDurationTimings,
 		},
 		{
 			name:     "storage.finalize_allocation",

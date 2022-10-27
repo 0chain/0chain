@@ -27,6 +27,7 @@ type randomSelector struct {
 	NumPartitions int                     `json:"num_partitions"`
 	Partitions    []*partition            `json:"-" msg:"-"`
 	Callback      ChangePartitionCallback `json:"-" msg:"-"`
+	ChangedNum    int                     `json:"-" msg:"-"`
 }
 
 func newRandomSelector(
@@ -384,6 +385,7 @@ func (rs *randomSelector) Size(state state.StateContextI) (int, error) {
 func (rs *randomSelector) Save(balances state.StateContextI) error {
 	for _, partition := range rs.Partitions {
 		if partition != nil && partition.changed() {
+			rs.ChangedNum++
 			err := partition.save(balances)
 			if err != nil {
 				return err
