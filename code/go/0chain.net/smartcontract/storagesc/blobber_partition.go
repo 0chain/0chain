@@ -42,13 +42,13 @@ func (pp *providerPartitions) get(balances state.StateContextI, id string, v par
 	return part.GetItem(balances, providerKey(id), v)
 }
 
-func (pp *providerPartitions) update(balances state.StateContextI, id string, f func(data []byte) ([]byte, error)) error {
+func (pp *providerPartitions) update(balances state.StateContextI, key string, f func(data []byte) ([]byte, error)) error {
 	part, err := partitions.GetPartitions(balances, pp.name)
 	if err != nil {
 		return err
 	}
 
-	if err := part.Update(balances, providerKey(id), f); err != nil {
+	if err := part.Update(balances, key, f); err != nil {
 		return err
 	}
 
