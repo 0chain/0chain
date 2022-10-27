@@ -206,18 +206,21 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		es := <-edb.eventsChannel
-		edb.addEvents(ctx, es)
-		//tx, err := edb.BeginTransaction()
-		//	if err != nil {
-		//		logging.Logger.Error("error starting transaction", zap.Error(err))
-		//	}
-		edb.parseBlockEvents(es)
-		//if err := tx.CommitTransaction(); err != nil {
-		//	logging.Logger.Error("error commiting block events",
-		//		zap.Int64("block", es.round),
-		//		zap.Error(err),
-		//	)
-		//	}
+
+		tx, err := edb.BeginTransaction()
+		if err != nil {
+			logging.Logger.Error("error starting transaction", zap.Error(err))
+		}
+
+		tx.addEvents(ctx, es)
+		tx.parseBlockEvents(es)
+
+		if err := tx.CommitTransaction(); err != nil {
+			logging.Logger.Error("error committing block events",
+				zap.Int64("block", es.round),
+				zap.Error(err),
+			)
+		}
 		es.doneC <- struct{}{}
 	}
 }
