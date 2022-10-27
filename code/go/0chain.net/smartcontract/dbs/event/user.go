@@ -13,7 +13,7 @@ import (
 
 type User struct {
 	UserID  string        `json:"user_id" gorm:"primarykey"`
-	TxnHash string        `json:"txn"`
+	TxnHash string        `json:"txn_hash"`
 	Balance currency.Coin `json:"balance"`
 	Change  currency.Coin `json:"change"`
 	Round   int64         `json:"round"`
@@ -40,14 +40,6 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 		logging.Logger.Debug("event db - upsert users ", zap.Any("duration", time.Since(ts)),
 			zap.Int("num", len(users)))
 	}()
-	for _, u := range users {
-		b, _ := u.Balance.Int64()
-		c, _ := u.Change.Int64()
-		logging.Logger.Debug("saving user", zap.String("id", u.UserID),
-			zap.Int64("nonce", u.Nonce), zap.Int64("balance", b), zap.Int64("change", c),
-			zap.Int64("round", u.Round))
-
-	}
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce"}),
