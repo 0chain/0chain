@@ -755,10 +755,14 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 }
 
 func (sa *StorageAllocation) saveUpdatedAllocation(
-	blobbers []*StorageNode,
 	balances chainstate.StateContextI,
+	part *partitions.Partitions,
+	blobbers []*StorageNode,
 ) (err error) {
 	for _, b := range blobbers {
+		if err := part.UpdateItem(balances, b); err != nil {
+			return err
+		}
 		emitUpdateBlobber(b, balances)
 	}
 
@@ -1284,7 +1288,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		alloc.IsImmutable = true
 	}
 
-	err = alloc.saveUpdatedAllocation(blobbers, balances)
+	err = alloc.saveUpdatedAllocation(balances, bPart, blobbers)
 	if err != nil {
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
@@ -1295,12 +1299,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 	if len(request.RemoveBlobberId) > 0 {
-		balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, []event.AllocationBlobberTerm{
-			{
-				AllocationID: alloc.ID,
-				BlobberID:    request.RemoveBlobberId,
-			},
-		})
+		balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash,
+			[]event.AllocationBlobberTerm{
+				{
+					AllocationID: alloc.ID,
+					BlobberID:    request.RemoveBlobberId,
+				},
+			})
 	}
 
 	return string(alloc.Encode()), nil
