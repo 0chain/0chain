@@ -144,28 +144,16 @@ func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 	})
 }
 
-func (edb *EventDb) processRewerdUpdate(spus []dbs.StakePoolReward, round int64) error {
-	if err := edb.BeginTransaction(); err != nil {
-		return err
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			_ = edb.RollbackTransaction()
-		}
-	}()
-	if err := edb.providerReward(spus, round); err != nil {
+func (edb *EventDb) processRewardUpdate(stakePoolsRewards []dbs.StakePoolReward, round int64) error {
+	if err := edb.providerReward(stakePoolsRewards, round); err != nil {
 		return err
 	}
 
-	if err := edb.rewardUpdate(spus, round); err != nil {
+	if err := edb.rewardUpdate(stakePoolsRewards, round); err != nil {
 		return err
 	}
 
-	if err := edb.delegateReward(spus, round); err != nil {
-		return err
-	}
-
-	return edb.CommitTransaction()
+	return edb.delegateReward(stakePoolsRewards, round)
 }
 
 func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error {
