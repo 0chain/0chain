@@ -93,7 +93,7 @@ func (edb *EventDb) ProcessEvents(ctx context.Context, events []Event, round int
 	}
 
 	select {
-	case edb.eventsChannel <- event:
+	case edb.blockEventChannel <- event:
 	case <-ctx.Done():
 		logging.Logger.Warn("process events - context done",
 			zap.Error(ctx.Err()),
