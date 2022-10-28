@@ -93,7 +93,7 @@ func (edb *EventDb) ProcessEvents(ctx context.Context, events []Event, round int
 	}
 
 	select {
-	case edb.blockEventChannel <- event:
+	case edb.eventsChannel <- event:
 	case <-ctx.Done():
 		logging.Logger.Warn("process events - context done",
 			zap.Error(ctx.Err()),
@@ -213,7 +213,46 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		}
 
 		tx.addEvents(ctx, es)
-		tx.parseBlockEvents(es)
+		//edb.addEvents(ctx, es)
+		tse := time.Now()
+		tags := make([]int, 0, len(es.events))
+		for _, event := range es.events {
+			var err error = nil
+			switch EventType(event.Type) {
+			case TypeStats:
+				tags = append(tags, event.Tag)
+				ts := time.Now()
+				//err = edb.addStat(event)
+				err = tx.addStat(event)
+				du := time.Since(ts)
+				if du.Milliseconds() > 50 {
+					logging.Logger.Warn("event db save slow - addStat",
+						zap.Any("duration", du),
+						zap.Int("event tag", event.Tag),
+						zap.Int64("round", es.round),
+						zap.String("block", es.block),
+						zap.Int("block size", es.blockSize),
+					)
+				}
+			case TypeError:
+				//err = edb.addError(Error{
+				err = tx.addError(Error{
+					TransactionID: event.TxHash,
+					Error:         fmt.Sprintf("%v", event.Data),
+				})
+			default:
+			}
+			if err != nil {
+				logging.Logger.Error("event could not be processed",
+					zap.Int64("round", es.round),
+					zap.String("block", es.block),
+					zap.Int("block size", es.blockSize),
+					zap.Any("event type", event.Type),
+					zap.Any("event tag", event.Tag),
+					zap.Error(err),
+				)
+			}
+		}
 
 		if err := tx.CommitTransaction(); err != nil {
 			logging.Logger.Error("error committing block events",
@@ -221,87 +260,27 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				zap.Error(err),
 			)
 		}
-		es.doneC <- struct{}{}
-	}
-}
 
-func (edb *EventDb) parseBlockEvents(es blockEvents) {
-	tse := time.Now()
-	tags := make([]int, 0, len(es.events))
-	for _, event := range es.events {
-		tags = edb.parseBlockEvent(event, tags, es.round, es.block, es.blockSize)
-	}
-	due := time.Since(tse)
-	logging.Logger.Debug("event db process",
-		zap.Any("duration", due),
-		zap.Int("events number", len(es.events)),
-		zap.Ints("tags", tags),
-		zap.Int64("round", es.round),
-		zap.String("block", es.block),
-		zap.Int("block size", es.blockSize))
-
-	if due.Milliseconds() > 200 {
-		logging.Logger.Warn("event db work slow",
+		due := time.Since(tse)
+		logging.Logger.Debug("event db process",
 			zap.Any("duration", due),
 			zap.Int("events number", len(es.events)),
 			zap.Ints("tags", tags),
 			zap.Int64("round", es.round),
 			zap.String("block", es.block),
 			zap.Int("block size", es.blockSize))
-	}
-}
 
-func (edb *EventDb) parseBlockEvent(
-	event Event,
-	tags []int,
-	round int64, block string, blockSize int,
-) []int {
-	edb.Store.Get().SavePoint(event.Index)
-	defer func() {
-		if r := recover(); r != nil {
-			edb.Store.Get().RollbackTo(event.Index)
-			logging.Logger.Error("panic processing events",
-				zap.Any("event", event),
-				zap.Any("", r),
-			)
+		if due.Milliseconds() > 200 {
+			logging.Logger.Warn("event db work slow",
+				zap.Any("duration", due),
+				zap.Int("events number", len(es.events)),
+				zap.Ints("tags", tags),
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize))
 		}
-	}()
-
-	var err error = nil
-	switch EventType(event.Type) {
-	case TypeStats:
-		tags = append(tags, event.Tag)
-		ts := time.Now()
-		err = edb.addStat(event)
-		du := time.Since(ts)
-		if du.Milliseconds() > 50 {
-			logging.Logger.Warn("event db save slow - addStat",
-				zap.Any("duration", du),
-				zap.Int("event tag", event.Tag),
-				zap.Int64("round", round),
-				zap.String("block", block),
-				zap.Int("block size", blockSize),
-			)
-		}
-	case TypeError:
-		err = edb.addError(Error{
-			TransactionID: event.TxHash,
-			Error:         fmt.Sprintf("%v", event.Data),
-		})
-
-	default:
+		es.doneC <- struct{}{}
 	}
-	if err != nil {
-		logging.Logger.Error("event could not be processed",
-			zap.Int64("round", round),
-			zap.String("block", block),
-			zap.Int("block size", blockSize),
-			zap.Any("event type", event.Type),
-			zap.Any("event tag", event.Tag),
-			zap.Error(err),
-		)
-	}
-	return tags
 }
 
 func (edb *EventDb) addStat(event Event) error {
