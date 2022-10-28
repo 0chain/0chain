@@ -46,7 +46,7 @@ func Test_stakePool_save(t *testing.T) {
 		sp       = newStakePool()
 		balances = newTestBalances(t, false)
 	)
-	require.NoError(t, sp.save(spenum.Blobber, blobID, balances))
+	sp.emitOfferChangeEvent(spenum.Blobber, blobID, balances)
 	assert.NotZero(t, balances.tree[stakePoolKey(spenum.Blobber, blobID)])
 }
 
@@ -162,7 +162,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	}
 	var usp = stakepool.NewUserStakePools()
 	require.NoError(t, usp.Save(spenum.Blobber, txn.ClientID, ctx))
-	require.NoError(t, stakePool.save(spenum.Blobber, blobberId, ctx))
+	stakePool.emitOfferChangeEvent(spenum.Blobber, blobberId, ctx)
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
 	if err != nil {

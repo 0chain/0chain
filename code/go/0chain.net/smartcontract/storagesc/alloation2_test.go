@@ -538,7 +538,7 @@ func setupMocksFinishAllocation(
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 		}
 		sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
-		require.NoError(t, sp.save(spenum.Blobber, blobber.ID, ctx))
+		sp.emitOfferChangeEvent(spenum.Blobber, blobber.ID, ctx)
 
 		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 		require.NoError(t, err)
@@ -758,7 +758,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		var stakePool = newStakePool()
 		stakePool.Pools["paula"] = &stakepool.DelegatePool{}
 		stakePool.Pools["paula"].Balance = currency.Coin(stakes[i])
-		require.NoError(t, stakePool.save(spenum.Blobber, blobber.ID, ctx))
+		stakePool.emitOfferChangeEvent(spenum.Blobber, blobber.ID, ctx)
 	}
 
 	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scYaml)

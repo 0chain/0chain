@@ -221,7 +221,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	for i, qsp := range stakePools {
-		// TODO: emit sp.Save events
 		if err := bspPart.UpdateItem(balances, qsp); err != nil {
 			return common.NewErrorf("blobber_block_rewards_failed", "saving blobber stake pool: %v", err)
 		}
@@ -235,6 +234,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		bid := qualifyingBlobberIds[i]
 		tag, data := event.NewUpdateBlobberTotalStakeEvent(bid, staked)
 		balances.EmitEvent(event.TypeStats, tag, bid, data)
+
+		qsp.emitOfferChangeEvent(spenum.Blobber, bid, balances)
 	}
 
 	if err := bspPart.Save(balances); err != nil {

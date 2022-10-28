@@ -72,10 +72,6 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
 	}
-	//if err = sp.save(spenum.Validator, t.ClientID, balances); err != nil {
-	//	return "", common.NewError("add_validator_failed",
-	//		"saving stake pool error: "+err.Error())
-	//}
 
 	if err = newValidator.emitAddOrOverwrite(balances); err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
@@ -125,8 +121,7 @@ func (sc *StorageSmartContract) updateValidatorSettings(t *transaction.Transacti
 			"can't get the validator: "+err.Error())
 	}
 
-	spKey := stakePoolKey(spenum.Validator, updatedValidator.ID)
-	if err := validatorStakePoolPartitions.update(balances, spKey, func(sp *stakePool) error {
+	if err := validatorStakePoolPartitions.update(balances, spenum.Validator, updatedValidator.ID, func(sp *stakePool) error {
 		if sp.Settings.DelegateWallet == "" {
 			return errors.New("validator's delegate_wallet is not set")
 		}

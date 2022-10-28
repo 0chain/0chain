@@ -613,7 +613,7 @@ func setupChallengeMocks(
 	}
 	sp.TotalOffers = 100e10
 	sp.Settings.DelegateWallet = blobberId + " wallet"
-	require.NoError(t, sp.save(spenum.Blobber, blobberId, ctx))
+	sp.emitOfferChangeEvent(spenum.Blobber, blobberId, ctx)
 
 	var validatorsSPs []*stakePool
 	for i, validator := range validators {

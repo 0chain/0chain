@@ -256,8 +256,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			return nil, err
 		}
 
-		spKey := stakePoolKey(spenum.Blobber, updatedBlobber.ID)
-		if err := blobberStakePoolPartitions.update(balances, spKey, func(sp *stakePool) error {
+		if err := blobberStakePoolPartitions.update(balances, spenum.Blobber, updatedBlobber.ID, func(sp *stakePool) error {
 			if sp.Settings.DelegateWallet == "" {
 				return errors.New("blobber delegate_wallet is not set")
 			}
@@ -409,18 +408,18 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related read pool: %v", err)
 	}
 
-	spKey := stakePoolKey(spenum.Blobber, commitRead.ReadMarker.BlobberID)
-	if err := blobberStakePoolPartitions.update(balances, spKey, func(sp *stakePool) error {
-		details.Stats.NumReads++
-		alloc.Stats.NumReads++
+	if err := blobberStakePoolPartitions.update(balances, spenum.Blobber, commitRead.ReadMarker.BlobberID,
+		func(sp *stakePool) error {
+			details.Stats.NumReads++
+			alloc.Stats.NumReads++
 
-		resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
-			commitRead.ReadMarker.BlobberID, sp, value, balances)
-		if err != nil {
-			return fmt.Errorf("can't transfer tokens from read pool to stake pool: %v", err)
-		}
-		return nil
-	}); err != nil {
+			resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
+				commitRead.ReadMarker.BlobberID, sp, value, balances)
+			if err != nil {
+				return fmt.Errorf("can't transfer tokens from read pool to stake pool: %v", err)
+			}
+			return nil
+		}); err != nil {
 		return "", common.NewError("commit_blobber_read", err.Error())
 	}
 
@@ -850,7 +849,7 @@ func (sc *StorageSmartContract) insertOrUpdateBlobber(t *transaction.Transaction
 			return err
 		}
 
-		return blobberStakePoolPartitions.update(balances, stakePoolKey(spenum.Blobber, blobber.ID), func(sp *stakePool) error {
+		return blobberStakePoolPartitions.update(balances, spenum.Blobber, blobber.ID, func(sp *stakePool) error {
 			return sc.updateBlobber(t, conf, sp, blobber, savedBlobber, balances)
 		})
 	}

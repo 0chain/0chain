@@ -44,12 +44,14 @@ func (spp *stakePoolPartition) getPart(balances cstate.StateContextI) (*partitio
 	return partitions.GetPartitions(balances, spp.name)
 }
 
-func (spp *stakePoolPartition) update(balances cstate.StateContextI, key string, f func(sp *stakePool) error) error {
+func (spp *stakePoolPartition) update(balances cstate.StateContextI,
+	providerType spenum.Provider, providerID string, f func(sp *stakePool) error) error {
 	part, err := spp.getPart(balances)
 	if err != nil {
 		return err
 	}
 
+	key := stakePoolKey(providerType, providerID)
 	if err := part.Update(balances, key, func(data []byte) ([]byte, error) {
 		sp := newStakePool()
 		_, err := sp.UnmarshalMsg(data)
@@ -61,7 +63,7 @@ func (spp *stakePoolPartition) update(balances cstate.StateContextI, key string,
 			return nil, err
 		}
 
-		// TODO: emit sp.Save events
+		sp.emitOfferChangeEvent(providerType, providerID, balances)
 		return sp.MarshalMsg(nil)
 	}); err != nil {
 		return err

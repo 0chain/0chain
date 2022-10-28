@@ -89,13 +89,8 @@ func (sp *stakePool) Decode(input []byte) error {
 }
 
 // save the stake pool
-func (sp *stakePool) save(providerType spenum.Provider, providerID string,
-	balances chainstate.StateContextI) error {
-	_, err := balances.InsertTrieNode(stakePoolKey(providerType, providerID), sp)
-	if err != nil {
-		return err
-	}
-
+func (sp *stakePool) emitOfferChangeEvent(providerType spenum.Provider, providerID string,
+	balances chainstate.StateContextI) {
 	if sp.isOfferChanged {
 		switch providerType {
 		case spenum.Blobber:
@@ -106,8 +101,6 @@ func (sp *stakePool) save(providerType spenum.Provider, providerID string,
 			// TODO: perhaps implement validator stake update events
 		}
 	}
-
-	return nil
 }
 
 // The cleanStake() is stake amount without delegate pools want to unstake.
@@ -411,7 +404,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 		}
 	}
 
-	// TODO: emit sp.Save events
+	sp.emitOfferChangeEvent(providerType, providerId, balances)
 
 	if err := part.Save(balances); err != nil {
 		return nil, err
@@ -467,8 +460,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"could not get stake pool partition: %v", err)
 	}
 
-	spKey := stakePoolKey(spr.ProviderType, spr.ProviderID)
-	if err := part.update(balances, spKey, func(sp *stakePool) error {
+	if err := part.update(balances, spr.ProviderType, spr.ProviderID, func(sp *stakePool) error {
 		if len(sp.Pools) >= conf.MaxDelegates {
 			return fmt.Errorf("max_delegates reached: %v, no more stake pools allowed",
 				conf.MaxDelegates)
@@ -479,9 +471,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			return fmt.Errorf("stake pool digging error: %v", err)
 		}
 
-		if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
-			return fmt.Errorf("saving stake pool: %v", err)
-		}
+		sp.emitOfferChangeEvent(spr.ProviderType, spr.ProviderID, balances)
 
 		staked, err := sp.stake()
 		if err != nil {
@@ -522,8 +512,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"could not get stake pool partition: %v", err)
 	}
 
-	spKey := stakePoolKey(spr.ProviderType, spr.ProviderID)
-	if err := part.update(balances, spKey, func(sp *stakePool) error {
+	if err := part.update(balances, spr.ProviderType, spr.ProviderID, func(sp *stakePool) error {
 		dp, ok := sp.Pools[t.ClientID]
 		if !ok {
 			return fmt.Errorf("no such delegate pool: %v ", t.ClientID)
