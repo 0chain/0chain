@@ -32,8 +32,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
-	eventsChannel     chan blockEvents
-	blockEventChannel chan blockEvents
+	eventsChannel chan blockEvents
 }
 
 func (edb *EventDb) BeginTransaction() (*EventDb, error) {
