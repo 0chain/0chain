@@ -12,8 +12,9 @@ import (
 )
 
 type User struct {
-	UserID  string        `json:"user_id" gorm:"primarykey"`
-	TxnHash string        `json:"txn"`
+	gorm.Model
+	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
+	TxnHash string        `json:"txn_hash"`
 	Balance currency.Coin `json:"balance"`
 	Change  currency.Coin `json:"change"`
 	Round   int64         `json:"round"`

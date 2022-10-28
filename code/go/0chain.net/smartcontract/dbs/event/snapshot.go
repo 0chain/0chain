@@ -103,6 +103,7 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 
 func (gs *globalSnapshot) update(e []Event) {
 	for _, event := range e {
+		logging.Logger.Debug("update snapshot", zap.Int("tag", event.Tag), zap.Int64("block_number", event.BlockNumber))
 		switch EventTag(event.Tag) {
 		case TagToChallengePool:
 			cp, ok := fromEvent[ChallengePoolLock](event.Data)
@@ -132,7 +133,7 @@ func (gs *globalSnapshot) update(e []Event) {
 			logging.Logger.Info("snapshot update TagAddMint",
 				zap.Any("total mint and zcn mint", gs))
 		case TagBurn:
-			m, ok := fromEvent[state.Mint](event.Data)
+			m, ok := fromEvent[state.Burn](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
@@ -149,6 +150,8 @@ func (gs *globalSnapshot) update(e []Event) {
 				continue
 			}
 			gs.TotalValueLocked += d.Amount
+			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", d.Amount),
+				zap.Int64("total_amount", gs.TotalValueLocked))
 		case TagUnlockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {

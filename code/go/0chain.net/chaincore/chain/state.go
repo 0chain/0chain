@@ -763,7 +763,6 @@ func userToState(u *event.User) *state.State {
 func stateToUser(clientID string, s *state.State, change currency.Coin) *event.User {
 	return &event.User{
 		UserID:  clientID,
-		Change:  change,
 		TxnHash: s.TxnHash,
 		Balance: s.Balance,
 		Round:   s.Round,
@@ -787,7 +786,7 @@ func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) error {
 		return nil
 	}
 
-	sc.EmitEvent(event.TypeStats, event.TagAddMint, "", usr)
+	sc.EmitEvent(event.TypeStats, event.TagAddMint, usr.UserID, usr)
 
 	return nil
 }
@@ -796,7 +795,7 @@ func (c *Chain) emitSendTransferEvent(sc bcstate.StateContextI, usr *event.User)
 		return nil
 	}
 
-	sc.EmitEvent(event.TypeStats, event.TagSendTransfer, "", usr)
+	sc.EmitEvent(event.TypeStats, event.TagSendTransfer, usr.UserID, usr)
 
 	return nil
 }
@@ -805,7 +804,7 @@ func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.Us
 		return nil
 	}
 
-	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, "", usr)
+	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, usr.UserID, usr)
 
 	return nil
 }

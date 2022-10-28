@@ -120,7 +120,7 @@ func TestTagStakePoolReward(t *testing.T) {
 		"pool_id_2": 2,
 	}
 	data, err := json.Marshal(&spr)
-	eventDb.addSmartContractEvent(Event{
+	eventDb.addStat(Event{
 		Type:  int(TypeStats),
 		Tag:   int(TagStakePoolReward),
 		Index: spr.ProviderId,

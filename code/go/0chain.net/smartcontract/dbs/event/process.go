@@ -325,7 +325,6 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 		Snapshot: *s,
 	}
 
-	round = e.events[0].BlockNumber
 	edb.updateBlobberAggregate(round, period, gs)
 	gs.update(e.events)
 
@@ -424,7 +423,16 @@ func (edb *EventDb) addStat(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrUpdateUsers(*users)
+		err := edb.addOrUpdateUsers(*users)
+		if err != nil {
+			for _, u := range *users {
+				b, _ := u.Balance.Int64()
+				logging.Logger.Debug("saving user", zap.String("id", u.UserID),
+					zap.Int64("nonce", u.Nonce), zap.Int64("balance", b),
+					zap.Int64("round", u.Round), zap.Error(err))
+			}
+		}
+		return err
 	case TagAddTransactions:
 		txns, ok := fromEvent[[]Transaction](event.Data)
 		if !ok {
