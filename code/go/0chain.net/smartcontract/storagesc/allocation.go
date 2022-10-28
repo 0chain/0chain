@@ -1348,21 +1348,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		alloc.Name = request.Name
 	}
 
-	// adjust expiration
-	var newExpiration = alloc.Expiration + request.Expiration
-	// close allocation now
-
-	if newExpiration <= t.CreationDate {
-		return sc.closeAllocation(t, alloc, balances) // update alloc tx, expir
-	}
-
-	// an allocation can't be shorter than configured in SC
-	// (prevent allocation shortening for entire period)
-	if newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
-		return "", common.NewError("allocation_updating_failed",
-			"allocation duration becomes too short")
-	}
-
 	var newSize = request.Size + alloc.Size
 	if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
 		return "", common.NewError("allocation_updating_failed",
@@ -1434,6 +1419,21 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	} else {
 		if request.Expiration != 0 {
+			// adjust expiration
+			var newExpiration = alloc.Expiration + request.Expiration
+			// close allocation now
+
+			if newExpiration <= t.CreationDate {
+				return sc.closeAllocation(t, alloc, balances) // update alloc tx, expir
+			}
+
+			// an allocation can't be shorter than configured in SC
+			// (prevent allocation shortening for entire period)
+			if newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
+				return "", common.NewErrorf("allocation_updating_failed",
+					"allocation duration becomes too short: exp: %v, min:%v", newExpiration-t.CreationDate, toSeconds(conf.MinAllocDuration))
+			}
+
 			if request.Expiration > 0 {
 				err = sc.extendDuration(balances, bspPart, t, conf, alloc, &request)
 			} else {
