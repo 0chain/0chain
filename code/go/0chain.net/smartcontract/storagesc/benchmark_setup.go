@@ -91,10 +91,12 @@ func addMockAllocation(
 		sa.Curators = append(sa.Curators, clients[j])
 	}
 
-	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
-	for j := 0; j < viper.GetInt(sc.NumBlobbersPerAllocation); j++ {
-		bIndex := startBlobbers + j
-		bId := getMockBlobberId(bIndex)
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	selected := make(map[int]struct{})
+	selected[0] = struct{}{}
+
+	selectBlobber := func(i int) {
+		bId := getMockBlobberId(i)
 		ba := BlobberAllocation{
 			BlobberID:      bId,
 			AllocationID:   sa.ID,
@@ -105,6 +107,22 @@ func addMockAllocation(
 			AllocationRoot: encryption.Hash("allocation root"),
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
+	}
+
+	selectBlobber(0)
+
+	//startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
+	for j := 0; j < viper.GetInt(sc.NumBlobbersPerAllocation); j++ {
+		//bIndex := startBlobbers + j
+		var bIndex int
+		for {
+			bIndex = r.Intn(viper.GetInt(sc.NumBlobbers))
+			if _, ok := selected[bIndex]; !ok {
+				selected[bIndex] = struct{}{}
+				break
+			}
+		}
+		selectBlobber(bIndex)
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
