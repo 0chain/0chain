@@ -147,6 +147,16 @@ func BenchmarkTests(
 	) (string, error) {
 		return ssc.updateAllocationRequest(t, r, b, updateAllocDurationTimings)
 	}
+
+	updateAllocResizeTimings := make(map[string]time.Duration)
+	updateAllocResizeRequestF := func(
+		t *transaction.Transaction,
+		r []byte,
+		b cstate.StateContextI,
+	) (string, error) {
+		return ssc.updateAllocationRequest(t, r, b, updateAllocResizeTimings)
+	}
+
 	var tests = []BenchTest{
 		// read/write markers
 		{
@@ -264,6 +274,30 @@ func BenchmarkTests(
 				return bytes
 			}(),
 			timings: updateAllocTimings,
+		},
+		{
+			name:     "storage.update_allocation_request_resize",
+			endpoint: updateAllocResizeRequestF,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				ClientID:     data.Clients[0],
+				CreationDate: creationTime - 1,
+				Value:        updateAllocVal,
+			},
+			input: func() []byte {
+				uar := updateAllocationRequest{
+					ID:           getMockAllocationId(0),
+					OwnerID:      data.Clients[0],
+					Size:         10000000,
+					Expiration:   0,
+					SetImmutable: true,
+				}
+				bytes, _ := json.Marshal(&uar)
+				return bytes
+			}(),
+			timings: updateAllocResizeTimings,
 		},
 		{
 			name:     "storage.update_allocation_request_change_blobbers",
