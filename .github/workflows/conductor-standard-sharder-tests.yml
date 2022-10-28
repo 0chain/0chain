@@ -1,4 +1,4 @@
-name: Conductor Standard Tests
+name: CONDUCTOR SHARDER STANDARD TESTS
 
 on:
   schedule:
@@ -11,8 +11,8 @@ env:
   ZCHAIN_BUILDRUN: zchain_run_base
 
 jobs:
-  conductor_build:
-    name: CONDUCTOR-BUILD
+  conductor_image_build:
+    name: CONDUCTOR-IMAGE-BUILDS
     runs-on: [self-hosted, arc-runner]
 
     steps:
@@ -43,6 +43,12 @@ jobs:
       run: |
         bash ./docker.local/bin/setup.network.sh || true
 
+    - name: Docker Compose Setup.
+      run: |
+        curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+      
     - name: Building Base Images
       run: |
         bash ./docker.local/bin/build.base.sh
@@ -73,10 +79,12 @@ jobs:
       with:
         go-version: '1.18'
 
-    - name: Running Standard Tests for Miners.
+    - name: Docker Compose Setup.
       run: |
-        bash ./docker.local/bin/start.conductor.sh miners
-
+        curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+      
     - name: Running Standard Tests for Sharders.
       run: |
         bash ./docker.local/bin/start.conductor.sh sharders
