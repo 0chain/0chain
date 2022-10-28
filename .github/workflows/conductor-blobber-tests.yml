@@ -9,13 +9,19 @@ on:
 jobs:
   conductor_blobbers_tests:
     name: CONDUCTOR-BLOBBERS-TESTS
-    runs-on: [self-hosted, conductor-test01]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - name: Go 1.18 setup.
       uses: actions/setup-go@v2
       with:
         go-version: '1.18'
+      
+    - name: Docker Compose Setup.
+      run: |
+        curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
 
     - name: Get Branch
       id: get_branch
@@ -149,7 +155,7 @@ jobs:
 
   upload_artifacts:
     name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test01]
+    runs-on: [self-hosted, arc-runner]
 
     if: always()
     needs: [conductor_blobbers_tests]
