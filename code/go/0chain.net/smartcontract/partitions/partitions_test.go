@@ -31,7 +31,7 @@ func TestPartitionsSave(t *testing.T) {
 	require.NoError(t, err)
 
 	var v testItem
-	err = p1.GetItem(balances, "k15", &v)
+	_, err = p1.GetItem(balances, "k15", &v)
 	require.NoError(t, err)
 	require.Equal(t, "v15", v.V)
 
@@ -49,7 +49,7 @@ func TestPartitionsSave(t *testing.T) {
 	require.Equal(t, 2, p3.rs.NumPartitions)
 
 	var vv testItem
-	err = p3.GetItem(balances, "k10", &vv)
+	_, err = p3.GetItem(balances, "k10", &vv)
 	require.NoError(t, err)
 	require.Equal(t, "vv10", vv.V)
 }
@@ -98,7 +98,7 @@ func Test_randomSelector_UpdateRandomItems(t *testing.T) {
 
 	for _, id := range ids {
 		var item testItem
-		err = rs3.GetItem(balances, id, &item)
+		_, err = rs3.GetItem(balances, id, &item)
 		require.NoError(t, err)
 		fmt.Println(item)
 	}

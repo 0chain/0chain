@@ -253,9 +253,15 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			"could not get blobbers partition: %v", err)
 	}
 
-	blobbers, err := getBlobbersByIDs(balances, bPart, request.Blobbers)
+	blobbers, partNum, err := getBlobbersByIDs(balances, bPart, request.Blobbers)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "get blobbers failed: %v", err)
+	}
+
+	maxParts := conf.MaxBlobbersPerAllocation / blobbersPartitionSize
+	if partNum > maxParts {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"should not select blobbers from %d partitions, max: %d", partNum, maxParts)
 	}
 
 	m.tick("get blobbers")
@@ -620,25 +626,28 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 }
 
 // get blobbers by IDs concurrently, return error if any of them could not be acquired.
-func getBlobbersByIDs(balances chainstate.StateContextI, part *partitions.Partitions, ids []string) ([]*StorageNode, error) {
+func getBlobbersByIDs(balances chainstate.StateContextI, part *partitions.Partitions, ids []string) ([]*StorageNode, int, error) {
 	blobbers := make([]*StorageNode, 0, len(ids))
+	partMap := make(map[int]struct{})
 	for _, id := range ids {
 		b := new(StorageNode)
-		if err := part.GetItem(balances, providerKey(id), b); err != nil {
-			return nil, err
+		loc, err := part.GetItem(balances, providerKey(id), b)
+		if err != nil {
+			return nil, 0, err
 		}
 
+		partMap[loc] = struct{}{}
 		blobbers = append(blobbers, b)
 	}
 
-	return blobbers, nil
+	return blobbers, len(partMap), nil
 }
 
 func getStakePoolsByIDs(balances chainstate.StateContextI, part *partitions.Partitions, ids []string, providerType spenum.Provider) (map[string]*stakePool, error) {
 	stakePoolMap := make(map[string]*stakePool, len(ids))
 	for _, id := range ids {
 		sp := newStakePool()
-		if err := part.GetItem(balances, stakePoolKey(providerType, id), sp); err != nil {
+		if _, err := part.GetItem(balances, stakePoolKey(providerType, id), sp); err != nil {
 			return nil, err
 		}
 		stakePoolMap[id] = sp
@@ -683,7 +692,8 @@ func (sc *StorageSmartContract) getAllocationBlobbers(balances chainstate.StateC
 		ids = append(ids, ba.BlobberID)
 	}
 
-	return getBlobbersByIDs(balances, bPart, ids)
+	blobbers, _, err = getBlobbersByIDs(balances, bPart, ids)
+	return
 }
 
 // closeAllocation making it expired; the allocation will be alive the
@@ -1800,7 +1810,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	var sps []*stakePool
 	for _, d := range alloc.BlobberAllocs {
 		sp := newStakePool()
-		if err := bspPart.GetItem(balances, stakePoolKey(spenum.Blobber, d.BlobberID), sp); err != nil {
+		if _, err := bspPart.GetItem(balances, stakePoolKey(spenum.Blobber, d.BlobberID), sp); err != nil {
 			return "", common.NewError("fini_alloc_failed", err.Error())
 		}
 

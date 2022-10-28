@@ -41,7 +41,7 @@ func (_ *StorageSmartContract) getBlobber(
 	blobberID string,
 ) (blobber *StorageNode, err error) {
 	b := new(StorageNode)
-	if err := part.GetItem(balances, providerKey(blobberID), b); err != nil {
+	if _, err := part.GetItem(balances, providerKey(blobberID), b); err != nil {
 		return nil, err
 	}
 
@@ -458,7 +458,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			}
 
 			var brn BlobberRewardNode
-			if err := parts.GetItem(balances, blobber.ID, &brn); err != nil {
+			if _, err := parts.GetItem(balances, blobber.ID, &brn); err != nil {
 				return nil, fmt.Errorf("cannot fetch blobber node item from partition: %v", err)
 			}
 
@@ -713,7 +713,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 
 		var brn BlobberRewardNode
-		if err := parts.GetItem(balances, blobber.ID, &brn); err != nil {
+		if _, err := parts.GetItem(balances, blobber.ID, &brn); err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"cannot fetch blobber node item from partition: %v", err)
 		}
@@ -846,7 +846,7 @@ func (sc *StorageSmartContract) insertOrUpdateBlobber(t *transaction.Transaction
 
 		// update item
 		savedBlobber := new(StorageNode)
-		if err := bPart.GetItem(balances, providerKey(blobber.ID), savedBlobber); err != nil {
+		if _, err := bPart.GetItem(balances, providerKey(blobber.ID), savedBlobber); err != nil {
 			return err
 		}
 

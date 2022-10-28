@@ -459,7 +459,7 @@ func (msc *MinerSmartContract) reduceShardersList(
 	for _, keepNode := range keep.Nodes {
 		sn := NewMinerNode()
 		sn.ID = keepNode.ID
-		if err := shardersPart.GetItem(balances, sn.GetKey(), sn); err != nil {
+		if _, err := shardersPart.GetItem(balances, sn.GetKey(), sn); err != nil {
 			return nil, common.NewErrorf("reduce sharders", "could not find sharder: %v", err)
 		}
 

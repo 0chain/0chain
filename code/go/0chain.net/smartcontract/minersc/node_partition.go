@@ -64,7 +64,8 @@ func (np *nodePartition) add(balances state.StateContextI, n *MinerNode) error {
 func (np *nodePartition) get(balances state.StateContextI, key string) (*MinerNode, error) {
 	var n MinerNode
 	if err := partitions.View(balances, np.name, func(part *partitions.Partitions) error {
-		return part.GetItem(balances, key, &n)
+		_, err := part.GetItem(balances, key, &n)
+		return err
 	}); err != nil {
 		return nil, err
 	}

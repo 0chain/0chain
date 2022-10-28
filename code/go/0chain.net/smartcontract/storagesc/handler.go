@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -451,7 +452,30 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		zap.Int64("last_health_check", int64(balances.Now())),
 	)
 
-	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now())
+	bPart, err := blobbersPartition.getPart(balances)
+	if err != nil {
+		return nil, fmt.Errorf("could not get blobbers partition: %v", err)
+	}
+
+	partNum := bPart.Num()
+
+	// select random partition
+	var (
+		r  = rand.New(rand.NewSource(time.Now().Unix()))
+		rp = r.Perm(partNum)
+		n  = numberOfBlobbers / blobbersPartitionSize
+	)
+
+	if n > 0 {
+		if numberOfBlobbers%blobbersPartitionSize > 0 {
+			n++
+		}
+	} else {
+		n++
+	}
+
+	rp = rp[:n]
+	blobberIDs, err := edb.GetBlobbersFromParams(allocation, rp, limit, balances.Now())
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
@@ -2506,7 +2530,7 @@ func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *h
 	var total int64
 	for _, blobber := range blobbers {
 		sp := newStakePool()
-		if err := spPart.GetItem(sctx, stakePoolKey(spenum.Blobber, blobber), sp); err != nil {
+		if _, err := spPart.GetItem(sctx, stakePoolKey(spenum.Blobber, blobber), sp); err != nil {
 			err := common.NewErrInternal("cannot get stake pool" + err.Error())
 			common.Respond(w, r, nil, err)
 			return

@@ -385,7 +385,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 		sp           = newStakePool()
 		addStakePool bool
 	)
-	if err := part.GetItem(balances, spKey, sp); err != nil {
+	if _, err := part.GetItem(balances, spKey, sp); err != nil {
 		if !partitions.ErrItemNotFound(err) {
 			return nil, err
 		}

@@ -978,7 +978,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 
 	sp := newStakePool()
-	if err := spPart.GetItem(balances, stakePoolKey(spenum.Blobber, addedBlobber.ID), sp); err != nil {
+	if _, err := spPart.GetItem(balances, stakePoolKey(spenum.Blobber, addedBlobber.ID), sp); err != nil {
 		return nil, fmt.Errorf("can't get blobber stake pool: %v", err)
 	}
 

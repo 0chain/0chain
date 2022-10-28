@@ -166,23 +166,23 @@ func (p *Partitions) GetChangedNum() int {
 }
 
 // GetItem returns partition item of given partition index and id
-func (p *Partitions) GetItem(state state.StateContextI, id string, v PartitionItem) error {
+func (p *Partitions) GetItem(state state.StateContextI, id string, v PartitionItem) (int, error) {
 	loc, ok, err := p.getItemPartIndex(state, id)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if !ok {
-		return common.NewError(errItemNotFoundCode, id)
+		return 0, common.NewError(errItemNotFoundCode, id)
 	}
 
 	if err := p.rs.GetItem(state, loc, id, v); err != nil {
-		return err
+		return 0, err
 	}
 
 	p.loadLocations(loc)
 
-	return nil
+	return loc, nil
 }
 
 // UpdateItem updates item on given partition index

@@ -238,7 +238,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 	}
 
 	nd := NewMinerNode()
-	if err := part.GetItem(mrh.GetStateContextI(), GetNodeKey(id), nd); err != nil {
+	if _, err := part.GetItem(mrh.GetStateContextI(), GetNodeKey(id), nd); err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get node"))
 		return
 	}

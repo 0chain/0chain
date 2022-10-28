@@ -78,7 +78,7 @@ func (spp *stakePoolPartition) get(balances cstate.StateContextI, pty spenum.Pro
 	}
 
 	sp := newStakePool()
-	if err := part.GetItem(balances, key, sp); err != nil {
+	if _, err := part.GetItem(balances, key, sp); err != nil {
 		return nil, err
 	}
 
@@ -94,7 +94,7 @@ func (spp *stakePoolPartition) updateArray(balances cstate.StateContextI, keys [
 	sps := make([]*stakePool, 0, len(keys))
 	for _, k := range keys {
 		sp := newStakePool()
-		if err := part.GetItem(balances, k, sp); err != nil {
+		if _, err := part.GetItem(balances, k, sp); err != nil {
 			return err
 		}
 		sps = append(sps, sp)

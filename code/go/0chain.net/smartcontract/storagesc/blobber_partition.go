@@ -15,6 +15,10 @@ var (
 	blobbersPartition     = newProviderPartition(blobbersPartitionName)
 )
 
+const (
+	blobbersPartitionSize = 10
+)
+
 func init() {
 	// register blobber stake pool partitions
 	regInitPartsFunc(func(state state.StateContextI) error {
@@ -39,7 +43,8 @@ func (pp *providerPartitions) get(balances state.StateContextI, id string, v par
 		return err
 	}
 
-	return part.GetItem(balances, providerKey(id), v)
+	_, err = part.GetItem(balances, providerKey(id), v)
+	return err
 }
 
 func (pp *providerPartitions) update(balances state.StateContextI, key string, f func(data []byte) ([]byte, error)) error {

@@ -120,7 +120,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	for i, br := range blobberRewards {
 		sp := newStakePool()
-		if err := bspPart.GetItem(balances, stakePoolKey(spenum.Blobber, br.ID), sp); err != nil {
+		if _, err := bspPart.GetItem(balances, stakePoolKey(spenum.Blobber, br.ID), sp); err != nil {
 			return common.NewError("blobber_block_rewards_failed", err.Error())
 		}
 

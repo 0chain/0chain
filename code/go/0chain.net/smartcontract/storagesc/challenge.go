@@ -586,7 +586,7 @@ func (sc *StorageSmartContract) challengePassed(
 	}
 
 	var brStats BlobberRewardNode
-	if err := ongoingParts.GetItem(balances, t.ClientID, &brStats); err != nil {
+	if _, err := ongoingParts.GetItem(balances, t.ClientID, &brStats); err != nil {
 		return "", common.NewErrorf("verify_challenge",
 			"can't get blobber reward from partition list: %v", err.Error())
 	}
