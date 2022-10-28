@@ -13,7 +13,7 @@ env:
 jobs:
   conductor_build:
     name: CONDUCTOR-BUILD
-    runs-on: [self-hosted, conductor-test01]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
@@ -62,7 +62,7 @@ jobs:
 
   conductor_standard_tests:
     name: CONDUCTOR-STANDARD-TESTS
-    runs-on: [self-hosted, conductor-test01]
+    runs-on: [self-hosted, arc-runner]
 
     needs:
     - conductor_build
@@ -83,7 +83,7 @@ jobs:
 
   upload_artifacts:
     name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test01]
+    runs-on: [self-hosted, arc-runner]
 
     if: always()
     needs: [conductor_standard_tests]
@@ -113,19 +113,19 @@ jobs:
       run: |
         rm -rf ./*
 
-  notify_slack:
-    runs-on: [self-hosted, conductor-test01]
-    needs: [conductor_standard_tests]
-    if: always() && (needs.conductor_standard_tests.result == 'failure')
-    steps:
-      - name: "Check if should send slack notification"
-        id: send-slack-notification
-        uses: peter-murray/value-as-flag-action@0.0.1
-        with:
-          value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
-          default: false
+  # notify_slack:
+  #   runs-on: [self-hosted, conductor-test01]
+  #   needs: [conductor_standard_tests]
+  #   if: always() && (needs.conductor_standard_tests.result == 'failure')
+  #   steps:
+  #     - name: "Check if should send slack notification"
+  #       id: send-slack-notification
+  #       uses: peter-murray/value-as-flag-action@0.0.1
+  #       with:
+  #         value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+  #         default: false
 
-      - name: "Notify Slack"
-        if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
-        run: |
-          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> Conductor tests FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+  #     - name: "Notify Slack"
+  #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+  #       run: |
+  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> Conductor tests FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
