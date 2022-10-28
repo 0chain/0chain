@@ -19,12 +19,10 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store:             db,
-		eventsChannel:     make(chan blockEvents, 1),
-		blockEventChannel: make(chan blockEvents),
+		Store:         db,
+		eventsChannel: make(chan blockEvents, 1),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
-	go eventDb.eventBlockController(common.GetRootContext())
 
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
