@@ -838,7 +838,8 @@ func (sc *StorageSmartContract) insertOrUpdateBlobber(t *transaction.Transaction
 		return err
 	}
 
-	if err := bPart.AddItem(balances, blobber); err != nil {
+	loc, err := bPart.AddItem(balances, blobber)
+	if err != nil {
 		if !partitions.ErrItemExist(err) {
 			return err
 		}
@@ -890,7 +891,7 @@ func (sc *StorageSmartContract) insertOrUpdateBlobber(t *transaction.Transaction
 	balances.EmitEvent(event.TypeStats, tag, t.ClientID, data)
 
 	// update the list
-	if err := emitAddBlobber(blobber, sp, balances); err != nil {
+	if err := emitAddBlobber(blobber, loc, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 

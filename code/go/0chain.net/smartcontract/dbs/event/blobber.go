@@ -22,6 +22,8 @@ type Blobber struct {
 	BlobberID string `json:"id" gorm:"uniqueIndex"`
 	BaseURL   string `json:"url" gorm:"uniqueIndex"`
 
+	Partition int `json:"partition" gorm:"partition"`
+
 	// geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`

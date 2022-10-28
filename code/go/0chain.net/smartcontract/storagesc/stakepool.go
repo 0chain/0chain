@@ -402,7 +402,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 
 	if addStakePool {
-		if err := part.AddItem(balances, sp); err != nil {
+		if _, err := part.AddItem(balances, sp); err != nil {
 			return nil, err
 		}
 	} else {

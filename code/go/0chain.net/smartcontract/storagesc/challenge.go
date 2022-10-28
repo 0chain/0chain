@@ -561,7 +561,7 @@ func (sc *StorageSmartContract) challengePassed(
 			dataRead = blobber.DataReadLastRewardRound
 		}
 
-		err := ongoingParts.AddItem(
+		_, err := ongoingParts.AddItem(
 			balances,
 			&BlobberRewardNode{
 				ID:                blobber.ID,

@@ -99,7 +99,7 @@ func AddMockNodes(
 			}
 		}
 
-		err = mp.AddItem(balances, newNode)
+		_, err = mp.AddItem(balances, newNode)
 		if err != nil {
 			panic(err)
 		}

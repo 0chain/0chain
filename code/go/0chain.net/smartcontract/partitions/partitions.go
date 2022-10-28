@@ -98,20 +98,20 @@ func (p *Partitions) GetName() string {
 }
 
 // AddItem adds a partition item to parititons
-func (p *Partitions) AddItem(state state.StateContextI, item PartitionItem) error {
+func (p *Partitions) AddItem(state state.StateContextI, item PartitionItem) (int, error) {
 	// duplicate item checking
 	_, ok, err := p.getItemPartIndex(state, item.GetID())
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if ok {
-		return common.NewError(errItemExistCode, item.GetID())
+		return 0, common.NewError(errItemExistCode, item.GetID())
 	}
 
 	idx, err := p.rs.Add(state, item)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	p.toAdd = append(p.toAdd, idIndex{
 		ID:  item.GetID(),
@@ -119,7 +119,7 @@ func (p *Partitions) AddItem(state state.StateContextI, item PartitionItem) erro
 	})
 
 	p.loadLocations(idx)
-	return nil
+	return idx, nil
 }
 
 func (p *Partitions) loadLocations(idx int) {

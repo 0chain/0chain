@@ -35,7 +35,7 @@ func partitionsChallengeReadyBlobbersAdd(state state.StateContextI,
 		return fmt.Errorf("could not get challenge ready partitions, %v", err)
 	}
 
-	err = challengeReadyParts.AddItem(state, &ChallengeReadyBlobber{
+	_, err = challengeReadyParts.AddItem(state, &ChallengeReadyBlobber{
 		BlobberID: blobberID,
 		Weight:    weight,
 	})

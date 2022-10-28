@@ -91,12 +91,10 @@ func addMockAllocation(
 		sa.Curators = append(sa.Curators, clients[j])
 	}
 
-	r := rand.New(rand.NewSource(time.Now().Unix()))
-	selected := make(map[int]struct{})
-	selected[0] = struct{}{}
-
-	selectBlobber := func(i int) {
-		bId := getMockBlobberId(i)
+	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
+	for j := 0; j < viper.GetInt(sc.NumBlobbersPerAllocation); j++ {
+		bIndex := startBlobbers + j
+		bId := getMockBlobberId(bIndex)
 		ba := BlobberAllocation{
 			BlobberID:      bId,
 			AllocationID:   sa.ID,
@@ -107,22 +105,6 @@ func addMockAllocation(
 			AllocationRoot: encryption.Hash("allocation root"),
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
-	}
-
-	selectBlobber(0)
-
-	//startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
-	for j := 0; j < viper.GetInt(sc.NumBlobbersPerAllocation); j++ {
-		//bIndex := startBlobbers + j
-		var bIndex int
-		for {
-			bIndex = r.Intn(viper.GetInt(sc.NumBlobbers))
-			if _, ok := selected[bIndex]; !ok {
-				selected[bIndex] = struct{}{}
-				break
-			}
-		}
-		selectBlobber(bIndex)
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
@@ -209,7 +191,7 @@ func AddMockChallenges(
 			continue
 		}
 
-		err := challengeReadyBlobbersPart.AddItem(balances, &ChallengeReadyBlobber{
+		_, err := challengeReadyBlobbersPart.AddItem(balances, &ChallengeReadyBlobber{
 			BlobberID: ch.BlobberID,
 		})
 		if err != nil {
@@ -247,7 +229,7 @@ func AddMockChallenges(
 		}
 		for allocID := range val {
 
-			err = aPart.AddItem(balances, &BlobberAllocationNode{
+			_, err = aPart.AddItem(balances, &BlobberAllocationNode{
 				ID: allocID,
 			})
 			if err != nil {
@@ -402,7 +384,7 @@ func AddMockBlobbers(
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
-		if err := bPart.AddItem(balances, blobber); err != nil {
+		if _, err := bPart.AddItem(balances, blobber); err != nil {
 			panic(err)
 		}
 
@@ -442,7 +424,7 @@ func AddMockBlobbers(
 		}
 
 		if i < numRewardPartitionBlobbers {
-			err = partition.AddItem(balances,
+			_, err = partition.AddItem(balances,
 				&BlobberRewardNode{
 					ID:                blobber.ID,
 					SuccessChallenges: 10,
@@ -517,7 +499,7 @@ func AddMockValidators(
 			_ = eventDb.Store.Get().Create(&validators)
 		}
 
-		if err := valParts.AddItem(balances, &vpn); err != nil {
+		if _, err := valParts.AddItem(balances, &vpn); err != nil {
 			panic(err)
 		}
 	}
@@ -616,7 +598,7 @@ func GetMockValidatorStakePools(
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
 		}
 
-		err := part.AddItem(balances, sp)
+		_, err := part.AddItem(balances, sp)
 		if err != nil {
 			panic(err)
 		}
@@ -637,7 +619,7 @@ func SaveMockStakePools(
 	}
 
 	for _, sp := range sps {
-		err := part.AddItem(balances, sp)
+		_, err := part.AddItem(balances, sp)
 		if err != nil {
 			panic(err)
 		}

@@ -55,7 +55,8 @@ func newNodePartition(name string) *nodePartition {
 
 func (np *nodePartition) add(balances state.StateContextI, n *MinerNode) error {
 	return partitions.Update(balances, np.name, func(part *partitions.Partitions) error {
-		return part.AddItem(balances, n)
+		_, err := part.AddItem(balances, n)
+		return err
 	})
 
 }

@@ -20,7 +20,7 @@ func TestPartitionsSave(t *testing.T) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 		it := testItem{ID: k, V: v}
-		err = parts.AddItem(balances, &it)
+		_, err = parts.AddItem(balances, &it)
 		require.NoError(t, err)
 	}
 
@@ -64,7 +64,7 @@ func Test_randomSelector_UpdateRandomItems(t *testing.T) {
 		v := fmt.Sprintf("v%d", i)
 		it := testItem{ID: k, V: v}
 		items = append(items, it)
-		err = rs.AddItem(balances, &it)
+		_, err = rs.AddItem(balances, &it)
 		require.NoError(t, err)
 	}
 

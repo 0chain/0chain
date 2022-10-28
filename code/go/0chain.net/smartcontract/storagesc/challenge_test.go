@@ -90,7 +90,7 @@ func TestAddChallenge(t *testing.T) {
 
 		blobberMap[blobberID] = blobberAllocs[0]
 
-		err = challengeReadyParts.AddItem(
+		_, err = challengeReadyParts.AddItem(
 			balances,
 			&ChallengeReadyBlobber{
 				BlobberID: blobberID,

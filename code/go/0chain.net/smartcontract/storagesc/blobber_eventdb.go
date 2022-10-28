@@ -40,7 +40,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 	return nil
 }
 
-func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
+func emitAddBlobber(sn *StorageNode, partLoc int, sp *stakePool, balances cstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
@@ -49,6 +49,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	data := &event.Blobber{
 		BlobberID:        sn.ID,
 		BaseURL:          sn.BaseURL,
+		Partition:        partLoc,
 		Latitude:         sn.Geolocation.Latitude,
 		Longitude:        sn.Geolocation.Longitude,
 		ReadPrice:        sn.Terms.ReadPrice,
