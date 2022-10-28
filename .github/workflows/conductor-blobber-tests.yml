@@ -38,6 +38,8 @@ jobs:
     - name: Docker Init Setup.
       run: |
         cd 0chain
+        make install-mockery
+        mv mockery /usr/local/bin
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
