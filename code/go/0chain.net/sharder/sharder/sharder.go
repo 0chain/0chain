@@ -145,7 +145,7 @@ func main() {
 	reader.Close()
 
 	if err := serverChain.SetupEventDatabase(); err != nil {
-		logging.Logger.Panic("Error setting up events database")
+		Logger.Panic(fmt.Sprintf("Error setting up events database: %v", err))
 	}
 
 	serverChain.OnBlockAdded = func(b *block.Block) {
