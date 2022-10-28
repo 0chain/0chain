@@ -591,6 +591,11 @@ const (
 	NodeTypeSharder                 // sharder node
 )
 
+// ToNodeType converts node.NodeType to minersc.NodeType
+func ToNodeType(typ node.NodeType) NodeType {
+	return NodeType(typ + 1)
+}
+
 // String converted NodeType to string.
 func (nt NodeType) String() string {
 	switch nt {

@@ -116,12 +116,13 @@ func (c *Chain) isRegisteredEx(nodeType node.NodeType, id string) (bool, error) 
 		logging.Logger.Error("could not get latest finalized block state")
 		return false, nil
 	}
+	ntp := minersc.ToNodeType(nodeType)
 
-	part, err := minersc.GetPartitions(state, minersc.NodeType(nodeType))
+	part, err := minersc.GetPartitions(state, ntp)
 	if err != nil {
 		logging.Logger.Error("could not get partitions",
 			zap.Error(err),
-			zap.Any("node type", nodeType))
+			zap.Any("node type", ntp))
 		return false, err
 	}
 
@@ -129,7 +130,7 @@ func (c *Chain) isRegisteredEx(nodeType node.NodeType, id string) (bool, error) 
 	if err != nil {
 		logging.Logger.Error("could not node check existence",
 			zap.Error(err),
-			zap.Any("node type", nodeType),
+			zap.Any("node type", ntp),
 			zap.String("ID", id))
 		return false, err
 	}

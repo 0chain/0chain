@@ -61,16 +61,13 @@ var (
 type NodeType int8
 
 const (
-	UnknownNodeType NodeType = iota
-	NodeTypeMiner
+	NodeTypeMiner NodeType = iota
 	NodeTypeSharder
 	NodeTypeBlobber
 )
 
 func (n NodeType) String() string {
 	switch n {
-	case UnknownNodeType:
-		return "Unknown"
 	case NodeTypeMiner:
 		return "Miner"
 	case NodeTypeSharder:
@@ -81,7 +78,7 @@ func (n NodeType) String() string {
 	return ""
 }
 
-var NodeTypeNames = common.CreateLookups("u", "Unknown", "m", "Miner", "s", "Sharder", "b", "Blobber")
+var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
 
 func GetNodeTypeName(n *Node) (typename string, err error) {
 	if n.Type < 0 || int(n.Type) >= len(NodeTypeNames) {
