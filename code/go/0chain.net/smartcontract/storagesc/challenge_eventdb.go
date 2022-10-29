@@ -61,7 +61,7 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstat
 		TotalChallenges: int64(1),
 	})
 
-	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToBlobber, ch.AllocationID, event.Blobber{
+	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToBlobber, ch.BlobberID, event.Blobber{
 		BlobberID:      ch.BlobberID,
 		OpenChallenges: 1,
 	})
