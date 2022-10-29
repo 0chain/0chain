@@ -363,6 +363,17 @@ func withBlobberChallengesMerged() eventMergeMiddleware {
 	})
 }
 
+func (edb *EventDb) addBlobberChallenges(blobbers []Blobber) error {
+	vs := map[string]interface{}{
+		"open_challenges": gorm.Expr("blobbers.open_challenges + excluded.open_challenges"),
+	}
+
+	return edb.Store.Get().Model(&Blobber{}).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "blobber_id"}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(blobbers).Error
+}
+
 func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
 	vs := map[string]interface{}{
 		"challenges_completed": gorm.Expr("blobbers.challenges_completed + excluded.challenges_completed"),

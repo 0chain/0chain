@@ -60,6 +60,11 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstat
 		OpenChallenges:  int64(1 - expiredN), // increase one challenge and remove expired ones
 		TotalChallenges: int64(1),
 	})
+
+	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToBlobber, ch.AllocationID, event.Blobber{
+		BlobberID:      ch.BlobberID,
+		OpenChallenges: 1,
+	})
 }
 
 func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI) {
@@ -81,7 +86,6 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	b := event.Blobber{
 		BlobberID:           sc.BlobberID,
 		ChallengesCompleted: 1,
-		OpenChallenges:      1,
 	}
 
 	if passed {
