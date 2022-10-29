@@ -1,7 +1,6 @@
 package state
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -265,8 +264,6 @@ func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag,
 		Index:       index,
 		Data:        data,
 	}
-	b, err := json.Marshal(e)
-	logging.Logger.Info("piers EmitEvent", zap.String("event", string(b)), zap.Error(err))
 	if len(appenders) != 0 {
 		sc.events = appenders[0](sc.events, e)
 	} else {

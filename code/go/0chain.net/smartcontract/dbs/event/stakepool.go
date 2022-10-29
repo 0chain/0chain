@@ -144,19 +144,19 @@ func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 	})
 }
 
-func (edb *EventDb) processRewardUpdate(stakePoolsRewards []dbs.StakePoolReward, round int64) error {
+func (edb *EventDb) rewardUpdate(stakePoolsRewards []dbs.StakePoolReward, round int64) error {
 	if err := edb.providerReward(stakePoolsRewards, round); err != nil {
 		return err
 	}
 
-	if err := edb.rewardUpdate(stakePoolsRewards, round); err != nil {
+	if err := edb.stakePoolRewardUpdate(stakePoolsRewards, round); err != nil {
 		return err
 	}
 
 	return edb.delegateReward(stakePoolsRewards, round)
 }
 
-func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error {
+func (edb *EventDb) stakePoolRewardUpdate(spus []dbs.StakePoolReward, round int64) error {
 	if len(spus) == 0 {
 		return nil
 	}
@@ -183,7 +183,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 
 	if len(rewards.rewards) > 0 {
 		if err := edb.rewardProviders(rewards.rewards); err != nil {
-			return fmt.Errorf("could not rewards providers: %v", err)
+			return fmt.Errorf("could not reward providers: %v", err)
 		}
 	}
 
@@ -195,7 +195,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	if len(rewards.delegatePools) > 0 {
-		if err := rewardProviderDelegates(edb.Tx(), rewards.delegatePools); err != nil {
+		if err := rewardProviderDelegates(edb, rewards.delegatePools); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
 	}
@@ -221,20 +221,20 @@ func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
 		"total_rewards": gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
 	}
 
-	return edb.Tx().Clauses(clause.OnConflict{
+	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "provider_id"}},
 		DoUpdates: clause.Assignments(vs),
 	}).Create(rewards).Error
 }
 
-func rewardProviderDelegates(tx *gorm.DB, rewards []DelegatePool) error {
+func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
 	vs := map[string]interface{}{
 		"reward":        gorm.Expr("delegate_pools.reward + excluded.reward"),
 		"total_reward":  gorm.Expr("delegate_pools.total_reward + excluded.total_reward"),
 		"total_penalty": gorm.Expr("delegate_pools.total_penalty + excluded.total_penalty"),
 	}
 
-	return tx.Clauses(clause.OnConflict{
+	return edb.Store.Get().Clauses(clause.OnConflict{
 		Where: clause.Where{
 			Exprs: []clause.Expression{gorm.Expr("delegate_pools.status != ?", spenum.Deleted)},
 		},

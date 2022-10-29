@@ -42,7 +42,7 @@ func (edb *EventDb) delegateReward(updates []dbs.StakePoolReward, round int64) e
 	if len(drs) == 0 {
 		return nil
 	}
-	return edb.Tx().Clauses(clause.OnConflict{
+	return edb.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&drs).Error

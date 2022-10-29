@@ -30,7 +30,7 @@ func (edb *EventDb) providerReward(updates []dbs.StakePoolReward, round int64) e
 		}
 		prs = append(prs, pr)
 	}
-	return edb.Tx().Clauses(clause.OnConflict{
+	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&prs).Error

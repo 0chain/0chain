@@ -3,8 +3,6 @@ package event
 import (
 	"time"
 
-	"gorm.io/gorm"
-
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
@@ -21,7 +19,6 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	eventDb := &EventDb{
 		Store:         db,
 		eventsChannel: make(chan blockEvents, 1),
-		settings:      *newSettings(config),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 
@@ -34,29 +31,6 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 type EventDb struct {
 	dbs.Store
 	eventsChannel chan blockEvents
-	tx            *gorm.DB
-	settings      Settings
-}
-
-func (edb *EventDb) Tx() *gorm.DB {
-	//return edb.Store.Get()
-	return edb.tx
-}
-
-func (edb *EventDb) BeginTransaction() error {
-	//return nil
-	edb.tx = edb.Store.Get().Begin()
-	return edb.tx.Error
-}
-
-func (edb *EventDb) CommitTransaction() error {
-	//return nil
-	return edb.tx.Commit().Error
-}
-
-func (edb *EventDb) RollbackTransaction() error {
-	//return nil
-	return edb.tx.Rollback().Error
 }
 
 type blockEvents struct {

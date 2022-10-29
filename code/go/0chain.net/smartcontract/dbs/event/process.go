@@ -434,21 +434,19 @@ func (edb *EventDb) addStat(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		logging.Logger.Info("piers TagAddOrOverwriteDelegatePool", zap.Any("event", event))
 		return edb.addOrOverwriteDelegatePools(*dps)
 	case TagUpdateDelegatePool:
 		spUpdate, ok := fromEvent[dbs.DelegatePoolUpdate](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		logging.Logger.Info("piers TagUpdateDelegatePool", zap.Any("event", event))
 		return edb.updateDelegatePool(*spUpdate)
 	case TagStakePoolReward:
 		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.processRewardUpdate(*spus, event.BlockNumber)
+		return edb.rewardUpdate(*spus, event.BlockNumber)
 	case TagAddAllocation:
 		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
