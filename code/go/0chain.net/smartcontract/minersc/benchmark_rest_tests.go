@@ -100,7 +100,22 @@ func BenchmarkRestTests(
 				},
 				Endpoint: mrh.getNodePoolStat,
 			},
-
+			{
+				FuncName: "provider-rewards",
+				Params: map[string]string{
+					"limit":  "20",
+					"offset": "1",
+				},
+				Endpoint: mrh.getProviderRewards,
+			},
+			{
+				FuncName: "delegate-rewards",
+				Params: map[string]string{
+					"limit":  "20",
+					"offset": "1",
+				},
+				Endpoint: mrh.getDelegateRewards,
+			},
 			{
 				FuncName: "get_miner_geolocations",
 				Params: map[string]string{

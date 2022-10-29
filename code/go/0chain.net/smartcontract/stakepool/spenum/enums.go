@@ -48,7 +48,16 @@ const (
 	MinLockDemand
 )
 
-var rewardString = []string{"block_reward", "fees", "validation", "read_file", "write_file"}
+var rewardString = []string{
+	"block_reward",
+	"fees",
+	"validation",
+	"file download",
+	"challenge pass",
+	"challenge slash",
+	"cancellation charge",
+	"min lock demand",
+}
 
 func (r Reward) String() string {
 	return rewardString[r]
