@@ -9,6 +9,7 @@ import (
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
 )
 
 func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge {
@@ -63,8 +64,10 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstat
 
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToBlobber, ch.BlobberID, event.Blobber{
 		BlobberID:      ch.BlobberID,
-		OpenChallenges: 1,
+		OpenChallenges: uint64(1 - expiredN),
 	})
+
+	logging.Logger.Debug("emitted add challenge")
 }
 
 func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI) {
