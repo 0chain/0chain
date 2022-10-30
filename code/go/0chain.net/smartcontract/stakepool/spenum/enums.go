@@ -37,3 +37,7 @@ func (p PoolStatus) String() string {
 	}
 	return ""
 }
+
+func (p PoolStatus) Size() int {
+	return len(poolString)
+}

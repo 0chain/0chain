@@ -1137,6 +1137,10 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	var ups = new(userPoolStat)
 	ups.Pools = make(map[datastore.Key][]*delegatePoolStat)
 	for _, pool := range pools {
+		if pool.Status >= spenum.PoolStatus(pool.Status).Size() {
+			common.Respond(w, r, nil, errors.New("invalid user pool status"))
+			return
+		}
 		var dps = delegatePoolStat{
 			ID:           pool.PoolID,
 			DelegateID:   pool.DelegateID,
