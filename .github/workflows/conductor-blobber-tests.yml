@@ -25,7 +25,6 @@ jobs:
         sudo wget https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-secretservice-v0.6.3-amd64.tar.gz
         sudo tar -xf docker-credential-secretservice-v0.6.3-amd64.tar.gz
         sudo chmod +x docker-credential-secretservice
-        sudo mv /usr/bin/docker-credential-secretservice /usr/bin/docker-credential-secretservice.bkp
         sudo mv docker-credential-secretservice /usr/bin/
 
     - name: Get Branch
@@ -123,7 +122,9 @@ jobs:
 
     - name: Build blobber base
       run: |
-        cd blobber && git checkout fix/conductor-actions && ./docker.local/bin/build.base.sh
+        cd blobber
+        git checkout fix/conductor-actions
+        bash ./docker.local/bin/build.base.sh
 
     - name: Build blobber
       run: |
