@@ -290,12 +290,14 @@ func (rs *randomSelector) foreach(state state.StateContextI, f func(string, []by
 			return fmt.Errorf("could not get partition: name:%s, index: %d", rs.Name, i)
 		}
 
-		for _, v := range part.Items {
+		for i, v := range part.Items {
 			ret, bk, err := f(v.ID, v.Data, i)
 			if err != nil {
 				return err
 			}
 			if !bytes.Equal(ret, v.Data) {
+				v.Data = ret
+				part.Items[i] = v
 				part.Changed = true
 			}
 
