@@ -35,6 +35,10 @@ func (p PoolStatus) String() string {
 	return poolString[p]
 }
 
+func (p PoolStatus) Int() int {
+	return int(p)
+}
+
 type Reward int
 
 const (
@@ -61,4 +65,8 @@ var rewardString = []string{
 
 func (r Reward) String() string {
 	return rewardString[r]
+}
+
+func (r Reward) Int() int {
+	return int(r)
 }
