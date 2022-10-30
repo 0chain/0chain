@@ -32,5 +32,8 @@ const (
 var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting", "deleted"}
 
 func (p PoolStatus) String() string {
-	return poolString[p]
+	if int(p) < len(poolString) {
+		return poolString[p]
+	}
+	return ""
 }
