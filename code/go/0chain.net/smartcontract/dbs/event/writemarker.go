@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/currency"
+	coreCommon "0chain.net/core/common"
 	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -22,18 +23,15 @@ type WriteMarker struct {
 
 	AllocationRoot         string `json:"allocation_root"`
 	PreviousAllocationRoot string `json:"previous_allocation_root"`
+	FileMetaRoot           string `json:"file_meta_root"`
 	Size                   int64  `json:"size"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
 	BlockNumber            int64  `json:"block_number" gorm:"index:idx_wblocknum,priority:1;index:idx_walloc_block,priority:2"` //used in alloc_written_size
 
-	// file info
-	LookupHash  string `json:"lookup_hash" gorm:"index:idx_wlookup,priority:1"`
-	Name        string `json:"name" gorm:"index:idx_wname,priority:1;idx_walloc_file,priority:1"`
-	ContentHash string `json:"content_hash" gorm:"index:idx_wcontent,priority:1"`
-	Operation   string `json:"operation"`
-
-	MovedTokens currency.Coin `json:"-" gorm:"-"`
+	FileID      int64             `json:"file_id"`
+	Operation   coreCommon.FileOp `json:"operation"`
+	MovedTokens currency.Coin     `json:"-" gorm:"-"`
 
 	//ref
 	User       User       `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
@@ -135,11 +133,11 @@ func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit co
 	return wms, result.Error
 }
 
-func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit common.Pagination) ([]WriteMarker, error) {
+func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, fileID int64, limit common.Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
-		Where(&WriteMarker{AllocationID: allocationID, Name: filename}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Where(&WriteMarker{AllocationID: allocationID, FileID: fileID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
 		Desc:   limit.IsDescending,
 	}).Scan(&wms)
