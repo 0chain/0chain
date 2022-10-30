@@ -1,8 +1,10 @@
-name: Conductor No View Change Scenarios Tests
+name: CONDUCTOR NO-VIEW CHANGE SCENARIOS TESTS
 
 on:
   schedule:
-    - cron: '0 1 * * * '
+    # Runs everyday at 01:00 am
+    - cron: '0 5 * * * '
+  workflow_dispatch:
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -11,7 +13,7 @@ env:
 jobs:
   fault_tolerance_tests:
     name: CONDUCTOR-FAULT-TOLERANCE-TESTS
-    runs-on: [self-hosted, conductor-test02]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
@@ -64,7 +66,7 @@ jobs:
 
   upload_artifacts_ft:
     name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test02]
+    runs-on: [self-hosted, arc-runner]
 
     if: always()
     needs: [fault_tolerance_tests]
@@ -80,13 +82,13 @@ jobs:
         name: Conductor-test-logs
         path: ./con-ft-tests-logs.tar.gz
 
-    - name: Cleanup
-      run: |
-        rm -rf ./*
+    # - name: Cleanup
+    #   run: |
+    #     rm -rf ./*
 
   conductor_byzantine_tests:
     name: CONDUCTOR-BYZANTINE-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
@@ -122,7 +124,7 @@ jobs:
 
   upload_artifacts_byz:
     name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, arc-runner]
 
     if: always()
     needs: [conductor_byzantine_tests]
@@ -138,6 +140,6 @@ jobs:
         name: Conductor-test-logs
         path: ./con-byz-tests-logs.tar.gz
 
-    - name: Cleanup
-      run: |
-        rm -rf ./*
+    # - name: Cleanup
+    #   run: |
+    #     rm -rf ./*

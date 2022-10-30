@@ -3,7 +3,8 @@ name: Conductor Validator Tests
 on:
   schedule:
     # Runs everyday at 03:00 am
-    - cron: '0 3 * * * '
+    - cron: '0 7 * * * '
+  workflow_dispatch:
 
 jobs:
   conductor_validators_tests:
@@ -16,9 +17,9 @@ jobs:
       with:
         go-version: '1.18'
 
-    - name: Clean up job.
-      run: |
-        rm -rf ./*
+    # - name: Clean up job.
+    #   run: |
+    #     rm -rf ./*
 
     - name: Get Branch
       id: get_branch
@@ -174,6 +175,6 @@ jobs:
     #     name: Conductor-test-logs
     #     path: ./con-tests-backup-logs.tar.gz
 
-    - name: Clean up job.
-      run: |
-        rm -rf ./*
+    # - name: Clean up job.
+    #   run: |
+    #     rm -rf ./*

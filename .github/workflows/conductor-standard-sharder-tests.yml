@@ -3,7 +3,7 @@ name: CONDUCTOR SHARDER STANDARD TESTS
 on:
   schedule:
     # Runs everyday at 01:00 am
-    - cron: '0 1 * * * '
+    - cron: '0 0 * * * '
   workflow_dispatch:
 
 env:
@@ -117,9 +117,9 @@ jobs:
     #     name: Conductor-test-logs
     #     path: ./con-tests-backup-logs.tar.gz
 
-    - name: Clean up job.
-      run: |
-        rm -rf ./*
+    # - name: Clean up job.
+    #   run: |
+    #     rm -rf ./*
 
   # notify_slack:
   #   runs-on: [self-hosted, conductor-test01]

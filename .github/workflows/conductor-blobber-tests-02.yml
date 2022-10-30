@@ -3,7 +3,7 @@ name: CONDUCTOR BLOBBER-02 TESTS
 on:
   schedule:
     # Runs everyday at 02:00 am
-    - cron: '0 2 * * * '
+    - cron: '0 3 * * * '
   workflow_dispatch:
 
 jobs:
@@ -159,34 +159,34 @@ jobs:
         cd 0chain
         ./docker.local/bin/start.conductor.sh blobber-2
 
-  # upload_artifacts:
-  #   name: UPLOAD-LOGS-AS-ARTIFACTS
-  #   runs-on: [self-hosted, arc-runner]
+  upload_artifacts:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, arc-runner]
 
-  #   if: always()
-  #   needs: [conductor_blobbers_tests]
+    if: always()
+    needs: [conductor_blobbers_tests]
 
-  #   steps:
-  #   - name: Creating Artifact con-tests-logs.tar.gz file.
-  #     run: |
-  #       find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
-
-  #   - name: Uploading artifact con-tests-logs.tar.gz file.
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: Conductor-test-logs
-  #       path: ./con-tests-logs.tar.gz
-
-    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-    #   run: |
-    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
-
-    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-backup-logs.tar.gz
-
-    - name: Clean up job.
+    steps:
+    - name: Creating Artifact con-tests-logs.tar.gz file.
       run: |
-        rm -rf ./*
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-tests-logs.tar.gz
+
+    - name: Creating Artifact con-tests-backup-logs.tar.gz file.
+      run: |
+        tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
+
+    - name: Uploading artifact con-tests-backup-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-tests-backup-logs.tar.gz
+
+    # - name: Clean up job.
+    #   run: |
+    #     rm -rf ./*
