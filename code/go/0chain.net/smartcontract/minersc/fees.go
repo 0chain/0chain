@@ -17,6 +17,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
+	"github.com/0chain/common/core/logging"
 	. "github.com/0chain/common/core/logging"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
@@ -24,10 +25,11 @@ import (
 
 func activatePending(mn *MinerNode) (bool, error) {
 	var change bool
-	for _, pool := range mn.Pools {
+	for pid, pool := range mn.Pools {
 		if pool.Status == spenum.Pending {
 			pool.Status = spenum.Active
 			change = true
+			logging.Logger.Debug("active pending", zap.String("pool", pid))
 
 			newTotalStaked, err := currency.AddCoin(mn.TotalStaked, pool.Balance)
 			if err != nil {

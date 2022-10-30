@@ -126,6 +126,10 @@ func (p *Partitions) loadLocations(idx int) {
 	if p.locations == nil {
 		p.locations = make(map[string]int)
 	}
+	if idx < 0 {
+		return
+	}
+
 	part := p.rs.Partitions[idx]
 	for _, it := range part.Items {
 		kid := p.getLocKey(it.ID)
