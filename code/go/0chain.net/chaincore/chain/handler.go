@@ -1350,6 +1350,14 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	sc := GetServerChain()
+	cb, err := sc.GetBlock(ctx, txn.Hash)
+	if err != nil {
+		return nil, err
+	}
+	if cb.CreationDate < txn.CreationDate-common.Timestamp(transaction.TXN_TIME_TOLERANCE) ||
+		cb.CreationDate > txn.CreationDate+common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
+		return nil, fmt.Errorf("put_transaction: time out of sync with server time")
+	}
 	if sc.TxnMaxPayload() > 0 {
 		if len(txn.TransactionData) > sc.TxnMaxPayload() {
 			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload())
