@@ -19,13 +19,14 @@ jobs:
       
     - name: Docker Compose Setup.
       run: |
-        # sudo apt update
-        # sudo apt upgrade -y
-        # sudo apt-get install iptables -y
-        # # sudo iptables -t nat -A POSTROUTING -s 192.168.255.0/24 -j MASQUERADE
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
+        sudo wget https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-secretservice-v0.6.3-amd64.tar.gz
+        sudo tar -xf docker-credential-secretservice-v0.6.3-amd64.tar.gz
+        sudo chmod +x docker-credential-secretservice
+        sudo mv /usr/bin/docker-credential-secretservice /usr/bin/docker-credential-secretservice.bkp
+        sudo mv docker-credential-secretservice /usr/bin/
 
     - name: Get Branch
       id: get_branch
