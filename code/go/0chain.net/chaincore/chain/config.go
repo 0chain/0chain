@@ -530,6 +530,7 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsEvents.MaxIdleConns = viper.GetInt("server_chain.dbs.events.max_idle_conns")
 	conf.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
 	conf.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
+	conf.DbsEvents.Debug = viper.GetBool("server_chain.dbs.events.debug")
 
 	return nil
 }

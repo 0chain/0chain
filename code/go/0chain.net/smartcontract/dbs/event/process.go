@@ -252,7 +252,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			zap.Ints("tags", tags),
 			zap.Int64("round", es.round),
 			zap.String("block", es.block),
-			zap.Int("block size", es.blockSize))
+			zap.Int("block size", es.blockSize),
+			zap.Bool("debug", edb.settings.Debug),
+		)
 
 		if due.Milliseconds() > 200 {
 			logging.Logger.Warn("event db work slow",
@@ -261,7 +263,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				zap.Ints("tags", tags),
 				zap.Int64("round", es.round),
 				zap.String("block", es.block),
-				zap.Int("block size", es.blockSize))
+				zap.Int("block size", es.blockSize),
+				zap.Bool("debug", edb.settings.Debug),
+			)
 		}
 		es.doneC <- struct{}{}
 	}
