@@ -28,7 +28,7 @@ const (
 )
 
 const GB = 1024 * 1024 * 1024
-const period = 100
+const period = 10
 
 const (
 	TagNone                         EventTag = iota
@@ -88,6 +88,7 @@ const (
 	TagBurn
 	TagAllocValueChange
 	TagAllocBlobberValueChange
+	TagAddChallengeToBlobber
 	NumberOfTags
 )
 
@@ -563,6 +564,13 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 
 		return edb.addChallengesToAllocations(*as)
+	case TagAddChallengeToBlobber:
+		b, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.addBlobberChallenges(*b)
 	case TagUpdateChallenge:
 		chs, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
