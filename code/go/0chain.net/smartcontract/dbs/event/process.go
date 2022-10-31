@@ -188,6 +188,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	)
 
 	for _, e := range events {
+		if e.Type == int(TypeChain) {
+			others = append(others, e)
+			continue
+		}
 		if e.Type != int(TypeStats) {
 			continue
 		}
