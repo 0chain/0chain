@@ -252,7 +252,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				err = edb.addStat(event)
 				du := time.Since(ts)
 				if du.Milliseconds() > 50 {
-					logging.Logger.Warn("event db save slow - addStat",
+					logging.Logger.Warn("event db save slow - addchain",
 						zap.Any("duration", du),
 						zap.Int("event tag", event.Tag),
 						zap.Int64("round", es.round),
@@ -460,6 +460,8 @@ func (edb *EventDb) addStat(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
+		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
+
 		return edb.addBlock(*block)
 	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
