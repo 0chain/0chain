@@ -35,14 +35,14 @@ type EventDb struct {
 	eventsChannel chan blockEvents
 }
 
-func (edb *EventDb) BeginTransaction() (*EventDb, error) {
+func (edb *EventDb) Begin() (*EventDb, error) {
 	tx := edb.Store.Get().Begin()
 	if tx.Error != nil {
 		return nil, fmt.Errorf("begin transcation: %v", tx.Error)
 	}
 
 	edbTx := EventDb{
-		Store: edbTransaction{
+		Store: edbTx{
 			Store: edb,
 			tx:    tx,
 		},
@@ -50,14 +50,14 @@ func (edb *EventDb) BeginTransaction() (*EventDb, error) {
 	return &edbTx, nil
 }
 
-func (edb *EventDb) CommitTransaction() error {
+func (edb *EventDb) Commit() error {
 	if edb.Store.Get() == nil {
 		return errors.New("committing nil transaction")
 	}
 	return edb.Store.Get().Commit().Error
 }
 
-func (edb *EventDb) RollbackTransaction() error {
+func (edb *EventDb) Rollback() error {
 	if edb.Store.Get() == nil {
 		return errors.New("rollbacking nil transaction")
 	}

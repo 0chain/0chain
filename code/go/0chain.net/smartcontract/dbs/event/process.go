@@ -207,7 +207,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		es := <-edb.eventsChannel
 
-		tx, err := edb.BeginTransaction()
+		tx, err := edb.Begin()
 		if err != nil {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
@@ -219,7 +219,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			tags = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
 		}
 
-		if err := tx.CommitTransaction(); err != nil {
+		if err := tx.Commit(); err != nil {
 			logging.Logger.Error("error committing block events",
 				zap.Int64("block", es.round),
 				zap.Error(err),

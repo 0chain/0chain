@@ -5,11 +5,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type edbTransaction struct {
+type edbTx struct {
 	dbs.Store
 	tx *gorm.DB
 }
 
-func (tx edbTransaction) Get() *gorm.DB {
+func (tx edbTx) Get() *gorm.DB {
 	return tx.tx
 }
