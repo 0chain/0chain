@@ -216,7 +216,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		tse := time.Now()
 		tags := make([]int, 0, len(es.events))
 		for _, event := range es.events {
-			tags = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
+			tx.Get().SavePoint(event.Index)
+			tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
+			tx.Get().RollbackTo(event.Index)
 		}
 
 		if err := tx.Commit(); err != nil {
@@ -248,7 +250,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) processEvent(event Event, tags []int, round int64, block string, blockSize int) []int {
+func (edb *EventDb) processEvent(event Event, tags []int, round int64, block string, blockSize int) ([]int, error) {
 	var err error = nil
 	switch EventType(event.Type) {
 	case TypeStats:
@@ -281,8 +283,9 @@ func (edb *EventDb) processEvent(event Event, tags []int, round int64, block str
 			zap.Any("event tag", event.Tag),
 			zap.Error(err),
 		)
+		return tags, err
 	}
-	return tags
+	return tags, nil
 }
 
 func (edb *EventDb) addStat(event Event) error {
