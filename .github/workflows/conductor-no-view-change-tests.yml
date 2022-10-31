@@ -38,7 +38,6 @@ jobs:
     
     - name: Docker Init Setup.
       run: |
-        cd 0chain
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
@@ -115,7 +114,6 @@ jobs:
     
     - name: Docker Init Setup.
       run: |
-        cd 0chain
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
