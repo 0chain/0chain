@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  conductor_validators_tests:
+  CONDUCTOR_VALIDATORS_TESTS:
     name: CONDUCTOR-VALIDATORS-TESTS
-    runs-on: [self-hosted, conductor-test01]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - name: Go 1.18 setup.
@@ -147,12 +147,12 @@ jobs:
       run: |
         cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
 
-  upload_artifacts:
+  UPLOAD_LOGS_AS_ARTIFACTS:
     name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test02]
+    runs-on: [self-hosted, arc-runner]
 
     if: always()
-    needs: [conductor_validators_tests]
+    needs: [CONDUCTOR_VALIDATORS_TESTS]
 
     steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.

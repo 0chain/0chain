@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  conductor_blobbers_tests:
-    name: CONDUCTOR-BLOBBERS-TESTS
+  CONDUCTOR_BLOBBERS_03_TESTS:
+    name: CONDUCTOR-BLOBBERS-03-TESTS
     runs-on: [self-hosted, arc-runner]
 
     steps:
@@ -128,7 +128,6 @@ jobs:
         chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
         ./docker.local/bin/build.blobber-integration-tests.sh
 
-
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
@@ -155,14 +154,6 @@ jobs:
         cd 0chain
         ./docker.local/bin/start.conductor.sh blobber-3
 
-  upload_artifacts:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, arc-runner]
-
-    if: always()
-    needs: [conductor_blobbers_tests]
-
-    steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
@@ -173,16 +164,29 @@ jobs:
         name: Conductor-test-logs
         path: ./con-tests-logs.tar.gz
 
-    - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-      run: |
-        tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
-
-    - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-      uses: actions/upload-artifact@v2
-      with:
-        name: Conductor-test-logs
-        path: ./con-tests-backup-logs.tar.gz
-
-    # - name: Clean up job.
+    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
     #   run: |
-    #     rm -rf ./*
+    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
+
+    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: Conductor-test-logs
+    #     path: ./con-tests-backup-logs.tar.gz
+
+  # notify_slack:
+  #   runs-on: [self-hosted, arc-runner]
+  #   needs: [CONDUCTOR_BLOBBERS_03_TESTS]
+  #   if: always() && (needs.CONDUCTOR_BLOBBERS_TESTS.result == 'failure')
+  #   steps:
+  #     - name: "Check if should send slack notification"
+  #       id: send-slack-notification
+  #       uses: peter-murray/value-as-flag-action@0.0.1
+  #       with:
+  #         value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+  #         default: false
+
+  #     - name: "Notify Slack"
+  #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+  #       run: |
+  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> Conductor tests FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
