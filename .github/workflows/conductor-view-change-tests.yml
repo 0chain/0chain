@@ -30,13 +30,11 @@ jobs:
       with:
         go-version: '1.18'
 
-    - name: Install mockery
-      run: |
-        make install-mockery
-        make build-mocks
-
     - name: Docker Init Setup.
       run: |
+        cd 0chain
+        make install-mockery
+        make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.

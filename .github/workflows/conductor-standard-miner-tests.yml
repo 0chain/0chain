@@ -35,14 +35,12 @@ jobs:
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
-    
-    - name: Install mockery
-      run: |
-        make install-mockery
-        make build-mocks
 
     - name: Docker Init Setup.
       run: |
+        cd 0chain
+        make install-mockery
+        make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
@@ -84,11 +82,6 @@ jobs:
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
-    
-    - name: Install mockery
-      run: |
-        make install-mockery
-        make build-mocks
     
     - name: Running Standard Tests for Miners.
       run: |
