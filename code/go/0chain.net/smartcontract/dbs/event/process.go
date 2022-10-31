@@ -218,7 +218,11 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		for _, event := range es.events {
 			tx.Get().SavePoint(event.Index)
 			tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
-			tx.Get().RollbackTo(event.Index)
+			if err != nil {
+				tx.Get().RollbackTo(event.Index)
+				logging.Logger.Error("processing", zap.Any("event", event), zap.Error(err))
+			}
+
 		}
 
 		if err := tx.Commit(); err != nil {
