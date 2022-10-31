@@ -219,8 +219,8 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			tx.Get().SavePoint(event.Index)
 			tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
 			if err != nil {
-				//tx.Get().RollbackTo(event.Index)
-				logging.Logger.Error("piers processing", zap.Any("event", event), zap.Error(err))
+				tx.Get().RollbackTo(event.Index)
+				logging.Logger.Error("error processing event", zap.Any(":", event), zap.Error(err))
 			}
 
 		}
