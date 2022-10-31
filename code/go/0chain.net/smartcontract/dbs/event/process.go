@@ -216,11 +216,11 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		tse := time.Now()
 		tags := make([]int, 0, len(es.events))
 		for _, event := range es.events {
-			tx.Get().SavePoint(event.Index)
+			//tx.Get().SavePoint(event.Index)
 			tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
 			if err != nil {
-				tx.Get().RollbackTo(event.Index)
-				logging.Logger.Error("processing", zap.Any("event", event), zap.Error(err))
+				//tx.Get().RollbackTo(event.Index)
+				logging.Logger.Error("piers processing", zap.Any("event", event), zap.Error(err))
 			}
 
 		}
