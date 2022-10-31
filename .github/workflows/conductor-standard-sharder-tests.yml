@@ -63,25 +63,6 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-  CONDUCTOR_SHARDER_STANDARD_TESTS:
-    name: CONDUCTOR-SHARDER-STANDARD-TESTS
-    runs-on: [self-hosted, arc-runner]
-
-    needs:
-    - CONDUCTOR_IMAGE_BUILDS
-
-    steps:
-    - name: Go 1.18 setup.
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.18'
-
-    - name: Docker Compose Setup.
-      run: |
-        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-      
     - name: Running Standard Tests for Sharders.
       run: |
         bash ./docker.local/bin/start.conductor.sh sharders

@@ -1,4 +1,4 @@
-name: Conductor View Change Tests
+name: CONDUCTOR VIEW CHANGE TESTS
 
 on:
   schedule:
@@ -343,24 +343,37 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance.stress-test view-change.fault-tolerance.threshold
 
-  UPLOAD_LOGS_AS_ARTIFACTS_BYZ:
-    name: UPLOAD-LOGS-AS-ARTIFACTS-BYZ
-    runs-on: [self-hosted, arc-runner]
+  # UPLOAD_LOGS_AS_ARTIFACTS_BYZ:
+  #   name: UPLOAD-LOGS-AS-ARTIFACTS-BYZ
+  #   runs-on: [self-hosted, arc-runner]
 
-    if: always()
-    needs: [CONDUCTOR_BYZANTINE_TESTS, CONDUCTOR_VIEW_CHANGE_MINERS_TESTS, CONDUCTOR_VIEW_CHANGE_SHARDERS_TESTS, CONDUCTOR_VIEW_CHANGE_OTHERS_TESTS]
+  #   if: always()
+  #   needs: [CONDUCTOR_BYZANTINE_TESTS, CONDUCTOR_VIEW_CHANGE_MINERS_TESTS, CONDUCTOR_VIEW_CHANGE_SHARDERS_TESTS, CONDUCTOR_VIEW_CHANGE_OTHERS_TESTS]
 
-    steps:
-    - name: Creating Artifact con-byz-tests-logs.tar.gz file.
-      run: |
-        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
+  #   steps:
+  #   - name: Creating Artifact con-byz-tests-logs.tar.gz file.
+  #     run: |
+  #       find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
 
-    - name: Uploading artifact con-byz-tests-logs.tar.gz file.
-      uses: actions/upload-artifact@v2
-      with:
-        name: Conductor-test-logs
-        path: ./con-byz-tests-logs.tar.gz
+  #   - name: Uploading artifact con-byz-tests-logs.tar.gz file.
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: Conductor-test-logs
+  #       path: ./con-byz-tests-logs.tar.gz
 
-    # - name: Cleanup
-    #   run: |
-    #     rm -rf ./*
+  # notify_slack:
+  #   runs-on: [self-hosted, arc-runner]
+  #   needs: [CONDUCTOR_BYZANTINE_TESTS, CONDUCTOR_VIEW_CHANGE_MINERS_TESTS, CONDUCTOR_VIEW_CHANGE_SHARDERS_TESTS, CONDUCTOR_VIEW_CHANGE_OTHERS_TESTS]
+  #   if: always() && (needs.CONDUCTOR_BYZANTINE_TESTS.result == 'failure')
+  #   steps:
+  #     - name: "Check if should send slack notification"
+  #       id: send-slack-notification
+  #       uses: peter-murray/value-as-flag-action@0.0.1
+  #       with:
+  #         value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+  #         default: false
+
+  #     - name: "Notify Slack"
+  #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+  #       run: |
+  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

@@ -1,4 +1,4 @@
-name: Conductor Validator Tests
+name: CONDUCTOR VALIDATOR-01 TESTS
 
 on:
   schedule:
@@ -151,14 +151,6 @@ jobs:
       run: |
         cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
 
-  UPLOAD_LOGS_AS_ARTIFACTS:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, arc-runner]
-
-    if: always()
-    needs: [CONDUCTOR_VALIDATORS_TESTS]
-
-    steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
@@ -195,4 +187,3 @@ jobs:
   #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
   #       run: |
   #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_VALIDATORS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
