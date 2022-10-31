@@ -220,7 +220,10 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
 			if err != nil {
 				tx.Get().RollbackTo(event.Index)
-				logging.Logger.Error("error processing event", zap.Any(":", event), zap.Error(err))
+				logging.Logger.Error("error processing event",
+					zap.Int64("round", event.BlockNumber),
+					zap.Any("tag", event.Tag),
+					zap.Error(err))
 			}
 
 		}
