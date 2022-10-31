@@ -189,4 +189,4 @@ jobs:
   #     - name: "Notify Slack"
   #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
   #       run: |
-  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> Conductor tests FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_02_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

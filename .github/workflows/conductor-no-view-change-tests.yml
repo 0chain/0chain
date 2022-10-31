@@ -11,7 +11,7 @@ env:
   ZCHAIN_BUILDRUN: zchain_run_base
 
 jobs:
-  fault_tolerance_tests:
+  CONDUCTOR_FAULT_TOLERANCE_TESTS:
     name: CONDUCTOR-FAULT-TOLERANCE-TESTS
     runs-on: [self-hosted, arc-runner]
 
@@ -30,6 +30,12 @@ jobs:
       with:
         go-version: '1.18'
 
+    - name: Docker Compose Setup.
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+    
     - name: Install mockery
       run: |
         make install-mockery
@@ -64,14 +70,6 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
 
-  upload_artifacts_ft:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, arc-runner]
-
-    if: always()
-    needs: [fault_tolerance_tests]
-
-    steps:
     - name: Creating Artifact con-ft-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-ft-tests-logs.tar.gz --null --files-from -
@@ -82,16 +80,45 @@ jobs:
         name: Conductor-test-logs
         path: ./con-ft-tests-logs.tar.gz
 
-    # - name: Cleanup
-    #   run: |
-    #     rm -rf ./*
+  # notify_slack:
+  #   runs-on: [self-hosted, arc-runner]
+  #   needs: [CONDUCTOR_FAULT_TOLERANCE_TESTS]
+  #   if: always() && (needs.CONDUCTOR_FAULT_TOLERANCE_TESTS.result == 'failure')
+  #   steps:
+  #     - name: "Check if should send slack notification"
+  #       id: send-slack-notification
+  #       uses: peter-murray/value-as-flag-action@0.0.1
+  #       with:
+  #         value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+  #         default: false
 
-  conductor_byzantine_tests:
+  #     - name: "Notify Slack"
+  #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+  #       run: |
+  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+
+  CONDUCTOR_BYZANTINE_TESTS:
     name: CONDUCTOR-BYZANTINE-TESTS
     runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
+
+    - name: Go 1.18 setup.
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+
+    - name: Docker Compose Setup.
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+    
+    - name: Install mockery
+      run: |
+        make install-mockery
+        make build-mocks
 
     - name: Docker Init Setup.
       run: |
@@ -113,23 +140,10 @@ jobs:
       run: |
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
-    - name: Go 1.18 setup.
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.18'
-
     - name: Running No VC Byzantine Tests.
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
-  upload_artifacts_byz:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, arc-runner]
-
-    if: always()
-    needs: [conductor_byzantine_tests]
-
-    steps:
     - name: Creating Artifact con-byz-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
@@ -140,6 +154,19 @@ jobs:
         name: Conductor-test-logs
         path: ./con-byz-tests-logs.tar.gz
 
-    # - name: Cleanup
-    #   run: |
-    #     rm -rf ./*
+  # notify_slack:
+  #   runs-on: [self-hosted, arc-runner]
+  #   needs: [CONDUCTOR_BYZANTINE_TESTS]
+  #   if: always() && (needs.CONDUCTOR_BYZANTINE_TESTS.result == 'failure')
+  #   steps:
+  #     - name: "Check if should send slack notification"
+  #       id: send-slack-notification
+  #       uses: peter-murray/value-as-flag-action@0.0.1
+  #       with:
+  #         value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+  #         default: false
+
+  #     - name: "Notify Slack"
+  #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+  #       run: |
+  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
