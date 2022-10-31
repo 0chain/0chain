@@ -246,6 +246,21 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 						zap.Int("block size", es.blockSize),
 					)
 				}
+			case TypeChain:
+				tags = append(tags, event.Tag)
+				ts := time.Now()
+				err = edb.addStat(event)
+				du := time.Since(ts)
+				if du.Milliseconds() > 50 {
+					logging.Logger.Warn("event db save slow - addStat",
+						zap.Any("duration", du),
+						zap.Int("event tag", event.Tag),
+						zap.Int64("round", es.round),
+						zap.String("block", es.block),
+						zap.Int("block size", es.blockSize),
+					)
+				}
+				continue
 			case TypeError:
 				err = edb.addError(Error{
 					TransactionID: event.TxHash,
