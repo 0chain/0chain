@@ -2705,6 +2705,34 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, sn, nil)
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round getBlobber
+// Get round(s) number for timestamp(s)
+//
+// parameters:
+//
+//	+name: timestamp
+//	description: timestamp you want to convert to round
+//	required: false
+//	in: query
+//	type: string
+//
+//	+name: from
+//	description: from timestamp you want to convert to rounds
+//	required: false
+//	in: query
+//	type: string
+//
+//	+name: timestamp
+//	description: to timestamp you want to convert to rounds
+//	required: false
+//	in: query
+//	type: string
+//
+// responses:
+//
+//	200: Int64Map
+//	400:
+//	500:
 func (srh *StorageRestHandler) timestampToRound(w http.ResponseWriter, r *http.Request) {
 	var (
 		from      = r.URL.Query().Get("from")
