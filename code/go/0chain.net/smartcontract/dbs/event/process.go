@@ -188,6 +188,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	)
 
 	for _, e := range events {
+		if e.Type == int(TypeChain) {
+			others = append(others, e)
+			continue
+		}
 		if e.Type != int(TypeStats) {
 			continue
 		}
@@ -246,6 +250,21 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 						zap.Int("block size", es.blockSize),
 					)
 				}
+			case TypeChain:
+				tags = append(tags, event.Tag)
+				ts := time.Now()
+				err = edb.addStat(event)
+				du := time.Since(ts)
+				if du.Milliseconds() > 50 {
+					logging.Logger.Warn("event db save slow - addchain",
+						zap.Any("duration", du),
+						zap.Int("event tag", event.Tag),
+						zap.Int64("round", es.round),
+						zap.String("block", es.block),
+						zap.Int("block size", es.blockSize),
+					)
+				}
+				continue
 			case TypeError:
 				err = edb.addError(Error{
 					TransactionID: event.TxHash,
@@ -445,6 +464,8 @@ func (edb *EventDb) addStat(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
+		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
+
 		return edb.addBlock(*block)
 	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
