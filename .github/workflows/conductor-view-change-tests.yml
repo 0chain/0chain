@@ -1,9 +1,9 @@
 name: CONDUCTOR VIEW CHANGE TESTS
 
 on:
-  schedule:
-    # Runs everyday at 03:00 am
-    - cron: '0 8 * * * '
+  # schedule:
+  #   # Runs everyday at 03:00 am
+  #   - cron: '0 8 * * * '
   workflow_dispatch:
 
 env:
