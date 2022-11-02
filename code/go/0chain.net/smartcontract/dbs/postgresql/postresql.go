@@ -1,11 +1,12 @@
 package postgresql
 
 import (
-	"0chain.net/core/viper"
 	"database/sql"
 	"errors"
 	"fmt"
 	"time"
+
+	"0chain.net/core/viper"
 
 	"gorm.io/gorm/logger"
 
@@ -57,7 +58,7 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 			config.Password)),
 			&gorm.Config{
 				Logger:                 lgr,
-				SkipDefaultTransaction: true,
+				SkipDefaultTransaction: false,
 				PrepareStmt:            true,
 				CreateBatchSize:        50,
 			})
