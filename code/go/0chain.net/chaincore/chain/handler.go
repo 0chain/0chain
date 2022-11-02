@@ -1349,6 +1349,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
+	if txn.CreationDate < common.Now()-common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
+		return nil, fmt.Errorf("put_transaction: time out of sync with server time")
+	}
+
 	sc := GetServerChain()
 	if sc.TxnMaxPayload() > 0 {
 		if len(txn.TransactionData) > sc.TxnMaxPayload() {
