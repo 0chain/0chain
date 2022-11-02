@@ -796,14 +796,9 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 	ups := new(userPools)
 	ups.Pools = make(map[string][]*delegatePoolStat, len(minerPools)+len(sharderPools))
 	for _, pool := range minerPools {
-		poolStatusStr, err := spenum.PoolStatus(pool.Status).String()
-		if err != nil {
-			common.Respond(w, r, nil, err)
-			return
-		}
 		dp := delegatePoolStat{
 			ID:     pool.PoolID,
-			Status: poolStatusStr,
+			Status: spenum.PoolStatus(pool.Status).String(),
 		}
 		dp.Balance = pool.Balance
 
@@ -815,14 +810,9 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 	}
 
 	for _, pool := range sharderPools {
-		poolStatusStr, err := spenum.PoolStatus(pool.Status).String()
-		if err != nil {
-			common.Respond(w, r, nil, err)
-			return
-		}
 		dp := delegatePoolStat{
 			ID:     pool.PoolID,
-			Status: poolStatusStr,
+			Status: spenum.PoolStatus(pool.Status).String(),
 		}
 
 		dp.Balance = pool.Balance

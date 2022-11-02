@@ -1,7 +1,5 @@
 package spenum
 
-import "errors"
-
 //go:generate msgp -v -io=false -tests=false
 
 type Provider int
@@ -33,9 +31,9 @@ const (
 
 var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting", "deleted"}
 
-func (p PoolStatus) String() (string, error) {
+func (p PoolStatus) String() string {
 	if int(p) < len(poolString) && int(p) >= 0 {
-		return poolString[p], nil
+		return poolString[p]
 	}
-	return "", errors.New("unknown pool status")
+	return "unknown pool status"
 }
