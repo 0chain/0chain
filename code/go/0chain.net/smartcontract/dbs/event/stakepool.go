@@ -145,7 +145,7 @@ func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 }
 
 func (edb *EventDb) rewardUpdate(stakePoolsRewards []dbs.StakePoolReward, round int64) error {
-	if err := edb.delegateReward(stakePoolsRewards, round); err != nil {
+	if err := edb.stakePoolRewardUpdate(stakePoolsRewards, round); err != nil {
 		return err
 	}
 	if !edb.settings.Debug {
@@ -155,8 +155,7 @@ func (edb *EventDb) rewardUpdate(stakePoolsRewards []dbs.StakePoolReward, round 
 	if err := edb.providerReward(stakePoolsRewards, round); err != nil {
 		return err
 	}
-
-	return edb.stakePoolRewardUpdate(stakePoolsRewards, round)
+	return edb.delegateReward(stakePoolsRewards, round)
 }
 
 func (edb *EventDb) stakePoolRewardUpdate(spus []dbs.StakePoolReward, round int64) error {
