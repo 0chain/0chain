@@ -54,6 +54,23 @@ type FaucetConfig struct {
 	Cost            map[string]int `json:"cost"`
 }
 
+func getConfig(balances cstate.CommonStateContextI) (*FaucetConfig, error) {
+	conf, err := balances.GetConfig("faucetscConfig")
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			gn := new(GlobalNode)
+			err = balances.GetTrieNode(globalNodeKey, gn)
+			if err != nil {
+				return nil, err
+			}
+			balances.SetConfig("faucetscConfig", gn.FaucetConfig)
+			return gn.FaucetConfig, nil
+		}
+		return nil, err
+	}
+	return (*conf).(*FaucetConfig), nil
+}
+
 // configurations from sc.yaml
 func getFaucetConfig() (conf *FaucetConfig, err error) {
 

@@ -52,8 +52,9 @@ func NoResourceOrErrInternal(w http.ResponseWriter, r *http.Request, err error) 
 // faucet smart contract configuration settings
 //
 // responses:
-//  200: StringMap
-//  404:
+//
+//	200: StringMap
+//	404:
 func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetQueryStateContext())
 	if err != nil {
@@ -63,7 +64,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 
 	var faucetConfig *FaucetConfig
 	if gn.FaucetConfig == nil {
-		faucetConfig, err = getFaucetConfig()
+		faucetConfig, err = getConfig(frh.GetQueryStateContext())
 		if err != nil {
 			NoResourceOrErrInternal(w, r, err)
 			return
@@ -116,8 +117,9 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 // pour amount
 //
 // responses:
-//  200:
-//  404:
+//
+//	200:
+//	404:
 func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetQueryStateContext())
 	if err != nil {
@@ -131,8 +133,9 @@ func (frh *FaucetscRestHandler) getPourAmount(w http.ResponseWriter, r *http.Req
 // list minersc config settings
 //
 // responses:
-//  200: periodicResponse
-//  404:
+//
+//	200: periodicResponse
+//	404:
 func (frh *FaucetscRestHandler) getGlobalPeriodicLimit(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(frh.GetQueryStateContext())
 	if err != nil {
@@ -155,8 +158,9 @@ func (frh *FaucetscRestHandler) getGlobalPeriodicLimit(w http.ResponseWriter, r 
 // list minersc config settings
 //
 // responses:
-//  200: periodicResponse
-//  404:
+//
+//	200: periodicResponse
+//	404:
 func (frh *FaucetscRestHandler) getPersonalPeriodicLimit(w http.ResponseWriter, r *http.Request) {
 	sctx := frh.GetQueryStateContext()
 	gn, err := getGlobalNode(sctx)
@@ -191,7 +195,7 @@ func getGlobalNode(sctx state.QueryStateContextI) (GlobalNode, error) {
 		if err != util.ErrValueNotPresent {
 			return gn, err
 		}
-		gn.FaucetConfig, err = getFaucetConfig()
+		gn.FaucetConfig, err = getConfig(sctx)
 		if err != nil {
 			return gn, err
 		}

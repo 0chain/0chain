@@ -131,6 +131,7 @@ type StateContext struct {
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
 	storagescConfig               *SCConfig
+	faucetscConfig                *SCConfig
 	invalidStateErrors            []error
 }
 
