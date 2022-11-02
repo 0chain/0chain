@@ -1137,14 +1137,15 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	var ups = new(userPoolStat)
 	ups.Pools = make(map[datastore.Key][]*delegatePoolStat)
 	for _, pool := range pools {
-		if pool.Status >= spenum.PoolStatus(pool.Status).Size() {
-			common.Respond(w, r, nil, errors.New("invalid user pool status"))
+		poolStatusStr, err := spenum.PoolStatus(pool.Status).String()
+		if err != nil {
+			common.Respond(w, r, nil, err)
 			return
 		}
 		var dps = delegatePoolStat{
 			ID:           pool.PoolID,
 			DelegateID:   pool.DelegateID,
-			Status:       spenum.PoolStatus(pool.Status).String(),
+			Status:       poolStatusStr,
 			RoundCreated: pool.RoundCreated,
 		}
 		dps.Balance = pool.Balance
@@ -1181,10 +1182,14 @@ func spStats(
 	}
 	stat.Rewards = blobber.Rewards.Rewards
 	for _, dp := range delegatePools {
+		poolStatusStr, err := spenum.PoolStatus(dp.Status).String()
+		if err != nil {
+			return nil, err
+		}
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,
 			DelegateID:   dp.DelegateID,
-			Status:       spenum.PoolStatus(dp.Status).String(),
+			Status:       poolStatusStr,
 			RoundCreated: dp.RoundCreated,
 		}
 		dpStats.Balance = dp.Balance
