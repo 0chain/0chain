@@ -1,4 +1,4 @@
-name: Conductor Validator Tests
+name: CONDUCTOR VALIDATOR-01 TESTS
 
 on:
   schedule:
@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  conductor_validators_tests:
-    name: CONDUCTOR-VALIDATORS-TESTS
-    runs-on: [self-hosted, conductor-test01]
+  CONDUCTOR_VALIDATORS_01_TESTS:
+    name: CONDUCTOR-VALIDATORS-01-TESTS
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - name: Go 1.18 setup.
@@ -17,9 +17,11 @@ jobs:
       with:
         go-version: '1.18'
 
-    # - name: Clean up job.
-    #   run: |
-    #     rm -rf ./*
+    - name: Docker Compose Setup.
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
 
     - name: Get Branch
       id: get_branch
@@ -37,6 +39,8 @@ jobs:
     - name: Docker Init Setup.
       run: |
         cd 0chain
+        make install-mockery
+        make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
@@ -147,14 +151,6 @@ jobs:
       run: |
         cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
 
-  upload_artifacts:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test02]
-
-    if: always()
-    needs: [conductor_validators_tests]
-
-    steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
@@ -175,6 +171,19 @@ jobs:
     #     name: Conductor-test-logs
     #     path: ./con-tests-backup-logs.tar.gz
 
-    # - name: Clean up job.
-    #   run: |
-    #     rm -rf ./*
+  notify_slack:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_VALIDATORS_01_TESTS]
+    if: always() && (needs.CONDUCTOR_VALIDATORS_01_TESTS.result == 'failure')
+    steps:
+      - name: "Check if should send slack notification"
+        id: send-slack-notification
+        uses: peter-murray/value-as-flag-action@0.0.1
+        with:
+          value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+          default: false
+
+      - name: "Notify Slack"
+        if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+        run: |
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_VALIDATORS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
