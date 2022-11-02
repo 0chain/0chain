@@ -300,8 +300,7 @@ func simpleRoundTrip(w http.ResponseWriter, r *http.Request) {
 }
 
 func handle(w http.ResponseWriter, r *http.Request, markers, filter string) {
-
-	if !strings.HasPrefix(r.URL.Host, "localhost") {
+	if strings.HasPrefix(r.URL.Host, "198.18.0.98") || (!strings.HasPrefix(r.URL.Host, "localhost") && !strings.HasPrefix(r.URL.Host, "198.18.0.9")) {
 		simpleRoundTrip(w, r) // not for a blobber
 		return
 	}

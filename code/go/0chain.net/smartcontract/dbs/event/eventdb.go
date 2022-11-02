@@ -1,6 +1,9 @@
 package event
 
 import (
+	"errors"
+	"fmt"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
@@ -28,6 +31,35 @@ type EventDb struct {
 	dbs.Store
 	dbConfig      config.DbAccess
 	eventsChannel chan blockEvents
+}
+
+func (edb *EventDb) Begin() (*EventDb, error) {
+	tx := edb.Store.Get().Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("begin transcation: %v", tx.Error)
+	}
+
+	edbTx := EventDb{
+		Store: edbTx{
+			Store: edb,
+			tx:    tx,
+		},
+	}
+	return &edbTx, nil
+}
+
+func (edb *EventDb) Commit() error {
+	if edb.Store.Get() == nil {
+		return errors.New("committing nil transaction")
+	}
+	return edb.Store.Get().Commit().Error
+}
+
+func (edb *EventDb) Rollback() error {
+	if edb.Store.Get() == nil {
+		return errors.New("rollbacking nil transaction")
+	}
+	return edb.Store.Get().Rollback().Error
 }
 
 type blockEvents struct {

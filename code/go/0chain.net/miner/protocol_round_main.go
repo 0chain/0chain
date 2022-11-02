@@ -26,3 +26,12 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
 	mc.moveToNextRoundNotAheadImpl(ctx, r, func() {})
 }
+
+// GenerateRoundBlock - given a round number generates a block.
+func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
+	return mc.generateRoundBlock(ctx, r)
+}
+
+func areRoundAndBlockSeedsEqual(r round.RoundI, b *block.Block) bool {
+	return r.GetRandomSeed() == b.GetRoundRandomSeed()
+}

@@ -1008,10 +1008,28 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 	b *block.Block, _ []byte, balances cstate.StateContextI) (err error) {
 
+	var conf *Config
+	if conf, err = sc.getConfig(balances, true); err != nil {
+		return fmt.Errorf("can't get SC configurations: %v", err.Error())
+	}
+
 	validators, err := getValidatorsList(balances)
 	if err != nil {
 		return common.NewErrorf("generate_challenge",
 			"error getting the validators list: %v", err)
+	}
+
+
+	// Check if the length of the list of validators is higher than the lower bound of validators
+	minValidators  := conf.ValidatorsPerChallenge
+	currentValidatorsCount, err := validators.Size(balances)
+	
+	if err != nil {
+		return fmt.Errorf("can't get validators partition size: %v", err.Error())
+	}
+	if currentValidatorsCount < minValidators {
+		return common.NewError("generate_challenge",
+			"Validators length is less than minimum validators specified in sc.yaml->validators_per_challenge")
 	}
 
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)

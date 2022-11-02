@@ -125,17 +125,17 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 
 		gs.blobberCount++ //todo figure out why we increment blobberCount on every update
 	}
-	//if len(aggregates) > 0 {
-	//	if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
-	//		logging.Logger.Error("saving aggregates", zap.Error(result.Error))
-	//	}
-	//}
-	//
-	//if len(currentBlobbers) > 0 {
-	//	if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
-	//		logging.Logger.Error("saving blobbers snapshots", zap.Error(err))
-	//	}
-	//}
+	if len(aggregates) > 0 {
+		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
+			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
+		}
+	}
+
+	if len(currentBlobbers) > 0 {
+		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
+			logging.Logger.Error("saving blobbers snapshots", zap.Error(err))
+		}
+	}
 
 	// update global snapshot object
 	if gs.blobberCount == 0 {

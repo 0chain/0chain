@@ -212,3 +212,11 @@ func (c *client) addBlockClientStats(req []byte) (err error) {
 	}
 	return
 }
+
+func (c *client) magicBlock() (configFile *string, err error) {
+	err = c.client.Call("Server.MagicBlock", &struct{}{}, &configFile)
+	for err == rpc.ErrShutdown {
+		err = c.client.Call("Server.MagicBlock", &struct{}{}, &configFile)
+	}
+	return
+}

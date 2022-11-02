@@ -145,8 +145,12 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	return r, err
 }
 
-/*GetBlockHash - get the block hash for a given round */
+// GetBlockHash - get the block hash for a given round
 func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, error) {
+	if roundNumber > sc.GetCurrentRound() {
+		return "", fmt.Errorf("round %d does not exist", roundNumber)
+	}
+
 	var err error
 	r := sc.GetSharderRound(roundNumber)
 	if r == nil {

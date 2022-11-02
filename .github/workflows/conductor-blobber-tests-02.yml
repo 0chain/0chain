@@ -1,31 +1,36 @@
-name: Conductor Validator Tests
+name: CONDUCTOR BLOBBER-02 TESTS
 
 on:
   schedule:
-    # Runs everyday at 03:00 am
-    - cron: '0 7 * * * '
+    # Runs everyday at 02:00 am
+    - cron: '0 3 * * * '
   workflow_dispatch:
 
 jobs:
-  conductor_validators_tests:
-    name: CONDUCTOR-VALIDATORS-TESTS
-    runs-on: [self-hosted, conductor-test01]
+  conductor_blobbers_tests:
+    name: CONDUCTOR-BLOBBERS-TESTS
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - name: Go 1.18 setup.
       uses: actions/setup-go@v2
       with:
         go-version: '1.18'
-
-    # - name: Clean up job.
-    #   run: |
-    #     rm -rf ./*
+      
+    - name: Docker Compose Setup.
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+        sudo wget https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-secretservice-v0.6.3-amd64.tar.gz
+        sudo tar -xf docker-credential-secretservice-v0.6.3-amd64.tar.gz
+        sudo chmod +x docker-credential-secretservice
+        sudo mv docker-credential-secretservice /usr/bin/
 
     - name: Get Branch
       id: get_branch
       run: |
         BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        BRANCH=add-blobber-test-send-wrong-data
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 
@@ -37,6 +42,8 @@ jobs:
     - name: Docker Init Setup.
       run: |
         cd 0chain
+        make install-mockery
+        make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
@@ -67,7 +74,6 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
-        cd blobber && git checkout add-send-wrong-bad-data-behaviour
 
     - name: Git clone zboxcli
       run: |
@@ -116,11 +122,16 @@ jobs:
 
     - name: Build blobber base
       run: |
-        cd blobber && ./docker.local/bin/build.base.sh
+        cd blobber
+        git checkout fix/conductor-actions
+        ./docker.local/bin/build.base.sh
 
     - name: Build blobber
       run: |
-        cd blobber && ./docker.local/bin/build.blobber-integration-tests.sh
+        cd blobber
+        chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
+        ./docker.local/bin/build.blobber-integration-tests.sh
+
 
     - name: Add ZCN config
       run: |
@@ -143,16 +154,17 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    - name: Starting validator Tests.
+    - name: Starting blobber Tests.
       run: |
-        cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh blobber-2
 
   upload_artifacts:
     name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test02]
+    runs-on: [self-hosted, arc-runner]
 
     if: always()
-    needs: [conductor_validators_tests]
+    needs: [conductor_blobbers_tests]
 
     steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.
@@ -165,15 +177,15 @@ jobs:
         name: Conductor-test-logs
         path: ./con-tests-logs.tar.gz
 
-    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-    #   run: |
-    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
+    - name: Creating Artifact con-tests-backup-logs.tar.gz file.
+      run: |
+        tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
 
-    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-backup-logs.tar.gz
+    - name: Uploading artifact con-tests-backup-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-tests-backup-logs.tar.gz
 
     # - name: Clean up job.
     #   run: |
