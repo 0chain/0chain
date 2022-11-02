@@ -39,7 +39,3 @@ func (p PoolStatus) String() (string, error) {
 	}
 	return "", errors.New("unknown pool status")
 }
-
-func (p PoolStatus) Size() int {
-	return len(poolString)
-}
