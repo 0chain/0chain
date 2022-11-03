@@ -16,13 +16,11 @@ sets:
 #
 # test cases
 #	Flow of this test case:
-#   There is a miner that sends a VRF before the previous round has been notarized. This test checks whether this attack prevents the rest of the network from operating (creating new rounds and blocks).
-#   1. All miners communicate honestly until the 10th round
-#   2. Leader_0 locks the notarization messages
-#   3. Replica_0 (Adv): send VRF_Share0_10
-#   4. Replica_0 (Adv): generate VRF_Share0_11 for round 11 and send VRF_Share0_11
-#   5. Leader_0 waits for VRF_Share0_11 to unlock notarization messages
-#   6. Check whether round 11 has been finalized
+# 1. All nodes communicate honestly until round 10th
+# 2. Lock notarization of round 10 in all nodes (block verification tickets sending)
+# 3. Adversarial node sends VRF for round 11
+# 4. All nodes receive adversarial node VRF for round 11, cache it and unblock verification tickets sending for round 10
+# 5. Verify whether network continues operating correctly
 tests:
   # VRF
   - name: "Spam VRFS to everyone"
@@ -31,16 +29,10 @@ tests:
       - cleanup_bc: {}
       - start: ["sharder-1"]
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - round_has_finalized:
-          spammers:
-            - node_type: 1 # replica node type
-              type_rank: 0
-          spamming_receiver:
-            node_type: 0
-            type_rank: 0
+      - lock_notarization_and_send_next_round_vrf:
+          adversarial: bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8
           round: 10
       - wait_round:
           shift: 10
           allow_beyond: true
-      - make_test_case_check:
-          wait_time: 10s
+          timeout: "30s"

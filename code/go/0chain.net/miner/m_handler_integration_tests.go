@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sync/atomic"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -20,7 +19,6 @@ import (
 	"0chain.net/conductor/config/cases"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 )
 
@@ -75,11 +73,6 @@ func VRFSStats(handler datastore.JSONEntityReqResponderF) datastore.JSONEntityRe
 	}
 }
 
-var (
-	waitForSpammingVRF      chan bool
-	waitForSpammingVRFCount int32
-)
-
 // NotarizationReceiptHandler - handles the receipt of a notarization
 // for a block.
 func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
@@ -93,23 +86,6 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 			<-delayedBlock
 		}()
 	}
-
-	state := crpc.Client().State()
-
-	if state.RoundHasFinalizedConfig != nil && state.RoundHasFinalizedConfig.Round == int(not.Round) && chain.IsSpamReceiver(state, not.Round) {
-		m := GetMinerChain()
-		mr := m.getOrCreateRound(ctx, (int64)(state.RoundHasFinalizedConfig.Round+1))
-		// if already received VRF share of next round the miner does not need to wait for the spamming VRF share
-		if len(mr.vrfSharesCache.getAll()) == 0 {
-			logging.Logger.Sugar().Debugf("Waiting for spamming VRF")
-			if waitForSpammingVRF == nil {
-				waitForSpammingVRF = make(chan bool)
-			}
-			atomic.AddInt32(&waitForSpammingVRFCount, 1)
-			<-waitForSpammingVRF
-		}
-	}
-
 	return notarizationReceiptHandler(ctx, entity)
 }
 

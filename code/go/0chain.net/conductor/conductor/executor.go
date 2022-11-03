@@ -917,6 +917,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.BlobberDelete = update
 		case *config.AdversarialValidator:
 			state.AdversarialValidator = update
+		case *config.LockNotarizationAndSendNextRoundVRF:
+			state.LockNotarizationAndSendNextRoundVRF = update
 		}
 	})
 

@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -48,17 +49,7 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 		state     = crpc.Client().State()
 		badVRFS   *round.VRFShare
 		good, bad []*node.Node
-		r         = mc.GetRound(vrfs.Round)
 	)
-
-	if state.RoundHasFinalizedConfig != nil && state.RoundHasFinalizedConfig.Spammers != nil && r.IsRanksComputed() {
-		isSpammer := chain.IsSpammer(state.RoundHasFinalizedConfig.Spammers, vrfs.Round)
-
-		if isSpammer && vrfs.Round == int64(state.RoundHasFinalizedConfig.Round) {
-			mc.SendVRFSSpam(ctx, vrfs)
-			return
-		}
-	}
 
 	// not possible to send bad VRFS and bad round timeout at the same time
 	switch {
@@ -233,6 +224,11 @@ func getBadBVTKey(ctx context.Context, b *block.Block) (
 	return
 }
 
+var (
+	sendVerificationTicketC       chan bool = make(chan bool)
+	sendVerificationTicketCounter int32
+)
+
 // SendVerificationTicket - send the block verification ticket
 func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
 	if isShuttingDown(b.Round) {
@@ -252,6 +248,25 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt
 
 		good, bad []*node.Node
 	)
+
+	if state.LockNotarizationAndSendNextRoundVRF != nil && state.LockNotarizationAndSendNextRoundVRF.Round == int(b.Round) {
+		logging.Logger.Debug("Lock notarization by holding the sending of verification tickets", zap.Int("Round", int(b.Round)))
+
+		if selfNodeKey == state.LockNotarizationAndSendNextRoundVRF.Adversarial {
+			logging.Logger.Debug("Sending next round VRF", zap.Int("Round", int(b.Round+1)))
+			currentRound := mc.GetMinerRound(b.Round)
+
+			nr := mc.StartNextRound(ctx, currentRound)
+			mc.addMyVRFShare(ctx, currentRound, nr)
+		}
+
+		atomic.AddInt32(&sendVerificationTicketCounter, 1)
+		<-sendVerificationTicketC
+
+		mc.sendVerificationTicket(ctx, b, bvt)
+
+		return
+	}
 
 	if mc.VerificationTicketsTo() == chain.Generator && b.MinerID != selfNodeKey {
 		switch {

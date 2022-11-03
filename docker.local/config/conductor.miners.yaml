@@ -17,7 +17,7 @@ sets:
   - name: "VRF"
     tests:
       - "Send bad VRFS to everyone"
-      - "Spam VRFS to everyone"
+      - "Lock notarization and spam next round VRF"
       - "Send VRFS only to group"
       - "Send only the group the correct VRFS (bad VRFS for everyone else)"
       - "Send no VRFS"
@@ -73,25 +73,19 @@ tests:
           shift: 10
           timeout: "1m"
           must_fail: true
-  - name: "Spam VRFS to everyone"
+  - name: "Lock notarization and spam next round VRF"
     flow:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - round_has_finalized:
-          spammers:
-            - node_type: 1 # replica node type
-              type_rank: 0
-          spamming_receiver:
-            node_type: 0
-            type_rank: 0
+      - lock_notarization_and_send_next_round_vrf:
+          adversarial: bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8
           round: 10
       - wait_round:
           shift: 10
           allow_beyond: true
-      - make_test_case_check:
-          wait_time: 10s
+          timeout: "30s"
   - name: "Send VRFS only to group"
     flow:
       - magic_block: config/b0magicBlock_4_miners_2_sharders.json
