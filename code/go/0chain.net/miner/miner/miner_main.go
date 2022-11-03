@@ -9,10 +9,9 @@ import (
 )
 
 // stubs that does nothing
-func initIntegrationsTests()           {}
-func registerInConductor(id string)    {}
-func shutdownIntegrationTests()        {}
-func configureIntegrationsTestsFlags() {}
+func initIntegrationsTests()        {}
+func registerInConductor(id string) {}
+func shutdownIntegrationTests()     {}
 func readMagicBlock(magicBlockConfig string) (*block.MagicBlock, error) {
 	return chain.ReadMagicBlockFile(magicBlockConfig)
 }

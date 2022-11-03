@@ -59,8 +59,6 @@ func main() {
 	flag.StringVar(&redisTxnsHost, "redis_txns_host", "", "TransactionDB redis host")
 	flag.IntVar(&redisTxnsPort, "redis_txns_port", 0, "TransactionDB redis port")
 
-	configureIntegrationsTestsFlags()
-
 	flag.Parse()
 	config.Configuration().DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
