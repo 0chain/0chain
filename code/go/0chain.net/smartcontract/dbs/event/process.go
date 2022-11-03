@@ -204,6 +204,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
+	logging.Logger.Info("start event db worker")
 	for {
 		es := <-edb.eventsChannel
 

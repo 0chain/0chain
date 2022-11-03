@@ -9,11 +9,13 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
+	. "github.com/0chain/common/core/logging"
 )
 
 const DefaultQueryTimeout = 5 * time.Second
 
 func NewEventDb(config config.DbAccess) (*EventDb, error) {
+	Logger.Info("new events DB")
 	db, err := postgresql.GetPostgresSqlDb(config)
 	if err != nil {
 		return nil, err
@@ -24,6 +26,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 
+	Logger.Info("starting automigrate")
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}
