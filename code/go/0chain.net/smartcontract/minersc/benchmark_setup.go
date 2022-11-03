@@ -211,7 +211,7 @@ func AddUserNodesForNode(
 	}
 }
 
-func AddMockRewards(
+func AddMockProviderRewards(
 	miners, sharders []string,
 	eventDb *event.EventDb,
 ) {
@@ -240,7 +240,6 @@ func AddMockRewards(
 	if err := eventDb.Store.Get().Create(&pRewards).Error; err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 func SetUpNodes(

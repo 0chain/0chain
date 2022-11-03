@@ -105,6 +105,8 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"limit":  "20",
 					"offset": "1",
+					"start":  "25",
+					"end":    "75",
 				},
 				Endpoint: mrh.getProviderRewards,
 			},
@@ -113,6 +115,8 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"limit":  "20",
 					"offset": "1",
+					"start":  "25",
+					"end":    "75",
 				},
 				Endpoint: mrh.getDelegateRewards,
 			},

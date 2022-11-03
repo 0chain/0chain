@@ -356,7 +356,7 @@ func setUpMpt(
 		go func() {
 			defer wg.Done()
 			timer := time.Now()
-			minersc.AddMockRewards(miners, sharders, eventDb)
+			minersc.AddMockProviderRewards(miners, sharders, eventDb)
 			log.Println("adding mock rewards for miners and sharders\t", time.Since(timer))
 		}()
 	}
