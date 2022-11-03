@@ -77,8 +77,7 @@ func (n *RoundHasFinalized) AddResult(blob []byte) error {
 		defer func() {
 			n.prepared <- struct{}{}
 		}()
-		n.res = new(RoundInfo)
-		return n.res.Decode(blob)
+		n.res = roundInfo
 	}
 
 	return nil

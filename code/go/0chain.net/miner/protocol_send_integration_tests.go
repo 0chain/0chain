@@ -64,10 +64,10 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	switch {
 	case state.VRFS != nil:
 		badVRFS = getBadVRFS(vrfs)
-		good, bad = crpcutils.Split(state, state.VRFS, mb.Miners.CopyNodes())
+		good, bad = chain.SplitGoodAndBadNodes(state, state.VRFS, mb.Miners.CopyNodes())
 	case state.RoundTimeout != nil:
 		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1) // just increase
-		good, bad = crpcutils.Split(state, state.RoundTimeout,
+		good, bad = chain.SplitGoodAndBadNodes(state, state.RoundTimeout,
 			mb.Miners.CopyNodes())
 
 	default:
@@ -284,12 +284,12 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt
 	case state.WrongVerificationTicketHash != nil:
 		// (wrong hash)
 		badvt = getBadBVTHash(ctx, b)
-		good, bad = crpcutils.Split(state, state.WrongVerificationTicketHash,
+		good, bad = chain.SplitGoodAndBadNodes(state, state.WrongVerificationTicketHash,
 			mb.Miners.CopyNodes())
 	case state.WrongVerificationTicketKey != nil:
 		// (wrong secret key)
 		badvt = getBadBVTKey(ctx, b)
-		good, bad = crpcutils.Split(state, state.WrongVerificationTicketKey,
+		good, bad = chain.SplitGoodAndBadNodes(state, state.WrongVerificationTicketKey,
 			mb.Miners.CopyNodes())
 	default:
 	}

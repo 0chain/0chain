@@ -4,9 +4,24 @@
 package chain
 
 import (
+	"0chain.net/chaincore/node"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config/cases"
 )
+
+// SplitGoodAndBadNodes nodes list by given IsGoodOrBad.
+func SplitGoodAndBadNodes(s *crpc.State, igb crpc.IsGoodOrBad, nodes []*node.Node) (
+	good, bad []*node.Node) {
+
+	for _, n := range nodes {
+		if igb.IsBad(s, n.GetKey()) {
+			bad = append(bad, n)
+		} else if igb.IsGood(s, n.GetKey()) {
+			good = append(good, n)
+		}
+	}
+	return
+}
 
 // IsSpammer checks whether a node is a spammer.
 // A list of spammers names with format "miner-x" are passed, then the x is extracted and compared with the node index.
