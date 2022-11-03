@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 
 	"0chain.net/core/common"
@@ -58,7 +59,7 @@ func (gn *GlobalNode) Decode(input []byte) error {
 	return err
 }
 
-func (gn *GlobalNode) updateConfig(fields map[string]string) error {
+func (gn *GlobalNode) updateConfig(balances cstate.CommonStateContextI, fields map[string]string) error {
 	for key, value := range fields {
 		switch key {
 		case Settings[PourAmount]:
@@ -120,10 +121,13 @@ func (gn *GlobalNode) updateConfig(fields map[string]string) error {
 			gn.OwnerId = value
 
 		default:
-			return gn.setCostValue(key, value)
+			err := gn.setCostValue(key, value)
+			if err != nil {
+				return fmt.Errorf("key %s, %v error in setting cost value", key, err)
+			}
 		}
 	}
-	return nil
+	return updateConfig(balances, gn)
 }
 
 func (gn *GlobalNode) setCostValue(key, value string) error {

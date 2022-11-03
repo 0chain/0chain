@@ -71,6 +71,14 @@ func getConfig(balances cstate.CommonStateContextI) (*FaucetConfig, error) {
 	return (*conf).(*FaucetConfig), nil
 }
 
+func updateConfig(balances cstate.CommonStateContextI, gn *GlobalNode) error {
+	_, err := balances.InsertTrieNode(globalNodeKey, gn)
+	if err != nil {
+		return err
+	}
+	return balances.SetConfig("faucetscConfig", gn.FaucetConfig)
+}
+
 // configurations from sc.yaml
 func getFaucetConfig() (conf *FaucetConfig, err error) {
 
