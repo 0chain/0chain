@@ -1,8 +1,6 @@
 package event
 
 import (
-	"fmt"
-
 	"github.com/0chain/common/core/currency"
 )
 
@@ -26,25 +24,24 @@ type BlobberSnapshot struct {
 	RankMetric          float64       `json:"rank_metric"`
 }
 
-func (edb *EventDb) getBlobberSnapshots(round, period int64) ([]string, map[string]BlobberSnapshot, error) {
+func (edb *EventDb) getBlobberSnapshots() (map[string]BlobberSnapshot, error) {
 	var snapshots []BlobberSnapshot
 	result := edb.Store.Get().
-		Raw(fmt.Sprintf("SELECT * FROM blobber_snapshots WHERE MOD(creation_round, %d) = ?", period), round%period).
+		Raw("SELECT * FROM blobber_snapshots WHERE blobber_id in (select id from temp_ids)").
 		Scan(&snapshots)
 	if result.Error != nil {
-		return nil, nil, result.Error
+		return nil, result.Error
 	}
 
 	var mapSnapshots = make(map[string]BlobberSnapshot, len(snapshots))
-	var ids []string
+
 	for _, snapshot := range snapshots {
 		mapSnapshots[snapshot.BlobberID] = snapshot
-		ids = append(ids, snapshot.BlobberID)
 	}
 
-	result = edb.Store.Get().Where("blobber_id IN ?", ids).Delete(&BlobberSnapshot{})
+	result = edb.Store.Get().Where("blobber_id IN (select id from temp_ids)").Delete(&BlobberSnapshot{})
 
-	return ids, mapSnapshots, result.Error
+	return mapSnapshots, result.Error
 }
 
 func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
