@@ -62,7 +62,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 	r := edb.Store.Get().
 		Raw(fmt.Sprintf("INSERT INTO temp_ids (id) SELECT blobber_id FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period)
 	if r.Error != nil {
-		logging.Logger.Error("inswrting current ids", zap.Error(r.Error))
+		logging.Logger.Error("inserting current ids", zap.Error(r.Error))
 		return
 	}
 

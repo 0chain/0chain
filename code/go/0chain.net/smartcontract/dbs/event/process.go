@@ -352,7 +352,13 @@ func (edb *EventDb) processEvent(event Event, tags []int, round int64, block str
 
 func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, error) {
 	round := e.round
-	if len(e.events) == 0 {
+	var events []Event
+	for _, ev := range e.events { //filter out round events
+		if ev.Type == int(TypeStats) {
+			events = append(events, ev)
+		}
+	}
+	if len(events) == 0 {
 		return s, nil
 	}
 	gs := &globalSnapshot{
@@ -360,7 +366,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	}
 
 	edb.updateBlobberAggregate(round, period, gs)
-	gs.update(e.events)
+	gs.update(events)
 
 	gs.Round = round
 	if err := edb.addSnapshot(gs.Snapshot); err != nil {
