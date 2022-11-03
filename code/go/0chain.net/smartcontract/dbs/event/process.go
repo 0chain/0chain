@@ -52,7 +52,7 @@ const (
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
-	TagAddOrOverwriteDelegatePool
+	TagAddDelegatePool
 	TagStakePoolReward                     // 26
 	TagUpdateDelegatePool                  // 27
 	TagAddAllocation                       // 28
@@ -458,12 +458,12 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.removeCurator(*c)
 
 	//stake pool
-	case TagAddOrOverwriteDelegatePool:
+	case TagAddDelegatePool:
 		dps, ok := fromEvent[[]DelegatePool](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteDelegatePools(*dps)
+		return edb.addDelegatePools(*dps)
 	case TagUpdateDelegatePool:
 		spUpdate, ok := fromEvent[dbs.DelegatePoolUpdate](event.Data)
 		if !ok {
