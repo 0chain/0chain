@@ -217,21 +217,21 @@ func AddMockProviderRewards(
 ) {
 	var mockRewardAmount currency.Coin = 1680000000
 	var pRewards []event.RewardProvider
-	for i, miner := range miners {
+	for _, miner := range miners {
 		for j := int64(0); j < viper.GetInt64(benchmark.NumBlocks); j++ {
 			pRewards = append(pRewards, event.RewardProvider{
 				Amount:      mockRewardAmount,
-				BlockNumber: int64(i),
+				BlockNumber: j,
 				Provider:    miner,
 				RewardType:  spenum.BlockReward.Int(),
 			})
 		}
 	}
-	for i, sharder := range sharders {
+	for _, sharder := range sharders {
 		for j := int64(0); j < viper.GetInt64(benchmark.NumBlocks); j++ {
 			pRewards = append(pRewards, event.RewardProvider{
 				Amount:      mockRewardAmount,
-				BlockNumber: int64(i),
+				BlockNumber: j,
 				Provider:    sharder,
 				RewardType:  spenum.BlockReward.Int(),
 			})
