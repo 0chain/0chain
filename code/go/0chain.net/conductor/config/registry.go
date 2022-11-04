@@ -190,6 +190,24 @@ func init() {
 		return ex.WrongBlockHash(&wbh)
 	})
 
+	register("wrong_block_random_seed", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wb Bad
+		if err = wb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockRandomSeed(&wb)
+	})
+
+	register("wrong_block_ddos", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wb Bad
+		if err = wb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockDDoS(&wb)
+	})
+
 	register("verification_ticket_group", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var vtg Bad
@@ -603,6 +621,47 @@ func init() {
 
 	register("adversarial_validator", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := NewAdversarialValidator()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("magic_block_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := val.(string)
+		return ex.SetMagicBlock(cfg)
+	})
+
+	register("blobber_list", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberList()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_download", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberDownload()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_upload", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberUpload()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_delete", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberDelete()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}

@@ -118,6 +118,8 @@ type Server struct {
 
 	CurrentTest cases.TestCase
 
+	magicBlock string
+
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
@@ -392,6 +394,12 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
 	return
 }
 
+// magic block handler
+func (s *Server) MagicBlock(_ *struct{}, configFile *string) (err error) {
+	(*configFile) = s.magicBlock
+	return nil
+}
+
 // state polling handler
 func (s *Server) State(id NodeID, state *State) (err error) {
 	// node name is not known by the node requesting the State
@@ -514,6 +522,11 @@ func (s *Server) EnableClientStatsCollector() error {
 	return s.UpdateAllStates(func(state *State) {
 		state.ClientStatsCollectorEnabled = true
 	})
+}
+
+// SetMagicBlock sets magic block in server state
+func (s *Server) SetMagicBlock(configFile string) {
+	s.magicBlock = configFile
 }
 
 // Close the server waiting.

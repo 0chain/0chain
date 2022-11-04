@@ -55,8 +55,6 @@ tests:
           timeout: '15m'
       - stop: ['blobber-3']
       - command:
-          name: 'sleep_20s'
-      - command:
           name: 'list'
       - command:
           name: 'download'

@@ -2,7 +2,9 @@ name: Conductor View Change Tests
 
 on:
   schedule:
-    - cron: '0 4 * * * '
+    # Runs everyday at 03:00 am
+    - cron: '0 8 * * * '
+  workflow_dispatch:
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -103,9 +105,9 @@ jobs:
         name: Conductor-test-logs
         path: ./con-ft-tests-logs.tar.gz
 
-    - name: Cleanup
-      run: |
-        rm -rf ./*
+    # - name: Cleanup
+    #   run: |
+    #     rm -rf ./*
 
   conductor_byzantine_tests:
     name: CONDUCTOR-BYZANTINE-TESTS
@@ -362,6 +364,6 @@ jobs:
         name: Conductor-test-logs
         path: ./con-byz-tests-logs.tar.gz
 
-    - name: Cleanup
-      run: |
-        rm -rf ./*
+    # - name: Cleanup
+    #   run: |
+    #     rm -rf ./*

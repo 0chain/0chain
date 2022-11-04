@@ -36,6 +36,24 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 	return mc.getBlockToExtend(ctx, r)
 }
 
+const DDOS_INVALID_BLOCKS_NUMBER = 100
+
+// GenerateRoundBlock - given a round number generates a block.
+func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
+	if crpc.Client().State().WrongBlockDDoS != nil {
+		var (
+			err error
+			b   *block.Block
+		)
+		for i := 1; i <= DDOS_INVALID_BLOCKS_NUMBER; i++ {
+			b, err = mc.generateRoundBlock(ctx, r)
+		}
+		return b, err
+	}
+
+	return mc.generateRoundBlock(ctx, r)
+}
+
 func isMockingNotNotarisedBlockExtension(round int64) bool {
 	cfg := crpc.Client().State().ExtendNotNotarisedBlock
 
@@ -189,4 +207,12 @@ func lockChainIfConfigured() {
 
 		<-time.NewTimer(time.Microsecond * 200).C
 	}
+}
+
+func areRoundAndBlockSeedsEqual(r round.RoundI, b *block.Block) bool {
+	if crpc.Client().State().WrongBlockRandomSeed != nil {
+		return true
+	}
+
+	return r.GetRandomSeed() == b.GetRoundRandomSeed()
 }
