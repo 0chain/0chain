@@ -253,13 +253,13 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			gs = &Snapshot{Round: 1}
 		}
 		if gs == nil && es.round > 1 {
-			g, err := edb.GetGlobal()
+			g, err := tx.GetGlobal()
 			if err != nil {
 				logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round))
 			}
 			gs = &g
 		}
-		gs, err = edb.updateSnapshots(es, gs)
+		gs, err = tx.updateSnapshots(es, gs)
 		if err != nil {
 			logging.Logger.Error("event could not be processed",
 				zap.Int64("round", es.round),
