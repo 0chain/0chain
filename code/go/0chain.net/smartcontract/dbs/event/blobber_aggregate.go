@@ -54,8 +54,8 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapshot) {
-	exec := edb.Store.Get().Exec(fmt.Sprintf("CREATE TEMP TABLE IF NOT EXISTS temp_ids  (id text) "+
-		"ON COMMIT DROP AS SELECT blobber_id FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period)
+	exec := edb.Store.Get().Exec(fmt.Sprintf("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
+		"ON COMMIT DROP AS SELECT blobber_id as id FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
 		return
