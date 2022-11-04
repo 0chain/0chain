@@ -575,6 +575,25 @@ func init() {
 		return ex.ConfigureTestCase(cfg)
 	})
 
+	register("lock_notarization_and_send_next_round_vrf", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewLockNotarizationAndSendNextRoundVRF()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("round_has_finalized", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := cases.NewRoundHasFinalized()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {

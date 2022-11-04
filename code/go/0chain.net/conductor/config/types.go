@@ -3,6 +3,22 @@ package config
 import "github.com/mitchellh/mapstructure"
 
 // BlobberList represents the blobber_list directive state.
+type LockNotarizationAndSendNextRoundVRF struct {
+	Round       int    `json:"round" yaml:"round" mapstructure:"round"`
+	Adversarial string `json:"adversarial" yaml:"adversarial" mapstructure:"adversarial"`
+}
+
+// NewLockNotarizationAndSendNextRoundVRF returns an entity of LockNotarizationAndSendNextRoundVRF
+func NewLockNotarizationAndSendNextRoundVRF() *LockNotarizationAndSendNextRoundVRF {
+	return &LockNotarizationAndSendNextRoundVRF{}
+}
+
+// Decode implements MapDecoder interface.
+func (n *LockNotarizationAndSendNextRoundVRF) Decode(val interface{}) error {
+	return mapstructure.Decode(val, n)
+}
+
+// BlobberList represents the blobber_list directive state.
 type BlobberList struct {
 	ReturnError       bool   `json:"return_error" yaml:"return_error" mapstructure:"return_error"`
 	SendWrongData     bool   `json:"send_wrong_data" yaml:"send_wrong_data" mapstructure:"send_wrong_data"`

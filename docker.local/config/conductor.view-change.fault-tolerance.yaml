@@ -112,3 +112,4 @@ tests:
       - generators_failure: 310 # setup failure for generators selected on start of round 310
       - wait_round:
           round: 330
+          timeout: "20m" # it's progressing, but slowly

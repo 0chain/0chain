@@ -5,8 +5,11 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 // SendBlock - send the block proposal to the network.
@@ -71,4 +74,25 @@ func (mc *Chain) sendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	mb := mc.GetMagicBlock(vrfs.Round)
 	m2m := mb.Miners
 	m2m.SendAll(ctx, RoundVRFSender(vrfs))
+}
+
+/*SendVerificationTicket - send the block verification ticket */
+func (mc *Chain) sendVerificationTicket(ctx context.Context, b *block.Block,
+	bvt *block.BlockVerificationTicket) {
+
+	var (
+		mb  = mc.GetMagicBlock(b.Round)
+		m2m = mb.Miners
+	)
+
+	if mc.VerificationTicketsTo() == chain.Generator &&
+		b.MinerID != node.Self.Underlying().GetKey() {
+
+		if _, err := m2m.SendTo(ctx, VerificationTicketSender(bvt), b.MinerID); err != nil {
+			logging.Logger.Error("send verification ticket failed", zap.Error(err))
+		}
+		return
+	}
+
+	m2m.SendAll(ctx, VerificationTicketSender(bvt))
 }
