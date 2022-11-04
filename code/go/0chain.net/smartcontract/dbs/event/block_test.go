@@ -88,3 +88,32 @@ func TestFindBlock(t *testing.T) {
 		require.Error(t, fmt.Errorf("got %v blocks but expected 2", len(gotBlocks)))
 	}
 }
+
+func TestGetRoundFromTime(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
+	access := config.DbAccess{
+		Enabled:         true,
+		Name:            "events_db",
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	require.NoError(t, err)
+	defer eventDb.Close()
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+
+	block := Block{
+		Model: gorm.Model{CreatedAt: time.Now()},
+		Hash:  "test",
+	}
+	err = eventDb.addBlock(block)
+	require.NoError(t, err, "Error while inserting Block to event Database")
+	_, err = eventDb.GetRoundFromTime(time.Now(), false)
+	require.NoError(t, err, "Error while getting rounds from DB")
+}
