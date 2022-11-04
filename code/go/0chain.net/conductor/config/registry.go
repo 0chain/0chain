@@ -577,11 +577,12 @@ func init() {
 
 	register("lock_notarization_and_send_next_round_vrf", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := cases.NewRoundHasFinalized()
+		cfg := NewLockNotarizationAndSendNextRoundVRF()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureTestCase(cfg)
+
+		return ex.SetServerState(cfg)
 	})
 
 	register("round_has_finalized", func(name string,
