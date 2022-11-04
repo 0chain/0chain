@@ -54,17 +54,27 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapshot) {
-	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids  (id text)  ON COMMIT DELETE ROWS")
+	exec := edb.Store.Get().Exec(fmt.Sprintf("CREATE TEMP TABLE IF NOT EXISTS temp_ids  (id text) "+
+		"ON COMMIT DROP AS SELECT blobber_id FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
 		return
 	}
+	//r := edb.Store.Get().
+	//	Exec(fmt.Sprintf("INSERT INTO temp_ids (id) SELECT blobber_id FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period)
+	//if r.Error != nil {
+	//	logging.Logger.Error("inserting current ids", zap.Error(r.Error))
+	//	return
+	//}
+
+	var ids []string
 	r := edb.Store.Get().
-		Exec(fmt.Sprintf("INSERT INTO temp_ids (id) SELECT blobber_id FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period)
+		Raw("select id from temp_ids").Scan(ids)
 	if r.Error != nil {
-		logging.Logger.Error("inserting current ids", zap.Error(r.Error))
+		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
 	}
+	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentBlobbers []Blobber
 	result := edb.Store.Get().
