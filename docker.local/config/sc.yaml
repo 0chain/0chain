@@ -47,27 +47,23 @@ smart_contracts:
     share_rounds: 50
     publish_rounds: 50
     wait_rounds: 50
-    # stake interests, will be declined every epoch
-    interest_rate: 0.0 # [0; 1)
     # reward rate for generators, will be declined every epoch
     reward_rate: 1.0 # [0; 1)
     # share ratio is miner/block sharders rewards ratio, for example 0.1
     # gives 10% for miner and rest for block sharders
-    share_ratio: 0.8 # [0; 1)
+    share_ratio: 0.81 # [0; 1)
     # reward for a block
-    block_reward: 0.21 # tokens
+    block_reward: 0.213 # tokens
     # max service charge can be set by a generator
-    max_charge: 0.5 # %
+    max_charge: 0.57 # %
     # epoch is number of rounds before rewards and interest are decreased
     epoch: 15000000 # rounds
     # decline rewards every new epoch by this value (the block_reward)
-    reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
-    # decline interests every new epoch by this value (the interest_rate)
-    interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    reward_decline_rate: 0.11 # [0; 1), 0.1 = 10%
     # no mints after miner SC total mints reaches this boundary
     max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
-    reward_round_frequency: 250
+    reward_round_frequency: 253
     # miner delegates to get paid each round when paying fees and rewards
     num_miner_delegates_rewarded: 10
     # sharders rewarded each round

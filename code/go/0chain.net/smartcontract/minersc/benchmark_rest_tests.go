@@ -103,10 +103,11 @@ func BenchmarkRestTests(
 			{
 				FuncName: "provider-rewards",
 				Params: map[string]string{
+					"id":     data.Miners[0],
 					"limit":  "20",
 					"offset": "1",
 					"start":  "25",
-					"end":    "75",
+					"end":    "25",
 				},
 				Endpoint: mrh.getProviderRewards,
 			},

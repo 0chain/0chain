@@ -48,15 +48,26 @@ func (edb *EventDb) delegateReward(updates []dbs.StakePoolReward, round int64) e
 	}).Create(&drs).Error
 }
 
-func (edb *EventDb) GetDelegateRewards(limit common.Pagination, start, end int64) ([]RewardDelegate, error) {
-	var wm []RewardDelegate
-	return wm, edb.Get().
-		Model(&RewardDelegate{}).
-		Where("block_number >= ? AND block_number < ?", start, end).
-		Offset(limit.Offset).
+func (edb *EventDb) GetDelegateRewards(limit common.Pagination, PoolId string, start, end int64) ([]RewardDelegate, error) {
+	var rds []RewardDelegate
+	query := edb.Get().Model(&RewardDelegate{})
+	if PoolId == "" {
+		if start == end {
+			query = query.Where("block_number = ?", start)
+		} else {
+			query = query.Where("block_number >= ? AND block_number < ?", start, end)
+		}
+	} else {
+		if start == end {
+			query = query.Where("pool_id = ? AND block_number = ?", PoolId, start)
+		} else {
+			query = query.Where("pool_id = ? AND block_number >= ? AND block_number < ?", PoolId, start, end)
+		}
+	}
+	return rds, query.Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "block_number"},
 			Desc:   limit.IsDescending,
-		}).Scan(&wm).Error
+		}).Scan(&rds).Error
 }

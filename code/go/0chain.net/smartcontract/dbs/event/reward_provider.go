@@ -36,15 +36,27 @@ func (edb *EventDb) providerReward(updates []dbs.StakePoolReward, round int64) e
 	}).Create(&prs).Error
 }
 
-func (edb *EventDb) GetProviderRewards(limit common.Pagination, start, end int64) ([]RewardProvider, error) {
-	var wm []RewardProvider
-	return wm, edb.Get().
-		Model(&RewardProvider{}).
-		Where("block_number >= ? AND block_number < ?", start, end).
-		Offset(limit.Offset).
+func (edb *EventDb) GetProviderRewards(limit common.Pagination, id string, start, end int64) ([]RewardProvider, error) {
+	var rps []RewardProvider
+	query := edb.Get().Model(&RewardProvider{})
+	if id == "" {
+		if start == end {
+			query = query.Where("block_number = ?", start)
+		} else {
+			query = query.Where("block_number >= ? AND block_number < ?", start, end)
+		}
+	} else {
+		if start == end {
+			query = query.Where("provider = ? AND block_number = ?", id, start)
+		} else {
+			query = query.Where("provider = ? AND block_number >= ? AND block_number < ?", id, start, end)
+		}
+	}
+
+	return rps, query.Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "block_number"},
 			Desc:   limit.IsDescending,
-		}).Scan(&wm).Error
+		}).Scan(&rps).Error
 }

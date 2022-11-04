@@ -87,6 +87,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //	400:
 //	500:
 func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.Request) {
+	poolId := r.URL.Query().Get("pool_id")
 	start, end, err := common2.GetStartEndBlock(r.URL.Query())
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
@@ -99,7 +100,7 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	rtv, err := edb.GetDelegateRewards(limit, start, end)
+	rtv, err := edb.GetDelegateRewards(limit, poolId, start, end)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -131,6 +132,7 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 //	400:
 //	500:
 func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
 	start, end, err := common2.GetStartEndBlock(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
@@ -147,7 +149,7 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	rtv, err := edb.GetProviderRewards(limit, start, end)
+	rtv, err := edb.GetProviderRewards(limit, id, start, end)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
