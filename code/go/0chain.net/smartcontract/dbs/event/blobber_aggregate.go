@@ -69,7 +69,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 
 	var ids []string
 	r := edb.Store.Get().
-		Raw("select id from temp_ids").Scan(ids)
+		Raw("select id from temp_ids").Scan(&ids)
 	if r.Error != nil {
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
