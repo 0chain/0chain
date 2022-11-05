@@ -27,6 +27,12 @@ type testBalances struct {
 
 // GetConfig implements state.CommonStateContextI
 func (tb *testBalances) GetConfig(smartcontract string) (*cstate.SCConfig, error) {
+	if smartcontract != "vestingsc" {
+		return nil, common.NewError("invalid_smart_contract", "smartcontract not implemented")
+	}
+	if tb.config == nil {
+		return nil, util.ErrValueNotPresent
+	}
 	return tb.config, nil
 }
 

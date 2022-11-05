@@ -156,12 +156,20 @@ func TestUpdateConfig(t *testing.T) {
 		if value, ok := p.input[Settings[OwnerId]]; ok {
 			conf.OwnerId = value
 		}
+		conf.Cost = prevConf.Cost
+
+		var scConfig chainstate.SCConfig
+		scConfig = &conf
+
 		fmt.Println("setExpectations conf", conf)
 		balances.On(
 			"InsertTrieNode",
 			scConfigKey(ADDRESS),
 			mock.Anything,
 		).Return("", nil).Once()
+
+		balances.On("GetConfig", mock.Anything).Return(&scConfig, nil).Once()
+		balances.On("SetConfig", mock.Anything, mock.Anything).Return(nil).Once()
 
 		return args{
 			vsc:      vsc,
