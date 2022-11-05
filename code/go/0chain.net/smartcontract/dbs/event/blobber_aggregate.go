@@ -60,12 +60,6 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
 		return
 	}
-	//r := edb.Store.Get().
-	//	Exec(fmt.Sprintf("INSERT INTO temp_ids (id) SELECT blobber_id FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period)
-	//if r.Error != nil {
-	//	logging.Logger.Error("inserting current ids", zap.Error(r.Error))
-	//	return
-	//}
 
 	var ids []string
 	r := edb.Store.Get().
@@ -84,7 +78,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		logging.Logger.Error("getting current blobbers", zap.Error(result.Error))
 		return
 	}
-	logging.Logger.Debug("current_blobbers", zap.Int("count", len(currentBlobbers)))
+	logging.Logger.Debug("blobber_snapshot", zap.Int("total_current_blobbers", len(currentBlobbers)))
 
 	if round <= period && len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
@@ -97,6 +91,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
 		return
 	}
+	logging.Logger.Debug("blobber_snapshot", zap.Int("total_old_blobbers", len(oldBlobbers)))
 
 	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
@@ -153,12 +148,15 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
 		}
 	}
+	logging.Logger.Debug("blobber_snapshot", zap.Int("aggregates", len(aggregates)))
 
 	if len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
 			logging.Logger.Error("saving blobbers snapshots", zap.Error(err))
 		}
 	}
+
+	logging.Logger.Debug("blobber_snapshot", zap.Int("current_blobebrs", len(currentBlobbers)))
 
 	// update global snapshot object
 	if gs.blobberCount == 0 {
