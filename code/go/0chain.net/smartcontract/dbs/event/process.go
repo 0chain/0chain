@@ -70,6 +70,7 @@ const (
 	TagAddOrUpdateChallengePool            // 40
 	TagUpdateAllocationStat                // 41
 	TagUpdateBlobberStat                   // 42
+	TagUpdateValidatorStakeTotal           // 43
 	NumberOfTags
 )
 
@@ -163,6 +164,9 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddReadMarkerEvents(),
 			mergeAllocationStatsEvents(),
 			mergeUpdateBlobberStatsEvents(),
+
+			mergeUpdateValidatorsEvents(),
+			mergeUpdateValidatorStakesEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -398,11 +402,17 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addOrOverwriteValidators(*vns)
 	case TagUpdateValidator:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		updates, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateValidator(*updates)
+		return edb.updateValidators(*updates)
+	case TagUpdateValidatorStakeTotal:
+		updates, ok := fromEvent[[]Validator](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateValidatorStakes(*updates)
 	case TagAddOrOverwriteMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
