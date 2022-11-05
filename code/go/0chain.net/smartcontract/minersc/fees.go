@@ -109,6 +109,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	round int64,
 	sharders *MinerNodes,
 	balances cstate.StateContextI) error {
+	Logger.Debug("view change pools work", zap.Int64("round", round))
 	miners, err := getMinersList(balances)
 	if err != nil {
 		return fmt.Errorf("getting all miners list: %v", err)
@@ -156,13 +157,16 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 			minerDelete = true
 			continue
 		}
+		Logger.Debug("active pending", zap.Int64("round", round), zap.String("miner", mn.ID))
 		if err = msc.activatePending(mn); err != nil {
 			return err
 		}
 		if _, ok := mbMiners[mn.ID]; !ok {
+			Logger.Debug("miner offline", zap.Int64("round", round), zap.String("miner", mn.ID))
 			minersOffline = append(minersOffline, mn)
 			continue
 		}
+		Logger.Debug("miner save", zap.Int64("round", round), zap.String("miner", mn.ID))
 		// save excluding offline nodes
 		if err = mn.save(balances); err != nil {
 			return err
@@ -404,8 +408,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
+	Logger.Debug("payFee VC check", zap.Int64("gn.RewardRoundFrequency", gn.RewardRoundFrequency))
 	if gn.RewardRoundFrequency != 0 && b.Round%gn.RewardRoundFrequency == 0 {
 		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
+		Logger.Debug("payFee VC check", zap.Bool("lfmb is nil", lfmb == nil))
 		if lfmb != nil {
 			err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
 			if err != nil {
