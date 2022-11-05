@@ -314,7 +314,7 @@ func (gn *GlobalNode) validate() error {
 }
 
 func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
-	var out smartcontract.StringMap // store this in balances
+	var out smartcontract.StringMap
 	out.Fields = make(map[string]string)
 	for _, key := range SettingName {
 		info, ok := Settings[key]
