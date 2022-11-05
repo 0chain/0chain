@@ -11,8 +11,8 @@ env:
   ZCHAIN_BUILDRUN: zchain_run_base
 
 jobs:
-  conductor_image_build:
-    name: CONDUCTOR-IMAGE-BUILDS
+  CONDUCTOR_SHARDER_STANDARD_TESTS:
+    name: CONDUCTOR-SHARDER-STANDARD-TESTS
     runs-on: [self-hosted, arc-runner]
 
     steps:
@@ -30,25 +30,28 @@ jobs:
       with:
         go-version: '1.18'
 
-    - name: Install mockery
+    - name: Docker Compose Setup.
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+      
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    
+    - name: Docker Init Setup.
       run: |
         make install-mockery
         make build-mocks
-
-    - name: Docker Init Setup.
-      run: |
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
       run: |
         bash ./docker.local/bin/setup.network.sh || true
 
-    - name: Docker Compose Setup.
-      run: |
-        curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-        chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-      
     - name: Building Base Images
       run: |
         bash ./docker.local/bin/build.base.sh
@@ -66,37 +69,10 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-  conductor_standard_tests:
-    name: CONDUCTOR-STANDARD-TESTS
-    runs-on: [self-hosted, arc-runner]
-
-    needs:
-    - conductor_build
-
-    steps:
-    - name: Go 1.18 setup.
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.18'
-
-    - name: Docker Compose Setup.
-      run: |
-        curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-        chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-      
     - name: Running Standard Tests for Sharders.
       run: |
         bash ./docker.local/bin/start.conductor.sh sharders
 
-  upload_artifacts:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, arc-runner]
-
-    if: always()
-    needs: [conductor_standard_tests]
-
-    steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
@@ -117,23 +93,19 @@ jobs:
     #     name: Conductor-test-logs
     #     path: ./con-tests-backup-logs.tar.gz
 
-    # - name: Clean up job.
-    #   run: |
-    #     rm -rf ./*
+  notify_slack:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_SHARDER_STANDARD_TESTS]
+    if: always() && (needs.CONDUCTOR_SHARDER_STANDARD_TESTS.result == 'failure')
+    steps:
+      - name: "Check if should send slack notification"
+        id: send-slack-notification
+        uses: peter-murray/value-as-flag-action@0.0.1
+        with:
+          value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+          default: false
 
-  # notify_slack:
-  #   runs-on: [self-hosted, conductor-test01]
-  #   needs: [conductor_standard_tests]
-  #   if: always() && (needs.conductor_standard_tests.result == 'failure')
-  #   steps:
-  #     - name: "Check if should send slack notification"
-  #       id: send-slack-notification
-  #       uses: peter-murray/value-as-flag-action@0.0.1
-  #       with:
-  #         value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
-  #         default: false
-
-  #     - name: "Notify Slack"
-  #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
-  #       run: |
-  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> Conductor tests FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+      - name: "Notify Slack"
+        if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+        run: |
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_SHARDER_STANDARD_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

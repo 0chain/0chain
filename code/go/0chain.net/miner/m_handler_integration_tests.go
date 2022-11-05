@@ -86,7 +86,6 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 			<-delayedBlock
 		}()
 	}
-
 	return notarizationReceiptHandler(ctx, entity)
 }
 
@@ -198,4 +197,10 @@ func blockWithoutVerTickets(r *http.Request) (*block.Block, error) {
 	bl.VerificationTickets = nil
 
 	return bl, nil
+}
+
+// VRFShareHandler - handle the vrf share.
+func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
+	interface{}, error) {
+	return vrfShareHandler(ctx, entity)
 }

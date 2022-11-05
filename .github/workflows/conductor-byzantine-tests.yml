@@ -1,9 +1,9 @@
-name: CONDUCTOR MINER STANDARD TESTS
+name: CONDUCTOR BYZANTINE TESTS
 
 on:
   schedule:
     # Runs everyday at 01:00 am
-    - cron: '0 1 * * * '
+    - cron: '0 5 * * * '
   workflow_dispatch:
 
 env:
@@ -11,19 +11,12 @@ env:
   ZCHAIN_BUILDRUN: zchain_run_base
 
 jobs:
-  CONDUCTOR_MINER_STANDARD_TESTS:
-    name: CONDUCTOR-MINER-STANDARD-TESTS
+  CONDUCTOR_BYZANTINE_TESTS:
+    name: CONDUCTOR-BYZANTINE-TESTS
     runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
-
-    - name: Get Branch
-      id: get_branch
-      run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo "Branch name is ${BRANCH}"
 
     - name: Go 1.18 setup.
       uses: actions/setup-go@v2
@@ -35,7 +28,7 @@ jobs:
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
-
+    
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
@@ -51,7 +44,7 @@ jobs:
     - name: Docker Network Setup.
       run: |
         bash ./docker.local/bin/setup.network.sh || true
-      
+
     - name: Building Base Images
       run: |
         bash ./docker.local/bin/build.base.sh
@@ -64,39 +57,24 @@ jobs:
       run: |
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
-    - name: View Change Rounds
+    - name: Running No VC Byzantine Tests.
       run: |
-        awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
-        awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
+        bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
-    - name: Running Standard Tests for Miners.
+    - name: Creating Artifact con-byz-tests-logs.tar.gz file.
       run: |
-        bash ./docker.local/bin/start.conductor.sh miners
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
 
-    - name: Creating Artifact con-tests-logs.tar.gz file.
-      run: |
-        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
-
-    - name: Uploading artifact con-tests-logs.tar.gz file.
+    - name: Uploading artifact con-byz-tests-logs.tar.gz file.
       uses: actions/upload-artifact@v2
       with:
         name: Conductor-test-logs
-        path: ./con-tests-logs.tar.gz
-
-    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-    #   run: |
-    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
-
-    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-backup-logs.tar.gz
+        path: ./con-byz-tests-logs.tar.gz
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_MINER_STANDARD_TESTS]
-    if: always() && (needs.CONDUCTOR_MINER_STANDARD_TESTS.result == 'failure')
+    needs: [CONDUCTOR_BYZANTINE_TESTS]
+    if: always() && (needs.CONDUCTOR_BYZANTINE_TESTS.result == 'failure')
     steps:
       - name: "Check if should send slack notification"
         id: send-slack-notification
@@ -108,4 +86,4 @@ jobs:
       - name: "Notify Slack"
         if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
         run: |
-          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_MINER_STANDARD_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

@@ -43,7 +43,7 @@ func TestValidatorNode(t *testing.T) {
 	vn := Validator{
 		ValidatorID: encryption.Hash("mockValidator_" + strconv.Itoa(0)),
 		BaseUrl:     "http://localhost:8080",
-		Stake:       100,
+		StakeTotal:  100,
 
 		DelegateWallet: "delegate wallet",
 		MinStake:       currency.Coin(53),
