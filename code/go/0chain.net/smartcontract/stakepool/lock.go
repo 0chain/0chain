@@ -72,11 +72,6 @@ func (sp *StakePool) LockPool(
 			return fmt.Errorf("could not stake for different delegate id: %s, txn client id: %s", dp.DelegateID, txn.ClientID)
 		}
 
-		//  check status, only allow staking more when current pool is active
-		if dp.Status != spenum.Active {
-			return fmt.Errorf("could not stake pool in %s status", dp.Status)
-		}
-
 		b, err := currency.AddCoin(dp.Balance, txn.Value)
 		if err != nil {
 			return err
