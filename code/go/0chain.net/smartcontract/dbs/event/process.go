@@ -255,7 +255,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		if gs == nil && es.round > 1 {
 			g, err := tx.GetGlobal()
 			if err != nil {
-				logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round))
+				logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
 			}
 			gs = &g
 		}
