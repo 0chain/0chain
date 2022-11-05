@@ -51,7 +51,7 @@ func (vsc *VestingSmartContract) GetAddress() string {
 }
 
 func (vsc *VestingSmartContract) GetCost(t *transaction.Transaction, funcName string, balances chainstate.StateContextI) (int, error) {
-	node, err := vsc.getConfig(balances)
+	node, err := getConfig(balances)
 	if err != nil {
 		return math.MaxInt32, err
 	}

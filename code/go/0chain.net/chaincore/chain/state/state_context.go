@@ -130,8 +130,10 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
-	storagescConfig               *SCConfig
 	faucetscConfig                *SCConfig
+	storagescConfig               *SCConfig
+	vestingscConfig               *SCConfig
+	zcnscConfig                   *SCConfig
 	invalidStateErrors            []error
 }
 
@@ -413,10 +415,14 @@ func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 func (sc *StateContext) GetConfig(smartcontract string) (*SCConfig, error) {
 	var config *SCConfig
 	switch smartcontract {
-	case "storagesc":
-		config = sc.storagescConfig
 	case "faucetsc":
 		config = sc.faucetscConfig
+	case "storagesc":
+		config = sc.storagescConfig
+	case "vestingsc":
+		config = sc.vestingscConfig
+	case "zcnsc":
+		config = sc.zcnscConfig
 	default:
 		return nil, errors.New("invalid smart contract")
 	}
@@ -428,8 +434,14 @@ func (sc *StateContext) GetConfig(smartcontract string) (*SCConfig, error) {
 
 func (sc *StateContext) SetConfig(smartcontract string, config SCConfig) error {
 	switch smartcontract {
+	case "faucetsc":
+		sc.faucetscConfig = &config
 	case "storagesc":
 		sc.storagescConfig = &config
+	case "vestingsc":
+		sc.vestingscConfig = &config
+	case "zcnsc":
+		sc.zcnscConfig = &config
 	default:
 		return nil
 		// return errors.New("smartcontract not found")

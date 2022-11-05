@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/currency"
 	"github.com/0chain/common/core/util"
 
@@ -47,7 +48,7 @@ func InitConfig(ctx state.StateContextI) error {
 	node := &GlobalNode{ID: ADDRESS}
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	if err == util.ErrValueNotPresent {
-		node.ZCNSConfig = getConfig()
+		node.ZCNSConfig = readConfig()
 		_, err := ctx.InsertTrieNode(node.GetKey(), node)
 		return err
 	}
@@ -124,7 +125,7 @@ func postfix(section string) string {
 	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
 
-func getConfig() (conf *ZCNSConfig) {
+func readConfig() (conf *ZCNSConfig) {
 	conf = new(ZCNSConfig)
 	conf.MinMintAmount = currency.Coin(cfg.GetInt(postfix(MinMintAmount)))
 	conf.MinBurnAmount = currency.Coin(cfg.GetInt64(postfix(MinBurnAmount)))
@@ -139,4 +140,26 @@ func getConfig() (conf *ZCNSConfig) {
 	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
 
 	return conf
+}
+
+func getConfig(balances cstate.CommonStateContextI) (*ZCNSConfig, error) {
+	conf, err := balances.GetConfig("zcnsc")
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			return getConfigFromMPT(balances)
+		}
+		return nil, err
+	}
+	return (*conf).(*ZCNSConfig), nil
+}
+
+func getConfigFromMPT(balances cstate.CommonStateContextI) (*ZCNSConfig, error) {
+	var conf = &ZCNSConfig{}
+	node := &GlobalNode{ID: ADDRESS}
+	err := balances.GetTrieNode(node.GetKey(), conf)
+	if err != nil {
+		return nil, err
+	}
+	balances.SetConfig("zcnsc", conf)
+	return conf, nil
 }

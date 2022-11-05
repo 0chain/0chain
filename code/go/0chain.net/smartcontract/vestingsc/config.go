@@ -23,6 +23,7 @@ import (
 	"github.com/0chain/common/core/util"
 
 	chainstate "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
 )
 
@@ -213,7 +214,7 @@ func (vsc *VestingSmartContract) updateConfig(
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
 	var conf *config
-	if conf, err = vsc.getConfig(balances); err != nil {
+	if conf, err = getConfig(balances); err != nil {
 		return "", common.NewError("update_config",
 			"can't get config: "+err.Error())
 	}
@@ -234,6 +235,11 @@ func (vsc *VestingSmartContract) updateConfig(
 	}
 
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	if err != nil {
+		return "", common.NewError("update_config", err.Error())
+	}
+
+	err = balances.SetConfig("vestingsc", conf)
 	if err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
@@ -289,14 +295,24 @@ func getConfigReadOnly(
 	}
 }
 
-func (vsc *VestingSmartContract) getConfig(
-	balances chainstate.StateContextI,
-) (conf *config, err error) {
-	conf = new(config)
-	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
+func getConfig(balances cstate.CommonStateContextI) (*config, error) {
+	conf, err := balances.GetConfig("vestingsc")
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			return getConfigFromMPT(balances)
+		}
+		return nil, err
+	}
+	return (*conf).(*config), nil
+}
+
+func getConfigFromMPT(balances cstate.CommonStateContextI) (*config, error) {
+	var conf = &config{}
+	err := balances.GetTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		return nil, err
 	}
+	balances.SetConfig("vestingsc", conf)
 	return conf, nil
 }
 
@@ -322,7 +338,7 @@ func (vsc *VestingSmartContract) getConfigHandler(
 	params url.Values,
 	balances chainstate.StateContextI,
 ) (interface{}, error) {
-	conf, err := vsc.getConfig(balances)
+	conf, err := getConfig(balances)
 	if err != nil {
 		return nil, common.NewErrInternal("can't get config", err.Error())
 	}
