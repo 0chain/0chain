@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -10,12 +11,22 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
+type ApiSimpleNode struct {
+	SimpleNode
+	TotalRewards currency.Coin `json:"total_rewards"`
+}
+
+type ApiMinerNode struct {
+	*ApiSimpleNode       `json:"simple_miner"`
+	*stakepool.StakePool `json:"stake_pool"`
+}
+
+func minerTableToMinerNode(edbMiner event.Miner) ApiMinerNode {
 	var status = node.NodeStatusInactive
 	if edbMiner.Active {
 		status = node.NodeStatusActive
 	}
-	msn := SimpleNode{
+	sn := SimpleNode{
 		ID:          edbMiner.MinerID,
 		N2NHost:     edbMiner.N2NHost,
 		Host:        edbMiner.Host,
@@ -34,9 +45,13 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		LastHealthCheck: edbMiner.LastHealthCheck,
 		Status:          status,
 	}
+	msn := ApiSimpleNode{
+		SimpleNode:   sn,
+		TotalRewards: edbMiner.Rewards.TotalRewards,
+	}
 
-	return MinerNode{
-		SimpleNode: &msn,
+	return ApiMinerNode{
+		ApiSimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbMiner.Rewards.Rewards,
 			Settings: stakepool.Settings{

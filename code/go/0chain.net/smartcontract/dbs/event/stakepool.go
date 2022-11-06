@@ -145,9 +145,17 @@ func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 }
 
 func (edb *EventDb) rewardUpdate(stakePoolsRewards []dbs.StakePoolReward, round int64) error {
+	for i := range stakePoolsRewards {
+		err := edb.incrementReward(stakePoolsRewards[i].ProviderId, stakePoolsRewards[i].Reward)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := edb.stakePoolRewardUpdate(stakePoolsRewards, round); err != nil {
 		return err
 	}
+
 	if !edb.settings.Debug {
 		return nil
 	}
