@@ -118,6 +118,8 @@ type Server struct {
 
 	CurrentTest cases.TestCase
 
+	magicBlock string
+
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
@@ -392,15 +394,41 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
 	return
 }
 
+// magic block handler
+func (s *Server) MagicBlock(_ *struct{}, configFile *string) (err error) {
+	(*configFile) = s.magicBlock
+	return nil
+}
+
 // state polling handler
 func (s *Server) State(id NodeID, state *State) (err error) {
 	// node name is not known by the node requesting the State
 	// and thus, NodeID used here
 
-	var name, ok = s.names[id]
+	var name NodeName
+
+	// Validator does not need to change the state generated while reading conductor test configuration,
+	// so we can return	an existing state of a different node.
+	if strings.Contains(string(id), "validator-") {
+		for _, k := range s.names {
+			if strings.Contains(string(k), "blobber-") {
+				name = k
+				break
+			}
+		}
+
+		if ns, ok := s.nodes[name]; ok {
+			*state = *ns.state
+		}
+
+		return
+	}
+
+	var nodeName, ok = s.names[id]
 	if !ok {
 		return fmt.Errorf("unknown node ID: %s", id)
 	}
+	name = nodeName
 
 	var ns *nodeState
 	if ns, err = s.nodeState(name); err != nil {
@@ -494,6 +522,11 @@ func (s *Server) EnableClientStatsCollector() error {
 	return s.UpdateAllStates(func(state *State) {
 		state.ClientStatsCollectorEnabled = true
 	})
+}
+
+// SetMagicBlock sets magic block in server state
+func (s *Server) SetMagicBlock(configFile string) {
+	s.magicBlock = configFile
 }
 
 // Close the server waiting.

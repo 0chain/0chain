@@ -136,8 +136,8 @@ func SetupM2MRequestors() {
 	DKGShareSender = node.RequestEntityHandler("/v1/_m2m/dkg/share", options, dkgShareEntityMetadata)
 }
 
-// VRFShareHandler - handle the vrf share.
-func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
+// vrfShareHandler - handle the vrf share.
+func vrfShareHandler(ctx context.Context, entity datastore.Entity) (
 	interface{}, error) {
 	vrfs, ok := entity.(*round.VRFShare)
 	if !ok {

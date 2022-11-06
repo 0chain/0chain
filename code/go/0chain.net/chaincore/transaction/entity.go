@@ -10,8 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"0chain.net/core/viper"
-
 	"0chain.net/chaincore/currency"
 
 	"encoding/json"
@@ -22,6 +20,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"

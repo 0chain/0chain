@@ -236,7 +236,12 @@ type GlobalNode struct {
 	RewardDeclineRate float64 `json:"reward_decline_rate"`
 	// MaxMint is minting boundary for SC.
 	MaxMint currency.Coin `json:"max_mint"`
-
+	// miner delegates to get paid each round when paying fees and rewards
+	NumMinerDelegatesRewarded int `json:"num_miner_delegates_rewarded"`
+	// sharders rewarded each round
+	NumShardersRewarded int `json:"num_sharders_rewarded"`
+	// sharder delegates to get paid each round when paying fees and rewards
+	NumSharderDelegatesRewarded int `json:"num_sharder_delegates_rewarded"`
 	// PrevMagicBlock keeps previous magic block to make Miner SC more stable.
 	// In case latestFinalizedMagicBlock of a miner works incorrect. We are
 	// using this previous MB or latestFinalizedMagicBlock for genesis block.
@@ -273,6 +278,9 @@ func (gn *GlobalNode) readConfig() (err error) {
 	gn.RewardRoundFrequency = config.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
 	gn.RewardRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
 	gn.ShareRatio = config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
+	gn.NumMinerDelegatesRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumMinerDelegatesRewarded])
+	gn.NumShardersRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumShardersRewarded])
+	gn.NumSharderDelegatesRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumSharderDelegatesRewarded])
 	gn.BlockReward, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[BlockReward]))
 	if err != nil {
 		return
@@ -309,6 +317,18 @@ func (gn *GlobalNode) validate() error {
 
 	if gn.MaxDelegates <= 0 {
 		return fmt.Errorf("max_delegates is too small: %d", gn.MaxDelegates)
+	}
+	if gn.NumSharderDelegatesRewarded < 0 {
+		return fmt.Errorf("%s cannot be negative: %d",
+			NumSharderDelegatesRewarded.String(), gn.NumSharderDelegatesRewarded)
+	}
+	if gn.NumMinerDelegatesRewarded < 0 {
+		return fmt.Errorf("%s cannot be negative: %d",
+			NumMinerDelegatesRewarded.String(), gn.NumMinerDelegatesRewarded)
+	}
+	if gn.NumShardersRewarded < 0 {
+		return fmt.Errorf("%s cannot be negative: %d",
+			NumShardersRewarded.String(), gn.NumShardersRewarded)
 	}
 	return nil
 }
@@ -368,6 +388,12 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.RewardRoundFrequency, nil
 	case RewardRate:
 		return gn.RewardRate, nil
+	case NumMinerDelegatesRewarded:
+		return gn.NumMinerDelegatesRewarded, nil
+	case NumShardersRewarded:
+		return gn.NumShardersRewarded, nil
+	case NumSharderDelegatesRewarded:
+		return gn.NumSharderDelegatesRewarded, nil
 	case ShareRatio:
 		return gn.ShareRatio, nil
 	case BlockReward:

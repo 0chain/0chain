@@ -14,15 +14,8 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/core/common"
+	"0chain.net/core/util"
 )
-
-func revertString(s string) string {
-	r := []rune(s)
-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
-		r[i], r[j] = r[j], r[i]
-	}
-	return string(r)
-}
 
 /*LatestFinalizedBlockHandler - provide the latest finalized block by this miner */
 func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (
@@ -32,7 +25,7 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (
 	if state.FinalizedBlock != nil {
 		// bad
 		var lfbs = GetServerChain().GetLatestFinalizedBlockSummary()
-		lfbs.Hash = revertString(lfbs.Hash)
+		lfbs.Hash = util.RevertString(lfbs.Hash)
 		return lfbs, nil
 	}
 
@@ -117,7 +110,7 @@ func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Reques
 	var state = crpc.Client().State()
 	if state.MagicBlock != nil {
 		var lfmb = GetServerChain().GetLatestFinalizedMagicBlockClone(ctx)
-		lfmb.Hash = revertString(lfmb.Hash)
+		lfmb.Hash = util.RevertString(lfmb.Hash)
 		return lfmb.GetSummary(), nil
 	}
 

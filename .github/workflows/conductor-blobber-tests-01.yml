@@ -1,27 +1,34 @@
-name: Conductor Blobber Tests
+name: CONDUCTOR BLOBBER-01 TESTS
 
 on:
   schedule:
     # Runs everyday at 02:00 am
     - cron: '0 2 * * * '
   workflow_dispatch:
-    inputs:
-      view_change: 
-        description: 'Type true/false for setting view change.'
-        default: 'false'
-        required: true
 
 jobs:
-  conductor_blobbers_tests: 
-    name: CONDUCTOR-BLOBBERS-TESTS
-    runs-on: [self-hosted, conductor-test01]
-    
+  CONDUCTOR_BLOBBERS_01_TESTS:
+    name: CONDUCTOR-BLOBBERS-01-TESTS
+    runs-on: [self-hosted, arc-runner]
+
     steps:
     - name: Go 1.18 setup.
       uses: actions/setup-go@v2
       with:
         go-version: '1.18'
+      
+    - name: Docker Compose Setup.
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
 
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    
     - name: Get Branch
       id: get_branch
       run: |
@@ -33,10 +40,12 @@ jobs:
       run: |
         git clone https://github.com/0chain/0chain.git
         cd 0chain && git checkout ${{ steps.get_branch.outputs.BRANCH }}
-    
+
     - name: Docker Init Setup.
       run: |
         cd 0chain
+        make install-mockery
+        make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
@@ -67,26 +76,26 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
-    
+
     - name: Git clone zboxcli
-      run: |    
+      run: |
         git clone https://github.com/0chain/zboxcli.git
-    
+
     - name: Git clone zwalletcli
       run: |
         git clone https://github.com/0chain/zwalletcli.git
-    
+
     - name: Git clone 0dns
       run: |
         git clone https://github.com/0chain/0dns.git
-    
+
     - name: list pwd
       run: |
         ls -lha
         cd 0chain && git status
         cd ../0dns && git status
         pwd
-    
+
     - name: Install zboxcli
       run: |
         cd zboxcli && make install
@@ -94,33 +103,36 @@ jobs:
     - name: Install zwalletcli
       run: |
         cd zwalletcli && make install
-  
+
     - name: 0dns Patching
       run: |
         cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
-    
+
     - name: Blobbers Patching
       run: |
         cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
-    
-    - name: 0chain configuration Patching
-      run: |
-        sed -i 's/magic_block_file: config\/b0magicBlock_4_miners_2_sharders.json/magic_block_file: config\/b0magicBlock_4_miners_1_sharder.json/' docker.local/config/0chain.yaml
 
     - name: Build 0dns
-      run: | 
+      run: |
         cd 0dns
         ./docker.local/bin/init.sh
         ./docker.local/bin/build.sh
 
     - name: Init setup for blobbers
-      run: | 
+      run: |
         cd blobber && ./docker.local/bin/blobber.init.setup.sh
 
     - name: Build blobber base
-      run: | 
-        cd blobber && ./docker.local/bin/build.base.sh
-        
+      run: |
+        cd blobber
+        ./docker.local/bin/build.base.sh
+
+    - name: Build blobber
+      run: |
+        cd blobber
+        chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
+        ./docker.local/bin/build.blobber-integration-tests.sh
+
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
@@ -134,27 +146,19 @@ jobs:
         max_txn_query: 5
         query_sleep_time: 5
         EOF
-    
+
     - name: List pwd zcn
       run: |
         pwd
         ls -lha ./
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
-    
+
     - name: Starting blobber Tests.
       run: |
-        cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
-        cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh blobber-1
 
-  upload_artifacts:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test01]
-    
-    if: always()
-    needs: [conductor_blobbers_tests]
-    
-    steps:
     - name: Creating Artifact con-tests-logs.tar.gz file.
       run: |
         find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
@@ -164,7 +168,7 @@ jobs:
       with:
         name: Conductor-test-logs
         path: ./con-tests-logs.tar.gz
-      
+
     # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
     #   run: |
     #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
@@ -175,6 +179,19 @@ jobs:
     #     name: Conductor-test-logs
     #     path: ./con-tests-backup-logs.tar.gz
 
-    - name: Clean up job.
-      run: |
-        rm -rf ./*
+  notify_slack:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_BLOBBERS_01_TESTS]
+    if: always() && (needs.CONDUCTOR_BLOBBERS_01_TESTS.result == 'failure')
+    steps:
+      - name: "Check if should send slack notification"
+        id: send-slack-notification
+        uses: peter-murray/value-as-flag-action@0.0.1
+        with:
+          value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+          default: false
+
+      - name: "Notify Slack"
+        if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+        run: |
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

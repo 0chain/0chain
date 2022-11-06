@@ -86,6 +86,7 @@ func processMinioConfig(reader io.Reader) (blockstore.MinioConfiguration, error)
 }
 
 func main() {
+
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
@@ -100,6 +101,7 @@ func main() {
 	config.SetupDefaultConfig()
 	config.SetupConfig(workdir)
 	config.SetupSmartContractConfig(workdir)
+	initIntegrationsTests()
 
 	if config.Development() {
 		logging.InitLogging("development", workdir)
@@ -194,7 +196,7 @@ func main() {
 	var magicBlock *block.MagicBlock
 	dnsURL := viper.GetString("network.dns_url")
 	if dnsURL == "" {
-		magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
+		magicBlock, err = readMagicBlock(*magicBlockFile)
 		if err != nil {
 			Logger.Panic("can't read magic block file", zap.Error(err))
 			return
@@ -264,8 +266,7 @@ func main() {
 	Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex),
 		zap.Any("id", selfNode.GetKey()))
 
-	initIntegrationsTests(node.Self.Underlying().GetKey())
-	defer shutdownIntegrationTests()
+	registerInConductor(node.Self.Underlying().GetKey())
 
 	var server *http.Server
 	if config.Development() {
@@ -325,7 +326,7 @@ func main() {
 	// Do a proximity scan from finalized block till ProximityWindow
 	go sc.HealthCheckWorker(ctx, sharder.ProximityScan) // 4) progressively checks the health for each round
 
-	shutdown := common.HandleShutdown(server, []func(){done, chain.CloseStateDB})
+	shutdown := common.HandleShutdown(server, []func(){shutdownIntegrationTests, done, chain.CloseStateDB})
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	Listen(server)

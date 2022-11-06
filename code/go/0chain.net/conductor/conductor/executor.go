@@ -442,6 +442,30 @@ func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
 	return
 }
 
+func (r *Runner) WrongBlockRandomSeed(wb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong block random seed", wb)
+
+	err = r.server.UpdateStates(wb.By, func(state *conductrpc.State) {
+		state.WrongBlockRandomSeed = wb
+	})
+	if err != nil {
+		return fmt.Errorf("setting 'wrong block random seed': %v", err)
+	}
+	return
+}
+
+func (r *Runner) WrongBlockDDoS(wb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong block ddos", wb)
+
+	err = r.server.UpdateStates(wb.By, func(state *conductrpc.State) {
+		state.WrongBlockDDoS = wb
+	})
+	if err != nil {
+		return fmt.Errorf("setting 'wrong block ddos': %v", err)
+	}
+	return
+}
+
 func (r *Runner) VerificationTicketGroup(vtg *config.Bad) (err error) {
 	r.verbosePrintByGoodBad("verification ticket group", vtg)
 
@@ -837,6 +861,12 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 		case *cases.MissingLFBTickets:
 			state.MissingLFBTicket = cfg
 
+		case *cases.CheckChallengeIsValid:
+			state.CheckChallengeIsValid = cfg
+
+		case *cases.RoundHasFinalized:
+			state.RoundHasFinalizedConfig = cfg
+
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())
 		}
@@ -870,5 +900,38 @@ func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	if !success {
 		return errors.New("check failed")
 	}
+	return nil
+}
+
+// SetServerState implements config.Executor interface.
+func (r *Runner) SetServerState(update interface{}) error {
+	err := r.server.UpdateAllStates(func(state *conductrpc.State) {
+		switch update := update.(type) {
+		case *config.BlobberList:
+			state.BlobberList = update
+		case *config.BlobberDownload:
+			state.BlobberDownload = update
+		case *config.BlobberUpload:
+			state.BlobberUpload = update
+		case *config.BlobberDelete:
+			state.BlobberDelete = update
+		case *config.AdversarialValidator:
+			state.AdversarialValidator = update
+		case *config.LockNotarizationAndSendNextRoundVRF:
+			state.LockNotarizationAndSendNextRoundVRF = update
+		}
+	})
+
+	return err
+}
+
+// SetMagicBlock implements config.Executor interface.
+func (r *Runner) SetMagicBlock(configFile string) error {
+	if r.verbose {
+		log.Print(" [INF] Setting magic block configuration file ", configFile)
+	}
+
+	r.server.SetMagicBlock(configFile)
+
 	return nil
 }

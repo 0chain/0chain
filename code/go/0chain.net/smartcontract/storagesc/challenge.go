@@ -424,6 +424,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		zap.Duration("delay", time.Since(common.ToTime(challenge.Created))))
 
 	for _, vn := range challResp.ValidationTickets {
+		if vn == nil {
+			continue
+		}
+
 		if _, ok := challenge.ValidatorIDMap[vn.ValidatorID]; !ok {
 			return "", common.NewError("verify_challenge",
 				"found invalid validator id in validation ticket")
@@ -486,6 +490,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 				continue
 			}
 			success++
+		} else {
+			failure++
 		}
 	}
 
@@ -917,7 +923,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 					BaseURL: randValidator.Url,
 				})
 		}
-		if len(selectedValidators) >= alloc.DataShards {
+		if len(selectedValidators) > alloc.DataShards {
 			break
 		}
 	}
@@ -964,10 +970,28 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 	b *block.Block, _ []byte, balances cstate.StateContextI) (err error) {
 
+	var conf *Config
+	if conf, err = sc.getConfig(balances, true); err != nil {
+		return fmt.Errorf("can't get SC configurations: %v", err.Error())
+	}
+
 	validators, err := getValidatorsList(balances)
 	if err != nil {
 		return common.NewErrorf("generate_challenge",
 			"error getting the validators list: %v", err)
+	}
+
+
+	// Check if the length of the list of validators is higher than the lower bound of validators
+	minValidators  := conf.ValidatorsPerChallenge
+	currentValidatorsCount, err := validators.Size(balances)
+	
+	if err != nil {
+		return fmt.Errorf("can't get validators partition size: %v", err.Error())
+	}
+	if currentValidatorsCount < minValidators {
+		return common.NewError("generate_challenge",
+			"Validators length is less than minimum validators specified in sc.yaml->validators_per_challenge")
 	}
 
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)
@@ -1022,6 +1046,8 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		return common.NewErrorf("adding_challenge_error",
 			"Error in adding challenge: %v", err)
 	}
+
+	afterAddChallenge(result.challInfo.ID, result.challInfo.ValidatorIDs)
 
 	return nil
 }
@@ -1085,6 +1111,8 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	//balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
+
+	beforeEmitAddChallenge(challInfo)
 
 	emitAddChallenge(challInfo, len(expiredIDs), balances)
 	return nil
