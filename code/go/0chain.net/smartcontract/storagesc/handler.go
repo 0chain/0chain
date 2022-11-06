@@ -2776,6 +2776,13 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, sn, nil)
 }
 
+type timestampToRoundResp struct {
+	Round  int64   `json:"round"`
+	From   int64   `json:"from"`
+	To     int64   `json:"to"`
+	Rounds []int64 `json:"rounds"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round getBlobber
 // Get round(s) number for timestamp(s)
 //
@@ -2806,9 +2813,10 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 //	500:
 func (srh *StorageRestHandler) timestampToRound(w http.ResponseWriter, r *http.Request) {
 	var (
-		from      = r.URL.Query().Get("from")
-		to        = r.URL.Query().Get("to")
-		timestamp = r.URL.Query().Get("timestamp")
+		from       = r.URL.Query().Get("from")
+		to         = r.URL.Query().Get("to")
+		timestamp  = r.URL.Query().Get("timestamp")
+		timestamps = r.URL.Query().Get("timestamps")
 	)
 
 	edb := srh.GetQueryStateContext().GetEventDB()
@@ -2829,14 +2837,37 @@ func (srh *StorageRestHandler) timestampToRound(w http.ResponseWriter, r *http.R
 			common.Respond(w, r, nil, err)
 			return
 		}
-		common.Respond(w, r, rest.Int64Map{
-			"round": round,
+		common.Respond(w, r, timestampToRoundResp{
+			Round: round,
+		}, nil)
+		return
+	}
+
+	if timestamps != "" {
+		var timeStamps []int64
+		if err := json.Unmarshal([]byte(timestamps), &timeStamps); err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("timestamps are not valid"))
+			return
+		}
+		var rounds []int64
+		for _, timestamp := range timeStamps {
+			round, err := edb.GetRoundFromTime(time.Unix(timestamp, 0), true)
+			if err != nil {
+				err := common.NewErrNoResource(err.Error())
+				common.Respond(w, r, nil, err)
+				return
+			}
+			rounds = append(rounds, round)
+		}
+
+		common.Respond(w, r, timestampToRoundResp{
+			Rounds: rounds,
 		}, nil)
 		return
 	}
 
 	if to == "" || from == "" {
-		err := common.NewErrBadRequest("missing to/from or timestamp URL query parameter")
+		err := common.NewErrBadRequest("missging query parameters")
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -2869,9 +2900,9 @@ func (srh *StorageRestHandler) timestampToRound(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	common.Respond(w, r, rest.Int64Map{
-		"from": fromRound,
-		"to":   toRound,
+	common.Respond(w, r, timestampToRoundResp{
+		From: fromRound,
+		To:   toRound,
 	}, nil)
 }
 
