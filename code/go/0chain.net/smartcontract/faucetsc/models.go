@@ -123,7 +123,7 @@ func (gn *GlobalNode) updateConfig(balances cstate.CommonStateContextI, fields m
 		default:
 			err := gn.setCostValue(key, value)
 			if err != nil {
-				return fmt.Errorf("key %s, %v error in setting cost value", key, err)
+				return err
 			}
 		}
 	}
