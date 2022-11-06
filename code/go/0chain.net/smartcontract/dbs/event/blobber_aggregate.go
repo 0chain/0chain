@@ -1,7 +1,7 @@
 package event
 
 import (
-	"fmt"
+	"math"
 
 	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
@@ -52,18 +52,48 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 
 	return snapshots, nil
 }
+func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSnapshot) {
+	count, err := edb.GetBlobberCount()
+	if err != nil {
+		logging.Logger.Error("update_blobber_aggregates", zap.Error(err))
+		return
+	}
+	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count)
 
-func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapshot) {
-	exec := edb.Store.Get().Exec(fmt.Sprintf("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
-		"ON COMMIT DROP AS SELECT blobber_id as id FROM blobbers WHERE MOD(creation_round, %d) = ?", period), round%period)
+	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
+		"ON COMMIT DROP AS SELECT blobber_id as id FROM blobbers ORDER BY (blobber_id, creation_round) LIMIT ? OFFSET ?",
+		size, size*currentPageNumber)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
 		return
 	}
 
+	for i := 0; i < subpageCount; i++ {
+		edb.calculateBlobberAggregate(gs, round, pageLimit, int64(i)*pageLimit)
+	}
+
+}
+
+func paginate(round int64, pageAmount int64, count int64) (int64, int64, int) {
+	size := int64(math.Ceil(float64(count) / float64(pageAmount)))
+	currentPageNumber := round % pageAmount
+
+	currentPageSize := size
+	if pageAmount-currentPageNumber == 1 { //last page
+		currentPageSize = count - size*currentPageNumber
+	}
+	subpageCount := 1
+	if currentPageSize > pageLimit {
+		subpageCount = int(math.Ceil(float64(size) / float64(pageLimit)))
+	}
+	return size, currentPageNumber, subpageCount
+}
+
+func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, offset int64) {
+
 	var ids []string
 	r := edb.Store.Get().
-		Raw("select id from temp_ids").Scan(&ids)
+		Raw("select id from temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
 	if r.Error != nil {
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
@@ -72,7 +102,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 
 	var currentBlobbers []Blobber
 	result := edb.Store.Get().
-		Raw("SELECT * FROM blobbers WHERE blobber_id in (select id from temp_ids)").
+		Raw("SELECT * FROM blobbers WHERE blobber_id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&currentBlobbers)
 	if result.Error != nil {
 		logging.Logger.Error("getting current blobbers", zap.Error(result.Error))
@@ -86,7 +116,7 @@ func (edb *EventDb) updateBlobberAggregate(round, period int64, gs *globalSnapsh
 		}
 	}
 
-	oldBlobbers, err := edb.getBlobberSnapshots()
+	oldBlobbers, err := edb.getBlobberSnapshots(limit, offset)
 	if err != nil {
 		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
 		return

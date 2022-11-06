@@ -24,10 +24,10 @@ type BlobberSnapshot struct {
 	RankMetric          float64       `json:"rank_metric"`
 }
 
-func (edb *EventDb) getBlobberSnapshots() (map[string]BlobberSnapshot, error) {
+func (edb *EventDb) getBlobberSnapshots(limit, offset int64) (map[string]BlobberSnapshot, error) {
 	var snapshots []BlobberSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM blobber_snapshots WHERE blobber_id in (select id from temp_ids)").
+		Raw("SELECT * FROM blobber_snapshots WHERE blobber_id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -39,7 +39,7 @@ func (edb *EventDb) getBlobberSnapshots() (map[string]BlobberSnapshot, error) {
 		mapSnapshots[snapshot.BlobberID] = snapshot
 	}
 
-	result = edb.Store.Get().Where("blobber_id IN (select id from temp_ids)").Delete(&BlobberSnapshot{})
+	result = edb.Store.Get().Where("blobber_id IN (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&BlobberSnapshot{})
 
 	return mapSnapshots, result.Error
 }
