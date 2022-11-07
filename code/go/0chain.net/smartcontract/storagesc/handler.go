@@ -2800,7 +2800,7 @@ func (srh *StorageRestHandler) timestampsToRounds(w http.ResponseWriter, r *http
 	var timestamps = r.URL.Query().Get("timestamps")
 
 	if timestamps == "" {
-		err := common.NewErrBadRequest("missging query parameter: timestamps")
+		err := common.NewErrBadRequest("missing query parameter: timestamps")
 		common.Respond(w, r, nil, err)
 		return
 	}
