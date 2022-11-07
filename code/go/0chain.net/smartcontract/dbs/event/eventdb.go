@@ -88,7 +88,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
-		&Reward{},
+		&RewardMint{},
 		&Authorizer{},
 		&Challenge{},
 		&AllocationBlobberTerm{},

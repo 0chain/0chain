@@ -654,6 +654,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
+					ProviderId:   getMockBlobberId(0),
 					ProviderType: spenum.Blobber,
 				})
 				return bytes

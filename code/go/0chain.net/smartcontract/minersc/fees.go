@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/chaincore/currency"
 
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
@@ -40,25 +39,6 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 	return nil
 }
 
-// LRU cache in action.
-func (msc *MinerSmartContract) deletePoolFromUserNode(
-	delegateID, nodeID string,
-	providerType spenum.Provider,
-	balances cstate.StateContextI,
-) error {
-
-	usp, err := stakepool.GetUserStakePools(providerType, delegateID, balances)
-	if err != nil {
-		return fmt.Errorf("getting user node: %v", err)
-	}
-	usp.Del(nodeID)
-	if err := usp.Save(providerType, delegateID, balances); err != nil {
-		return fmt.Errorf("saving user node: %v", err)
-	}
-
-	return nil
-}
-
 // unlock deleted pools
 func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
 	balances cstate.StateContextI) (err error) {
@@ -81,19 +61,6 @@ func (msc *MinerSmartContract) unlockOffline(
 		if err := balances.AddTransfer(transfer); err != nil {
 			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)
 		}
-		var err error
-		switch mn.NodeType {
-		case NodeTypeMiner:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, spenum.Miner, balances)
-		case NodeTypeSharder:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, spenum.Sharder, balances)
-		default:
-			err = fmt.Errorf("unrecognised node type: %s", mn.NodeType.String())
-		}
-		if err != nil {
-			return common.NewError("pay_fees/unlock_offline", err.Error())
-		}
-
 		pool.Status = spenum.Deleted
 	}
 
@@ -374,7 +341,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		spenum.Miner,
 		b.GetRoundRandomSeed(),
 		gn.NumMinerDelegatesRewarded,
-		"fee",
 		balances,
 	); err != nil {
 		return "", err
@@ -551,7 +517,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 			return err
 		}
 		if err = sh.StakePool.DistributeRewardsRandN(
-			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, "pay sharders", balances,
+			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)

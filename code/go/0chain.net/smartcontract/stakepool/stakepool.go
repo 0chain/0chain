@@ -122,22 +122,23 @@ func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.
 func (sp *StakePool) MintRewards(
 	clientId, providerId string,
 	providerType spenum.Provider,
-	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
-	var reward currency.Coin
+	var delegateReward, serviceCharge currency.Coin
 	var err error
 	if clientId == sp.Settings.DelegateWallet && sp.Reward > 0 {
-		reward, err = sp.MintServiceCharge(balances)
+		serviceCharge, err = sp.MintServiceCharge(balances)
 		if err != nil {
 			return 0, err
 		}
-		return reward, nil
 	}
 
 	dPool, ok := sp.Pools[clientId]
 	if !ok {
-		return 0, fmt.Errorf("cannot find rewards for %s", clientId)
+		if serviceCharge == 0 {
+			return 0, fmt.Errorf("cannot find rewards for %s", clientId)
+		}
+		return serviceCharge, nil
 	}
 
 	if dPool.Reward > 0 {
@@ -152,11 +153,14 @@ func (sp *StakePool) MintRewards(
 		}); err != nil {
 			return 0, fmt.Errorf("minting rewards: %v", err)
 		}
-		newReward, err := currency.AddCoin(reward, dPool.Reward)
-		if err != nil {
-			return 0, err
-		}
-		reward = newReward
+		balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId, event.RewardMint{
+			Amount:       dPool.Reward,
+			BlockNumber:  balances.GetBlock().Round,
+			ClientID:     clientId,
+			ProviderType: providerType.String(),
+			ProviderID:   providerId,
+		})
+		delegateReward = dPool.Reward
 		dPool.Reward = 0
 	}
 
@@ -170,14 +174,13 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		usp.Del(providerId)
-		return reward, nil
+		return delegateReward + serviceCharge, nil
 	} else {
 		err := dpUpdate.emitUpdate(balances)
 		if err != nil {
 			return 0, err
 		}
-		return reward, nil
+		return delegateReward + serviceCharge, nil
 	}
 }
 
@@ -188,7 +191,6 @@ func (sp *StakePool) DistributeRewardsRandN(
 	providerType spenum.Provider,
 	seed int64,
 	randN int,
-	desc string,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {

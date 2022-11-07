@@ -5,34 +5,34 @@ import (
 	"math"
 	"time"
 
+	"0chain.net/chaincore/currency"
+
 	"gorm.io/gorm"
 )
 
-type Reward struct {
+type RewardMint struct {
 	gorm.Model
-	Amount       int64  `json:"amount"`
-	BlockNumber  int64  `json:"block_number"`
-	ClientID     string `json:"client_id"`     // wallet ID
-	PoolID       string `json:"pool_id"`       // stake pool ID
-	ProviderType string `json:"provider_type"` // blobber or validator
-	ProviderID   string `json:"provider_id"`
+	Amount       currency.Coin `json:"amount"`
+	BlockNumber  int64         `json:"block_number"`
+	ClientID     string        `json:"client_id"`     // wallet ID
+	ProviderType string        `json:"provider_type"` // blobber or validator
+	ProviderID   string        `json:"provider_id"`
 }
 
-type RewardQuery struct {
+type RewardMintQuery struct {
 	StartBlock   int       `json:"start_block"`
 	EndBlock     int       `json:"end_block"`
 	DataPoints   int64     `json:"data_points"`
 	StartDate    time.Time `json:"start_date"`
 	EndDate      time.Time `json:"end_date"`
 	ClientID     string    `json:"client_id"`
-	PoolID       string    `json:"pool_id"`
 	ProviderType string    `json:"provider_type"`
 	ProviderID   string    `json:"provider_id"`
 }
 
 // GetRewardClaimedTotalBetweenBlocks returns the sum of amounts
 // from rewards table  matching the given query
-func (edb *EventDb) GetRewardClaimedTotalBetweenBlocks(query RewardQuery) ([]int64, error) {
+func (edb *EventDb) GetRewardClaimedTotalBetweenBlocks(query RewardMintQuery) ([]int64, error) {
 	var rewards []int64
 
 	step := math.Ceil(float64(query.EndBlock-query.StartBlock) / float64(query.DataPoints))
@@ -44,7 +44,7 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenBlocks(query RewardQuery) ([]int
 		)
 		SELECT coalesce(sum(amount), 0) as val
 		FROM ranges r
-		LEFT JOIN rewards rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%[4]v'
+		LEFT JOIN reward_mints rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%[4]v'
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
 	`, query.StartBlock, query.EndBlock, step, query.ClientID)
@@ -52,7 +52,7 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenBlocks(query RewardQuery) ([]int
 	return rewards, edb.Store.Get().Raw(rawQuery).Scan(&rewards).Error
 }
 
-func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardQuery) ([]int64, error) {
+func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardMintQuery) ([]int64, error) {
 	var rewards []int64
 	rawQuery := fmt.Sprintf(`
 		WITH
@@ -66,7 +66,7 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardQuery) ([]int6
 		)
 		SELECT coalesce(%s, 0) as val
 		FROM ranges r
-		LEFT JOIN rewards rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%s'
+		LEFT JOIN reward_mints rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%s'
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
 	`, query.DataPoints, query.StartDate.UnixNano(), query.EndDate.UnixNano(), "sum(amount)", query.ClientID)
@@ -74,6 +74,6 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardQuery) ([]int6
 	return rewards, edb.Store.Get().Raw(rawQuery).Scan(&rewards).Error
 }
 
-func (edb *EventDb) addReward(reward Reward) error {
+func (edb *EventDb) addRewardMint(reward RewardMint) error {
 	return edb.Store.Get().Create(&reward).Error
 }

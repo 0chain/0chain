@@ -17,17 +17,11 @@ func (sp *StakePool) UnlockClientStakePool(
 	providerId datastore.Key,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
-	var usp *UserStakePools
-	usp, err := getOrCreateUserStakePool(providerType, clientID, balances)
-	if err != nil {
-		return 0, fmt.Errorf("can't get user pools list: %v", err)
-	}
-
 	return sp.UnlockPool(
 		clientID,
 		providerType,
 		providerId,
-		usp,
+		//usp,
 		balances,
 	)
 }
@@ -36,13 +30,9 @@ func (sp *StakePool) UnlockPool(
 	clientID string,
 	providerType spenum.Provider,
 	providerId datastore.Key,
-	usp *UserStakePools,
+	//usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
-	if _, ok := usp.Find(providerId); !ok {
-		return 0, fmt.Errorf("user %v does not own stake pool for %v", clientID, providerId)
-	}
-
 	dp, ok := sp.Pools[clientID]
 	if !ok {
 		return 0, fmt.Errorf("can't find pool of %v", clientID)
@@ -50,7 +40,7 @@ func (sp *StakePool) UnlockPool(
 
 	dp.Status = spenum.Deleting
 	amount, err := sp.MintRewards(
-		clientID, providerId, providerType, usp, balances,
+		clientID, providerId, providerType, balances,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("error emptying account, %v", err)

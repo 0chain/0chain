@@ -273,9 +273,17 @@ func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
 	}
 }
 
-func (msc *MinerSmartContract) getSharderNode(sid string,
-	balances cstate.StateContextI) (*MinerNode, error) {
+func (_ *MinerSmartContract) getSharderNode(
+	sid string,
+	balances cstate.StateContextI,
+) (*MinerNode, error) {
+	return getSharderNode(sid, balances)
+}
 
+func getSharderNode(
+	sid string,
+	balances cstate.StateContextI,
+) (*MinerNode, error) {
 	sn := NewMinerNode()
 	sn.ID = sid
 	err := balances.GetTrieNode(sn.GetKey(), sn)

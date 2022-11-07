@@ -375,6 +375,23 @@ func (conf *Config) Decode(b []byte) error {
 	return json.Unmarshal(b, conf)
 }
 
+func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateContextI) error {
+	minted, err := currency.AddCoin(conf.Minted, toMint)
+	if err != nil {
+		return err
+	}
+
+	if minted > conf.MaxMint {
+		return fmt.Errorf("max min %v exceeded by: %v", conf.MaxMint, minted)
+	}
+	conf.Minted = minted
+	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 //
 // rest handler and update function
 //

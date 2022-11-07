@@ -524,7 +524,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		dataPoints = 100
 	}
 
-	query := event.RewardQuery{
+	query := event.RewardMintQuery{
 		ClientID:   clientID,
 		DataPoints: dataPoints,
 	}

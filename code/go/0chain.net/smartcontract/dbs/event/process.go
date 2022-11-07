@@ -58,7 +58,7 @@ const (
 	TagAddAllocation                       // 28
 	TagUpdateAllocationStakes              // 29
 	TagUpdateAllocation                    // 30
-	TagAddReward                           // 31
+	TagMintReward                          // 31
 	TagAddChallenge                        // 32
 	TagUpdateChallenge                     // 33
 	TagUpdateBlobberChallenge              // 34
@@ -500,12 +500,12 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.updateAllocationStakes(*allocs)
-	case TagAddReward:
-		reward, ok := fromEvent[Reward](event.Data)
+	case TagMintReward:
+		reward, ok := fromEvent[RewardMint](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addReward(*reward)
+		return edb.addRewardMint(*reward)
 	case TagAddChallenge:
 		challenges, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
