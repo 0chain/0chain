@@ -33,7 +33,7 @@ func TestAddBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	block := Block{}
-	err = eventDb.addBlock(block)
+	err = eventDb.addOrUpdateBlock(block)
 	require.NoError(t, err, "Error while inserting Block to event Database")
 	var count int64
 	eventDb.Get().Table("blocks").Count(&count)
@@ -68,7 +68,7 @@ func TestFindBlock(t *testing.T) {
 		Model: gorm.Model{ID: 1},
 		Hash:  "test",
 	}
-	err = eventDb.addBlock(block)
+	err = eventDb.addOrUpdateBlock(block)
 	require.NoError(t, err, "Error while inserting Block to event Database")
 	gotBlock, err := eventDb.GetBlockByHash("test")
 
@@ -81,7 +81,7 @@ func TestFindBlock(t *testing.T) {
 		Model: gorm.Model{ID: 2},
 		Hash:  "test2",
 	}
-	err = eventDb.addBlock(block2)
+	err = eventDb.addOrUpdateBlock(block2)
 	require.NoError(t, err, "Error while inserting Block to event Database")
 	gotBlocks, err := eventDb.GetBlocksByBlockNumbers(0, 1, common.Pagination{Limit: 20, IsDescending: true})
 	if len(gotBlocks) != 2 {
@@ -112,7 +112,7 @@ func TestGetRoundFromTime(t *testing.T) {
 		Model: gorm.Model{CreatedAt: time.Now()},
 		Hash:  "test",
 	}
-	err = eventDb.addBlock(block)
+	err = eventDb.addOrUpdateBlock(block)
 	require.NoError(t, err, "Error while inserting Block to event Database")
 	_, err = eventDb.GetRoundFromTime(time.Now(), false)
 	require.NoError(t, err, "Error while getting rounds from DB")

@@ -16,7 +16,7 @@ func (edb *EventDb) addChainEvent(event Event) error {
 		}
 		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
 
-		return edb.addBlock(*block)
+		return edb.addOrUpdateBlock(*block)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

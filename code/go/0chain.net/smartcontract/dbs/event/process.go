@@ -491,7 +491,7 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
 
-		return edb.addBlock(*block)
+		return edb.addOrUpdateBlock(*block)
 	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
