@@ -36,6 +36,8 @@ sets:
       - "attack MinerNotarisedBlockRequestor: only one node sends valid block (with changed hash)"
       - "attack MinerNotarisedBlockRequestor: only one node sends invalid block (with changed hash)"
       - "attack MinerNotarisedBlockRequestor: only one node sends block without verification tickets"
+      - "attack MinerNotarisedBlockRequestor: only one node sends block with invalid tickets"
+      - "attack MinerNotarisedBlockRequestor: only one node sends block with valid tickets for old rounds"
       - "attack FBRequestor: neither node reply"
       - "attack FBRequestor: only one node replies"
       - "attack FBRequestor: only one node sends valid block (with changed hash)"
@@ -645,6 +647,79 @@ tests:
           round: 70
       - make_test_case_check:
           wait_time: 5m
+
+  - name: "attack MinerNotarisedBlockRequestor: only one node sends block with invalid tickets"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
+      - configure_miner_notarised_block_requestor_test_case:
+          test_report:
+            round: 50
+            by_generator: false
+            by_node_with_type_rank: 0
+
+          ignoring_requests_by:
+            miners:
+              # Generator1
+              - generator: true
+                type_rank: 1
+
+              # Replica1
+              - generator: false
+                type_rank: 1
+
+            sharders:
+              - "sharder-1"
+              - "sharder-2"
+
+          block_with_invalid_tickets_by:
+            miners:
+              # Generator0
+              - generator: true
+                type_rank: 0
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "attack MinerNotarisedBlockRequestor: only one node sends block with valid tickets for old rounds"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
+      - configure_miner_notarised_block_requestor_test_case:
+          test_report:
+            round: 50
+            by_generator: false
+            by_node_with_type_rank: 0
+
+          ignoring_requests_by:
+            miners:
+              # Generator1
+              - generator: true
+                type_rank: 1
+
+              # Replica1
+              - generator: false
+                type_rank: 1
+
+            sharders:
+              - "sharder-1"
+              - "sharder-2"
+
+          block_with_valid_tickets_for_old_round_by:
+            miners:
+              # Generator0
+              - generator: true
+                type_rank: 0
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - wait_round:
+          round: 70
+      - make_test_case_check:
+          wait_time: 5m
+
 
   - name: "attack FBRequestor: neither node reply"
     flow:
