@@ -29,10 +29,10 @@ type (
 		// BlockWithoutVerTicketsBy contains nodes which must response Replica0 with block without verification tickets.
 		BlockWithoutVerTicketsBy Nodes `json:"block_without_ver_tickets_by" yaml:"block_without_ver_tickets_by" mapstructure:"block_without_ver_tickets_by"`
 
-		// BlockWithoutVerTicketsBy contains nodes which must response Replica0 with block without verification tickets.
+		// BlockWithInvalidTicketsBy contains nodes which must response Replica0 with block with invalid verification tickets.
 		BlockWithInvalidTicketsBy Nodes `json:"block_with_invalid_tickets_by" yaml:"block_with_invalid_tickets_by" mapstructure:"block_with_invalid_tickets_by"`
 
-		// BlockWithoutVerTicketsBy contains nodes which must response Replica0 with block without verification tickets.
+		// BlockWithValidTicketsForOldRoundBy contains nodes which must response Replica0 with block with verification tickets of previous block.
 		BlockWithValidTicketsForOldRoundBy Nodes `json:"block_with_valid_tickets_for_old_round_by" yaml:"block_with_valid_tickets_for_old_round_by" mapstructure:"block_with_valid_tickets_for_old_round_by"`
 
 		Configured bool
