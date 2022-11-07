@@ -95,7 +95,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/alloc-blobber-term", srh.getAllocBlobberTerms),
 		rest.MakeEndpoint(storage+"/replicate-snapshots", srh.replicateSnapshots),
 		rest.MakeEndpoint(storage+"/replicate-blobber-aggregates", srh.replicateBlobberAggregates),
-		rest.MakeEndpoint(storage+"/timestamp-to-round", srh.timestampToRound),
+		rest.MakeEndpoint(storage+"/timestamp-to-round", srh.timestampsToRounds),
 	}
 }
 
@@ -2777,9 +2777,6 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 }
 
 type timestampToRoundResp struct {
-	Round  int64   `json:"round"`
-	From   int64   `json:"from"`
-	To     int64   `json:"to"`
 	Rounds []int64 `json:"rounds"`
 }
 
@@ -2789,35 +2786,24 @@ type timestampToRoundResp struct {
 // parameters:
 //
 //	+name: timestamp
-//	description: timestamp you want to convert to round
-//	required: false
+//	description: timestamps you want to convert to rounds
+//	required: true
 //	in: query
-//	type: string
-//
-//	+name: from
-//	description: from timestamp you want to convert to rounds
-//	required: false
-//	in: query
-//	type: string
-//
-//	+name: timestamp
-//	description: to timestamp you want to convert to rounds
-//	required: false
-//	in: query
-//	type: string
+//	type: array
 //
 // responses:
 //
-//	200: Int64Map
+//	200: []Int64
 //	400:
 //	500:
-func (srh *StorageRestHandler) timestampToRound(w http.ResponseWriter, r *http.Request) {
-	var (
-		from       = r.URL.Query().Get("from")
-		to         = r.URL.Query().Get("to")
-		timestamp  = r.URL.Query().Get("timestamp")
-		timestamps = r.URL.Query().Get("timestamps")
-	)
+func (srh *StorageRestHandler) timestampsToRounds(w http.ResponseWriter, r *http.Request) {
+	var timestamps = r.URL.Query().Get("timestamps")
+
+	if timestamps == "" {
+		err := common.NewErrBadRequest("missging query parameter: timestamps")
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -2825,85 +2811,26 @@ func (srh *StorageRestHandler) timestampToRound(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if timestamp != "" {
-		t, err := strconv.ParseInt(timestamp, 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("timestamp is not valid"))
-			return
-		}
-		round, err := edb.GetRoundFromTime(time.Unix(t, 0), true)
+	var timeStamps []int64
+	if err := json.Unmarshal([]byte(timestamps), &timeStamps); err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("timestamps are not valid"))
+		return
+	}
+	var rounds []int64
+	for _, timestamp := range timeStamps {
+		round, err := edb.GetRoundFromTime(time.Unix(timestamp, 0), true)
 		if err != nil {
 			err := common.NewErrNoResource(err.Error())
 			common.Respond(w, r, nil, err)
 			return
 		}
-		common.Respond(w, r, timestampToRoundResp{
-			Round: round,
-		}, nil)
-		return
-	}
-
-	if timestamps != "" {
-		var timeStamps []int64
-		if err := json.Unmarshal([]byte(timestamps), &timeStamps); err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("timestamps are not valid"))
-			return
-		}
-		var rounds []int64
-		for _, timestamp := range timeStamps {
-			round, err := edb.GetRoundFromTime(time.Unix(timestamp, 0), true)
-			if err != nil {
-				err := common.NewErrNoResource(err.Error())
-				common.Respond(w, r, nil, err)
-				return
-			}
-			rounds = append(rounds, round)
-		}
-
-		common.Respond(w, r, timestampToRoundResp{
-			Rounds: rounds,
-		}, nil)
-		return
-	}
-
-	if to == "" || from == "" {
-		err := common.NewErrBadRequest("missging query parameters")
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	fromTime, err := strconv.ParseInt(from, 10, 64)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("from timestamp is not valid"))
-		return
-	}
-	toTime, err := strconv.ParseInt(to, 10, 64)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("to timestamp is not valid"))
-		return
-	}
-
-	if fromTime >= toTime {
-		common.Respond(w, r, nil, common.NewErrBadRequest("from timestamp is greater than to timestamp"))
-		return
-	}
-	fromRound, err := edb.GetRoundFromTime(time.Unix(fromTime, 0), true)
-	if err != nil {
-		err := common.NewErrNoResource(err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-	toRound, err := edb.GetRoundFromTime(time.Unix(toTime, 0), false)
-	if err != nil {
-		err := common.NewErrNoResource(err.Error())
-		common.Respond(w, r, nil, err)
-		return
+		rounds = append(rounds, round)
 	}
 
 	common.Respond(w, r, timestampToRoundResp{
-		From: fromRound,
-		To:   toRound,
+		Rounds: rounds,
 	}, nil)
+	return
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms
