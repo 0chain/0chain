@@ -3,7 +3,6 @@ package chain
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"sort"
 	"sync"
@@ -30,17 +29,17 @@ func SetNetworkRelayTime(delta time.Duration) {
 	FINALIZATION_TIME = 2 * delta
 }
 
-//SteadyStateFinalizationTimer - a metric that tracks the steady state finality time (time between two successive finalized blocks in steady state)
+// SteadyStateFinalizationTimer - a metric that tracks the steady state finality time (time between two successive finalized blocks in steady state)
 var SteadyStateFinalizationTimer metrics.Timer
 var ssFTs time.Time
 
-//StartToFinalizeTimer - a metric that tracks the time a block is created to finalized
+// StartToFinalizeTimer - a metric that tracks the time a block is created to finalized
 var StartToFinalizeTimer metrics.Timer
 
-//StartToFinalizeTxnTimer - a metric that trakcs the time a txn is created to finalized
+// StartToFinalizeTxnTimer - a metric that trakcs the time a txn is created to finalized
 var StartToFinalizeTxnTimer metrics.Timer
 
-//FinalizationLagMetric - a metric that tracks how much is the lag between current round and finalization round
+// FinalizationLagMetric - a metric that tracks how much is the lag between current round and finalization round
 var FinalizationLagMetric metrics.Histogram
 
 func init() {
@@ -499,49 +498,6 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 	// TODO: this may not be the best round block or the best chain weight
 	// block. Do we do that extra work?
 	return r.GetHeaviestNotarizedBlock()
-}
-
-// GetHeaviestNotarizedBlockLight - get a notarized block for a round.
-func (c *Chain) GetHeaviestNotarizedBlockLight(ctx context.Context, r int64) *block.Block {
-	params := &url.Values{}
-
-	params.Add("round", fmt.Sprintf("%v", r))
-
-	cctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
-	defer cancel()
-
-	notarizedBlockC := make(chan *block.Block, 1)
-	var handler = func(ctx context.Context, entity datastore.Entity) (
-		resp interface{}, err error) {
-		logging.Logger.Info("get notarized block for round", zap.Int64("round", r),
-			zap.String("block", entity.GetKey()))
-
-		var nb, ok = entity.(*block.Block)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-
-		if nb.Round != r {
-			return nil, common.NewError("invalid_block",
-				"Block not from the requested round")
-		}
-
-		select {
-		case notarizedBlockC <- nb:
-		default:
-		}
-		cancel()
-		return nb, nil
-	}
-
-	c.RequestEntityFromMinersOnMB(cctx, c.GetCurrentMagicBlock(), MinerNotarizedBlockRequestor, params, handler)
-	var nb *block.Block
-	select {
-	case nb = <-notarizedBlockC:
-	default:
-	}
-
-	return nb
 }
 
 // GetLatestFinalizedMagicBlockFromShardersOn - request for latest finalized
