@@ -32,7 +32,6 @@ func TestRewardEvents(t *testing.T) {
 		Amount:       500,
 		BlockNumber:  345,
 		ClientID:     "new_wallet_id",
-		PoolID:       "new_pool_id",
 		ProviderType: "blobber",
 		ProviderID:   "blobber_id",
 	}
@@ -100,7 +99,6 @@ func TestRewardEvents(t *testing.T) {
 func removeReward(edb *EventDb, query RewardMintQuery) error {
 	reward := RewardMint{
 		ClientID:     query.ClientID,
-		PoolID:       query.PoolID,
 		ProviderType: query.ProviderType,
 		ProviderID:   query.ProviderID,
 	}
