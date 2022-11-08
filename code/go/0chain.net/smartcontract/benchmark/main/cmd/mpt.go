@@ -350,14 +350,6 @@ func setUpMpt(
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
 	}()
-	/*
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			timer := time.Now()
-			minersc.AddNodeDelegates(clients, miners, sharders, balances)
-			log.Println("adding miners and sharders delegates\t", time.Since(timer))
-		}()*/
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

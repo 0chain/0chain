@@ -21,7 +21,6 @@ func (sp *StakePool) UnlockClientStakePool(
 		clientID,
 		providerType,
 		providerId,
-		//usp,
 		balances,
 	)
 }
@@ -30,7 +29,6 @@ func (sp *StakePool) UnlockPool(
 	clientID string,
 	providerType spenum.Provider,
 	providerId datastore.Key,
-	//usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
 	dp, ok := sp.Pools[clientID]
