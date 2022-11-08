@@ -170,16 +170,10 @@ func (sp *StakePool) MintRewards(
 	if dPool.Status == spenum.Deleting {
 		delete(sp.Pools, clientId)
 		dpUpdate.Updates["status"] = spenum.Deleted
-		err := dpUpdate.emitUpdate(balances)
-		if err != nil {
-			return 0, err
-		}
+		dpUpdate.emitUpdate(balances)
 		return delegateReward + serviceCharge, nil
 	} else {
-		err := dpUpdate.emitUpdate(balances)
-		if err != nil {
-			return 0, err
-		}
+		dpUpdate.emitUpdate(balances)
 		return delegateReward + serviceCharge, nil
 	}
 }

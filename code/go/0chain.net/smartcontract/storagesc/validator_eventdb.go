@@ -80,6 +80,6 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 		Rewards:        event.ProviderRewards{ProviderID: vn.ID},
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwiteValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteValidator, vn.ID, data)
 	return nil
 }

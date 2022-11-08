@@ -47,6 +47,7 @@ func (sp *StakePool) LockPool(
 	status spenum.PoolStatus,
 	balances cstate.StateContextI,
 ) error {
+	var err error
 	if err := CheckClientBalance(txn.ClientID, txn.Value, balances); err != nil {
 		return err
 	}
@@ -65,7 +66,7 @@ func (sp *StakePool) LockPool(
 		}
 
 		sp.Pools[newPoolId] = dp
-
+		dp.emitNew(newPoolId, providerId, providerType, balances)
 	} else {
 		// stake from the same clients
 		if dp.DelegateID != txn.ClientID {
@@ -77,13 +78,12 @@ func (sp *StakePool) LockPool(
 			return fmt.Errorf("could not stake pool in %s status", dp.Status)
 		}
 
-		b, err := currency.AddCoin(dp.Balance, txn.Value)
+		var dpUpdate = newDelegatePoolUpdate(txn.ClientID, providerId, providerType)
+		dpUpdate.Updates["balance"], err = currency.AddCoin(dp.Balance, txn.Value)
 		if err != nil {
 			return err
 		}
-
-		dp.Balance = b
-		dp.StakedAt = txn.CreationDate
+		dpUpdate.emitUpdate(balances)
 	}
 
 	if err := balances.AddTransfer(state.NewTransfer(
@@ -91,8 +91,6 @@ func (sp *StakePool) LockPool(
 	)); err != nil {
 		return err
 	}
-
-	dp.emitNew(newPoolId, providerId, providerType, balances)
 
 	return nil
 }

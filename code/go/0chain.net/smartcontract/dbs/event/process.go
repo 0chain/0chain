@@ -15,65 +15,6 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-type (
-	EventType int
-	EventTag  int
-)
-
-const (
-	TypeNone EventType = iota
-	TypeError
-	TypeStats
-)
-
-const (
-	TagNone                         EventTag = iota
-	TagAddBlobber                            // 1
-	TagUpdateBlobber                         // 2
-	TagUpdateBlobberAllocatedHealth          // 3
-	TagUpdateBlobberTotalStake               // 4
-	TagUpdateBlobberTotalOffers              // 5
-	TagDeleteBlobber
-	TagAddAuthorizer
-	TagUpdateAuthorizer
-	TagDeleteAuthorizer
-	TagAddTransactions        // 10
-	TagAddOrOverwriteUser     // 11
-	TagAddWriteMarker         // 12
-	TagAddBlock               // 13
-	TagAddOrOverwiteValidator // 14
-	TagUpdateValidator
-	TagAddReadMarker
-	TagAddOrOverwriteMiner
-	TagUpdateMiner // 18
-	TagDeleteMiner
-	TagAddOrOverwriteSharder
-	TagUpdateSharder
-	TagDeleteSharder
-	TagAddOrOverwriteCurator
-	TagRemoveCurator
-	TagAddOrOverwriteDelegatePool
-	TagStakePoolReward                     // 26
-	TagUpdateDelegatePool                  // 27
-	TagAddAllocation                       // 28
-	TagUpdateAllocationStakes              // 29
-	TagUpdateAllocation                    // 30
-	TagMintReward                          // 31
-	TagAddChallenge                        // 32
-	TagUpdateChallenge                     // 33
-	TagUpdateBlobberChallenge              // 34
-	TagUpdateAllocationChallenge           // 35
-	TagAddChallengeToAllocation            // 36
-	TagAddOrOverwriteAllocationBlobberTerm // 37
-	TagUpdateAllocationBlobberTerm         // 38
-	TagDeleteAllocationBlobberTerm         // 39
-	TagAddOrUpdateChallengePool            // 40
-	TagUpdateAllocationStat                // 41
-	TagUpdateBlobberStat                   // 42
-	TagUpdateValidatorStakeTotal           // 43
-	NumberOfTags
-)
-
 var ErrInvalidEventData = errors.New("invalid event data")
 
 func (edb *EventDb) ProcessEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) error {
@@ -136,7 +77,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddProviderEvents[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
-			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Validator](TagAddOrOverwriteValidator, withUniqueEventOverwrite()),
 
 			mergeAddAllocationEvents(),
 			mergeUpdateAllocEvents(),
@@ -158,6 +99,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
 			mergeAddDelegatePoolsEvents(),
+			mergeUpdateDelegatePoolsEvents(),
 
 			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
@@ -395,7 +337,7 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.addBlock(*block)
-	case TagAddOrOverwiteValidator:
+	case TagAddOrOverwriteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
@@ -464,12 +406,12 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.removeCurator(*c)
 
 	//stake pool
-	case TagAddOrOverwriteDelegatePool:
+	case TagAddDelegatePool:
 		dps, ok := fromEvent[[]DelegatePool](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteDelegatePools(*dps)
+		return edb.addDelegatePool(*dps)
 	case TagUpdateDelegatePool:
 		spUpdate, ok := fromEvent[dbs.DelegatePoolUpdate](event.Data)
 		if !ok {

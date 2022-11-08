@@ -220,9 +220,12 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 	if sp, err = zcn.getStakePool(spr.AuthorizerID, ctx); err != nil {
 		return "", common.NewErrorf(code, "can't get stake pool: %v", err)
 	}
-
 	if len(sp.Pools) >= gn.MaxDelegates {
-		return "", common.NewErrorf(code, "max_delegates reached: %v, no more stake pools allowed", gn.MaxDelegates)
+		_, found := sp.Pools[t.ClientID]
+		if !found {
+			return "", common.NewErrorf(code, "max_delegates reached: %v, "+
+				"no more stake pools allowed", gn.MaxDelegates)
+		}
 	}
 
 	err = sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)

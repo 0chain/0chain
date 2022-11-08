@@ -21,7 +21,7 @@ func newDelegatePoolUpdate(poolID, pId string, pType spenum.Provider) *DelegateP
 	return &spu
 }
 
-func (dp DelegatePool) emitNew(
+func (dp *DelegatePool) emitNew(
 	poolId, providerId string,
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
@@ -39,26 +39,24 @@ func (dp DelegatePool) emitNew(
 
 	balances.EmitEvent(
 		event.TypeStats,
-		event.TagAddOrOverwriteDelegatePool,
+		event.TagAddDelegatePool,
 		fmt.Sprintf("%d:%s:%s", providerType, providerId, poolId),
 		data,
 	)
 }
 
-func (dpu DelegatePoolUpdate) emitUpdate(
+func (dpu *DelegatePoolUpdate) emitUpdate(
 	balances cstate.StateContextI,
-) error {
-
+) {
 	balances.EmitEvent(
 		event.TypeStats,
 		event.TagUpdateDelegatePool,
 		dpu.PoolId,
 		delegatePoolUpdateToDbsDelegatePoolUpdate(dpu),
 	)
-	return nil
 }
 
-func delegatePoolUpdateToDbsDelegatePoolUpdate(dpu DelegatePoolUpdate) dbs.DelegatePoolUpdate {
+func delegatePoolUpdateToDbsDelegatePoolUpdate(dpu *DelegatePoolUpdate) dbs.DelegatePoolUpdate {
 	return dbs.DelegatePoolUpdate{
 		DelegatePoolId: dpu.DelegatePoolId,
 		Updates:        dpu.Updates,
