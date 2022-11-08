@@ -170,7 +170,7 @@ func addMPTNode(r *http.Request) (*block.StateChange, error) {
 	sChain := GetServerChain()
 	bl, err := sChain.getNotarizedBlock(context.Background(), r.FormValue("round"), r.FormValue("block"))
 	if err != nil {
-		log.Panicf("Conductor: error while fetching notarized block: %v")
+		log.Panicf("Conductor: error while fetching notarized block: %v", err)
 	}
 
 	bsc, err := block.NewBlockStateChange(bl)

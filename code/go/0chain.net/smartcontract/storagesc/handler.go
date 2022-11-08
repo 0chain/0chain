@@ -1157,25 +1157,94 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	common.Respond(w, r, ups, nil)
 }
 
-func spStats(
-	blobber event.Blobber,
-	delegatePools []event.DelegatePool,
-) (*stakePoolStat, error) {
-	stat := new(stakePoolStat)
-	stat.ID = blobber.BlobberID
-	stat.UnstakeTotal = blobber.UnstakeTotal
-	stat.Capacity = blobber.Capacity
-	stat.WritePrice = blobber.WritePrice
-	stat.OffersTotal = blobber.OffersTotal
-	stat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
-	stat.Settings = stakepool.Settings{
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
+// Gets statistic for all locked tokens of a stake pool
+//
+// parameters:
+//
+//	+name: provider_id
+//	 description: id of a provider
+//	 required: true
+//	 in: query
+//	 type: string
+//	+name: provider_type
+//	 description: type of the provider, ie: blobber. validator
+//	 required: true
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: stakePoolStat
+//	400:
+//	500:
+func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
+	providerID := r.URL.Query().Get("provider_id")
+	providerTypeString := r.URL.Query().Get("provider_type")
+	providerType, err := strconv.Atoi(providerTypeString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := getProviderStakePoolStats(providerType, providerID, edb)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("could not find provider stats: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, res, nil)
+}
+
+func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakePoolStat, error) {
+	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
+	}
+
+	spStat := &stakePoolStat{}
+	spStat.Delegate = make([]delegatePoolStat, len(delegatePools))
+
+	switch spenum.Provider(providerType) {
+	case spenum.Blobber:
+		blobber, err := edb.GetBlobber(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return toBlobberStakePoolStats(blobber, delegatePools)
+	case spenum.Validator:
+		validator, err := edb.GetValidatorByValidatorID(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return toValidatorStakePoolStats(&validator, delegatePools)
+	}
+
+	return nil, fmt.Errorf("unknown provider type")
+}
+
+func toBlobberStakePoolStats(blobber *event.Blobber, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
+	spStat := new(stakePoolStat)
+	spStat.ID = blobber.BlobberID
+	spStat.StakeTotal = blobber.TotalStake
+	spStat.UnstakeTotal = blobber.UnstakeTotal
+	spStat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
+	spStat.Settings = stakepool.Settings{
 		DelegateWallet:     blobber.DelegateWallet,
 		MinStake:           blobber.MinStake,
 		MaxStake:           blobber.MaxStake,
 		MaxNumDelegates:    blobber.NumDelegates,
 		ServiceChargeRatio: blobber.ServiceCharge,
 	}
-	stat.Rewards = blobber.Rewards.Rewards
+	spStat.Rewards = blobber.Rewards.TotalRewards
 	for _, dp := range delegatePools {
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,
@@ -1191,56 +1260,56 @@ func spStats(
 
 		dpStats.TotalReward = dp.TotalReward
 
-		newBal, err := currency.AddCoin(stat.Balance, dpStats.Balance)
+		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
 		if err != nil {
 			return nil, err
 		}
-		stat.Balance = newBal
-		stat.Delegate = append(stat.Delegate, dpStats)
+		spStat.Balance = newBal
+		spStat.Delegate = append(spStat.Delegate, dpStats)
 	}
-	return stat, nil
+
+	return spStat, nil
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
-// Gets statistic for all locked tokens of a stake pool
-//
-// parameters:
-//
-//	+name: blobber_id
-//	 description: id of blobber
-//	 required: true
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: stakePoolStat
-//	400:
-//	500:
-func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
-	blobberID := r.URL.Query().Get("blobber_id")
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
+func toValidatorStakePoolStats(validator *event.Validator, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
+	spStat := new(stakePoolStat)
+	spStat.ID = validator.ValidatorID
+	spStat.StakeTotal = validator.StakeTotal
+	spStat.UnstakeTotal = validator.UnstakeTotal
+
+	spStat.Settings = stakepool.Settings{
+		DelegateWallet:     validator.DelegateWallet,
+		MinStake:           validator.MinStake,
+		MaxStake:           validator.MaxStake,
+		MaxNumDelegates:    validator.NumDelegates,
+		ServiceChargeRatio: validator.ServiceCharge,
 	}
-	blobber, err := edb.GetBlobber(blobberID)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("cannot find blobber: "+err.Error()))
-		return
+	spStat.Rewards = validator.Rewards.TotalRewards
+
+	for _, dp := range delegatePools {
+		dpStats := delegatePoolStat{
+			ID:           dp.PoolID,
+			DelegateID:   dp.DelegateID,
+			Status:       spenum.PoolStatus(dp.Status).String(),
+			RoundCreated: dp.RoundCreated,
+		}
+		dpStats.Balance = dp.Balance
+
+		dpStats.Rewards = dp.Reward
+
+		dpStats.TotalPenalty = dp.TotalPenalty
+
+		dpStats.TotalReward = dp.TotalReward
+
+		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
+		if err != nil {
+			return nil, err
+		}
+		spStat.Balance = newBal
+		spStat.Delegate = append(spStat.Delegate, dpStats)
 	}
 
-	delegatePools, err := edb.GetDelegatePools(blobberID, int(spenum.Blobber))
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("cannot find user stake pool: "+err.Error()))
-		return
-	}
-	spS, err := spStats(*blobber, delegatePools)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("cannot fetch stake pool stats: "+err.Error()))
-		return
-	}
-	common.Respond(w, r, spS, nil)
+	return spStat, nil
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
@@ -1402,10 +1471,11 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 }
 
 type validatorNodeResponse struct {
-	ValidatorID string `json:"validator_id"`
-	BaseUrl     string `json:"url"`
-	Stake       int64  `json:"stake"`
-	PublicKey   string `json:"public_key"`
+	ValidatorID  string        `json:"validator_id"`
+	BaseUrl      string        `json:"url"`
+	StakeTotal   currency.Coin `json:"stake_total"`
+	UnstakeTotal currency.Coin `json:"unstake_total"`
+	PublicKey    string        `json:"public_key"`
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`
@@ -1422,7 +1492,8 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 	return &validatorNodeResponse{
 		ValidatorID:    v.ValidatorID,
 		BaseUrl:        v.BaseUrl,
-		Stake:          v.Stake,
+		StakeTotal:     v.StakeTotal,
+		UnstakeTotal:   v.UnstakeTotal,
 		PublicKey:      v.PublicKey,
 		DelegateWallet: v.DelegateWallet,
 		MinStake:       v.MinStake,

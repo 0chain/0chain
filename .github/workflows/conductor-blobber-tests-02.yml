@@ -1,14 +1,14 @@
-name: CONDUCTOR VALIDATOR-01 TESTS
+name: CONDUCTOR BLOBBER-02 TESTS
 
 on:
   schedule:
-    # Runs everyday at 03:00 am
-    - cron: '0 7 * * * '
+    # Runs everyday at 02:00 am
+    - cron: '0 3 * * * '
   workflow_dispatch:
 
 jobs:
-  CONDUCTOR_VALIDATORS_01_TESTS:
-    name: CONDUCTOR-VALIDATORS-01-TESTS
+  CONDUCTOR_BLOBBERS_02_TESTS:
+    name: CONDUCTOR-BLOBBERS-02-TESTS
     runs-on: [self-hosted, arc-runner]
 
     steps:
@@ -16,18 +16,23 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: '1.18'
-
+      
     - name: Docker Compose Setup.
       run: |
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
 
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    
     - name: Get Branch
       id: get_branch
       run: |
         BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        BRANCH=add-blobber-test-send-wrong-data
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 
@@ -71,7 +76,6 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
-        cd blobber && git checkout add-send-wrong-bad-data-behaviour
 
     - name: Git clone zboxcli
       run: |
@@ -120,11 +124,14 @@ jobs:
 
     - name: Build blobber base
       run: |
-        cd blobber && ./docker.local/bin/build.base.sh
+        cd blobber
+        ./docker.local/bin/build.base.sh
 
     - name: Build blobber
       run: |
-        cd blobber && ./docker.local/bin/build.blobber-integration-tests.sh
+        cd blobber
+        chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
+        ./docker.local/bin/build.blobber-integration-tests.sh
 
     - name: Add ZCN config
       run: |
@@ -147,9 +154,10 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    - name: Starting validator Tests.
+    - name: Starting blobber Tests.
       run: |
-        cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh blobber-2
 
     - name: Creating Artifact con-tests-logs.tar.gz file.
       run: |
@@ -173,8 +181,8 @@ jobs:
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_VALIDATORS_01_TESTS]
-    if: always() && (needs.CONDUCTOR_VALIDATORS_01_TESTS.result == 'failure')
+    needs: [CONDUCTOR_BLOBBERS_02_TESTS]
+    if: always() && (needs.CONDUCTOR_BLOBBERS_02_TESTS.result == 'failure')
     steps:
       - name: "Check if should send slack notification"
         id: send-slack-notification
@@ -186,4 +194,4 @@ jobs:
       - name: "Notify Slack"
         if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
         run: |
-          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_VALIDATORS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_02_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

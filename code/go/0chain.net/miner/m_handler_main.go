@@ -31,3 +31,9 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return notarizedBlockSendHandler(ctx, r)
 }
+
+// VRFShareHandler - handle the vrf share.
+func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
+	interface{}, error) {
+	return vrfShareHandler(ctx, entity)
+}

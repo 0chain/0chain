@@ -864,6 +864,9 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 		case *cases.CheckChallengeIsValid:
 			state.CheckChallengeIsValid = cfg
 
+		case *cases.RoundHasFinalized:
+			state.RoundHasFinalizedConfig = cfg
+
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())
 		}
@@ -914,6 +917,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.BlobberDelete = update
 		case *config.AdversarialValidator:
 			state.AdversarialValidator = update
+		case *config.LockNotarizationAndSendNextRoundVRF:
+			state.LockNotarizationAndSendNextRoundVRF = update
 		}
 	})
 

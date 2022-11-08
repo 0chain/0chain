@@ -1,17 +1,19 @@
-name: Conductor View Change Tests
+name: CONDUCTOR VIEW CHANGE TESTS
 
 on:
-  schedule:
-    - cron: '0 4 * * * '
+  # schedule:
+  #   # Runs everyday at 03:00 am
+  #   - cron: '0 8 * * * '
+  workflow_dispatch:
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
   ZCHAIN_BUILDRUN: zchain_run_base
 
 jobs:
-  fault_tolerance_tests:
+  CONDUCTOR_FAULT_TOLERANCE_TESTS:
     name: CONDUCTOR-FAULT-TOLERANCE-TESTS
-    runs-on: [self-hosted, conductor-test02]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
@@ -28,13 +30,11 @@ jobs:
       with:
         go-version: '1.18'
 
-    - name: Install mockery
-      run: |
-        make install-mockery
-        make build-mocks
-
     - name: Docker Init Setup.
       run: |
+        cd 0chain
+        make install-mockery
+        make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
@@ -85,12 +85,12 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
 
-  upload_artifacts_ft:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test02]
+  UPLOAD_LOGS_AS_ARTIFACTS_FAULT:
+    name: UPLOAD-LOGS-AS-ARTIFACTS-FAULT
+    runs-on: [self-hosted, arc-runner]
 
     if: always()
-    needs: [fault_tolerance_tests]
+    needs: [CONDUCTOR_FAULT_TOLERANCE_TESTS]
 
     steps:
     - name: Creating Artifact con-ft-tests-logs.tar.gz file.
@@ -103,13 +103,13 @@ jobs:
         name: Conductor-test-logs
         path: ./con-ft-tests-logs.tar.gz
 
-    - name: Cleanup
-      run: |
-        rm -rf ./*
+    # - name: Cleanup
+    #   run: |
+    #     rm -rf ./*
 
-  conductor_byzantine_tests:
+  CONDUCTOR_BYZANTINE_TESTS:
     name: CONDUCTOR-BYZANTINE-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
@@ -166,9 +166,9 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.byzantine
 
-  conductor_view_change_miners_tests:
+  CONDUCTOR_VIEW_CHANGE_MINERS_TESTS:
     name: CONDUCTOR-VIEW-CHANGE-MINERS-TESTS
-    runs-on: [self-hosted, conductor-test02]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
@@ -225,9 +225,9 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance.miners*
 
-  conductor_view_change_sharders_tests:
+  CONDUCTOR_VIEW_CHANGE_SHARDERS_TESTS:
     name: CONDUCTOR-VIEW-CHANGE-SHARDERS-TESTS
-    runs-on: [self-hosted, conductor-test01]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
@@ -284,10 +284,9 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance.sharders*
 
-
-  conductor_view_change_others_tests:
+  CONDUCTOR_VIEW_CHANGE_OTHERS_TESTS:
     name: CONDUCTOR-VIEW-CHANGE-OTHERS-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - uses: actions/checkout@v1
@@ -344,24 +343,37 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance.stress-test view-change.fault-tolerance.threshold
 
-  upload_artifacts_byz:
-    name: UPLOAD-LOGS-AS-ARTIFACTS
-    runs-on: [self-hosted, conductor-test03]
+  # UPLOAD_LOGS_AS_ARTIFACTS_BYZ:
+  #   name: UPLOAD-LOGS-AS-ARTIFACTS-BYZ
+  #   runs-on: [self-hosted, arc-runner]
 
-    if: always()
-    needs: [conductor_byzantine_tests, conductor_view_change_miners_tests, conductor_view_change_sharders_tests, conductor_view_change_others_tests]
+  #   if: always()
+  #   needs: [CONDUCTOR_BYZANTINE_TESTS, CONDUCTOR_VIEW_CHANGE_MINERS_TESTS, CONDUCTOR_VIEW_CHANGE_SHARDERS_TESTS, CONDUCTOR_VIEW_CHANGE_OTHERS_TESTS]
 
-    steps:
-    - name: Creating Artifact con-byz-tests-logs.tar.gz file.
-      run: |
-        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
+  #   steps:
+  #   - name: Creating Artifact con-byz-tests-logs.tar.gz file.
+  #     run: |
+  #       find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
 
-    - name: Uploading artifact con-byz-tests-logs.tar.gz file.
-      uses: actions/upload-artifact@v2
-      with:
-        name: Conductor-test-logs
-        path: ./con-byz-tests-logs.tar.gz
+  #   - name: Uploading artifact con-byz-tests-logs.tar.gz file.
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: Conductor-test-logs
+  #       path: ./con-byz-tests-logs.tar.gz
 
-    - name: Cleanup
-      run: |
-        rm -rf ./*
+  # notify_slack:
+  #   runs-on: [self-hosted, arc-runner]
+  #   needs: [CONDUCTOR_BYZANTINE_TESTS, CONDUCTOR_VIEW_CHANGE_MINERS_TESTS, CONDUCTOR_VIEW_CHANGE_SHARDERS_TESTS, CONDUCTOR_VIEW_CHANGE_OTHERS_TESTS]
+  #   if: always() && (needs.CONDUCTOR_BYZANTINE_TESTS.result == 'failure')
+  #   steps:
+  #     - name: "Check if should send slack notification"
+  #       id: send-slack-notification
+  #       uses: peter-murray/value-as-flag-action@0.0.1
+  #       with:
+  #         value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+  #         default: false
+
+  #     - name: "Notify Slack"
+  #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
+  #       run: |
+  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

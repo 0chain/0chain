@@ -125,6 +125,8 @@ func (edb *EventDb) GetWriteMarkers(limit common.Pagination) ([]WriteMarker, err
 func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit common.Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
+		Joins("User").
+		Joins("Allocation").
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{AllocationID: allocationID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
@@ -136,6 +138,8 @@ func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit co
 func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, fileID int64, limit common.Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
+		Joins("User").
+		Joins("Allocation").
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{AllocationID: allocationID, FileID: fileID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
