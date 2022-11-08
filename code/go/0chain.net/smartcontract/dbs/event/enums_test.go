@@ -7,9 +7,9 @@ import (
 )
 
 func TestEventType(t *testing.T) {
-	require.Len(t, TypeSting, TypeStats.Int())
+	require.Len(t, TypeSting, TypeStats.Int()+1)
 }
 
 func TestEventTags(t *testing.T) {
-	require.Len(t, TagString, NumberOfTags.Int())
+	require.Len(t, TagString, NumberOfTags.Int()+1)
 }
