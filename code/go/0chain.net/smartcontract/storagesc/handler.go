@@ -2811,7 +2811,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 
 		common.Respond(w, r, blk, nil)
 		return
-	case "FildID":
+	case "FileID":
 		fileID, err := strconv.ParseInt(query, 10, 64)
 		if err != nil || fileID <= 0 {
 			common.Respond(w, r, nil, common.NewErrBadRequest("Invalid file id"))
