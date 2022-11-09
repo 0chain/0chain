@@ -472,12 +472,6 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				logging.Logger.Debug("BC is moving",
 					zap.Int64("current_lfb_round", bs.Round),
 					zap.Int64("last_round", lastRound.round))
-				// call cancel to stop state syncing process in case it was started
-				//if cancel != nil && isSynching {
-				//	cancel()
-				//	cancel = nil
-				//}
-
 				// update to latest finalized round
 				lastRound.round = bs.Round
 				lastRound.stateHash = bs.ClientStateHash
@@ -497,33 +491,13 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			// time since the last finalized round arrived
 			ts := time.Since(lastRound.tm)
 			if ts <= c.bcStuckTimeThreshold {
-				// reset sync state and continue as the BC is not stuck
-				//isSynching = false
 				continue
 			}
-
-			// continue if state is syncing
-			//if isSynching {
-			//	continue
-			//}
 
 			logging.Logger.Debug("BC may get stuck",
 				zap.Int64("lastRound", lastRound.round),
 				zap.String("state_hash", util.ToHex(lastRound.stateHash)),
 				zap.Any("stuck time", ts))
-
-			//cctx, cancel = context.WithCancel(ctx)
-			//isSynching = true
-			//go func() {
-			//	defer func() {
-			//		synchingStopC <- struct{}{}
-			//	}()
-			//	if lfb == nil {
-			//		return
-			//	}
-			//
-			//	c.syncRoundStateToStateDB(cctx, lfb.Round, lfb.ClientStateHash)
-			//}()
 		case mns := <-c.syncMissingNodesC:
 			func() {
 				lfb := c.GetLatestFinalizedBlock()
@@ -569,46 +543,6 @@ func (c *Chain) findMissingNodesInPath(path util.Path, round int64, root util.Ke
 	}
 
 	return keys
-}
-
-func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootStateHash util.Key) {
-	//Logger.Info("Sync round state from network...")
-	//mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round), rootStateHash)
-	//
-	//Logger.Info("Finding missing nodes")
-	//cctx, cancel := context.WithTimeout(ctx, c.syncStateTimeout)
-	//defer cancel()
-
-	//_, keys, err := mpt.FindMissingNodes(cctx)
-	//if err != nil {
-	//	switch err {
-	//	case context.Canceled:
-	//		Logger.Debug("Sync round state abort, context is canceled, suppose the BC is moving")
-	//		return
-	//	case context.DeadlineExceeded:
-	//		Logger.Error("Sync round state abort, context timed out for checking missing nodes")
-	//		return
-	//	default:
-	//		Logger.Error("Sync round state abort, failed to get missing nodes",
-	//			zap.Int64("round", round),
-	//			zap.String("client state hash", util.ToHex(rootStateHash)),
-	//			zap.Error(err))
-	//		return
-	//	}
-	//}
-
-	//if len(keys) == 0 {
-	//	Logger.Debug("Found no missing node",
-	//		zap.Int64("round", round),
-	//		zap.String("state hash", util.ToHex(rootStateHash)))
-	//	return
-	//}
-	//
-	//Logger.Info("Sync round state, found missing nodes",
-	//	zap.Int64("round", round),
-	//	zap.Int("missing_node_num", len(keys)))
-	//
-	//c.GetStateNodes(ctx, keys)
 }
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
