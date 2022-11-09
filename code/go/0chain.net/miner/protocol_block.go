@@ -83,9 +83,11 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
 	s, err := mc.GetStateById(bState, minerId)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
+		if cstate.ErrInvalidState(err) {
 			mc.SyncMissingNodes(round, util.Path(minerId))
+		}
 
+		if err != util.ErrValueNotPresent {
 			logging.Logger.Error("can't get nonce", zap.Error(err))
 			return 0, err
 		}
