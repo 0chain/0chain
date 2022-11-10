@@ -5,7 +5,6 @@ import (
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
@@ -77,21 +76,10 @@ func (ssc *StorageSmartContract) collectReward(
 				"error saving stake pool, %v", err)
 		}
 
-		staked, err := sp.stake()
+		err = sp.stakeForProvider(prr.ProviderType, providerID, balances)
 		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"can't get stake: %v", err)
-		}
-
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-
-		switch prr.ProviderType {
-		case spenum.Blobber:
-			tag, data := event.NewUpdateBlobberTotalStakeEvent(providerID, staked)
-			balances.EmitEvent(event.TypeStats, tag, providerID, data)
-		case spenum.Validator:
-			// TODO: implement validator stake update events
+			return "", common.NewErrorf("stake_pool_unlock_failed",
+				"stake pool staking error: %v", err)
 		}
 
 		err = emitAddOrOverwriteReward(reward, providerID, prr, balances, txn)
