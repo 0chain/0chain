@@ -88,7 +88,3 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
 	return newEventsMerger[DelegatePool](TagAddDelegatePool, withUniqueEventOverwrite())
 }
-
-func mergeUpdateDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
-	return newEventsMerger[DelegatePool](TagUpdateDelegatePool, withUniqueEventOverwrite())
-}

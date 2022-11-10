@@ -99,7 +99,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
 			mergeAddDelegatePoolsEvents(),
-			mergeUpdateDelegatePoolsEvents(),
 
 			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
