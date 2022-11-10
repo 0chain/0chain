@@ -71,6 +71,7 @@ const (
 	TagUpdateAllocationStat
 	TagUpdateBlobberStat
 	TagUpdateValidatorStakeTotal
+	TagCollectProviderReward
 	NumberOfTags
 )
 
@@ -119,6 +120,7 @@ var TagString = []string{
 	"UpdateAllocationStat",
 	"UpdateBlobberStat",
 	"UpdateValidatorStakeTotal",
+	"TagCollectProviderReward",
 	"Invalid",
 }
 

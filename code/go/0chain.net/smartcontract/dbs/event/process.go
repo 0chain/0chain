@@ -517,6 +517,8 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.addOrUpdateChallengePools(*cps)
+	case TagCollectProviderReward:
+		return edb.collectRewards(event.Index)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
