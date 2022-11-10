@@ -23,15 +23,7 @@ services:
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
-    image: 0chaindev/miner:latest
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '0.25'
-    #       memory: 250M
-    #     reservations:
-    #       cpus: '0.1'
-    #       memory: 100M
+    image: "miner"
     environment:
       - DOCKER=true
       - REDIS_HOST=redis
