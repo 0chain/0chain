@@ -28,9 +28,10 @@ func (rl *ratelimit) init() {
 	rl.Limiter = tollbooth.NewLimiter(rl.RequestsPerSecond, &limiter.ExpirableOptions{DefaultExpirationTTL: time.Hour}).
 		SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"}).
 		SetMethods([]string{"GET", "POST"})
+	ConfigRateLimits()
 }
 
-//ConfigRateLimits - configure the rate limits
+// ConfigRateLimits - configure the rate limits
 func ConfigRateLimits() {
 	userRl := viper.GetFloat64("network.user_handlers.rate_limit")
 	userRateLimit = &ratelimit{RequestsPerSecond: userRl}
@@ -41,7 +42,7 @@ func ConfigRateLimits() {
 	n2nRateLimit.init()
 }
 
-//UserRateLimit - rate limiting for end user handlers
+// UserRateLimit - rate limiting for end user handlers
 func UserRateLimit(handler ReqRespHandlerf) ReqRespHandlerf {
 	if !userRateLimit.RateLimit {
 		return Recover(handler)
@@ -51,7 +52,7 @@ func UserRateLimit(handler ReqRespHandlerf) ReqRespHandlerf {
 	}
 }
 
-//N2NRateLimit - rate limiting for n2n handlers
+// N2NRateLimit - rate limiting for n2n handlers
 func N2NRateLimit(handler ReqRespHandlerf) ReqRespHandlerf {
 	if !n2nRateLimit.RateLimit {
 		return Recover(handler)
