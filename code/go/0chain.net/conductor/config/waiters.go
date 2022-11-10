@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // ExpectMagicBlock represents expected magic block.
 type ExpectMagicBlock struct {
@@ -94,14 +97,29 @@ func (wssos *WaitShareSignsOrShares) IsZero() bool {
 
 // WaitAdd used to wait for add_miner and add_sharder SC calls.
 type WaitAdd struct {
-	Miners   []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
-	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
-	Blobbers []NodeName `json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
-	Start    bool       `json:"start" yaml:"start" mapstructure:"start"`
+	Miners      []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
+	Sharders    []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+	Blobbers    []NodeName `json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
+	Authorizers []NodeName `json:"authorizers" yaml:"authorizers" mapstructure:"authorizers"`
+	Start       bool       `json:"start" yaml:"start" mapstructure:"start"`
 }
 
 func (wa *WaitAdd) IsZero() bool {
-	return len(wa.Miners) == 0 && len(wa.Sharders) == 0 && len(wa.Blobbers) == 0
+	return len(wa.Miners) == 0 && len(wa.Sharders) == 0 && len(wa.Blobbers) == 0 && len(wa.Authorizers) == 0
+}
+
+func (wa *WaitAdd) Take(name NodeName) (ok bool) {
+	if strings.Contains(string(name), "miner") {
+		return wa.TakeMiner(name)
+	} else if strings.Contains(string(name), "sharder") {
+		return wa.TakeSharder(name)
+	} else if strings.Contains(string(name), "blobber") {
+		return wa.TakeBlobber(name)
+	} else if strings.Contains(string(name), "authorizer") {
+		return wa.TakeAuthorizer(name)
+	}
+
+	return false
 }
 
 func (wa *WaitAdd) TakeMiner(name NodeName) (ok bool) {
@@ -128,6 +146,16 @@ func (wa *WaitAdd) TakeBlobber(name NodeName) (ok bool) {
 	for i, blobberName := range wa.Blobbers {
 		if blobberName == name {
 			wa.Blobbers = append(wa.Blobbers[:i], wa.Blobbers[i+1:]...)
+			return true
+		}
+	}
+	return
+}
+
+func (wa *WaitAdd) TakeAuthorizer(name NodeName) (ok bool) {
+	for i, authorizerName := range wa.Authorizers {
+		if authorizerName == name {
+			wa.Authorizers = append(wa.Authorizers[:i], wa.Authorizers[i+1:]...)
 			return true
 		}
 	}

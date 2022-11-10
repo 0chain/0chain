@@ -61,6 +61,12 @@ type AddBlobberEvent struct {
 	Blobber NodeName // the added blobber
 }
 
+// AddAuthorizerEvent in miner SC.
+type AddAuthorizerEvent struct {
+	Sender     NodeName // event emitter
+	Authorizer NodeName // the added blobber
+}
+
 // SharderKeepEvent in miner SC.
 type SharderKeepEvent struct {
 	Sender  NodeName // event emitter
@@ -108,6 +114,8 @@ type Server struct {
 	onAddSharder chan *AddSharderEvent
 	// onAddBlobber occurs where blobber added in storage SC
 	onAddBlobber chan *AddBlobberEvent
+	// onAddAuthorizer occurs where authorizer added in storage SC
+	onAddAuthorizer chan *AddAuthorizerEvent
 	// onSharderKeep occurs where miner SC proceed sharder_keep function
 	onSharderKeep chan *SharderKeepEvent
 
@@ -152,6 +160,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server,
 	s.onAddMiner = make(chan *AddMinerEvent, 10)
 	s.onAddSharder = make(chan *AddSharderEvent, 10)
 	s.onAddBlobber = make(chan *AddBlobberEvent, 10)
+	s.onAddAuthorizer = make(chan *AddAuthorizerEvent, 10)
 	s.onSharderKeep = make(chan *SharderKeepEvent, 10)
 	s.onNodeReady = make(chan NodeName, 10)
 
@@ -289,6 +298,10 @@ func (s *Server) OnAddBlobber() chan *AddBlobberEvent {
 	return s.onAddBlobber
 }
 
+func (s *Server) OnAddAuthorizer() chan *AddAuthorizerEvent {
+	return s.onAddAuthorizer
+}
+
 func (s *Server) OnSharderKeep() chan *SharderKeepEvent {
 	return s.onSharderKeep
 }
@@ -310,6 +323,10 @@ func (s *Server) OnContributeMPK() chan *ContributeMPKEvent {
 
 func (s *Server) OnShareOrSignsShares() chan *ShareOrSignsSharesEvent {
 	return s.onShareOrSignsSharesEvent
+}
+
+func (s *Server) Nodes() map[config.NodeName]*nodeState {
+	return s.nodes
 }
 
 //
@@ -353,6 +370,14 @@ func (s *Server) AddSharder(add *AddSharderEvent, _ *struct{}) (err error) {
 func (s *Server) AddBlobber(add *AddBlobberEvent, _ *struct{}) (err error) {
 	select {
 	case s.onAddBlobber <- add:
+	case <-s.quit:
+	}
+	return
+}
+
+func (s *Server) AddAuthorizer(add *AddAuthorizerEvent, _ *struct{}) (err error) {
+	select {
+	case s.onAddAuthorizer <- add:
 	case <-s.quit:
 	}
 	return

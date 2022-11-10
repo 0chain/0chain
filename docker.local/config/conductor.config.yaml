@@ -134,6 +134,28 @@ nodes:
     start_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml up"
     stop_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml down"
 
+  # authorizer
+  - name: "authorizer-1"
+    id: fb276b545a4c2f1d1771f2f9cdbf106f78ea1b2c7ea4ca763161145ec891aa26
+    work_dir: "../token_bridge_authserver/docker.local/auth1"
+    env: AUTHORIZER=1
+    start_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+
+  - name: "authorizer-2"
+    id: 45ad4982464f7e47d1160b608fb9285a1d0a1e1f6242f00acb02118179224f13
+    work_dir: "../token_bridge_authserver/docker.local/auth2"
+    env: AUTHORIZER=2
+    start_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+
+  - name: "authorizer-3"
+    id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    work_dir: "../token_bridge_authserver/docker.local/auth3"
+    env: AUTHORIZER=3
+    start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+
   # 0dns (patched version, add docker-clean, start-no-daemon.sh)
   - name: "0dns" #
     id: "0dns" # no real ID used
@@ -271,4 +293,8 @@ commands:
   list_repair:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list_repair.sh"
+    should_fail: false
+  register_authorizer:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/register_authorizer.sh"
     should_fail: false
