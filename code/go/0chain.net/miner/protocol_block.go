@@ -80,9 +80,13 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	return feeTxn
 }
 
-func (mc *Chain) getCurrentSelfNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
+func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
 	s, err := mc.GetStateById(bState, minerId)
 	if err != nil {
+		if cstate.ErrInvalidState(err) {
+			mc.SyncMissingNodes(round, util.Path(minerId))
+		}
+
 		if err != util.ErrValueNotPresent {
 			logging.Logger.Error("can't get nonce", zap.Error(err))
 			return 0, err
@@ -132,7 +136,6 @@ func (mc *Chain) validateTransaction(b *block.Block, bState util.MerklePatriciaT
 		return ErrNotTimeTolerant
 	}
 	state, err := mc.GetStateById(bState, txn.ClientID)
-
 	if err != nil {
 		if err == util.ErrValueNotPresent {
 			if txn.Nonce > 1 {
@@ -143,6 +146,7 @@ func (mc *Chain) validateTransaction(b *block.Block, bState util.MerklePatriciaT
 			}
 			return nil
 		}
+		mc.SyncMissingNodes(b.Round, util.Path(txn.ClientID))
 		return err
 	}
 
@@ -339,7 +343,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	var costs []int
 	for _, txn := range b.Txns {
-		c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn)
+		c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn, true)
 		if err != nil {
 			return nil, err
 		}
@@ -835,7 +839,7 @@ func txnIterHandlerFunc(mc *Chain,
 			return false, nil
 		}
 
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, true)
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 
@@ -978,7 +982,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.ChainConfig.MaxBlockCost() &&
 		iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
 		txn := iterInfo.currentTxns[i]
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, true)
 		if err != nil {
 			// Note: optimistic block generation
 			// we would just skip the error so that the work on txns collection and state computation above
@@ -1026,7 +1030,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	for _, biTxn := range buildInTxns {
-		biTxn.Nonce, err = mc.getCurrentSelfNonce(b.MinerID, blockState)
+		biTxn.Nonce, err = mc.getCurrentSelfNonce(b.Round, b.MinerID, blockState)
 		if err != nil {
 			logging.Logger.Error("generate block - could not get miner nonce",
 				zap.Error(err),
@@ -1095,7 +1099,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		var costs []int
 		cost := 0
 		for _, txn := range b.Txns {
-			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, true)
 			if err != nil {
 				logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 				break
@@ -1153,7 +1157,7 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block, state uti
 
 	var cost int
 	for _, txn := range txns {
-		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
+		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, true)
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			return nil, 0, err
