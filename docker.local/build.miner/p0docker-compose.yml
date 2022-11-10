@@ -23,7 +23,7 @@ services:
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
-    image: "miner"
+    image: 0chaindev/miner:latest
     environment:
       - DOCKER=true
       - REDIS_HOST=redis

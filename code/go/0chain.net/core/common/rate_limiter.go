@@ -28,7 +28,6 @@ func (rl *ratelimit) init() {
 	rl.Limiter = tollbooth.NewLimiter(rl.RequestsPerSecond, &limiter.ExpirableOptions{DefaultExpirationTTL: time.Hour}).
 		SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"}).
 		SetMethods([]string{"GET", "POST"})
-	ConfigRateLimits()
 }
 
 // ConfigRateLimits - configure the rate limits
