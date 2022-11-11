@@ -4,10 +4,15 @@ enable:
 sets:
   - name: "Authorizer Consensus"
     tests:
-      - "Launch and register 3 authorizers"
+      - "One authorizer is down"
+      # - "Send faked tickets with signatures"
+      # - "Send mint transaction with signatures less than the threshold"
+  - name: "Mint and burn values"
+    tests:
+      # - Burn less tokens than the minimum amount to burn
 
 tests:
-  - name: "Launch and register 3 authorizers"
+  - name: "One authorizer is down"
     flow:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
@@ -29,5 +34,8 @@ tests:
           start: true
       - wait_round:
           shift: 50
+      - stop: ['authorizer-1']
+      - command:
+          name: "burn_zcn"
 
 ...

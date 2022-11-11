@@ -537,8 +537,6 @@ func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
 
 func (r *Runner) acceptAddAuthorizer(addb *conductrpc.AddAuthorizerEvent) (
 	err error) {
-	fmt.Printf("accepting authorizer %+v\n", addb)
-
 	if addb.Sender != r.monitor {
 		return // not the monitor node
 	}
@@ -785,7 +783,6 @@ func (r *Runner) proceedWaiting() (err error) {
 		case addb := <-r.server.OnAddBlobber():
 			err = r.acceptAddBlobber(addb)
 		case adda := <-r.server.OnAddAuthorizer():
-			fmt.Printf("received ada : %+v\n", adda)
 			err = r.acceptAddAuthorizer(adda)
 		case sk := <-r.server.OnSharderKeep():
 			err = r.acceptSharderKeep(sk)
