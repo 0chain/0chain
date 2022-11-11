@@ -28,8 +28,8 @@ func (edb *EventDb) incrementReward(providerId string, increment currency.Coin) 
 
 func (edb *EventDb) collectRewards(providerId string) error {
 	return edb.Get().Model(&ProviderRewards{}).
-		Where("provider_id == ?", providerId).
+		Where("provider_id = ?", providerId).
 		Updates(map[string]interface{}{
-			"rewards": 0,
+			"rewards": currency.Coin(0),
 		}).Error
 }
