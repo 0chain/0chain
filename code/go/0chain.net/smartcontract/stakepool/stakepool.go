@@ -131,7 +131,8 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, clientId, nil)
+		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId, nil)
+
 	}
 
 	dPool, ok := sp.Pools[clientId]
