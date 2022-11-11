@@ -15,6 +15,10 @@ const (
 var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
 
 func (p Provider) String() string {
+	if p < 0 || int(p) >= len(providerString) {
+		return "unknown"
+	}
+
 	return providerString[p]
 }
 
