@@ -35,3 +35,11 @@ sudo ifconfig lo0 alias 198.18.0.64
 sudo ifconfig lo0 alias 198.18.0.65
 sudo ifconfig lo0 alias 198.18.0.66
 sudo ifconfig lo0 alias 198.18.0.67
+# authorizers
+sudo ifconfig lo0 alias 198.18.0.131
+sudo ifconfig lo0 alias 198.18.0.132
+sudo ifconfig lo0 alias 198.18.0.133
+sudo ifconfig lo0 alias 198.18.0.134
+sudo ifconfig lo0 alias 198.18.0.135
+sudo ifconfig lo0 alias 198.18.0.136
+sudo ifconfig lo0 alias 198.18.0.137

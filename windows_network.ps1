@@ -29,3 +29,10 @@ netsh int ip add address "Loopback" 198.18.0.64
 netsh int ip add address "Loopback" 198.18.0.65
 netsh int ip add address "Loopback" 198.18.0.66
 netsh int ip add address "Loopback" 198.18.0.67
+netsh int ip add address "Loopback" 198.18.0.131
+netsh int ip add address "Loopback" 198.18.0.132
+netsh int ip add address "Loopback" 198.18.0.133
+netsh int ip add address "Loopback" 198.18.0.134
+netsh int ip add address "Loopback" 198.18.0.135
+netsh int ip add address "Loopback" 198.18.0.136
+netsh int ip add address "Loopback" 198.18.0.137

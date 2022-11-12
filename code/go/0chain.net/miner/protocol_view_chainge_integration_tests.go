@@ -21,7 +21,6 @@ import (
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc" // integration tests
-	crpcutils "0chain.net/conductor/utils"
 )
 
 // The sendDKGShare sends the generated secShare to the given node.
@@ -275,7 +274,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 
 	var (
 		state             = crpc.Client().State()
-		good, bad         = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
+		good, bad         = chain.SplitGoodAndBadNodes(state, state.MPK, mb.Miners.Nodes)
 		goodurls, badurls = getBaseN2NURLs(good), getBaseN2NURLs(bad)
 		badMPK            = getBadMPK(mpk)
 		shardersUrls      = mb.Sharders.N2NURLs()

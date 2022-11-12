@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -30,7 +31,12 @@ func Recover(handler ReqRespHandlerf) ReqRespHandlerf {
 				)
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
-				data["error"] = fmt.Sprintf("%v", err)
+				errorMessage := fmt.Sprintf("%v", err)
+				if 	strings.Contains(strings.ToLower(errorMessage), "panic") ||
+					strings.Contains(strings.ToLower(errorMessage), "stack trace") {
+					errorMessage = "Unknown Server Error"
+				}
+				data["error"] = errorMessage
 				if are, ok := err.(*Error); ok {
 					data["code"] = are.Code
 				}

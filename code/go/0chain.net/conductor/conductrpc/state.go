@@ -66,6 +66,9 @@ type State struct {
 	MinerNotarisedBlockRequestor          *cases.MinerNotarisedBlockRequestor
 	FBRequestor                           *cases.FBRequestor
 	MissingLFBTicket                      *cases.MissingLFBTickets
+	RoundHasFinalizedConfig               *cases.RoundHasFinalized
+
+	LockNotarizationAndSendNextRoundVRF *config.LockNotarizationAndSendNextRoundVRF
 
 	// Blobbers related states
 	StorageTree          *config.Bad // blobber sends bad files/tree responses

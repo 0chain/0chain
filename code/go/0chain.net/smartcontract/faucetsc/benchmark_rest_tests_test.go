@@ -3,6 +3,7 @@ package faucetsc
 import (
 	"testing"
 
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/mocks"
 	"0chain.net/smartcontract/rest"
@@ -16,6 +17,7 @@ func TestFaucetBenchmarkRestTests(t *testing.T) {
 	mockSigScheme.On("SetPrivateKey", mock.Anything).Return()
 	mockSigScheme.On("Sign", mock.Anything).Return("", nil)
 
+	common.ConfigRateLimits()
 	require.EqualValues(
 		t,
 		len(GetEndpoints(rest.NewRestHandler(nil))),

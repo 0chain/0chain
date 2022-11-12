@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -19,6 +20,8 @@ import (
 	"0chain.net/conductor/config/cases"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	coreutil "0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 )
 
@@ -86,7 +89,6 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 			<-delayedBlock
 		}()
 	}
-
 	return notarizationReceiptHandler(ctx, entity)
 }
 
@@ -128,6 +130,12 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 
 	case cfg.BlockWithoutVerTicketsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		return blockWithoutVerTickets(r)
+
+	case cfg.BlockWithInvalidTicketsBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
+		return blockWithInvalidTickets(r)
+
+	case cfg.BlockWithValidTicketsForOldRoundBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
+		return blockWithValidTicketsForOldRound(r)
 
 	case cfg.CorrectResponseBy.IsActingOnTestRequestor(minerInformer, requestorID, cfg.OnRound, selfInfo):
 		fallthrough
@@ -198,4 +206,51 @@ func blockWithoutVerTickets(r *http.Request) (*block.Block, error) {
 	bl.VerificationTickets = nil
 
 	return bl, nil
+}
+
+func blockWithInvalidTickets(r *http.Request) (*block.Block, error) {
+	bl, err := getNotarizedBlock(context.TODO(), r)
+	if err != nil {
+		log.Panicf("Conductor: error while getting notarised block: %v", err)
+	}
+
+	for _, vt := range bl.VerificationTickets {
+		vt.Signature = coreutil.RevertString(vt.Signature)
+	}
+
+	logging.Logger.Debug("tampering block notarized tickets")
+
+	return bl, nil
+}
+
+func blockWithValidTicketsForOldRound(r *http.Request) (*block.Block, error) {
+	bl, err := getNotarizedBlock(context.TODO(), r)
+	if err != nil {
+		log.Panicf("Conductor: error while getting notarised block: %v", err)
+	}
+
+	prevRoundReq := r.Clone(context.TODO())
+	reqRound := prevRoundReq.FormValue("round")
+	roundN, err := strconv.Atoi(reqRound)
+	if err != nil {
+		return nil, err
+	}
+	prevRoundReq.Form.Set("round", strconv.Itoa(roundN-1))
+	prevRoundReq.Form.Set("block", bl.PrevHash)
+	prevBl, err := getNotarizedBlock(context.TODO(), prevRoundReq)
+	if err != nil {
+		log.Panicf("Conductor: error while getting notarised block: %v", err)
+	}
+
+	bl.VerificationTickets = prevBl.VerificationTickets
+
+	logging.Logger.Debug("replacing verification tickets of current block notarized by the previous block notarized tickets")
+
+	return bl, nil
+}
+
+// VRFShareHandler - handle the vrf share.
+func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
+	interface{}, error) {
+	return vrfShareHandler(ctx, entity)
 }
