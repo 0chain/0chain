@@ -48,11 +48,12 @@ services:
       - ../miner${MINER}/log:/0chain/log
     ports:
       - "707${MINER}:707${MINER}"
+      - "607${MINER}:607${MINER}"
     networks:
       default:
       testnet0:
         ipv4_address: 198.18.0.7${MINER}
-    command: ./bin/miner  --deployment_mode 0 --keys_file config${CONFIG_SUBPATH}/b0mnode${MINER}_keys.txt --dkg_file config${CONFIG_SUBPATH}/b0mnode${MINER}_${DKG_AFFIX}dkg.json ${CLI_ARGS}
+    command: ./bin/miner  --deployment_mode 0 --keys_file config${KEYS_CONFIG_PATH}/b0mnode${MINER}_keys.txt --dkg_file config${DKG_CONFIG_PATH}/b0mnode${MINER}_${DKG_AFFIX}dkg.json ${CLI_ARGS}
 
 networks:
   default:

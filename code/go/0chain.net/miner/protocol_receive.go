@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// HandleVRFShare - handles the vrf share.
-func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+// handleVRFShare - handles the vrf share.
+func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
 
 	var mr = mc.getOrCreateRound(ctx, msg.VRFShare.Round)
 	if mr == nil {
@@ -513,8 +513,8 @@ func (mc *Chain) handleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	mc.processNotarization(ctx, msg.Notarization)
 }
 
-// HandleNotarizedBlockMessage - handles a notarized block for a previous round.
-func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
+// handleNotarizedBlockMessage - handles a notarized block for a previous round.
+func (mc *Chain) handleNotarizedBlockMessage(ctx context.Context,
 	msg *BlockMessage) {
 
 	nb := msg.Block

@@ -125,7 +125,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 		CreationDate: creationDate,
 	}
 	var ctx = &mockStateContext{
-		ctx: *cstate.NewStateContext(
+		StateContext: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
@@ -144,7 +144,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 			ID: storageScId,
 		},
 	}
-	_, err := ctx.InsertTrieNode(scConfigKey(ssc.ID), scYaml)
+	_, err := ctx.InsertTrieNode(scConfigKey(ADDRESS), scYaml)
 	require.NoError(t, err)
 	var spr = &stakePoolRequest{
 		ProviderType: spenum.Blobber,

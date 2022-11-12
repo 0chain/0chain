@@ -50,49 +50,49 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	srh := NewStorageRestHandler(rh)
 	storage := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
-		rest.MakeEndpoint(storage+"/get_blobber_count", srh.getBlobberCount),
-		rest.MakeEndpoint(storage+"/getBlobber", srh.getBlobber),
-		rest.MakeEndpoint(storage+"/getblobbers", srh.getBlobbers),
-		rest.MakeEndpoint(storage+"/blobbers-by-rank", srh.getBlobbersByRank),
-		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", srh.getBlobberTotalStakes), //todo limit sorting
-		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", srh.getBlobbersByGeoLocation),
-		rest.MakeEndpoint(storage+"/transaction", srh.getTransactionByHash),
-		rest.MakeEndpoint(storage+"/transactions", srh.getTransactionByFilter),
-		rest.MakeEndpoint(storage+"/transaction-hashes", srh.getTransactionHashesByFilter),
-		rest.MakeEndpoint(storage+"/writemarkers", srh.getWriteMarker),
-		rest.MakeEndpoint(storage+"/errors", srh.getErrors),
-		rest.MakeEndpoint(storage+"/allocations", srh.getAllocations),
-		rest.MakeEndpoint(storage+"/allocation_min_lock", srh.getAllocationMinLock),
-		rest.MakeEndpoint(storage+"/allocation", srh.getAllocation),
-		rest.MakeEndpoint(storage+"/latestreadmarker", srh.getLatestReadMarker),
-		rest.MakeEndpoint(storage+"/readmarkers", srh.getReadMarkers),
-		rest.MakeEndpoint(storage+"/count_readmarkers", srh.getReadMarkersCount),
-		rest.MakeEndpoint(storage+"/getWriteMarkers", srh.getWriteMarkers),
-		rest.MakeEndpoint(storage+"/get_validator", srh.getValidator),
-		rest.MakeEndpoint(storage+"/validators", srh.validators),
-		rest.MakeEndpoint(storage+"/openchallenges", srh.getOpenChallenges),
-		rest.MakeEndpoint(storage+"/getchallenge", srh.getChallenge),
-		rest.MakeEndpoint(storage+"/getStakePoolStat", srh.getStakePoolStat),
-		rest.MakeEndpoint(storage+"/getUserStakePoolStat", srh.getUserStakePoolStat),
-		rest.MakeEndpoint(storage+"/block", srh.getBlock),
-		rest.MakeEndpoint(storage+"/get_blocks", srh.getBlocks),
-		rest.MakeEndpoint(storage+"/total-stored-data", srh.getTotalData),
-		rest.MakeEndpoint(storage+"/storage-config", srh.getConfig),
-		rest.MakeEndpoint(storage+"/getReadPoolStat", srh.getReadPoolStat),
-		rest.MakeEndpoint(storage+"/getChallengePoolStat", srh.getChallengePoolStat),
-		rest.MakeEndpoint(storage+"/alloc_written_size", srh.getWrittenAmount),
-		rest.MakeEndpoint(storage+"/alloc-written-size-per-period", srh.getWrittenAmountPerPeriod),
-		rest.MakeEndpoint(storage+"/alloc_read_size", srh.getReadAmount),
-		rest.MakeEndpoint(storage+"/alloc_write_marker_count", srh.getWriteMarkerCount),
-		rest.MakeEndpoint(storage+"/collected_reward", srh.getCollectedReward),
-		rest.MakeEndpoint(storage+"/blobber_ids", srh.getBlobberIdsByUrls),
-		rest.MakeEndpoint(storage+"/alloc_blobbers", srh.getAllocationBlobbers),
-		rest.MakeEndpoint(storage+"/free_alloc_blobbers", srh.getFreeAllocationBlobbers),
-		rest.MakeEndpoint(storage+"/average-write-price", srh.getAverageWritePrice),
-		rest.MakeEndpoint(storage+"/total-blobber-capacity", srh.getTotalBlobberCapacity),
-		rest.MakeEndpoint(storage+"/blobber-rank", srh.getBlobberRank),
-		rest.MakeEndpoint(storage+"/search", srh.getSearchHandler),
-		rest.MakeEndpoint(storage+"/alloc-blobber-term", srh.getAllocBlobberTerms),
+		rest.MakeEndpoint(storage+"/get_blobber_count", common.UserRateLimit(srh.getBlobberCount)),
+		rest.MakeEndpoint(storage+"/getBlobber", common.UserRateLimit(srh.getBlobber)),
+		rest.MakeEndpoint(storage+"/getblobbers", common.UserRateLimit(srh.getBlobbers)),
+		rest.MakeEndpoint(storage+"/blobbers-by-rank", common.UserRateLimit(srh.getBlobbersByRank)),
+		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", common.UserRateLimit(srh.getBlobberTotalStakes)), //todo limit sorting
+		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", common.UserRateLimit(srh.getBlobbersByGeoLocation)),
+		rest.MakeEndpoint(storage+"/transaction", common.UserRateLimit(srh.getTransactionByHash)),
+		rest.MakeEndpoint(storage+"/transactions", common.UserRateLimit(srh.getTransactionByFilter)),
+		rest.MakeEndpoint(storage+"/transaction-hashes", common.UserRateLimit(srh.getTransactionHashesByFilter)),
+		rest.MakeEndpoint(storage+"/writemarkers", common.UserRateLimit(srh.getWriteMarker)),
+		rest.MakeEndpoint(storage+"/errors", common.UserRateLimit(srh.getErrors)),
+		rest.MakeEndpoint(storage+"/allocations", common.UserRateLimit(srh.getAllocations)),
+		rest.MakeEndpoint(storage+"/allocation_min_lock", common.UserRateLimit(srh.getAllocationMinLock)),
+		rest.MakeEndpoint(storage+"/allocation", common.UserRateLimit(srh.getAllocation)),
+		rest.MakeEndpoint(storage+"/latestreadmarker", common.UserRateLimit(srh.getLatestReadMarker)),
+		rest.MakeEndpoint(storage+"/readmarkers", common.UserRateLimit(srh.getReadMarkers)),
+		rest.MakeEndpoint(storage+"/count_readmarkers", common.UserRateLimit(srh.getReadMarkersCount)),
+		rest.MakeEndpoint(storage+"/getWriteMarkers", common.UserRateLimit(srh.getWriteMarkers)),
+		rest.MakeEndpoint(storage+"/get_validator", common.UserRateLimit(srh.getValidator)),
+		rest.MakeEndpoint(storage+"/validators", common.UserRateLimit(srh.validators)),
+		rest.MakeEndpoint(storage+"/openchallenges", common.UserRateLimit(srh.getOpenChallenges)),
+		rest.MakeEndpoint(storage+"/getchallenge", common.UserRateLimit(srh.getChallenge)),
+		rest.MakeEndpoint(storage+"/getStakePoolStat", common.UserRateLimit(srh.getStakePoolStat)),
+		rest.MakeEndpoint(storage+"/getUserStakePoolStat", common.UserRateLimit(srh.getUserStakePoolStat)),
+		rest.MakeEndpoint(storage+"/block", common.UserRateLimit(srh.getBlock)),
+		rest.MakeEndpoint(storage+"/get_blocks", common.UserRateLimit(srh.getBlocks)),
+		rest.MakeEndpoint(storage+"/total-stored-data", common.UserRateLimit(srh.getTotalData)),
+		rest.MakeEndpoint(storage+"/storage-config", common.UserRateLimit(srh.getConfig)),
+		rest.MakeEndpoint(storage+"/getReadPoolStat", common.UserRateLimit(srh.getReadPoolStat)),
+		rest.MakeEndpoint(storage+"/getChallengePoolStat", common.UserRateLimit(srh.getChallengePoolStat)),
+		rest.MakeEndpoint(storage+"/alloc_written_size", common.UserRateLimit(srh.getWrittenAmount)),
+		rest.MakeEndpoint(storage+"/alloc-written-size-per-period", common.UserRateLimit(srh.getWrittenAmountPerPeriod)),
+		rest.MakeEndpoint(storage+"/alloc_read_size", common.UserRateLimit(srh.getReadAmount)),
+		rest.MakeEndpoint(storage+"/alloc_write_marker_count", common.UserRateLimit(srh.getWriteMarkerCount)),
+		rest.MakeEndpoint(storage+"/collected_reward", common.UserRateLimit(srh.getCollectedReward)),
+		rest.MakeEndpoint(storage+"/blobber_ids", common.UserRateLimit(srh.getBlobberIdsByUrls)),
+		rest.MakeEndpoint(storage+"/alloc_blobbers", common.UserRateLimit(srh.getAllocationBlobbers)),
+		rest.MakeEndpoint(storage+"/free_alloc_blobbers", common.UserRateLimit(srh.getFreeAllocationBlobbers)),
+		rest.MakeEndpoint(storage+"/average-write-price", common.UserRateLimit(srh.getAverageWritePrice)),
+		rest.MakeEndpoint(storage+"/total-blobber-capacity", common.UserRateLimit(srh.getTotalBlobberCapacity)),
+		rest.MakeEndpoint(storage+"/blobber-rank", common.UserRateLimit(srh.getBlobberRank)),
+		rest.MakeEndpoint(storage+"/search", common.UserRateLimit(srh.getSearchHandler)),
+		rest.MakeEndpoint(storage+"/alloc-blobber-term", common.UserRateLimit(srh.getAllocBlobberTerms)),
 	}
 }
 
@@ -955,20 +955,14 @@ type fullBlock struct {
 //	400:
 //	500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
+	var (
+		startBlockNum = r.URL.Query().Get("start")
+		endBlockNum   = r.URL.Query().Get("end")
+	)
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
-		return
-	}
-	start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
-		return
-	}
-	end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
 		return
 	}
 
@@ -977,10 +971,35 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blocks, err := edb.GetBlocks(start, end, limit)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting block "+err.Error()))
-		return
+	var blocks []event.Block
+	if startBlockNum != "" && endBlockNum != "" {
+		start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("start block number is not valid"))
+			return
+		}
+		end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("end block number is not valid"))
+			return
+		}
+
+		if start > end {
+			common.Respond(w, r, nil, common.NewErrBadRequest("start block number is greater than end block number"))
+			return
+		}
+
+		blocks, err = edb.GetBlocksByBlockNumbers(start, end, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+			return
+		}
+	} else {
+		blocks, err = edb.GetBlocks(limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+			return
+		}
 	}
 
 	if r.URL.Query().Get("content") != "full" {
@@ -1138,25 +1157,94 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	common.Respond(w, r, ups, nil)
 }
 
-func spStats(
-	blobber event.Blobber,
-	delegatePools []event.DelegatePool,
-) (*stakePoolStat, error) {
-	stat := new(stakePoolStat)
-	stat.ID = blobber.BlobberID
-	stat.UnstakeTotal = blobber.UnstakeTotal
-	stat.Capacity = blobber.Capacity
-	stat.WritePrice = blobber.WritePrice
-	stat.OffersTotal = blobber.OffersTotal
-	stat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
-	stat.Settings = stakepool.Settings{
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
+// Gets statistic for all locked tokens of a stake pool
+//
+// parameters:
+//
+//	+name: provider_id
+//	 description: id of a provider
+//	 required: true
+//	 in: query
+//	 type: string
+//	+name: provider_type
+//	 description: type of the provider, ie: blobber. validator
+//	 required: true
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: stakePoolStat
+//	400:
+//	500:
+func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
+	providerID := r.URL.Query().Get("provider_id")
+	providerTypeString := r.URL.Query().Get("provider_type")
+	providerType, err := strconv.Atoi(providerTypeString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := getProviderStakePoolStats(providerType, providerID, edb)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("could not find provider stats: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, res, nil)
+}
+
+func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakePoolStat, error) {
+	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
+	}
+
+	spStat := &stakePoolStat{}
+	spStat.Delegate = make([]delegatePoolStat, len(delegatePools))
+
+	switch spenum.Provider(providerType) {
+	case spenum.Blobber:
+		blobber, err := edb.GetBlobber(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return toBlobberStakePoolStats(blobber, delegatePools)
+	case spenum.Validator:
+		validator, err := edb.GetValidatorByValidatorID(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return toValidatorStakePoolStats(&validator, delegatePools)
+	}
+
+	return nil, fmt.Errorf("unknown provider type")
+}
+
+func toBlobberStakePoolStats(blobber *event.Blobber, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
+	spStat := new(stakePoolStat)
+	spStat.ID = blobber.BlobberID
+	spStat.StakeTotal = blobber.TotalStake
+	spStat.UnstakeTotal = blobber.UnstakeTotal
+	spStat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
+	spStat.Settings = stakepool.Settings{
 		DelegateWallet:     blobber.DelegateWallet,
 		MinStake:           blobber.MinStake,
 		MaxStake:           blobber.MaxStake,
 		MaxNumDelegates:    blobber.NumDelegates,
 		ServiceChargeRatio: blobber.ServiceCharge,
 	}
-	stat.Rewards = blobber.Reward
+	spStat.Rewards = blobber.Rewards.TotalRewards
 	for _, dp := range delegatePools {
 		dpStats := delegatePoolStat{
 			ID:           dp.PoolID,
@@ -1172,56 +1260,56 @@ func spStats(
 
 		dpStats.TotalReward = dp.TotalReward
 
-		newBal, err := currency.AddCoin(stat.Balance, dpStats.Balance)
+		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
 		if err != nil {
 			return nil, err
 		}
-		stat.Balance = newBal
-		stat.Delegate = append(stat.Delegate, dpStats)
+		spStat.Balance = newBal
+		spStat.Delegate = append(spStat.Delegate, dpStats)
 	}
-	return stat, nil
+
+	return spStat, nil
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
-// Gets statistic for all locked tokens of a stake pool
-//
-// parameters:
-//
-//	+name: blobber_id
-//	 description: id of blobber
-//	 required: true
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: stakePoolStat
-//	400:
-//	500:
-func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
-	blobberID := r.URL.Query().Get("blobber_id")
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
+func toValidatorStakePoolStats(validator *event.Validator, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
+	spStat := new(stakePoolStat)
+	spStat.ID = validator.ValidatorID
+	spStat.StakeTotal = validator.StakeTotal
+	spStat.UnstakeTotal = validator.UnstakeTotal
+
+	spStat.Settings = stakepool.Settings{
+		DelegateWallet:     validator.DelegateWallet,
+		MinStake:           validator.MinStake,
+		MaxStake:           validator.MaxStake,
+		MaxNumDelegates:    validator.NumDelegates,
+		ServiceChargeRatio: validator.ServiceCharge,
 	}
-	blobber, err := edb.GetBlobber(blobberID)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("cannot find blobber: "+err.Error()))
-		return
+	spStat.Rewards = validator.Rewards.TotalRewards
+
+	for _, dp := range delegatePools {
+		dpStats := delegatePoolStat{
+			ID:           dp.PoolID,
+			DelegateID:   dp.DelegateID,
+			Status:       spenum.PoolStatus(dp.Status).String(),
+			RoundCreated: dp.RoundCreated,
+		}
+		dpStats.Balance = dp.Balance
+
+		dpStats.Rewards = dp.Reward
+
+		dpStats.TotalPenalty = dp.TotalPenalty
+
+		dpStats.TotalReward = dp.TotalReward
+
+		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
+		if err != nil {
+			return nil, err
+		}
+		spStat.Balance = newBal
+		spStat.Delegate = append(spStat.Delegate, dpStats)
 	}
 
-	delegatePools, err := edb.GetDelegatePools(blobberID, int(spenum.Blobber))
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("cannot find user stake pool: "+err.Error()))
-		return
-	}
-	spS, err := spStats(*blobber, delegatePools)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("cannot fetch stake pool stats: "+err.Error()))
-		return
-	}
-	common.Respond(w, r, spS, nil)
+	return spStat, nil
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
@@ -1379,10 +1467,44 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	common.Respond(w, r, validator, nil)
+	common.Respond(w, r, newValidatorNodeResponse(validator), nil)
 }
 
-// validators swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators validators
+type validatorNodeResponse struct {
+	ValidatorID  string        `json:"validator_id"`
+	BaseUrl      string        `json:"url"`
+	StakeTotal   currency.Coin `json:"stake_total"`
+	UnstakeTotal currency.Coin `json:"unstake_total"`
+	PublicKey    string        `json:"public_key"`
+
+	// StakePoolSettings
+	DelegateWallet string        `json:"delegate_wallet"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
+	NumDelegates   int           `json:"num_delegates"`
+	ServiceCharge  float64       `json:"service_charge"`
+
+	Rewards     currency.Coin `json:"rewards"`
+	TotalReward currency.Coin `json:"total_reward"`
+}
+
+func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
+	return &validatorNodeResponse{
+		ValidatorID:    v.ValidatorID,
+		BaseUrl:        v.BaseUrl,
+		StakeTotal:     v.StakeTotal,
+		UnstakeTotal:   v.UnstakeTotal,
+		PublicKey:      v.PublicKey,
+		DelegateWallet: v.DelegateWallet,
+		MinStake:       v.MinStake,
+		MaxStake:       v.MaxStake,
+		NumDelegates:   v.NumDelegates,
+		ServiceCharge:  v.ServiceCharge,
+		Rewards:        v.Rewards.Rewards,
+		TotalReward:    v.Rewards.TotalRewards,
+	}
+}
+
 // Gets list of all validators alive (e.g. excluding blobbers with zero capacity).
 //
 // responses:
@@ -1404,7 +1526,12 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	common.Respond(w, r, validators, nil)
+	vns := make([]*validatorNodeResponse, len(validators))
+	for i, v := range validators {
+		vns[i] = newValidatorNodeResponse(v)
+	}
+
+	common.Respond(w, r, vns, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers
@@ -2205,7 +2332,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				ServiceChargeRatio: blobber.ServiceCharge,
 			},
 		},
-		TotalServiceCharge: blobber.TotalServiceCharge,
+		TotalServiceCharge: blobber.Rewards.TotalRewards,
 		TotalStake:         blobber.TotalStake,
 		UsedAllocation:     blobber.Used,
 		TotalOffers:        blobber.OffersTotal,
@@ -2241,12 +2368,21 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	values := r.URL.Query()
+	active := values.Get("active")
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.GetBlobbers(limit)
+
+	var blobbers []event.Blobber
+	if active == "true" {
+		blobbers, err = edb.GetActiveBlobbers(limit)
+	} else {
+		blobbers, err = edb.GetBlobbers(limit)
+	}
+
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber list" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -2261,6 +2397,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		sn := blobberTableToStorageNode(blobber)
 		sns.Nodes = append(sns.Nodes, sn)
 	}
+
 	common.Respond(w, r, sns, nil)
 }
 
@@ -2584,8 +2721,13 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 	}
 
 	var resp interface{}
-	if allocationID == "" || blobberID == "" {
-		resp, err = edb.GetAllocationBlobberTerms(allocationID, blobberID, limit)
+	if allocationID == "" {
+		common.Respond(w, r, nil, common.NewErrBadRequest("missing allocation id"))
+		return
+	}
+
+	if blobberID == "" {
+		resp, err = edb.GetAllocationBlobberTerms(allocationID, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("error finding terms: "+err.Error()))
 			return

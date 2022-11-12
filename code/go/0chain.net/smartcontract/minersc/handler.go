@@ -37,27 +37,27 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	mrh := NewMinerRestHandler(rh)
 	miner := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
-		rest.MakeEndpoint(miner+"/globalSettings", mrh.getGlobalSettings),
-		rest.MakeEndpoint(miner+"/getNodepool", mrh.getNodePool),
-		rest.MakeEndpoint(miner+"/getUserPools", mrh.getUserPools),
-		rest.MakeEndpoint(miner+"/getMinerList", mrh.getMinerList),
-		rest.MakeEndpoint(miner+"/get_miners_stats", mrh.getMinersStats),
-		rest.MakeEndpoint(miner+"/get_miners_stake", mrh.getMinersStake),
-		rest.MakeEndpoint(miner+"/getSharderList", mrh.getSharderList),
-		rest.MakeEndpoint(miner+"/get_sharders_stats", mrh.getShardersStats),
-		rest.MakeEndpoint(miner+"/get_sharders_stake", mrh.getShardersStake),
-		rest.MakeEndpoint(miner+"/getSharderKeepList", mrh.getSharderKeepList),
-		rest.MakeEndpoint(miner+"/getPhase", mrh.getPhase),
-		rest.MakeEndpoint(miner+"/getDkgList", mrh.getDkgList),
-		rest.MakeEndpoint(miner+"/getMpksList", mrh.getMpksList),
-		rest.MakeEndpoint(miner+"/getGroupShareOrSigns", mrh.getGroupShareOrSigns),
-		rest.MakeEndpoint(miner+"/getMagicBlock", mrh.getMagicBlock),
-		rest.MakeEndpoint(miner+"/getEvents", mrh.getEvents),
-		rest.MakeEndpoint(miner+"/nodeStat", mrh.getNodeStat),
-		rest.MakeEndpoint(miner+"/nodePoolStat", mrh.getNodePoolStat),
-		rest.MakeEndpoint(miner+"/configs", mrh.getConfigs),
-		rest.MakeEndpoint(miner+"/get_miner_geolocations", mrh.getMinerGeolocations),
-		rest.MakeEndpoint(miner+"/get_sharder_geolocations", mrh.getSharderGeolocations),
+		rest.MakeEndpoint(miner+"/globalSettings", common.UserRateLimit(mrh.getGlobalSettings)),
+		rest.MakeEndpoint(miner+"/getNodepool", common.UserRateLimit(mrh.getNodePool)),
+		rest.MakeEndpoint(miner+"/getUserPools", common.UserRateLimit(mrh.getUserPools)),
+		rest.MakeEndpoint(miner+"/getMinerList", common.UserRateLimit(mrh.getMinerList)),
+		rest.MakeEndpoint(miner+"/get_miners_stats",common.UserRateLimit(mrh.getMinersStats)),
+		rest.MakeEndpoint(miner+"/get_miners_stake", common.UserRateLimit(mrh.getMinersStake)),
+		rest.MakeEndpoint(miner+"/getSharderList", common.UserRateLimit(mrh.getSharderList)),
+		rest.MakeEndpoint(miner+"/get_sharders_stats", common.UserRateLimit(mrh.getShardersStats)),
+		rest.MakeEndpoint(miner+"/get_sharders_stake", common.UserRateLimit(mrh.getShardersStake)),
+		rest.MakeEndpoint(miner+"/getSharderKeepList", common.UserRateLimit(mrh.getSharderKeepList)),
+		rest.MakeEndpoint(miner+"/getPhase", common.UserRateLimit(mrh.getPhase)),
+		rest.MakeEndpoint(miner+"/getDkgList", common.UserRateLimit(mrh.getDkgList)),
+		rest.MakeEndpoint(miner+"/getMpksList", common.UserRateLimit(mrh.getMpksList)),
+		rest.MakeEndpoint(miner+"/getGroupShareOrSigns", common.UserRateLimit(mrh.getGroupShareOrSigns)),
+		rest.MakeEndpoint(miner+"/getMagicBlock", common.UserRateLimit(mrh.getMagicBlock)),
+		rest.MakeEndpoint(miner+"/getEvents", common.UserRateLimit(mrh.getEvents)),
+		rest.MakeEndpoint(miner+"/nodeStat", common.UserRateLimit(mrh.getNodeStat)),
+		rest.MakeEndpoint(miner+"/nodePoolStat", common.UserRateLimit(mrh.getNodePoolStat)),
+		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
+		rest.MakeEndpoint(miner+"/get_miner_geolocations", common.UserRateLimit(mrh.getMinerGeolocations)),
+		rest.MakeEndpoint(miner+"/get_sharder_geolocations", common.UserRateLimit(mrh.getSharderGeolocations)),
 	}
 }
 
@@ -295,7 +295,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 
 	if miner, err := edb.GetMiner(id); err == nil {
 		common.Respond(w, r, nodeStat{
-			MinerNode: minerTableToMinerNode(miner), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.TotalReward)}, nil)
+			MinerNode: minerTableToMinerNode(miner), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
 		return
 	}
 	sharder, err := edb.GetSharder(id)
@@ -306,7 +306,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, nodeStat{
 		MinerNode:   sharderTableToSharderNode(sharder),
 		Round:       sCtx.GetBlock().Round,
-		TotalReward: int64(sharder.TotalReward)}, nil)
+		TotalReward: int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
@@ -613,7 +613,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		shardersArr[i] = nodeStat{
 			MinerNode:   sharderTableToSharderNode(sharder),
 			Round:       sCtx.GetBlock().Round,
-			TotalReward: int64(sharder.TotalReward),
+			TotalReward: int64(sharder.Rewards.TotalRewards),
 		}
 	}
 	common.Respond(w, r, rest.InterfaceMap{
@@ -740,7 +740,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		minersArr[i] = nodeStat{
 			MinerNode:   minerTableToMinerNode(miner),
 			Round:       sCtx.GetBlock().Round,
-			TotalReward: int64(miner.TotalReward),
+			TotalReward: int64(miner.Rewards.TotalRewards),
 		}
 	}
 

@@ -7,7 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -37,6 +37,7 @@ import (
 )
 
 func main() {
+
 	var (
 		workdir       string
 		redisHost     string
@@ -63,6 +64,7 @@ func main() {
 	config.SetupDefaultConfig()
 	config.SetupConfig(workdir)
 	config.SetupSmartContractConfig(workdir)
+	initIntegrationsTests()
 
 	if config.Development() {
 		logging.InitLogging("development", workdir)
@@ -126,7 +128,7 @@ func main() {
 	var magicBlock *block.MagicBlock
 	dnsURL := viper.GetString("network.dns_url")
 	if dnsURL == "" {
-		magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
+		magicBlock, err = readMagicBlock(*magicBlockFile)
 		if err != nil {
 			logging.Logger.Panic("can't read magic block file", zap.Error(err))
 			return
@@ -201,10 +203,31 @@ func main() {
 	logging.Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	logging.Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
 
-	initIntegrationsTests(node.Self.Underlying().GetKey())
+	registerInConductor(node.Self.Underlying().GetKey())
 
 	var server *http.Server
+	var profServer *http.Server
+
+	mux := http.NewServeMux()
+	http.DefaultServeMux = mux
+
 	if config.Development() {
+		if viper.GetBool("development.pprof") {
+			// start pprof server
+			pprofMux := http.NewServeMux()
+			profServer = &http.Server{
+				Addr:           fmt.Sprintf(":%d", node.Self.Underlying().Port-1000),
+				ReadTimeout:    30 * time.Second,
+				MaxHeaderBytes: 1 << 20,
+				Handler:        pprofMux,
+			}
+			initProfHandlers(pprofMux)
+			go func() {
+				err2 := profServer.ListenAndServe()
+				logging.Logger.Info("Http server shut down", zap.Error(err2))
+			}()
+		}
+
 		// No WriteTimeout setup to enable pprof
 		server = &http.Server{
 			Addr:           address,
@@ -328,6 +351,10 @@ func main() {
 	}
 
 	shutdown := common.HandleShutdown(server, []func(){shutdownIntegrationTests, done, chain.CloseStateDB})
+	if profServer != nil {
+		shutdownProf := common.HandleShutdown(profServer, nil)
+		<-shutdownProf
+	}
 	<-shutdown
 	time.Sleep(2 * time.Second)
 	logging.Logger.Info("0chain miner shut down gracefully")
@@ -463,4 +490,12 @@ func initWorkers(ctx context.Context) {
 	serverChain.SetupWorkers(ctx)
 	//miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
+}
+
+func initProfHandlers(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/pprof/", common.UserRateLimit(pprof.Index))
+	mux.HandleFunc("/debug/pprof/cmdline", common.UserRateLimit(pprof.Cmdline))
+	mux.HandleFunc("/debug/pprof/profile", common.UserRateLimit(pprof.Profile))
+	mux.HandleFunc("/debug/pprof/symbol", common.UserRateLimit(pprof.Symbol))
+	mux.HandleFunc("/debug/pprof/trace", common.UserRateLimit(pprof.Trace))
 }

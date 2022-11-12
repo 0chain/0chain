@@ -61,6 +61,12 @@ type AddBlobberEvent struct {
 	Blobber NodeName // the added blobber
 }
 
+// AddAuthorizerEvent in miner SC.
+type AddAuthorizerEvent struct {
+	Sender     NodeName // event emitter
+	Authorizer NodeName // the added blobber
+}
+
 // SharderKeepEvent in miner SC.
 type SharderKeepEvent struct {
 	Sender  NodeName // event emitter
@@ -108,6 +114,8 @@ type Server struct {
 	onAddSharder chan *AddSharderEvent
 	// onAddBlobber occurs where blobber added in storage SC
 	onAddBlobber chan *AddBlobberEvent
+	// onAddAuthorizer occurs where authorizer added in storage SC
+	onAddAuthorizer chan *AddAuthorizerEvent
 	// onSharderKeep occurs where miner SC proceed sharder_keep function
 	onSharderKeep chan *SharderKeepEvent
 
@@ -117,6 +125,8 @@ type Server struct {
 	onNodeReady chan NodeName
 
 	CurrentTest cases.TestCase
+
+	magicBlock string
 
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent
@@ -150,6 +160,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server,
 	s.onAddMiner = make(chan *AddMinerEvent, 10)
 	s.onAddSharder = make(chan *AddSharderEvent, 10)
 	s.onAddBlobber = make(chan *AddBlobberEvent, 10)
+	s.onAddAuthorizer = make(chan *AddAuthorizerEvent, 10)
 	s.onSharderKeep = make(chan *SharderKeepEvent, 10)
 	s.onNodeReady = make(chan NodeName, 10)
 
@@ -287,6 +298,10 @@ func (s *Server) OnAddBlobber() chan *AddBlobberEvent {
 	return s.onAddBlobber
 }
 
+func (s *Server) OnAddAuthorizer() chan *AddAuthorizerEvent {
+	return s.onAddAuthorizer
+}
+
 func (s *Server) OnSharderKeep() chan *SharderKeepEvent {
 	return s.onSharderKeep
 }
@@ -308,6 +323,10 @@ func (s *Server) OnContributeMPK() chan *ContributeMPKEvent {
 
 func (s *Server) OnShareOrSignsShares() chan *ShareOrSignsSharesEvent {
 	return s.onShareOrSignsSharesEvent
+}
+
+func (s *Server) Nodes() map[config.NodeName]*nodeState {
+	return s.nodes
 }
 
 //
@@ -356,6 +375,14 @@ func (s *Server) AddBlobber(add *AddBlobberEvent, _ *struct{}) (err error) {
 	return
 }
 
+func (s *Server) AddAuthorizer(add *AddAuthorizerEvent, _ *struct{}) (err error) {
+	select {
+	case s.onAddAuthorizer <- add:
+	case <-s.quit:
+	}
+	return
+}
+
 func (s *Server) SharderKeep(sk *SharderKeepEvent, _ *struct{}) (err error) {
 	select {
 	case s.onSharderKeep <- sk:
@@ -392,15 +419,41 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
 	return
 }
 
+// magic block handler
+func (s *Server) MagicBlock(_ *struct{}, configFile *string) (err error) {
+	(*configFile) = s.magicBlock
+	return nil
+}
+
 // state polling handler
 func (s *Server) State(id NodeID, state *State) (err error) {
 	// node name is not known by the node requesting the State
 	// and thus, NodeID used here
 
-	var name, ok = s.names[id]
+	var name NodeName
+
+	// Validator does not need to change the state generated while reading conductor test configuration,
+	// so we can return	an existing state of a different node.
+	if strings.Contains(string(id), "validator-") {
+		for _, k := range s.names {
+			if strings.Contains(string(k), "blobber-") {
+				name = k
+				break
+			}
+		}
+
+		if ns, ok := s.nodes[name]; ok {
+			*state = *ns.state
+		}
+
+		return
+	}
+
+	var nodeName, ok = s.names[id]
 	if !ok {
 		return fmt.Errorf("unknown node ID: %s", id)
 	}
+	name = nodeName
 
 	var ns *nodeState
 	if ns, err = s.nodeState(name); err != nil {
@@ -494,6 +547,11 @@ func (s *Server) EnableClientStatsCollector() error {
 	return s.UpdateAllStates(func(state *State) {
 		state.ClientStatsCollectorEnabled = true
 	})
+}
+
+// SetMagicBlock sets magic block in server state
+func (s *Server) SetMagicBlock(configFile string) {
+	s.magicBlock = configFile
 }
 
 // Close the server waiting.

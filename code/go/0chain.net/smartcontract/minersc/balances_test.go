@@ -59,14 +59,14 @@ func (tb *testBalances) GetBlock() *block.Block {
 	return tb.block
 }
 
+func (tb *testBalances) GetMagicBlock(round int64) *block.MagicBlock {
+	return nil
+}
+
 func (tb *testBalances) SetMagicBlock(mb *block.MagicBlock) {
 	if tb.block != nil {
 		tb.block.MagicBlock = mb
 	}
-}
-
-func (tb *testBalances) GetBlockSharders(*block.Block) []string {
-	return tb.blockSharders
 }
 
 // stubs
@@ -105,6 +105,10 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 		return 0, util.ErrValueNotPresent
 	}
 	return
+}
+
+func (tb *testBalances) GetInvalidStateErrors() []error {
+	return nil
 }
 
 func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
@@ -152,5 +156,17 @@ func (tb *testBalances) AddMint(mint *state.Mint) error {
 }
 
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock {
+	return nil
+}
+
+func (tb *testBalances) GetClientState(clientID datastore.Key) (*state.State, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (util.Key, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) GetMissingNodesPath() util.Path {
 	return nil
 }

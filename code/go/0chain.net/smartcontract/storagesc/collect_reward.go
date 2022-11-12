@@ -5,8 +5,6 @@ import (
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
@@ -73,24 +71,16 @@ func (ssc *StorageSmartContract) collectReward(
 
 		totalMinted = tm
 
-		if err := sp.save(spenum.Blobber, providerID, balances); err != nil {
+		if err := sp.save(prr.ProviderType, providerID, balances); err != nil {
 			return "", common.NewErrorf("collect_reward_failed",
 				"error saving stake pool, %v", err)
 		}
 
-		staked, err := sp.stake()
+		err = sp.stakeForProvider(prr.ProviderType, providerID, balances)
 		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"can't get stake: %v", err)
+			return "", common.NewErrorf("stake_pool_unlock_failed",
+				"stake pool staking error: %v", err)
 		}
-
-		data := dbs.DbUpdates{
-			Id: providerID,
-			Updates: map[string]interface{}{
-				"total_stake": int64(staked),
-			},
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
 
 		err = emitAddOrOverwriteReward(reward, providerID, prr, balances, txn)
 		if err != nil {
@@ -99,7 +89,7 @@ func (ssc *StorageSmartContract) collectReward(
 		}
 	}
 
-	if err := usp.Save(spenum.Blobber, txn.ClientID, balances); err != nil {
+	if err := usp.Save(prr.ProviderType, txn.ClientID, balances); err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
 			"error saving user stake pool, %v", err)
 	}
@@ -110,7 +100,7 @@ func (ssc *StorageSmartContract) collectReward(
 
 	conf.Minted = totalMinted
 
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		return "", common.NewErrorf("collect_reward_failed",
 			"cannot save config: %v", err)

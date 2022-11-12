@@ -88,7 +88,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 	if err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
-	if err := allocation.saveUpdatedAllocation(nil, balances); err != nil {
+	if err := allocation.saveUpdatedStakes(balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
@@ -132,7 +132,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
 	alloc.WritePool = 0
-	if err = alloc.saveUpdatedAllocation(nil, balances); err != nil {
+	if err = alloc.saveUpdatedStakes(balances); err != nil {
 		return "", common.NewError("write_pool_unlock_failed",
 			"saving allocation pools: "+err.Error())
 	}

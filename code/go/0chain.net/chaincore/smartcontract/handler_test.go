@@ -19,6 +19,7 @@ import (
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 
+	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
@@ -116,6 +117,7 @@ tr.header { background-color: #E0E0E0;  }
 func TestGetSmartContract(t *testing.T) {
 	t.Parallel()
 
+	common.ConfigRateLimits()
 	tests := []struct {
 		name       string
 		address    string
@@ -226,7 +228,9 @@ func TestExecuteWithStats(t *testing.T) {
 	smcoi.SmartContract.SmartContractExecutionStats["token refills"] = metrics.NewHistogram(metrics.NilSample{})
 	smcoi.SmartContract.SmartContractExecutionStats["refill"] = metrics.NewTimer()
 
-	gn := &faucetsc.GlobalNode{}
+	gn := &faucetsc.GlobalNode{
+		FaucetConfig: &faucetsc.FaucetConfig{},
+	}
 	blob, err := gn.MarshalMsg(nil)
 	require.NoError(t, err)
 
@@ -338,7 +342,9 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *faucetsc.GlobalNode) bool {
-			gn := &faucetsc.GlobalNode{}
+			gn := &faucetsc.GlobalNode{
+				FaucetConfig: &faucetsc.FaucetConfig{},
+			}
 			blob, err := gn.MarshalMsg(nil)
 			require.NoError(t, err)
 

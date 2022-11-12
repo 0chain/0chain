@@ -43,7 +43,7 @@ func TestValidatorNode(t *testing.T) {
 	vn := Validator{
 		ValidatorID: encryption.Hash("mockValidator_" + strconv.Itoa(0)),
 		BaseUrl:     "http://localhost:8080",
-		Stake:       100,
+		StakeTotal:  100,
 
 		DelegateWallet: "delegate wallet",
 		MinStake:       currency.Coin(53),
@@ -52,7 +52,7 @@ func TestValidatorNode(t *testing.T) {
 		ServiceCharge:  61.0,
 	}
 
-	err = eventDb.addValidator(vn)
+	err = eventDb.addOrOverwriteValidators([]Validator{vn})
 	require.NoError(t, err, "Error while inserting Validation Node to event Database")
 
 	var count int64

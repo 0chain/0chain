@@ -15,6 +15,10 @@ const (
 var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
 
 func (p Provider) String() string {
+	if p < 0 || int(p) >= len(providerString) {
+		return "unknown"
+	}
+
 	return providerString[p]
 }
 
@@ -32,5 +36,8 @@ const (
 var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting", "deleted"}
 
 func (p PoolStatus) String() string {
-	return poolString[p]
+	if int(p) < len(poolString) && int(p) >= 0 {
+		return poolString[p]
+	}
+	return "unknown pool status"
 }

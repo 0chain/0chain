@@ -72,7 +72,7 @@ tests:
           shift: 20
       - stop: ["miner-3", "miner-4"]
       - wait_no_progress:
-          timeout: "5m"
+          timeout: "1m"
 
   - name: "All miners go down"
     flow:
@@ -86,7 +86,7 @@ tests:
           shift: 20
       - stop: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_no_progress:
-          timeout: "5m"
+          timeout: "1m"
 
   # MINERS GO DOWN AND COME UP
   - name: "Less than consensus miners go down and come up"
@@ -177,7 +177,7 @@ tests:
           shift: 20
       - stop: ["sharder-1"]
       - wait_no_progress:
-          timeout: "5m"
+          timeout: "1m"
 
   # SHARDERS GO DOWN AND COME UP
   - name: "All sharders go down and come up"
@@ -273,13 +273,16 @@ tests:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - env:
-          CONFIG_SUBPATH: "/test.generators_failure"
+          KEYS_CONFIG_PATH: "/test.generators_failure"
+          DKG_CONFIG_PATH: "/test.generators_failure"
           CLI_ARGS: "--magic_block_file config/test.generators_failure/b0magicBlock_7_miners_1_sharder.json"
           DKG_AFFIX: "7_miners_1_sharder_"
       - start: ["sharder-1"]
       - start: ["miner-1", "miner-2", "miner-3", "miner-4", "miner-5", "miner-6", "miner-7"]
       - wait_round:
           round: 20
+          allow_beyond: true
       - generators_failure: 30 # setup failure for generators selected on start of round 30
       - wait_round:
           round: 50
+          timeout: "20m"

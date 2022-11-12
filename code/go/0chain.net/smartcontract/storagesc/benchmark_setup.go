@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"log"
 	"math/rand"
 	"strconv"
@@ -63,17 +62,16 @@ func addMockAllocation(
 ) {
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
-		ID:                      id,
-		DataShards:              viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-		ParityShards:            viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-		Size:                    viper.GetInt64(sc.StorageMinAllocSize),
-		Expiration:              benchAllocationExpire(balances.GetTransaction().CreationDate),
-		Owner:                   clients[cIndex],
-		OwnerPublicKey:          publicKey,
-		ReadPriceRange:          PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
-		WritePriceRange:         PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
-		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
-		DiverseBlobbers:         viper.GetBool(sc.StorageDiverseBlobbers),
+		ID:              id,
+		DataShards:      viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		ParityShards:    viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		Size:            viper.GetInt64(sc.StorageMinAllocSize),
+		Expiration:      benchAllocationExpire(balances.GetTransaction().CreationDate),
+		Owner:           clients[cIndex],
+		OwnerPublicKey:  publicKey,
+		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
+		WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+		DiverseBlobbers: viper.GetBool(sc.StorageDiverseBlobbers),
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1,
 			NumWrites:                 1,
@@ -106,17 +104,6 @@ func addMockAllocation(
 			AllocationRoot: encryption.Hash("allocation root"),
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
-		if viper.GetBool(sc.EventDbEnabled) {
-			terms := event.AllocationTerm{
-				BlobberID:        bId,
-				AllocationID:     sa.ID,
-				ReadPrice:        ba.Terms.ReadPrice,
-				WritePrice:       ba.Terms.WritePrice,
-				MinLockDemand:    ba.Terms.MinLockDemand,
-				MaxOfferDuration: ba.Terms.MaxOfferDuration,
-			}
-			_ = eventDb.Store.Get().Create(&terms)
-		}
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
@@ -124,22 +111,18 @@ func addMockAllocation(
 	}
 
 	if viper.GetBool(sc.EventDbEnabled) {
-		allocationTerms := make([]event.AllocationTerm, 0)
+		allocationTerms := make([]event.AllocationBlobberTerm, 0)
 		for _, b := range sa.BlobberAllocs {
-			allocationTerms = append(allocationTerms, event.AllocationTerm{
+			allocationTerms = append(allocationTerms, event.AllocationBlobberTerm{
 				BlobberID:        b.BlobberID,
 				AllocationID:     b.AllocationID,
-				ReadPrice:        b.Terms.ReadPrice,
-				WritePrice:       b.Terms.WritePrice,
+				ReadPrice:        int64(b.Terms.ReadPrice),
+				WritePrice:       int64(b.Terms.WritePrice),
 				MinLockDemand:    b.Terms.MinLockDemand,
 				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}
 
-		termsByte, err := json.Marshal(allocationTerms)
-		if err != nil {
-			log.Fatal(err)
-		}
 		allocationDb := event.Allocation{
 			AllocationID:             sa.ID,
 			DataShards:               sa.DataShards,
@@ -148,7 +131,6 @@ func addMockAllocation(
 			Expiration:               int64(sa.Expiration),
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
-			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
 			UsedSize:                 sa.UsedSize,
 			NumWrites:                sa.Stats.NumWrites,
 			NumReads:                 sa.Stats.NumReads,
@@ -156,7 +138,7 @@ func addMockAllocation(
 			OpenChallenges:           sa.Stats.OpenChallenges,
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
-			Terms:                    string(termsByte),
+			Terms:                    allocationTerms,
 		}
 		_ = eventDb.Store.Get().Create(&allocationDb)
 	}
@@ -436,6 +418,7 @@ func AddMockBlobbers(
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
+				Rewards:             event.ProviderRewards{ProviderID: blobber.ID},
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
@@ -510,6 +493,7 @@ func AddMockValidators(
 				MaxStake:       validator.StakePoolSettings.MaxStake,
 				NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
 				ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
+				Rewards:        event.ProviderRewards{ProviderID: validator.ID},
 			}
 			_ = eventDb.Store.Get().Create(&validators)
 		}
@@ -675,12 +659,14 @@ func AddMockWriteRedeems(
 				panic(err)
 			}
 			if viper.GetBool(sc.EventDbEnabled) {
-				mockBlockNumber := int64((i + 1) % viper.GetInt(sc.NumBlocks))
+				numBlocks := viper.GetInt(sc.NumBlocks)
+				mockBlockNumber := int64((i + 1) % numBlocks)
+				txnNum := (i + 1) / numBlocks
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
 					AllocationID:  rm.AllocationID,
-					TransactionID: benchmark.GetMockTransactionHash(mockBlockNumber, 1),
+					TransactionID: benchmark.GetMockTransactionHash(mockBlockNumber, txnNum),
 					OwnerID:       rm.OwnerID,
 					ReadCounter:   rm.ReadCounter,
 					ReadSize:      100,
@@ -694,7 +680,7 @@ func AddMockWriteRedeems(
 					ClientID:       rm.ClientID,
 					BlobberID:      rm.BlobberID,
 					AllocationID:   rm.AllocationID,
-					TransactionID:  benchmark.GetMockTransactionHash(mockBlockNumber, 1),
+					TransactionID:  benchmark.GetMockTransactionHash(mockBlockNumber, txnNum),
 					AllocationRoot: "mock allocation root",
 					BlockNumber:    mockBlockNumber,
 					Size:           100,
@@ -781,7 +767,7 @@ func getMockChallengeId(blobberId, allocationId string) string {
 func SetMockConfig(
 	balances cstate.StateContextI,
 ) (conf *Config) {
-	conf = new(Config)
+	conf = newConfig()
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
@@ -856,6 +842,41 @@ func SetMockConfig(
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
 		panic(err)
+	}
+	var mockCost = 100
+	conf.Cost = map[string]int{
+		"cost.update_settings":             mockCost,
+		"cost.read_redeem":                 mockCost,
+		"cost.commit_connection":           mockCost,
+		"cost.new_allocation_request":      mockCost,
+		"cost.update_allocation_request":   mockCost,
+		"cost.finalize_allocation":         mockCost,
+		"cost.cancel_allocation":           mockCost,
+		"cost.add_free_storage_assigner":   mockCost,
+		"cost.free_allocation_request":     mockCost,
+		"cost.free_update_allocation":      mockCost,
+		"cost.add_curator":                 mockCost,
+		"cost.remove_curator":              mockCost,
+		"cost.blobber_health_check":        mockCost,
+		"cost.update_blobber_settings":     mockCost,
+		"cost.pay_blobber_block_rewards":   mockCost,
+		"cost.curator_transfer_allocation": mockCost,
+		"cost.challenge_request":           mockCost,
+		"cost.challenge_response":          mockCost,
+		"cost.generate_challenges":         mockCost,
+		"cost.add_validator":               mockCost,
+		"cost.update_validator_settings":   mockCost,
+		"cost.add_blobber":                 mockCost,
+		"cost.new_read_pool":               mockCost,
+		"cost.read_pool_lock":              mockCost,
+		"cost.read_pool_unlock":            mockCost,
+		"cost.write_pool_lock":             mockCost,
+		"cost.write_pool_unlock":           mockCost,
+		"cost.stake_pool_lock":             mockCost,
+		"cost.stake_pool_unlock":           mockCost,
+		"cost.stake_pool_pay_interests":    mockCost,
+		"cost.commit_settings_changes":     mockCost,
+		"cost.collect_reward":              mockCost,
 	}
 	return
 }

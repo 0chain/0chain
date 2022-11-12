@@ -72,15 +72,29 @@ func getBalances(
 	}
 	bk.Round = 2
 	bk.CreationDate = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-	bk.MinerID = minersc.GetMockNodeId(0, spenum.Miner)
-	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, spenum.Miner))
-	magicBlock := &block.MagicBlock{}
+	bk.MinerID = data.Miners[0]
+	node.Self.Underlying().SetKey(data.Miners[0])
+	magicBlock := &block.MagicBlock{
+		Sharders: node.NewPool(node.NodeTypeSharder),
+	}
+	for i := range data.Sharders {
+		var n = node.Provider()
+		if err := n.SetID(data.Sharders[i]); err != nil {
+			log.Fatal(err)
+		}
+		n.PublicKey = data.SharderKeys[i]
+		n.Type = node.NodeTypeSharder
+		n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
+		if err := magicBlock.Sharders.AddNode(n); err != nil {
+			log.Fatal(err)
+		}
+	}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
 		bk,
 		mpt,
 		txn,
-		func(*block.Block) []string { return data.Sharders },
+		func(int64) *block.MagicBlock { return magicBlock },
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
@@ -202,7 +216,7 @@ func setUpMpt(
 			},
 			CreationDate: common.Now(),
 		},
-		func(*block.Block) []string { return []string{} },
+		func(int64) *block.MagicBlock { return magicBlock },
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
@@ -219,8 +233,8 @@ func setUpMpt(
 
 	var wg sync.WaitGroup
 	var (
-		blobbers         []*storagesc.StorageNode
-		miners, sharders []string
+		blobbers                      []*storagesc.StorageNode
+		miners, sharders, sharderKeys []string
 	)
 
 	wg.Add(1)
@@ -252,7 +266,15 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		miners = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances)
+		minersc.AddMockGlobalNode(balances)
+		log.Println("added minersc global node\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer := time.Now()
+		miners, _ = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances, getMockIdKeyPair)
 		log.Println("added miners\t", time.Since(timer))
 	}()
 
@@ -260,7 +282,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		sharders = minersc.AddMockNodes(clients, spenum.Sharder, eventDb, balances)
+		sharders, sharderKeys = minersc.AddMockNodes(clients, spenum.Sharder, eventDb, balances, getMockIdKeyPair)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
 
@@ -346,7 +368,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		minersc.SetUpNodes(miners, sharders)
+		minersc.SetUpNodes(miners, sharders, sharderKeys)
 		log.Println("registering miners and sharders\t", time.Since(timer))
 	}()
 
@@ -450,7 +472,9 @@ func setUpMpt(
 		benchData.Clients = clients
 		benchData.PublicKeys = publicKeys
 		benchData.PrivateKeys = privateKeys
+		benchData.Miners = miners
 		benchData.Sharders = sharders
+		benchData.SharderKeys = sharderKeys
 		benchData.Now = common.Now()
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
@@ -469,6 +493,19 @@ func setUpMpt(
 	log.Println("mpt generation took:", time.Since(mptGenTime))
 
 	return pMpt, balances.GetState().GetRoot(), benchData
+}
+
+func getMockIdKeyPair() (string, string, error) {
+	blsScheme := BLS0ChainScheme{}
+	if err := blsScheme.GenerateKeys(); err != nil {
+		return "", "", err
+	}
+	pk := blsScheme.GetPublicKey()
+	b, err := hex.DecodeString(pk)
+	if err != nil {
+		return "", "", err
+	}
+	return encryption.Hash(b), pk, nil
 }
 
 func openEventsDb() *event.EventDb {

@@ -101,7 +101,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 			endRound = lfbTk.Round + aheadN
 
-			if endRound <= cr {
+			if endRound <= cr || lfb.Round >= lfbTk.Round {
+				logging.Logger.Debug("process block, synced already, continue...")
 				continue
 			}
 
@@ -129,7 +130,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			cr := sc.GetCurrentRound()
 			lfb := sc.GetLatestFinalizedBlock()
 			if b.Round > lfb.Round+aheadN {
-
 				// trigger sync process to pull the latest blocks when
 				// current round is > lfb.Round + aheadN to break the stuck if any.
 				if !syncing {

@@ -102,7 +102,7 @@ type (
 )
 
 func globalKeyHash(name string) datastore.Key {
-	return datastore.Key(ADDRESS + encryption.Hash(name))
+	return ADDRESS + encryption.Hash(name)
 }
 
 func NewSimpleNodes() SimpleNodes {
@@ -236,7 +236,12 @@ type GlobalNode struct {
 	RewardDeclineRate float64 `json:"reward_decline_rate"`
 	// MaxMint is minting boundary for SC.
 	MaxMint currency.Coin `json:"max_mint"`
-
+	// miner delegates to get paid each round when paying fees and rewards
+	NumMinerDelegatesRewarded int `json:"num_miner_delegates_rewarded"`
+	// sharders rewarded each round
+	NumShardersRewarded int `json:"num_sharders_rewarded"`
+	// sharder delegates to get paid each round when paying fees and rewards
+	NumSharderDelegatesRewarded int `json:"num_sharder_delegates_rewarded"`
 	// PrevMagicBlock keeps previous magic block to make Miner SC more stable.
 	// In case latestFinalizedMagicBlock of a miner works incorrect. We are
 	// using this previous MB or latestFinalizedMagicBlock for genesis block.
@@ -273,6 +278,9 @@ func (gn *GlobalNode) readConfig() (err error) {
 	gn.RewardRoundFrequency = config.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
 	gn.RewardRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
 	gn.ShareRatio = config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
+	gn.NumMinerDelegatesRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumMinerDelegatesRewarded])
+	gn.NumShardersRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumShardersRewarded])
+	gn.NumSharderDelegatesRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumSharderDelegatesRewarded])
 	gn.BlockReward, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[BlockReward]))
 	if err != nil {
 		return
@@ -286,7 +294,7 @@ func (gn *GlobalNode) readConfig() (err error) {
 	}
 	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
 	gn.CooldownPeriod = config.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
-	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + SettingName[Cost])
+	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + "cost")
 	return nil
 }
 
@@ -310,6 +318,18 @@ func (gn *GlobalNode) validate() error {
 	if gn.MaxDelegates <= 0 {
 		return fmt.Errorf("max_delegates is too small: %d", gn.MaxDelegates)
 	}
+	if gn.NumSharderDelegatesRewarded < 0 {
+		return fmt.Errorf("%s cannot be negative: %d",
+			NumSharderDelegatesRewarded.String(), gn.NumSharderDelegatesRewarded)
+	}
+	if gn.NumMinerDelegatesRewarded < 0 {
+		return fmt.Errorf("%s cannot be negative: %d",
+			NumMinerDelegatesRewarded.String(), gn.NumMinerDelegatesRewarded)
+	}
+	if gn.NumShardersRewarded < 0 {
+		return fmt.Errorf("%s cannot be negative: %d",
+			NumShardersRewarded.String(), gn.NumShardersRewarded)
+	}
 	return nil
 }
 
@@ -317,7 +337,7 @@ func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
 	var out smartcontract.StringMap
 	out.Fields = make(map[string]string)
 	for _, key := range SettingName {
-		info, ok := Settings[strings.ToLower(key)]
+		info, ok := Settings[key]
 		if !ok {
 			return out, fmt.Errorf("SettingName %s not found in Settings", key)
 		}
@@ -338,6 +358,11 @@ func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
 }
 
 func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
+	if isCost(key.String()) {
+		value, _ := gn.getCost(key.String())
+		return value, nil
+	}
+
 	switch key {
 	case MinStake:
 		return gn.MinStake, nil
@@ -363,6 +388,12 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.RewardRoundFrequency, nil
 	case RewardRate:
 		return gn.RewardRate, nil
+	case NumMinerDelegatesRewarded:
+		return gn.NumMinerDelegatesRewarded, nil
+	case NumShardersRewarded:
+		return gn.NumShardersRewarded, nil
+	case NumSharderDelegatesRewarded:
+		return gn.NumSharderDelegatesRewarded, nil
 	case ShareRatio:
 		return gn.ShareRatio, nil
 	case BlockReward:
@@ -379,45 +410,6 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.OwnerId, nil
 	case CooldownPeriod:
 		return gn.CooldownPeriod, nil
-	case Cost:
-		return "", nil
-	case CostAddMiner:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddMiner], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostAddSharder:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddSharder], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostDeleteMiner:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostDeleteMiner], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostMinerHealthCheck:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostMinerHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostSharderHealthCheck:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostSharderHealthCheck], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostContributeMpk:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostContributeMpk], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostShareSignsOrShares:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostShareSignsOrShares], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostWait:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostWait], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostUpdateGlobals:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateGlobals], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostUpdateSettings:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostUpdateMinerSettings:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateMinerSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostUpdateSharderSettings:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostUpdateSharderSettings], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostPayFees:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostPayFees], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostFeesPaid:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostFeesPaid], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostMintedTokens:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostMintedTokens], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostAddToDelegatePool:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostAddToDelegatePool], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostDeleteFromDelegatePool:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostDeleteFromDelegatePool], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-	case CostSharderKeep:
-		return gn.Cost[strings.ToLower(strings.TrimPrefix(SettingName[CostSharderKeep], fmt.Sprintf("%s.", SettingName[Cost])))], nil
-
 	default:
 		return nil, errors.New("Setting not implemented")
 	}
@@ -1049,7 +1041,19 @@ func getNodesList(balances cstate.CommonStateContextI, key datastore.Key) (*Mine
 		return nil, err
 	}
 
-	return nodesList, nil
+	ids := make([]string, 0, len(nodesList.Nodes))
+	for _, sh := range nodesList.Nodes {
+		ids = append(ids, sh.ID)
+	}
+
+	// TODO: replace AllShardersKey data in MPT with keys only or use partitions to
+	// avoid sync issue
+	ss, err := cstate.GetItemsByIDs(ids, getMinerNode, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MinerNodes{ss}, nil
 }
 
 // quick fix: localhost check + duplicate check

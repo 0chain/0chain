@@ -1,6 +1,8 @@
 package event
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -33,11 +35,41 @@ type EventDb struct {
 	eventsChannel chan blockEvents
 }
 
+func (edb *EventDb) Begin() (*EventDb, error) {
+	tx := edb.Store.Get().Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("begin transcation: %v", tx.Error)
+	}
+
+	edbTx := EventDb{
+		Store: edbTx{
+			Store: edb,
+			tx:    tx,
+		},
+	}
+	return &edbTx, nil
+}
+
+func (edb *EventDb) Commit() error {
+	if edb.Store.Get() == nil {
+		return errors.New("committing nil transaction")
+	}
+	return edb.Store.Get().Commit().Error
+}
+
+func (edb *EventDb) Rollback() error {
+	if edb.Store.Get() == nil {
+		return errors.New("rollbacking nil transaction")
+	}
+	return edb.Store.Get().Rollback().Error
+}
+
 type blockEvents struct {
 	block     string
 	blockSize int
 	round     int64
 	events    []Event
+	doneC     chan struct{}
 }
 
 func (edb *EventDb) AutoMigrate() error {
@@ -56,12 +88,12 @@ func (edb *EventDb) AutoMigrate() error {
 		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
-		&AllocationTerm{},
 		&Reward{},
 		&Authorizer{},
 		&Challenge{},
 		&AllocationBlobberTerm{},
-		ChallengePool{},
+		&ProviderRewards{},
+		&ChallengePool{},
 	); err != nil {
 		return err
 	}

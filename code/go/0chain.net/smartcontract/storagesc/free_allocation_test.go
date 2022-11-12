@@ -98,7 +98,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 		input, err := json.Marshal(p.info)
 		require.NoError(t, err)
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", scConfigKey(ADDRESS),
 			mockSetValue(conf)).Return(nil).Once()
 
 		//var newRedeemed []freeStorageRedeemed
@@ -314,7 +314,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
 			mockSetValue(p.assigner)).Return(nil).Once()
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", scConfigKey(ADDRESS),
 			mockSetValue(conf)).Return(nil)
 
 		balances.On("GetClientBalance", mockRecipient,
@@ -424,6 +424,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"EmitEvent",
 			event.TypeStats, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
 		).Return().Maybe()
+		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobberTotalOffers,
+			mock.Anything, mock.Anything).Return().Maybe()
 
 		balances.On(
 			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
@@ -673,7 +675,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				mockSetValue(p.assigner),
 			).Return(nil).Once()
 		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", scConfigKey(ADDRESS),
 			mockSetValue(conf)).Return(nil).Once()
 
 		var sa = StorageAllocation{
@@ -739,6 +741,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateAllocationBlobberTerm, mock.Anything, mock.Anything,
 		).Return().Maybe()
+
+		balances.On(
+			"EmitEvent", event.TypeStats, event.TagUpdateBlobberAllocatedHealth,
+			mock.Anything, mock.Anything).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}

@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-//ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
+// ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
 
 func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
@@ -59,7 +59,7 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 	return inter, err
 }
 
-//ExecuteSmartContract - executes the smart contract in the context of the given transaction
+// ExecuteSmartContract - executes the smart contract in the context of the given transaction
 func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
 	contractObj := getSmartContract(t.ToClientID)
 	if contractObj != nil {

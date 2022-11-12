@@ -242,14 +242,17 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var globalNode = &GlobalNode{
 		//ViewChange:           runtime.nextViewChange,
-		LastRound:            runtime.lastRound,
-		RewardRate:           scYaml.rewardRate,
-		BlockReward:          zcnToBalance(scYaml.blockReward),
-		Epoch:                scYaml.epoch,
-		ShareRatio:           scYaml.shareRatio,
-		MaxMint:              zcnToBalance(scYaml.maxMint),
-		Minted:               runtime.minted,
-		RewardRoundFrequency: scYaml.rewardRoundPeriod,
+		LastRound:                   runtime.lastRound,
+		RewardRate:                  scYaml.rewardRate,
+		BlockReward:                 zcnToBalance(scYaml.blockReward),
+		Epoch:                       scYaml.epoch,
+		ShareRatio:                  scYaml.shareRatio,
+		MaxMint:                     zcnToBalance(scYaml.maxMint),
+		Minted:                      runtime.minted,
+		RewardRoundFrequency:        scYaml.rewardRoundPeriod,
+		NumShardersRewarded:         5,
+		NumSharderDelegatesRewarded: 1,
+		NumMinerDelegatesRewarded:   10,
 	}
 	var msc = &MinerSmartContract{
 		SmartContract: &sci.SmartContract{
@@ -263,11 +266,15 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		ToClientID: minerScId,
 	}
 	var ctx = &mockStateContext{
-		ctx: *cstate.NewStateContext(
+		StateContext: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
-			nil,
+			func(round int64) *block.MagicBlock {
+				return &block.MagicBlock{
+					Sharders: shardersPool,
+				}
+			},
 			nil,
 			nil,
 			nil,
@@ -285,8 +292,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			},
 			PrevBlock: &block.Block{},
 		},
-		sharders: sharderIDs,
-		store:    make(map[datastore.Key]util.MPTSerializable),
+		store: make(map[datastore.Key]util.MPTSerializable),
 		LastestFinalizedMagicBlock: &block.Block{
 			MagicBlock: &block.MagicBlock{
 				Miners:   minersPool,

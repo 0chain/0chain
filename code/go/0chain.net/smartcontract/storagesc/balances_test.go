@@ -68,12 +68,12 @@ func (tb *testBalances) GetTransaction() *transaction.Transaction {
 // stubs
 func (tb *testBalances) GetBlock() *block.Block                      { return &block.Block{} }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI          { return nil }
-func (tb *testBalances) GetBlockSharders(b *block.Block) []string    { return nil }
 func (tb *testBalances) Validate() error                             { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                     { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error          { return nil }
 func (tb *testBalances) AddMint(*state.Mint) error                   { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer             { return nil }
+func (tb *testBalances) GetMagicBlock(round int64) *block.MagicBlock { return nil }
 func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)       {}
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)  {}
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer { return nil }
@@ -164,5 +164,19 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	tb.balances[t.ClientID] -= t.Amount
 	tb.balances[t.ToClientID] += t.Amount
 	tb.transfers = append(tb.transfers, t)
+	return nil
+}
+
+func (tb *testBalances) GetInvalidStateErrors() []error { return nil }
+
+func (tb *testBalances) GetClientState(clientID datastore.Key) (*state.State, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (util.Key, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) GetMissingNodesPath() util.Path {
 	return nil
 }

@@ -2,6 +2,7 @@ version: 1.0
 
 logging:
   level: "debug"
+  verbose: false
   console: false # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
@@ -18,6 +19,7 @@ development:
     min_txn_value: 100
   faucet:
     refill_amount: 1000000000000000
+  pprof: true
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
@@ -65,7 +67,7 @@ server_chain:
     softto_min: 1500 # in miliseconds
     softto_mult: 1 # multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
     round_restart_mult: 10 # number of soft timeouts before round is restarted
-    timeout_cap: 0 # 0 indicates no cap
+    timeout_cap: 1 # 0 indicates no cap
     vrfs_timeout_mismatch_tolerance: 5
   transaction:
     payload:
@@ -92,7 +94,7 @@ server_chain:
     prune_below_count: 100 # rounds
     sync:
       timeout: 10 # seconds
-  block_rewards: true  
+  block_rewards: true
   stuck:
     check_interval: 10 # seconds
     time_threshold: 60 #seconds

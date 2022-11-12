@@ -33,7 +33,7 @@ func TestAddTransaction(t *testing.T) {
 	require.NoError(t, err)
 
 	tr := Transaction{}
-	err = eventDb.addTransaction(tr)
+	err = eventDb.addTransactions([]Transaction{tr})
 	require.NoError(t, err, "Error while inserting Transaction to event Database")
 	var count int64
 	eventDb.Get().Table("transactions").Count(&count)
@@ -145,7 +145,7 @@ func SetUpTransactionData(t *testing.T, eventDb *EventDb) {
 			ClientId:  "someClientID",
 			BlockHash: "blockHash",
 		}
-		err := eventDb.addTransaction(tr)
+		err := eventDb.addTransactions([]Transaction{tr})
 		require.NoError(t, err, "Error while inserting Transaction to event Database")
 	}
 }

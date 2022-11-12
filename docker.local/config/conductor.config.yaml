@@ -47,7 +47,7 @@ nodes:
     start_command: "docker-compose -p sharder4 -f ../build.sharder/b0docker-compose.yml up"
     stop_command: "docker-compose -p sharder4 -f ../build.sharder/b0docker-compose.yml down"
 
-    
+
   # miners
   - name: "miner-1"
     id: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
@@ -134,6 +134,28 @@ nodes:
     start_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml up"
     stop_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml down"
 
+  # authorizer
+  - name: "authorizer-1"
+    id: fb276b545a4c2f1d1771f2f9cdbf106f78ea1b2c7ea4ca763161145ec891aa26
+    work_dir: "../token_bridge_authserver/docker.local/auth1"
+    env: AUTHORIZER=1,ETH_MNEMONIC=proud magnet gaze juice win budget tonight comfort swallow expire need start,ETH_UNLOCKPASSWORD=password123,ETH_ADDRESS=0xbcfcd404c50f0cd6fa1c1ac1e7f7f2826999fb8a,ETH_PK=0x2006940444fec70072bdaadb519d68b4c60b15880721d9d09921fef545bc1d0a
+    start_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+
+  - name: "authorizer-2"
+    id: 45ad4982464f7e47d1160b608fb9285a1d0a1e1f6242f00acb02118179224f13
+    work_dir: "../token_bridge_authserver/docker.local/auth2"
+    env: AUTHORIZER=2,ETH_MNEMONIC=blame bubble mistake evolve oven ethics race fresh dinosaur woman love slam,ETH_UNLOCKPASSWORD=password123,ETH_ADDRESS=0x035E97Dd1DA12C35a5b4868C3853e7747C0B1237,ETH_PK=0xaa4d77fa8dbaebe4ac848e84514076919110dee2c85e7ac34d3e1c981f99a637
+    start_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+
+  - name: "authorizer-3"
+    id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    work_dir: "../token_bridge_authserver/docker.local/auth3"
+    env: AUTHORIZER=3,ETH_MNEMONIC=whip figure access later easily either amazing menu spy exile pyramid identify,ETH_UNLOCKPASSWORD=password123,ETH_ADDRESS=0x84232D61d3a8f4Fca7d8f29893C43aE79D492ceB,ETH_PK=0x4fffe76ab041cec36f2017ba7437882366e36d508dc89bf08fe42fdcef8d939e
+    start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+
   # 0dns (patched version, add docker-clean, start-no-daemon.sh)
   - name: "0dns" #
     id: "0dns" # no real ID used
@@ -179,10 +201,29 @@ commands:
   sleep_3m:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/sleep_3m.sh"
+  sleep_30m:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/sleep_30m.sh"
   list:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list.sh"
     should_fail: false # consensus
+  list_and_verify:
+    work_dir: "../"
+    exec: "bash -x 0chain/docker.local/bin/conductor/list_and_verify.sh"
+    should_fail: false
+  download_and_verify:
+    work_dir: "../"
+    exec: "bash -x 0chain/docker.local/bin/conductor/download_and_verify.sh"
+    should_fail: false
+  upload_and_verify:
+    work_dir: "../"
+    exec: "bash -x 0chain/docker.local/bin/conductor/upload_and_verify.sh"
+    should_fail: false
+  delete_and_verify:
+    work_dir: "../"
+    exec: "bash -x 0chain/docker.local/bin/conductor/delete_and_verify.sh"
+    should_fail: false
   download:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/download.sh"
@@ -194,7 +235,7 @@ commands:
   upload:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh"
-    should_fail: true # should fail, consensus 66.6%, but expected is 76.6%
+    should_fail: false
   unverified_transaction:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/unverified_transaction.sh"
@@ -252,4 +293,12 @@ commands:
   list_repair:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list_repair.sh"
+    should_fail: false
+  register_authorizer:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/register_authorizer.sh"
+    should_fail: false
+  burn_zcn:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/burn_zcn.sh"
     should_fail: false

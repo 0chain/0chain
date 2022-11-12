@@ -27,6 +27,8 @@ type periodicResponse struct {
 	Allowed currency.Coin `json:"tokens_allowed"`
 }
 
+var globalNodeKey = ADDRESS + encryption.Hash("faucetsc_config")
+
 type GlobalNode struct {
 	*FaucetConfig `json:"faucet_config"`
 	ID            string        `json:"id"`
@@ -35,7 +37,7 @@ type GlobalNode struct {
 }
 
 func (gn *GlobalNode) GetKey() datastore.Key {
-	return datastore.Key(gn.ID + gn.ID)
+	return globalNodeKey
 }
 
 func (gn *GlobalNode) GetHash() string {

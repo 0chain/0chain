@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/viper"
+
 	"gorm.io/gorm/logger"
 
 	"0chain.net/chaincore/config"
@@ -40,9 +42,13 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 	var sqldb *sql.DB
 	var err error
 
+	lgr := logger.Default.LogMode(logger.Silent)
+	if viper.GetBool("logging.verbose") {
+		lgr = logger.Default.LogMode(logger.Info)
+	}
+
 	maxRetries := 60 * 1 // 1 minutes
 	for i := 0; i < maxRetries; i++ {
-
 		db, err = gorm.Open(postgres.Open(fmt.Sprintf(
 			"host=%v port=%v user=%v dbname=%v password=%v sslmode=disable",
 			config.Host,
@@ -51,9 +57,10 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 			config.Name,
 			config.Password)),
 			&gorm.Config{
-				Logger:                 logger.Default.LogMode(logger.Silent),
-				SkipDefaultTransaction: true,
+				Logger:                 lgr,
+				SkipDefaultTransaction: false,
 				PrepareStmt:            true,
+				CreateBatchSize:        50,
 			})
 
 		if err == nil { // tcp host/port are ready

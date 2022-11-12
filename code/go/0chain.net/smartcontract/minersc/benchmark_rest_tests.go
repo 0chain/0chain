@@ -88,14 +88,14 @@ func BenchmarkRestTests(
 			{
 				FuncName: "nodeStat",
 				Params: map[string]string{
-					"id": GetMockNodeId(0, spenum.Miner),
+					"id": data.Miners[0],
 				},
 				Endpoint: mrh.getNodeStat,
 			},
 			{
 				FuncName: "nodePoolStat",
 				Params: map[string]string{
-					"id":      GetMockNodeId(0, spenum.Miner),
+					"id":      data.Miners[0],
 					"pool_id": getMinerDelegatePoolId(0, 0, spenum.Miner),
 				},
 				Endpoint: mrh.getNodePoolStat,

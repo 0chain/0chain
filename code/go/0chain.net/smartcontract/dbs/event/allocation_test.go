@@ -182,19 +182,17 @@ func TestAllocations(t *testing.T) {
 	}
 
 	convertSa := func(sa StorageAllocation) Allocation {
-		var allocationTerms []AllocationTerm
+		var allocationTerms []AllocationBlobberTerm
 		for _, b := range sa.BlobberDetails {
-			allocationTerms = append(allocationTerms, AllocationTerm{
+			allocationTerms = append(allocationTerms, AllocationBlobberTerm{
 				BlobberID:        b.BlobberID,
 				AllocationID:     b.AllocationID,
-				ReadPrice:        b.Terms.ReadPrice,
-				WritePrice:       b.Terms.WritePrice,
+				ReadPrice:        int64(b.Terms.ReadPrice),
+				WritePrice:       int64(b.Terms.WritePrice),
 				MinLockDemand:    b.Terms.MinLockDemand,
 				MaxOfferDuration: b.Terms.MaxOfferDuration,
 			})
 		}
-		termsByte, err := json.Marshal(allocationTerms)
-		require.NoError(t, err)
 
 		return Allocation{
 			AllocationID:             sa.ID,
@@ -203,7 +201,7 @@ func TestAllocations(t *testing.T) {
 			ParityShards:             sa.ParityShards,
 			Size:                     sa.Size,
 			Expiration:               int64(sa.Expiration),
-			Terms:                    string(termsByte),
+			Terms:                    allocationTerms,
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
 			IsImmutable:              sa.IsImmutable,
@@ -211,7 +209,6 @@ func TestAllocations(t *testing.T) {
 			ReadPriceMax:             sa.ReadPriceRange.Max,
 			WritePriceMin:            sa.WritePriceRange.Min,
 			WritePriceMax:            sa.WritePriceRange.Max,
-			ChallengeCompletionTime:  int64(sa.ChallengeCompletionTime),
 			StartTime:                int64(sa.StartTime),
 			Finalized:                sa.Finalized,
 			Cancelled:                sa.Canceled,
@@ -357,7 +354,7 @@ func TestAllocations(t *testing.T) {
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10)
 	time.Sleep(100 * time.Millisecond)
 	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
@@ -377,7 +374,7 @@ func TestAllocations(t *testing.T) {
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10)
 
 	alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)

@@ -43,7 +43,7 @@ func TestChallengePoolEvent(t *testing.T) {
 		Finalized:    false,
 	}
 
-	err = eventDb.addOrUpdateChallengePool(c)
+	err = eventDb.addOrUpdateChallengePools([]ChallengePool{c})
 	require.NoError(t, err, "Error while inserting ChallengePool to event Database")
 
 	var count int64
@@ -51,7 +51,7 @@ func TestChallengePoolEvent(t *testing.T) {
 	require.Equal(t, int64(1), count, "ChallengePool not getting inserted")
 
 	c.Balance = 11223344
-	err = eventDb.addOrUpdateChallengePool(c)
+	err = eventDb.addOrUpdateChallengePools([]ChallengePool{c})
 	require.NoError(t, err, "Error while updating ChallengePool to event Database")
 
 	eventDb.Get().Model(&ChallengePool{}).Count(&count)
@@ -62,7 +62,7 @@ func TestChallengePoolEvent(t *testing.T) {
 	require.Equal(t, int64(11223344), cp.Balance, "ChallengePool balance is not getting updated")
 
 	c.ID = c.ID + "_2"
-	err = eventDb.addOrUpdateChallengePool(c)
+	err = eventDb.addOrUpdateChallengePools([]ChallengePool{c})
 	require.NoError(t, err, "Error while inserting ChallengePool to event Database")
 
 	eventDb.Get().Model(&ChallengePool{}).Count(&count)

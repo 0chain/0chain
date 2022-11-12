@@ -135,7 +135,6 @@ func CreateTransaction(fromClient, method string, payload []byte, ctx state.Stat
 
 func CreateAuthorizerParam(delegateWalletID string, publicKey string) *AddAuthorizerPayload {
 	return &AddAuthorizerPayload{
-		ID:        delegateWalletID,
 		PublicKey: publicKey,
 		URL:       "http://localhost:2344",
 		StakePoolSettings: stakepool.Settings{

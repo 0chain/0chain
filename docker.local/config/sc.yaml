@@ -68,6 +68,12 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
+    # miner delegates to get paid each round when paying fees and rewards
+    num_miner_delegates_rewarded: 10
+    # sharders rewarded each round
+    num_sharders_rewarded: 5
+    # sharder delegates to get paid each round when paying fees and rewards
+    num_sharder_delegates_rewarded: 1
     cooldown_period: 100
     cost:
       add_miner: 100
@@ -142,7 +148,7 @@ smart_contracts:
       data_shards: 2
       duration: 50h
       parity_shards: 2
-      read_pool_fraction: 0.2
+      read_pool_fraction: 0
       mint_amount: 0.5
       read_price_range:
         max: 1

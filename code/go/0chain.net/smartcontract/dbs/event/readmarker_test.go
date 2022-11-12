@@ -20,6 +20,7 @@ func init() {
 }
 
 func TestReadMarkersPaginated(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
 	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
@@ -122,17 +123,18 @@ func TestReadMarkersPaginated(t *testing.T) {
 func insertMultipleReadMarker(t *testing.T, eventDb *EventDb) {
 	for j := 0; j < 10; j++ {
 		blobberID := fmt.Sprintf("blobberID %v", j)
-		err := eventDb.addOrOverwriteBlobber(Blobber{BlobberID: blobberID})
+		err := eventDb.addOrOverwriteBlobber([]Blobber{Blobber{BlobberID: blobberID}})
 		if !assert.NoError(t, err, "Error while writing blobber marker") {
 			return
 		}
 		for i := 0; i < 10; i++ {
 			transactionHash := fmt.Sprintf("transactionHash %v %v", i, j)
-			err = eventDb.addTransaction(Transaction{Hash: transactionHash})
+			err = eventDb.addTransactions([]Transaction{{Hash: transactionHash}})
 			if !assert.NoError(t, err, "Error while writing blobber marker") {
 				return
 			}
-			err = eventDb.addOrOverwriteReadMarker(ReadMarker{TransactionID: transactionHash, BlobberID: blobberID, ClientID: "someClientID", AllocationID: strconv.Itoa(i), AuthTicket: strconv.Itoa(i), BlockNumber: int64(i), ReadSize: float64(i)})
+			rm := ReadMarker{TransactionID: transactionHash, BlobberID: blobberID, ClientID: "someClientID", AllocationID: strconv.Itoa(i), AuthTicket: strconv.Itoa(i), BlockNumber: int64(i), ReadSize: float64(i)}
+			err = eventDb.addOrOverwriteReadMarker([]ReadMarker{rm})
 			if !assert.NoError(t, err, "Error while writing read marker") {
 				return
 			}

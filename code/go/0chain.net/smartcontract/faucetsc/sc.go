@@ -83,6 +83,7 @@ func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _
 func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
 	if err == util.ErrValueNotPresent {
+		logging.Logger.Error("faucet sc state was not initialized", zap.String("ID", gn.ID))
 		return false, common.NewError("invalid_request", "faucet has no tokens and needs to be refilled")
 	}
 	if err != nil {
@@ -249,37 +250,25 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
 	gn := &GlobalNode{ID: fc.ID}
-	err := balances.GetTrieNode(gn.GetKey(), gn)
-	switch err {
-	case nil, util.ErrValueNotPresent:
-		var err2 error
-		if gn.FaucetConfig == nil {
-			gn.FaucetConfig, err2 = getFaucetConfig()
-			if err2 != nil {
-				return nil, err2
-			}
-		}
-		return gn, err
-	default:
+	err := balances.GetTrieNode(globalNodeKey, gn)
+	if err != nil {
 		return nil, err
 	}
+
+	return gn, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) (*GlobalNode, error) {
 	gn, err := fc.getGlobalNode(balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil {
 		return nil, err
 	}
 
-	if err == nil {
-		if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
-			gn.StartTime = common.ToTime(t.CreationDate)
-			gn.Used = 0
-		}
-		return gn, nil
+	if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
+		gn.StartTime = common.ToTime(t.CreationDate)
+		gn.Used = 0
 	}
-	gn.Used = 0
-	gn.StartTime = common.ToTime(t.CreationDate)
+
 	return gn, nil
 }
 

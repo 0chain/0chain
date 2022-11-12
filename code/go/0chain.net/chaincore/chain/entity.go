@@ -15,7 +15,10 @@ import (
 	"0chain.net/chaincore/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/storagesc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"github.com/herumi/bls/ffi/go/bls"
 	"go.uber.org/zap"
 
@@ -185,7 +188,7 @@ type Chain struct {
 	unsubLFBTicket        chan chan *LFBTicket     // }
 	lfbTickerWorkerIsDone chan struct{}            // get rid out of context misuse
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
-	syncLFBStateNowC      chan struct{}            // sync latest finalized round state from network immediately
+	syncMissingNodesC     chan syncPathNodes
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
 
@@ -202,6 +205,11 @@ type Chain struct {
 	computeBlockStateC chan struct{}
 
 	OnBlockAdded func(b *block.Block)
+}
+
+type syncPathNodes struct {
+	round int64
+	path  util.Path
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -238,11 +246,6 @@ func (c *Chain) GetEventDb() *event.EventDb {
 	c.eventMutex.RLock()
 	defer c.eventMutex.RUnlock()
 	return c.EventDb
-}
-
-// SyncLFBStateNow notify workers to start the LFB state sync immediately.
-func (c *Chain) SyncLFBStateNow() {
-	c.syncLFBStateNowC <- struct{}{}
 }
 
 // SetBCStuckTimeThreshold sets the BC stuck time threshold
@@ -406,7 +409,7 @@ func (c *Chain) Delete(ctx context.Context) error {
 // DefaultSmartContractTimeout represents the default smart contract execution timeout
 const DefaultSmartContractTimeout = time.Second
 
-//NewChainFromConfig - create a new chain from config
+// NewChainFromConfig - create a new chain from config
 func NewChainFromConfig() *Chain {
 	chain := Provider().(*Chain)
 	chain.ID = datastore.ToKey(config.Configuration().ChainID)
@@ -459,7 +462,7 @@ func Provider() datastore.Entity {
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
 	c.syncLFBStateC = make(chan *block.BlockSummary)
-	c.syncLFBStateNowC = make(chan struct{})
+	c.syncMissingNodesC = make(chan syncPathNodes, 1)
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 
@@ -507,7 +510,7 @@ func SetupEntity(store datastore.Store, workdir string) {
 
 var stateDB *util.PNodeDB
 
-//SetupStateDB - setup the state db
+// SetupStateDB - setup the state db
 func SetupStateDB(workdir string) {
 
 	datadir := "data/rocksdb/state"
@@ -563,15 +566,46 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
 		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
-			logging.Logger.Error("chain.stateDB insert failed", zap.Error(err))
+			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
 		}
+		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
 	}
 
-	state := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
-	mustInitPartitions(state)
+	stateCtx := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
+	mustInitPartitions(stateCtx)
+
+	err := faucetsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB faucetsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = minersc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB minersc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = storagesc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB storagesc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = vestingsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB vestingsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = zcnsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB zcnsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
 
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
-		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
+		logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
 	}
 	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
@@ -638,8 +672,10 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	return c.addBlock(b)
 }
 
-/*AddNotarizedBlockToRound - adds notarized block to round, sets RRS with block's if needed.
-Client should check if block is valid notarized block, round should be created*/
+/*
+AddNotarizedBlockToRound - adds notarized block to round, sets RRS with block's if needed.
+Client should check if block is valid notarized block, round should be created
+*/
 func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
@@ -725,6 +761,17 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 	c.blocksMutex.RLock()
 	defer c.blocksMutex.RUnlock()
 	return c.getBlock(ctx, hash)
+}
+
+func (c *Chain) GetBlockClone(ctx context.Context, hash string) (*block.Block, error) {
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
+	b, err := c.getBlock(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.Clone(), nil
 }
 
 func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error) {
@@ -885,23 +932,6 @@ func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder 
 	return sharder.IsInTopWithNodes(scores, c.NumReplicators())
 }
 
-// GetBlockSharders - get the list of sharders who would be replicating the block.
-func (c *Chain) GetBlockSharders(b *block.Block) (sharders []string) {
-	//TODO: sharders list needs to get resolved per the magic block of the block
-	var (
-		sharderPool  = c.GetMagicBlock(b.Round).Sharders
-		sharderNodes = sharderPool.CopyNodes()
-	)
-	if c.NumReplicators() > 0 {
-		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)
-		sharderNodes = node.GetTopNNodes(scores, c.NumReplicators())
-	}
-	for _, sharder := range sharderNodes {
-		sharders = append(sharders, sharder.GetKey())
-	}
-	return sharders
-}
-
 /*ValidGenerator - check whether this block is from a valid generator */
 func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	miner := c.GetMiners(r.GetRoundNumber()).GetNode(b.MinerID)
@@ -957,7 +987,7 @@ func (c *Chain) getMiningStake(minerID datastore.Key) uint64 {
 	return c.minersStake[minerID]
 }
 
-//InitializeMinerPool - initialize the miners after their configuration is read
+// InitializeMinerPool - initialize the miners after their configuration is read
 func (c *Chain) InitializeMinerPool(mb *block.MagicBlock) {
 	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	for _, nd := range mb.Miners.CopyNodes() {
@@ -1154,22 +1184,22 @@ func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block
 	return blocks
 }
 
-//ResetRoundTimeoutCount - reset the counter
+// ResetRoundTimeoutCount - reset the counter
 func (c *Chain) ResetRoundTimeoutCount() {
 	atomic.SwapInt64(&c.crtCount, 0)
 }
 
-//IncrementRoundTimeoutCount - increment the counter
+// IncrementRoundTimeoutCount - increment the counter
 func (c *Chain) IncrementRoundTimeoutCount() {
 	atomic.AddInt64(&c.crtCount, 1)
 }
 
-//GetRoundTimeoutCount - get the counter
+// GetRoundTimeoutCount - get the counter
 func (c *Chain) GetRoundTimeoutCount() int64 {
 	return atomic.LoadInt64(&c.crtCount)
 }
 
-//GetSignatureScheme - get the signature scheme used by this chain
+// GetSignatureScheme - get the signature scheme used by this chain
 func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.GetSignatureScheme(c.ClientSignatureScheme())
 }
@@ -1234,7 +1264,7 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 	return false
 }
 
-//SetFetchedNotarizedBlockHandler - setter for FetchedNotarizedBlockHandler
+// SetFetchedNotarizedBlockHandler - setter for FetchedNotarizedBlockHandler
 func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandler) {
 	c.fetchedNotarizedBlockHandler = fnbh
 }
@@ -1251,7 +1281,7 @@ func (c *Chain) SetMagicBlockSaver(mbs MagicBlockSaver) {
 	c.magicBlockSaver = mbs
 }
 
-//GetPruneStats - get the current prune stats
+// GetPruneStats - get the current prune stats
 func (c *Chain) GetPruneStats() *util.PruneStats {
 	return c.pruneStats
 }

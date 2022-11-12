@@ -146,7 +146,7 @@ func BenchmarkTests(
 			name:     "miner.update_globals",
 			endpoint: msc.minerHealthCheck,
 			txn: &transaction.Transaction{
-				ClientID:     GetMockNodeId(0, spenum.Miner),
+				ClientID:     data.Miners[0],
 				CreationDate: creationTime,
 			},
 			input: nil,
@@ -155,7 +155,7 @@ func BenchmarkTests(
 			name:     "miner.miner_health_check",
 			endpoint: msc.minerHealthCheck,
 			txn: &transaction.Transaction{
-				ClientID:     GetMockNodeId(0, spenum.Miner),
+				ClientID:     data.Miners[0],
 				CreationDate: creationTime,
 			},
 			input: nil,
@@ -164,7 +164,7 @@ func BenchmarkTests(
 			name:     "miner.sharder_health_check",
 			endpoint: msc.sharderHealthCheck,
 			txn: &transaction.Transaction{
-				ClientID:     GetMockNodeId(0, spenum.Sharder),
+				ClientID:     data.Miners[0],
 				CreationDate: creationTime,
 			},
 			input: nil,
@@ -173,7 +173,7 @@ func BenchmarkTests(
 			name:     "miner.payFees",
 			endpoint: msc.payFees,
 			txn: &transaction.Transaction{
-				ClientID:     GetMockNodeId(0, spenum.Miner),
+				ClientID:     data.Miners[0],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},
@@ -183,14 +183,14 @@ func BenchmarkTests(
 			name:     "miner.contributeMpk",
 			endpoint: msc.contributeMpk,
 			txn: &transaction.Transaction{
-				ClientID:     GetMockNodeId(0, spenum.Miner),
+				ClientID:     data.Miners[0],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				var mpks []string
 				for i := 0; i < viper.GetInt(bk.InternalT); i++ {
-					mpks = append(mpks, GetMockNodeId(i, spenum.Miner))
+					mpks = append(mpks, data.Miners[i])
 				}
 				return (&block.MPK{
 					Mpk: mpks,
@@ -201,13 +201,13 @@ func BenchmarkTests(
 			name:     "miner.shareSignsOrShares",
 			endpoint: msc.shareSignsOrShares,
 			txn: &transaction.Transaction{
-				ClientID:     GetMockNodeId(0, spenum.Miner),
+				ClientID:     data.Miners[0],
 				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				var sos = make(map[string]*bls.DKGKeyShare)
 				for i := 0; i < viper.GetInt(bk.InternalT); i++ {
-					sos[GetMockNodeId(i, spenum.Miner)] = nil
+					sos[data.Miners[i]] = nil
 				}
 				return (&block.ShareOrSigns{
 					ShareOrSigns: sos,
@@ -255,24 +255,43 @@ func BenchmarkTests(
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
-					"min_stake":              "0.0",
-					"max_stake":              "100",
-					"max_n":                  "7",
-					"min_n":                  "3",
-					"t_percent":              "0.66",
-					"k_percent":              "0.75",
-					"x_percent":              "0.70",
-					"max_s":                  "2",
-					"min_s":                  "1",
-					"max_delegates":          "200",
-					"reward_round_frequency": "64250",
-					"reward_rate":            "1.0",
-					"share_ratio":            "50",
-					"block_reward":           "021",
-					"max_charge":             "0.5",
-					"epoch":                  "6415000000",
-					"reward_decline_rate":    "0.1",
-					"max_mint":               "1500000.0",
+					"min_stake":                    "0.0",
+					"max_stake":                    "100",
+					"max_n":                        "7",
+					"min_n":                        "3",
+					"t_percent":                    "0.66",
+					"k_percent":                    "0.75",
+					"x_percent":                    "0.70",
+					"max_s":                        "2",
+					"min_s":                        "1",
+					"max_delegates":                "200",
+					"reward_round_frequency":       "64250",
+					"reward_rate":                  "1.0",
+					"share_ratio":                  "50",
+					"block_reward":                 "021",
+					"max_charge":                   "0.5",
+					"epoch":                        "6415000000",
+					"reward_decline_rate":          "0.1",
+					"max_mint":                     "1500000.0",
+					"owner_id":                     "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
+					"cost.add_miner":               "111",
+					"cost.add_sharder":             "111",
+					"cost.delete_miner":            "111",
+					"cost.miner_health_check":      "111",
+					"cost.sharder_health_check":    "111",
+					"cost.contributeMpk":           "111",
+					"cost.shareSignsOrShares":      "111",
+					"cost.wait":                    "111",
+					"cost.update_globals":          "111",
+					"cost.update_settings":         "111",
+					"cost.update_miner_settings":   "111",
+					"cost.update_sharder_settings": "111",
+					"cost.payFees":                 "111",
+					"cost.feesPaid":                "111",
+					"cost.mintedTokens":            "111",
+					"cost.addToDelegatePool":       "111",
+					"cost.deleteFromDelegatePool":  "111",
+					"cost.sharder_keep":            "111",
 				},
 			}).Encode(),
 		},
@@ -285,7 +304,7 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID: GetMockNodeId(0, spenum.Miner),
+					ID: data.Miners[0],
 				},
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
@@ -307,7 +326,7 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID: GetMockNodeId(0, spenum.Sharder),
+					ID: data.Miners[0],
 				},
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
@@ -332,7 +351,7 @@ func BenchmarkTests(
 				CreationDate: creationTime,
 			},
 			input: (&deletePool{
-				MinerID: GetMockNodeId(0, spenum.Miner),
+				MinerID: data.Miners[0],
 			}).Encode(),
 		},
 		{
@@ -343,7 +362,7 @@ func BenchmarkTests(
 				CreationDate: creationTime,
 			},
 			input: (&deletePool{
-				MinerID: GetMockNodeId(0, spenum.Miner),
+				MinerID: data.Miners[0],
 			}).Encode(),
 		},
 		{
@@ -352,7 +371,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        GetMockNodeId(0, spenum.Sharder),
+					ID:        data.Sharders[0],
 					PublicKey: "my public key",
 				},
 			}).Encode(),
@@ -363,7 +382,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        GetMockNodeId(1, spenum.Miner),
+					ID:        data.Miners[1],
 					PublicKey: "my public key",
 				},
 			}).Encode(),
@@ -374,7 +393,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        GetMockNodeId(1, spenum.Sharder),
+					ID:        data.Sharders[0],
 					PublicKey: "my public key",
 				},
 			}).Encode(),
@@ -390,7 +409,7 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
 					//PoolId:       miner00,
 					ProviderType: spenum.Miner,
-					ProviderId:   GetMockNodeId(0, spenum.Miner),
+					ProviderId:   data.Miners[0],
 				})
 				return bytes
 			}(),

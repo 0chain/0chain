@@ -71,12 +71,12 @@ func (tb *testBalances) GetTransaction() *transaction.Transaction {
 // stubs
 func (tb *testBalances) GetBlock() *block.Block                      { return &block.Block{} }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI          { return nil }
-func (tb *testBalances) GetBlockSharders(b *block.Block) []string    { return nil }
 func (tb *testBalances) Validate() error                             { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                     { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error          { return nil }
 func (tb *testBalances) AddMint(*state.Mint) error                   { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer             { return nil }
+func (tb *testBalances) GetMagicBlock(round int64) *block.MagicBlock { return nil }
 func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)       {}
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)  {}
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer { return nil }
@@ -119,6 +119,23 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 		return 0, util.ErrValueNotPresent
 	}
 	return
+}
+
+func (tb *testBalances) GetClientState(clientID datastore.Key) (*state.State, error) {
+	s := state.State{}
+	if err := tb.mpts.mpt.GetNodeValue(util.Path(clientID), &s); err != nil {
+		return nil, err
+	}
+
+	return &s, nil
+}
+
+func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (util.Key, error) {
+	return tb.mpts.mpt.Insert(util.Path(clientID), s)
+}
+
+func (tb *testBalances) GetMissingNodesPath() util.Path {
+	return nil
 }
 
 func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
@@ -175,6 +192,8 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	tb.transfers = append(tb.transfers, t)
 	return nil
 }
+
+func (tb *testBalances) GetInvalidStateErrors() []error { return nil }
 
 type mptStore struct {
 	mpt  util.MerklePatriciaTrieI

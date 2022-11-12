@@ -221,8 +221,11 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.MaxS = 30
 	gn.MinS = 1
 	gn.MaxDelegates = 10 // for tests
-	gn.TPercent = 0.51   // %
-	gn.KPercent = 0.75   // %
+	gn.NumMinerDelegatesRewarded = 10
+	gn.NumShardersRewarded = 5
+	gn.NumSharderDelegatesRewarded = 1
+	gn.TPercent = 0.51 // %
+	gn.KPercent = 0.75 // %
 	gn.LastRound = 0
 	gn.MaxStake = currency.Coin(100.0e10)
 	gn.MinStake = currency.Coin(0.01e10)
