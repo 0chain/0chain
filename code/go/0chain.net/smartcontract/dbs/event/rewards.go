@@ -17,7 +17,6 @@ func (edb *EventDb) incrementReward(providerId string, increment currency.Coin) 
 	if increment == 0 {
 		return nil
 	}
-
 	return edb.Get().Model(&ProviderRewards{}).
 		Where("provider_id = ?", providerId).
 		Updates(map[string]interface{}{
