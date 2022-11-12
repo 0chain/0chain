@@ -74,7 +74,7 @@ func (sp *StakePool) LockPool(
 		}
 
 		//  check status, only allow staking more when current pool is active
-		if dp.Status != spenum.Active {
+		if dp.Status != spenum.Active && dp.Status != spenum.Pending {
 			return fmt.Errorf("could not stake pool in %s status", dp.Status)
 		}
 

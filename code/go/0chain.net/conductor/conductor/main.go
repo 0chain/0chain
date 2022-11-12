@@ -217,7 +217,7 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		fmt.Printf("wait for view change %v\n", r.waitViewChange)
 		return tm, true
 	case !r.waitAdd.IsZero():
-		log.Printf("wait for adding sharders (%+v), miners (%+v) and blobbers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers)
+		log.Printf("wait for adding sharders (%+v), miners (%+v), blobbers (%+v) and authorizers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers, r.waitAdd.Authorizers)
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
 		log.Println("wait for sharder keep")
@@ -535,6 +535,38 @@ func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
 	return
 }
 
+func (r *Runner) acceptAddAuthorizer(addb *conductrpc.AddAuthorizerEvent) (
+	err error) {
+	if addb.Sender != r.monitor {
+		return // not the monitor node
+	}
+	var (
+		sender, sok = r.conf.Nodes.NodeByName(addb.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(addb.Authorizer)
+	)
+	if !sok {
+		return fmt.Errorf("unexpected add_miner sender: %q", addb.Sender)
+	}
+	if !aok {
+		return fmt.Errorf("unexpected authorizer %q added by add_authorizer of %q",
+			addb.Authorizer, sender.Name)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] add_authorizer ", added.Name)
+	}
+
+	if r.waitAdd.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	fmt.Printf("Take authorizer %v %v\n", added.Name, r.waitAdd.Authorizers)
+	if r.waitAdd.TakeAuthorizer(added.Name) {
+		log.Print("[OK] add_authorizer ", added.Name)
+	}
+	return
+}
+
 func (r *Runner) acceptSharderKeep(ske *conductrpc.SharderKeepEvent) (
 	err error) {
 
@@ -581,6 +613,9 @@ func (r *Runner) acceptNodeReady(nodeName NodeName) (err error) {
 		return fmt.Errorf("unknown node: %s", nodeName)
 	}
 	log.Println("[OK] node ready", nodeName, n.Name)
+
+	r.waitAdd.Take(nodeName)
+
 	return
 }
 
@@ -747,6 +782,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptAddSharder(adds)
 		case addb := <-r.server.OnAddBlobber():
 			err = r.acceptAddBlobber(addb)
+		case adda := <-r.server.OnAddAuthorizer():
+			err = r.acceptAddAuthorizer(adda)
 		case sk := <-r.server.OnSharderKeep():
 			err = r.acceptSharderKeep(sk)
 		case nid := <-r.server.OnNodeReady():

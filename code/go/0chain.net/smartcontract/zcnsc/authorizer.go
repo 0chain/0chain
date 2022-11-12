@@ -126,6 +126,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 	err = increaseAuthorizerCount(ctx)
 
+	afterInsertAuthorizer(authorizerID)
+
 	return string(authorizer.Encode()), err
 }
 

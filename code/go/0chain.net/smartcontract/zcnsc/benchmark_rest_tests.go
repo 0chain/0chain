@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/rest"
 )
@@ -8,6 +9,7 @@ import (
 func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
 	rh := rest.NewRestHandler(&rest.TestQueryChainer{})
 	zrh := NewZcnRestHandler(rh)
+	common.ConfigRateLimits()
 	return benchmark.GetRestTests(
 		[]benchmark.TestParameters{
 			{
