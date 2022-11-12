@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
-	github.com/alicebob/miniredis/v2 v2.23.0
+	github.com/alicebob/miniredis/v2 v2.23.1
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.24.2
 	github.com/go-playground/validator/v10 v10.11.1
@@ -42,7 +42,7 @@ require (
 	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
 )
 
-require github.com/0chain/common v0.0.5
+require github.com/0chain/common v0.0.6-0.20221108095012-622480d64186
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect

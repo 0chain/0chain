@@ -132,19 +132,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	minerDelete := false
 	for i := len(miners.Nodes) - 1; i >= 0; i-- {
 		mn := miners.Nodes[i]
-
-		m, er := getMinerNode(mn.ID, balances)
-		switch er {
-		case nil:
-			mn = m
-			// ref back to the miners list, otherwise the changes on the miner would
-			// not be saved to the miners list.
-			miners.Nodes[i] = mn
-		case util.ErrValueNotPresent:
-		default:
-			return fmt.Errorf("could not get miner node: %v", er)
-		}
-
 		if err = msc.unlockDeleted(mn, round, balances); err != nil {
 			return err
 		}
@@ -173,16 +160,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	sharderDelete := false
 	for i := len(sharders.Nodes) - 1; i >= 0; i-- {
 		sn := sharders.Nodes[i]
-		n, er := msc.getSharderNode(sn.ID, balances)
-		switch er {
-		case nil:
-			sn = n
-			sharders.Nodes[i] = sn
-		case util.ErrValueNotPresent:
-		default:
-			return fmt.Errorf("could not found sharder node: %v", er)
-		}
-
 		if err = msc.unlockDeleted(sn, round, balances); err != nil {
 			return err
 		}

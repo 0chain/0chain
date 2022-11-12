@@ -100,6 +100,18 @@ func (c *client) addBlobber(add *AddBlobberEvent) (err error) {
 	return
 }
 
+// addAuthorizer notification.
+func (c *client) addAuthorizer(add *AddAuthorizerEvent) (err error) {
+	err = c.client.Call("Server.AddAuthorizer", add, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddAuthorizer", add, &struct{}{})
+	}
+	return
+}
+
 // sharderKeep notification
 func (c *client) sharderKeep(sk *SharderKeepEvent) (err error) {
 	err = c.client.Call("Server.SharderKeep", sk, &struct{}{})

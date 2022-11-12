@@ -1,0 +1,41 @@
+enable:
+  - "Authorizer Consensus"
+
+sets:
+  - name: "Authorizer Consensus"
+    tests:
+      - "One authorizer is down"
+      # - "Send faked tickets with signatures"
+      # - "Send mint transaction with signatures less than the threshold"
+  - name: "Mint and burn values"
+    tests:
+      # - Burn less tokens than the minimum amount to burn
+
+tests:
+  - name: "One authorizer is down"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_0dns"
+      - wait_add:
+          sharders: ['sharder-1','sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3','miner-4']
+          start: true
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      - command:
+          name: "sleep_20s"
+      - command:
+          name: "register_authorizer"
+      - wait_add:
+          authorizers: ['authorizer-1','authorizer-2','authorizer-3']
+          start: true
+      - wait_round:
+          shift: 50
+      - stop: ['authorizer-1']
+      - command:
+          name: "burn_zcn"
+
+...
