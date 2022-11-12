@@ -9,35 +9,37 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
+func sharderTableToSharderNode(edbSharder event.Sharder) ApiMinerNode {
 
 	var status = node.NodeStatusInactive
 	if edbSharder.Active {
 		status = node.NodeStatusActive
 	}
-	msn := SimpleNode{
-		ID:          edbSharder.SharderID,
-		N2NHost:     edbSharder.N2NHost,
-		Host:        edbSharder.Host,
-		Port:        edbSharder.Port,
-		Path:        edbSharder.Path,
-		PublicKey:   edbSharder.PublicKey,
-		ShortName:   edbSharder.ShortName,
-		BuildTag:    edbSharder.BuildTag,
-		TotalStaked: edbSharder.TotalStaked,
-		Delete:      edbSharder.Delete,
+	msn := ApiSimpleNode{
+		SimpleNode: SimpleNode{
+			ID:          edbSharder.SharderID,
+			N2NHost:     edbSharder.N2NHost,
+			Host:        edbSharder.Host,
+			Port:        edbSharder.Port,
+			Path:        edbSharder.Path,
+			PublicKey:   edbSharder.PublicKey,
+			ShortName:   edbSharder.ShortName,
+			BuildTag:    edbSharder.BuildTag,
+			TotalStaked: edbSharder.TotalStaked,
+			Delete:      edbSharder.Delete,
 
-		LastHealthCheck: edbSharder.LastHealthCheck,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbSharder.Latitude,
-			Longitude: edbSharder.Longitude,
+			LastHealthCheck: edbSharder.LastHealthCheck,
+			Geolocation: SimpleNodeGeolocation{
+				Latitude:  edbSharder.Latitude,
+				Longitude: edbSharder.Longitude,
+			},
+			NodeType: NodeTypeSharder,
+			Status:   status,
 		},
-		NodeType: NodeTypeSharder,
-		Status:   status,
 	}
 
-	return MinerNode{
-		SimpleNode: &msn,
+	return ApiMinerNode{
+		ApiSimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbSharder.Rewards.Rewards,
 			Settings: stakepool.Settings{
