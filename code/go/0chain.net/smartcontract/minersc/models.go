@@ -81,6 +81,8 @@ const (
 var (
 	AllMinersKey         = globalKeyHash("all_miners")
 	AllShardersKey       = globalKeyHash("all_sharders")
+	SharderListLengthKey = globalKeyHash("sharder_list_length")
+	MinerListLengthKey   = globalKeyHash("miner_list_length")
 	DKGMinersKey         = globalKeyHash("dkg_miners")
 	MinersMPKKey         = globalKeyHash("miners_mpk")
 	MagicBlockKey        = globalKeyHash("magic_block")
@@ -911,6 +913,92 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(dmn.Encode())
 }
 
+type NodeListLength int
+
+func getMinerListLength(state cstate.QueryStateContextI) (*NodeListLength, error) {
+	length, err := getOrInitializeLengthNode(state, MinerListLengthKey);
+	if err != nil {
+		return nil, err
+	}
+
+	return length, nil
+}
+
+func IncrementMinerListLength(state cstate.QueryStateContextI) (*NodeListLength, error) {
+	length, err := getOrInitializeLengthNode(state, MinerListLengthKey);
+	if err != nil {
+		return nil, err
+	}
+	
+	*length = *length + 1
+
+	err = updateLengthNode(state, MinerListLengthKey, length)
+	if err != nil {
+		return nil, err
+	}
+
+	return length, nil
+}
+
+func DecrementMinerListLength(state cstate.QueryStateContextI) (*NodeListLength, error) {
+	length, err := getOrInitializeLengthNode(state, MinerListLengthKey);
+	if err != nil {
+		return nil, err
+	}
+	
+	*length = *length - 1
+
+	err = updateLengthNode(state, MinerListLengthKey, length)
+	if err != nil {
+		return nil, err
+	}
+
+	return length, nil
+}
+
+func getSharderListLength(state cstate.QueryStateContextI) (*NodeListLength, error) {
+	length, err := getOrInitializeLengthNode(state, SharderListLengthKey);
+	if err != nil {
+		return nil, err
+	}
+
+	return length, nil
+}
+
+func IncrementSharderListLength(state cstate.QueryStateContextI) (*NodeListLength, error) {
+	length, err := getOrInitializeLengthNode(state, SharderListLengthKey);
+	if err != nil {
+		return nil, err
+	}
+	
+	*length = *length + 1
+
+	err = updateLengthNode(state, SharderListLengthKey, length)
+	if err != nil {
+		return nil, err
+	}
+
+	return length, nil
+}
+
+func DecrementSharderListLength(state cstate.QueryStateContextI) (*NodeListLength, error) {
+	length, err := getOrInitializeLengthNode(state, SharderListLengthKey);
+	if err != nil {
+		return nil, err
+	}
+	
+	if *length > 0 {
+		*length = *length - 1
+	}
+
+	err = updateLengthNode(state, SharderListLengthKey, length)
+	if err != nil {
+		return nil, err
+	}
+
+	return length, nil
+}
+
 // getMinersList returns miners list
 func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(state, AllMinersKey)
@@ -1054,6 +1142,27 @@ func getNodesList(balances cstate.CommonStateContextI, key datastore.Key) (*Mine
 	}
 
 	return &MinerNodes{ss}, nil
+}
+
+func getOrInitializeLengthNode(balances cstate.CommonStateContextI, key datastore.Key) (*NodeListLength, error) {
+	var length NodeListLength
+	err := balances.GetTrieNode(key, &length)
+	if err != nil {
+		if err == util.ErrMissingNodes {
+			var ndl NodeListLength = 0
+			balances.InsertTrieNode(key, &ndl)
+			return &ndl, nil
+		} else {
+			return nil, err
+		}
+	}
+
+	return &length, nil
+}
+
+func updateLengthNode(state cstate.CommonStateContextI, key datastore.Key, ndl *NodeListLength) (error) {
+	_, err := state.InsertTrieNode(key, ndl)
+	return err
 }
 
 // quick fix: localhost check + duplicate check
