@@ -23,7 +23,6 @@
 - [Initial states](#initial-states)
 - [Miscellaneous](#miscellaneous)
   - [Cleanup](#cleanup)
-  - [Minio Setup](#minio)
 - [Integration tests](#integration-tests)
 - [Benchmarks](#benchmarks)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
@@ -493,56 +492,6 @@ separate file, deleting thousands of such files will take some time._**
 ```
 docker system prune
 ```
-
-### Minio
-
-- You can use the inbuilt minio support to store blocks on cloud
-
-You have to update minio_config file with the cloud creds data, The file can be found at `docker.local/config/minio_config.txt`.
-The following order is used for the content :
-
-```
-CONNECTION_URL
-ACCESS_KEY_ID
-SECRET_ACCESS_KEY
-BUCKET_NAME
-REGION
-```
-
-- Your minio config file is then used in the docker-compose while starting the sharder node
-
-```
---minio_file config/minio_config.txt
-```
-
-- You can either update the setting in the same file which is given above or create a new one with you config and use that as
-
-```
---minio_file config/your_new_minio_config_file.txt
-```
-
-\*\*\_Note: Do not forget to put the file in the same config folder OR mount your new folder.
-
-- Apart from private connection config, There are other options as well in the 0chain.yaml file to manage minio settings.
-
-Sample config
-
-```
-minio:
-  # Enable or disable minio backup, Do not enable with deep scan ON
-  enabled: false
-  # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  worker_frequency: 3600
-  # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
-  num_workers: 5
-  # Use SSL for connection or not
-  use_ssl: false
-  # How old the block should be to be considered for moving to cloud
-  old_block_round_range: 20000000
-  # Delete local copy of block once it's moved to cloud
-  delete_local_copy: true
-```
-- In minio the folders do not get deleted and will cause a slight increase in volume over time.
 
 ## Integration tests
 
