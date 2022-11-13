@@ -48,6 +48,21 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
+	// Check global max_n (max miners count) first
+	currentMinersCount, err := getMinerListLength(balances)
+	if err != nil {
+		logging.Logger.Error("add_miner: Error in getting miners list length from the DB",
+			zap.Error(err))
+		return "", common.NewErrorf("add_miner",
+			"failed to get miner list length: %v", err)		
+	}
+	maxMinersCount := gn.MaxN
+	if ((int)(*currentMinersCount) >= maxMinersCount) {
+		logging.Logger.Error("add_miner: Error in Adding a new miner: Reached maximum number of miners")
+		return "", common.NewErrorf("add_miner",
+			"failed to add new miner: Reached maximum number of miners", err)
+	}
+
 	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
 	allMiners, err := getMinersList(balances)
@@ -111,6 +126,14 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 				"saving all miners list: %v", err)
 		}
 
+		newL, err := IncrementMinerListLength(balances)
+		if err != nil {
+			return "", common.NewErrorf("add_miner",
+				"Couldn't increment miner list length: %v", err)
+		}
+
+		logging.Logger.Debug("Miners incremented to", zap.Int("MinerListLength", int(*newL)))
+
 		err = emitAddOrOverwriteMiner(newMiner, balances)
 		if err != nil {
 			return "", common.NewErrorf("add_miner",
@@ -171,6 +194,17 @@ func (msc *MinerSmartContract) DeleteMiner(
 	if err != nil {
 		return "", common.NewError("delete_miner", err.Error())
 	}
+
+	lockAllMiners.Lock()
+	defer lockAllMiners.Unlock()
+
+	newL, err := DecrementMinerListLength(balances)
+	if err != nil {
+		return "", common.NewErrorf("delete_miner",
+			"Couldn't decrement miner list length: %v", err)
+	}
+
+	logging.Logger.Debug("Miners decremented to", zap.Int("MinerListLength", int(*newL)))
 
 	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
 		return "", common.NewError("delete_miner", err.Error())
