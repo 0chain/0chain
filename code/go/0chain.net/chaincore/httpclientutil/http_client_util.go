@@ -755,7 +755,7 @@ func SendSmartContractTxn(txn *Transaction,
 	txn.ToClientID = address
 	txn.Value = value
 	txn.Fee = fee
-	txn.TransactionType = TxnTypeStats
+	txn.TransactionType = TxnTypeSmartContract
 	txnBytes, err := json.Marshal(scData)
 	if err != nil {
 		logging.Logger.Error("Returning error", zap.Error(err))

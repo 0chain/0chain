@@ -40,8 +40,8 @@ const (
 	//TxnTypeData A transaction to just store a piece of data on the block chain
 	TxnTypeData = 10
 
-	//TxnTypeStats A smart contract transaction type
-	TxnTypeStats = 1000
+	//TxnTypeSmartContract A smart contract transaction type
+	TxnTypeSmartContract = 1000
 )
 
 //SmartContractTxnData Smart Contract Txn Data
