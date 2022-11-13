@@ -43,7 +43,16 @@ func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
 // GetTransactionByHash finds the transaction record by hash
 func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 	tr := Transaction{}
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{Hash: hash}).First(&tr)
+	res := edb.Store.Get().
+		Preload("WriteMarker.User").
+		Preload("WriteMarker.Allocation").
+		Preload("ReadMarkers.User").
+		Preload("ReadMarkers.Owner").
+		Preload("ReadMarkers.Allocation").
+		Preload(clause.Associations).
+		Model(Transaction{}).
+		Where(Transaction{Hash: hash}).
+		First(&tr)
 	return tr, res.Error
 }
 
