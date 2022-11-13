@@ -211,6 +211,8 @@ func main() {
 	mux := http.NewServeMux()
 	http.DefaultServeMux = mux
 
+	common.ConfigRateLimits()
+
 	if config.Development() {
 		if viper.GetBool("development.pprof") {
 			// start pprof server
@@ -243,7 +245,6 @@ func main() {
 		}
 	}
 	memorystore.GetInfo()
-	common.ConfigRateLimits()
 	initN2NHandlers(mc)
 
 	initWorkers(ctx)
