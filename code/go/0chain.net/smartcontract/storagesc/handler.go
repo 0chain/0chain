@@ -1400,7 +1400,7 @@ func roundIntervalFromTime(fromTime, toTime string, edb *event.EventDb) (int64, 
 	return start, end, nil
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getchallenge
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge getChallenge
 // Gets challenges for a blobber by challenge id
 //
 // parameters:
@@ -1418,7 +1418,7 @@ func roundIntervalFromTime(fromTime, toTime string, edb *event.EventDb) (int64, 
 //
 // responses:
 //
-//	200: StorageChallenge
+//	200: StorageChallengeResponse
 //	400:
 //	404:
 //	500:
