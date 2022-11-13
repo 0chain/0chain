@@ -74,16 +74,16 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSn
 
 }
 
+// paginate divides `count` of items in exactly `round` pages and returns
+// the size of the page, current page number and amount of subpages if needed
+// for example, we have round=101, pageAmount=2, count=11, then
+// size will be 6, current page 1, and subpage count 1
 func paginate(round int64, pageAmount int64, count int64) (int64, int64, int) {
 	size := int64(math.Ceil(float64(count) / float64(pageAmount)))
 	currentPageNumber := round % pageAmount
 
-	currentPageSize := size
-	if pageAmount-currentPageNumber == 1 { //last page
-		currentPageSize = count - size*currentPageNumber
-	}
 	subpageCount := 1
-	if currentPageSize > pageLimit {
+	if size > pageLimit {
 		subpageCount = int(math.Ceil(float64(size) / float64(pageLimit)))
 	}
 	return size, currentPageNumber, subpageCount
