@@ -60,7 +60,7 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	return string(sn.Encode()), nil
 }
 
-// AddSharder function to handle miner register
+// AddSharder function to handle sharder register
 func (msc *MinerSmartContract) AddSharder(
 	t *transaction.Transaction,
 	input []byte,
@@ -86,6 +86,21 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder", "getting all sharders list: %v", err)
 	}
 
+	// Check global max_s (max sharders count) first
+	currentShardersCount, err := getSharderListLength(balances)
+	if err != nil {
+		logging.Logger.Error("add_sharder: Error in getting sharders list length from the DB",
+			zap.Error(err))
+		return "", common.NewErrorf("add_miner",
+			"failed to get sharder list length: %v", err)		
+	}
+	maxShardersCount := gn.MaxS
+	if (int(*currentShardersCount) >= maxShardersCount) {
+		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Reached maximum number of sharders")
+		return "", common.NewErrorf("add_sharder",
+			"failed to add new sharder: Reached maximum number of sharders", err)
+	}
+	
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
 
 	if newSharder.Settings.DelegateWallet == "" {
@@ -192,6 +207,14 @@ func (msc *MinerSmartContract) DeleteSharder(
 	if err != nil {
 		return "", common.NewError("delete_sharder", err.Error())
 	}
+
+	newL, err := DecrementSharderListLength(balances)
+	if err != nil {
+		return "", common.NewErrorf("delete_sharder",
+			"Couldn't decrement sharder list length: %v", err)
+	}
+
+	logging.Logger.Debug("Sharders decremented to", zap.Int("SharderListLength", int(*newL)))
 
 	if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
 		return "", common.NewError("delete_sharder", err.Error())
