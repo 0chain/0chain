@@ -13,7 +13,7 @@ const (
 
 	TxnTypeData = 10 // A transaction to just store a piece of data on the block chain
 
-	TxnTypeStats = 1000 // A smart contract transaction type
+	TxnTypeSmartContract = 1000 // A smart contract transaction type
 )
 
 var ErrSmartContractContext = common.NewError("smart_contract_execution_ctx_err", "context deadline")

@@ -68,7 +68,7 @@ func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg s
 	if isFeeEnabled {
 		txn.Fee = fee
 	}
-	txn.TransactionType = transaction.TxnTypeStats
+	txn.TransactionType = transaction.TxnTypeSmartContract
 	if _, err := txn.Sign(w.SignatureScheme); err != nil {
 		panic(err)
 	}
