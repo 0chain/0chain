@@ -169,7 +169,7 @@ func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.Mer
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction) (int, error) {
+	txn *transaction.Transaction, sync ...bool) (int, error) {
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
@@ -192,6 +192,9 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 				zap.Errors("errors", ierrs),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
+			if len(sync) > 0 && sync[0] {
+				c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath())
+			}
 			return math.MaxInt32, ierrs[0] // return the first one only
 		}
 
@@ -237,9 +240,10 @@ func (c *Chain) NewStateContext(
 	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error) {
+func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction) (es []event.Event, err error) {
 	// check if the block's ClientState has root value
-	_, err := bState.GetNodeDB().GetNode(bState.GetRoot())
+	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
 		return nil, common.NewErrorf("update_state_failed",
 			"block state root is incorrect, err: %v, block hash: %v, state hash: %v, root: %v, round: %d",
@@ -252,7 +256,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		startRoot   = sctx.GetState().GetRoot()
 	)
 
-	if err := c.validateNonce(sctx, txn.ClientID, txn.Nonce); err != nil {
+	defer func() {
+		if bcstate.ErrInvalidState(err) {
+			c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath())
+		}
+	}()
+
+	if err = c.validateNonce(sctx, txn.ClientID, txn.Nonce); err != nil {
 		return nil, err
 	}
 
@@ -268,7 +278,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			dataBytes = []byte(txn.TransactionData)
 		)
 
-		if err := json.Unmarshal(dataBytes, &scData); err != nil {
+		if err = json.Unmarshal(dataBytes, &scData); err != nil {
 			logging.Logger.Error("Error while decoding the JSON from transaction",
 				zap.Any("input", txn.TransactionData), zap.Any("error", err))
 			return nil, err
@@ -348,7 +358,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
-		err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value))
+		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
 				zap.Any("txn type", txn.TransactionType),
@@ -449,21 +459,6 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		return nil, err
 	}
 
-	if state.DebugTxn() {
-		// TODO: fix me, the b does not has the state changes
-		if err = block.ValidateState(context.TODO(), b, startRoot); err != nil {
-			logging.Logger.DPanic("update state - state validation failure",
-				zap.Any("txn", txn), zap.Error(err))
-		}
-		var os *state.State
-		os, err = c.GetStateById(bState, c.OwnerID())
-		if err != nil || os == nil || os.Balance == 0 {
-			logging.Logger.DPanic("update state - owner account",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash),
-				zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
-		}
-	}
-
 	//if status is not set
 	if txn.Status == 0 {
 		txn.Status = transaction.TxnSuccess
@@ -477,30 +472,28 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 *   when there is an error getting the state of the from or to account (other than no value), the error is simply returned back
 *   when there is an error inserting/deleting the state of the from or to account, this results in fatal error when state is enabled
  */
-func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient datastore.Key, amount currency.Coin) ([]*event.User, error) {
+func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient datastore.Key,
+	amount currency.Coin) (eus []*event.User, err error) {
 	if amount == 0 {
 		return nil, nil
 	}
 	if fromClient == toClient {
 		return nil, common.InvalidRequest("from and to client should be different for balance transfer")
 	}
-	b := sctx.GetBlock()
-	clientState := sctx.GetState()
-	txn := sctx.GetTransaction()
-	fs, err := c.GetStateById(clientState, fromClient)
-	if !isValid(err) {
-		if state.DebugTxn() {
-			logging.Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-			for _, txn := range b.Txns {
-				if txn == nil {
-					break
-				}
-				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
-			}
-			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", fromClient, txn, err)
-			block.PrintStates(clientState, b.ClientState)
-			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", fromClient, err))
+
+	defer func() {
+		if bcstate.ErrInvalidState(err) {
+			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodesPath())
 		}
+	}()
+
+	var (
+		b   = sctx.GetBlock()
+		txn = sctx.GetTransaction()
+	)
+
+	fs, err := sctx.GetClientState(fromClient)
+	if !isValid(err) {
 		return nil, err
 	}
 
@@ -510,20 +503,9 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 			zap.Any("transfer", amount))
 		return nil, transaction.ErrInsufficientBalance
 	}
-	ts, err := c.GetStateById(clientState, toClient)
+
+	ts, err := sctx.GetClientState(toClient)
 	if !isValid(err) {
-		if state.DebugTxn() {
-			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-			for _, txn := range b.Txns {
-				if txn == nil {
-					break
-				}
-				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
-			}
-			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
-			block.PrintStates(clientState, b.ClientState)
-			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
-		}
 		return nil, err
 	}
 
@@ -535,18 +517,12 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, err
 	}
 	fs.Balance -= amount
-	_, err = clientState.Insert(util.Path(fromClient), fs)
+
+	_, err = sctx.SetClientState(fromClient, fs)
 	if err != nil {
-		if state.DebugTxn() {
-			if c.ChainConfig.IsStateEnabled() {
-				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
-			}
-			if state.Debug() {
-				logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
-			}
-		}
 		return nil, err
 	}
+
 	if err := sctx.SetStateContext(ts); err != nil {
 		logging.Logger.Error("transfer amount - set state context failed",
 			zap.Int64("round", b.Round),
@@ -556,20 +532,15 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 	ts.Balance, err = currency.AddCoin(ts.Balance, amount)
 	if err != nil {
-		logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		logging.Logger.Error("transfer amount - error",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Any("txn", txn), zap.Error(err))
 		return nil, err
 	}
 
-	_, err = clientState.Insert(util.Path(toClient), ts)
+	_, err = sctx.SetClientState(toClient, ts)
 	if err != nil {
-		if state.DebugTxn() {
-			if c.ChainConfig.IsStateEnabled() {
-				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
-			}
-			if state.Debug() {
-				logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
-			}
-		}
 		return nil, err
 	}
 
@@ -579,30 +550,24 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	return []*event.User{stateToUser(fromClient, fs, -amount), stateToUser(toClient, ts, amount)}, nil
 }
 
-func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (*event.User, error) {
+func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
 	if amount == 0 {
 		return nil, nil
 	}
-	b := sctx.GetBlock()
-	clientState := sctx.GetState()
-	txn := sctx.GetTransaction()
-	ts, err := c.GetStateById(clientState, toClient)
+
+	var (
+		b   = sctx.GetBlock()
+		txn = sctx.GetTransaction()
+	)
+
+	defer func() {
+		if bcstate.ErrInvalidState(err) {
+			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodesPath())
+		}
+	}()
+
+	ts, err := sctx.GetClientState(toClient)
 	if !isValid(err) {
-		if state.DebugTxn() {
-			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-			for _, txn := range b.Txns {
-				if txn == nil {
-					break
-				}
-				_, _ = fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
-			}
-			_, _ = fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
-			block.PrintStates(clientState, b.ClientState)
-			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
-		}
-		if state.Debug() {
-			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
-		}
 		return nil, common.NewError("mint_amount - get state", err.Error())
 	}
 
@@ -615,29 +580,16 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 
 	ts.Balance, err = currency.AddCoin(ts.Balance, amount)
 	if err != nil {
-		logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		logging.Logger.Error("transfer amount - error",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Any("txn", txn),
+			zap.Error(err))
 		return nil, err
 	}
 
-	_, err = clientState.Insert(util.Path(toClient), ts)
+	_, err = sctx.SetClientState(toClient, ts)
 	if err != nil {
-		if state.DebugTxn() {
-			if c.ChainConfig.IsStateEnabled() {
-				logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-				for _, txn := range b.Txns {
-					if txn == nil {
-						break
-					}
-					_, _ = fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
-				}
-				_, _ = fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
-				block.PrintStates(clientState, b.ClientState)
-				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
-			}
-		}
-		if state.Debug() {
-			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
-		}
 		return nil, common.NewError("mint_amount - insert", err.Error())
 	}
 
@@ -647,7 +599,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 }
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
-	s, err := c.GetStateById(sctx.GetState(), fromClient)
+	s, err := sctx.GetClientState(fromClient)
 	if !isValid(err) {
 		return err
 	}
@@ -667,8 +619,7 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 }
 
 func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key) (*event.User, error) {
-	sc := sctx.GetState()
-	s, err := c.GetStateById(sc, fromClient)
+	s, err := sctx.GetClientState(fromClient)
 	if !isValid(err) {
 		return nil, err
 	}
@@ -680,10 +631,12 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 		return nil, err
 	}
 	s.Nonce += 1
-	if _, err := sc.Insert(util.Path(fromClient), s); err != nil {
+	if _, err := sctx.SetClientState(fromClient, s); err != nil {
 		return nil, err
 	}
-	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
+	logging.Logger.Debug("Updating nonce",
+		zap.String("client", fromClient),
+		zap.Int64("new_nonce", s.Nonce))
 
 	return stateToUser(fromClient, s, 0), nil
 }

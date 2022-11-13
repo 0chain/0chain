@@ -19,6 +19,7 @@ import (
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 
+	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
@@ -116,6 +117,7 @@ tr.header { background-color: #E0E0E0;  }
 func TestGetSmartContract(t *testing.T) {
 	t.Parallel()
 
+	common.ConfigRateLimits()
 	tests := []struct {
 		name       string
 		address    string

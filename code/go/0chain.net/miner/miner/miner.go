@@ -210,6 +210,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	http.DefaultServeMux = mux
+	common.ConfigRateLimits()
 
 	if config.Development() {
 		if viper.GetBool("development.pprof") {
@@ -243,7 +244,6 @@ func main() {
 		}
 	}
 	memorystore.GetInfo()
-	common.ConfigRateLimits()
 	initN2NHandlers(mc)
 
 	initWorkers(ctx)
@@ -493,9 +493,9 @@ func initWorkers(ctx context.Context) {
 }
 
 func initProfHandlers(mux *http.ServeMux) {
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	mux.HandleFunc("/debug/pprof/", common.UserRateLimit(pprof.Index))
+	mux.HandleFunc("/debug/pprof/cmdline", common.UserRateLimit(pprof.Cmdline))
+	mux.HandleFunc("/debug/pprof/profile", common.UserRateLimit(pprof.Profile))
+	mux.HandleFunc("/debug/pprof/symbol", common.UserRateLimit(pprof.Symbol))
+	mux.HandleFunc("/debug/pprof/trace", common.UserRateLimit(pprof.Trace))
 }

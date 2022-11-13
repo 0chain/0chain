@@ -124,3 +124,15 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 }
 
 func (tb *testBalances) GetInvalidStateErrors() []error { return nil }
+
+func (tb *testBalances) GetClientState(clientID datastore.Key) (*state.State, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (util.Key, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) GetMissingNodesPath() util.Path {
+	return nil
+}

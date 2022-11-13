@@ -100,6 +100,8 @@ type StateContextI interface {
 	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
+	GetClientState(clientID datastore.Key) (*state.State, error)
+	SetClientState(clientID datastore.Key, s *state.State) (util.Key, error)
 	GetClientBalance(clientID datastore.Key) (currency.Coin, error)
 	SetStateContext(st *state.State) error // cannot use in smart contracts or REST endpoints
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
@@ -116,6 +118,7 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetInvalidStateErrors() []error
+	GetMissingNodesPath() util.Path
 }
 
 // StateContext - a context object used to manipulate global state
@@ -135,6 +138,7 @@ type StateContext struct {
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
 	invalidStateErrors            []error
+	missingNodesPath              util.Path
 }
 
 type GetNow func() common.Timestamp
@@ -383,12 +387,13 @@ func (sc *StateContext) Validate() error {
 	return nil
 }
 
-func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
+func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 	s := &state.State{}
-	err := sc.state.GetNodeValue(util.Path(clientID), s)
+	path := util.Path(clientID)
+	err := sc.state.GetNodeValue(path, s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(err)
+			sc.addInvalidStateError(path, err)
 			return nil, err
 		}
 		return s, err
@@ -397,9 +402,22 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	return s, nil
 }
 
+func (sc *StateContext) SetClientState(clientID string, s *state.State) (util.Key, error) {
+	path := util.Path(clientID)
+	key, err := sc.state.Insert(path, s)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			sc.addInvalidStateError(path, err)
+		}
+		return nil, err
+	}
+
+	return key, nil
+}
+
 // GetClientBalance - get the balance of the client
 func (sc *StateContext) GetClientBalance(clientID string) (currency.Coin, error) {
-	s, err := sc.getClientState(clientID)
+	s, err := sc.GetClientState(clientID)
 	if err != nil {
 		return 0, err
 	}
@@ -408,7 +426,7 @@ func (sc *StateContext) GetClientBalance(clientID string) (currency.Coin, error)
 
 // GetClientNonce - get the nonce of the client
 func (sc *StateContext) GetClientNonce(clientID string) (int64, error) {
-	s, err := sc.getClientState(clientID)
+	s, err := sc.GetClientState(clientID)
 	if err != nil {
 		return 0, err
 	}
@@ -454,9 +472,10 @@ func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 }
 
 func (sc *StateContext) getNodeValue(key datastore.Key, v util.MPTSerializable) error {
-	if err := sc.state.GetNodeValue(util.Path(encryption.Hash(key)), v); err != nil {
+	path := util.Path(encryption.Hash(key))
+	if err := sc.state.GetNodeValue(path, v); err != nil {
 		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(err)
+			sc.addInvalidStateError(path, err)
 		}
 		return err
 	}
@@ -464,10 +483,11 @@ func (sc *StateContext) getNodeValue(key datastore.Key, v util.MPTSerializable) 
 }
 
 func (sc *StateContext) setNodeValue(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
-	newKey, err := sc.state.Insert(util.Path(encryption.Hash(key)), node)
+	path := util.Path(encryption.Hash(key))
+	newKey, err := sc.state.Insert(path, node)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(err)
+			sc.addInvalidStateError(path, err)
 		}
 		return "", err
 	}
@@ -476,10 +496,11 @@ func (sc *StateContext) setNodeValue(key datastore.Key, node util.MPTSerializabl
 }
 
 func (sc *StateContext) deleteNode(key datastore.Key) (datastore.Key, error) {
-	newKey, err := sc.state.Delete(util.Path(encryption.Hash(key)))
+	path := util.Path(encryption.Hash(key))
+	newKey, err := sc.state.Delete(path)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(err)
+			sc.addInvalidStateError(path, err)
 		}
 		return "", err
 	}
@@ -487,9 +508,10 @@ func (sc *StateContext) deleteNode(key datastore.Key) (datastore.Key, error) {
 	return datastore.Key(newKey), nil
 }
 
-func (sc *StateContext) addInvalidStateError(err error) {
+func (sc *StateContext) addInvalidStateError(path util.Path, err error) {
 	sc.mutex.Lock()
 	sc.invalidStateErrors = append(sc.invalidStateErrors, err)
+	sc.missingNodesPath = path
 	sc.mutex.Unlock()
 }
 
@@ -502,9 +524,17 @@ func (sc *StateContext) GetInvalidStateErrors() []error {
 	return errs
 }
 
+// GetMissingNodesPath returns node path that has missing nodes
+func (sc *StateContext) GetMissingNodesPath() util.Path {
+	sc.mutex.Lock()
+	path := sc.missingNodesPath
+	sc.mutex.Unlock()
+	return path
+}
+
 // ErrInvalidState checks if the error is an invalid state error
 func ErrInvalidState(err error) bool {
-	return strings.Contains(err.Error(), util.ErrNodeNotFound.Error())
+	return err != nil && strings.Contains(err.Error(), util.ErrNodeNotFound.Error())
 }
 
 type errorIndex struct {

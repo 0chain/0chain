@@ -24,9 +24,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	vrh := NewVestingRestHandler(rh)
 	vesting := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
-		rest.MakeEndpoint(vesting+"/getPoolInfo", vrh.getPoolInfo),
-		rest.MakeEndpoint(vesting+"/getClientPools", vrh.getClientPools),
-		rest.MakeEndpoint(vesting+"/vesting-config", vrh.getConfig),
+		rest.MakeEndpoint(vesting+"/getPoolInfo", common.UserRateLimit(vrh.getPoolInfo)),
+		rest.MakeEndpoint(vesting+"/getClientPools", common.UserRateLimit(vrh.getClientPools)),
+		rest.MakeEndpoint(vesting+"/vesting-config", common.UserRateLimit(vrh.getConfig)),
 	}
 }
 

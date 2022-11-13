@@ -240,7 +240,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	}
 
 	if stake == 0 {
-		return fmt.Errorf("no stake")
+		return nil
 	}
 
 	for _, pool := range pools {
