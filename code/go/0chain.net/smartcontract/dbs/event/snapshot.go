@@ -86,10 +86,6 @@ type globalSnapshot struct {
 	blobberCount          int
 }
 
-func newGlobalSnapshot() *globalSnapshot {
-	return &globalSnapshot{}
-}
-
 func (edb *EventDb) addSnapshot(s Snapshot) error {
 	return edb.Store.Get().Create(&s).Error
 }

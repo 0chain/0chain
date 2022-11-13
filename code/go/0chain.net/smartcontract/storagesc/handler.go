@@ -34,9 +34,6 @@ import (
 // swagger:model stringArray
 type stringArray []string
 
-// swagger:model intArray
-type intArray []int64
-
 type StorageRestHandler struct {
 	rest.RestHandlerI
 }

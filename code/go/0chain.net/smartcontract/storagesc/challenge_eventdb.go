@@ -12,7 +12,7 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge {
+func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge { //nolint
 	var validators = make([]string, 0, len(ch.Validators))
 	for _, v := range ch.Validators {
 		validators = append(validators, v.ID)

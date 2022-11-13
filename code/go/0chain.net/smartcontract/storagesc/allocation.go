@@ -209,12 +209,6 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	return resp, err
 }
 
-type blobberWithPool struct {
-	*StorageNode
-	Pool *stakePool
-	idx  int
-}
-
 // newAllocationRequest creates new allocation
 func (sc *StorageSmartContract) newAllocationRequestInternal(
 	txn *transaction.Transaction,
