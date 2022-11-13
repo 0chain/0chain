@@ -34,6 +34,9 @@ import (
 // swagger:model stringArray
 type stringArray []string
 
+// swagger:model intArray
+type intArray []int64
+
 type StorageRestHandler struct {
 	rest.RestHandlerI
 }
@@ -73,7 +76,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/validators", common.UserRateLimit(srh.validators)),
 		rest.MakeEndpoint(storage+"/openchallenges", common.UserRateLimit(srh.getOpenChallenges)),
 		rest.MakeEndpoint(storage+"/getchallenge", common.UserRateLimit(srh.getChallenge)),
-		rest.MakeEndpoint(storage+"/blobber-challenges", srh.getBlobberChallenges),
+		rest.MakeEndpoint(storage+"/blobber-challenges", common.UserRateLimit(srh.getBlobberChallenges)),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", common.UserRateLimit(srh.getStakePoolStat)),
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", common.UserRateLimit(srh.getUserStakePoolStat)),
 		rest.MakeEndpoint(storage+"/block", common.UserRateLimit(srh.getBlock)),
@@ -901,7 +904,7 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 //
 // responses:
 //
-//	200: int64
+//	200: StringMap
 //	400:
 func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
 	edb := srh.GetQueryStateContext().GetEventDB()
@@ -1314,17 +1317,17 @@ func toValidatorStakePoolStats(validator *event.Validator, delegatePools []event
 // Gets challenges for a blobber by challenge id
 //
 // parameters:
-//   - name: id
+//   + name: id
 //     description: id of blobber
 //     required: true
 //     in: query
 //     type: string
-//   - name: start
+//   + name: start
 //     description: start time of interval
 //     required: true
 //     in: query
 //     type: string
-//   - name: end
+//   + name: end
 //     description: end time of interval
 //     required: true
 //     in: query
@@ -2776,24 +2779,25 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, sn, nil)
 }
 
+// swagger:model timestampToRoundResp
 type timestampToRoundResp struct {
 	Rounds []int64 `json:"rounds"`
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round getBlobber
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round timestampsToRounds
 // Get round(s) number for timestamp(s)
 //
 // parameters:
 //
-//	+name: timestamp
-//	description: timestamps you want to convert to rounds
-//	required: true
-//	in: query
-//	type: array
+//  +name: timestamps
+//	 description: timestamps you want to convert to rounds
+//	 required: true
+//	 in: query
+//	 type: string
 //
 // responses:
 //
-//	200: []Int64
+//	200: timestampToRoundResp
 //	400:
 //	500:
 func (srh *StorageRestHandler) timestampsToRounds(w http.ResponseWriter, r *http.Request) {
@@ -3001,15 +3005,11 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 	common.Respond(w, r, nil, common.NewErrInternal("Request failed, searchString isn't a (wallet address)/(block hash)/(txn hash)/(round num)/(content hash)/(file name)"))
 }
 
-// replicateSnapshots swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicateSnapshots replicate-snapshots
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots replicateSnapshots
 // Gets list of snapshot records
 //
 // parameters:
 //
-//	+name: round
-//	 description: current round
-//	 in: query
-//	 type: int64
 //	+name: offset
 //	 description: offset
 //	 in: query
@@ -3025,7 +3025,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 //
 // responses:
 //
-//	200: Snapshot
+//	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http.Request) {
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -3048,15 +3048,11 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 	common.Respond(w, r, blobbers, nil)
 }
 
-// replicateBlobberAggregates swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicateBlobberAggregates replicate-blobber-aggregate
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate replicateBlobberAggregates
 // Gets list of blobber aggregate records
 //
 // parameters:
 //
-//	+name: round
-//	 description: current round
-//	 in: query
-//	 type: int64
 //	+name: offset
 //	 description: offset
 //	 in: query
@@ -3072,7 +3068,7 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 //
 // responses:
 //
-//	200: Snapshot
+//	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter, r *http.Request) {
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())

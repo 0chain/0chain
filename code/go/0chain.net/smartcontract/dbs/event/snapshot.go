@@ -19,7 +19,6 @@ import (
 //staked + unstaked = max_capacity
 //allocated + unallocated = staked
 
-// swagger:model Snapshot
 type Snapshot struct {
 	Round int64 `gorm:"primaryKey;autoIncrement:false" json:"round"`
 
