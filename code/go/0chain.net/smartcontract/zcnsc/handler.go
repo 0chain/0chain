@@ -31,9 +31,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	zrh := NewZcnRestHandler(rh)
 	zcn := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
-		{URI: zcn + "/getAuthorizerNodes", Handler: zrh.getAuthorizerNodes},
-		{URI: zcn + "/getGlobalConfig", Handler: zrh.GetGlobalConfig},
-		{URI: zcn + "/getAuthorizer", Handler: zrh.getAuthorizer},
+		{URI: zcn + "/getAuthorizerNodes", Handler: common.UserRateLimit(zrh.getAuthorizerNodes)},
+		{URI: zcn + "/getGlobalConfig", Handler: common.UserRateLimit(zrh.GetGlobalConfig)},
+		{URI: zcn + "/getAuthorizer", Handler: common.UserRateLimit(zrh.getAuthorizer)},
 	}
 }
 
