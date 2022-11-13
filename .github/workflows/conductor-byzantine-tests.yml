@@ -44,7 +44,6 @@ jobs:
     - name: Docker Network Setup.
       run: |
         bash ./docker.local/bin/setup.network.sh || true
-        lsalda
 
 #     - name: Building Base Images
 #       run: |
