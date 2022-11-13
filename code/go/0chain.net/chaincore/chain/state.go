@@ -434,12 +434,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	for _, e := range ue {
-		if err = c.emitUserEvent(sctx, e); err != nil {
-			logging.Logger.Error("could not emit event", zap.Any("error", err),
-				zap.Any("transaction", txn.Hash),
-				zap.String("clientID", txn.ClientID))
-			return nil, err
-		}
+		c.emitUserEvent(sctx, e)
 	}
 
 	// commit transaction
@@ -578,13 +573,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, err
 	}
 
-	if err = c.emitSendTransferEvent(sctx, stateToUser(fromClient, fs, amount)); err != nil {
-		return nil, common.NewError("transfer_amount", "could not emit event")
-	}
-
-	if err = c.emitReceiveTransferEvent(sctx, stateToUser(toClient, ts, amount)); err != nil {
-		return nil, common.NewError("transfer_amount", "could not emit event")
-	}
+	c.emitSendTransferEvent(sctx, stateToUser(fromClient, fs, amount))
+	c.emitReceiveTransferEvent(sctx, stateToUser(toClient, ts, amount))
 
 	return []*event.User{stateToUser(fromClient, fs, -amount), stateToUser(toClient, ts, amount)}, nil
 }
@@ -650,6 +640,8 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return nil, common.NewError("mint_amount - insert", err.Error())
 	}
+
+	c.emitMintEvent(sctx, stateToUser(toClient, ts, amount))
 
 	return stateToUser(toClient, ts, amount), nil
 }
@@ -770,41 +762,41 @@ func stateToUser(clientID string, s *state.State, change currency.Coin) *event.U
 	}
 }
 
-func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) error {
+func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
 	if c.GetEventDb() == nil {
-		return nil
+		return
 	}
 
 	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, usr.UserID, usr,
 		func(events []event.Event, current event.Event) []event.Event {
 			return append([]event.Event{current}, events...)
 		})
-	return nil
+	return
 }
-func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) error {
+func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) {
 	if c.GetEventDb() == nil {
-		return nil
+		return
 	}
 
 	sc.EmitEvent(event.TypeStats, event.TagAddMint, usr.UserID, usr)
 
-	return nil
+	return
 }
-func (c *Chain) emitSendTransferEvent(sc bcstate.StateContextI, usr *event.User) error {
+func (c *Chain) emitSendTransferEvent(sc bcstate.StateContextI, usr *event.User) {
 	if c.GetEventDb() == nil {
-		return nil
+		return
 	}
 
 	sc.EmitEvent(event.TypeStats, event.TagSendTransfer, usr.UserID, usr)
 
-	return nil
+	return
 }
-func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.User) error {
+func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.User) {
 	if c.GetEventDb() == nil {
-		return nil
+		return
 	}
 
 	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, usr.UserID, usr)
 
-	return nil
+	return
 }
