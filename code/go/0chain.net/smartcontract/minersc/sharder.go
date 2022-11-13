@@ -98,7 +98,7 @@ func (msc *MinerSmartContract) AddSharder(
 	if (int(*currentShardersCount) >= maxShardersCount) {
 		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Reached maximum number of sharders")
 		return "", common.NewErrorf("add_sharder",
-			"failed to add new sharder: Reached maximum number of sharders", err)
+			"failed to add new sharder: Reached maximum number of sharders")
 	}
 	
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")

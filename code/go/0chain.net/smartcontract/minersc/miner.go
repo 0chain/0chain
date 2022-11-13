@@ -60,7 +60,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	if ((int)(*currentMinersCount) >= maxMinersCount) {
 		logging.Logger.Error("add_miner: Error in Adding a new miner: Reached maximum number of miners")
 		return "", common.NewErrorf("add_miner",
-			"failed to add new miner: Reached maximum number of miners", err)
+			"failed to add new miner: Reached maximum number of miners")
 	}
 
 	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
