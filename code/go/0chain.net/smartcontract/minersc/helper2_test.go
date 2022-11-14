@@ -43,8 +43,8 @@ func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock { retu
 func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appender ...cstate.Appender) {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
-		Type:        int(eventType),
-		Tag:         int(tag),
+		Type:        eventType,
+		Tag:         tag,
 		Index:       index,
 		Data:        data,
 	})
