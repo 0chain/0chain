@@ -87,8 +87,8 @@ func TestWriteMarker(t *testing.T) {
 	eventAddOrOverwriteWm := Event{
 		BlockNumber: eWriteMarker.BlockNumber,
 		TxHash:      eWriteMarker.TransactionID,
-		Type:        int(TypeStats),
-		Tag:         int(TagAddWriteMarker),
+		Type:        TypeStats,
+		Tag:         TagAddWriteMarker,
 		Data:        string(data),
 	}
 	events := []Event{eventAddOrOverwriteWm}

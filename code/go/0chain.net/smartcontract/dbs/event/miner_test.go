@@ -165,8 +165,8 @@ func TestMiners(t *testing.T) {
 	eventAddMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteMiner),
+		Type:        TypeStats,
+		Tag:         TagAddOrOverwriteMiner,
 		Data:        string(data),
 	}
 	events := []Event{eventAddMn}
@@ -186,8 +186,8 @@ func TestMiners(t *testing.T) {
 	eventAddOrOverwriteMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteMiner),
+		Type:        TypeStats,
+		Tag:         TagAddOrOverwriteMiner,
 		Data:        string(data),
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn}, 100, "hash", 10)
@@ -210,8 +210,8 @@ func TestMiners(t *testing.T) {
 	eventUpdateMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
-		Type:        int(TypeStats),
-		Tag:         int(TagUpdateMiner),
+		Type:        TypeStats,
+		Tag:         TagUpdateMiner,
 		Data:        string(data),
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateMn}, 100, "bhash", 10)
@@ -225,8 +225,8 @@ func TestMiners(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
-		Type:        int(TypeStats),
-		Tag:         int(TagDeleteMiner),
+		Type:        TypeStats,
+		Tag:         TagDeleteMiner,
 		Data:        mn.ID,
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "bhash", 10)

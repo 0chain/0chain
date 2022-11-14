@@ -32,7 +32,7 @@ func TestAddEvents(t *testing.T) {
 	eventDb.ProcessEvents(context.Background(), []Event{
 		{
 			TxHash: "somehash",
-			Type:   int(TypeError),
+			Type:   TypeError,
 			Data:   "someData",
 		},
 	}, 100, "hash", 10)
