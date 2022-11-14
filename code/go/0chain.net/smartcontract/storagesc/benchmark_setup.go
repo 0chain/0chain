@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -716,8 +717,9 @@ func AddMockWriteRedeems(
 			}
 			if viper.GetBool(sc.EventDbEnabled) {
 				numBlocks := viper.GetInt(sc.NumBlocks)
-				mockBlockNumber := int64((i + 1) % numBlocks)
-				txnNum := (i + 1) / numBlocks
+				txnPerBlock := viper.GetInt(sc.NumTransactionPerBlock)
+				mockBlockNumber := int64(i%(numBlocks-1)) + 1
+				txnNum := (i) % txnPerBlock
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
@@ -729,6 +731,7 @@ func AddMockWriteRedeems(
 					BlockNumber:   mockBlockNumber,
 				}
 				if out := eventDb.Store.Get().Create(&readMarker); out.Error != nil {
+					log.Println(fmt.Sprintf("error on block [%v] txn [%v]", mockBlockNumber, txnNum))
 					log.Fatal(out.Error)
 				}
 
