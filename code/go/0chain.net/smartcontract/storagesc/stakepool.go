@@ -150,24 +150,6 @@ func (sp *stakePool) stake() (stake currency.Coin, err error) {
 	return
 }
 
-//func (sp *stakePool) emitStakeEvent(providerType spenum.Provider, providerID string, staked currency.Coin, balances chainstate.StateContextI) {
-//	logging.Logger.Info("emitting stake event")
-//	data := dbs.DbUpdates{
-//		Id:      providerID,
-//		Updates: map[string]interface{}{},
-//	}
-//	switch providerType {
-//	case spenum.Blobber:
-//		data.Updates["total_stake"] = int64(staked)
-//		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerID, data)
-//	case spenum.Validator:
-//		data.Updates["stake"] = int64(staked)
-//		balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, providerID, data)
-//	default:
-//		logging.Logger.Error("invalid providerType in stakepool StakeEvent")
-//	}
-//}
-
 // empty a delegate pool if possible, call update before the empty
 func (sp *stakePool) empty(
 	sscID,
@@ -563,8 +545,6 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)
 	}
-	//todo merge problem
-	//sp.emitSaveEvent(spr.ProviderType, spr.ProviderID, balances)
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }

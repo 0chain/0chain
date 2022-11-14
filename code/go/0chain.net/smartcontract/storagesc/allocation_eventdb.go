@@ -135,7 +135,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}, nil
 }
 
-func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
+func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
 	alloc := &event.Allocation{
 		AllocationID:      sa.ID,
 		AllocationName:    sa.Name,
@@ -173,7 +173,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		alloc.LatestClosedChallengeTxn = sa.Stats.LastestClosedChallengeTxn
 	}
 
-	return alloc, nil
+	return alloc
 }
 
 func (sa *StorageAllocation) buildEventBlobberTerms() []event.AllocationBlobberTerm {
@@ -243,11 +243,7 @@ func (sa *StorageAllocation) buildStakeUpdateEvent() event.Allocation {
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
-	alloc, err := storageAllocationToAllocationTable(sa)
-	if err != nil {
-		return err
-	}
-
+	alloc := storageAllocationToAllocationTable(sa)
 	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil

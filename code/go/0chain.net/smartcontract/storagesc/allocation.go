@@ -1127,7 +1127,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get existing allocation: "+err.Error())
 	}
-	_, err = storageAllocationToAllocationTable(alloc)
+	storageAllocationToAllocationTable(alloc)
 	if err != nil {
 		return "", err
 	}
@@ -1740,7 +1740,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	i, err := prevBal.Int64()
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
-			"emitting pool change "+err.Error())
+			"failed to convert balance "+err.Error())
 	}
 	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 		Client:       alloc.Owner,

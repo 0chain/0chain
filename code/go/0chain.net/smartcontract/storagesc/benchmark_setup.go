@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -731,7 +730,6 @@ func AddMockWriteRedeems(
 					BlockNumber:   mockBlockNumber,
 				}
 				if out := eventDb.Store.Get().Create(&readMarker); out.Error != nil {
-					log.Println(fmt.Sprintf("error on block [%v] txn [%v]", mockBlockNumber, txnNum))
 					log.Fatal(out.Error)
 				}
 

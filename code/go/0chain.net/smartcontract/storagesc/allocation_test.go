@@ -1653,7 +1653,7 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 	tx.CreationDate = 1050
 
 	alloc, err = ssc.getAllocation(allocTxHash, balances)
-	_, err = storageAllocationToAllocationTable(alloc)
+	storageAllocationToAllocationTable(alloc)
 
 	require.NoError(t, err)
 
