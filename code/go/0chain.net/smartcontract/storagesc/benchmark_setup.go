@@ -420,7 +420,7 @@ func AddMockBlobbers(
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
-				log.Fatal("covert currency", err)
+				log.Fatal("convert currency", err)
 			}
 			_ = eventDb.Store.Get().Create(&blobberDb)
 			addMockBlobberSnapshots(blobberDb, eventDb)
