@@ -1544,11 +1544,11 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 //	 required: true
 //	 in: query
 //	 type: string
-//	+name: file-id
+//	+name: fileid
 //	 description: file id
 //	 required: true
 //	 in: query
-//	 type: int
+//	 type: integer
 //	+name: offset
 //	 description: offset
 //	 in: query
@@ -1570,7 +1570,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Request) {
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
-		fileIDStr    = r.URL.Query().Get("file-id")
+		fileIDStr    = r.URL.Query().Get("fileid")
 	)
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2218,7 +2218,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 //	400:
 //	500:
 func (srh *StorageRestHandler) getTransactionHashesByFilter(w http.ResponseWriter, r *http.Request) {
-	fileIDStr := r.URL.Query().Get("file-id")
+	fileIDStr := r.URL.Query().Get("fileid")
 	fileID, err := strconv.ParseInt(fileIDStr, 10, 64)
 	if err != nil || fileID <= 0 {
 		common.Respond(w, r, nil, common.NewErrBadRequest("Invalid file id."))
