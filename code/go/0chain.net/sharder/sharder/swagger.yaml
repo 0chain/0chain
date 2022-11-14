@@ -746,17 +746,6 @@ definitions:
         title: NodeType used in pools statistic.
         type: integer
         x-go-package: 0chain.net/chaincore/node
-    Nodes:
-        description: Nodes - a set of nodes for synching the state
-        properties:
-            id:
-                type: string
-                x-go-name: ID
-            version:
-                type: string
-                x-go-name: Version
-        type: object
-        x-go-package: 0chain.net/chaincore/state
     NullTime:
         description: |-
             NullTime implements the Scanner interface so
@@ -2048,46 +2037,10 @@ info:
     title: '0chain Api:'
     version: 0.0.1
 paths:
-    /_healthcheck:
-        get:
-            description: a handler to check health of the queries
-            operationId: healthcheck2
-            responses:
-                "200":
-                    description: ""
-                "404":
-                    description: ""
-    /v1/block/magic/get:
-        get:
-            description: a handler to respond to block queries
-            operationId: getmagicblock
-            responses:
-                "200":
-                    description: ""
-                "404":
-                    description: ""
-    /v1/block/state_change:
-        get:
-            operationId: statechange
-            responses:
-                "200":
-                    description: ""
-                "404":
-                    description: ""
-            summary: a handler to provide the state changes associated with a block.
     /v1/chain/get/stats:
         get:
             description: a handler to provide block statistics
             operationId: chainstatus
-            responses:
-                "200":
-                    description: ""
-                "404":
-                    description: ""
-    /v1/healthcheck:
-        get:
-            description: a handler to check health of the queries
-            operationId: healthcheck
             responses:
                 "200":
                     description: ""
@@ -3543,17 +3496,6 @@ paths:
             responses:
                 "200":
                     description: ""
-                "404":
-                    description: ""
-    /v1/state/nodes:
-        get:
-            description: a handler to return a list of state nodes
-            operationId: statenodes
-            responses:
-                "200":
-                    description: Nodes
-                    schema:
-                        $ref: '#/definitions/Nodes'
                 "404":
                     description: ""
 produces:

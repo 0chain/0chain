@@ -84,11 +84,8 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator | [get validator](#get-validator) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers | [getblobbers](#getblobbers) | Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity). |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge | [getchallenge](#getchallenge) |  |
-| GET | /v1/block/magic/get | [getmagicblock](#getmagicblock) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/globalPeriodicLimit | [global periodic limit](#global-periodic-limit) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings | [global settings](#global-settings) |  |
-| GET | /v1/healthcheck | [healthcheck](#healthcheck) |  |
-| GET | /_healthcheck | [healthcheck2](#healthcheck2) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker | [latestreadmarker](#latestreadmarker) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat | [node pool stat](#node-pool-stat) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat | [node stat](#node-stat) |  |
@@ -98,8 +95,6 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers | [readmarkers](#readmarkers) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search | [search](#search) |  |
 | GET | /v1/sharder/get/stats | [sharderstats](#sharderstats) |  |
-| GET | /v1/block/state_change | [statechange](#statechange) | a handler to provide the state changes associated with a block. |
-| GET | /v1/state/nodes | [statenodes](#statenodes) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config | [storage config](#storage-config) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data | [total stored data](#total-stored-data) | Gets the total data stored across all blobbers.
 Each change to files results in the blobber sending a WriteMarker to 0chain.
@@ -2199,33 +2194,6 @@ Status: Internal Server Error
 
 ###### <span id="getchallenge-500-schema"></span> Schema
 
-### <span id="getmagicblock"></span> getmagicblock (*getmagicblock*)
-
-```
-GET /v1/block/magic/get
-```
-
-a handler to respond to block queries
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#getmagicblock-200) | OK |  |  | [schema](#getmagicblock-200-schema) |
-| [404](#getmagicblock-404) | Not Found |  |  | [schema](#getmagicblock-404-schema) |
-
-#### Responses
-
-
-##### <span id="getmagicblock-200"></span> 200
-Status: OK
-
-###### <span id="getmagicblock-200-schema"></span> Schema
-
-##### <span id="getmagicblock-404"></span> 404
-Status: Not Found
-
-###### <span id="getmagicblock-404-schema"></span> Schema
-
 ### <span id="global-periodic-limit"></span> global periodic limit (*globalPeriodicLimit*)
 
 ```
@@ -2287,60 +2255,6 @@ Status: OK
 Status: Bad Request
 
 ###### <span id="global-settings-400-schema"></span> Schema
-
-### <span id="healthcheck"></span> healthcheck (*healthcheck*)
-
-```
-GET /v1/healthcheck
-```
-
-a handler to check health of the queries
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#healthcheck-200) | OK |  |  | [schema](#healthcheck-200-schema) |
-| [404](#healthcheck-404) | Not Found |  |  | [schema](#healthcheck-404-schema) |
-
-#### Responses
-
-
-##### <span id="healthcheck-200"></span> 200
-Status: OK
-
-###### <span id="healthcheck-200-schema"></span> Schema
-
-##### <span id="healthcheck-404"></span> 404
-Status: Not Found
-
-###### <span id="healthcheck-404-schema"></span> Schema
-
-### <span id="healthcheck2"></span> healthcheck2 (*healthcheck2*)
-
-```
-GET /_healthcheck
-```
-
-a handler to check health of the queries
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#healthcheck2-200) | OK |  |  | [schema](#healthcheck2-200-schema) |
-| [404](#healthcheck2-404) | Not Found |  |  | [schema](#healthcheck2-404-schema) |
-
-#### Responses
-
-
-##### <span id="healthcheck2-200"></span> 200
-Status: OK
-
-###### <span id="healthcheck2-200-schema"></span> Schema
-
-##### <span id="healthcheck2-404"></span> 404
-Status: Not Found
-
-###### <span id="healthcheck2-404-schema"></span> Schema
 
 ### <span id="latestreadmarker"></span> latestreadmarker (*latestreadmarker*)
 
@@ -2678,62 +2592,6 @@ Status: OK
 Status: Not Found
 
 ###### <span id="sharderstats-404-schema"></span> Schema
-
-### <span id="statechange"></span> a handler to provide the state changes associated with a block. (*statechange*)
-
-```
-GET /v1/block/state_change
-```
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#statechange-200) | OK |  |  | [schema](#statechange-200-schema) |
-| [404](#statechange-404) | Not Found |  |  | [schema](#statechange-404-schema) |
-
-#### Responses
-
-
-##### <span id="statechange-200"></span> 200
-Status: OK
-
-###### <span id="statechange-200-schema"></span> Schema
-
-##### <span id="statechange-404"></span> 404
-Status: Not Found
-
-###### <span id="statechange-404-schema"></span> Schema
-
-### <span id="statenodes"></span> statenodes (*statenodes*)
-
-```
-GET /v1/state/nodes
-```
-
-a handler to return a list of state nodes
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#statenodes-200) | OK | Nodes |  | [schema](#statenodes-200-schema) |
-| [404](#statenodes-404) | Not Found |  |  | [schema](#statenodes-404-schema) |
-
-#### Responses
-
-
-##### <span id="statenodes-200"></span> 200 - Nodes
-Status: OK
-
-###### <span id="statenodes-200-schema"></span> Schema
-   
-  
-
-[Nodes](#nodes)
-
-##### <span id="statenodes-404"></span> 404
-Status: Not Found
-
-###### <span id="statenodes-404-schema"></span> Schema
 
 ### <span id="storage-config"></span> storage config (*storage-config*)
 
@@ -3645,25 +3503,6 @@ gorm.Model
 | Name | Type | Go type | Default | Description | Example |
 |------|------|---------| ------- |-------------|---------|
 | NodeType | int8 (formatted integer)| int8 | |  |  |
-
-
-
-### <span id="nodes"></span> Nodes
-
-
-> Nodes - a set of nodes for synching the state
-  
-
-
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| ID | string| `string` |  | |  |  |
-| Version | string| `string` |  | |  |  |
 
 
 
