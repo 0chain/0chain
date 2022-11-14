@@ -386,10 +386,7 @@ func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateCon
 	}
 	conf.Minted = minted
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 //

@@ -33,7 +33,7 @@ func (ssc *MinerSmartContract) collectReward(
 			case spenum.Sharder:
 				provider, err = getSharderNode(crr.ProviderId, balances)
 			default:
-				err = fmt.Errorf("unsupported provider type %s", crr.ProviderType.String())
+				err = fmt.Errorf("unsupported provider type %s", crr.ProviderType)
 			}
 			if err != nil {
 				return 0, err
@@ -53,6 +53,9 @@ func (ssc *MinerSmartContract) collectReward(
 		},
 		balances,
 	)
+	if err != nil {
+		return "", err
+	}
 	if minted > 0 {
 		gn.Minted += minted
 		if !gn.canMint() {
@@ -64,5 +67,5 @@ func (ssc *MinerSmartContract) collectReward(
 				"saving global node: %v", err)
 		}
 	}
-	return "", err
+	return "", nil
 }

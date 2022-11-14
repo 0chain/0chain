@@ -110,12 +110,6 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		return nil
 	}
 
-	for i := range spus {
-		if err := edb.incrementReward(spus[i].ProviderId, spus[i].Reward); err != nil {
-			return err
-		}
-	}
-
 	ts := time.Now()
 	rewards, err := aggregateProviderRewards(spus)
 	if err != nil {
@@ -136,6 +130,12 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}()
 
+	if len(rewards.rewards) > 0 {
+		if err := edb.rewardProviders(rewards.rewards); err != nil {
+			return fmt.Errorf("could not reward providers: %v", err)
+		}
+	}
+
 	rpdu := time.Since(ts)
 	if rpdu.Milliseconds() > 50 {
 		logging.Logger.Debug("event db - reward providers slow",
@@ -145,7 +145,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 
 	if len(rewards.delegatePools) > 0 {
 		if err := rewardProviderDelegates(edb, rewards.delegatePools); err != nil {
-			return fmt.Errorf("could not rewards delegate pool: %v", err)
+			return fmt.Errorf("could not reward delegate pool: %v", err)
 		}
 	}
 
@@ -164,7 +164,6 @@ func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T)
 	}).Create(&providers).Error
 }
 
-/*
 func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
 	vs := map[string]interface{}{
 		"rewards":       gorm.Expr("provider_rewards.rewards + excluded.rewards"),
@@ -176,7 +175,7 @@ func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
 		DoUpdates: clause.Assignments(vs),
 	}).Create(rewards).Error
 }
-*/
+
 func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
 	vs := map[string]interface{}{
 		"reward":        gorm.Expr("delegate_pools.reward + excluded.reward"),

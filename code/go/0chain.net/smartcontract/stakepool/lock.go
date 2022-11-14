@@ -21,7 +21,6 @@ func CheckClientBalance(
 	toLock currency.Coin,
 	balances cstate.StateContextI,
 ) (err error) {
-
 	var balance currency.Coin
 	balance, err = balances.GetClientBalance(clientId)
 
@@ -47,7 +46,6 @@ func (sp *StakePool) LockPool(
 	status spenum.PoolStatus,
 	balances cstate.StateContextI,
 ) error {
-	var err error
 	if err := CheckClientBalance(txn.ClientID, txn.Value, balances); err != nil {
 		return err
 	}
@@ -79,6 +77,7 @@ func (sp *StakePool) LockPool(
 		}
 
 		var dpUpdate = newDelegatePoolUpdate(txn.ClientID, providerId, providerType)
+		var err error
 		dpUpdate.Updates["balance"], err = currency.AddCoin(dp.Balance, txn.Value)
 		if err != nil {
 			return err

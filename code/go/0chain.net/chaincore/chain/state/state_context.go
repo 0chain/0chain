@@ -263,8 +263,8 @@ func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag,
 	e := event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
-		Type:        int(eventType),
-		Tag:         int(tag),
+		Type:        eventType,
+		Tag:         tag,
 		Index:       index,
 		Data:        data,
 	}
@@ -280,7 +280,7 @@ func (sc *StateContext) EmitError(err error) {
 		{
 			BlockNumber: sc.block.Round,
 			TxHash:      sc.txn.Hash,
-			Type:        int(event.TypeError),
+			Type:        event.TypeError,
 			Data:        err.Error(),
 		},
 	}
