@@ -19,7 +19,6 @@ func (t EventType) String() string {
 	if int(t) < len(TagString) && int(t) >= 0 {
 		return TagString[t]
 	}
-
 	return "unknown tag"
 }
 
