@@ -363,6 +363,10 @@ func withBlobberChallengesMerged() eventMergeMiddleware {
 	})
 }
 
+func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagAddChallengeToBlobber, withBlobberChallengesMerged())
+}
+
 func (edb *EventDb) addBlobberChallenges(blobbers []Blobber) error {
 	logging.Logger.Debug("adding blobber challenges")
 
