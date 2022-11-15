@@ -27,7 +27,6 @@ jobs:
       id: get_branch
       run: |
         BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        BRANCH=add-blobber-test-send-wrong-data
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 

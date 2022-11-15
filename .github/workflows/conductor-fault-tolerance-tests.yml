@@ -3,7 +3,7 @@ name: CONDUCTOR FAULT TOLERANCE TESTS
 on:
   schedule:
     # Runs everyday at 01:00 am
-    - cron: '0 5 * * * '
+    - cron: '0 7 * * * '
   workflow_dispatch:
 
 env:
