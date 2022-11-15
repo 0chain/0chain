@@ -363,8 +363,8 @@ func withBlobberChallengesMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagAddChallengeToBlobber, withBlobberChallengesMerged())
+func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagAddChallengeToBlobber, withBlobberChallengesMerged())
 }
 
 func (edb *EventDb) addBlobberChallenges(blobbers []Blobber) error {

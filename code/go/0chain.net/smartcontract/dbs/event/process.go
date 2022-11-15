@@ -305,12 +305,29 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 }
 
 func (edb *EventDb) processEvent(event Event, tags []int, round int64, block string, blockSize int) ([]int, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logging.Logger.Error("piers Recovered in processEvent",
+				zap.Any("r", r),
+				zap.Any("event", event))
+		}
+	}()
 	var err error = nil
 	switch EventType(event.Type) {
 	case TypeStats:
 		tags = append(tags, event.Tag)
 		ts := time.Now()
 		err = edb.addStat(event)
+		if err != nil {
+			logging.Logger.Error("piers addStat typeStats error",
+				zap.Int64("round", round),
+				zap.String("block", block),
+				zap.Int("block size", blockSize),
+				zap.Any("event type", event.Type),
+				zap.Any("event tag", event.Tag),
+				zap.Error(err),
+			)
+		}
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addStat",
@@ -325,6 +342,16 @@ func (edb *EventDb) processEvent(event Event, tags []int, round int64, block str
 		tags = append(tags, event.Tag)
 		ts := time.Now()
 		err = edb.addStat(event)
+		if err != nil {
+			logging.Logger.Error("piers addStat TypeChain error",
+				zap.Int64("round", round),
+				zap.String("block", block),
+				zap.Int("block size", blockSize),
+				zap.Any("event type", event.Type),
+				zap.Any("event tag", event.Tag),
+				zap.Error(err),
+			)
+		}
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addchain",
@@ -382,7 +409,19 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	return &gs.Snapshot, nil
 }
 
-func (edb *EventDb) addStat(event Event) error {
+func (edb *EventDb) addStat(event Event) (err error) {
+	defer func() {
+		if err != nil {
+			logging.Logger.Info("piers addStat error", zap.Error(err))
+		}
+	}()
+	defer func() {
+		if r := recover(); r != nil {
+			logging.Logger.Error("piers Recovered in addStat",
+				zap.Any("r", r),
+				zap.Any("event", event))
+		}
+	}()
 	switch EventTag(event.Tag) {
 	// blobber
 	case TagAddBlobber:
