@@ -1,0 +1,133 @@
+name: "0chain Build & Publish Docker Image"
+
+on:
+  workflow_dispatch:
+    inputs:
+      latest_tag:
+        description: 'type yes for building latest / staging tag'
+        default: 'no'
+        required: true
+
+env:
+  ZCHAIN_BUILDBASE: zchain_build_base
+  ZCHAIN_BUILDRUN: zchain_run_base
+  ZCHAIN_SHARDER_REGISTRY: ${{ secrets.ZCHAIN_SHARDER_REGISTRY }}
+  ZCHAIN_MINER_REGISTRY: ${{ secrets.ZCHAIN_MINER_REGISTRY }}
+
+jobs:
+  miner:
+    runs-on: [self-hosted, build]
+    steps:
+
+    - name: Set docker image tag
+      id: get_info
+      run: |
+        if [[ "${{github.ref}}" == refs/pull/* ]]; then
+          tag=${GITHUB_REF/\/merge/}
+          echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+        else
+          echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        fi
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v2
+
+    - name: Setup go 1.18
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18' # The Go version to download (if necessary) and use.
+
+    - name: Build base images
+      run: |
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.ZCHAIN_DOCKERHUB_USERNAME }}
+        password: ${{ secrets.ZCHAIN_DOCKERHUB_PASSWORD }}
+
+    - name: Build & Push
+      run: |
+        make install-mockery
+        make build-mocks
+
+        sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
+
+
+        docker tag miner:latest ${ZCHAIN_MINER_REGISTRY}:$TAG
+        docker push ${ZCHAIN_MINER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+        docker tag miner:latest ${ZCHAIN_MINER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${ZCHAIN_MINER_REGISTRY}:$TAG-$SHORT_SHA
+
+      env:
+        DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
+
+    - name: Push latest
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
+      run: |
+          docker push $ZCHAIN_MINER_REGISTRY:latest
+
+
+  sharder:
+    runs-on: [self-hosted, build]
+    steps:
+
+    - name: Set docker image tag
+      id: get_info
+      run: |
+        if [[ "${{github.ref}}" == refs/pull/* ]]; then
+          tag=${GITHUB_REF/\/merge/}
+          echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+        else
+          echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        fi
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v1
+
+    - name: Setup go 1.18
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18' # The Go version to download (if necessary) and use.
+
+
+    - name: Build base images
+      run: |
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.ZCHAIN_DOCKERHUB_USERNAME }}
+        password: ${{ secrets.ZCHAIN_DOCKERHUB_PASSWORD }}
+
+    - name: generate swagger
+      run: docker.local/bin/test.swagger.sh
+
+    - name: Build & Push
+      run: |
+        make install-mockery
+        make build-mocks
+
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
+
+        docker tag sharder:latest ${ZCHAIN_SHARDER_REGISTRY}:$TAG
+        docker push ${ZCHAIN_SHARDER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+        docker tag sharder:latest ${ZCHAIN_SHARDER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${ZCHAIN_SHARDER_REGISTRY}:$TAG-$SHORT_SHA
+
+
+    - name: Push latest
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
+      run: |
+          docker push $ZCHAIN_SHARDER_REGISTRY:latest
