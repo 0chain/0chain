@@ -117,6 +117,9 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: generate swagger
+      run: docker.local/bin/test.swagger.sh
+
     - name: Build & Push
       run: |
         make install-mockery
