@@ -368,8 +368,6 @@ func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
 }
 
 func (edb *EventDb) addBlobberChallenges(blobbers []Blobber) error {
-	logging.Logger.Debug("adding blobber challenges")
-
 	vs := map[string]interface{}{
 		"open_challenges": gorm.Expr("blobbers.open_challenges + excluded.open_challenges"),
 	}

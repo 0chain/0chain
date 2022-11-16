@@ -75,21 +75,21 @@ const (
 	TagAddOrUpdateChallengePool            // 40
 	TagUpdateAllocationStat                // 41
 	TagUpdateBlobberStat                   // 42
-	TagSendTransfer
-	TagReceiveTransfer
-	TagLockStakePool
+	TagSendTransfer                        // 43
+	TagReceiveTransfer                     // 44
+	TagLockStakePool                       // 45
 	TagUnlockStakePool
 	TagLockWritePool
-	TagUnlockWritePool
+	TagUnlockWritePool //48
 	TagLockReadPool
-	TagUnlockReadPool
+	TagUnlockReadPool //50
 	TagToChallengePool
-	TagFromChallengePool
+	TagFromChallengePool //52
 	TagAddMint
-	TagBurn
-	TagAllocValueChange
-	TagAllocBlobberValueChange
-	TagAddChallengeToBlobber
+	TagBurn                    //54
+	TagAllocValueChange        //55
+	TagAllocBlobberValueChange //56
+	TagAddChallengeToBlobber   //57
 	TagUpdateValidatorStakeTotal
 	NumberOfTags
 )
