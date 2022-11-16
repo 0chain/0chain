@@ -12,7 +12,6 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
-	github.com/hashicorp/golang-lru v0.5.4
 	github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
