@@ -1371,7 +1371,9 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, txn.ClientID)
 	if !isValid(err) {
-		return nil, err
+		// put txn to pool if the miner has 'node not found', we should not ignore the txn because
+		// of the 'error' of the miner itself.
+		return transaction.PutTransaction(ctx, txn)
 	}
 	nonce := int64(0)
 	if s != nil {

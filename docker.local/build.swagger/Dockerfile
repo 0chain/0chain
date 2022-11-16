@@ -1,5 +1,3 @@
-
-
 FROM zchain_build_base as cross
 
 ARG commit_hash="dev"

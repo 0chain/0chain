@@ -17,13 +17,9 @@ import (
 	"0chain.net/core/common"
 )
 
-const (
-	getBlockV1Pattern = "/v1/block/get"
-)
-
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
-		getBlockV1Pattern:                  common.ToJSONResponse(BlockHandler),
+		"/v1/block/get":                    common.ToJSONResponse(BlockHandler),
 		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
 		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
 		"/v1/healthcheck":                  common.ToJSONResponse(HealthcheckHandler),
@@ -31,9 +27,8 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		"/_chain_stats":                    ChainStatsWriter,
 		"/_healthcheck":                    HealthCheckWriter,
 		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
-
-		"/v1/state/nodes":        common.ToJSONResponse(chain.StateNodesHandler),
-		"/v1/block/state_change": common.ToJSONResponse(BlockStateChangeHandler),
+		"/v1/state/nodes":                  common.ToJSONResponse(chain.StateNodesHandler),
+		"/v1/block/state_change":           common.ToJSONResponse(BlockStateChangeHandler),
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))
@@ -146,13 +141,19 @@ func MagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error
 	return b, nil
 }
 
-/*ChainStatsHandler - a handler to provide block statistics */
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetSharderChain().Chain
 	return diagnostics.GetStatistics(c, chain.SteadyStateFinalizationTimer, 1000000.0), nil
 }
 
 /*ChainStatsWriter - a handler to provide block statistics */
+// swagger:route GET /v1/chain/get/stats chainstatus
+// a handler to provide block statistics
+//
+// responses:
+//  200:
+//  404:
+
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	sc := GetSharderChain()
 	c := sc.Chain
@@ -239,6 +240,14 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "</table>")
 }
+
+//
+// swagger:route GET /v1/sharder/get/stats sharderstats
+// a handler to get sharder stats
+//
+// responses:
+//  200:
+//  404:
 
 func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
