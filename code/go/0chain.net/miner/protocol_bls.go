@@ -352,16 +352,17 @@ func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG)
 func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Round, dkg *bls.DKG) {
 	if err := mc.verifyCachedVRFSharesWorker.Run(ctx, func() error {
 		var (
-			vrfShares    = r.vrfSharesCache.getAll()
-			blsThreshold = dkg.T
-			roundTC      = r.GetTimeoutCount()
+			vrfShares     = r.vrfSharesCache.getAll()
+			blsThreshold  = dkg.T
+			roundTC       = r.GetTimeoutCount()
+			removeVRFKeys = make(map[string]struct{}, len(vrfShares))
 		)
 
 		if len(vrfShares) == 0 {
 			return nil
 		}
 
-		defer r.vrfSharesCache.clean(roundTC)
+		defer r.vrfSharesCache.clean(removeVRFKeys)
 
 		for _, vrfs := range vrfShares {
 			if vrfs.GetRoundTimeoutCount() != roundTC {
@@ -373,6 +374,7 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 			}
 
 			r.AddVRFShare(vrfs, blsThreshold)
+			removeVRFKeys[vrfs.GetParty().GetKey()] = struct{}{}
 		}
 		return nil
 	}); err != nil {
