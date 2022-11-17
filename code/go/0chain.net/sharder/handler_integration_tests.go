@@ -19,8 +19,8 @@ import (
 func SetupHandlers() {
 	handlers := handlersMap()
 
-	handlers[getBlockV1Pattern] = chain.BlockStats(
-		handlers[getBlockV1Pattern],
+	handlers[chain.GetBlockV1Pattern] = chain.BlockStats(
+		handlers[chain.GetBlockV1Pattern],
 		chain.BlockStatsConfigurator{
 			HashKey: "block",
 		},
