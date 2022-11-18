@@ -526,6 +526,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 				if v.BlocksSize < selectedVolume.BlocksSize {
 					selectedVolume = v
 					selectedIndex = i
+					break
 				}
 			}
 
@@ -574,6 +575,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 				if v.BlocksCount < selectedVolume.BlocksCount {
 					selectedVolume = v
 					selectedIndex = i
+					break
 				}
 			}
 
