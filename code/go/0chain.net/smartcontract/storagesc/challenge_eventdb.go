@@ -56,6 +56,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 }
 
 func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
 		AllocationID:    ch.AllocationID,
 		OpenChallenges:  int64(1 - expiredN), // increase one challenge and remove expired ones
