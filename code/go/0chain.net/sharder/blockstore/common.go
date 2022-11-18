@@ -27,7 +27,8 @@ const (
 
 	//BlockLimit Limit the number of blocks to store in any tier
 	BlockLimitNumber = 10000000000 // 10^10
-	GB               = 1024 * 1024 * 1024
+	MB               = 1024 * 1024
+	GB               = 1024 * MB
 )
 
 //Common errors
