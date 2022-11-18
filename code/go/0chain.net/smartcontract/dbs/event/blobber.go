@@ -407,16 +407,17 @@ func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error
 	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(deltas)).Scan(&Blobber{}).Error
 }
 
+// ref https://www.postgresql.org/docs/9.1/sql-values.html
 func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
 	if len(deltas) == 0 {
 		return ""
 	}
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
-	sql += "  challenges_completed = challenges_completed + v.completed\n"
+	sql += "  challenges_completed = challenges_completed + v.completed,\n"
 	sql += "  challenges_passed = challenges_passed + v.passed\n"
-	sql += "  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n"
-	sql += "FROM ( VALUES\n"
+	//sql += ",  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n" todo
+	sql += "FROM ( VALUES "
 	first := true
 	for _, delta := range deltas {
 		if first {
@@ -426,7 +427,7 @@ func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
 		}
 		sql += fmt.Sprintf("('%s', %d, %d)", delta.Id, delta.PassedDelta, delta.CompletedDelta)
 	}
-	sql += ")"
+	sql += ")\n"
 	sql += "AS v (id, passed, completed)\n"
 	sql += "WHERE\n"
 	sql += "blobbers.blobber_id = v.id"
