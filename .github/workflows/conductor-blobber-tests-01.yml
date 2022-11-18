@@ -9,7 +9,7 @@ on:
 jobs:
   CONDUCTOR_BLOBBERS_01_TESTS:
     name: CONDUCTOR-BLOBBERS-01-TESTS
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [self-hosted, tests-suite]
 
     steps:
     - name: Go 1.18 setup.
