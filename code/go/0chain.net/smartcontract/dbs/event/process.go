@@ -86,10 +86,10 @@ const (
 	TagToChallengePool
 	TagFromChallengePool //52
 	TagAddMint
-	TagBurn                    //54
-	TagAllocValueChange        //55
-	TagAllocBlobberValueChange //56
-	TagAddChallengeToBlobber   //57
+	TagBurn                        //54
+	TagAllocValueChange            //55
+	TagAllocBlobberValueChange     //56
+	TagUpdateBlobberOpenChallenges //57
 	TagUpdateValidatorStakeTotal
 	NumberOfTags
 )
@@ -647,13 +647,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.addChallengesToAllocations(*as)
-	case TagAddChallengeToBlobber:
-		b, ok := fromEvent[[]Blobber](event.Data)
+	case TagUpdateBlobberOpenChallenges:
+		updates, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		return edb.addBlobberChallenges(*b)
+		return edb.updateOpenBlobberChallenges(*updates)
 	case TagUpdateChallenge:
 		chs, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
@@ -661,7 +661,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
-		bs, ok := fromEvent[[]Blobber](event.Data)
+		bs, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}

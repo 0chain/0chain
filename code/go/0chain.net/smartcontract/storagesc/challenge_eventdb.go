@@ -61,12 +61,10 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstat
 		OpenChallenges:  int64(1 - expiredN), // increase one challenge and remove expired ones
 		TotalChallenges: int64(1),
 	})
-
-	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToBlobber, ch.BlobberID, event.Blobber{
-		BlobberID:      ch.BlobberID,
-		OpenChallenges: uint64(1 - expiredN),
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, ch.BlobberID, event.ChallengeStatsDeltas{
+		Id:        ch.BlobberID,
+		OpenDelta: int64(1 - expiredN),
 	})
-
 	logging.Logger.Debug("emitted add challenge")
 }
 
@@ -100,11 +98,14 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.AllocationID, a)
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, event.ChallengeStatsDeltas{
+		Id:             sc.BlobberID,
+		CompletedDelta: int64(b.ChallengesCompleted),
+		PassedDelta:    int64(b.ChallengesPassed),
+	})
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
-
 	var chs []*StorageChallengeResponse
 	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from,
 		common.Timestamp(time.Now().Unix()), cct, limit)

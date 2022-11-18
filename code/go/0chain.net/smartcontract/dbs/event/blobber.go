@@ -350,43 +350,86 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withBlobberChallengesMerged())
+type ChallengeStatsDeltas struct {
+	Id             string `json:"id"`
+	PassedDelta    int64  `json:"passed_delta"`
+	CompletedDelta int64  `json:"completed_delta"`
+	OpenDelta      int64  `json:"open_delta"`
+}
+
+func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
+	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withBlobberChallengesMerged())
 }
 
 func withBlobberChallengesMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		a.ChallengesCompleted += b.ChallengesCompleted
-		a.ChallengesPassed += b.ChallengesPassed
-		a.OpenChallenges += b.OpenChallenges
+	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
+		a.CompletedDelta += b.CompletedDelta
+		a.PassedDelta += b.PassedDelta
+		a.OpenDelta += b.OpenDelta
 		return a, nil
 	})
 }
 
-func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagAddChallengeToBlobber, withBlobberChallengesMerged())
+func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
+	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withBlobberChallengesMerged())
 }
 
-func (edb *EventDb) addBlobberChallenges(blobbers []Blobber) error {
-	vs := map[string]interface{}{
-		"open_challenges": gorm.Expr("blobbers.open_challenges + excluded.open_challenges"),
-	}
-
-	return edb.Store.Get().Model(&Blobber{}).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "blobber_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(blobbers).Error
+func (edb *EventDb) updateOpenBlobberChallenges(deltas []ChallengeStatsDeltas) error {
+	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(deltas)).Scan(&Blobber{}).Error
 }
 
-func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
-	vs := map[string]interface{}{
-		"challenges_completed": gorm.Expr("blobbers.challenges_completed + excluded.challenges_completed"),
-		"challenges_passed":    gorm.Expr("blobbers.challenges_passed + excluded.challenges_passed"),
-		"rank_metric":          gorm.Expr("((blobbers.challenges_passed + excluded.challenges_passed)::FLOAT / (blobbers.challenges_completed + excluded.challenges_completed)::FLOAT)::DECIMAL(10,3)"),
+func sqlUpdateOpenChallenges(deltas []ChallengeStatsDeltas) string {
+	if len(deltas) == 0 {
+		return ""
 	}
+	sql := "UPDATE blobbers \n"
+	sql += "SET "
+	sql += "  open_challenges = open_challenges + v.open\n"
+	sql += "FROM ( VALUES"
+	first := true
+	for _, delta := range deltas {
+		if first {
+			first = false
+		} else {
+			sql += ","
+		}
+		sql += fmt.Sprintf("('%s', %d)", delta.Id, delta.OpenDelta)
+	}
+	sql += "  )\n"
+	sql += "AS v (id, open)\n"
+	sql += "WHERE\n"
+	sql += "  blobbers.blobber_id = v.id"
 
-	return edb.Store.Get().Model(&Blobber{}).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "blobber_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(blobbers).Error
+	return sql
+}
+
+func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error {
+	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(deltas)).Scan(&Blobber{}).Error
+}
+
+func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
+	if len(deltas) == 0 {
+		return ""
+	}
+	sql := "UPDATE blobbers \n"
+	sql += "SET "
+	sql += "  challenges_completed = challenges_completed + v.completed\n"
+	sql += "  challenges_passed = challenges_passed + v.passed\n"
+	sql += "  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n"
+	sql += "FROM ( VALUES\n"
+	first := true
+	for _, delta := range deltas {
+		if first {
+			first = false
+		} else {
+			sql += ",\n"
+		}
+		sql += fmt.Sprintf("('%s', %d, %d)", delta.Id, delta.PassedDelta, delta.CompletedDelta)
+	}
+	sql += ")"
+	sql += "AS v (id, passed, completed)\n"
+	sql += "WHERE\n"
+	sql += "blobbers.blobber_id = v.id"
+
+	return sql
 }
