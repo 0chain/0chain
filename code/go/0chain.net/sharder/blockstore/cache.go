@@ -227,6 +227,10 @@ func initCache(viper *viper.Viper) cacher {
 		panic(err)
 	}
 
+	if size < 500*MB {
+		panic("cache size cannot be lesser than 500MB")
+	}
+
 	var bufferSize int
 	bufferSizeStr := viper.GetString("buffer_size")
 	if bufferSizeStr == "" {
