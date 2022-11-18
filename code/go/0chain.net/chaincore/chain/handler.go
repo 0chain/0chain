@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	getBlockV1Pattern = "/v1/block/get"
+	GetBlockV1Pattern = "/v1/block/get"
 )
 
 // chainhandlersMap returns routes of associated with chain
@@ -125,7 +125,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		),
 	}
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		m[getBlockV1Pattern] = common.UserRateLimit(
+		m[GetBlockV1Pattern] = common.UserRateLimit(
 			common.ToJSONResponse(
 				GetBlockHandler,
 			),
