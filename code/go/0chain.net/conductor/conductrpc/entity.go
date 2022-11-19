@@ -159,6 +159,13 @@ func (e *Entity) AddBlobber(add *AddBlobberEvent) (err error) {
 	return e.client.addBlobber(add)
 }
 
+func (e *Entity) AddAuthorizer(add *AddAuthorizerEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.addAuthorizer(add)
+}
+
 func (e *Entity) SharderKeep(sk *SharderKeepEvent) (err error) {
 	if !e.isMonitor() {
 		return // not a monitor

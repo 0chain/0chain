@@ -21,8 +21,8 @@ done
 
 docker $cmd -f $dockerfile . -t swagger_test
 
-docker run $platform $INTERACTIVE -v $(pwd)/code:/codecov  swagger_test bash -c "\
-  cd 0chain.net/sharder/sharder;\
+docker run $platform $INTERACTIVE -v $(pwd)/:/codecov  swagger_test bash -c "\
+  cd /codecov/code/go/0chain.net/sharder/sharder;\
   swagger generate spec -w  .  -m  -o swagger.yaml; \
   swagger generate markdown  -f swagger.yaml --output=swagger.md; \
 "

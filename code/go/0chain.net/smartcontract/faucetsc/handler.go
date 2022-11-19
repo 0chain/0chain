@@ -37,10 +37,10 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	frh := NewFaucetscRestHandler(rh)
 	faucet := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
-		rest.MakeEndpoint(faucet+"/personalPeriodicLimit", frh.getPersonalPeriodicLimit),
-		rest.MakeEndpoint(faucet+"/globalPeriodicLimit", frh.getGlobalPeriodicLimit),
-		rest.MakeEndpoint(faucet+"/pourAmount", frh.getPourAmount),
-		rest.MakeEndpoint(faucet+"/faucet-config", frh.getConfig),
+		rest.MakeEndpoint(faucet+"/personalPeriodicLimit", common.UserRateLimit(frh.getPersonalPeriodicLimit)),
+		rest.MakeEndpoint(faucet+"/globalPeriodicLimit", common.UserRateLimit(frh.getGlobalPeriodicLimit)),
+		rest.MakeEndpoint(faucet+"/pourAmount", common.UserRateLimit(frh.getPourAmount)),
+		rest.MakeEndpoint(faucet+"/faucet-config", common.UserRateLimit(frh.getConfig)),
 	}
 }
 

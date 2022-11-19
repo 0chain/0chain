@@ -170,3 +170,15 @@ func (tb *testBalances) SetConfig(smartcontract string, config cstate.SCConfig) 
 	tb.config = &config
 	return nil
 }
+
+func (tb *testBalances) GetClientState(clientID datastore.Key) (*state.State, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (util.Key, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) GetMissingNodesPath() util.Path {
+	return nil
+}
