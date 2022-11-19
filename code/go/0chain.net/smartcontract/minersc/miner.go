@@ -49,19 +49,15 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	defer lockAllMiners.Unlock()
 
 	// Check global max_n (max miners count) first
-	currentMinersCount, err := getMinerListLength(balances)
-	if err != nil {
-		logging.Logger.Error("add_miner: Error in getting miners list length from the DB",
-			zap.Error(err))
+	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
+	fmt.Println(magicBlockMiners);
+	
+	if magicBlockMiners.HasNode(newMiner.ID) == false {
+		logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
 		return "", common.NewErrorf("add_miner",
-			"failed to get miner list length: %v", err)		
+			"failed to add new miner: Not in magic block")
 	}
-	maxMinersCount := gn.MaxN
-	if ((int)(*currentMinersCount) >= maxMinersCount) {
-		logging.Logger.Error("add_miner: Error in Adding a new miner: Reached maximum number of miners")
-		return "", common.NewErrorf("add_miner",
-			"failed to add new miner: Reached maximum number of miners")
-	}
+	
 
 	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
