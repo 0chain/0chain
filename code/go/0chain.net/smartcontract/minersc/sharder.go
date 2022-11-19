@@ -86,19 +86,11 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder", "getting all sharders list: %v", err)
 	}
 
-	// Check global max_s (max sharders count) first
-	currentShardersCount, err := getSharderListLength(balances)
-	if err != nil {
-		logging.Logger.Error("add_sharder: Error in getting sharders list length from the DB",
-			zap.Error(err))
-		return "", common.NewErrorf("add_miner",
-			"failed to get sharder list length: %v", err)		
-	}
-	maxShardersCount := gn.MaxS
-	if (int(*currentShardersCount) >= maxShardersCount) {
-		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Reached maximum number of sharders")
+	magicBlockSharders := balances.GetChainCurrentMagicBlock().Sharders
+	if magicBlockSharders.HasNode(newSharder.ID) {
+		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Not in magic block")
 		return "", common.NewErrorf("add_sharder",
-			"failed to add new sharder: Reached maximum number of sharders")
+			"failed to add new sharder: Not in magic block")
 	}
 	
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")

@@ -48,9 +48,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
-	// Check global max_n (max miners count) first
 	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
-	fmt.Println(magicBlockMiners);
 	
 	if magicBlockMiners.HasNode(newMiner.ID) == false {
 		logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
