@@ -54,8 +54,8 @@ func SetupHandlers(c Chainer) {
 	hMap := handlersMap(c)
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		hMap[getBlockV1Pattern] = BlockStats(
-			hMap[getBlockV1Pattern],
+		hMap[GetBlockV1Pattern] = BlockStats(
+			hMap[GetBlockV1Pattern],
 			BlockStatsConfigurator{
 				HashKey: "block",
 			},

@@ -34,3 +34,4 @@ FROM zchain_run_base
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 COPY --from=sharder_build $APP_DIR/code/go/0chain.net/sharder/sharder/sharder $APP_DIR/bin/
+COPY ./code/go/0chain.net/sharder/sharder/swagger.yaml /docs/swagger.yaml
