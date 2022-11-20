@@ -46,6 +46,11 @@ Run powershell as administrator
 ```powershell
 ./windows_network.sh
 ```
+#### Ubuntu/WSL2
+Run the following script
+```bash
+./wsl_ubuntu_network_iptables.sh
+```
 ### Directory Setup for Miners and Sharders
 
 In the git/0chain run the following command
