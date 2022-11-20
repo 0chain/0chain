@@ -6,6 +6,8 @@ import (
 
 	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -104,6 +106,27 @@ func (sp *StakePool) LockPool(
 	}
 
 	dp.emitNew(newPoolId, providerId, providerType, balances)
+
+	return nil
+}
+
+func (sp *StakePool) StakeForProvider(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error {
+	staked, err := sp.stake()
+	if err != nil {
+		return err
+	}
+
+	logging.Logger.Info("emitting stake event")
+	switch providerType {
+	case spenum.Blobber:
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(providerID, staked)
+		balances.EmitEvent(event.TypeStats, tag, providerID, data)
+	case spenum.Validator:
+		tag, data := event.NewUpdateValidatorTotalStakeEvent(providerID, staked)
+		balances.EmitEvent(event.TypeStats, tag, providerID, data)
+	default:
+		logging.Logger.Error("unsupported providerType in stakepool StakeEvent")
+	}
 
 	return nil
 }

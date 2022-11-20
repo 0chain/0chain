@@ -16,27 +16,23 @@ import (
 
 type Miner struct {
 	gorm.Model
-	MinerID           string `gorm:"uniqueIndex"`
-	N2NHost           string `gorm:"column:n2n_host"`
-	Host              string
-	Port              int
-	Path              string
-	PublicKey         string
-	ShortName         string
-	BuildTag          string
-	TotalStaked       currency.Coin
-	Delete            bool
-	DelegateWallet    string
-	ServiceCharge     float64
-	NumberOfDelegates int
-	MinStake          currency.Coin
-	MaxStake          currency.Coin
-	LastHealthCheck   common.Timestamp
-	Fees              currency.Coin
-	Active            bool
-	Longitude         float64
-	Latitude          float64
-	Rewards           ProviderRewards `json:"rewards" gorm:"foreignKey:MinerID;references:ProviderID"`
+	*StakePool
+	MinerID   string `gorm:"uniqueIndex"`
+	N2NHost   string `gorm:"column:n2n_host"`
+	Host      string
+	Port      int
+	Path      string
+	PublicKey string
+	ShortName string
+	BuildTag  string
+
+	Delete          bool
+	LastHealthCheck common.Timestamp
+	Fees            currency.Coin
+	Active          bool
+	Longitude       float64
+	Latitude        float64
+	Rewards         ProviderRewards `json:"rewards" gorm:"foreignKey:MinerID;references:ProviderID"`
 }
 
 // swagger:model MinerGeolocation
@@ -159,7 +155,7 @@ func (edb *EventDb) CountInactiveMiners() (int64, error) {
 func (edb *EventDb) GetMinersTotalStake() (int64, error) {
 	var count int64
 
-	err := edb.Store.Get().Table("miners").Select("sum(total_staked)").Row().Scan(&count)
+	err := edb.Store.Get().Table("miners").Select("sum(total_stake)").Row().Scan(&count)
 	return count, err
 }
 

@@ -15,6 +15,17 @@ import (
 	"0chain.net/smartcontract/dbs"
 )
 
+type StakePool struct {
+	// stake_pool_settings
+	DelegateWallet string        `json:"delegate_wallet"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
+	NumDelegates   int           `json:"num_delegates"`
+	ServiceCharge  float64       `json:"service_charge"`
+	UnstakeTotal   currency.Coin `json:"unstake_total"`
+	TotalStake     currency.Coin `json:"total_stake"`
+}
+
 type providerRewardsDelegates struct {
 	rewards       []ProviderRewards
 	delegatePools []DelegatePool

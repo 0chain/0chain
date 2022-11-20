@@ -11,6 +11,7 @@ import (
 
 type Authorizer struct {
 	gorm.Model
+	*StakePool
 
 	AuthorizerID string `json:"id" gorm:"uniqueIndex"`
 	URL          string `json:"url"`
@@ -24,13 +25,6 @@ type Authorizer struct {
 
 	// Stats
 	LastHealthCheck int64 `json:"last_health_check"`
-
-	// stake_pool_settings
-	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       currency.Coin `json:"min_stake"`
-	MaxStake       currency.Coin `json:"max_stake"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {

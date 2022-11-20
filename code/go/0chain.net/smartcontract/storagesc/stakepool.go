@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/0chain/common/core/logging"
-
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs/event"
@@ -114,27 +112,6 @@ func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
 	}
 
 	return staked - sp.TotalUnStake, nil
-}
-
-func (sp *stakePool) stakeForProvider(providerType spenum.Provider, providerID string, balances chainstate.StateContextI) error {
-	staked, err := sp.stake()
-	if err != nil {
-		return err
-	}
-
-	logging.Logger.Info("emitting stake event")
-	switch providerType {
-	case spenum.Blobber:
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Validator:
-		tag, data := event.NewUpdateValidatorTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	default:
-		logging.Logger.Error("unsupported providerType in stakepool StakeEvent")
-	}
-
-	return nil
 }
 
 // The stake() returns total stake size including delegate pools want to unstake.
@@ -459,7 +436,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
-	err = sp.stakeForProvider(spr.ProviderType, spr.ProviderID, balances)
+	err = sp.StakeForProvider(spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool staking error: %v", err)
@@ -513,7 +490,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
-		err = sp.stakeForProvider(spr.ProviderType, spr.ProviderID, balances)
+		err = sp.StakeForProvider(spr.ProviderType, spr.ProviderID, balances)
 		if err != nil {
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"stake pool staking error: %v", err)
@@ -533,7 +510,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"saving stake pool: %v", err)
 	}
 
-	err = sp.stakeForProvider(spr.ProviderType, spr.ProviderID, balances)
+	err = sp.StakeForProvider(spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)

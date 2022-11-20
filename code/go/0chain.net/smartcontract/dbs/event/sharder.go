@@ -109,7 +109,7 @@ func (edb *EventDb) CountInactiveSharders() (int64, error) {
 func (edb *EventDb) GetShardersTotalStake() (int64, error) {
 	var count int64
 
-	err := edb.Store.Get().Table("sharders").Select("sum(total_staked)").Row().Scan(&count)
+	err := edb.Store.Get().Table("sharders").Select("sum(total_stake)").Row().Scan(&count)
 	return count, err
 }
 

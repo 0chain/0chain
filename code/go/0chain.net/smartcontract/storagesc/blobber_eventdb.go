@@ -25,15 +25,17 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
-		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
-		MinStake:       sn.StakePoolSettings.MinStake,
-		MaxStake:       sn.StakePoolSettings.MaxStake,
-		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+		StakePool: &event.StakePool{
+			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+			MinStake:       sn.StakePoolSettings.MinStake,
+			MaxStake:       sn.StakePoolSettings.MaxStake,
+			NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
 
-		OffersTotal:  sp.TotalOffers,
-		UnstakeTotal: sp.TotalUnStake,
-		TotalStake:   staked,
+			UnstakeTotal: sp.TotalUnStake,
+			TotalStake:   staked,
+		},
+		OffersTotal: sp.TotalOffers,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
@@ -61,20 +63,22 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
-		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
-		MinStake:       sn.StakePoolSettings.MinStake,
-		MaxStake:       sn.StakePoolSettings.MaxStake,
-		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+		StakePool: &event.StakePool{
+			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+			MinStake:       sn.StakePoolSettings.MinStake,
+			MaxStake:       sn.StakePoolSettings.MaxStake,
+			NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+			TotalStake:     staked,
+			UnstakeTotal:   sp.TotalUnStake,
+		},
 
-		OffersTotal:  sp.TotalOffers,
-		UnstakeTotal: sp.TotalUnStake,
+		OffersTotal: sp.TotalOffers,
 		Rewards: event.ProviderRewards{
 			ProviderID:   sn.ID,
 			Rewards:      sp.Reward,
 			TotalRewards: sp.Reward,
 		},
-		TotalStake: staked,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)

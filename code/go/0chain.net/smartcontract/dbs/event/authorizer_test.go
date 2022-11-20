@@ -46,11 +46,13 @@ func TestAuthorizers(t *testing.T) {
 		Latitude:        0.0,
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
-		DelegateWallet:  "delegate wallet",
-		MinStake:        currency.Coin(53),
-		MaxStake:        currency.Coin(57),
-		NumDelegates:    59,
-		ServiceCharge:   61.0,
+		StakePool: &StakePool{
+			DelegateWallet: "delegate wallet",
+			MinStake:       currency.Coin(53),
+			MaxStake:       currency.Coin(57),
+			NumDelegates:   59,
+			ServiceCharge:  61.0,
+		},
 	}
 
 	authorizer_2 := Authorizer{
@@ -59,11 +61,13 @@ func TestAuthorizers(t *testing.T) {
 		Latitude:        1.0,
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),
-		DelegateWallet:  "delegate wallet",
-		MinStake:        currency.Coin(52),
-		MaxStake:        currency.Coin(57),
-		NumDelegates:    60,
-		ServiceCharge:   50.0,
+		StakePool: &StakePool{
+			DelegateWallet: "delegate wallet",
+			MinStake:       currency.Coin(52),
+			MaxStake:       currency.Coin(57),
+			NumDelegates:   60,
+			ServiceCharge:  50.0,
+		},
 	}
 
 	err = eventDb.AddAuthorizer(&authorizer_1)

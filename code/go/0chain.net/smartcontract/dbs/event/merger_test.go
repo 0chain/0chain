@@ -26,8 +26,10 @@ func makeBlobberTotalStakeEvent(id string, totalStake currency.Coin) Event {
 		Tag:   int(TagUpdateBlobberTotalStake),
 		Index: id,
 		Data: Blobber{
-			BlobberID:  id,
-			TotalStake: totalStake,
+			BlobberID: id,
+			StakePool: &StakePool{
+				TotalStake: totalStake,
+			},
 		},
 	}
 }
@@ -192,7 +194,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			events: []Event{makeBlobberTotalStakeEvent("b_1", 100)},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", TotalStake: 100},
+					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 100}},
 				},
 			},
 		},
@@ -204,8 +206,8 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", TotalStake: 100},
-					"b_2": {BlobberID: "b_2", TotalStake: 200},
+					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 100}},
+					"b_2": {BlobberID: "b_2", StakePool: &StakePool{TotalStake: 200}},
 				},
 			},
 		},
@@ -217,7 +219,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", TotalStake: 300},
+					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 300}},
 				},
 			},
 		},
@@ -231,9 +233,9 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", TotalStake: 300},
-					"b_2": {BlobberID: "b_2", TotalStake: 200},
-					"b_3": {BlobberID: "b_3", TotalStake: 300},
+					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 300}},
+					"b_2": {BlobberID: "b_2", StakePool: &StakePool{TotalStake: 200}},
+					"b_3": {BlobberID: "b_3", StakePool: &StakePool{TotalStake: 300}},
 				},
 			},
 		},
@@ -249,9 +251,9 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", TotalStake: 300},
-					"b_2": {BlobberID: "b_2", TotalStake: 200},
-					"b_3": {BlobberID: "b_3", TotalStake: 300},
+					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 300}},
+					"b_2": {BlobberID: "b_2", StakePool: &StakePool{TotalStake: 200}},
+					"b_3": {BlobberID: "b_3", StakePool: &StakePool{TotalStake: 300}},
 				},
 			},
 		},

@@ -76,7 +76,7 @@ func (ssc *StorageSmartContract) collectReward(
 				"error saving stake pool, %v", err)
 		}
 
-		err = sp.stakeForProvider(prr.ProviderType, providerID, balances)
+		err = sp.StakeForProvider(prr.ProviderType, providerID, balances)
 		if err != nil {
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"stake pool staking error: %v", err)
