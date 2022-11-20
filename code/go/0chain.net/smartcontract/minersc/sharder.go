@@ -200,14 +200,6 @@ func (msc *MinerSmartContract) DeleteSharder(
 		return "", common.NewError("delete_sharder", err.Error())
 	}
 
-	newL, err := DecrementSharderListLength(balances)
-	if err != nil {
-		return "", common.NewErrorf("delete_sharder",
-			"Couldn't decrement sharder list length: %v", err)
-	}
-
-	logging.Logger.Debug("Sharders decremented to", zap.Int("SharderListLength", int(*newL)))
-
 	if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
 		return "", common.NewError("delete_sharder", err.Error())
 	}

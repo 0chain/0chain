@@ -120,14 +120,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 				"saving all miners list: %v", err)
 		}
 
-		newL, err := IncrementMinerListLength(balances)
-		if err != nil {
-			return "", common.NewErrorf("add_miner",
-				"Couldn't increment miner list length: %v", err)
-		}
-
-		logging.Logger.Debug("Miners incremented to", zap.Int("MinerListLength", int(*newL)))
-
 		err = emitAddOrOverwriteMiner(newMiner, balances)
 		if err != nil {
 			return "", common.NewErrorf("add_miner",
@@ -191,14 +183,6 @@ func (msc *MinerSmartContract) DeleteMiner(
 
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
-
-	newL, err := DecrementMinerListLength(balances)
-	if err != nil {
-		return "", common.NewErrorf("delete_miner",
-			"Couldn't decrement miner list length: %v", err)
-	}
-
-	logging.Logger.Debug("Miners decremented to", zap.Int("MinerListLength", int(*newL)))
 
 	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
 		return "", common.NewError("delete_miner", err.Error())
