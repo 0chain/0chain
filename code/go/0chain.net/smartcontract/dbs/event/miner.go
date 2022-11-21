@@ -226,3 +226,30 @@ func (edb *EventDb) deleteMiner(id string) error {
 
 	return result.Error
 }
+
+func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateMinerTotalStake, Miner{
+		MinerID: ID,
+		StakePool: &StakePool{
+			TotalStake: totalStake,
+		},
+	}
+}
+
+func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "miner_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
+	}).Create(&miners).Error
+}
+
+func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
+	return newEventsMerger[Miner](TagUpdateMinerTotalStake, withMinerTotalStakesAdded())
+}
+
+func withMinerTotalStakesAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Miner) (*Miner, error) {
+		a.TotalStake += b.TotalStake
+		return a, nil
+	})
+}

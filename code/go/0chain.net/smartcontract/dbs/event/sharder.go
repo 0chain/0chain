@@ -17,26 +17,21 @@ import (
 
 type Sharder struct {
 	gorm.Model
-	SharderID         string `gorm:"uniqueIndex"`
-	N2NHost           string `gorm:"column:n2n_host"`
-	Host              string
-	Port              int
-	Path              string
-	PublicKey         string
-	ShortName         string
-	BuildTag          string
-	TotalStaked       currency.Coin
-	Delete            bool
-	DelegateWallet    string
-	ServiceCharge     float64
-	NumberOfDelegates int
-	MinStake          currency.Coin
-	MaxStake          currency.Coin
-	LastHealthCheck   common.Timestamp
-	Fees              currency.Coin
-	Active            bool
-	Longitude         float64
-	Latitude          float64
+	*StakePool
+	SharderID       string `gorm:"uniqueIndex"`
+	N2NHost         string `gorm:"column:n2n_host"`
+	Host            string
+	Port            int
+	Path            string
+	PublicKey       string
+	ShortName       string
+	BuildTag        string
+	Delete          bool
+	LastHealthCheck common.Timestamp
+	Fees            currency.Coin
+	Active          bool
+	Longitude       float64
+	Latitude        float64
 
 	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:SharderID;references:ProviderID"`
 }
@@ -221,4 +216,31 @@ func (edb *EventDb) deleteSharder(id string) error {
 		Delete(&Sharder{})
 
 	return result.Error
+}
+
+func NewUpdateSharderTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateSharderTotalStake, Sharder{
+		SharderID: ID,
+		StakePool: &StakePool{
+			TotalStake: totalStake,
+		},
+	}
+}
+
+func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "sharder_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
+	}).Create(&sharders).Error
+}
+
+func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
+	return newEventsMerger[Sharder](TagUpdateSharderTotalStake, withSharderTotalStakesAdded())
+}
+
+func withSharderTotalStakesAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Sharder) (*Sharder, error) {
+		a.TotalStake += b.TotalStake
+		return a, nil
+	})
 }

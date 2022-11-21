@@ -1274,7 +1274,7 @@ func toBlobberStakePoolStats(blobber *event.Blobber, delegatePools []event.Deleg
 func toValidatorStakePoolStats(validator *event.Validator, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
 	spStat := new(stakePoolStat)
 	spStat.ID = validator.ValidatorID
-	spStat.StakeTotal = validator.StakeTotal
+	spStat.StakeTotal = validator.TotalStake
 	spStat.UnstakeTotal = validator.UnstakeTotal
 
 	spStat.Settings = stakepool.Settings{
@@ -1492,7 +1492,7 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 	return &validatorNodeResponse{
 		ValidatorID:    v.ValidatorID,
 		BaseUrl:        v.BaseUrl,
-		StakeTotal:     v.StakeTotal,
+		StakeTotal:     v.TotalStake,
 		UnstakeTotal:   v.UnstakeTotal,
 		PublicKey:      v.PublicKey,
 		DelegateWallet: v.DelegateWallet,

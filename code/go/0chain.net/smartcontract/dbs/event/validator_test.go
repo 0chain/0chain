@@ -43,13 +43,16 @@ func TestValidatorNode(t *testing.T) {
 	vn := Validator{
 		ValidatorID: encryption.Hash("mockValidator_" + strconv.Itoa(0)),
 		BaseUrl:     "http://localhost:8080",
-		StakeTotal:  100,
+		StakePool: &StakePool{
 
-		DelegateWallet: "delegate wallet",
-		MinStake:       currency.Coin(53),
-		MaxStake:       currency.Coin(57),
-		NumDelegates:   59,
-		ServiceCharge:  61.0,
+			TotalStake: 100,
+
+			DelegateWallet: "delegate wallet",
+			MinStake:       currency.Coin(53),
+			MaxStake:       currency.Coin(57),
+			NumDelegates:   59,
+			ServiceCharge:  61.0,
+		},
 	}
 
 	err = eventDb.addOrOverwriteValidators([]Validator{vn})

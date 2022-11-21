@@ -124,6 +124,15 @@ func (sp *StakePool) StakeForProvider(providerType spenum.Provider, providerID s
 	case spenum.Validator:
 		tag, data := event.NewUpdateValidatorTotalStakeEvent(providerID, staked)
 		balances.EmitEvent(event.TypeStats, tag, providerID, data)
+	case spenum.Miner:
+		tag, data := event.NewUpdateMinerTotalStakeEvent(providerID, staked)
+		balances.EmitEvent(event.TypeStats, tag, providerID, data)
+	case spenum.Sharder:
+		tag, data := event.NewUpdateSharderTotalStakeEvent(providerID, staked)
+		balances.EmitEvent(event.TypeStats, tag, providerID, data)
+	case spenum.Authorizer:
+		tag, data := event.NewUpdateAuthorizerTotalStakeEvent(providerID, staked)
+		balances.EmitEvent(event.TypeStats, tag, providerID, data)
 	default:
 		logging.Logger.Error("unsupported providerType in stakepool StakeEvent")
 	}

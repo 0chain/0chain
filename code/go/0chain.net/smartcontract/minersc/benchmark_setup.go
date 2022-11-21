@@ -115,14 +115,16 @@ func AddMockNodes(
 				_ = eventDb.Store.Get().Create(&minerDb)
 			} else {
 				sharderDb := event.Sharder{
-					SharderID:         newNode.ID,
-					LastHealthCheck:   newNode.LastHealthCheck,
-					PublicKey:         newNode.PublicKey,
-					ServiceCharge:     newNode.Settings.ServiceChargeRatio,
-					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
-					MinStake:          newNode.Settings.MinStake,
-					MaxStake:          newNode.Settings.MaxStake,
-					Rewards:           event.ProviderRewards{ProviderID: newNode.ID},
+					SharderID:       newNode.ID,
+					LastHealthCheck: newNode.LastHealthCheck,
+					PublicKey:       newNode.PublicKey,
+					StakePool: &event.StakePool{
+						ServiceCharge: newNode.Settings.ServiceChargeRatio,
+						NumDelegates:  newNode.Settings.MaxNumDelegates,
+						MinStake:      newNode.Settings.MinStake,
+						MaxStake:      newNode.Settings.MaxStake,
+					},
+					Rewards: event.ProviderRewards{ProviderID: newNode.ID},
 				}
 				_ = eventDb.Store.Get().Create(&sharderDb)
 			}

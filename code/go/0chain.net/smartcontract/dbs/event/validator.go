@@ -14,18 +14,12 @@ import (
 // swagger:model Validator
 type Validator struct {
 	gorm.Model
+	*StakePool
 	ValidatorID string `json:"validator_id" gorm:"uniqueIndex"`
 	BaseUrl     string `json:"url"`
 	PublicKey   string `json:"public_key"`
 
-	// StakePoolSettings
-	StakeTotal     currency.Coin `json:"stake_total"`
-	UnstakeTotal   currency.Coin `json:"unstake_total"`
-	MinStake       currency.Coin `json:"min_stake"`
-	MaxStake       currency.Coin `json:"max_stake"`
-	DelegateWallet string        `json:"delegate_wallet"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	ServiceCharge float64 `json:"service_charge"`
 
 	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:ValidatorID;references:ProviderID"`
 }
@@ -89,7 +83,7 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateValidatorStakeTotal, Validator{
 		ValidatorID: ID,
-		StakeTotal:  totalStake,
+		StakePool:   &StakePool{TotalStake: totalStake},
 	}
 }
 
@@ -105,6 +99,13 @@ func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidator, withUniqueEventOverwrite())
 }
 
+func withValidatorTotalStakesAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Validator) (*Validator, error) {
+		a.TotalStake += b.TotalStake
+		return a, nil
+	})
+}
+
 func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
-	return newEventsMerger[Validator](TagUpdateValidatorStakeTotal, withUniqueEventOverwrite())
+	return newEventsMerger[Validator](TagUpdateValidatorStakeTotal, withValidatorTotalStakesAdded())
 }

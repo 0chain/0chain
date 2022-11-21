@@ -488,14 +488,16 @@ func AddMockValidators(
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			validators := event.Validator{
-				ValidatorID:    validator.ID,
-				BaseUrl:        validator.BaseURL,
-				DelegateWallet: validator.StakePoolSettings.DelegateWallet,
-				MinStake:       validator.StakePoolSettings.MaxStake,
-				MaxStake:       validator.StakePoolSettings.MaxStake,
-				NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
-				ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
-				Rewards:        event.ProviderRewards{ProviderID: validator.ID},
+				ValidatorID: validator.ID,
+				BaseUrl:     validator.BaseURL,
+				StakePool: &event.StakePool{
+					DelegateWallet: validator.StakePoolSettings.DelegateWallet,
+					MinStake:       validator.StakePoolSettings.MaxStake,
+					MaxStake:       validator.StakePoolSettings.MaxStake,
+					NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
+					ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
+				},
+				Rewards: event.ProviderRewards{ProviderID: validator.ID},
 			}
 			_ = eventDb.Store.Get().Create(&validators)
 		}

@@ -45,15 +45,17 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 	logging.Logger.Info("emitting validator update event")
 
 	data := &event.Validator{
-		ValidatorID:    vn.ID,
-		BaseUrl:        vn.BaseURL,
-		StakeTotal:     staked,
-		UnstakeTotal:   sp.TotalUnStake,
-		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-		MinStake:       vn.StakePoolSettings.MinStake,
-		MaxStake:       vn.StakePoolSettings.MaxStake,
-		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+		ValidatorID: vn.ID,
+		BaseUrl:     vn.BaseURL,
+		StakePool: &event.StakePool{
+			TotalStake:     staked,
+			UnstakeTotal:   sp.TotalUnStake,
+			DelegateWallet: vn.StakePoolSettings.DelegateWallet,
+			MinStake:       vn.StakePoolSettings.MinStake,
+			MaxStake:       vn.StakePoolSettings.MaxStake,
+			NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+		},
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
@@ -68,16 +70,18 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 
 	logging.Logger.Info("emitting validator add or overwrite event")
 	data := &event.Validator{
-		ValidatorID:    vn.ID,
-		BaseUrl:        vn.BaseURL,
-		StakeTotal:     staked,
-		UnstakeTotal:   sp.TotalUnStake,
-		DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-		MinStake:       vn.StakePoolSettings.MinStake,
-		MaxStake:       vn.StakePoolSettings.MaxStake,
-		NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
-		Rewards:        event.ProviderRewards{ProviderID: vn.ID},
+		ValidatorID: vn.ID,
+		BaseUrl:     vn.BaseURL,
+		StakePool: &event.StakePool{
+			TotalStake:     staked,
+			UnstakeTotal:   sp.TotalUnStake,
+			DelegateWallet: vn.StakePoolSettings.DelegateWallet,
+			MinStake:       vn.StakePoolSettings.MinStake,
+			MaxStake:       vn.StakePoolSettings.MaxStake,
+			NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+		},
+		Rewards: event.ProviderRewards{ProviderID: vn.ID},
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwiteValidator, vn.ID, data)

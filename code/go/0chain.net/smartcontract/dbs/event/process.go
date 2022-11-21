@@ -71,6 +71,9 @@ const (
 	TagUpdateAllocationStat                // 41
 	TagUpdateBlobberStat                   // 42
 	TagUpdateValidatorStakeTotal           // 43
+	TagUpdateMinerTotalStake
+	TagUpdateSharderTotalStake
+	TagUpdateAuthorizerTotalStake
 	NumberOfTags
 )
 
@@ -158,6 +161,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
 			mergeAddDelegatePoolsEvents(),
+
+			mergeUpdateMinerTotalStakesEvents(),
+			mergeUpdateSharderTotalStakesEvents(),
+			mergeUpdateAuthorizerTotalStakesEvents(),
 
 			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
@@ -620,4 +627,11 @@ func setEventData[T any](e *Event, data interface{}) error {
 	}
 
 	return ErrInvalidEventData
+}
+
+func withTotalStakesAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *StakePool) (*StakePool, error) {
+		a.TotalStake += b.TotalStake
+		return a, nil
+	})
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/currency"
+	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
 )
@@ -91,4 +92,31 @@ func (a *Authorizer) exists(edb *EventDb) (bool, error) {
 			)
 	}
 	return count > 0, nil
+}
+
+func NewUpdateAuthorizerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateAuthorizerTotalStake, Authorizer{
+		AuthorizerID: ID,
+		StakePool: &StakePool{
+			TotalStake: totalStake,
+		},
+	}
+}
+
+func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
+	}).Create(&authorizer).Error
+}
+
+func mergeUpdateAuthorizerTotalStakesEvents() *eventsMergerImpl[Authorizer] {
+	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalStake, withAuthorizerTotalStakesAdded())
+}
+
+func withAuthorizerTotalStakesAdded() eventMergeMiddleware {
+	return withEventMerge(func(a, b *Authorizer) (*Authorizer, error) {
+		a.TotalStake += b.TotalStake
+		return a, nil
+	})
 }
