@@ -167,6 +167,6 @@ func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (
 	return nil, nil
 }
 
-func (tb *testBalances) GetMissingNodesPath() util.Path {
+func (tb *testBalances) ReadMissingNodesPath() util.Path {
 	return nil
 }

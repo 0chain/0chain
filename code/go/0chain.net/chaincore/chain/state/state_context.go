@@ -109,7 +109,7 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetInvalidStateErrors() []error
-	GetMissingNodesPath() util.Path
+	ReadMissingNodesPath() util.Path
 }
 
 // StateContext - a context object used to manipulate global state
@@ -474,10 +474,12 @@ func (sc *StateContext) GetInvalidStateErrors() []error {
 	return errs
 }
 
-// GetMissingNodesPath returns node path that has missing nodes
-func (sc *StateContext) GetMissingNodesPath() util.Path {
+// ReadMissingNodesPath returns node path that has missing nodes and empty it
+func (sc *StateContext) ReadMissingNodesPath() util.Path {
 	sc.mutex.Lock()
 	path := sc.missingNodesPath
+	// reset once it's acquired
+	sc.missingNodesPath = util.Path("")
 	sc.mutex.Unlock()
 	return path
 }
