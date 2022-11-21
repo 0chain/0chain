@@ -505,6 +505,10 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 					return
 				}
 
+				defer func() {
+					go c.notifyNodesSynced(mns.round)
+				}()
+
 				for {
 					select {
 					case <-ctx.Done():

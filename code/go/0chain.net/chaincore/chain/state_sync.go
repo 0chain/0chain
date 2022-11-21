@@ -33,7 +33,7 @@ func (c *Chain) GetBlockStateChangeForce(ctx context.Context, b *block.Block) er
 	})
 }
 
-//GetBlockStateChange - get the state change of the block from the network
+// GetBlockStateChange - get the state change of the block from the network
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	ts := time.Now()
 	if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
@@ -71,7 +71,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	return nil
 }
 
-//GetStateNodes - get a bunch of state nodes from the network
+// GetStateNodes - get a bunch of state nodes from the network
 func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	ns, err := c.getStateNodes(ctx, keys)
 	if err != nil {
@@ -101,6 +101,36 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	}
 }
 
+func (c *Chain) OnNodesSynced(round int64, ch chan struct{}) {
+	c.syncMissingNodesMutex.Lock()
+	defer c.syncMissingNodesMutex.Unlock()
+
+	_, ok := c.syncMissingNodesSub[round]
+	if !ok {
+		c.syncMissingNodesSub[round] = []chan struct{}{ch}
+		return
+	}
+
+	c.syncMissingNodesSub[round] = append(c.syncMissingNodesSub[round], ch)
+}
+
+func (c *Chain) UnsubNodesSynced(round int64) {
+	c.syncMissingNodesMutex.Lock()
+	delete(c.syncMissingNodesSub, round)
+	c.syncMissingNodesMutex.Unlock()
+}
+
+func (c *Chain) notifyNodesSynced(round int64) {
+	c.syncMissingNodesMutex.Lock()
+	defer c.syncMissingNodesMutex.Unlock()
+
+	for _, ch := range c.syncMissingNodesSub[round] {
+		close(ch)
+	}
+
+	delete(c.syncMissingNodesSub, round)
+}
+
 // UpdateStateFromNetwork get a bunch of state nodes from the network
 func (c *Chain) UpdateStateFromNetwork(ctx context.Context, mpt util.MerklePatriciaTrieI, keys []util.Key) error {
 	ns, err := c.getStateNodes(ctx, keys)
@@ -113,7 +143,7 @@ func (c *Chain) UpdateStateFromNetwork(ctx context.Context, mpt util.MerklePatri
 	return ns.SaveState(ctx, mpt.GetNodeDB())
 }
 
-//GetStateNodesSharders - get a bunch of state nodes from the network
+// GetStateNodesSharders - get a bunch of state nodes from the network
 func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) {
 	ns, err := c.getStateNodesFromSharders(ctx, keys)
 	if err != nil {
@@ -143,7 +173,7 @@ func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	}
 }
 
-//GetStateFrom - get the state from a given node
+// GetStateFrom - get the state from a given node
 func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialState, error) {
 	partialState := &state.PartialState{}
 	partialState.Hash = key
@@ -172,7 +202,7 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 	return nil, util.ErrNodeNotFound
 }
 
-//GetStateNodesFrom - get the state nodes from db
+// GetStateNodesFrom - get the state nodes from db
 func (c *Chain) GetStateNodesFrom(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
 	var stateNodes = state.NewStateNodes()
 	nodes, err := c.stateDB.MultiGetNode(keys)
@@ -185,7 +215,7 @@ func (c *Chain) GetStateNodesFrom(ctx context.Context, keys []util.Key) (*state.
 	return stateNodes, nil
 }
 
-//SyncPartialState - sync partial state
+// SyncPartialState - sync partial state
 func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) error {
 	if ps.GetRoot() == nil {
 		return ErrNodeNull
@@ -193,14 +223,14 @@ func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) er
 	return c.SavePartialState(ctx, ps)
 }
 
-//SavePartialState - save the partial state
+// SavePartialState - save the partial state
 func (c *Chain) SavePartialState(ctx context.Context, ps *state.PartialState) error {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return ps.SaveState(ctx, c.stateDB)
 }
 
-//SaveStateNodes - save the state nodes
+// SaveStateNodes - save the state nodes
 func (c *Chain) SaveStateNodes(ctx context.Context, ns *state.Nodes) error {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
