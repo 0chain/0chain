@@ -73,7 +73,7 @@ func TestBlobbers(t *testing.T) {
 			Capacity:         sn.Capacity,
 			Allocated:        sn.Allocated,
 			LastHealthCheck:  int64(sn.LastHealthCheck),
-			StakePool: &StakePool{
+			Provider: &Provider{
 				DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 				MinStake:       sn.StakePoolSettings.MaxStake,
 				MaxStake:       sn.StakePoolSettings.MaxStake,

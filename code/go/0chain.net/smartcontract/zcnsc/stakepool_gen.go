@@ -10,11 +10,11 @@ import (
 func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
-	// string "StakePool"
+	// string "Provider"
 	o = append(o, 0x81, 0xa9, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c)
 	o, err = z.StakePool.MarshalMsg(o)
 	if err != nil {
-		err = msgp.WrapError(err, "StakePool")
+		err = msgp.WrapError(err, "Provider")
 		return
 	}
 	return
@@ -38,10 +38,10 @@ func (z *StakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "StakePool":
+		case "Provider":
 			bts, err = z.StakePool.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "StakePool")
+				err = msgp.WrapError(err, "Provider")
 				return
 			}
 		default:

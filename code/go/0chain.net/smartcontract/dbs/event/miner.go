@@ -16,7 +16,7 @@ import (
 
 type Miner struct {
 	gorm.Model
-	*StakePool
+	*Provider
 	MinerID   string `gorm:"uniqueIndex"`
 	N2NHost   string `gorm:"column:n2n_host"`
 	Host      string
@@ -230,7 +230,7 @@ func (edb *EventDb) deleteMiner(id string) error {
 func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateMinerTotalStake, Miner{
 		MinerID: ID,
-		StakePool: &StakePool{
+		Provider: &Provider{
 			TotalStake: totalStake,
 		},
 	}

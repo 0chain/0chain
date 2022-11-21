@@ -64,7 +64,7 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		ShortName: sn.ShortName,
 		BuildTag:  sn.BuildTag,
 		Delete:    sn.Delete,
-		StakePool: &event.StakePool{
+		Provider: &event.Provider{
 			TotalStake:     sn.TotalStaked,
 			DelegateWallet: sn.Settings.DelegateWallet,
 			ServiceCharge:  sn.Settings.ServiceChargeRatio,

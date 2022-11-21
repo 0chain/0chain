@@ -24,7 +24,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		PublicKey:   edbMiner.PublicKey,
 		ShortName:   edbMiner.ShortName,
 		BuildTag:    edbMiner.BuildTag,
-		TotalStaked: edbMiner.StakePool.TotalStake,
+		TotalStaked: edbMiner.Provider.TotalStake,
 		Delete:      edbMiner.Delete,
 		Geolocation: SimpleNodeGeolocation{
 			Latitude:  edbMiner.Latitude,
@@ -42,7 +42,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbMiner.DelegateWallet,
 				ServiceChargeRatio: edbMiner.ServiceCharge,
-				MaxNumDelegates:    edbMiner.StakePool.NumDelegates,
+				MaxNumDelegates:    edbMiner.Provider.NumDelegates,
 				MinStake:           edbMiner.MinStake,
 				MaxStake:           edbMiner.MaxStake,
 			},
@@ -62,7 +62,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		ShortName: mn.ShortName,
 		BuildTag:  mn.BuildTag,
 		Delete:    mn.Delete,
-		StakePool: &event.StakePool{
+		Provider: &event.Provider{
 			TotalStake:     mn.TotalStaked,
 			DelegateWallet: mn.Settings.DelegateWallet,
 			ServiceCharge:  mn.Settings.ServiceChargeRatio,

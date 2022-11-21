@@ -70,7 +70,7 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
-	// string "StakePool"
+	// string "Provider"
 	o = append(o, 0xa9, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c)
 	if z.StakePool == nil {
 		o = msgp.AppendNil(o)
@@ -80,7 +80,7 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 		o = append(o, 0x82, 0xa7, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b)
 		o, err = z.StakePool.MinLock.MarshalMsg(o)
 		if err != nil {
-			err = msgp.WrapError(err, "StakePool", "MinLock")
+			err = msgp.WrapError(err, "Provider", "MinLock")
 			return
 		}
 		// string "MinLockPeriod"
@@ -355,7 +355,7 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					}
 				}
 			}
-		case "StakePool":
+		case "Provider":
 			if msgp.IsNil(bts) {
 				bts, err = msgp.ReadNilBytes(bts)
 				if err != nil {
@@ -369,33 +369,33 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				var zb0004 uint32
 				zb0004, bts, err = msgp.ReadMapHeaderBytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "StakePool")
+					err = msgp.WrapError(err, "Provider")
 					return
 				}
 				for zb0004 > 0 {
 					zb0004--
 					field, bts, err = msgp.ReadMapKeyZC(bts)
 					if err != nil {
-						err = msgp.WrapError(err, "StakePool")
+						err = msgp.WrapError(err, "Provider")
 						return
 					}
 					switch msgp.UnsafeString(field) {
 					case "MinLock":
 						bts, err = z.StakePool.MinLock.UnmarshalMsg(bts)
 						if err != nil {
-							err = msgp.WrapError(err, "StakePool", "MinLock")
+							err = msgp.WrapError(err, "Provider", "MinLock")
 							return
 						}
 					case "MinLockPeriod":
 						z.StakePool.MinLockPeriod, bts, err = msgp.ReadDurationBytes(bts)
 						if err != nil {
-							err = msgp.WrapError(err, "StakePool", "MinLockPeriod")
+							err = msgp.WrapError(err, "Provider", "MinLockPeriod")
 							return
 						}
 					default:
 						bts, err = msgp.Skip(bts)
 						if err != nil {
-							err = msgp.WrapError(err, "StakePool")
+							err = msgp.WrapError(err, "Provider")
 							return
 						}
 					}

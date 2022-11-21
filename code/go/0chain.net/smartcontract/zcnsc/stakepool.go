@@ -47,7 +47,7 @@ func (spr *stakePoolRequest) encode() []byte {
 
 // ----------- LockingPool pool --------------------------
 
-//type stakePool stakepool.StakePool
+//type stakePool stakepool.Provider
 
 type StakePool struct {
 	stakepool.StakePool

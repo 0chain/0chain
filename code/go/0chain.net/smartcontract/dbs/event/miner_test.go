@@ -92,7 +92,7 @@ func TestMiners(t *testing.T) {
 			ShortName: mn.ShortName,
 			BuildTag:  mn.BuildTag,
 			Delete:    mn.Delete,
-			StakePool: &StakePool{
+			Provider: &Provider{
 				TotalStake:     currency.Coin(mn.TotalStaked),
 				DelegateWallet: mn.DelegateWallet,
 				ServiceCharge:  mn.ServiceCharge,
@@ -350,7 +350,7 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) {
 			ShortName: "localhost.m2",
 			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 			Delete:    false,
-			StakePool: &StakePool{
+			Provider: &Provider{
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
@@ -388,7 +388,7 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 			ShortName: "localhost.m2",
 			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 			Delete:    false,
-			StakePool: &StakePool{
+			Provider: &Provider{
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
@@ -443,7 +443,7 @@ func ReturnValue() Miner {
 		ShortName: "localhost.m2",
 		BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 		Delete:    false,
-		StakePool: &StakePool{
+		Provider: &Provider{
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
 			NumDelegates:   10,
@@ -468,7 +468,7 @@ func ReturnPointer() *Miner {
 		ShortName: "localhost.m2",
 		BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 		Delete:    false,
-		StakePool: &StakePool{
+		Provider: &Provider{
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
 			NumDelegates:   10,

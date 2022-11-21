@@ -47,7 +47,7 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 	data := &event.Validator{
 		ValidatorID: vn.ID,
 		BaseUrl:     vn.BaseURL,
-		StakePool: &event.StakePool{
+		Provider: &event.Provider{
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,
 			DelegateWallet: vn.StakePoolSettings.DelegateWallet,
@@ -72,7 +72,7 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 	data := &event.Validator{
 		ValidatorID: vn.ID,
 		BaseUrl:     vn.BaseURL,
-		StakePool: &event.StakePool{
+		Provider: &event.Provider{
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,
 			DelegateWallet: vn.StakePoolSettings.DelegateWallet,

@@ -14,7 +14,7 @@ import (
 // swagger:model Validator
 type Validator struct {
 	gorm.Model
-	*StakePool
+	*Provider
 	ValidatorID string `json:"validator_id" gorm:"uniqueIndex"`
 	BaseUrl     string `json:"url"`
 	PublicKey   string `json:"public_key"`
@@ -83,7 +83,7 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateValidatorStakeTotal, Validator{
 		ValidatorID: ID,
-		StakePool:   &StakePool{TotalStake: totalStake},
+		Provider:    &Provider{TotalStake: totalStake},
 	}
 }
 

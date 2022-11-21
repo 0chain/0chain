@@ -25,7 +25,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
-		StakePool: &event.StakePool{
+		Provider: &event.Provider{
 			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 			MinStake:       sn.StakePoolSettings.MinStake,
 			MaxStake:       sn.StakePoolSettings.MaxStake,
@@ -63,7 +63,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
-		StakePool: &event.StakePool{
+		Provider: &event.Provider{
 			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 			MinStake:       sn.StakePoolSettings.MinStake,
 			MaxStake:       sn.StakePoolSettings.MaxStake,

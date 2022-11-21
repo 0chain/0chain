@@ -15,7 +15,7 @@ import (
 	"0chain.net/smartcontract/dbs"
 )
 
-type StakePool struct {
+type Provider struct {
 	// stake_pool_settings
 	DelegateWallet string        `json:"delegate_wallet"`
 	MinStake       currency.Coin `json:"min_stake"`

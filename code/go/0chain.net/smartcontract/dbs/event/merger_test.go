@@ -27,7 +27,7 @@ func makeBlobberTotalStakeEvent(id string, totalStake currency.Coin) Event {
 		Index: id,
 		Data: Blobber{
 			BlobberID: id,
-			StakePool: &StakePool{
+			Provider: &Provider{
 				TotalStake: totalStake,
 			},
 		},
@@ -194,7 +194,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			events: []Event{makeBlobberTotalStakeEvent("b_1", 100)},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 100}},
+					"b_1": {BlobberID: "b_1", Provider: &Provider{TotalStake: 100}},
 				},
 			},
 		},
@@ -206,8 +206,8 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 100}},
-					"b_2": {BlobberID: "b_2", StakePool: &StakePool{TotalStake: 200}},
+					"b_1": {BlobberID: "b_1", Provider: &Provider{TotalStake: 100}},
+					"b_2": {BlobberID: "b_2", Provider: &Provider{TotalStake: 200}},
 				},
 			},
 		},
@@ -219,7 +219,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 300}},
+					"b_1": {BlobberID: "b_1", Provider: &Provider{TotalStake: 300}},
 				},
 			},
 		},
@@ -233,9 +233,9 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 300}},
-					"b_2": {BlobberID: "b_2", StakePool: &StakePool{TotalStake: 200}},
-					"b_3": {BlobberID: "b_3", StakePool: &StakePool{TotalStake: 300}},
+					"b_1": {BlobberID: "b_1", Provider: &Provider{TotalStake: 300}},
+					"b_2": {BlobberID: "b_2", Provider: &Provider{TotalStake: 200}},
+					"b_3": {BlobberID: "b_3", Provider: &Provider{TotalStake: 300}},
 				},
 			},
 		},
@@ -251,9 +251,9 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {BlobberID: "b_1", StakePool: &StakePool{TotalStake: 300}},
-					"b_2": {BlobberID: "b_2", StakePool: &StakePool{TotalStake: 200}},
-					"b_3": {BlobberID: "b_3", StakePool: &StakePool{TotalStake: 300}},
+					"b_1": {BlobberID: "b_1", Provider: &Provider{TotalStake: 300}},
+					"b_2": {BlobberID: "b_2", Provider: &Provider{TotalStake: 200}},
+					"b_3": {BlobberID: "b_3", Provider: &Provider{TotalStake: 300}},
 				},
 			},
 		},

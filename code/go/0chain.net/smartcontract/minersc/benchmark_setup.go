@@ -104,7 +104,7 @@ func AddMockNodes(
 					MinerID:         newNode.ID,
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
-					StakePool: &event.StakePool{
+					Provider: &event.Provider{
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
 						MinStake:      newNode.Settings.MinStake,
@@ -118,7 +118,7 @@ func AddMockNodes(
 					SharderID:       newNode.ID,
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
-					StakePool: &event.StakePool{
+					Provider: &event.Provider{
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
 						MinStake:      newNode.Settings.MinStake,

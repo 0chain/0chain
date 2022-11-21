@@ -90,7 +90,7 @@ func TestSharders(t *testing.T) {
 			ShortName: sn.ShortName,
 			BuildTag:  sn.BuildTag,
 			Delete:    sn.Delete,
-			StakePool: &StakePool{
+			Provider: &Provider{
 				TotalStake:     currency.Coin(sn.TotalStaked),
 				DelegateWallet: sn.DelegateWallet,
 				ServiceCharge:  sn.ServiceCharge,

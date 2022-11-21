@@ -19,7 +19,7 @@ const ActiveBlobbersTimeLimit = 5 * time.Minute // 5 Minutes
 
 type Blobber struct {
 	gorm.Model
-	*StakePool
+	*Provider
 
 	BlobberID string `json:"id" gorm:"uniqueIndex"`
 	BaseURL   string `json:"url" gorm:"uniqueIndex"`
@@ -263,7 +263,7 @@ func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
 func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateBlobberTotalStake, Blobber{
 		BlobberID: ID,
-		StakePool: &StakePool{
+		Provider: &Provider{
 			TotalStake: totalStake,
 		},
 	}

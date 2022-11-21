@@ -17,7 +17,7 @@ import (
 
 type Sharder struct {
 	gorm.Model
-	*StakePool
+	*Provider
 	SharderID       string `gorm:"uniqueIndex"`
 	N2NHost         string `gorm:"column:n2n_host"`
 	Host            string
@@ -221,7 +221,7 @@ func (edb *EventDb) deleteSharder(id string) error {
 func NewUpdateSharderTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateSharderTotalStake, Sharder{
 		SharderID: ID,
-		StakePool: &StakePool{
+		Provider: &Provider{
 			TotalStake: totalStake,
 		},
 	}
