@@ -22,14 +22,14 @@ func (z *MinerNode) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
-	// string "Provider"
+	// string "StakePool"
 	o = append(o, 0xa9, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c)
 	if z.StakePool == nil {
 		o = msgp.AppendNil(o)
 	} else {
 		o, err = z.StakePool.MarshalMsg(o)
 		if err != nil {
-			err = msgp.WrapError(err, "Provider")
+			err = msgp.WrapError(err, "StakePool")
 			return
 		}
 	}
@@ -71,7 +71,7 @@ func (z *MinerNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
-		case "Provider":
+		case "StakePool":
 			if msgp.IsNil(bts) {
 				bts, err = msgp.ReadNilBytes(bts)
 				if err != nil {
@@ -84,7 +84,7 @@ func (z *MinerNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 				bts, err = z.StakePool.UnmarshalMsg(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "Provider")
+					err = msgp.WrapError(err, "StakePool")
 					return
 				}
 			}
