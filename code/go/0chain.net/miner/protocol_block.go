@@ -362,7 +362,14 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		zap.Int("calculated cost", cost))
 
 	cur = time.Now()
-	if err = mc.ComputeState(ctx, b); err != nil {
+	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for {
+		err = mc.ComputeState(cctx, b)
+		if err == nil {
+			break
+		}
+
 		if err == context.Canceled {
 			logging.Logger.Warn("verify block - compute state canceled",
 				zap.Int64("round", b.Round),
@@ -370,14 +377,30 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 			return
 		}
 
+		if !cstate.ErrInvalidState(err) {
+			return nil, err
+		}
+
 		logging.Logger.Error("verify block - error computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash),
 			zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 			zap.Error(err))
-		return // TODO (sfxdx): to return here or not to return (keep error)?
+
+		select {
+		case <-cctx.Done():
+			return nil, cctx.Err()
+		case <-time.After(time.Second):
+			logging.Logger.Error("verify block - retry computing state",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.String("prev_block", b.PrevHash),
+				zap.String("state_hash", util.ToHex(b.ClientStateHash)))
+		}
 	}
-	logging.Logger.Debug("ComputeState finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
+
+	logging.Logger.Debug("veryfy block - ComputeState finished",
+		zap.String("block", b.Hash),
+		zap.Duration("spent", time.Since(cur)))
 
 	cur = time.Now()
 	if err = mc.verifySmartContracts(ctx, b); err != nil {
