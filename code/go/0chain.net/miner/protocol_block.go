@@ -343,12 +343,18 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	var costs []int
 	for _, txn := range b.Txns {
-		c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn, true)
-		if err != nil {
+		if err := mc.syncAndRetry(ctx, b, "estimate cost", func(ctx context.Context) error {
+			c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn, true)
+			if err != nil {
+				return err
+			}
+
+			cost += c
+			costs = append(costs, c)
+			return nil
+		}); err != nil {
 			return nil, err
 		}
-		cost += c
-		costs = append(costs, c)
 	}
 	if cost > mc.ChainConfig.MaxBlockCost() {
 		logging.Logger.Error("cost limit exceeded", zap.Int("calculated_cost", cost),
@@ -362,52 +368,10 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		zap.Int("calculated cost", cost))
 
 	cur = time.Now()
-	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	for {
-		retry, err := func() (retry bool, err error) {
-			wc := make(chan struct{}, 1)
-			mc.OnNodesSynced(b.Round, wc)
-			defer mc.UnsubNodesSynced(b.Round)
-
-			err = mc.ComputeState(cctx, b)
-			if err == nil {
-				return false, nil
-			}
-
-			if !cstate.ErrInvalidState(err) {
-				logging.Logger.Warn("verify block - compute state failed",
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash),
-					zap.Error(err))
-				return false, err
-			}
-
-			logging.Logger.Error("verify block - error computing state",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash),
-				zap.String("prev_block", b.PrevHash),
-				zap.String("state_hash", util.ToHex(b.ClientStateHash)),
-				zap.Error(err))
-
-			select {
-			case <-cctx.Done():
-				return false, cctx.Err()
-			case <-wc:
-				logging.Logger.Error("verify block - retry computing state",
-					zap.Int64("round", b.Round), zap.String("block", b.Hash),
-					zap.String("prev_block", b.PrevHash),
-					zap.String("state_hash", util.ToHex(b.ClientStateHash)))
-				return true, nil
-			}
-		}()
-
-		if err != nil {
-			return nil, err
-		}
-
-		if !retry {
-			break
-		}
+	if err := mc.syncAndRetry(ctx, b, "verify block", func(ctx context.Context) error {
+		return mc.ComputeState(ctx, b)
+	}); err != nil {
+		return nil, err
 	}
 
 	logging.Logger.Debug("verify block - ComputeState finished",
@@ -441,6 +405,57 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		zap.Int8("state_status", b.GetStateStatus()))
 
 	return
+}
+
+func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, f func(context.Context) error) error {
+	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for {
+		retry, err := func() (retry bool, err error) {
+			wc := make(chan struct{}, 1)
+			mc.OnNodesSynced(b.Round, wc)
+			defer mc.UnsubNodesSynced(b.Round)
+
+			err = f(cctx)
+			if err == nil {
+				return false, nil
+			}
+
+			if !cstate.ErrInvalidState(err) {
+				logging.Logger.Warn("sync and retry - none invalid state error",
+					zap.String("desc", desc),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.Error(err))
+				return false, err
+			}
+
+			logging.Logger.Error("sync and retry - invalid state error",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.String("prev_block", b.PrevHash),
+				zap.String("state_hash", util.ToHex(b.ClientStateHash)),
+				zap.Error(err))
+
+			select {
+			case <-cctx.Done():
+				return false, cctx.Err()
+			case <-wc:
+				logging.Logger.Error("sync and retry - retry",
+					zap.Int64("round", b.Round), zap.String("block", b.Hash),
+					zap.String("prev_block", b.PrevHash),
+					zap.String("state_hash", util.ToHex(b.ClientStateHash)))
+				return true, nil
+			}
+		}()
+
+		if err != nil {
+			return err
+		}
+
+		if !retry {
+			return nil
+		}
+	}
 }
 
 func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error {
