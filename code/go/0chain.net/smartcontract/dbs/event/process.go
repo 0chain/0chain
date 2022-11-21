@@ -359,6 +359,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.DeleteAuthorizer(id)
+	case TagUpdateAuthorizerTotalStake:
+		as, ok := fromEvent[[]Authorizer](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateAuthorizersTotalStakes(*as)
 	case TagAddWriteMarker:
 		wms, ok := fromEvent[[]WriteMarker](event.Data)
 		if !ok {
@@ -445,6 +452,13 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 
 		return edb.addOrOverwriteSharders(*sharders)
+	case TagUpdateMinerTotalStake:
+		m, ok := fromEvent[[]Miner](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateMinersTotalStakes(*m)
 	case TagUpdateSharder:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -463,6 +477,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return ErrInvalidEventData
 		}
 		return edb.addOrOverwriteCurator(*c)
+	case TagUpdateSharderTotalStake:
+		s, ok := fromEvent[[]Sharder](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateShardersTotalStakes(*s)
 	case TagRemoveCurator:
 		c, ok := fromEvent[Curator](event.Data)
 		if !ok {
