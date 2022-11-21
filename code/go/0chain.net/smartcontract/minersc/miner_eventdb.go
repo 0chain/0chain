@@ -1,12 +1,11 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/stakepool"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/logging"
 )
 

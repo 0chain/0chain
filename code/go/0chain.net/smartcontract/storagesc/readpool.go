@@ -5,13 +5,14 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 )
 
@@ -227,6 +228,13 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
+	i, _ := txn.Value.Int64()
+	balances.EmitEvent(event.TypeStats, event.TagLockReadPool, txn.ClientID, event.ReadPoolLock{
+		Client: txn.ClientID,
+		PoolId: targetId,
+		Amount: i,
+	})
+
 	return "", nil
 }
 
@@ -249,6 +257,14 @@ func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, in
 	if err = rp.save(ssc.ID, txn.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
+
+	i, _ := balance.Int64()
+	key := readPoolKey(ssc.ID, txn.ClientID)
+	balances.EmitEvent(event.TypeStats, event.TagUnlockReadPool, key, event.ReadPoolLock{
+		Client: txn.ClientID,
+		PoolId: key,
+		Amount: i,
+	})
 
 	return "", nil
 }

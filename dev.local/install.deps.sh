@@ -10,7 +10,7 @@ echo ""
 
 wget -O - https://github.com/facebook/rocksdb/archive/v6.20.3.tar.gz | tar xz 
 cd ./rocksdb* && \
-PORTABLE=1 make -j $(nproc) install-shared OPT=-g0 USE_RTTI=1 
+PORTABLE=1 make -j 4 install-shared OPT=-g0 USE_RTTI=1
 cd /usr/local/lib/
 ln -fs librocksdb.6.20.3.dylib /usr/local/lib/-mmacosx-version-min=12.0librocksdb.6.20.dylib
 ln -fs librocksdb.6.20.3.dylib /usr/local/lib/-mmacosx-version-min=10.12librocksdb.6.20.dylib
@@ -23,7 +23,7 @@ echo ""
 cd $root
 wget -O - https://github.com/herumi/mcl/archive/master.tar.gz | tar xz
 mv mcl* mcl
-make -C mcl -j $(nproc) lib/libmclbn256.dylib install 
+make -C mcl -j 4 lib/libmclbn256.dylib install
 
 echo ""
 echo "3> Build and install herumi/bls"
@@ -31,7 +31,7 @@ echo ""
 cd $root
 wget -O - https://github.com/herumi/bls/archive/master.tar.gz | tar xz 
 mv bls* bls
-make MCL_DIR=../mcl -C bls -j $(nproc) install 
+make MCL_DIR=../mcl -C bls -j 4 install
 
 
 echo ""
