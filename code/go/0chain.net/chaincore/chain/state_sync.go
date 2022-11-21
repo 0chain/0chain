@@ -124,9 +124,13 @@ func (c *Chain) notifyNodesSynced(round int64) {
 	c.syncMissingNodesMutex.Lock()
 	defer c.syncMissingNodesMutex.Unlock()
 
+	var i int
 	for _, ch := range c.syncMissingNodesSub[round] {
 		close(ch)
+		i++
 	}
+
+	logging.Logger.Debug("notify nodes synced", zap.Int64("round", round), zap.Int("num", i))
 
 	delete(c.syncMissingNodesSub, round)
 }
