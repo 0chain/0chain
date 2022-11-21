@@ -649,10 +649,3 @@ func setEventData[T any](e *Event, data interface{}) error {
 
 	return ErrInvalidEventData
 }
-
-func withTotalStakesAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *StakePool) (*StakePool, error) {
-		a.TotalStake += b.TotalStake
-		return a, nil
-	})
-}
