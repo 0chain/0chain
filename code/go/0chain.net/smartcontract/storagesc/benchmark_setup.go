@@ -10,8 +10,8 @@ import (
 
 	"0chain.net/core/datastore"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -178,6 +178,7 @@ func AddMockChallenges(
 			&allocationChall[i],
 			eventDb,
 			balances,
+			i,
 		)
 		challenges = append(challenges, cs...)
 	}
@@ -251,11 +252,6 @@ func AddMockChallenges(
 	}
 }
 
-func benchWritePoolExpire(now common.Timestamp) common.Timestamp {
-	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
-		now + common.Timestamp(time.Hour*24*23)
-}
-
 func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 	rps := make([]*readPool, len(clients))
 	for i := range clients {
@@ -306,6 +302,7 @@ func setupMockChallenge(
 	ac *AllocationChallenges,
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
+	index int,
 ) []*StorageChallenge {
 	ac.AllocationID = allocationId
 
@@ -332,10 +329,11 @@ func setupMockChallenge(
 
 	if viper.GetBool(sc.EventDbEnabled) {
 		challengeRow := event.Challenge{
-			ChallengeID:  challenge.ID,
-			CreatedAt:    balances.GetTransaction().CreationDate,
-			AllocationID: challenge.AllocationID,
-			BlobberID:    challenge.BlobberID,
+			ChallengeID:    challenge.ID,
+			CreatedAt:      balances.GetTransaction().CreationDate,
+			AllocationID:   challenge.AllocationID,
+			BlobberID:      challenge.BlobberID,
+			RoundResponded: int64(index),
 		}
 		_ = eventDb.Store.Get().Create(&challengeRow)
 	}
@@ -356,7 +354,7 @@ func AddMockBlobbers(
 
 	partition, err := getActivePassedBlobberRewardsPartitions(balances, viper.GetInt64(sc.StorageBlockRewardTriggerPeriod))
 	if err != nil {
-		panic(err)
+		log.Fatal("getting active passed blobber rewards partition", err)
 	}
 
 	var sscId = StorageSmartContract{
@@ -390,11 +388,11 @@ func AddMockBlobbers(
 		rtvBlobbers = append(rtvBlobbers, blobber)
 		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
 		if err != nil {
-			panic(err)
+			log.Fatal("insert blobber into mpt", err)
 		}
 		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sscId), &datastore.NOIDField{})
 		if err != nil {
-			panic(err)
+			log.Fatal("insert blobber url into mpt", err)
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
@@ -408,7 +406,7 @@ func AddMockBlobbers(
 				MaxOfferDuration: blobber.Terms.MaxOfferDuration.Nanoseconds(),
 				Capacity:         blobber.Capacity,
 				Allocated:        blobber.Allocated,
-				Used:             blobber.Allocated / 2,
+				ReadData:             blobber.Allocated * 2,
 				LastHealthCheck:  int64(blobber.LastHealthCheck),
 				Provider: &event.Provider{
 					DelegateWallet: blobber.StakePoolSettings.DelegateWallet,
@@ -424,9 +422,10 @@ func AddMockBlobbers(
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
-				panic(err)
+				log.Fatal("convert currency", err)
 			}
 			_ = eventDb.Store.Get().Create(&blobberDb)
+			addMockBlobberSnapshots(blobberDb, eventDb)
 		}
 
 		if i < numRewardPartitionBlobbers {
@@ -440,16 +439,73 @@ func AddMockBlobbers(
 					DataRead:          float64(i) * 0.1,
 				})
 			if err != nil {
-				panic(err)
+				log.Fatal("add partition", err)
 			}
 		}
 	}
-
 	err = partition.Save(balances)
 	if err != nil {
-		panic(err)
+		log.Fatal("save partition", err)
 	}
 	return rtvBlobbers
+}
+
+func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
+	var mockChallengesPassed = viper.GetUint64(sc.EventDbAggregatePeriod)
+	var mockChallengesCompleted = viper.GetUint64(sc.EventDbAggregatePeriod) + 1
+	const mockInactiveRounds = 17
+	var aggregates []event.BlobberAggregate
+	for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
+		aggregate := event.BlobberAggregate{
+			Round:               int64(i),
+			BlobberID:           blobber.BlobberID,
+			WritePrice:          blobber.WritePrice,
+			Capacity:            blobber.Capacity,
+			Allocated:           blobber.Allocated,
+			SavedData:           blobber.SavedData,
+			ReadData:            blobber.ReadData,
+			OffersTotal:         blobber.OffersTotal,
+			UnstakeTotal:        blobber.UnstakeTotal,
+			TotalServiceCharge:  blobber.TotalServiceCharge,
+			TotalStake:          blobber.TotalStake,
+			ChallengesPassed:    mockChallengesPassed * uint64(i),
+			ChallengesCompleted: mockChallengesCompleted * uint64(i),
+			InactiveRounds:      mockInactiveRounds,
+		}
+		aggregates = append(aggregates, aggregate)
+	}
+	res := edb.Store.Get().Create(&aggregates)
+	if res.Error != nil {
+		log.Fatal(res.Error)
+	}
+}
+
+func AddMockSnapshots(edb *event.EventDb) {
+	var snapshots []event.Snapshot
+	for i := 1; i < viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
+		snapshot := event.Snapshot{
+			Round:                int64(i),
+			TotalMint:            int64(i + 10),
+			TotalChallengePools:  int64(currency.Coin(i + (1 * 1e10))),
+			ActiveAllocatedDelta: int64(i),
+			AverageWritePrice:    int64(getMockBlobberTerms().WritePrice),
+			TotalStaked:          int64(currency.Coin(i * (0.001 * 1e10))),
+			SuccessfulChallenges: int64(i-1) / 2,
+			TotalChallenges:      int64(i - 1),
+			ZCNSupply:            100000 * int64(i+10),
+			AllocatedStorage:     int64(i * 1024),
+			MaxCapacityStorage:   int64(i * 10240),
+			StakedStorage:        int64(i * 512),
+			UsedStorage:          int64(i * 256),
+			TotalValueLocked:     int64(currency.Coin(i * (0.001 * 1e10))),
+			ClientLocks:          int64(currency.Coin(i * (0.0001 * 1e10))),
+		}
+		snapshots = append(snapshots, snapshot)
+	}
+	res := edb.Store.Get().Create(&snapshots)
+	if res.Error != nil {
+		log.Fatal("mock snapshot failed on create edb row", res.Error)
+	}
 }
 
 func AddMockValidators(
@@ -664,8 +720,9 @@ func AddMockWriteRedeems(
 			}
 			if viper.GetBool(sc.EventDbEnabled) {
 				numBlocks := viper.GetInt(sc.NumBlocks)
-				mockBlockNumber := int64((i + 1) % numBlocks)
-				txnNum := (i + 1) / numBlocks
+				txnPerBlock := viper.GetInt(sc.NumTransactionPerBlock)
+				mockBlockNumber := int64(i%(numBlocks-1)) + 1
+				txnNum := (i) % txnPerBlock
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	sc "0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool"

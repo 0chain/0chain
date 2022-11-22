@@ -1,0 +1,291 @@
+{
+	"info": {
+		"_postman_id": "32be5d8b-5fed-474b-aa0f-586d14e5e3d4",
+		"name": "0chain",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "0swap",
+			"item": [
+				{
+					"name": "v1",
+					"item": [
+						{
+							"name": "circle",
+							"item": [
+								{
+									"name": "/v1/circle/cards/",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"idempotencyKey\": \"ba943ff1-ca16-49b2-ba55-1057e70ca5c7\",\n    \"encryptedData\": \"LS0tLS1CRUdJTiBQR1AgTUVTU0FHRS0tLS0tCgp3Y0JNQTBYV1NGbEZScFZoQVFmL2J2bVVkNG5LZ3dkbExKVTlEdEFEK0p5c0VOTUxuOUlRUWVGWnZJUWEKMGgzQklpRFNRU0RMZmI0NEs2SXZMeTZRbm54bmFLcWx0MjNUSmtPd2hGWFIrdnNSMU5IbnVHN0lUNWJECmZzeVdleXlNK1JLNUVHV0thZ3NmQ2tWamh2NGloY29xUnlTTGtJbWVmRzVaR0tMRkJTTTBsTFNPWFRURQpiMy91eU1zMVJNb3ZiclNvbXkxa3BybzUveWxabWVtV2ZsU1pWQlhNcTc1dGc1YjVSRVIraXM5ckc0cS8KMXl0M0FOYXA3UDhKekFhZVlyTnVNZGhGZFhvK0NFMC9CQnN3L0NIZXdhTDk4SmRVUEV0NjA5WFRHTG9kCjZtamY0YUtMQ01xd0RFMkNVb3dPdE8vMzVIMitnVDZKS3FoMmtjQUQyaXFlb3luNWcralRHaFNyd3NKWgpIdEphQWVZZXpGQUVOaFo3Q01IOGNsdnhZVWNORnJuNXlMRXVGTkwwZkczZy95S3loclhxQ0o3UFo5b3UKMFVxQjkzQURKWDlJZjRBeVQ2bU9MZm9wUytpT2lLall4bG1NLzhlVWc3OGp1OVJ5T1BXelhyTzdLWTNHClFSWm8KPXc1dEYKLS0tLS1FTkQgUEdQIE1FU1NBR0UtLS0tLQo\",\n    \"billingDetails\":{\n        \"name\": \"Satoshi Nakamoto\",\n        \"city\": \"Boston\",\n        \"country\": \"US\",\n        \"line1\": \"100 Money Street\",\n        \"district\": \"MA\",\n        \"postalCode\": \"01234\"\n    },\n    \"expMonth\": 1,\n    \"expYear\": 2025,\n    \"metadata\":{\n        \"email\": \"satoshi@circle.com\",\n        \"phoneNumber\": \"+84966548140\",\n        \"sessionId\": \"DE6FA86F60BB47B379307F851E238617\",\n        \"ipAddress\": \"244.28.239.130\"\n    },\n    \"zcnWallet\": \"123456\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:9083/v1/circle/cards/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "9083",
+											"path": [
+												"v1",
+												"circle",
+												"cards",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "/v1/circle/cards/publickey",
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "http://localhost:9083/v1/circle/cards/publickey",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "9083",
+											"path": [
+												"v1",
+												"circle",
+												"cards",
+												"publickey"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "/v1/circle/cards/",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "phone",
+												"value": "+84966548140",
+												"type": "default"
+											}
+										],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "phone",
+													"value": "+14155555555",
+													"type": "default",
+													"disabled": true
+												}
+											],
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:9083/v1/circle/cards/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "9083",
+											"path": [
+												"v1",
+												"circle",
+												"cards",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "/v1/circle/payment",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"idempotencyKey\": \"ba943ff1-ca16-49b2-ba55-1057e70ca5c7\",\n    \"keyId\":\"key1\",\n    \"encryptedData\": \"LS0tLS1CRUdJTiBQR1AgTUVTU0FHRS0tLS0tCgp3Y0JNQTBYV1NGbEZScFZoQVFmL2J2bVVkNG5LZ3dkbExKVTlEdEFEK0p5c0VOTUxuOUlRUWVGWnZJUWEKMGgzQklpRFNRU0RMZmI0NEs2SXZMeTZRbm54bmFLcWx0MjNUSmtPd2hGWFIrdnNSMU5IbnVHN0lUNWJECmZzeVdleXlNK1JLNUVHV0thZ3NmQ2tWamh2NGloY29xUnlTTGtJbWVmRzVaR0tMRkJTTTBsTFNPWFRURQpiMy91eU1zMVJNb3ZiclNvbXkxa3BybzUveWxabWVtV2ZsU1pWQlhNcTc1dGc1YjVSRVIraXM5ckc0cS8KMXl0M0FOYXA3UDhKekFhZVlyTnVNZGhGZFhvK0NFMC9CQnN3L0NIZXdhTDk4SmRVUEV0NjA5WFRHTG9kCjZtamY0YUtMQ01xd0RFMkNVb3dPdE8vMzVIMitnVDZKS3FoMmtjQUQyaXFlb3luNWcralRHaFNyd3NKWgpIdEphQWVZZXpGQUVOaFo3Q01IOGNsdnhZVWNORnJuNXlMRXVGTkwwZkczZy95S3loclhxQ0o3UFo5b3UKMFVxQjkzQURKWDlJZjRBeVQ2bU9MZm9wUytpT2lLall4bG1NLzhlVWc3OGp1OVJ5T1BXelhyTzdLWTNHClFSWm8KPXc1dEYKLS0tLS1FTkQgUEdQIE1FU1NBR0UtLS0tLQo\",\n    \"metadata\":{\n        \"email\": \"satoshi@circle.com\",\n        \"phoneNumber\": \"+84966548140\",\n        \"sessionId\": \"DE6FA86F60BB47B379307F851E238617\",\n        \"ipAddress\": \"244.28.239.130\"\n    },\n    \"amount\":{\n        \"amount\": \"3.14\",\n        \"currency\": \"USD\"\n    },\n    \"autoCapture\": true,\n    \"verification\": \"cvv\",\n    \"source\": {\n        \"id\": \"c2126773-b04a-4995-8356-9e3b5b3f6855\",\n        \"type\": \"card\"\n    },\n    \"zcnWallet\": \"123456\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:9083/v1/circle/payment/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "9083",
+											"path": [
+												"v1",
+												"circle",
+												"payment",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "/v1/circle/subscribe",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "http://localhost:9083/v1/circle/subscribe",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "9083",
+											"path": [
+												"v1",
+												"circle",
+												"subscribe"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "/v1/circle/webhook",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"Type\" : \"Notification\",\n  \"MessageId\" : \"05dd4857-b93f-5a6c-a230-1f444c7e017b\",\n  \"TopicArn\" : \"arn:aws:sns:us-east-1:908968368384:sandbox_platform-notifications-topic\",\n  \"Message\" : \"{\n    \\\"clientId\\\":\\\"ad06b880-41b8-4e17-b4d1-db1730902a28\\\",\n    \\\"notificationType\\\":\\\"payments\\\",\n    \\\"version\\\":1,\n    \\\"customAttributes\\\":{\n      \\\"clientId\\\":\\\"ad06b880-41b8-4e17-b4d1-db1730902a28\\\"\n    },\n    \\\"payment\\\": {\n      \\\"id\\\":\\\"10aafcb5-f612-4832-9bc2-9e842f1521cf\\\",\n      \\\"type\\\":\\\"payment\\\",\n      \\\"merchantId\\\":\\\"ad06b880-41b8-4e17-b4d1-db1730902a28\\\",\n      \\\"merchantWalletId\\\":\\\"1000197258\\\",\n      \\\"source\\\":{\n        \\\"id\\\":\\\"c2126773-b04a-4995-8356-9e3b5b3f6855\\\",\n        \\\"type\\\":\\\"card\\\"\n      },\n      \\\"description\\\":\\\"Payment\\\",\n      \\\"amount\\\":{\n        \\\"amount\\\":\\\"3.14\\\",\n        \\\"currency\\\":\\\"USD\\\"\n      },\n      \\\"metadata\\\":{\n        \\\"phoneNumber\\\":\\\"+84966548140\\\",\n        \\\"email\\\":\\\"test@test.com\\\"\n      },\n      \\\"status\\\":\\\"confirmed\\\",\n      \\\"createDate\\\":\\\"2020-04-17T18:18:38.838Z\\\"\n    }\n  }\",\n  \"Timestamp\" : \"2020-04-17T18:18:41.531Z\",\n  \"SignatureVersion\" : \"1\",\n  \"Signature\" : \"b6lp6siDD1R4NZ8aPR5AcNua3GinP9Ol3PVfgCM6DtwA20O/f30s2EZU0IgexoeF0r2eP+rOpHZAL8pT5Tk/cjvCaEQ5Kck55k3vlNWqcgY2B116Gc5ujmIfOaC+oJBBU8GvCXtRzodN6JvrnNQzy00KzQ2vXyrXBs3kOLB5HwCVVxPM+7a4J2NT7SVCsca/GH+ffD35VH9TkDkZI6gDRbrT2Ac3TTnNum8s4vo1yzqkABsfFFgyqrFLqC3KeNrtOA3qDMQlvIjA9xsA05SamRegpa4vvvK6V++yCKnDG86v8yKUBgeBWCBhpL3U9mYQYQUzzXbUlXlXs9ShT62Rjg==\",\n  \"SigningCertURL\" : \"https://sns.us-east-1.amazonaws.com/SimpleNotificationService-a86cb10b4e1f29c941702d737128f7b6.pem\",\n  \"UnsubscribeURL\" : \"https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:908968368384:sandbox_platform-notifications-topic:8735fb3c-e8fc-4a73-a225-cb2852f570e0\",\n  \"MessageAttributes\" : {\n    \"clientId\" : {\n      \"Type\":\"String\",\n      \"Value\":\"ef25859e-4842-4b16-a3bd-cbe531e15b85\"\n    }\n  }\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:9083/v1/circle/webhook",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "9083",
+											"path": [
+												"v1",
+												"circle",
+												"webhook"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "/v1/circle/payment/rate",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"idempotencyKey\": \"ba943ff1-ca16-49b2-ba55-1057e70ca5c7\",\n    \"keyId\":\"key1\",\n    \"encryptedData\": \"LS0tLS1CRUdJTiBQR1AgTUVTU0FHRS0tLS0tCgp3Y0JNQTBYV1NGbEZScFZoQVFmL2J2bVVkNG5LZ3dkbExKVTlEdEFEK0p5c0VOTUxuOUlRUWVGWnZJUWEKMGgzQklpRFNRU0RMZmI0NEs2SXZMeTZRbm54bmFLcWx0MjNUSmtPd2hGWFIrdnNSMU5IbnVHN0lUNWJECmZzeVdleXlNK1JLNUVHV0thZ3NmQ2tWamh2NGloY29xUnlTTGtJbWVmRzVaR0tMRkJTTTBsTFNPWFRURQpiMy91eU1zMVJNb3ZiclNvbXkxa3BybzUveWxabWVtV2ZsU1pWQlhNcTc1dGc1YjVSRVIraXM5ckc0cS8KMXl0M0FOYXA3UDhKekFhZVlyTnVNZGhGZFhvK0NFMC9CQnN3L0NIZXdhTDk4SmRVUEV0NjA5WFRHTG9kCjZtamY0YUtMQ01xd0RFMkNVb3dPdE8vMzVIMitnVDZKS3FoMmtjQUQyaXFlb3luNWcralRHaFNyd3NKWgpIdEphQWVZZXpGQUVOaFo3Q01IOGNsdnhZVWNORnJuNXlMRXVGTkwwZkczZy95S3loclhxQ0o3UFo5b3UKMFVxQjkzQURKWDlJZjRBeVQ2bU9MZm9wUytpT2lLall4bG1NLzhlVWc3OGp1OVJ5T1BXelhyTzdLWTNHClFSWm8KPXc1dEYKLS0tLS1FTkQgUEdQIE1FU1NBR0UtLS0tLQo\",\n    \"metadata\":{\n        \"email\": \"satoshi@circle.com\",\n        \"phoneNumber\": \"+84966548140\",\n        \"sessionId\": \"DE6FA86F60BB47B379307F851E238617\",\n        \"ipAddress\": \"244.28.239.130\"\n    },\n    \"amount\":{\n        \"amount\": \"3.14\",\n        \"currency\": \"USD\"\n    },\n    \"autoCapture\": true,\n    \"verification\": \"cvv\",\n    \"source\": {\n        \"id\": \"c2126773-b04a-4995-8356-9e3b5b3f6855\",\n        \"type\": \"card\"\n    },\n    \"zcnWallet\": \"123456\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "http://localhost:9083/v1/circle/payment/",
+											"protocol": "http",
+											"host": [
+												"localhost"
+											],
+											"port": "9083",
+											"path": [
+												"v1",
+												"circle",
+												"payment",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "/v1/wallet",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"crypto_wallet\": \"0x28525a7a1F592a6aDFE28b597631fDF5e0f7c6ed\",\n  \"idempotencyKey\": \"ba943ff1-ca16-49b2-ba55-1057e70ca5c7\",\n  \"node\": \"goerli\",\n  \"phone_num\": \"+84966548140\",\n  \"provider\": \"ETH\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:9083/v1/wallet",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "9083",
+									"path": [
+										"v1",
+										"wallet"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "0box",
+			"item": [
+				{
+					"name": "freestorage",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:9081/v2/freestorage",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9081",
+							"path": [
+								"v2",
+								"freestorage"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

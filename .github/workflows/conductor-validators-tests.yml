@@ -70,7 +70,6 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
-        cd blobber && git checkout add-send-wrong-bad-data-behaviour
 
     - name: Git clone zboxcli
       run: |

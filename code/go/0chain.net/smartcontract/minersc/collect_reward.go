@@ -6,10 +6,10 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/currency"
 )
 
 // collectReward mints tokens for miner or sharder delegate rewards.

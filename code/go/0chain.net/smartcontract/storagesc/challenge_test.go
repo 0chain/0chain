@@ -10,7 +10,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -536,6 +536,7 @@ func setupChallengeMocks(
 		TimeUnit:   scYaml.TimeUnit,
 		WritePool:  currency.Coin(wpBalance),
 	}
+
 	var allocChallenges = &AllocationChallenges{
 		AllocationID: encryption.Hash("alloc_challenges_id"),
 		LatestCompletedChallenge: &StorageChallenge{
@@ -579,6 +580,7 @@ func setupChallengeMocks(
 			ID: storageScId,
 		},
 	}
+	_, err = ctx.InsertTrieNode(allocation.GetKey(ADDRESS), allocation)
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{

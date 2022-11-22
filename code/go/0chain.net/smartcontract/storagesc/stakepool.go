@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -418,6 +418,10 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
+	_, err = sp.stake()
+	if err != nil {
+		return "", err
+	}
 
 	if len(sp.Pools) >= conf.MaxDelegates {
 		return "", common.NewErrorf("stake_pool_lock_failed",
@@ -461,7 +465,10 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
-
+	_, err = sp.stake()
+	if err != nil {
+		return "", err
+	}
 	dp, ok := sp.Pools[t.ClientID]
 	if !ok {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)

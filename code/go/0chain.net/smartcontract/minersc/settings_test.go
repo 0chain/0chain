@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	chainstate "0chain.net/chaincore/chain/state"
 

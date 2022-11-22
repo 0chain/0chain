@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/core/common"
-	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+
+	"0chain.net/core/common"
+	common2 "0chain.net/smartcontract/common"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 	"github.com/guregu/null"
 )
 
@@ -38,9 +39,12 @@ type Blobber struct {
 	Allocated       int64 `json:"allocated"` // allocated capacity
 	Used            int64 `json:"used"`      // total of files saved on blobber
 	LastHealthCheck int64 `json:"last_health_check"`
-	SavedData       int64 `json:"saved_data"`
+	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
+	ReadData        int64 `json:"read_data"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
+	//todo update
+	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 
 	Name        string `json:"name" gorm:"name"`
 	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
@@ -49,12 +53,16 @@ type Blobber struct {
 
 	ChallengesPassed    uint64  `json:"challenges_passed"`
 	ChallengesCompleted uint64  `json:"challenges_completed"`
+	OpenChallenges      uint64  `json:"open_challenges"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
 
 	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:BlobberID;references:ProviderID"`
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:BlobberID"`
+
+	CreationRound  int64 `json:"creation_round" gorm:"index:idx_blobber_creation_round"`
+	InactiveRounds int64 `json:"inactive_rounds"`
 }
 
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.
@@ -332,31 +340,92 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
 		a.Used += b.Used
 		a.SavedData += b.SavedData
+		a.ReadData += b.ReadData
 		return a, nil
 	})
 }
 
-func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withBlobberChallengesMerged())
+type ChallengeStatsDeltas struct {
+	Id             string `json:"id"`
+	PassedDelta    int64  `json:"passed_delta"`
+	CompletedDelta int64  `json:"completed_delta"`
+	OpenDelta      int64  `json:"open_delta"`
+}
+
+func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
+	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withBlobberChallengesMerged())
 }
 
 func withBlobberChallengesMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		a.ChallengesCompleted += b.ChallengesCompleted
-		a.ChallengesPassed += b.ChallengesPassed
+	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
+		a.CompletedDelta += b.CompletedDelta
+		a.PassedDelta += b.PassedDelta
+		a.OpenDelta += b.OpenDelta
 		return a, nil
 	})
 }
 
-func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
-	vs := map[string]interface{}{
-		"challenges_completed": gorm.Expr("blobbers.challenges_completed + excluded.challenges_completed"),
-		"challenges_passed":    gorm.Expr("blobbers.challenges_passed + excluded.challenges_passed"),
-		"rank_metric":          gorm.Expr("((blobbers.challenges_passed + excluded.challenges_passed)::FLOAT / (blobbers.challenges_completed + excluded.challenges_completed)::FLOAT)::DECIMAL(10,3)"),
-	}
+func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
+	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withBlobberChallengesMerged())
+}
 
-	return edb.Store.Get().Model(&Blobber{}).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "blobber_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(blobbers).Error
+func (edb *EventDb) updateOpenBlobberChallenges(deltas []ChallengeStatsDeltas) error {
+	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(deltas)).Scan(&Blobber{}).Error
+}
+
+func sqlUpdateOpenChallenges(deltas []ChallengeStatsDeltas) string {
+	if len(deltas) == 0 {
+		return ""
+	}
+	sql := "UPDATE blobbers \n"
+	sql += "SET "
+	sql += "  open_challenges = open_challenges + v.open\n"
+	sql += "FROM ( VALUES"
+	first := true
+	for _, delta := range deltas {
+		if first {
+			first = false
+		} else {
+			sql += ","
+		}
+		sql += fmt.Sprintf("('%s', %d)", delta.Id, delta.OpenDelta)
+	}
+	sql += "  )\n"
+	sql += "AS v (id, open)\n"
+	sql += "WHERE\n"
+	sql += "  blobbers.blobber_id = v.id"
+
+	return sql
+}
+
+func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error {
+	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(deltas)).Scan(&Blobber{}).Error
+}
+
+// ref https://www.postgresql.org/docs/9.1/sql-values.html
+func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
+	if len(deltas) == 0 {
+		return ""
+	}
+	sql := "UPDATE blobbers \n"
+	sql += "SET "
+	sql += "  challenges_completed = challenges_completed + v.completed,\n"
+	sql += "  challenges_passed = challenges_passed + v.passed\n"
+	//sql += ",  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n" todo
+	sql += "FROM ( VALUES "
+	first := true
+	for _, delta := range deltas {
+		if first {
+			first = false
+		} else {
+			sql += ",\n"
+		}
+		sql += fmt.Sprintf("('%s', %d, %d)", delta.Id, delta.PassedDelta, delta.CompletedDelta)
+	}
+	sql += ")\n"
+	sql += "AS v (id, passed, completed)\n"
+	sql += "WHERE\n"
+	sql += "blobbers.blobber_id = v.id"
+
+	return sql
 }

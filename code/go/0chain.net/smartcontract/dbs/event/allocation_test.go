@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"

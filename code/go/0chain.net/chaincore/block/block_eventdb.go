@@ -3,6 +3,9 @@ package block
 import (
 	"fmt"
 
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 )
@@ -31,11 +34,12 @@ func blockToBlockEvent(block *Block) *event.Block {
 }
 
 func CreateBlockEvent(block *Block) (error, event.Event) {
-
+	logging.Logger.Info("create block event", zap.Any("block", block))
+	// todo block.Round is zero, need to replace with block/round number
 	return nil, event.Event{
 		BlockNumber: block.Round,
 		TxHash:      "",
-		Type:        int(event.TypeStats),
+		Type:        int(event.TypeChain),
 		Tag:         int(event.TagAddBlock),
 		Index:       block.Hash,
 		Data:        blockToBlockEvent(block),

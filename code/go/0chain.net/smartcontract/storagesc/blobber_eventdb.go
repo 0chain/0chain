@@ -79,6 +79,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			Rewards:      sp.Reward,
 			TotalRewards: sp.Reward,
 		},
+		CreationRound: balances.GetBlock().Round,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)

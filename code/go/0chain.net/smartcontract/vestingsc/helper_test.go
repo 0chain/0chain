@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/common/core/currency"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
