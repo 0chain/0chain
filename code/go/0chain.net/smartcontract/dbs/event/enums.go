@@ -70,8 +70,23 @@ const (
 	TagAddOrUpdateChallengePool
 	TagUpdateAllocationStat
 	TagUpdateBlobberStat
-	TagUpdateValidatorStakeTotal
 	TagCollectProviderReward
+	TagSendTransfer
+	TagReceiveTransfer
+	TagLockStakePool
+	TagUnlockStakePool
+	TagLockWritePool
+	TagUnlockWritePool
+	TagLockReadPool
+	TagUnlockReadPool
+	TagToChallengePool
+	TagFromChallengePool
+	TagAddMint
+	TagBurn
+	TagAllocValueChange
+	TagAllocBlobberValueChange
+	TagUpdateBlobberOpenChallenges
+	TagUpdateValidatorStakeTotal
 	NumberOfTags
 )
 
@@ -119,8 +134,23 @@ var TagString = []string{
 	"AddOrUpdateChallengePool",
 	"UpdateAllocationStat",
 	"UpdateBlobberStat",
-	"UpdateValidatorStakeTotal",
 	"TagCollectProviderReward",
+	"TagSendTransfer",
+	"TagReceiveTransfer",
+	"TagLockStakePool",
+	"TagUnlockStakePool",
+	"TagLockWritePool",
+	"TagUnlockWritePool",
+	"TagLockReadPool",
+	"TagUnlockReadPool",
+	"TagToChallengePool",
+	"TagFromChallengePool",
+	"TagAddMint",
+	"TagBurn",
+	"TagAllocValueChange",
+	"TagAllocBlobberValueChange",
+	"TagUpdateBlobberOpenChallenges",
+	"TagUpdateValidatorStakeTotal",
 	"Invalid",
 }
 

@@ -2394,9 +2394,9 @@ type storageNodesResponse struct {
 type storageNodeResponse struct {
 	*StorageNode
 	TotalStake               currency.Coin `json:"total_stake"`
-	CreationRound      int64         `json:"creation_round"`
-	ReadData           int64         `json:"read_data"`
-	UsedAllocation     int64         `json:"used_allocation"`
+	CreationRound            int64         `json:"creation_round"`
+	ReadData                 int64         `json:"read_data"`
+	UsedAllocation           int64         `json:"used_allocation"`
 	TotalOffers              currency.Coin `json:"total_offers"`
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
@@ -2428,13 +2428,13 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				ServiceChargeRatio: blobber.ServiceCharge,
 			},
 		},
-		TotalStake:         blobber.TotalStake,
-		CreationRound:      blobber.CreationRound,
-		ReadData:           blobber.ReadData,
-		UsedAllocation:     blobber.Used,
-		TotalOffers:        blobber.OffersTotal,
+		TotalStake:     blobber.TotalStake,
+		CreationRound:  blobber.CreationRound,
+		ReadData:       blobber.ReadData,
+		UsedAllocation: blobber.Used,
+		TotalOffers:    blobber.OffersTotal,
 
-		TotalServiceCharge: blobber.Rewards.TotalRewards,
+		TotalServiceCharge:       blobber.Rewards.TotalRewards,
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
 	}
 }
