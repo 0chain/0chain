@@ -13,8 +13,7 @@ sets:
     - "Not respond to the client on uploading file"
     - "Not respond to the client on deleting file"
     - "Return error to the client on listing file"
-    # next test must be uncommented after https://github.com/0chain/blobber/issues/810 has been resolved
-    # - "Return error to the client on downloading file"
+    - "Return error to the client on downloading file"
     - "Return error to the client on uploading file"
     - "Return error to the client on deleting file"
 
