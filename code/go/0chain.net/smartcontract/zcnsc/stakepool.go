@@ -260,7 +260,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
 	}
 
-	amount, err := sp.UnlockClientStakePool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
+	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "%v", err)
 	}

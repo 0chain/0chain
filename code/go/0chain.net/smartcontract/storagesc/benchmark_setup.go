@@ -572,7 +572,6 @@ func GetMockBlobberStakePools(
 	balances cstate.StateContextI,
 ) []*stakePool {
 	sps := make([]*stakePool, 0, viper.GetInt(sc.NumBlobbers))
-	usps := make([]*stakepool.UserStakePools, len(clients))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		bId := getMockBlobberId(i)
 		sp := &stakePool{
@@ -589,10 +588,6 @@ func GetMockBlobberStakePools(
 			sp.Pools[id] = &stakepool.DelegatePool{}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
 			sp.Pools[id].DelegateID = clients[clientIndex]
-			if usps[clientIndex] == nil {
-				usps[clientIndex] = stakepool.NewUserStakePools()
-			}
-			usps[clientIndex].Providers = append(usps[clientIndex].Providers, bId)
 
 			if viper.GetBool(sc.EventDbEnabled) {
 				dp := event.DelegatePool{
@@ -612,18 +607,6 @@ func GetMockBlobberStakePools(
 		}
 		sps = append(sps, sp)
 	}
-
-	for cId, usp := range usps {
-		if usp != nil {
-			_, err := balances.InsertTrieNode(
-				stakepool.UserStakePoolsKey(spenum.Blobber, clients[cId]), usp,
-			)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
 	return sps
 }
 

@@ -29,20 +29,8 @@ func (ssc *MinerSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"invalid provider type: %s", prr.ProviderType.String())
 	}
-
-	usp, err := stakepool.GetUserStakePools(prr.ProviderType, txn.ClientID, balances)
-	if err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"can't get related user stake pools: %v", err)
-	}
-
-	var providers []string
-	if len(prr.ProviderId) == 0 {
-		providers = usp.Providers
-	} else {
-		providers = []string{prr.ProviderId}
-	}
-
+	var err error
+	providers := []string{prr.ProviderId}
 	var totalMinted currency.Coin
 	for _, providerID := range providers {
 		var provider *MinerNode
@@ -62,7 +50,7 @@ func (ssc *MinerSmartContract) collectReward(
 		if ok || providerID == txn.ClientID ||
 			provider.Settings.DelegateWallet == txn.ClientID {
 			minted, err := provider.StakePool.MintRewards(
-				txn.ClientID, providerID, prr.ProviderType, usp, balances)
+				txn.ClientID, providerID, prr.ProviderType, balances)
 			if err != nil {
 				return "", common.NewErrorf("collect_reward_failed",
 					"error emptying account, %v", err)

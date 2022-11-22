@@ -89,13 +89,6 @@ func (sp *StakePool) LockPool(
 		dp.StakedAt = txn.CreationDate
 	}
 
-	var usp *UserStakePools
-	usp, err := getOrCreateUserStakePool(providerType, txn.ClientID, balances)
-	if err != nil {
-		return fmt.Errorf("can't get user pools list: %v", err)
-	}
-
-	usp.Add(providerId)
 	i, _ := txn.Value.Int64()
 	logging.Logger.Info("emmit TagLockStakePool", zap.String("client_id", txn.ClientID), zap.String("provider_id", providerId))
 
@@ -105,9 +98,6 @@ func (sp *StakePool) LockPool(
 		ProviderType: providerType,
 		Amount:       i,
 	})
-	if err = usp.Save(providerType, txn.ClientID, balances); err != nil {
-		return fmt.Errorf("saving user pools: %v", err)
-	}
 
 	if err := balances.AddTransfer(state.NewTransfer(
 		txn.ClientID, txn.ToClientID, txn.Value,

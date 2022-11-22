@@ -122,7 +122,6 @@ func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.
 func (sp *StakePool) MintRewards(
 	clientId, providerId string,
 	providerType spenum.Provider,
-	usp *UserStakePools,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
 	var reward currency.Coin
@@ -170,7 +169,6 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		usp.Del(providerId)
 		return reward, nil
 	} else {
 		err := dpUpdate.emitUpdate(balances)

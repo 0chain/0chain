@@ -249,23 +249,15 @@ func (zcn *ZCNSmartContract) CollectRewards(
 		return "", common.NewErrorf(code, "can't decode request: %v", err)
 	}
 
-	usp, err := stakepool.GetUserStakePools(prr.ProviderType, tran.ClientID, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "can't get related user stake pools: %v", err)
-	}
-
-	providers := usp.Providers
-	if len(providers) == 0 {
-		return "", common.NewErrorf(code, "user %v does not own stake pool", tran.ClientID)
-	}
-
+	var providers []string
+	providers = []string{prr.ProviderId}
 	for _, providerId := range providers {
 		sp, err := zcn.getStakePool(providerId, ctx)
 		if err != nil {
 			return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
 		}
 
-		_, err = sp.MintRewards(tran.ClientID, providerId, prr.ProviderType, usp, ctx)
+		_, err = sp.MintRewards(tran.ClientID, providerId, prr.ProviderType, ctx)
 		if err != nil {
 			return "", common.NewErrorf(code, "error emptying account, %v", err)
 		}
@@ -273,10 +265,6 @@ func (zcn *ZCNSmartContract) CollectRewards(
 		if err := sp.save(zcn.ID, providerId, ctx); err != nil {
 			return "", common.NewErrorf(code, "error saving stake pool, %v", err)
 		}
-	}
-
-	if err := usp.Save(spenum.Authorizer, tran.ClientID, ctx); err != nil {
-		return "", common.NewErrorf(code, "error saving user stake pool, %v", err)
 	}
 
 	return "", nil
