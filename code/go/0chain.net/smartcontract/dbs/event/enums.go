@@ -5,6 +5,10 @@ type (
 	EventTag  int
 )
 
+const GB = 1024 * 1024 * 1024
+const period = 10
+const pageLimit = int64(50)
+
 const (
 	TypeNone EventType = iota
 	TypeError
