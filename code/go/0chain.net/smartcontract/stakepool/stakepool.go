@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"sort"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -344,7 +344,6 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 		spUpdate.Reward = value
-
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
 		}

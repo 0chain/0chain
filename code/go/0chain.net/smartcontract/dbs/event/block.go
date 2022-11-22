@@ -33,6 +33,29 @@ type Block struct {
 	IsFinalised           bool      `json:"is_finalised"`
 }
 
+func (edb *EventDb) GetRoundFromTime(at time.Time, asc bool) (int64, error) {
+	round := struct {
+		Round int64 `json:"round" gorm:"index:idx_bround"`
+	}{}
+	var direction, sign string
+	if asc {
+		direction = "asc"
+		sign = ">="
+	} else {
+		sign = "<="
+		direction = "desc"
+	}
+
+	if res := edb.Store.Get().
+		Table("blocks").
+		Where("created_at "+sign+" ?", at).
+		Order("round " + direction).
+		First(&round); res.Error != nil {
+		return 0, res.Error
+	}
+	return round.Round, nil
+}
+
 func (edb *EventDb) GetBlockByHash(hash string) (Block, error) {
 	block := Block{}
 	res := edb.Store.Get().Table("blocks").Where("hash = ?", hash).First(&block)
@@ -87,7 +110,9 @@ func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 	return blocks, res.Error
 }
 
-func (edb *EventDb) addBlock(block Block) error {
-	result := edb.Store.Get().Create(&block)
-	return result.Error
+func (edb *EventDb) addOrUpdateBlock(block Block) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "hash"}},
+		UpdateAll: true,
+	}).Create(&block).Error
 }

@@ -86,6 +86,16 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
+	err = edb.Store.Get().Migrator().DropTable(&BlobberAggregate{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&BlobberSnapshot{})
+	if err != nil {
+		return err
+	}
+
 	err = edb.Store.Get().Migrator().DropTable(&Transaction{})
 	if err != nil {
 		return err
@@ -147,6 +157,11 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Challenge{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Snapshot{})
 	if err != nil {
 		return err
 	}

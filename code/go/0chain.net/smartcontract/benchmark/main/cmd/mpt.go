@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/context"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -204,6 +204,7 @@ func setUpMpt(
 	timer = time.Now()
 
 	bk := &block.Block{}
+	bk.Round = viper.GetInt64(benchmark.NumBlocks)
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 
@@ -252,6 +253,14 @@ func setUpMpt(
 		timer := time.Now()
 		blobbers = storagesc.AddMockBlobbers(eventDb, balances)
 		log.Println("added blobbers\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer := time.Now()
+		storagesc.AddMockSnapshots(eventDb)
+		log.Println("added snapshots\t", time.Since(timer))
 	}()
 
 	wg.Add(1)
@@ -537,6 +546,7 @@ func newEventsDb() *event.EventDb {
 			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
 			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
 			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+			AggregatePeriod: viper.GetInt64(benchmark.EventDbAggregatePeriod),
 		})
 
 	}

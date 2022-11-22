@@ -3,7 +3,7 @@ package event
 import (
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
@@ -14,8 +14,9 @@ import (
 type User struct {
 	gorm.Model
 	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
-	TxnHash string        `json:"txn"`
+	TxnHash string        `json:"txn_hash"`
 	Balance currency.Coin `json:"balance"`
+	Change  currency.Coin `json:"change"`
 	Round   int64         `json:"round"`
 	Nonce   int64         `json:"nonce"`
 }

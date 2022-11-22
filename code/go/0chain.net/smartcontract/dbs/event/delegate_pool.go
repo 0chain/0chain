@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/stakepool/spenum"

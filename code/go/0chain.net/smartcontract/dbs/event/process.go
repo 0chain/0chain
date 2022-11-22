@@ -92,6 +92,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateChallengesEvents(),
 			mergeAddChallengePoolsEvents(),
 			mergeUpdateBlobberChallengesEvents(),
+			mergeAddChallengesToBlobberEvents(),
 			mergeUpdateAllocChallengesEvents(),
 
 			mergeUpdateBlobbersEvents(),
@@ -105,7 +106,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddReadMarkerEvents(),
 			mergeAllocationStatsEvents(),
 			mergeUpdateBlobberStatsEvents(),
-
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
 		}
@@ -114,6 +114,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	)
 
 	for _, e := range events {
+		if e.Type == int(TypeChain) {
+			others = append(others, e)
+			continue
+		}
 		if e.Type != TypeStats {
 			continue
 		}
@@ -149,6 +153,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
+	var gs *Snapshot
 	for {
 		es := <-edb.eventsChannel
 
@@ -168,6 +173,26 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 					zap.Any("tag", event.Tag),
 					zap.Error(err))
 			}
+		}
+
+		if gs == nil && es.round == 1 {
+			gs = &Snapshot{Round: 1}
+		}
+		if gs == nil && es.round > 1 {
+			g, err := tx.GetGlobal()
+			if err != nil {
+				logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
+			}
+			gs = &g
+		}
+		gs, err = tx.updateSnapshots(es, gs)
+		if err != nil {
+			logging.Logger.Error("event could not be processed",
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize),
+				zap.Error(err),
+			)
 		}
 
 		if err := tx.Commit(); err != nil {
@@ -206,11 +231,45 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		tags = append(tags, event.Tag.String())
 		ts := time.Now()
 		err = edb.addStat(event)
+		if err != nil {
+			logging.Logger.Error("piers addStat typeStats error",
+				zap.Int64("round", round),
+				zap.String("block", block),
+				zap.Int("block size", blockSize),
+				zap.Any("event type", event.Type),
+				zap.Any("event tag", event.Tag),
+				zap.Error(err),
+			)
+		}
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addStat",
 				zap.Any("duration", du),
 				zap.String("event tag", event.Tag.String()),
+				zap.Int64("round", round),
+				zap.String("block", block),
+				zap.Int("block size", blockSize),
+			)
+		}
+	case TypeChain:
+		tags = append(tags, event.Tag)
+		ts := time.Now()
+		err = edb.addStat(event)
+		if err != nil {
+			logging.Logger.Error("piers addStat TypeChain error",
+				zap.Int64("round", round),
+				zap.String("block", block),
+				zap.Int("block size", blockSize),
+				zap.Any("event type", event.Type),
+				zap.Any("event tag", event.Tag),
+				zap.Error(err),
+			)
+		}
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Warn("event db save slow - addchain",
+				zap.Any("duration", du),
+				zap.Int("event tag", event.Tag),
 				zap.Int64("round", round),
 				zap.String("block", block),
 				zap.Int("block size", blockSize),
@@ -237,7 +296,45 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 	return tags, nil
 }
 
-func (edb *EventDb) addStat(event Event) error {
+func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, error) {
+	round := e.round
+	var events []Event
+	for _, ev := range e.events { //filter out round events
+		if ev.Type == int(TypeStats) {
+			events = append(events, ev)
+		}
+	}
+	if len(events) == 0 {
+		return s, nil
+	}
+	gs := &globalSnapshot{
+		Snapshot: *s,
+	}
+
+	edb.updateBlobberAggregate(round, period, gs)
+	gs.update(events)
+
+	gs.Round = round
+	if err := edb.addSnapshot(gs.Snapshot); err != nil {
+		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
+	}
+
+	return &gs.Snapshot, nil
+}
+
+func (edb *EventDb) addStat(event Event) (err error) {
+	defer func() {
+		if err != nil {
+			logging.Logger.Info("piers addStat error", zap.Error(err))
+		}
+	}()
+	defer func() {
+		if r := recover(); r != nil {
+			logging.Logger.Error("piers Recovered in addStat",
+				zap.Any("r", r),
+				zap.Any("event", event))
+		}
+	}()
 	switch EventTag(event.Tag) {
 	// blobber
 	case TagAddBlobber:
@@ -315,8 +412,9 @@ func (edb *EventDb) addStat(event Event) error {
 
 		for i := range *rms {
 			(*rms)[i].BlockNumber = event.BlockNumber
-		}
+			(*rms)[i].TransactionID = event.TxHash
 
+		}
 		return edb.addOrOverwriteReadMarker(*rms)
 	case TagAddOrOverwriteUser:
 		users, ok := fromEvent[[]User](event.Data)
@@ -335,8 +433,10 @@ func (edb *EventDb) addStat(event Event) error {
 		if !ok {
 			return ErrInvalidEventData
 		}
+		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
+
 		return edb.addBlock(*block)
-	case TagAddOrOverwriteValidator:
+	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
@@ -460,6 +560,13 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 
 		return edb.addChallengesToAllocations(*as)
+	case TagUpdateBlobberOpenChallenges:
+		updates, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateOpenBlobberChallenges(*updates)
 	case TagUpdateChallenge:
 		chs, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
@@ -467,7 +574,7 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
-		bs, ok := fromEvent[[]Blobber](event.Data)
+		bs, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
@@ -520,7 +627,8 @@ func (edb *EventDb) addStat(event Event) error {
 	case TagCollectProviderReward:
 		return edb.collectRewards(event.Index)
 	default:
-		return fmt.Errorf("unrecognised event %v", event)
+		logging.Logger.Debug("skipping event", zap.Int("tag", event.Tag))
+		return nil
 	}
 }
 

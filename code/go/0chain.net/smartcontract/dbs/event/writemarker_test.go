@@ -129,7 +129,6 @@ func TestGetWriteMarkers(t *testing.T) {
 		return
 	}
 	defer eventDb.Drop()
-
 	err = eventDb.addOrOverwriteBlobber([]Blobber{Blobber{BlobberID: "someHash"}})
 	if !assert.NoError(t, err, "Error while writing blobber marker") {
 		return

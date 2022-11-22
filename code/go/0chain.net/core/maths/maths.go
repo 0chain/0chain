@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 )
 
 // GetGamma gets gamma for blobber block reward

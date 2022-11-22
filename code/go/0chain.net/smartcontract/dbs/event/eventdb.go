@@ -3,15 +3,12 @@ package event
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
 )
-
-const DefaultQueryTimeout = 5 * time.Second
 
 func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)
@@ -20,10 +17,10 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 	}
 	eventDb := &EventDb{
 		Store:         db,
+		dbConfig:      config,
 		eventsChannel: make(chan blockEvents, 1),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
-
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}
@@ -32,6 +29,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
+	dbConfig      config.DbAccess
 	eventsChannel chan blockEvents
 }
 
@@ -91,6 +89,9 @@ func (edb *EventDb) AutoMigrate() error {
 		&RewardMint{},
 		&Authorizer{},
 		&Challenge{},
+		&Snapshot{},
+		&BlobberSnapshot{},
+		&BlobberAggregate{},
 		&AllocationBlobberTerm{},
 		&ProviderRewards{},
 		&ChallengePool{},
@@ -98,4 +99,8 @@ func (edb *EventDb) AutoMigrate() error {
 		return err
 	}
 	return nil
+}
+
+func (edb *EventDb) Config() config.DbAccess {
+	return edb.dbConfig
 }
