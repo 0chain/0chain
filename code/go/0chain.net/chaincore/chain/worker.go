@@ -417,7 +417,7 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 }
 
 // SyncMissingNodes notify the nodes sync process to sync missing nodes
-func (c *Chain) SyncMissingNodes(round int64, path util.Path, wc ...chan struct{}) {
+func (c *Chain) SyncMissingNodes(round int64, path util.Path, mpt util.MerklePatriciaTrieI, wc ...chan struct{}) {
 	if len(path) == 0 {
 		return
 	}
@@ -427,6 +427,7 @@ func (c *Chain) SyncMissingNodes(round int64, path util.Path, wc ...chan struct{
 			case c.syncMissingNodesC <- syncPathNodes{
 				round:  round,
 				path:   path,
+				mpt:    mpt,
 				replyC: wc,
 			}:
 				return
@@ -501,25 +502,34 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				zap.Any("stuck time", ts))
 		case mns := <-c.syncMissingNodesC:
 			func() {
-				lfb := c.GetLatestFinalizedBlock()
-				if lfb == nil || lfb.ClientState == nil {
-					return
-				}
-
+				var synced bool
 				defer func() {
 					for _, ch := range mns.replyC {
-						close(ch)
+						if synced {
+							ch <- struct{}{}
+						} else {
+							close(ch)
+						}
 					}
 				}()
+				logging.Logger.Debug("sync missing nodes in path",
+					zap.String("path", string(mns.path)),
+					zap.Int64("round", mns.round))
 
 				for {
 					select {
 					case <-ctx.Done():
 						return
+					case <-time.After(10 * time.Second):
+						logging.Logger.Debug("sync missing nodes timeout",
+							zap.String("path", string(mns.path)),
+							zap.Int64("round", mns.round))
+						return
 					default:
 						// find missing nodes in the path
-						keys := c.findMissingNodesInPath(mns.path, mns.round, lfb.ClientStateHash)
+						keys := c.findMissingNodesInPath(mns.path, mns.round, mns.mpt)
 						if len(keys) == 0 {
+							synced = true
 							return
 						}
 
@@ -527,7 +537,14 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 							zap.Int64("round", mns.round),
 							zap.String("path", string(mns.path)),
 							zap.Int("keys", len(keys)))
-						c.GetStateNodes(ctx, keys)
+
+						if err := c.GetStateNodes(ctx, keys); err != nil {
+							logging.Logger.Debug("sync missing nodes failed",
+								zap.String("path", string(mns.path)),
+								zap.Int64("round", mns.round),
+								zap.Error(err))
+							return
+						}
 					}
 				}
 			}()
@@ -538,9 +555,9 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 	}
 }
 
-func (c *Chain) findMissingNodesInPath(path util.Path, round int64, root util.Key) []util.Key {
+func (c *Chain) findMissingNodesInPath(path util.Path, round int64, mpt util.MerklePatriciaTrieI) []util.Key {
 	logging.Logger.Debug("Finding missing nodes in path", zap.Int64("round", round))
-	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round), root)
+	//mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round), root)
 	keys, err := mpt.FindMissingNodesInPath(path)
 	if err != nil {
 		logging.Logger.Error("error in finding missing nodes in path",

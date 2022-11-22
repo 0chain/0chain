@@ -203,7 +203,7 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
 			if len(syncOpt) > 0 && syncOpt[0].Sync {
-				c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath(), syncOpt[0].ReplyC...)
+				c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath(), sctx.GetState(), syncOpt[0].ReplyC...)
 			}
 			return math.MaxInt32, ierrs[0] // return the first one only
 		}
@@ -268,7 +268,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	defer func() {
 		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath(), waitC...)
+			c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath(), sctx.GetState(), waitC...)
 		}
 	}()
 
@@ -498,7 +498,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 
 	defer func() {
 		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodesPath())
+			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodesPath(), sctx.GetState())
 		}
 	}()
 
@@ -574,7 +574,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 
 	defer func() {
 		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodesPath())
+			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodesPath(), sctx.GetState())
 		}
 	}()
 

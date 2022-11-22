@@ -208,6 +208,7 @@ type Chain struct {
 }
 
 type syncPathNodes struct {
+	mpt    util.MerklePatriciaTrieI
 	round  int64
 	path   util.Path
 	replyC []chan struct{}

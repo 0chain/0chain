@@ -84,7 +84,7 @@ func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState 
 	s, err := mc.GetStateById(bState, minerId)
 	if err != nil {
 		if cstate.ErrInvalidState(err) {
-			mc.SyncMissingNodes(round, util.Path(minerId))
+			mc.SyncMissingNodes(round, util.Path(minerId), bState)
 		}
 
 		if err != util.ErrValueNotPresent {
@@ -146,7 +146,7 @@ func (mc *Chain) validateTransaction(b *block.Block, bState util.MerklePatriciaT
 			}
 			return nil
 		}
-		mc.SyncMissingNodes(b.Round, util.Path(txn.ClientID))
+		mc.SyncMissingNodes(b.Round, util.Path(txn.ClientID), bState)
 		return err
 	}
 
@@ -431,7 +431,9 @@ func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, 
 			}
 
 			logging.Logger.Error("sync and retry - invalid state error",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.String("desc", desc),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
 				zap.String("prev_block", b.PrevHash),
 				zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 				zap.Error(err))
@@ -439,9 +441,20 @@ func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, 
 			select {
 			case <-cctx.Done():
 				return false, cctx.Err()
-			case <-wc:
+			case _, ok := <-wc:
+				if !ok {
+					logging.Logger.Error("sync and retry - sync failed",
+						zap.String("desc", desc),
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					return false, err
+				}
+
 				logging.Logger.Error("sync and retry - retry",
-					zap.Int64("round", b.Round), zap.String("block", b.Hash),
+					zap.String("desc", desc),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
 					zap.String("prev_block", b.PrevHash),
 					zap.String("state_hash", util.ToHex(b.ClientStateHash)))
 				return true, nil

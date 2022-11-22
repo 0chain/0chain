@@ -72,33 +72,22 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 }
 
 // GetStateNodes - get a bunch of state nodes from the network
-func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
+func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) error {
 	ns, err := c.getStateNodes(ctx, keys)
 	if err != nil {
-		skeys := make([]string, len(keys))
-		for idx, key := range keys {
-			skeys[idx] = util.ToHex(key)
-		}
-		logging.Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
-			zap.Any("keys", skeys), zap.Error(err))
-		return
+		return common.NewError("sync state nodes failed", err.Error())
 	}
+
 	keysStr := make([]string, len(keys))
 	for i := range keys {
 		keysStr[i] = util.ToHex(keys[i])
 	}
-	err = c.SaveStateNodes(ctx, ns)
-	if err != nil {
-		logging.Logger.Error("get state nodes - error saving",
-			zap.Int("num_keys", len(keys)),
-			zap.Strings("keys:", keysStr),
-			zap.Error(err))
-	} else {
-		logging.Logger.Info("get state nodes - saving",
-			zap.Int("num_keys", len(keys)),
-			zap.Strings("keys:", keysStr),
-			zap.Int("nodes", len(ns.Nodes)))
+
+	if err := c.SaveStateNodes(ctx, ns); err != nil {
+		return common.NewError("saving synced state nodes failed", err.Error())
 	}
+
+	return nil
 }
 
 // UpdateStateFromNetwork get a bunch of state nodes from the network
