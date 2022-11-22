@@ -1,12 +1,13 @@
 package zcnsc
 
 import (
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
-	"fmt"
+	"github.com/0chain/common/core/currency"
 )
 
 func (zcn *ZCNSmartContract) CollectRewards(
