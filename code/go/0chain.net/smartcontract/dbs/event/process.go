@@ -114,11 +114,11 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	)
 
 	for _, e := range events {
-		if e.Type == int(TypeChain) {
+		if e.Type == TypeChain {
 			others = append(others, e)
 			continue
 		}
-		if e.Type != int(TypeStats) {
+		if e.Type != TypeStats {
 			continue
 		}
 
@@ -164,7 +164,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		tx.addEvents(ctx, es)
 		tse := time.Now()
-		tags := make([]int, 0, len(es.events))
+		tags := make([]string, 0, len(es.events))
 		for _, event := range es.events {
 			tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
 			if err != nil {
@@ -206,7 +206,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		logging.Logger.Debug("event db process",
 			zap.Any("duration", due),
 			zap.Int("events number", len(es.events)),
-			zap.Ints("tags", tags),
+			zap.Strings("tags", tags),
 			zap.Int64("round", es.round),
 			zap.String("block", es.block),
 			zap.Int("block size", es.blockSize))
@@ -215,7 +215,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			logging.Logger.Warn("event db work slow",
 				zap.Any("duration", due),
 				zap.Int("events number", len(es.events)),
-				zap.Ints("tags", tags),
+				zap.Strings("tags", tags),
 				zap.Int64("round", es.round),
 				zap.String("block", es.block),
 				zap.Int("block size", es.blockSize))
@@ -224,7 +224,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) processEvent(event Event, tags []int, round int64, block string, blockSize int) ([]int, error) {
+func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logging.Logger.Error("piers Recovered in processEvent",
@@ -233,9 +233,9 @@ func (edb *EventDb) processEvent(event Event, tags []int, round int64, block str
 		}
 	}()
 	var err error = nil
-	switch EventType(event.Type) {
+	switch event.Type {
 	case TypeStats:
-		tags = append(tags, event.Tag)
+		tags = append(tags, event.Tag.String())
 		ts := time.Now()
 		err = edb.addStat(event)
 		if err != nil {
@@ -252,14 +252,14 @@ func (edb *EventDb) processEvent(event Event, tags []int, round int64, block str
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addStat",
 				zap.Any("duration", du),
-				zap.Int("event tag", event.Tag),
+				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),
 				zap.Int("block size", blockSize),
 			)
 		}
 	case TypeChain:
-		tags = append(tags, event.Tag)
+		tags = append(tags, event.Tag.String())
 		ts := time.Now()
 		err = edb.addStat(event)
 		if err != nil {
@@ -276,7 +276,7 @@ func (edb *EventDb) processEvent(event Event, tags []int, round int64, block str
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addchain",
 				zap.Any("duration", du),
-				zap.Int("event tag", event.Tag),
+				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),
 				zap.Int("block size", blockSize),
@@ -307,7 +307,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	round := e.round
 	var events []Event
 	for _, ev := range e.events { //filter out round events
-		if ev.Type == int(TypeStats) {
+		if ev.Type == TypeStats {
 			events = append(events, ev)
 		}
 	}
@@ -632,7 +632,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.addOrUpdateChallengePools(*cps)
 	default:
-		logging.Logger.Debug("skipping event", zap.Int("tag", event.Tag))
+		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
 	}
 }

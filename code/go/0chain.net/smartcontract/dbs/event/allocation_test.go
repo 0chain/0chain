@@ -349,8 +349,8 @@ func TestAllocations(t *testing.T) {
 		Model:       gorm.Model{},
 		BlockNumber: 1,
 		TxHash:      "txn_hash",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddAllocation),
+		Type:        TypeStats,
+		Tag:         TagAddAllocation,
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
@@ -369,8 +369,8 @@ func TestAllocations(t *testing.T) {
 		Model:       gorm.Model{},
 		BlockNumber: 2,
 		TxHash:      "txn_hash2",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddAllocation),
+		Type:        TypeStats,
+		Tag:         TagAddAllocation,
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
