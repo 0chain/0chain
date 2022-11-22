@@ -160,28 +160,26 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 			RoundCreated: stake.MintAt,
 		}
 	}
-	var usp = stakepool.NewUserStakePools()
-	require.NoError(t, usp.Save(spenum.Blobber, txn.ClientID, ctx))
 	require.NoError(t, stakePool.save(spenum.Blobber, blobberId, ctx))
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
 	if err != nil {
 		return err
 	}
-
 	newStakePool, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
-	var newUsp *stakepool.UserStakePools
-	newUsp, err = stakepool.GetUserStakePools(spenum.Blobber, txn.ClientID, ctx)
-	require.NoError(t, err)
 
-	confirmPoolLockResult(t, f, resp, *newStakePool, *newUsp, ctx)
+	confirmPoolLockResult(t, f, resp, *newStakePool, ctx)
 
 	return nil
 }
 
-func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, newStakePool stakePool,
-	newUsp stakepool.UserStakePools, ctx cstate.StateContextI) {
+func confirmPoolLockResult(t *testing.T,
+	f formulaeStakePoolLock,
+	resp string,
+	newStakePool stakePool,
+	ctx cstate.StateContextI,
+) {
 	for _, transfer := range ctx.GetTransfers() {
 		require.EqualValues(t, f.value, transfer.Amount)
 		require.EqualValues(t, storageScId, transfer.ToClientID)
@@ -190,12 +188,6 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 		require.True(t, ok)
 		require.EqualValues(t, f.now, txPool.RoundCreated)
 	}
-
-	_, ok := newUsp.Find(blobberId)
-	require.True(t, ok)
-	//require.Len(t, pools, 1)
-
-	//require.EqualValues(t, transactionHash, pools[0])
 
 	var respObj = &splResponse{}
 	require.NoError(t, json.Unmarshal([]byte(resp), respObj))
