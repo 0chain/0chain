@@ -110,9 +110,7 @@ func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 	return blocks, res.Error
 }
 
-func (edb *EventDb) addOrUpdateBlock(block Block) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "hash"}},
-		UpdateAll: true,
-	}).Create(&block).Error
+func (edb *EventDb) addBlock(block Block) error {
+	return edb.Store.Get().Create(&block).Error
+
 }

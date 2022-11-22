@@ -60,7 +60,7 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 	return nil
 }
 
-func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.StateContextI) error {
+func (vn *ValidationNode) emitAdd(sp *stakePool, balances cstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
@@ -80,6 +80,6 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 		Rewards:        event.ProviderRewards{ProviderID: vn.ID},
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteValidator, vn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagAddValidator, vn.ID, data)
 	return nil
 }

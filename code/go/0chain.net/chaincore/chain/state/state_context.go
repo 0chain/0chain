@@ -219,8 +219,8 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 			sc.events = append(sc.events, event.Event{
 				BlockNumber: sc.block.Round,
 				TxHash:      sc.txn.Hash,
-				Type:        int(event.TypeStats),
-				Tag:         int(event.TagBurn),
+				Type:        event.TypeStats,
+				Tag:         event.TagBurn,
 				Index:       sc.txn.ClientID,
 				Data: state.Burn{
 					Burner: t.ClientID,
@@ -235,8 +235,8 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 			sc.events = append(sc.events, event.Event{
 				BlockNumber: sc.block.Round,
 				TxHash:      sc.txn.Hash,
-				Type:        int(event.TypeStats),
-				Tag:         int(event.TagAddMint),
+				Type:        event.TypeStats,
+				Tag:         event.TagAddMint,
 				Index:       sc.txn.ClientID,
 				Data: state.Mint{
 					Minter:     t.ClientID,
@@ -268,8 +268,8 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
-		Type:        int(event.TypeStats),
-		Tag:         int(event.TagAddMint),
+		Type:        event.TypeStats,
+		Tag:         event.TagAddMint,
 		Index:       sc.txn.ClientID,
 		Data:        m,
 	})

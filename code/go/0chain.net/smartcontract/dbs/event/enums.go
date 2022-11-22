@@ -12,11 +12,12 @@ const pageLimit = int64(50)
 const (
 	TypeNone EventType = iota
 	TypeError
+	TypeChain
 	TypeStats
 )
 
 var TypeSting = []string{
-	"none", "error", "stats",
+	"none", "error", "chain", "stats",
 }
 
 func (t EventType) String() string {
@@ -45,7 +46,7 @@ const (
 	TagAddOrOverwriteUser
 	TagAddWriteMarker
 	TagAddBlock
-	TagAddOrOverwriteValidator
+	TagAddValidator
 	TagUpdateValidator
 	TagAddReadMarker
 	TagAddOrOverwriteMiner

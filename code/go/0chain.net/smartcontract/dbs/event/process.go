@@ -75,9 +75,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddUsersEvents(),
 			mergeAddProviderEvents[Miner](TagAddOrOverwriteMiner, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
-			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
-			mergeAddProviderEvents[Validator](TagAddOrOverwriteValidator, withUniqueEventOverwrite()),
 
 			mergeAddAllocationEvents(),
 			mergeUpdateAllocEvents(),
@@ -114,7 +112,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	)
 
 	for _, e := range events {
-		if e.Type == int(TypeChain) {
+		if e.Type == TypeChain {
 			others = append(others, e)
 			continue
 		}
@@ -226,7 +224,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
 	var err error = nil
-	switch EventType(event.Type) {
+	switch event.Type {
 	case TypeStats:
 		tags = append(tags, event.Tag.String())
 		ts := time.Now()
@@ -252,7 +250,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 			)
 		}
 	case TypeChain:
-		tags = append(tags, event.Tag)
+		tags = append(tags, event.Tag.String())
 		ts := time.Now()
 		err = edb.addStat(event)
 		if err != nil {
@@ -269,7 +267,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addchain",
 				zap.Any("duration", du),
-				zap.Int("event tag", event.Tag),
+				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),
 				zap.Int("block size", blockSize),
@@ -300,7 +298,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	round := e.round
 	var events []Event
 	for _, ev := range e.events { //filter out round events
-		if ev.Type == int(TypeStats) {
+		if ev.Type == TypeStats {
 			events = append(events, ev)
 		}
 	}
@@ -335,7 +333,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 				zap.Any("event", event))
 		}
 	}()
-	switch EventTag(event.Tag) {
+	switch event.Tag {
 	// blobber
 	case TagAddBlobber:
 		blobbers, ok := fromEvent[[]Blobber](event.Data)
@@ -436,12 +434,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
 
 		return edb.addBlock(*block)
-	case TagAddOrOverwiteValidator:
+	case TagAddValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteValidators(*vns)
+		return edb.addValidators(*vns)
 	case TagUpdateValidator:
 		updates, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
@@ -627,7 +625,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 	case TagCollectProviderReward:
 		return edb.collectRewards(event.Index)
 	default:
-		logging.Logger.Debug("skipping event", zap.Int("tag", event.Tag))
+		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
 	}
 }
