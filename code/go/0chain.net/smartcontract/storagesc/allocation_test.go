@@ -11,7 +11,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/partitions"
 
@@ -702,6 +702,14 @@ func TestExtendAllocation(t *testing.T) {
 				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
+		).Return().Maybe()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		return ssc, &txn, sa, blobbers, balances
 	}
@@ -874,6 +882,10 @@ func TestTransferAllocation(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateAllocation, mock.Anything, mock.Anything,
+		).Return().Maybe()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
@@ -1648,6 +1660,8 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 	tx.CreationDate = 1050
 
 	alloc, err = ssc.getAllocation(allocTxHash, balances)
+	storageAllocationToAllocationTable(alloc)
+
 	require.NoError(t, err)
 
 	// 1. expiring allocation

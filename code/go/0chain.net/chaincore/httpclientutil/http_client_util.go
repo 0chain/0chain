@@ -17,7 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -34,7 +34,7 @@ import (
   ToDo: This is adapted from blobber code. Need to find a way to reuse this
 */
 
-//SleepBetweenRetries suggested time to sleep between retries
+// SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
 
 const clientBalanceURL = "v1/client/get/balance?client_id="
@@ -45,7 +45,7 @@ const scRestAPIURL = "v1/screst/"
 const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
 const finalizeBlockURL = "v1/block/get/latest_finalized"
 
-//RegisterClient path to RegisterClient
+// RegisterClient path to RegisterClient
 const RegisterClient = "/v1/client/put"
 
 var httpClient *http.Client
@@ -65,10 +65,10 @@ func init() {
 	httpClient = &http.Client{Transport: transport}
 }
 
-//Signer for the transaction hash
+// Signer for the transaction hash
 type Signer func(h string) (string, error)
 
-//ComputeHashAndSign compute Hash and sign the transaction
+// ComputeHashAndSign compute Hash and sign the transaction
 func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v:%v", t.CreationDate, t.Nonce, t.ClientID,
 		t.ToClientID, t.Value, encryption.Hash(t.TransactionData))
@@ -83,7 +83,7 @@ func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 
 /////////////// Plain Transaction ///////////
 
-//NewHTTPRequest to use in sending http requests
+// NewHTTPRequest to use in sending http requests
 func NewHTTPRequest(method string, url string, data []byte, ID string, pkey string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
 	if err != nil {
@@ -100,7 +100,7 @@ func NewHTTPRequest(method string, url string, data []byte, ID string, pkey stri
 	return req, err
 }
 
-//SendMultiPostRequest send same request to multiple URLs
+// SendMultiPostRequest send same request to multiple URLs
 func SendMultiPostRequest(urls []string, data []byte, ID string, pkey string) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(urls))
@@ -117,7 +117,7 @@ func SendMultiPostRequest(urls []string, data []byte, ID string, pkey string) {
 	wg.Wait()
 }
 
-//SendPostRequest function to send post requests
+// SendPostRequest function to send post requests
 func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.WaitGroup) ([]byte, error) {
 	//ToDo: Add more error handling
 	if wg != nil {
@@ -140,7 +140,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	return body, err
 }
 
-//SendTransaction send a transaction
+// SendTransaction send a transaction
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	for _, u := range urls {
 		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
@@ -157,7 +157,7 @@ func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	}
 }
 
-//GetTransactionStatus check the status of the transaction.
+// GetTransactionStatus check the status of the transaction.
 func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, error) {
 	//ToDo: Add more error handling
 	numSuccess := 0
@@ -363,7 +363,7 @@ func MakeClientStateRequest(ctx context.Context, clientID string, urls []string,
 	return clientState, common.NewError("unknown_err", "Not able to run the request. unknown reason")
 }
 
-//MakeSCRestAPICall for smart contract REST API Call
+// MakeSCRestAPICall for smart contract REST API Call
 func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath string, params map[string]string, urls []string, entity util.Serializable, consensus int) error {
 
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
@@ -649,8 +649,8 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 	}
 }
 
-//GetMagicBlockCall for smart contract to get magic block
-//TODO not used, remove this func
+// GetMagicBlockCall for smart contract to get magic block
+// TODO not used, remove this func
 func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*block.Block, error) {
 	var retObj interface{}
 	numSuccess := 0

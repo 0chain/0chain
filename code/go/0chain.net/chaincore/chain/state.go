@@ -8,7 +8,7 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -444,12 +444,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	for _, e := range ue {
-		if err = c.emitUserEvent(sctx, e); err != nil {
-			logging.Logger.Error("could not emit event", zap.Any("error", err),
-				zap.Any("transaction", txn.Hash),
-				zap.String("clientID", txn.ClientID))
-			return nil, err
-		}
+		c.emitUserEvent(sctx, e)
 	}
 
 	// commit transaction
@@ -549,7 +544,10 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, err
 	}
 
-	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
+	c.emitSendTransferEvent(sctx, stateToUser(fromClient, fs, amount))
+	c.emitReceiveTransferEvent(sctx, stateToUser(toClient, ts, amount))
+
+	return []*event.User{stateToUser(fromClient, fs, -amount), stateToUser(toClient, ts, amount)}, nil
 }
 
 func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
@@ -595,7 +593,9 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return nil, common.NewError("mint_amount - insert", err.Error())
 	}
 
-	return stateToUser(toClient, ts), nil
+	c.emitMintEvent(sctx, stateToUser(toClient, ts, amount))
+
+	return stateToUser(toClient, ts, amount), nil
 }
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
@@ -638,7 +638,7 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 		zap.String("client", fromClient),
 		zap.Int64("new_nonce", s.Nonce))
 
-	return stateToUser(fromClient, s), nil
+	return stateToUser(fromClient, s, 0), nil
 }
 
 func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
@@ -705,7 +705,7 @@ func userToState(u *event.User) *state.State {
 	}
 }
 
-func stateToUser(clientID string, s *state.State) *event.User {
+func stateToUser(clientID string, s *state.State, change currency.Coin) *event.User {
 	return &event.User{
 		UserID:  clientID,
 		TxnHash: s.TxnHash,
@@ -715,14 +715,41 @@ func stateToUser(clientID string, s *state.State) *event.User {
 	}
 }
 
-func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) error {
+func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
 	if c.GetEventDb() == nil {
-		return nil
+		return
 	}
 
 	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, usr.UserID, usr,
 		func(events []event.Event, current event.Event) []event.Event {
 			return append([]event.Event{current}, events...)
 		})
-	return nil
+	return
+}
+func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) {
+	if c.GetEventDb() == nil {
+		return
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagAddMint, usr.UserID, usr)
+
+	return
+}
+func (c *Chain) emitSendTransferEvent(sc bcstate.StateContextI, usr *event.User) {
+	if c.GetEventDb() == nil {
+		return
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagSendTransfer, usr.UserID, usr)
+
+	return
+}
+func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.User) {
+	if c.GetEventDb() == nil {
+		return
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, usr.UserID, usr)
+
+	return
 }

@@ -13,7 +13,7 @@ import (
 
 	"0chain.net/core/common"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
@@ -48,6 +48,15 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 		return "", fmt.Errorf("invalid minter %v", minter)
 	}
 	return approvedMinters[minter], nil
+}
+
+func isMinter(id string) bool {
+	for _, m := range approvedMinters {
+		if m == id {
+			return true
+		}
+	}
+	return false
 }
 
 /*
@@ -214,6 +223,38 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
+	if isMinter(t.ToClientID) {
+		if !isMinter(t.ClientID) {
+			sc.events = append(sc.events, event.Event{
+				BlockNumber: sc.block.Round,
+				TxHash:      sc.txn.Hash,
+				Type:        int(event.TypeStats),
+				Tag:         int(event.TagBurn),
+				Index:       sc.txn.ClientID,
+				Data: state.Burn{
+					Burner: t.ClientID,
+					Amount: t.Amount,
+				},
+			})
+		}
+		return nil
+	}
+	if isMinter(t.ClientID) {
+		if !isMinter(t.ToClientID) {
+			sc.events = append(sc.events, event.Event{
+				BlockNumber: sc.block.Round,
+				TxHash:      sc.txn.Hash,
+				Type:        int(event.TypeStats),
+				Tag:         int(event.TagAddMint),
+				Index:       sc.txn.ClientID,
+				Data: state.Mint{
+					Minter:     t.ClientID,
+					ToClientID: t.ToClientID,
+					Amount:     t.Amount,
+				},
+			})
+		}
+	}
 
 	return nil
 }
@@ -232,6 +273,15 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
+
+	sc.events = append(sc.events, event.Event{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        int(event.TypeStats),
+		Tag:         int(event.TagAddMint),
+		Index:       sc.txn.ClientID,
+		Data:        m,
+	})
 
 	return nil
 }

@@ -1,6 +1,6 @@
 package dbs
 
-import "0chain.net/chaincore/currency"
+import "github.com/0chain/common/core/currency"
 
 type DbUpdates struct {
 	Id      string                 `json:"id"`

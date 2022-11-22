@@ -2,11 +2,11 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 )
 
 // collectReward mints tokens for delegate rewards.
@@ -21,6 +21,7 @@ func (ssc *StorageSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"can't decode request: %v", err)
 	}
+
 	if prr.ProviderType != spenum.Blobber && prr.ProviderType != spenum.Validator {
 		return "", common.NewErrorf("collect_reward_failed",
 			"invalid provider type: %s", prr.ProviderType.String())
@@ -50,7 +51,7 @@ func (ssc *StorageSmartContract) collectReward(
 		sp, err := ssc.getStakePool(prr.ProviderType, providerID, balances)
 		if err != nil {
 			return "", common.NewErrorf("collect_reward_failed",
-				"can't get related stake pool: %v", err)
+				"id %v can't get related stake pool: %v", providerID, err)
 		}
 
 		reward, err := sp.MintRewards(txn.ClientID, providerID, prr.ProviderType, usp, balances)

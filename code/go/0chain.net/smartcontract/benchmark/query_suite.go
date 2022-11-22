@@ -9,11 +9,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type TestSuiteFunc func(data BenchData, sigScheme SignatureScheme) TestSuite
@@ -64,6 +65,7 @@ func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testin
 		req.URL.RawQuery = q.Encode()
 	}
 	b.StartTimer()
+
 	qbt.Receiver.SetQueryStateContext(balances)
 	qbt.Endpoint(rec, req)
 

@@ -1,8 +1,8 @@
 package event
 
 import (
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -22,6 +22,7 @@ type Transaction struct {
 	Signature         string        `json:"signature"`
 	CreationDate      int64         `json:"creation_date"  gorm:"index:idx_tcreation_date"`
 	Fee               currency.Coin `json:"fee"`
+	Nonce             int64         `json:"nonce"`
 	TransactionType   int           `json:"transaction_type"`
 	TransactionOutput string        `json:"transaction_output"`
 	OutputHash        string        `json:"output_hash"`

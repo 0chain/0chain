@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
@@ -198,6 +198,7 @@ type DbAccess struct {
 	MaxIdleConns    int           `json:"max_idle_conns"`
 	MaxOpenConns    int           `json:"max_open_conns"`
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
+	AggregatePeriod int64         `json:"aggregate_period"`
 }
 
 // HealthCheckCycleScan -
