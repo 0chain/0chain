@@ -905,6 +905,7 @@ func (r *Runner) Run() (err error, success bool) {
 
 	cases:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
+			_ = r.SetMagicBlock("")
 			r.conf.CleanupEnv()
 			var report reportTestCase
 			report.name = testCase.Name
