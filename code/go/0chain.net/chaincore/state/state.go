@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"

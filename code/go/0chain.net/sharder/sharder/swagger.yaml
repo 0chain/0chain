@@ -1,0 +1,3511 @@
+basePath: /
+definitions:
+    Allocation:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            User:
+                $ref: '#/definitions/User'
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            allocation_name:
+                type: string
+                x-go-name: AllocationName
+            cancelled:
+                type: boolean
+                x-go-name: Cancelled
+            data_shards:
+                format: int64
+                type: integer
+                x-go-name: DataShards
+            expiration:
+                format: int64
+                type: integer
+                x-go-name: Expiration
+            failed_challenges:
+                format: int64
+                type: integer
+                x-go-name: FailedChallenges
+            finalized:
+                type: boolean
+                x-go-name: Finalized
+            is_immutable:
+                type: boolean
+                x-go-name: IsImmutable
+            latest_closed_challenge_txn:
+                type: string
+                x-go-name: LatestClosedChallengeTxn
+            moved_back:
+                $ref: '#/definitions/Coin'
+            moved_to_challenge:
+                $ref: '#/definitions/Coin'
+            moved_to_validators:
+                $ref: '#/definitions/Coin'
+            num_reads:
+                format: int64
+                type: integer
+                x-go-name: NumReads
+            num_writes:
+                format: int64
+                type: integer
+                x-go-name: NumWrites
+            open_challenges:
+                format: int64
+                type: integer
+                x-go-name: OpenChallenges
+            owner:
+                type: string
+                x-go-name: Owner
+            owner_public_key:
+                type: string
+                x-go-name: OwnerPublicKey
+            parity_shards:
+                format: int64
+                type: integer
+                x-go-name: ParityShards
+            read_price_max:
+                $ref: '#/definitions/Coin'
+            read_price_min:
+                $ref: '#/definitions/Coin'
+            size:
+                format: int64
+                type: integer
+                x-go-name: Size
+            start_time:
+                format: int64
+                type: integer
+                x-go-name: StartTime
+            successful_challenges:
+                format: int64
+                type: integer
+                x-go-name: SuccessfulChallenges
+            terms:
+                items:
+                    $ref: '#/definitions/AllocationBlobberTerm'
+                type: array
+                x-go-name: Terms
+            time_unit:
+                format: int64
+                type: integer
+                x-go-name: TimeUnit
+            total_challenges:
+                format: int64
+                type: integer
+                x-go-name: TotalChallenges
+            transaction_id:
+                type: string
+                x-go-name: TransactionID
+            used_size:
+                format: int64
+                type: integer
+                x-go-name: UsedSize
+            write_pool:
+                $ref: '#/definitions/Coin'
+            write_price_max:
+                $ref: '#/definitions/Coin'
+            write_price_min:
+                $ref: '#/definitions/Coin'
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    AllocationBlobberTerm:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            max_offer_duration:
+                $ref: '#/definitions/Duration'
+            min_lock_demand:
+                format: double
+                type: number
+                x-go-name: MinLockDemand
+            read_price:
+                format: int64
+                type: integer
+                x-go-name: ReadPrice
+            write_price:
+                format: int64
+                type: integer
+                x-go-name: WritePrice
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    ApprovedMinter:
+        format: int64
+        type: integer
+        x-go-package: 0chain.net/chaincore/chain/state
+    BlobberAllocation:
+        properties:
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            allocation_root:
+                type: string
+                x-go-name: AllocationRoot
+            blobber_allocs_partition_loc:
+                $ref: '#/definitions/PartitionLocation'
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            challenge_pool_integral_value:
+                $ref: '#/definitions/Coin'
+            challenge_reward:
+                $ref: '#/definitions/Coin'
+            min_lock_demand:
+                $ref: '#/definitions/Coin'
+            penalty:
+                $ref: '#/definitions/Coin'
+            read_reward:
+                $ref: '#/definitions/Coin'
+            returned:
+                $ref: '#/definitions/Coin'
+            size:
+                description: Size is blobber allocation maximum size
+                format: int64
+                type: integer
+                x-go-name: Size
+            spent:
+                $ref: '#/definitions/Coin'
+            stats:
+                $ref: '#/definitions/StorageAllocationStats'
+            terms:
+                $ref: '#/definitions/Terms'
+            write_marker:
+                $ref: '#/definitions/WriteMarker'
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    Block:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            chain_id:
+                type: string
+                x-go-name: ChainId
+            created_at:
+                format: date-time
+                type: string
+                x-go-name: CreatedAt
+            creation_date:
+                format: int64
+                type: integer
+                x-go-name: CreationDate
+            hash:
+                type: string
+                x-go-name: Hash
+            is_finalised:
+                type: boolean
+                x-go-name: IsFinalised
+            magic_block_hash:
+                type: string
+                x-go-name: MagicBlockHash
+            merkle_tree_root:
+                type: string
+                x-go-name: MerkleTreeRoot
+            miner_id:
+                type: string
+                x-go-name: MinerID
+            num_txns:
+                format: int64
+                type: integer
+                x-go-name: NumTxns
+            prev_hash:
+                type: string
+                x-go-name: PrevHash
+            receipt_merkle_tree_root:
+                type: string
+                x-go-name: ReceiptMerkleTreeRoot
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            round_random_seed:
+                format: int64
+                type: integer
+                x-go-name: RoundRandomSeed
+            round_timeout_count:
+                format: int64
+                type: integer
+                x-go-name: RoundTimeoutCount
+            running_txn_count:
+                type: string
+                x-go-name: RunningTxnCount
+            signature:
+                type: string
+                x-go-name: Signature
+            state_hash:
+                type: string
+                x-go-name: StateHash
+            version:
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    ChallengesResponse:
+        properties:
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            challenges:
+                items:
+                    $ref: '#/definitions/StorageChallengeResponse'
+                type: array
+                x-go-name: Challenges
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    Client:
+        description: |-
+            go:generate msgp -io=false -tests=false -v
+            Client - data structure that holds the client data
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            id:
+                type: string
+                x-go-name: ID
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            version:
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: 0chain.net/chaincore/client
+    Coin:
+        description: |-
+            go:generate msgp -io=false -tests=false -v
+            Coin - any quantity that is represented as an integer in the lowest denomination
+        format: uint64
+        type: integer
+        x-go-package: 0chain.net/chaincore/currency
+    CreationDateField:
+        description: |-
+            go:generate msgp -io=false -tests=false -v
+            CreationDateField - Can be used to add a creation date functionality to an entity */
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+        type: object
+        x-go-package: 0chain.net/core/datastore
+    DKGKeyShare:
+        properties:
+            id:
+                type: string
+                x-go-name: ID
+            message:
+                type: string
+                x-go-name: Message
+            share:
+                type: string
+                x-go-name: Share
+            sign:
+                type: string
+                x-go-name: Sign
+        type: object
+        x-go-package: 0chain.net/chaincore/threshold/bls
+    DKGMinerNodes:
+        properties:
+            k:
+                format: int64
+                type: integer
+                x-go-name: K
+            k_percent:
+                format: double
+                type: number
+                x-go-name: KPercent
+            max_n:
+                format: int64
+                type: integer
+                x-go-name: MaxN
+            min_n:
+                format: int64
+                type: integer
+                x-go-name: MinN
+            "n":
+                format: int64
+                type: integer
+                x-go-name: "N"
+            revealed_shares:
+                additionalProperties:
+                    format: int64
+                    type: integer
+                type: object
+                x-go-name: RevealedShares
+            start_round:
+                description: StartRound used to filter responses from old MB where sharders comes up.
+                format: int64
+                type: integer
+                x-go-name: StartRound
+            t:
+                format: int64
+                type: integer
+                x-go-name: T
+            t_percent:
+                format: double
+                type: number
+                x-go-name: TPercent
+            waited:
+                additionalProperties:
+                    type: boolean
+                type: object
+                x-go-name: Waited
+            x_percent:
+                format: double
+                type: number
+                x-go-name: XPercent
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    DelegatePool:
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+            delegate_id:
+                type: string
+                x-go-name: DelegateID
+            reward:
+                $ref: '#/definitions/Coin'
+            round_created:
+                format: int64
+                type: integer
+                x-go-name: RoundCreated
+            staked_at:
+                $ref: '#/definitions/Timestamp'
+            status:
+                $ref: '#/definitions/PoolStatus'
+        type: object
+        x-go-package: 0chain.net/smartcontract/stakepool
+    DeletedAt:
+        $ref: '#/definitions/NullTime'
+    Duration:
+        description: |-
+            A Duration represents the elapsed time between two instants
+            as an int64 nanosecond count. The representation limits the
+            largest representable duration to approximately 290 years.
+        format: int64
+        type: integer
+        x-go-package: time
+    Error:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            Error:
+                type: string
+            ID:
+                format: uint64
+                type: integer
+            TransactionID:
+                type: string
+            UpdatedAt:
+                format: date-time
+                type: string
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    Event:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            block_number:
+                format: int64
+                type: integer
+                x-go-name: BlockNumber
+            data:
+                x-go-name: Data
+            index:
+                type: string
+                x-go-name: Index
+            tag:
+                format: int64
+                type: integer
+                x-go-name: Tag
+            tx_hash:
+                type: string
+                x-go-name: TxHash
+            type:
+                format: int64
+                type: integer
+                x-go-name: Type
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    GroupSharesOrSigns:
+        properties:
+            shares:
+                additionalProperties:
+                    $ref: '#/definitions/ShareOrSigns'
+                type: object
+                x-go-name: Shares
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    HashIDField:
+        properties:
+            hash:
+                type: string
+                x-go-name: Hash
+        title: HashIDField - Useful to embed this into all the entities and get consistent behavior */
+        type: object
+        x-go-package: 0chain.net/core/datastore
+    IDField:
+        description: |-
+            go:generate msgp -io=false -tests=false -v
+            IDField - Useful to embed this into all the entities and get consistent behavior */
+        properties:
+            id:
+                type: string
+                x-go-name: ID
+        type: object
+        x-go-package: 0chain.net/core/datastore
+    Info:
+        description: Info - (informal) info of a node that can be shared with other nodes
+        properties:
+            avg_block_txns:
+                format: int64
+                type: integer
+                x-go-name: AvgBlockTxns
+            build_tag:
+                type: string
+                x-go-name: BuildTag
+            miners_median_network_time:
+                $ref: '#/definitions/Duration'
+            state_missing_nodes:
+                format: int64
+                type: integer
+                x-go-name: StateMissingNodes
+        type: object
+        x-go-package: 0chain.net/chaincore/node
+    Int64Map:
+        additionalProperties:
+            format: int64
+            type: integer
+        type: object
+        x-go-package: 0chain.net/smartcontract/rest
+    InterfaceMap:
+        additionalProperties: {}
+        type: object
+        x-go-package: 0chain.net/smartcontract/rest
+    MPK:
+        properties:
+            ID:
+                type: string
+            Mpk:
+                items:
+                    type: string
+                type: array
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    MagicBlock:
+        properties:
+            hash:
+                type: string
+                x-go-name: Hash
+            k:
+                format: int64
+                type: integer
+                x-go-name: K
+            magic_block_number:
+                format: int64
+                type: integer
+                x-go-name: MagicBlockNumber
+            miners:
+                $ref: '#/definitions/Pool'
+            mpks:
+                $ref: '#/definitions/Mpks'
+            "n":
+                format: int64
+                type: integer
+                x-go-name: "N"
+            previous_hash:
+                type: string
+                x-go-name: PreviousMagicBlockHash
+            sharders:
+                $ref: '#/definitions/Pool'
+            share_or_signs:
+                $ref: '#/definitions/GroupSharesOrSigns'
+            starting_round:
+                format: int64
+                type: integer
+                x-go-name: StartingRound
+            t:
+                format: int64
+                type: integer
+                x-go-name: T
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    MinerGeolocation:
+        properties:
+            latitude:
+                format: double
+                type: number
+                x-go-name: Latitude
+            longitude:
+                format: double
+                type: number
+                x-go-name: Longitude
+            miner_id:
+                type: string
+                x-go-name: MinerID
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    MinerGlobalSettings:
+        properties:
+            fields:
+                additionalProperties:
+                    type: string
+                type: object
+                x-go-name: Fields
+            version:
+                format: int64
+                type: integer
+                x-go-name: Version
+        type: object
+        x-go-name: GlobalSettings
+        x-go-package: 0chain.net/smartcontract/minersc
+    MinerNode:
+        properties:
+            build_tag:
+                type: string
+                x-go-name: BuildTag
+            delete:
+                type: boolean
+                x-go-name: Delete
+            geolocation:
+                $ref: '#/definitions/SimpleNodeGeolocation'
+            host:
+                type: string
+                x-go-name: Host
+            id:
+                type: string
+                x-go-name: ID
+            last_health_check:
+                $ref: '#/definitions/Timestamp'
+            last_setting_update_round:
+                description: LastSettingUpdateRound will be set to round number when settings were updated
+                format: int64
+                type: integer
+                x-go-name: LastSettingUpdateRound
+            minter:
+                $ref: '#/definitions/ApprovedMinter'
+            n2n_host:
+                type: string
+                x-go-name: N2NHost
+            node_type:
+                $ref: '#/definitions/NodeType'
+            path:
+                type: string
+                x-go-name: Path
+            pools:
+                additionalProperties:
+                    $ref: '#/definitions/DelegatePool'
+                type: object
+                x-go-name: Pools
+            port:
+                format: int64
+                type: integer
+                x-go-name: Port
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            rewards:
+                $ref: '#/definitions/Coin'
+            settings:
+                $ref: '#/definitions/Settings'
+            short_name:
+                type: string
+                x-go-name: ShortName
+            total_stake:
+                $ref: '#/definitions/Coin'
+        title: MinerNode struct that holds information about the registering miner.
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    MinerNodes:
+        properties:
+            Nodes:
+                items:
+                    $ref: '#/definitions/MinerNode'
+                type: array
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    Model:
+        description: |-
+            Model a basic GoLang struct which includes the following fields: ID, CreatedAt, UpdatedAt, DeletedAt
+            It may be embedded into your model or you may build your own model without it
+            type User struct {
+            gorm.Model
+            }
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+        type: object
+        x-go-package: gorm.io/gorm
+    Mpks:
+        properties:
+            Mpks:
+                additionalProperties:
+                    $ref: '#/definitions/MPK'
+                type: object
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    Node:
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            description:
+                type: string
+                x-go-name: Description
+            host:
+                type: string
+                x-go-name: Host
+            id:
+                type: string
+                x-go-name: ID
+            in_prev_mb:
+                type: boolean
+                x-go-name: InPrevMB
+            info:
+                $ref: '#/definitions/Info'
+            n2n_host:
+                type: string
+                x-go-name: N2NHost
+            path:
+                type: string
+                x-go-name: Path
+            port:
+                format: int64
+                type: integer
+                x-go-name: Port
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            set_index:
+                format: int64
+                type: integer
+                x-go-name: SetIndex
+            status:
+                format: int64
+                type: integer
+                x-go-name: Status
+            type:
+                $ref: '#/definitions/NodeType'
+            version:
+                type: string
+                x-go-name: Version
+        title: Node - a struct holding the node information */
+        type: object
+        x-go-package: 0chain.net/chaincore/node
+    NodeType:
+        format: int8
+        title: NodeType used in pools statistic.
+        type: integer
+        x-go-package: 0chain.net/chaincore/node
+    NullTime:
+        description: |-
+            NullTime implements the Scanner interface so
+            it can be used as a scan destination, similar to NullString.
+        properties:
+            Time:
+                format: date-time
+                type: string
+            Valid:
+                type: boolean
+        title: NullTime represents a time.Time that may be null.
+        type: object
+        x-go-package: database/sql
+    PartitionLocation:
+        properties:
+            Location:
+                format: int64
+                type: integer
+            Timestamp:
+                $ref: '#/definitions/Timestamp'
+        type: object
+        x-go-package: 0chain.net/smartcontract/partitions
+    Phase:
+        format: int64
+        title: Phase number.
+        type: integer
+        x-go-package: 0chain.net/smartcontract/minersc
+    PhaseNode:
+        properties:
+            current_round:
+                format: int64
+                type: integer
+                x-go-name: CurrentRound
+            phase:
+                $ref: '#/definitions/Phase'
+            restarts:
+                format: int64
+                type: integer
+                x-go-name: Restarts
+            start_round:
+                format: int64
+                type: integer
+                x-go-name: StartRound
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    Pool:
+        properties:
+            nodes:
+                additionalProperties:
+                    $ref: '#/definitions/Node'
+                type: object
+                x-go-name: NodesMap
+            type:
+                $ref: '#/definitions/NodeType'
+        title: Pool - a pool of nodes used for the same purpose */
+        type: object
+        x-go-package: 0chain.net/chaincore/node
+    PoolMemberInfo:
+        description: PoolMemberInfo of a pool member
+        properties:
+            n2n_host:
+                type: string
+                x-go-name: N2NHost
+            port:
+                type: string
+                x-go-name: Port
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            type:
+                type: string
+                x-go-name: Type
+        type: object
+        x-go-package: 0chain.net/chaincore/smartcontract
+    PoolMembersInfo:
+        description: PoolMembersInfo array of pool memebers
+        properties:
+            members_info:
+                items:
+                    $ref: '#/definitions/PoolMemberInfo'
+                type: array
+                x-go-name: MembersInfo
+        type: object
+        x-go-package: 0chain.net/chaincore/smartcontract
+    PoolStatus:
+        format: int64
+        type: integer
+        x-go-package: 0chain.net/smartcontract/stakepool/spenum
+    PriceRange:
+        properties:
+            max:
+                $ref: '#/definitions/Coin'
+            min:
+                $ref: '#/definitions/Coin'
+        title: PriceRange represents a price range allowed by user to filter blobbers.
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    ProviderRewards:
+        description: ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            provider_id:
+                type: string
+                x-go-name: ProviderID
+            rewards:
+                $ref: '#/definitions/Coin'
+            total_rewards:
+                $ref: '#/definitions/Coin'
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    ReadMarker:
+        properties:
+            Allocation:
+                $ref: '#/definitions/Allocation'
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            Owner:
+                $ref: '#/definitions/User'
+            UpdatedAt:
+                format: date-time
+                type: string
+            User:
+                $ref: '#/definitions/User'
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            auth_ticket:
+                type: string
+                x-go-name: AuthTicket
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            block_number:
+                format: int64
+                type: integer
+                x-go-name: BlockNumber
+            client_id:
+                type: string
+                x-go-name: ClientID
+            owner_id:
+                type: string
+                x-go-name: OwnerID
+            payer_id:
+                type: string
+                x-go-name: PayerID
+            read_counter:
+                format: int64
+                type: integer
+                x-go-name: ReadCounter
+            read_size:
+                format: double
+                type: number
+                x-go-name: ReadSize
+            signature:
+                type: string
+                x-go-name: Signature
+            timestamp:
+                format: int64
+                type: integer
+                x-go-name: Timestamp
+            transaction_id:
+                type: string
+                x-go-name: TransactionID
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    RewardPartitionLocation:
+        properties:
+            index:
+                format: int64
+                type: integer
+                x-go-name: Index
+            start_round:
+                format: int64
+                type: integer
+                x-go-name: StartRound
+            timestamp:
+                $ref: '#/definitions/Timestamp'
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    Settings:
+        properties:
+            delegate_wallet:
+                type: string
+                x-go-name: DelegateWallet
+            max_stake:
+                $ref: '#/definitions/Coin'
+            min_stake:
+                $ref: '#/definitions/Coin'
+            num_delegates:
+                format: int64
+                type: integer
+                x-go-name: MaxNumDelegates
+            service_charge:
+                format: double
+                type: number
+                x-go-name: ServiceChargeRatio
+        type: object
+        x-go-package: 0chain.net/smartcontract/stakepool
+    SharderGeolocation:
+        properties:
+            latitude:
+                format: double
+                type: number
+                x-go-name: Latitude
+            longitude:
+                format: double
+                type: number
+                x-go-name: Longitude
+            sharder_id:
+                type: string
+                x-go-name: SharderID
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    ShareOrSigns:
+        properties:
+            id:
+                type: string
+                x-go-name: ID
+            share_or_sign:
+                additionalProperties:
+                    $ref: '#/definitions/DKGKeyShare'
+                type: object
+                x-go-name: ShareOrSigns
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    SimpleNode:
+        properties:
+            build_tag:
+                type: string
+                x-go-name: BuildTag
+            delete:
+                type: boolean
+                x-go-name: Delete
+            geolocation:
+                $ref: '#/definitions/SimpleNodeGeolocation'
+            host:
+                type: string
+                x-go-name: Host
+            id:
+                type: string
+                x-go-name: ID
+            last_health_check:
+                $ref: '#/definitions/Timestamp'
+            last_setting_update_round:
+                description: LastSettingUpdateRound will be set to round number when settings were updated
+                format: int64
+                type: integer
+                x-go-name: LastSettingUpdateRound
+            n2n_host:
+                type: string
+                x-go-name: N2NHost
+            node_type:
+                $ref: '#/definitions/NodeType'
+            path:
+                type: string
+                x-go-name: Path
+            port:
+                format: int64
+                type: integer
+                x-go-name: Port
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            short_name:
+                type: string
+                x-go-name: ShortName
+            total_stake:
+                $ref: '#/definitions/Coin'
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    SimpleNodeGeolocation:
+        properties:
+            latitude:
+                format: double
+                type: number
+                x-go-name: Latitude
+            longitude:
+                format: double
+                type: number
+                x-go-name: Longitude
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    SimpleNodes:
+        additionalProperties:
+            $ref: '#/definitions/SimpleNode'
+        description: not thread safe
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    StakePool:
+        description: StakePool holds delegate information for an 0chain providers
+        properties:
+            minter:
+                $ref: '#/definitions/ApprovedMinter'
+            pools:
+                additionalProperties:
+                    $ref: '#/definitions/DelegatePool'
+                type: object
+                x-go-name: Pools
+            rewards:
+                $ref: '#/definitions/Coin'
+            settings:
+                $ref: '#/definitions/Settings'
+        type: object
+        x-go-package: 0chain.net/smartcontract/stakepool
+    StorageAllocation:
+        properties:
+            blobber_details:
+                description: |-
+                    Blobbers not to be used anywhere except /allocation and /allocations table
+                    if Blobbers are getting used in any smart-contract, we should avoid.
+                items:
+                    $ref: '#/definitions/BlobberAllocation'
+                type: array
+                x-go-name: BlobberAllocs
+            canceled:
+                description: |-
+                    Canceled set to true where allocation finalized by cancel_allocation
+                    transaction.
+                type: boolean
+                x-go-name: Canceled
+            curators:
+                items:
+                    type: string
+                type: array
+                x-go-name: Curators
+            data_shards:
+                format: int64
+                type: integer
+                x-go-name: DataShards
+            diverse_blobbers:
+                type: boolean
+                x-go-name: DiverseBlobbers
+            expiration_date:
+                $ref: '#/definitions/Timestamp'
+            file_options:
+                description: |-
+                    FileOptions to define file restrictions on an allocation for third-parties
+                    default 00000000 for all crud operations suggesting only owner has the below listed abilities.
+                    enabling option/s allows any third party to perform certain ops
+                    00000001 - 1  - upload
+                    00000010 - 2  - delete
+                    00000100 - 4  - update
+                    00001000 - 8  - move
+                    00010000 - 16 - copy
+                    00100000 - 32 - rename
+                format: uint8
+                type: integer
+                x-go-name: FileOptions
+            finalized:
+                description: Finalized is true where allocation has been finalized.
+                type: boolean
+                x-go-name: Finalized
+            id:
+                description: |-
+                    ID is unique allocation ID that is equal to hash of transaction with
+                    which the allocation has created.
+                type: string
+                x-go-name: ID
+            is_immutable:
+                description: Defines mutability of the files in the allocation, used by blobber on CommitWrite
+                type: boolean
+                x-go-name: IsImmutable
+            moved_back:
+                $ref: '#/definitions/Coin'
+            moved_to_challenge:
+                $ref: '#/definitions/Coin'
+            moved_to_validators:
+                $ref: '#/definitions/Coin'
+            name:
+                description: Name is the name of an allocation
+                type: string
+                x-go-name: Name
+            owner_id:
+                type: string
+                x-go-name: Owner
+            owner_public_key:
+                type: string
+                x-go-name: OwnerPublicKey
+            parity_shards:
+                format: int64
+                type: integer
+                x-go-name: ParityShards
+            preferred_blobbers:
+                items:
+                    type: string
+                type: array
+                x-go-name: PreferredBlobbers
+            read_price_range:
+                $ref: '#/definitions/PriceRange'
+            size:
+                format: int64
+                type: integer
+                x-go-name: Size
+            start_time:
+                $ref: '#/definitions/Timestamp'
+            stats:
+                $ref: '#/definitions/StorageAllocationStats'
+            third_party_extendable:
+                description: Flag to determine if anyone can extend this allocation
+                type: boolean
+                x-go-name: ThirdPartyExtendable
+            time_unit:
+                $ref: '#/definitions/Duration'
+            tx:
+                description: Tx keeps hash with which the allocation has created or updated. todo do we need this field?
+                type: string
+                x-go-name: Tx
+            write_pool:
+                $ref: '#/definitions/Coin'
+            write_price_range:
+                $ref: '#/definitions/PriceRange'
+        title: StorageAllocation request and entity.
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    StorageAllocationStats:
+        properties:
+            latest_closed_challenge:
+                type: string
+                x-go-name: LastestClosedChallengeTxn
+            num_failed_challenges:
+                format: int64
+                type: integer
+                x-go-name: FailedChallenges
+            num_of_reads:
+                format: int64
+                type: integer
+                x-go-name: NumReads
+            num_of_writes:
+                format: int64
+                type: integer
+                x-go-name: NumWrites
+            num_open_challenges:
+                format: int64
+                type: integer
+                x-go-name: OpenChallenges
+            num_success_challenges:
+                format: int64
+                type: integer
+                x-go-name: SuccessChallenges
+            total_challenges:
+                format: int64
+                type: integer
+                x-go-name: TotalChallenges
+            used_size:
+                format: int64
+                type: integer
+                x-go-name: UsedSize
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    StorageChallenge:
+        properties:
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            created:
+                $ref: '#/definitions/Timestamp'
+            id:
+                type: string
+                x-go-name: ID
+            responded:
+                type: boolean
+                x-go-name: Responded
+            total_validators:
+                format: int64
+                type: integer
+                x-go-name: TotalValidators
+            validator_ids:
+                items:
+                    type: string
+                type: array
+                x-go-name: ValidatorIDs
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    StorageChallengeResponse:
+        properties:
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            allocation_root:
+                type: string
+                x-go-name: AllocationRoot
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            created:
+                $ref: '#/definitions/Timestamp'
+            id:
+                type: string
+                x-go-name: ID
+            responded:
+                type: boolean
+                x-go-name: Responded
+            seed:
+                format: int64
+                type: integer
+                x-go-name: Seed
+            total_validators:
+                format: int64
+                type: integer
+                x-go-name: TotalValidators
+            validator_ids:
+                items:
+                    type: string
+                type: array
+                x-go-name: ValidatorIDs
+            validators:
+                items:
+                    $ref: '#/definitions/ValidationNode'
+                type: array
+                x-go-name: Validators
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    StorageNode:
+        properties:
+            allocated:
+                format: int64
+                type: integer
+                x-go-name: Allocated
+            capacity:
+                format: int64
+                type: integer
+                x-go-name: Capacity
+            data_read_last_reward_round:
+                format: double
+                type: number
+                x-go-name: DataReadLastRewardRound
+            geolocation:
+                $ref: '#/definitions/StorageNodeGeolocation'
+            id:
+                type: string
+                x-go-name: ID
+            last_health_check:
+                $ref: '#/definitions/Timestamp'
+            last_reward_data_read_round:
+                format: int64
+                type: integer
+                x-go-name: LastRewardDataReadRound
+            reward_partition:
+                $ref: '#/definitions/RewardPartitionLocation'
+            saved_data:
+                format: int64
+                type: integer
+                x-go-name: SavedData
+            stake_pool_settings:
+                $ref: '#/definitions/Settings'
+            terms:
+                $ref: '#/definitions/Terms'
+            url:
+                type: string
+                x-go-name: BaseURL
+        title: StorageNode represents Blobber configurations.
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    StorageNodeGeolocation:
+        description: Move to the core, in case of multi-entity use of geo data
+        properties:
+            latitude:
+                format: double
+                type: number
+                x-go-name: Latitude
+            longitude:
+                format: double
+                type: number
+                x-go-name: Longitude
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    StringMap:
+        properties:
+            fields:
+                additionalProperties:
+                    type: string
+                type: object
+                x-go-name: Fields
+        type: object
+        x-go-package: 0chain.net/smartcontract
+    Terms:
+        description: but any existing offer will use terms of offer signing time.
+        properties:
+            max_offer_duration:
+                $ref: '#/definitions/Duration'
+            min_lock_demand:
+                description: |-
+                    MinLockDemand in number in [0; 1] range. It represents part of
+                    allocation should be locked for the blobber rewards even if
+                    user never write something to the blobber.
+                format: double
+                type: number
+                x-go-name: MinLockDemand
+            read_price:
+                $ref: '#/definitions/Coin'
+            write_price:
+                $ref: '#/definitions/Coin'
+        title: Terms represents Blobber terms. A Blobber can update its terms,
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    Timestamp:
+        description: |-
+            go:generate msgp -io=false -tests=false -v
+            Timestamp - just a wrapper to control the json encoding */
+        format: int64
+        type: integer
+        x-go-package: 0chain.net/core/common
+    Transaction:
+        description: Transaction model to save the transaction data
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            ReadMarkers:
+                description: ref
+                items:
+                    $ref: '#/definitions/ReadMarker'
+                type: array
+            UpdatedAt:
+                format: date-time
+                type: string
+            WriteMarker:
+                items:
+                    $ref: '#/definitions/WriteMarker'
+                type: array
+            block_hash:
+                type: string
+                x-go-name: BlockHash
+            client_id:
+                type: string
+                x-go-name: ClientId
+            creation_date:
+                format: int64
+                type: integer
+                x-go-name: CreationDate
+            fee:
+                $ref: '#/definitions/Coin'
+            hash:
+                type: string
+                x-go-name: Hash
+            output_hash:
+                type: string
+                x-go-name: OutputHash
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            signature:
+                type: string
+                x-go-name: Signature
+            status:
+                format: int64
+                type: integer
+                x-go-name: Status
+            to_client_id:
+                type: string
+                x-go-name: ToClientId
+            transaction_data:
+                type: string
+                x-go-name: TransactionData
+            transaction_output:
+                type: string
+                x-go-name: TransactionOutput
+            transaction_type:
+                format: int64
+                type: integer
+                x-go-name: TransactionType
+            value:
+                $ref: '#/definitions/Coin'
+            version:
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    User:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            balance:
+                $ref: '#/definitions/Coin'
+            nonce:
+                format: int64
+                type: integer
+                x-go-name: Nonce
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            txn:
+                type: string
+                x-go-name: TxnHash
+            user_id:
+                type: string
+                x-go-name: UserID
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    ValidationNode:
+        properties:
+            id:
+                type: string
+                x-go-name: ID
+            stake_pool_settings:
+                $ref: '#/definitions/Settings'
+            url:
+                type: string
+                x-go-name: BaseURL
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    Validator:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            delegate_wallet:
+                type: string
+                x-go-name: DelegateWallet
+            max_stake:
+                $ref: '#/definitions/Coin'
+            min_stake:
+                $ref: '#/definitions/Coin'
+            num_delegates:
+                format: int64
+                type: integer
+                x-go-name: NumDelegates
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            rewards:
+                $ref: '#/definitions/ProviderRewards'
+            service_charge:
+                format: double
+                type: number
+                x-go-name: ServiceCharge
+            stake_total:
+                $ref: '#/definitions/Coin'
+            unstake_total:
+                $ref: '#/definitions/Coin'
+            url:
+                type: string
+                x-go-name: BaseUrl
+            validator_id:
+                type: string
+                x-go-name: ValidatorID
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
+    VersionField:
+        description: go:generate msgp -io=false -tests=false -v
+        properties:
+            version:
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: 0chain.net/core/datastore
+    WriteMarker:
+        properties:
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            allocation_root:
+                type: string
+                x-go-name: AllocationRoot
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            client_id:
+                type: string
+                x-go-name: ClientID
+            content_hash:
+                type: string
+                x-go-name: ContentHash
+            lookup_hash:
+                description: file info
+                type: string
+                x-go-name: LookupHash
+            name:
+                type: string
+                x-go-name: Name
+            operation:
+                type: string
+                x-go-name: Operation
+            prev_allocation_root:
+                type: string
+                x-go-name: PreviousAllocationRoot
+            signature:
+                type: string
+                x-go-name: Signature
+            size:
+                format: int64
+                type: integer
+                x-go-name: Size
+            timestamp:
+                $ref: '#/definitions/Timestamp'
+                format: int64
+                type: integer
+                x-go-name: Timestamp
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    authorizerNode:
+        properties:
+            id:
+                type: string
+                x-go-name: ID
+            url:
+                type: string
+                x-go-name: URL
+        type: object
+        x-go-package: 0chain.net/smartcontract/zcnsc
+    authorizerNodesResponse:
+        properties:
+            nodes:
+                items:
+                    $ref: '#/definitions/authorizerNode'
+                type: array
+                x-go-name: Nodes
+        type: object
+        x-go-package: 0chain.net/smartcontract/zcnsc
+    authorizerResponse:
+        properties:
+            delegate_wallet:
+                description: stake_pool_settings
+                type: string
+                x-go-name: DelegateWallet
+            fee:
+                $ref: '#/definitions/Coin'
+            id:
+                type: string
+                x-go-name: AuthorizerID
+            last_health_check:
+                description: Stats
+                format: int64
+                type: integer
+                x-go-name: LastHealthCheck
+            latitude:
+                description: Geolocation
+                format: double
+                type: number
+                x-go-name: Latitude
+            longitude:
+                format: double
+                type: number
+                x-go-name: Longitude
+            max_stake:
+                $ref: '#/definitions/Coin'
+            min_stake:
+                $ref: '#/definitions/Coin'
+            num_delegates:
+                format: int64
+                type: integer
+                x-go-name: NumDelegates
+            service_charge:
+                format: double
+                type: number
+                x-go-name: ServiceCharge
+            url:
+                type: string
+                x-go-name: URL
+        type: object
+        x-go-package: 0chain.net/smartcontract/zcnsc
+    challengePoolStat:
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+            expiration:
+                $ref: '#/definitions/Timestamp'
+            finalized:
+                type: boolean
+                x-go-name: Finalized
+            id:
+                type: string
+                x-go-name: ID
+            start_time:
+                $ref: '#/definitions/Timestamp'
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    delegatePoolStat:
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+            delegate_id:
+                type: string
+                x-go-name: DelegateID
+            id:
+                type: string
+                x-go-name: ID
+            rewards:
+                $ref: '#/definitions/Coin'
+            round_created:
+                format: int64
+                type: integer
+                x-go-name: RoundCreated
+            status:
+                type: string
+                x-go-name: Status
+            total_penalty:
+                $ref: '#/definitions/Coin'
+            total_reward:
+                $ref: '#/definitions/Coin'
+            unstake:
+                type: boolean
+                x-go-name: UnStake
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    destInfo:
+        properties:
+            earned:
+                $ref: '#/definitions/Coin'
+            id:
+                type: string
+                x-go-name: ID
+            last:
+                $ref: '#/definitions/Timestamp'
+            vested:
+                $ref: '#/definitions/Coin'
+            wanted:
+                $ref: '#/definitions/Coin'
+        type: object
+        x-go-package: 0chain.net/smartcontract/vestingsc
+    eventList:
+        properties:
+            events:
+                items:
+                    $ref: '#/definitions/Event'
+                type: array
+                x-go-name: Events
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    fullBlock:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            DeletedAt:
+                $ref: '#/definitions/DeletedAt'
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            chain_id:
+                type: string
+                x-go-name: ChainId
+            created_at:
+                format: date-time
+                type: string
+                x-go-name: CreatedAt
+            creation_date:
+                format: int64
+                type: integer
+                x-go-name: CreationDate
+            hash:
+                type: string
+                x-go-name: Hash
+            is_finalised:
+                type: boolean
+                x-go-name: IsFinalised
+            magic_block_hash:
+                type: string
+                x-go-name: MagicBlockHash
+            merkle_tree_root:
+                type: string
+                x-go-name: MerkleTreeRoot
+            miner_id:
+                type: string
+                x-go-name: MinerID
+            num_txns:
+                format: int64
+                type: integer
+                x-go-name: NumTxns
+            prev_hash:
+                type: string
+                x-go-name: PrevHash
+            receipt_merkle_tree_root:
+                type: string
+                x-go-name: ReceiptMerkleTreeRoot
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            round_random_seed:
+                format: int64
+                type: integer
+                x-go-name: RoundRandomSeed
+            round_timeout_count:
+                format: int64
+                type: integer
+                x-go-name: RoundTimeoutCount
+            running_txn_count:
+                type: string
+                x-go-name: RunningTxnCount
+            signature:
+                type: string
+                x-go-name: Signature
+            state_hash:
+                type: string
+                x-go-name: StateHash
+            transactions:
+                items:
+                    $ref: '#/definitions/Transaction'
+                type: array
+                x-go-name: Transactions
+            version:
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    nodeStat:
+        properties:
+            build_tag:
+                type: string
+                x-go-name: BuildTag
+            delete:
+                type: boolean
+                x-go-name: Delete
+            geolocation:
+                $ref: '#/definitions/SimpleNodeGeolocation'
+            host:
+                type: string
+                x-go-name: Host
+            id:
+                type: string
+                x-go-name: ID
+            last_health_check:
+                $ref: '#/definitions/Timestamp'
+            last_setting_update_round:
+                description: LastSettingUpdateRound will be set to round number when settings were updated
+                format: int64
+                type: integer
+                x-go-name: LastSettingUpdateRound
+            minter:
+                $ref: '#/definitions/ApprovedMinter'
+            n2n_host:
+                type: string
+                x-go-name: N2NHost
+            node_type:
+                $ref: '#/definitions/NodeType'
+            path:
+                type: string
+                x-go-name: Path
+            pools:
+                additionalProperties:
+                    $ref: '#/definitions/DelegatePool'
+                type: object
+                x-go-name: Pools
+            port:
+                format: int64
+                type: integer
+                x-go-name: Port
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            rewards:
+                $ref: '#/definitions/Coin'
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            settings:
+                $ref: '#/definitions/Settings'
+            short_name:
+                type: string
+                x-go-name: ShortName
+            total_reward:
+                format: int64
+                type: integer
+                x-go-name: TotalReward
+            total_stake:
+                $ref: '#/definitions/Coin'
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    periodicResponse:
+        properties:
+            start_time:
+                format: date-time
+                type: string
+                x-go-name: Start
+            time_left:
+                type: string
+                x-go-name: Restart
+            tokens_allowed:
+                $ref: '#/definitions/Coin'
+            tokens_poured:
+                $ref: '#/definitions/Coin'
+        type: object
+        x-go-package: 0chain.net/smartcontract/faucetsc
+    readMarkersCount:
+        properties:
+            read_markers_count:
+                format: int64
+                type: integer
+                x-go-name: ReadMarkersCount
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    readPool:
+        description: |-
+            one for the allocations that the client (client_id) owns
+            and the other for the allocations that the client (client_id) doesn't own
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+        title: readPool represents new trimmed down readPool consisting of two balances,
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    stakePoolStat:
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+            delegate:
+                items:
+                    $ref: '#/definitions/delegatePoolStat'
+                type: array
+                x-go-name: Delegate
+            penalty:
+                $ref: '#/definitions/Coin'
+            pool_id:
+                type: string
+                x-go-name: ID
+            rewards:
+                $ref: '#/definitions/Coin'
+            settings:
+                $ref: '#/definitions/Settings'
+            stake_total:
+                $ref: '#/definitions/Coin'
+            unstake_total:
+                $ref: '#/definitions/Coin'
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    storageNodeResponse:
+        properties:
+            allocated:
+                format: int64
+                type: integer
+                x-go-name: Allocated
+            capacity:
+                format: int64
+                type: integer
+                x-go-name: Capacity
+            data_read_last_reward_round:
+                format: double
+                type: number
+                x-go-name: DataReadLastRewardRound
+            geolocation:
+                $ref: '#/definitions/StorageNodeGeolocation'
+            id:
+                type: string
+                x-go-name: ID
+            last_health_check:
+                $ref: '#/definitions/Timestamp'
+            last_reward_data_read_round:
+                format: int64
+                type: integer
+                x-go-name: LastRewardDataReadRound
+            reward_partition:
+                $ref: '#/definitions/RewardPartitionLocation'
+            saved_data:
+                format: int64
+                type: integer
+                x-go-name: SavedData
+            stake_pool_settings:
+                $ref: '#/definitions/Settings'
+            terms:
+                $ref: '#/definitions/Terms'
+            total_offers:
+                $ref: '#/definitions/Coin'
+            total_service_charge:
+                $ref: '#/definitions/Coin'
+            total_stake:
+                $ref: '#/definitions/Coin'
+            url:
+                type: string
+                x-go-name: BaseURL
+            used_allocation:
+                format: int64
+                type: integer
+                x-go-name: UsedAllocation
+        title: StorageNode represents Blobber configurations.
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    storageNodesResponse:
+        properties:
+            Nodes:
+                items:
+                    $ref: '#/definitions/storageNodeResponse'
+                type: array
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    stringArray:
+        items:
+            type: string
+        type: array
+        x-go-package: 0chain.net/smartcontract/storagesc
+    userPoolStat:
+        properties:
+            pools:
+                additionalProperties:
+                    items:
+                        $ref: '#/definitions/delegatePoolStat'
+                    type: array
+                type: object
+                x-go-name: Pools
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    userPools:
+        properties:
+            pools:
+                additionalProperties:
+                    items:
+                        $ref: '#/definitions/delegatePoolStat'
+                    type: array
+                type: object
+                x-go-name: Pools
+        type: object
+        x-go-package: 0chain.net/smartcontract/minersc
+    vestingClientPools:
+        properties:
+            pools:
+                items:
+                    type: string
+                type: array
+                x-go-name: Pools
+        type: object
+        x-go-name: clientPools
+        x-go-package: 0chain.net/smartcontract/vestingsc
+    vestingInfo:
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+            client_id:
+                type: string
+                x-go-name: ClientID
+            description:
+                type: string
+                x-go-name: Description
+            destinations:
+                items:
+                    $ref: '#/definitions/destInfo'
+                type: array
+                x-go-name: Destinations
+            expire_at:
+                $ref: '#/definitions/Timestamp'
+            left:
+                $ref: '#/definitions/Coin'
+            pool_id:
+                type: string
+                x-go-name: ID
+            start_time:
+                $ref: '#/definitions/Timestamp'
+        type: object
+        x-go-name: info
+        x-go-package: 0chain.net/smartcontract/vestingsc
+host: localhost:7171
+info:
+    title: '0chain Api:'
+    version: 0.0.1
+paths:
+    /v1/chain/get/stats:
+        get:
+            description: a handler to provide block statistics
+            operationId: chainstatus
+            responses:
+                "200":
+                    description: ""
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig:
+        get:
+            description: get zcn configuration settings
+            operationId: GetGlobalConfig
+            responses:
+                "200":
+                    description: StringMap
+                    schema:
+                        $ref: '#/definitions/StringMap'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/faucet_config:
+        get:
+            description: faucet smart contract configuration settings
+            operationId: faucet_config
+            responses:
+                "200":
+                    description: StringMap
+                    schema:
+                        $ref: '#/definitions/StringMap'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizer:
+        get:
+            description: get authorizer
+            operationId: getAuthorizer
+            responses:
+                "200":
+                    description: authorizerResponse
+                    schema:
+                        $ref: '#/definitions/authorizerResponse'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizerNodes:
+        get:
+            description: get authorizer nodes
+            operationId: getAuthorizerNodes
+            responses:
+                "200":
+                    description: authorizerNodesResponse
+                    schema:
+                        $ref: '#/definitions/authorizerNodesResponse'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/globalPeriodicLimit:
+        get:
+            description: list minersc config settings
+            operationId: globalPeriodicLimit
+            responses:
+                "200":
+                    description: periodicResponse
+                    schema:
+                        $ref: '#/definitions/periodicResponse'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/personalPeriodicLimit:
+        get:
+            description: list minersc config settings
+            operationId: personalPeriodicLimit
+            responses:
+                "200":
+                    description: periodicResponse
+                    schema:
+                        $ref: '#/definitions/periodicResponse'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pourAmount:
+        get:
+            description: pour amount
+            operationId: pourAmount
+            responses:
+                "200":
+                    description: ""
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term:
+        get:
+            description: Gets statistic for all locked tokens of a stake pool
+            operationId: getAllocBlobberTerms
+            parameters:
+                - description: id of allocation
+                  in: query
+                  name: allocation_id
+                  type: string
+                - description: id of blobber
+                  in: query
+                  name: blobber_id
+                  type: string
+            responses:
+                "200":
+                    description: Terms
+                    schema:
+                        $ref: '#/definitions/Terms'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers:
+        get:
+            operationId: alloc_blobbers
+            parameters:
+                - description: allocation data
+                  in: query
+                  name: allocation_data
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: ""
+                "400":
+                    description: ""
+            summary: returns list of all blobbers alive that match the allocation request.
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_read_size:
+        get:
+            operationId: alloc_read_size
+            parameters:
+                - description: allocation for which to get challenge pools statistics
+                  in: query
+                  name: allocation_id
+                  required: true
+                  type: string
+                - description: block number
+                  in: query
+                  name: block_number
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: challengePoolStat
+                    schema:
+                        $ref: '#/definitions/challengePoolStat'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count:
+        get:
+            operationId: alloc_write_marker_count
+            parameters:
+                - description: allocation for which to get challenge pools statistics
+                  in: query
+                  name: allocation_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: challengePoolStat
+                    schema:
+                        $ref: '#/definitions/challengePoolStat'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_written_size:
+        get:
+            description: statistic for all locked tokens of a challenge pool
+            operationId: alloc_written_size
+            parameters:
+                - description: allocation for which to get challenge pools statistics
+                  in: query
+                  name: allocation_id
+                  required: true
+                  type: string
+                - description: block number
+                  in: query
+                  name: block_number
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: challengePoolStat
+                    schema:
+                        $ref: '#/definitions/challengePoolStat'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocWrittenSizePerPeriod:
+        get:
+            description: Total amount of data added during given blocks
+            operationId: allocWrittenSizePerPeriod
+            parameters:
+                - description: start block number
+                  in: query
+                  name: block-start
+                  required: true
+                  type: string
+                - description: end block number
+                  in: query
+                  name: block-end
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation:
+        get:
+            description: Gets allocation object
+            operationId: allocation
+            parameters:
+                - description: offset
+                  in: query
+                  name: allocation
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: StorageAllocation
+                    schema:
+                        $ref: '#/definitions/StorageAllocation'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock:
+        get:
+            operationId: allocation_min_lock
+            parameters:
+                - description: json marshall of new allocation request input data
+                  in: query
+                  name: allocation_data
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+            summary: Calculates the cost of a new allocation request.
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations:
+        get:
+            description: Gets a list of allocation information for allocations owned by the client
+            operationId: allocations
+            parameters:
+                - description: owner of allocations we wish to list
+                  in: query
+                  name: client
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: StorageAllocation
+                    schema:
+                        items:
+                            $ref: '#/definitions/StorageAllocation'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price:
+        get:
+            description: Gets the average write price across all blobbers
+            operationId: average-write-price
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank:
+        get:
+            description: challenges passed / total challenges
+            operationId: blobber-rank
+            parameters:
+                - description: id of blobber
+                  in: query
+                  name: id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "400":
+                    description: ""
+            summary: Gets the rank of a blobber.
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids:
+        get:
+            description: convert list of blobber urls into ids
+            operationId: blobber_ids
+            parameters:
+                - description: allocation data
+                  in: query
+                  name: free_allocation_data
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: stringArray
+                    schema:
+                        $ref: '#/definitions/stringArray'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation:
+        get:
+            description: |-
+                + name: max_latitude
+                description: maximum latitude value, defaults to 90
+                in: query
+                type: string
+                + name: min_latitude
+                description:  minimum latitude value, defaults to -90
+                in: query
+                type: string
+                + name: max_longitude
+                description: maximum max_longitude value, defaults to 180
+                in: query
+                type: string
+                + name: min_longitude
+                description: minimum max_longitude value, defaults to -180
+                in: query
+                type: string
+                + name: offset
+                description: offset
+                in: query
+                type: string
+                + name: limit
+                description: limit
+                in: query
+                type: string
+                + name: sort
+                description: desc or asc
+                in: query
+                type: string
+            operationId: blobbers-by-geolocation
+            responses:
+                "200":
+                    description: stringArray
+                    schema:
+                        $ref: '#/definitions/stringArray'
+                "500":
+                    description: ""
+            summary: Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values.
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank:
+        get:
+            description: Gets list of all blobbers ordered by rank
+            operationId: blobbers-by-rank
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: storageNodeResponse
+                    schema:
+                        $ref: '#/definitions/storageNodeResponse'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block:
+        get:
+            description: Gets block information
+            operationId: block
+            parameters:
+                - description: block hash
+                  in: query
+                  name: block_hash
+                  type: string
+                - description: block created closest to the date (epoch timestamp in nanoseconds)
+                  in: query
+                  name: date
+                  type: string
+                - description: block round
+                  in: query
+                  name: round
+                  type: string
+            responses:
+                "200":
+                    description: Block
+                    schema:
+                        $ref: '#/definitions/Block'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward:
+        get:
+            description: '> Note: Using start/end-block and start/end-date together would only return results with start/end-block'
+            operationId: collected_reward
+            parameters:
+                - description: start block
+                  in: query
+                  name: start-block
+                  type: string
+                - description: end block
+                  in: query
+                  name: end-block
+                  type: string
+                - description: start date
+                  in: query
+                  name: start-date
+                  type: string
+                - description: end date
+                  in: query
+                  name: end-date
+                  type: string
+                - description: number of data points in response
+                  in: query
+                  name: data-points
+                  type: string
+                - description: client id
+                  in: query
+                  name: client-id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: challengePoolStat
+                    schema:
+                        $ref: '#/definitions/challengePoolStat'
+                "400":
+                    description: ""
+            summary: |-
+                Returns collected reward for a client_id.
+                > Note: start-date and end-date resolves to the closest block number for those timestamps on the network.
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers:
+        get:
+            description: Gets read markers according to a filter
+            operationId: count_readmarkers
+            parameters:
+                - description: count read markers for this allocation
+                  in: query
+                  name: allocation_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: readMarkersCount
+                    schema:
+                        $ref: '#/definitions/readMarkersCount'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors:
+        get:
+            description: Gets errors returned by indicated transaction
+            operationId: errors
+            parameters:
+                - description: transaction_hash
+                  in: query
+                  name: transaction_hash
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: Error
+                    schema:
+                        items:
+                            $ref: '#/definitions/Error'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers:
+        get:
+            operationId: free_alloc_blobbers
+            parameters:
+                - description: allocation data
+                  in: query
+                  name: free_allocation_data
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: ""
+                "400":
+                    description: ""
+            summary: returns list of all blobbers alive that match the free allocation request.
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_total_stakes:
+        get:
+            description: Gets total stake of all blobbers combined
+            operationId: get_blobber_total_stakes
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks:
+        get:
+            operationId: get_blocks
+            parameters:
+                - description: block hash
+                  in: query
+                  name: block_hash
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: fullBlock
+                    schema:
+                        items:
+                            $ref: '#/definitions/fullBlock'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+            summary: 'Gets block information for all blocks. Todo: We need to add a filter to this.'
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator:
+        get:
+            description: Gets validator information
+            operationId: get_validator
+            parameters:
+                - description: validator on which to get information
+                  in: query
+                  name: validator_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: Validator
+                    schema:
+                        $ref: '#/definitions/Validator'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber:
+        get:
+            description: Get blobber information
+            operationId: getBlobber
+            parameters:
+                - description: blobber for which to return information
+                  in: query
+                  name: blobber_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: storageNodeResponse
+                    schema:
+                        $ref: '#/definitions/storageNodeResponse'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat:
+        get:
+            description: statistic for all locked tokens of a challenge pool
+            operationId: getChallengePoolStat
+            parameters:
+                - description: allocation for which to get challenge pools statistics
+                  in: query
+                  name: allocation_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: challengePoolStat
+                    schema:
+                        $ref: '#/definitions/challengePoolStat'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat:
+        get:
+            description: Gets  statistic for all locked tokens of the read pool
+            operationId: getReadPoolStat
+            parameters:
+                - description: client for which to get read pools statistics
+                  in: query
+                  name: client_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: readPool
+                    schema:
+                        $ref: '#/definitions/readPool'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat:
+        get:
+            description: Gets statistic for all locked tokens of a stake pool
+            operationId: getStakePoolStat
+            parameters:
+                - description: id of a provider
+                  in: query
+                  name: provider_id
+                  required: true
+                  type: string
+                - description: 'type of the provider, ie: blobber. validator'
+                  in: query
+                  name: provider_type
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: stakePoolStat
+                    schema:
+                        $ref: '#/definitions/stakePoolStat'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat:
+        get:
+            description: Gets statistic for a user's stake pools
+            operationId: getUserStakePoolStat
+            parameters:
+                - description: client for which to get stake pool information
+                  in: query
+                  name: client_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: userPoolStat
+                    schema:
+                        $ref: '#/definitions/userPoolStat'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers:
+        get:
+            description: Gets read markers according to a filter
+            operationId: getWriteMarkers
+            parameters:
+                - description: count write markers for this allocation
+                  in: query
+                  name: allocation_id
+                  required: true
+                  type: string
+                - description: file name
+                  in: query
+                  name: filename
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: WriteMarker
+                    schema:
+                        items:
+                            $ref: '#/definitions/WriteMarker'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers:
+        get:
+            operationId: getblobbers
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: storageNodesResponse
+                    schema:
+                        $ref: '#/definitions/storageNodesResponse'
+                "500":
+                    description: ""
+            summary: Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity).
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge:
+        get:
+            description: Gets challenges for a blobber by challenge id
+            operationId: getchallenge
+            parameters:
+                - description: id of blobber
+                  in: query
+                  name: blobber
+                  required: true
+                  type: string
+                - description: id of challenge
+                  in: query
+                  name: challenge
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: StorageChallenge
+                    schema:
+                        $ref: '#/definitions/StorageChallenge'
+                "400":
+                    description: ""
+                "404":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker:
+        get:
+            description: Gets latest read marker for a client and blobber
+            operationId: latestreadmarker
+            parameters:
+                - description: client
+                  in: query
+                  name: client
+                  type: string
+                - description: blobber
+                  in: query
+                  name: blobber
+                  type: string
+            responses:
+                "200":
+                    description: ReadMarker
+                    schema:
+                        $ref: '#/definitions/ReadMarker'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges:
+        get:
+            description: Gets open challenges for a blobber
+            operationId: openchallenges
+            parameters:
+                - description: id of blobber for which to get open challenges
+                  in: query
+                  name: blobber
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: ChallengesResponse
+                    schema:
+                        $ref: '#/definitions/ChallengesResponse'
+                "400":
+                    description: ""
+                "404":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers:
+        get:
+            description: Gets read markers according to a filter
+            operationId: readmarkers
+            parameters:
+                - description: filter read markers by this allocation
+                  in: query
+                  name: allocation_id
+                  type: string
+                - description: filter in only read markers using auth thicket
+                  in: query
+                  name: auth_ticket
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: ReadMarker
+                    schema:
+                        items:
+                            $ref: '#/definitions/ReadMarker'
+                        type: array
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search:
+        get:
+            description: Generic search endpoint
+            operationId: search
+            parameters:
+                - description: 'Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address'
+                  in: query
+                  name: searchString
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: ""
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config:
+        get:
+            description: Gets the current storage smart contract settings
+            operationId: storage-config
+            responses:
+                "200":
+                    description: StringMap
+                    schema:
+                        $ref: '#/definitions/StringMap'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data:
+        get:
+            description: '# This endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers'
+            operationId: total-stored-data
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "400":
+                    description: ""
+            summary: |-
+                Gets the total data stored across all blobbers.
+                Each change to files results in the blobber sending a WriteMarker to 0chain.
+                This WriteMarker has a Size filed indicated the change the data stored on the blobber.
+                Negative if data is removed.
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction:
+        get:
+            description: Gets transaction information from transaction hash
+            operationId: transaction
+            responses:
+                "200":
+                    description: Transaction
+                    schema:
+                        $ref: '#/definitions/Transaction'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes:
+        get:
+            description: Gets filtered list of transaction hashes from file information
+            operationId: transactionHashes
+            parameters:
+                - description: restrict to transactions by the specific look up hash on write marker
+                  in: query
+                  name: look-up-hash
+                  type: string
+                - description: restrict to transactions by the specific file name on write marker
+                  in: query
+                  name: name
+                  type: string
+                - description: restrict to transactions by the specific content hash on write marker
+                  in: query
+                  name: content-hash
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: stringArray
+                    schema:
+                        $ref: '#/definitions/stringArray'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions:
+        get:
+            description: Gets filtered list of transaction information
+            operationId: transactions
+            parameters:
+                - description: restrict to transactions sent by the specified client
+                  in: query
+                  name: client_id
+                  type: string
+                - description: restrict to transactions sent to a specified client
+                  in: query
+                  name: to_client_id
+                  type: string
+                - description: restrict to transactions in indicated block
+                  in: query
+                  name: block_hash
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+                - description: restrict to transactions in specified start block and endblock
+                  in: query
+                  name: block-start
+                  type: string
+                - description: restrict to transactions in specified start block and endblock
+                  in: query
+                  name: block-end
+                  type: string
+            responses:
+                "200":
+                    description: Transaction
+                    schema:
+                        items:
+                            $ref: '#/definitions/Transaction'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers:
+        get:
+            description: Gets list of write markers satisfying filter
+            operationId: writemarkers
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: is descending
+                  in: query
+                  name: is_descending
+                  type: string
+            responses:
+                "200":
+                    description: WriteMarker
+                    schema:
+                        items:
+                            $ref: '#/definitions/WriteMarker'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs:
+        get:
+            description: list minersc config settings
+            operationId: configs
+            responses:
+                "200":
+                    description: StringMap
+                    schema:
+                        $ref: '#/definitions/StringMap'
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations:
+        get:
+            description: list minersc config settings
+            operationId: get_miner_geolocations
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  required: true
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  required: true
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+                - description: active
+                  in: query
+                  name: active
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: MinerGeolocation
+                    schema:
+                        $ref: '#/definitions/MinerGeolocation'
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake:
+        get:
+            description: get total miner stake
+            operationId: get_miners_stake
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats:
+        get:
+            description: get count of active and inactive miners
+            operationId: get_miners_stats
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations:
+        get:
+            description: list minersc config settings
+            operationId: get_sharder_geolocations
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  required: true
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  required: true
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+                - description: active
+                  in: query
+                  name: active
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: SharderGeolocation
+                    schema:
+                        $ref: '#/definitions/SharderGeolocation'
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake:
+        get:
+            description: get total sharder stake
+            operationId: get_sharders_stake
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats:
+        get:
+            description: get count of active and inactive miners
+            operationId: get_sharders_stats
+            responses:
+                "200":
+                    description: Int64Map
+                    schema:
+                        $ref: '#/definitions/Int64Map'
+                "404":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getClientPools:
+        get:
+            description: get client pools
+            operationId: getClientPools
+            responses:
+                "200":
+                    description: vestingClientPools
+                    schema:
+                        $ref: '#/definitions/vestingClientPools'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList:
+        get:
+            description: gets dkg miners list
+            operationId: getDkgList
+            responses:
+                "200":
+                    description: DKGMinerNodes
+                    schema:
+                        $ref: '#/definitions/DKGMinerNodes'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents:
+        get:
+            description: events for block
+            operationId: getEvents
+            parameters:
+                - description: block number
+                  in: query
+                  name: block_number
+                  type: string
+                - description: type
+                  in: query
+                  name: type
+                  type: string
+                - description: tag
+                  in: query
+                  name: tag
+                  type: string
+                - description: hash of transaction
+                  in: query
+                  name: tx_hash
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: eventList
+                    schema:
+                        $ref: '#/definitions/eventList'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns:
+        get:
+            description: gets group share or signs
+            operationId: getGroupShareOrSigns
+            responses:
+                "200":
+                    description: GroupSharesOrSigns
+                    schema:
+                        $ref: '#/definitions/GroupSharesOrSigns'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock:
+        get:
+            description: gets magic block
+            operationId: getMagicBlock
+            responses:
+                "200":
+                    description: MagicBlock
+                    schema:
+                        $ref: '#/definitions/MagicBlock'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList:
+        get:
+            description: lists miners
+            operationId: getMinerList
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+                - description: active
+                  in: query
+                  name: active
+                  type: string
+            responses:
+                "200":
+                    description: InterfaceMap
+                    schema:
+                        $ref: '#/definitions/InterfaceMap'
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList:
+        get:
+            description: gets dkg miners list
+            operationId: getMpksList
+            responses:
+                "200":
+                    description: Mpks
+                    schema:
+                        $ref: '#/definitions/Mpks'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool:
+        get:
+            description: provides nodepool information for registered miners
+            operationId: getNodepool
+            responses:
+                "200":
+                    description: PoolMembersInfo
+                    schema:
+                        $ref: '#/definitions/PoolMembersInfo'
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase:
+        get:
+            description: get phase nodes
+            operationId: getPhase
+            responses:
+                "200":
+                    description: PhaseNode
+                    schema:
+                        $ref: '#/definitions/PhaseNode'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPoolInfo:
+        get:
+            description: get vesting configuration settings
+            operationId: getPoolInfo
+            responses:
+                "200":
+                    description: vestingInfo
+                    schema:
+                        $ref: '#/definitions/vestingInfo'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList:
+        get:
+            description: get total sharder stake
+            operationId: getSharderKeepList
+            responses:
+                "200":
+                    description: MinerNodes
+                    schema:
+                        $ref: '#/definitions/MinerNodes'
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList:
+        get:
+            description: lists sharders
+            operationId: getSharderList
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc
+                  in: query
+                  name: sort
+                  type: string
+                - description: active
+                  in: query
+                  name: active
+                  type: string
+            responses:
+                "200":
+                    description: InterfaceMap
+                    schema:
+                        $ref: '#/definitions/InterfaceMap'
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools:
+        get:
+            description: user oriented pools requests handler
+            operationId: getUserPools
+            parameters:
+                - description: client for which to get write pools statistics
+                  in: query
+                  name: client_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: userPools
+                    schema:
+                        $ref: '#/definitions/userPools'
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings:
+        get:
+            description: global object for miner smart contracts
+            operationId: globalSettings
+            responses:
+                "200":
+                    description: MinerGlobalSettings
+                    schema:
+                        $ref: '#/definitions/MinerGlobalSettings'
+                "400":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat:
+        get:
+            description: lists sharders
+            operationId: nodePoolStat
+            parameters:
+                - description: id
+                  in: query
+                  name: id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: ""
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat:
+        get:
+            description: lists sharders
+            operationId: nodeStat
+            parameters:
+                - description: id
+                  in: query
+                  name: id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: nodeStat
+                    schema:
+                        $ref: '#/definitions/nodeStat'
+                "400":
+                    description: ""
+                "484":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config:
+        get:
+            description: get vesting configuration settings
+            operationId: vesting_config
+            responses:
+                "200":
+                    description: StringMap
+                    schema:
+                        $ref: '#/definitions/StringMap'
+                "500":
+                    description: ""
+    /v1/sharder/get/stats:
+        get:
+            description: a handler to get sharder stats
+            operationId: sharderstats
+            responses:
+                "200":
+                    description: ""
+                "404":
+                    description: ""
+produces:
+    - application/json
+schemes:
+    - http
+    - https
+securityDefinitions:
+    apiKey:
+        in: header
+        name: authorization
+        type: apiKey
+swagger: "2.0"

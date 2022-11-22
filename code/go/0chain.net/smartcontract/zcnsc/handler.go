@@ -5,7 +5,7 @@ import (
 
 	"0chain.net/smartcontract/rest"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
@@ -37,12 +37,13 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizerNodes getAuthorizerNodes
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes getAuthorizerNodes
 // get authorizer nodes
 //
 // responses:
-//  200: authorizerNodesResponse
-//  404:
+//
+//	200: authorizerNodesResponse
+//	404:
 func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Request) {
 	var (
 		err    error
@@ -71,8 +72,9 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 // get zcn configuration settings
 //
 // responses:
-//  200: StringMap
-//  404:
+//
+//	200: StringMap
+//	404:
 func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
 	gn, err := GetGlobalNode(zrh.GetQueryStateContext())
 	if err != nil && err != util.ErrValueNotPresent {
@@ -87,8 +89,9 @@ func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Reques
 // get authorizer
 //
 // responses:
-//  200: authorizerResponse
-//  404:
+//
+//	200: authorizerResponse
+//	404:
 func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if len(id) == 0 {

@@ -75,6 +75,7 @@ tests:
           must_fail: true
   - name: "Lock notarization and spam next round VRF"
     flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - start: ["sharder-1"]

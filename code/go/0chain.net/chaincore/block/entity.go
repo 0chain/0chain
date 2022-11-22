@@ -1020,8 +1020,8 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string, round int64) event.Transaction {
 	return event.Transaction{
 		Hash:              tr.Hash,
-		BlockHash:         blockHash,
 		Round:             round,
+		BlockHash:         blockHash,
 		Version:           tr.Version,
 		ClientId:          tr.ClientID,
 		ToClientId:        tr.ToClientID,
@@ -1030,6 +1030,7 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 		Signature:         tr.Signature,
 		CreationDate:      int64(tr.CreationDate.Duration()),
 		Fee:               tr.Fee,
+		Nonce:             tr.Nonce,
 		TransactionType:   tr.TransactionType,
 		TransactionOutput: tr.TransactionOutput,
 		OutputHash:        tr.OutputHash,

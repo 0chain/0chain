@@ -8,7 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -156,11 +157,23 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		}
 		blobAlloc.Returned = newReturned
 
+		coin, _ := move.Int64()
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       coin,
+		})
+
 	}
 
 	var sp *stakePool
 	if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool: %v", err)
+	}
+
+	before, err := sp.stake()
+	if err != nil {
+		return err
 	}
 
 	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, balances)
@@ -196,6 +209,18 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return err
 	}
 
+	if blobAlloc.Terms.WritePrice > 0 {
+		stake, err := sp.stake()
+		if err != nil {
+			return err
+		}
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
+			FieldType:    event.Staked,
+			AllocationId: "",
+			BlobberId:    blobAlloc.BlobberID,
+			Delta:        int64((stake - before) / blobAlloc.Terms.WritePrice),
+		})
+	}
 	// save the pools
 	if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't save sake pool: %v", err)
@@ -318,6 +343,13 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	err = alloc.moveFromChallengePool(cp, move)
+	coin, _ := move.Int64()
+	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		Client:       alloc.Owner,
+		AllocationId: alloc.ID,
+		Amount:       coin,
+	})
+
 	if err != nil {
 		return fmt.Errorf("moving challenge pool rest back to write pool: %v", err)
 	}
@@ -364,7 +396,14 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			return err
 		}
 		blobAlloc.Penalty = penalty
-
+		if blobAlloc.Terms.WritePrice > 0 {
+			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
+				FieldType:    event.Staked,
+				AllocationId: "",
+				BlobberId:    blobAlloc.BlobberID,
+				Delta:        -int64(move / blobAlloc.Terms.WritePrice),
+			})
+		}
 		// save stake pool
 		if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't save blobber's stake pool: %v", err)
@@ -387,7 +426,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
 	var challResp ChallengeResponse
-
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewError("verify_challenge",

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/viper"
 	"github.com/0chain/common/core/logging"
@@ -530,7 +530,7 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsEvents.MaxIdleConns = viper.GetInt("server_chain.dbs.events.max_idle_conns")
 	conf.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
 	conf.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
-
+	conf.DbsEvents.AggregatePeriod = viper.GetInt64("server_chain.dbs.events.aggregate_period")
 	return nil
 }
 

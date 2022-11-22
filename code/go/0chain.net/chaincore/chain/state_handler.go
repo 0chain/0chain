@@ -30,7 +30,7 @@ import (
 )
 
 func SetupSwagger() {
-	//http.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
+	http.Handle("/swagger.yaml", http.FileServer(http.Dir("/docs")))
 
 	// documentation for developers
 	opts := middleware.SwaggerUIOpts{SpecURL: "swagger.yaml"}

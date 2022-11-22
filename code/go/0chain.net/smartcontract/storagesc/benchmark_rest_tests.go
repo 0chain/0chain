@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/smartcontract/dbs/benchmark"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"encoding/hex"
 	"encoding/json"
@@ -43,10 +43,6 @@ func BenchmarkRestTests(
 			{
 				FuncName: "get_blobber_total_stakes",
 				Endpoint: srh.getBlobberTotalStakes,
-			},
-			{
-				FuncName: "total-blobber-capacity",
-				Endpoint: srh.getTotalBlobberCapacity,
 			},
 			{
 				FuncName: "blobbers-by-geolocation",
@@ -119,10 +115,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getTotalData,
 			},
 			{
-				FuncName: "average-write-price",
-				Endpoint: srh.getAverageWritePrice,
-			},
-			{
 				FuncName: "latestreadmarker",
 				Params: map[string]string{
 					"client":  data.Clients[0],
@@ -161,6 +153,14 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.getAllocations,
 			},
+			//{
+			//	FuncName: "blobber-aggregate",
+			//	Params: map[string]string{
+			//		"id":    getMockBlobberId(1),
+			//		"round": "2",
+			//	},
+			//	Endpoint: srh.getBlobberAggregate,
+			//},
 			{
 				FuncName: "allocation-min-lock",
 				Params: map[string]string{
@@ -194,13 +194,6 @@ func BenchmarkRestTests(
 					"blobber": getMockBlobberId(0),
 				},
 				Endpoint: srh.getOpenChallenges,
-			},
-			{
-				FuncName: "blobber-rank",
-				Params: map[string]string{
-					"id": getMockBlobberId(3),
-				},
-				Endpoint: srh.getBlobberRank,
 			},
 			{
 				FuncName: "getchallenge",
@@ -406,7 +399,16 @@ func BenchmarkRestTests(
 				Endpoint: srh.getFreeAllocationBlobbers,
 			},
 			{
-				FuncName: "getSearchHandler",
+				FuncName: "blobber-challenges",
+				Params: map[string]string{
+					"id":   getMockBlobberId(0),
+					"from": "0",
+					"to":   strconv.FormatInt(time.Now().AddDate(1, 0, 0).Unix(), 10),
+				},
+				Endpoint: srh.getBlobberChallenges,
+			},
+			{
+				FuncName: "search",
 				Params: map[string]string{
 					"query": benchmark.GetMockTransactionHash(3, 3),
 				},

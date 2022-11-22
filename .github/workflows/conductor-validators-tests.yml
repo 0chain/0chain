@@ -27,7 +27,6 @@ jobs:
       id: get_branch
       run: |
         BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        BRANCH=add-blobber-test-send-wrong-data
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 
@@ -71,7 +70,6 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
-        cd blobber && git checkout add-send-wrong-bad-data-behaviour
 
     - name: Git clone zboxcli
       run: |
@@ -176,14 +174,6 @@ jobs:
     needs: [CONDUCTOR_VALIDATORS_01_TESTS]
     if: always() && (needs.CONDUCTOR_VALIDATORS_01_TESTS.result == 'failure')
     steps:
-      - name: "Check if should send slack notification"
-        id: send-slack-notification
-        uses: peter-murray/value-as-flag-action@0.0.1
-        with:
-          value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
-          default: false
-
       - name: "Notify Slack"
-        if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
         run: |
           curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_VALIDATORS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
