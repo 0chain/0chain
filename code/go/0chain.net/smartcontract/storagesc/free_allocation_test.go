@@ -11,7 +11,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -414,7 +414,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"EmitEvent",
 			event.TypeStats, event.TagAddAllocation, mock.Anything, mock.Anything,
 		).Return().Maybe()
-
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagLockReadPool, mock.Anything, mock.Anything,
+		).Return().Maybe()
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, mock.Anything, mock.Anything,
@@ -435,6 +438,14 @@ func TestFreeAllocationRequest(t *testing.T) {
 			mock.MatchedBy(func(rp *readPool) bool {
 				return rp.Balance == currency.Coin(readPoolLocked)
 			})).Return("", nil).Once()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
+		).Return().Maybe()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}
@@ -709,6 +720,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
 			mockSetValue(&challengePool{})).Return(nil).Once()
+		balances.On(
+			"GetTrieNode", mock.Anything,
+			mockSetValue(&StorageAllocation{ID: p.allocationId})).Return(nil)
 
 		balances.On(
 			"GetSignatureScheme",
@@ -735,6 +749,14 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+		).Return().Maybe()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
+		).Return().Maybe()
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(

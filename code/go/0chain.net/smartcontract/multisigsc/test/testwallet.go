@@ -1,12 +1,12 @@
 package main
 
 import (
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/state"
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/multisigsc"
+	"github.com/0chain/common/core/currency"
 	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )

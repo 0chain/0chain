@@ -114,7 +114,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	var update bool
 	if _, ok := allMap[newMiner.GetKey()]; !ok {
 		allMiners.Nodes = append(allMiners.Nodes, newMiner)
-
 		if err = updateMinersList(balances, allMiners); err != nil {
 			return "", common.NewErrorf("add_miner",
 				"saving all miners list: %v", err)
