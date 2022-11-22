@@ -39,13 +39,13 @@ func init() {
 var ErrWrongNonce = common.NewError("wrong_nonce", "nonce of sender is not valid")
 
 /*ComputeState - compute the state for the block */
-func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
+func (c *Chain) ComputeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) (err error) {
 	return c.ComputeBlockStateWithLock(ctx, func() error {
 		//check whether we already computed it
 		if b.IsStateComputed() {
 			return nil
 		}
-		return c.computeState(ctx, b)
+		return c.computeState(ctx, b, waitC...)
 	})
 }
 
@@ -75,8 +75,8 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
-	return b.ComputeState(ctx, c)
+func (c *Chain) computeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) error {
+	return b.ComputeState(ctx, c, waitC...)
 }
 
 // SaveChanges - persist the state changes
@@ -160,16 +160,26 @@ func (c *Chain) ExecuteSmartContract(
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error) {
+func (c *Chain) UpdateState(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	waitC ...chan struct{},
+) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(ctx, b, bState, txn)
+	return c.updateState(ctx, b, bState, txn, waitC...)
+}
+
+type SyncMissingNodesOption struct {
+	Sync   bool
+	ReplyC []chan struct{}
 }
 
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction, sync ...bool) (int, error) {
+	txn *transaction.Transaction, syncOpt ...*SyncMissingNodesOption) (int, error) {
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
@@ -192,8 +202,8 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 				zap.Errors("errors", ierrs),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			if len(sync) > 0 && sync[0] {
-				c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath())
+			if len(syncOpt) > 0 && syncOpt[0].Sync {
+				c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath(), syncOpt[0].ReplyC...)
 			}
 			return math.MaxInt32, ierrs[0] // return the first one only
 		}
@@ -241,7 +251,7 @@ func (c *Chain) NewStateContext(
 }
 
 func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction) (es []event.Event, err error) {
+	txn *transaction.Transaction, waitC ...chan struct{}) (es []event.Event, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
@@ -258,7 +268,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	defer func() {
 		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath())
+			c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath(), waitC...)
 		}
 	}()
 

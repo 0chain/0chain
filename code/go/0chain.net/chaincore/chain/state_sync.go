@@ -101,40 +101,6 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	}
 }
 
-func (c *Chain) OnNodesSynced(round int64, ch chan struct{}) {
-	c.syncMissingNodesMutex.Lock()
-	defer c.syncMissingNodesMutex.Unlock()
-
-	_, ok := c.syncMissingNodesSub[round]
-	if !ok {
-		c.syncMissingNodesSub[round] = []chan struct{}{ch}
-		return
-	}
-
-	c.syncMissingNodesSub[round] = append(c.syncMissingNodesSub[round], ch)
-}
-
-func (c *Chain) UnsubNodesSynced(round int64) {
-	c.syncMissingNodesMutex.Lock()
-	delete(c.syncMissingNodesSub, round)
-	c.syncMissingNodesMutex.Unlock()
-}
-
-func (c *Chain) notifyNodesSynced(round int64) {
-	c.syncMissingNodesMutex.Lock()
-	defer c.syncMissingNodesMutex.Unlock()
-
-	var i int
-	for _, ch := range c.syncMissingNodesSub[round] {
-		close(ch)
-		i++
-	}
-
-	logging.Logger.Debug("notify nodes synced", zap.Int64("round", round), zap.Int("num", i))
-
-	delete(c.syncMissingNodesSub, round)
-}
-
 // UpdateStateFromNetwork get a bunch of state nodes from the network
 func (c *Chain) UpdateStateFromNetwork(ctx context.Context, mpt util.MerklePatriciaTrieI, keys []util.Key) error {
 	ns, err := c.getStateNodes(ctx, keys)

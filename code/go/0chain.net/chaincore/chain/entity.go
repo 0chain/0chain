@@ -189,8 +189,6 @@ type Chain struct {
 	lfbTickerWorkerIsDone chan struct{}            // get rid out of context misuse
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
 	syncMissingNodesC     chan syncPathNodes
-	syncMissingNodesMutex *sync.Mutex
-	syncMissingNodesSub   map[int64][]chan struct{}
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
 
@@ -210,8 +208,9 @@ type Chain struct {
 }
 
 type syncPathNodes struct {
-	round int64
-	path  util.Path
+	round  int64
+	path   util.Path
+	replyC []chan struct{}
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -465,8 +464,6 @@ func Provider() datastore.Entity {
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
 	c.syncLFBStateC = make(chan *block.BlockSummary)
 	c.syncMissingNodesC = make(chan syncPathNodes, 1)
-	c.syncMissingNodesSub = make(map[int64][]chan struct{})
-	c.syncMissingNodesMutex = &sync.Mutex{}
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 

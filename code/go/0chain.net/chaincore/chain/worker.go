@@ -417,7 +417,7 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 }
 
 // SyncMissingNodes notify the nodes sync process to sync missing nodes
-func (c *Chain) SyncMissingNodes(round int64, path util.Path) {
+func (c *Chain) SyncMissingNodes(round int64, path util.Path, wc ...chan struct{}) {
 	if len(path) == 0 {
 		return
 	}
@@ -425,8 +425,9 @@ func (c *Chain) SyncMissingNodes(round int64, path util.Path) {
 		for {
 			select {
 			case c.syncMissingNodesC <- syncPathNodes{
-				round: round,
-				path:  path,
+				round:  round,
+				path:   path,
+				replyC: wc,
 			}:
 				return
 			case <-time.After(time.Second):
@@ -506,7 +507,9 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				}
 
 				defer func() {
-					go c.notifyNodesSynced(mns.round)
+					for _, ch := range mns.replyC {
+						close(ch)
+					}
 				}()
 
 				for {
