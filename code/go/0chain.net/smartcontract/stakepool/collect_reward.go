@@ -34,6 +34,7 @@ func CollectReward(
 	if err := crr.Decode(input); err != nil {
 		return 0, fmt.Errorf("can't decode request: %v", err)
 	}
+
 	if crr.ProviderId == "" {
 		return 0, fmt.Errorf("no provider")
 	}
