@@ -221,7 +221,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 		return "", common.NewErrorf(code, "can't get stake pool: %v", err)
 	}
 
-	if len(sp.Pools) >= gn.MaxDelegates {
+	if len(sp.Pools) >= gn.MaxDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf(code, "max_delegates reached: %v, no more stake pools allowed", gn.MaxDelegates)
 	}
 

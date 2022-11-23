@@ -81,16 +81,9 @@ func (sp *StakePool) OrderedPoolIds() []string {
 	return ids
 }
 
-func GetStakePool(
-	p spenum.Provider, id string, balances cstate.StateContextI,
-) (*StakePool, error) {
-	var sp = NewStakePool()
-	err := balances.GetTrieNode(stakePoolKey(p, id), sp)
-	if err != nil {
-		return nil, err
-	}
-
-	return sp, nil
+func (sp *StakePool) HasStakePool(user string) bool {
+	_, found := sp.Pools[user]
+	return found
 }
 
 func (sp *StakePool) Save(

@@ -41,7 +41,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"max delegates already reached: %d (%d)", numDelegates, mn.Settings.MaxNumDelegates)
 	}
 
-	if numDelegates >= gn.MaxDelegates {
+	if numDelegates >= gn.MaxDelegates && !mn.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("delegate_pool_add",
 			"SC max delegates already reached: %d (%d)", numDelegates, gn.MaxDelegates)
 	}

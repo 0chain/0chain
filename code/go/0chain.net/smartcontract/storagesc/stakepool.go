@@ -446,7 +446,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 		return "", err
 	}
 
-	if len(sp.Pools) >= conf.MaxDelegates {
+	if len(sp.Pools) >= conf.MaxDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
 			conf.MaxDelegates)
