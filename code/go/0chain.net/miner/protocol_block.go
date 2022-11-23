@@ -344,10 +344,8 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	var costs []int
 	for _, txn := range b.Txns {
 		if err := mc.syncAndRetry(ctx, b, "estimate cost", func(ctx context.Context, waitC chan struct{}) error {
-			c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn, &chain.SyncMissingNodesOption{
-				Sync:   true,
-				ReplyC: []chan struct{}{waitC},
-			})
+			c, err := mc.EstimateTransactionCost(ctx,
+				b, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 			if err != nil {
 				return err
 			}
@@ -430,14 +428,6 @@ func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, 
 				return false, err
 			}
 
-			logging.Logger.Error("sync and retry - invalid state error",
-				zap.String("desc", desc),
-				zap.Int64("round", b.Round),
-				zap.String("block", b.Hash),
-				zap.String("prev_block", b.PrevHash),
-				zap.String("state_hash", util.ToHex(b.ClientStateHash)),
-				zap.Error(err))
-
 			select {
 			case <-cctx.Done():
 				return false, cctx.Err()
@@ -451,7 +441,7 @@ func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, 
 					return false, err
 				}
 
-				logging.Logger.Error("sync and retry - retry",
+				logging.Logger.Debug("sync and retry - retry",
 					zap.String("desc", desc),
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
@@ -903,7 +893,7 @@ func txnIterHandlerFunc(mc *Chain,
 			return false, nil
 		}
 
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, &chain.SyncMissingNodesOption{Sync: true})
+		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 
@@ -1046,7 +1036,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.ChainConfig.MaxBlockCost() &&
 		iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
 		txn := iterInfo.currentTxns[i]
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, &chain.SyncMissingNodesOption{Sync: true})
+		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
 		if err != nil {
 			// Note: optimistic block generation
 			// we would just skip the error so that the work on txns collection and state computation above
@@ -1163,7 +1153,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		var costs []int
 		cost := 0
 		for _, txn := range b.Txns {
-			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, &chain.SyncMissingNodesOption{Sync: true})
+			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
 			if err != nil {
 				logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 				break
@@ -1221,7 +1211,7 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block, state uti
 
 	var cost int
 	for _, txn := range txns {
-		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, &chain.SyncMissingNodesOption{Sync: true})
+		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			return nil, 0, err

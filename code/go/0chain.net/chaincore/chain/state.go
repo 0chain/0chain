@@ -143,9 +143,8 @@ func (c *Chain) ExecuteSmartContract(
 		return "", transaction.ErrSmartContractContext
 	case r := <-resultC:
 		SmartContractExecutionTimer.Update(time.Since(ts))
-
-		if ierrs := balances.GetInvalidStateErrors(); len(ierrs) > 0 {
-			return "", ierrs[0]
+		if len(balances.GetMissingNodeKeys()) > 0 {
+			return "", util.ErrNodeNotFound
 		}
 
 		return r.output, r.err
@@ -171,15 +170,32 @@ func (c *Chain) UpdateState(ctx context.Context,
 	return c.updateState(ctx, b, bState, txn, waitC...)
 }
 
-type SyncMissingNodesOption struct {
-	Sync   bool
-	ReplyC []chan struct{}
+type syncNodesOption struct {
+	sync   bool
+	replyC []chan struct{}
+}
+
+// SyncNodesOption function for setting node syncing option
+type SyncNodesOption func(*syncNodesOption)
+
+// WithSync enable synching missing nodes if any
+func WithSync() SyncNodesOption {
+	return func(s *syncNodesOption) {
+		s.sync = true
+	}
+}
+
+// WithNotifyC subscribe to channel that will be notified when missing nodes syncing is done
+func WithNotifyC(replyC ...chan struct{}) SyncNodesOption {
+	return func(s *syncNodesOption) {
+		s.replyC = replyC
+	}
 }
 
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction, syncOpt ...*SyncMissingNodesOption) (int, error) {
+	txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
@@ -197,15 +213,20 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 			return math.MaxInt32, err
 		}
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
-		if ierrs := sctx.GetInvalidStateErrors(); len(ierrs) > 0 {
+		if missingKeys := sctx.GetMissingNodeKeys(); len(missingKeys) > 0 {
+			syncOpts := &syncNodesOption{}
+			for _, opt := range opts {
+				opt(syncOpts)
+			}
+
 			logging.Logger.Error("Internal error while estimate transaction cost",
-				zap.Errors("errors", ierrs),
+				zap.Error(util.ErrNodeNotFound),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			if len(syncOpt) > 0 && syncOpt[0].Sync {
-				c.SyncMissingNodes(b.Round, sctx.GetMissingNodeKeys(), syncOpt[0].ReplyC...)
+			if syncOpts.sync {
+				c.SyncMissingNodes(b.Round, missingKeys, syncOpts.replyC...)
 			}
-			return math.MaxInt32, ierrs[0] // return the first one only
+			return math.MaxInt32, util.ErrNodeNotFound
 		}
 
 		return cost, err
