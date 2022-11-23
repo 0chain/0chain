@@ -29,8 +29,9 @@ func (ssc *MinerSmartContract) collectReward(
 		return "", common.NewErrorf("collect_reward_failed",
 			"invalid provider type: %s", prr.ProviderType.String())
 	}
-	var err error
+
 	providers := []string{prr.ProviderId}
+	var err error
 	var totalMinted currency.Coin
 	for _, providerID := range providers {
 		var provider *MinerNode
