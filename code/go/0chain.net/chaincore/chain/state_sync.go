@@ -78,11 +78,6 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) error {
 		return common.NewError("sync state nodes failed", err.Error())
 	}
 
-	keysStr := make([]string, len(keys))
-	for i := range keys {
-		keysStr[i] = util.ToHex(keys[i])
-	}
-
 	if err := c.SaveStateNodes(ctx, ns); err != nil {
 		return common.NewError("saving synced state nodes failed", err.Error())
 	}

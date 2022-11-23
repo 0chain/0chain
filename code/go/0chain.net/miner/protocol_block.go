@@ -84,7 +84,7 @@ func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState 
 	s, err := mc.GetStateById(bState, minerId)
 	if err != nil {
 		if cstate.ErrInvalidState(err) {
-			mc.SyncMissingNodes(round, util.Path(minerId), bState)
+			mc.SyncMissingNodes(round, bState.GetMissingNodeKeys())
 		}
 
 		if err != util.ErrValueNotPresent {
@@ -146,7 +146,7 @@ func (mc *Chain) validateTransaction(b *block.Block, bState util.MerklePatriciaT
 			}
 			return nil
 		}
-		mc.SyncMissingNodes(b.Round, util.Path(txn.ClientID), bState)
+		mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys())
 		return err
 	}
 

@@ -109,7 +109,7 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetInvalidStateErrors() []error
-	GetMissingNodesPath() util.Path
+	GetMissingNodeKeys() []util.Key
 }
 
 // StateContext - a context object used to manipulate global state
@@ -129,7 +129,7 @@ type StateContext struct {
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
 	invalidStateErrors            []error
-	missingNodesPath              util.Path
+	//missingNodesPaths             []util.Path
 }
 
 type GetNow func() common.Timestamp
@@ -461,7 +461,7 @@ func (sc *StateContext) deleteNode(key datastore.Key) (datastore.Key, error) {
 func (sc *StateContext) addInvalidStateError(path util.Path, err error) {
 	sc.mutex.Lock()
 	sc.invalidStateErrors = append(sc.invalidStateErrors, err)
-	sc.missingNodesPath = path
+	//sc.missingNodesPaths = append(sc.missingNodesPaths, path)
 	sc.mutex.Unlock()
 }
 
@@ -474,12 +474,9 @@ func (sc *StateContext) GetInvalidStateErrors() []error {
 	return errs
 }
 
-// GetMissingNodesPath returns node path that has missing nodes and empty it
-func (sc *StateContext) GetMissingNodesPath() util.Path {
-	sc.mutex.Lock()
-	path := sc.missingNodesPath
-	sc.mutex.Unlock()
-	return path
+// GetMissingNodeKeys returns missing node keys
+func (sc *StateContext) GetMissingNodeKeys() []util.Key {
+	return sc.state.GetMissingNodeKeys()
 }
 
 // ErrInvalidState checks if the error is an invalid state error
