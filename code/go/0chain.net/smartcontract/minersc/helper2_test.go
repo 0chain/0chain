@@ -43,8 +43,8 @@ func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock { retu
 func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appender ...cstate.Appender) {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
-		Type:        int(eventType),
-		Tag:         int(tag),
+		Type:        eventType,
+		Tag:         tag,
 		Index:       index,
 		Data:        data,
 	})
@@ -109,7 +109,7 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 	}
 }
 
-func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f formulae, mn *MinerNode, ctx cstate.StateContextI) {
+func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f formulae, mn *MinerNode, _ cstate.StateContextI) {
 	var epochChangeRound = runtime.blockRound%scYaml.epoch == 0
 
 	if epochChangeRound {

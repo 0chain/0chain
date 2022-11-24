@@ -2,10 +2,10 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 )
 
@@ -16,96 +16,44 @@ func (ssc *StorageSmartContract) collectReward(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	var prr stakepool.CollectRewardRequest
-	if err := prr.Decode(input); err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"can't decode request: %v", err)
-	}
-
-	if prr.ProviderType != spenum.Blobber && prr.ProviderType != spenum.Validator {
-		return "", common.NewErrorf("collect_reward_failed",
-			"invalid provider type: %s", prr.ProviderType.String())
-	}
-
-	usp, err := stakepool.GetUserStakePools(prr.ProviderType, txn.ClientID, balances)
+	conf, err := getConfig(balances)
 	if err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"can't get related user stake pools: %v", err)
+		return "", common.NewError("collect_reward_failed", "can't get config: "+err.Error())
 	}
+	minted, err := stakepool.CollectReward(
+		input, func(
+			crr stakepool.CollectRewardRequest, balances cstate.StateContextI,
+		) (currency.Coin, error) {
+			sp, err := ssc.getStakePool(crr.ProviderType, crr.ProviderId, balances)
+			if err != nil {
+				return 0, err
+			}
 
-	var providers []string
-	if len(prr.ProviderId) == 0 {
-		providers = usp.Providers
-	} else {
-		providers = []string{prr.ProviderId}
-	}
+			minted, err := sp.MintRewards(
+				txn.ClientID, crr.ProviderId, crr.ProviderType, balances)
+			if err != nil {
+				return 0, err
+			}
 
-	conf, err := ssc.getConfig(balances, true)
+			if err := sp.save(crr.ProviderType, crr.ProviderId, balances); err != nil {
+				return 0, err
+			}
+
+			err = sp.stakeForProvider(crr.ProviderType, crr.ProviderId, balances)
+			if err != nil {
+				return 0, err
+			}
+
+			return minted, nil
+		},
+		balances,
+	)
 	if err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"can't get config: %v", err)
+		return "", common.NewError("collect_reward_failed", err.Error())
 	}
 
-	totalMinted := conf.Minted
-	for _, providerID := range providers {
-		sp, err := ssc.getStakePool(prr.ProviderType, providerID, balances)
-		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"id %v can't get related stake pool: %v", providerID, err)
-		}
-
-		reward, err := sp.MintRewards(txn.ClientID, providerID, prr.ProviderType, usp, balances)
-		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"error emptying account, %v", err)
-		}
-
-		tm, err := currency.AddCoin(totalMinted, reward)
-		if err != nil {
-			return "", common.NewErrorf("collect_reward_failed", "error adding reward: %v", err)
-		}
-
-		if tm > conf.MaxMint {
-			return "", common.NewErrorf("collect_reward_failed",
-				"max min %v exceeded: %v", conf.MaxMint, conf.Minted)
-		}
-
-		totalMinted = tm
-
-		if err := sp.save(prr.ProviderType, providerID, balances); err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"error saving stake pool, %v", err)
-		}
-
-		err = sp.StakeForProvider(prr.ProviderType, providerID, balances)
-		if err != nil {
-			return "", common.NewErrorf("stake_pool_unlock_failed",
-				"stake pool staking error: %v", err)
-		}
-
-		err = emitAddOrOverwriteReward(reward, providerID, prr, balances, txn)
-		if err != nil {
-			return "", common.NewErrorf("pay_reward_failed",
-				"emitting reward event: %v", err)
-		}
+	if err := conf.saveMints(minted, balances); err != nil {
+		return "", common.NewError("collect_reward_failed", "can't save config: "+err.Error())
 	}
-
-	if err := usp.Save(prr.ProviderType, txn.ClientID, balances); err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"error saving user stake pool, %v", err)
-	}
-
-	if totalMinted-conf.Minted == 0 {
-		return "", nil
-	}
-
-	conf.Minted = totalMinted
-
-	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-	if err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"cannot save config: %v", err)
-	}
-
-	return "", nil
+	return "", err
 }

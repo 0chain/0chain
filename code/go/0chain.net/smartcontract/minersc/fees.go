@@ -7,7 +7,6 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
@@ -40,28 +39,8 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 	return nil
 }
 
-// LRU cache in action.
-func (msc *MinerSmartContract) deletePoolFromUserNode(
-	delegateID, nodeID string,
-	providerType spenum.Provider,
-	balances cstate.StateContextI,
-) error {
-
-	usp, err := stakepool.GetUserStakePools(providerType, delegateID, balances)
-	if err != nil {
-		return fmt.Errorf("getting user node: %v", err)
-	}
-	usp.Del(nodeID)
-	if err := usp.Save(providerType, delegateID, balances); err != nil {
-		return fmt.Errorf("saving user node: %v", err)
-	}
-
-	return nil
-}
-
 // unlock deleted pools
-func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
-	balances cstate.StateContextI) (err error) {
+func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode) (err error) {
 	for _, pool := range mn.Pools {
 		if pool.Status == spenum.Deleting {
 			pool.Status = spenum.Deleted
@@ -81,19 +60,6 @@ func (msc *MinerSmartContract) unlockOffline(
 		if err := balances.AddTransfer(transfer); err != nil {
 			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)
 		}
-		var err error
-		switch mn.NodeType {
-		case NodeTypeMiner:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, spenum.Miner, balances)
-		case NodeTypeSharder:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, spenum.Sharder, balances)
-		default:
-			err = fmt.Errorf("unrecognised node type: %s", mn.NodeType.String())
-		}
-		if err != nil {
-			return common.NewError("pay_fees/unlock_offline", err.Error())
-		}
-
 		pool.Status = spenum.Deleted
 	}
 
@@ -132,7 +98,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	minerDelete := false
 	for i := len(miners.Nodes) - 1; i >= 0; i-- {
 		mn := miners.Nodes[i]
-		if err = msc.unlockDeleted(mn, round, balances); err != nil {
+		if err = msc.unlockDeleted(mn); err != nil {
 			return err
 		}
 		if mn.Delete {
@@ -160,7 +126,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	sharderDelete := false
 	for i := len(sharders.Nodes) - 1; i >= 0; i-- {
 		sn := sharders.Nodes[i]
-		if err = msc.unlockDeleted(sn, round, balances); err != nil {
+		if err = msc.unlockDeleted(sn); err != nil {
 			return err
 		}
 		if sn.Delete {

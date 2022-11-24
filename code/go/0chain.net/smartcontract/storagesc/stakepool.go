@@ -423,7 +423,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 		return "", err
 	}
 
-	if len(sp.Pools) >= conf.MaxDelegates {
+	if len(sp.Pools) >= conf.MaxDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
 			conf.MaxDelegates)
@@ -506,7 +506,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockClientStakePool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	amount, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}

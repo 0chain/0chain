@@ -92,22 +92,13 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 }
 
 func addMockStakePools(clients []string, ctx cstate.StateContextI) {
-
 	numAuthorizers := viper.GetInt(benchmark.NumAuthorizers)
 	numDelegates := viper.GetInt(benchmark.ZcnMaxDelegates) - 1
-	usps := make([]*stakepool.UserStakePools, numDelegates)
 	for i := 0; i < numAuthorizers; i++ {
 		sp := NewStakePool()
 		sp.Settings = getMockStakePoolSettings(clients[i])
 		for j := 0; j < numDelegates; j++ {
-			//did := getMockAuthoriserStakePoolId(clients[i], j)
 			sp.Pools[clients[j]] = getMockDelegatePool(clients[j])
-
-			if usps[j] == nil {
-				usps[j] = stakepool.NewUserStakePools()
-			}
-
-			usps[j].Providers = append(usps[j].Providers, clients[i])
 		}
 		sp.Reward = 11
 		sp.Minter = cstate.MinterZcn
@@ -116,16 +107,6 @@ func addMockStakePools(clients []string, ctx cstate.StateContextI) {
 			log.Fatal(err)
 		}
 
-	}
-	for cId, usp := range usps {
-		if usp != nil {
-			_, err := ctx.InsertTrieNode(
-				stakepool.UserStakePoolsKey(spenum.Authorizer, clients[cId]), usp,
-			)
-			if err != nil {
-				panic(err)
-			}
-		}
 	}
 }
 
