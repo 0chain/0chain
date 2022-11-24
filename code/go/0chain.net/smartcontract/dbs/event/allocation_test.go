@@ -354,7 +354,7 @@ func TestAllocations(t *testing.T) {
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10, access)
 	time.Sleep(100 * time.Millisecond)
 	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
@@ -374,7 +374,7 @@ func TestAllocations(t *testing.T) {
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10, access)
 
 	alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
