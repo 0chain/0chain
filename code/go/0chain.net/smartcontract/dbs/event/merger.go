@@ -12,14 +12,14 @@ type eventsMerger interface {
 }
 
 type eventsMergerImpl[T any] struct {
-	tag         int
+	tag         EventTag
 	events      []Event
 	middlewares []eventMergeMiddleware
 }
 
 func newEventsMerger[T any](tag EventTag, middlewares ...eventMergeMiddleware) *eventsMergerImpl[T] {
 	return &eventsMergerImpl[T]{
-		tag:         int(tag),
+		tag:         tag,
 		middlewares: append([]eventMergeMiddleware{}, middlewares...),
 	}
 }
@@ -66,7 +66,7 @@ func (em *eventsMergerImpl[T]) merge(round int64, blockHash string) (*Event, err
 	}
 
 	return &Event{
-		Type:        int(TypeStats),
+		Type:        TypeStats,
 		Tag:         em.tag,
 		BlockNumber: round,
 		Index:       blockHash,
