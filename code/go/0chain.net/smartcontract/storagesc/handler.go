@@ -527,7 +527,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 		dataPoints = 100
 	}
 
-	query := event.RewardQuery{
+	query := event.RewardMintQuery{
 		ClientID:   clientID,
 		DataPoints: dataPoints,
 	}
@@ -1572,24 +1572,24 @@ type validatorNodeResponse struct {
 	NumDelegates   int           `json:"num_delegates"`
 	ServiceCharge  float64       `json:"service_charge"`
 
-	Rewards     currency.Coin `json:"rewards"`
-	TotalReward currency.Coin `json:"total_reward"`
+	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
+	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 }
 
 func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 	return &validatorNodeResponse{
-		ValidatorID:    v.ValidatorID,
-		BaseUrl:        v.BaseUrl,
-		StakeTotal:     v.StakeTotal,
-		UnstakeTotal:   v.UnstakeTotal,
-		PublicKey:      v.PublicKey,
-		DelegateWallet: v.DelegateWallet,
-		MinStake:       v.MinStake,
-		MaxStake:       v.MaxStake,
-		NumDelegates:   v.NumDelegates,
-		ServiceCharge:  v.ServiceCharge,
-		Rewards:        v.Rewards.Rewards,
-		TotalReward:    v.Rewards.TotalRewards,
+		ValidatorID:              v.ValidatorID,
+		BaseUrl:                  v.BaseUrl,
+		StakeTotal:               v.StakeTotal,
+		UnstakeTotal:             v.UnstakeTotal,
+		PublicKey:                v.PublicKey,
+		DelegateWallet:           v.DelegateWallet,
+		MinStake:                 v.MinStake,
+		MaxStake:                 v.MaxStake,
+		NumDelegates:             v.NumDelegates,
+		ServiceCharge:            v.ServiceCharge,
+		UncollectedServiceCharge: v.Rewards.Rewards,
+		TotalServiceCharge:       v.Rewards.TotalRewards,
 	}
 }
 
@@ -2393,12 +2393,13 @@ type storageNodesResponse struct {
 // swagger:model storageNodeResponse
 type storageNodeResponse struct {
 	*StorageNode
-	TotalServiceCharge currency.Coin `json:"total_service_charge"`
-	TotalStake         currency.Coin `json:"total_stake"`
-	CreationRound      int64         `json:"creation_round"`
-	ReadData           int64         `json:"read_data"`
-	UsedAllocation     int64         `json:"used_allocation"`
-	TotalOffers        currency.Coin `json:"total_offers"`
+	TotalStake               currency.Coin `json:"total_stake"`
+	CreationRound            int64         `json:"creation_round"`
+	ReadData                 int64         `json:"read_data"`
+	UsedAllocation           int64         `json:"used_allocation"`
+	TotalOffers              currency.Coin `json:"total_offers"`
+	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
+	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 }
 
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
@@ -2427,12 +2428,14 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				ServiceChargeRatio: blobber.ServiceCharge,
 			},
 		},
-		TotalServiceCharge: blobber.Rewards.TotalRewards,
-		TotalStake:         blobber.TotalStake,
-		CreationRound:      blobber.CreationRound,
-		ReadData:           blobber.ReadData,
-		TotalOffers:        blobber.OffersTotal,
-		//SavedData: blobber.SavedData,
+		TotalStake:     blobber.TotalStake,
+		CreationRound:  blobber.CreationRound,
+		ReadData:       blobber.ReadData,
+		UsedAllocation: blobber.Used,
+		TotalOffers:    blobber.OffersTotal,
+
+		TotalServiceCharge:       blobber.Rewards.TotalRewards,
+		UncollectedServiceCharge: blobber.Rewards.Rewards,
 	}
 }
 

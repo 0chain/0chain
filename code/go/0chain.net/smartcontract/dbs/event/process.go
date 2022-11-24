@@ -548,12 +548,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateAllocationStakes(*allocs)
-	case TagAddReward:
-		reward, ok := fromEvent[Reward](event.Data)
+	case TagMintReward:
+		reward, ok := fromEvent[RewardMint](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addReward(*reward)
+		return edb.addRewardMint(*reward)
 	case TagAddChallenge:
 		challenges, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
@@ -631,6 +631,8 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addOrUpdateChallengePools(*cps)
+	case TagCollectProviderReward:
+		return edb.collectRewards(event.Index)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
