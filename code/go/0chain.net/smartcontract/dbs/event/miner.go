@@ -247,7 +247,7 @@ func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
 
 func withMinerTotalStakesAdded() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Miner) (*Miner, error) {
-		a.TotalStake += b.TotalStake
-		return a, nil
+		//use the newer one
+		return b, nil
 	})
 }

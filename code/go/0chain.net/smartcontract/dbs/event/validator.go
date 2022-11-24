@@ -99,8 +99,8 @@ func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
 
 func withValidatorTotalStakesAdded() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Validator) (*Validator, error) {
-		a.TotalStake += b.TotalStake
-		return a, nil
+		//use the newer one
+		return b, nil
 	})
 }
 

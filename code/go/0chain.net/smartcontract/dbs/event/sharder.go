@@ -238,7 +238,7 @@ func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
 
 func withSharderTotalStakesAdded() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Sharder) (*Sharder, error) {
-		a.TotalStake += b.TotalStake
-		return a, nil
+		//use the newer one
+		return b, nil
 	})
 }

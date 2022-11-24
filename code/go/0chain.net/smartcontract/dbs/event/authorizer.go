@@ -113,7 +113,7 @@ func mergeUpdateAuthorizerTotalStakesEvents() *eventsMergerImpl[Authorizer] {
 
 func withAuthorizerTotalStakesAdded() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Authorizer) (*Authorizer, error) {
-		a.TotalStake += b.TotalStake
-		return a, nil
+		//use the newer one
+		return b, nil
 	})
 }
