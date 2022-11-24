@@ -439,7 +439,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving stake pool: %v", err)
 	}
 
-	err = sp.StakeForProvider(spr.ProviderType, spr.ProviderID, balances)
+	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool staking error: %v", err)
@@ -495,7 +495,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
-		err = sp.StakeForProvider(spr.ProviderType, spr.ProviderID, balances)
+		err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
 		if err != nil {
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"stake pool staking error: %v", err)
@@ -515,7 +515,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 			"saving stake pool: %v", err)
 	}
 
-	err = sp.StakeForProvider(spr.ProviderType, spr.ProviderID, balances)
+	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)

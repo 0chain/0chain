@@ -110,7 +110,7 @@ func (sp *StakePool) LockPool(
 	return nil
 }
 
-func (sp *StakePool) StakeForProvider(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error {
+func (sp *StakePool) EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err

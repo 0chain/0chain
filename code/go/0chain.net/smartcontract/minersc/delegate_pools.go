@@ -65,7 +65,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"saving miner node: %v", err)
 	}
 
-	err = mn.StakeForProvider(spenum.Provider(mn.NodeType), mn.ID, balances)
+	err = mn.EmitStakeEvent(spenum.Provider(mn.NodeType), mn.ID, balances)
 
 	resp = string(mn.Encode())
 	return
