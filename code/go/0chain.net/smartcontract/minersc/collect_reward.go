@@ -20,87 +20,52 @@ func (ssc *MinerSmartContract) collectReward(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	var prr stakepool.CollectRewardRequest
-	if err := prr.Decode(input); err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"can't decode request: %v", err)
-	}
-	if prr.ProviderType != spenum.Miner && prr.ProviderType != spenum.Sharder {
-		return "", common.NewErrorf("collect_reward_failed",
-			"invalid provider type: %s", prr.ProviderType.String())
-	}
-
-	usp, err := stakepool.GetUserStakePools(prr.ProviderType, txn.ClientID, balances)
-	if err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"can't get related user stake pools: %v", err)
-	}
-
-	var providers []string
-	if len(prr.ProviderId) == 0 {
-		providers = usp.Providers
-	} else {
-		providers = []string{prr.ProviderId}
-	}
-
-	var totalMinted currency.Coin
-	for _, providerID := range providers {
-		var provider *MinerNode
-		switch prr.ProviderType {
-		case spenum.Miner:
-			provider, err = getMinerNode(providerID, balances)
-		case spenum.Sharder:
-			provider, err = ssc.getSharderNode(providerID, balances)
-		default:
-			err = fmt.Errorf("unsupported provider type %s", prr.ProviderType.String())
-		}
-		if err != nil {
-			return "", common.NewError("collect_reward_failed", err.Error())
-		}
-
-		_, ok := provider.Pools[txn.ClientID]
-		if ok || providerID == txn.ClientID ||
-			provider.Settings.DelegateWallet == txn.ClientID {
-			minted, err := provider.StakePool.MintRewards(
-				txn.ClientID, providerID, prr.ProviderType, usp, balances)
+	minted, err := stakepool.CollectReward(
+		input,
+		func(
+			crr stakepool.CollectRewardRequest, balances cstate.StateContextI,
+		) (currency.Coin, error) {
+			var provider *MinerNode
+			var err error
+			switch crr.ProviderType {
+			case spenum.Miner:
+				provider, err = getMinerNode(crr.ProviderId, balances)
+			case spenum.Sharder:
+				provider, err = getSharderNode(crr.ProviderId, balances)
+			default:
+				err = fmt.Errorf("unsupported provider type %s", crr.ProviderType)
+			}
 			if err != nil {
-				return "", common.NewErrorf("collect_reward_failed",
-					"error emptying account, %v", err)
+				return 0, err
+			}
+
+			minted, err := provider.StakePool.MintRewards(
+				txn.ClientID, crr.ProviderId, crr.ProviderType, balances)
+			if err != nil {
+				return 0, err
 			}
 
 			if err := provider.save(balances); err != nil {
-				return "", common.NewErrorf("collect_reward_failed",
-					"error saving stake pool, %v", err)
+				return 0, err
 			}
 
-			tm, err := currency.AddCoin(totalMinted, minted)
-			if err != nil {
-				return "", common.NewErrorf("collect_reward_failed", "error adding total minted token: %v", err)
-			}
-
-			totalMinted = tm
+			return minted, nil
+		},
+		balances,
+	)
+	if err != nil {
+		return "", err
+	}
+	if minted > 0 {
+		gn.Minted += minted
+		if !gn.canMint() {
+			return "", common.NewErrorf("collect_reward_failed",
+				"max mint %v exceeded, %v", gn.MaxMint, gn.Minted)
+		}
+		if err = gn.save(balances); err != nil {
+			return "", common.NewErrorf("collect_reward_failed",
+				"saving global node: %v", err)
 		}
 	}
-
-	if totalMinted == 0 {
-		return "", common.NewErrorf("collect_reward_failed",
-			"user %v does not own stake pool of type %s", txn.ClientID, prr.ProviderType)
-	}
-
-	gnMinted, err := currency.AddCoin(gn.Minted, totalMinted)
-	if err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"error adding minted to global node, %v", err)
-	}
-	gn.Minted = gnMinted
-	if !gn.canMint() {
-		return "", common.NewErrorf("collect_reward_failed",
-			"max mint %v exceeded, %v", gn.MaxMint, gn.Minted)
-	}
-	if err = gn.save(balances); err != nil {
-		return "", common.NewErrorf("collect_reward_failed",
-			"saving global node: %v", err)
-	}
-
 	return "", nil
 }

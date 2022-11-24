@@ -529,7 +529,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockClientStakePool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	amount, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}

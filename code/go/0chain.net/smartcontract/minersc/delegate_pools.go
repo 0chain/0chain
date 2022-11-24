@@ -100,11 +100,6 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	switch pool.Status {
 	case spenum.Pending:
 		{
-			_, err := mn.UnlockClientStakePool(t.ClientID, spenum.Miner, dp.MinerID, balances)
-			if err != nil {
-				return "", common.NewErrorf("delegate_pool_del",
-					"stake_pool_unlock_failed: %v", err)
-			}
 			if err = mn.save(balances); err != nil {
 				return "", common.NewError("delegate_pool_del", err.Error())
 			}
