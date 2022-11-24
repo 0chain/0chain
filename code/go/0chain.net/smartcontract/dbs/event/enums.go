@@ -61,7 +61,7 @@ const (
 	TagAddAllocation
 	TagUpdateAllocationStakes
 	TagUpdateAllocation
-	TagAddReward
+	TagMintReward
 	TagAddChallenge
 	TagUpdateChallenge
 	TagUpdateBlobberChallenge
@@ -145,7 +145,7 @@ func initTagString() {
 	TagString[TagAddAllocation] = "TagAddAllocation"
 	TagString[TagUpdateAllocationStakes] = "TagUpdateAllocationStakes"
 	TagString[TagUpdateAllocation] = "TagUpdateAllocation"
-	TagString[TagAddReward] = "TagAddReward"
+	TagString[TagMintReward] = "TagMintReward"
 	TagString[TagAddChallenge] = "TagAddChallenge"
 	TagString[TagUpdateChallenge] = "TagUpdateChallenge"
 	TagString[TagUpdateBlobberChallenge] = "TagUpdateBlobberChallenge"
