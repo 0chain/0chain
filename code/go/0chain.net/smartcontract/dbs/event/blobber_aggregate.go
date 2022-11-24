@@ -69,7 +69,7 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSn
 	}
 
 	for i := 0; i < subpageCount; i++ {
-		edb.calculateBlobberAggregate(gs, round, edb.PageLimit(), int64(i)*pageLimit)
+		edb.calculateBlobberAggregate(gs, round, edb.PageLimit(), int64(i)*edb.PageLimit())
 	}
 
 }
