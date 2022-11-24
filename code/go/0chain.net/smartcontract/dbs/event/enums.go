@@ -90,6 +90,9 @@ const (
 	TagAllocBlobberValueChange
 	TagUpdateBlobberOpenChallenges
 	TagUpdateValidatorStakeTotal
+	TagUpdateMinerTotalStake
+	TagUpdateSharderTotalStake
+	TagUpdateAuthorizerTotalStake
 	NumberOfTags
 )
 

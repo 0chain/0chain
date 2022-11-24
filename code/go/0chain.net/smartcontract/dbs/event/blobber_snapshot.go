@@ -48,7 +48,7 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 	var snapshots []BlobberSnapshot
 	for _, blobber := range blobbers {
 		snapshots = append(snapshots, BlobberSnapshot{
-			BlobberID:    blobber.BlobberID,
+			BlobberID:    blobber.ID,
 			WritePrice:   blobber.WritePrice,
 			Capacity:     blobber.Capacity,
 			Allocated:    blobber.Allocated,

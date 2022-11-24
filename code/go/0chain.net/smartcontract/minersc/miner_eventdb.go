@@ -15,7 +15,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
-		ID:          edbMiner.MinerID,
+		ID:          edbMiner.ID,
 		N2NHost:     edbMiner.N2NHost,
 		Host:        edbMiner.Host,
 		Port:        edbMiner.Port,
@@ -52,7 +52,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	return event.Miner{
-		MinerID:   mn.ID,
+
 		N2NHost:   mn.N2NHost,
 		Host:      mn.Host,
 		Port:      mn.Port,
@@ -62,6 +62,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		BuildTag:  mn.BuildTag,
 		Delete:    mn.Delete,
 		Provider: &event.Provider{
+			ID:             mn.ID,
 			TotalStake:     mn.TotalStaked,
 			DelegateWallet: mn.Settings.DelegateWallet,
 			ServiceCharge:  mn.Settings.ServiceChargeRatio,

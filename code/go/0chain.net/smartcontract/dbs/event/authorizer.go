@@ -6,16 +6,13 @@ import (
 
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
-
-	"gorm.io/gorm"
 )
 
 type Authorizer struct {
-	gorm.Model
 	*Provider
 
-	AuthorizerID string `json:"id" gorm:"uniqueIndex"`
-	URL          string `json:"url"`
+	ID  string `json:"id" gorm:"uniqueIndex"`
+	URL string `json:"url"`
 
 	// Configuration
 	Fee currency.Coin `json:"fee"`
@@ -48,7 +45,7 @@ func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 
 	result := edb.Store.Get().
 		Model(&Authorizer{}).
-		Where(&Authorizer{AuthorizerID: id}).
+		Where(&Authorizer{ID: id}).
 		First(&auth)
 
 	if result.Error != nil {
@@ -81,14 +78,14 @@ func (a *Authorizer) exists(edb *EventDb) (bool, error) {
 
 	result := edb.Get().
 		Model(&Authorizer{}).
-		Where(&Authorizer{AuthorizerID: a.AuthorizerID}).
+		Where(&Authorizer{ID: a.ID}).
 		Count(&count)
 
 	if result.Error != nil {
 		return false,
 			fmt.Errorf(
 				"error searching for authorizer %v, error %v",
-				a.AuthorizerID, result.Error,
+				a.ID, result.Error,
 			)
 	}
 	return count > 0, nil
@@ -96,7 +93,7 @@ func (a *Authorizer) exists(edb *EventDb) (bool, error) {
 
 func NewUpdateAuthorizerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateAuthorizerTotalStake, Authorizer{
-		AuthorizerID: ID,
+		ID: ID,
 		Provider: &Provider{
 			TotalStake: totalStake,
 		},

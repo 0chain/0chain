@@ -15,9 +15,7 @@ import (
 )
 
 type Miner struct {
-	gorm.Model
 	*Provider
-	MinerID   string `gorm:"uniqueIndex"`
 	N2NHost   string `gorm:"column:n2n_host"`
 	Host      string
 	Port      int
@@ -32,7 +30,7 @@ type Miner struct {
 	Active          bool
 	Longitude       float64
 	Latitude        float64
-	Rewards         ProviderRewards `json:"rewards" gorm:"foreignKey:MinerID;references:ProviderID"`
+	Rewards         ProviderRewards `json:"rewards" gorm:"foreignKey:ID;references:ProviderID"`
 }
 
 // swagger:model MinerGeolocation
@@ -48,7 +46,7 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 	return miner, edb.Store.Get().
 		Preload("Rewards").
 		Model(&Miner{}).
-		Where(&Miner{MinerID: id}).
+		Where(&Miner{Provider: &Provider{ID: id}}).
 		First(&miner).Error
 }
 
@@ -56,7 +54,7 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 //	var miner providerAggregateStats
 //	result := edb.Store.Get().
 //		Model(&Miner{}).
-//		Where(&Miner{MinerID: id}).
+//		Where(&Miner{ID: id}).
 //		First(&miner)
 //	if result.Error != nil {
 //		return nil, fmt.Errorf("error retrieving miner %v, error %v",
@@ -173,7 +171,7 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 
 func (edb *EventDb) addOrOverwriteMiner(miners []Miner) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "miner_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&miners).Error
 }
@@ -184,14 +182,14 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 
 	result := edb.Get().
 		Model(&Miner{}).
-		Where(&Miner{MinerID: mn.MinerID}).
+		Where(&Miner{Provider: &Provider{ID: mn.ID}}).
 		Take(&miner)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return false, nil
 	} else if result.Error != nil {
 		return false, fmt.Errorf("error searching for miner %v, error %v",
-			mn.MinerID, result.Error)
+			mn.ID, result.Error)
 	}
 
 	return true, nil
@@ -199,7 +197,7 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 
-	var miner = Miner{MinerID: updates.Id}
+	var miner = Miner{Provider: &Provider{ID: updates.Id}}
 	exists, err := miner.exists(edb)
 
 	if err != nil {
@@ -207,12 +205,12 @@ func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 	}
 	if !exists {
 		return fmt.Errorf("miner %v not in database cannot update",
-			miner.MinerID)
+			miner.ID)
 	}
 
 	result := edb.Store.Get().
 		Model(&Miner{}).
-		Where(&Miner{MinerID: miner.MinerID}).
+		Where(&Miner{Provider: &Provider{ID: miner.ID}}).
 		Updates(updates.Updates)
 
 	return result.Error
@@ -221,7 +219,7 @@ func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 func (edb *EventDb) deleteMiner(id string) error {
 
 	result := edb.Store.Get().
-		Where(&Miner{MinerID: id}).
+		Where(&Miner{Provider: &Provider{ID: id}}).
 		Delete(&Miner{})
 
 	return result.Error
@@ -229,8 +227,8 @@ func (edb *EventDb) deleteMiner(id string) error {
 
 func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateMinerTotalStake, Miner{
-		MinerID: ID,
 		Provider: &Provider{
+			ID:         ID,
 			TotalStake: totalStake,
 		},
 	}
@@ -238,7 +236,7 @@ func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag Eve
 
 func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "miner_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
 	}).Create(&miners).Error
 }

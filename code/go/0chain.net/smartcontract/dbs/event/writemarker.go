@@ -49,7 +49,7 @@ type WriteMarker struct {
 //	if err := tx.Model(&Blobber{}).Clauses(clause.OnConflict{
 //		Columns:   []clause.Column{{Name: "blobber_id"}},
 //		DoUpdates: clause.Assignments(vs),
-//	}).Create(&Blobber{BlobberID: w.BlobberID, Used: w.Size, SavedData: w.Size}).Error; err != nil {
+//	}).Create(&Blobber{ID: w.ID, Used: w.Size, SavedData: w.Size}).Error; err != nil {
 //		return err
 //	}
 //

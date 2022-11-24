@@ -7,21 +7,18 @@ import (
 
 	common2 "0chain.net/smartcontract/common"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 // swagger:model Validator
 type Validator struct {
-	gorm.Model
 	*Provider
-	ValidatorID string `json:"validator_id" gorm:"uniqueIndex"`
-	BaseUrl     string `json:"url"`
-	PublicKey   string `json:"public_key"`
+	BaseUrl   string `json:"url"`
+	PublicKey string `json:"public_key"`
 
 	ServiceCharge float64 `json:"service_charge"`
 
-	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:ValidatorID;references:ProviderID"`
+	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:ID;references:ProviderID"`
 }
 
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
@@ -29,7 +26,7 @@ func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, er
 
 	result := edb.Store.Get().
 		Preload("Rewards").
-		Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(&vn)
+		Model(&Validator{}).Where(&Validator{Provider: &Provider{ID: validatorID}}).First(&vn)
 
 	if result.Error != nil {
 		return vn, fmt.Errorf("error retrieving Validation node with ID %v; error: %v", validatorID, result.Error)
@@ -41,14 +38,14 @@ func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, er
 func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
 	var validators []Validator
 	result := edb.Store.Get().Preload("Rewards").
-		Model(&Validator{}).Where("validator_id IN ?", ids).Find(&validators)
+		Model(&Validator{}).Where("id IN ?", ids).Find(&validators)
 
 	return validators, result.Error
 }
 
 func (edb *EventDb) addOrOverwriteValidators(validators []Validator) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "validator_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&validators).Error
 }
@@ -75,22 +72,23 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 		"service_charge",
 	}
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "validator_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns(updateFields),
 	}).Create(&validators).Error
 }
 
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateValidatorStakeTotal, Validator{
-		ValidatorID: ID,
-		Provider:    &Provider{TotalStake: totalStake},
+		Provider: &Provider{
+			ID:         ID,
+			TotalStake: totalStake},
 	}
 }
 
 func (edb *EventDb) updateValidatorStakes(validators []Validator) error {
 	updateFields := []string{"stake_total"}
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "validator_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns(updateFields),
 	}).Create(&validators).Error
 }

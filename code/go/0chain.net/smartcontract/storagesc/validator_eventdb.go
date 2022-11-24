@@ -10,7 +10,7 @@ import (
 
 func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
-		ID:        v.ValidatorID,
+		ID:        v.ID,
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
 		StakePoolSettings: stakepool.Settings{
@@ -45,9 +45,9 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 	logging.Logger.Info("emitting validator update event")
 
 	data := &event.Validator{
-		ValidatorID: vn.ID,
-		BaseUrl:     vn.BaseURL,
+		BaseUrl: vn.BaseURL,
 		Provider: &event.Provider{
+			ID:             vn.ID,
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,
 			DelegateWallet: vn.StakePoolSettings.DelegateWallet,
@@ -70,9 +70,9 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 
 	logging.Logger.Info("emitting validator add or overwrite event")
 	data := &event.Validator{
-		ValidatorID: vn.ID,
-		BaseUrl:     vn.BaseURL,
+		BaseUrl: vn.BaseURL,
 		Provider: &event.Provider{
+			ID:             vn.ID,
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,
 			DelegateWallet: vn.StakePoolSettings.DelegateWallet,

@@ -942,20 +942,20 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
 	bb := event.Blobber{
-		BlobberID: w.BlobberID,
+		Provider:  &event.Provider{ID: w.BlobberID},
 		Used:      w.Size,
 		SavedData: w.Size,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.BlobberID, bb)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
 }
 
 func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI) {
 	i, _ := big.NewFloat(r.ReadSize).Int64()
 	bb := event.Blobber{
-		BlobberID: r.BlobberID,
-		ReadData:  i,
+		Provider: &event.Provider{ID: r.BlobberID},
+		ReadData: i,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.BlobberID, bb)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
 }

@@ -16,7 +16,9 @@ import (
 )
 
 type Provider struct {
-	// stake_pool_settings
+	ID             string `gorm:"primarykey"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 	DelegateWallet string        `json:"delegate_wallet"`
 	MinStake       currency.Coin `json:"min_stake"`
 	MaxStake       currency.Coin `json:"max_stake"`
@@ -215,13 +217,13 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: un
 	var provider interface{}
 	switch spenum.Provider(spu.ProviderType) {
 	case spenum.Blobber:
-		provider = &Blobber{BlobberID: spu.ProviderId}
+		provider = &Blobber{Provider: &Provider{ID: spu.ProviderId}}
 	case spenum.Validator:
-		provider = &Validator{ValidatorID: spu.ProviderId}
+		provider = &Validator{Provider: &Provider{ID: spu.ProviderId}}
 	case spenum.Miner:
-		provider = &Miner{MinerID: spu.ProviderId}
+		provider = &Miner{Provider: &Provider{ID: spu.ProviderId}}
 	case spenum.Sharder:
-		provider = &Sharder{SharderID: spu.ProviderId}
+		provider = &Sharder{Provider: &Provider{ID: spu.ProviderId}}
 	default:
 		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
 	}

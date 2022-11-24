@@ -16,7 +16,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
-		ID:          edbSharder.SharderID,
+		ID:          edbSharder.ID,
 		N2NHost:     edbSharder.N2NHost,
 		Host:        edbSharder.Host,
 		Port:        edbSharder.Port,
@@ -55,7 +55,6 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 
 	return event.Sharder{
-		SharderID: sn.ID,
 		N2NHost:   sn.N2NHost,
 		Host:      sn.Host,
 		Port:      sn.Port,
@@ -65,6 +64,7 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		BuildTag:  sn.BuildTag,
 		Delete:    sn.Delete,
 		Provider: &event.Provider{
+			ID:             sn.ID,
 			TotalStake:     sn.TotalStaked,
 			DelegateWallet: sn.Settings.DelegateWallet,
 			ServiceCharge:  sn.Settings.ServiceChargeRatio,

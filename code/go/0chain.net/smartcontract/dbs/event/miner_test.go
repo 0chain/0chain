@@ -83,7 +83,7 @@ func TestMiners(t *testing.T) {
 
 	convertMn := func(mn MinerNode) Miner {
 		return Miner{
-			MinerID:   mn.ID,
+
 			N2NHost:   mn.N2NHost,
 			Host:      mn.Host,
 			Port:      mn.Port,
@@ -93,6 +93,7 @@ func TestMiners(t *testing.T) {
 			BuildTag:  mn.BuildTag,
 			Delete:    mn.Delete,
 			Provider: &Provider{
+				ID:             mn.ID,
 				TotalStake:     currency.Coin(mn.TotalStaked),
 				DelegateWallet: mn.DelegateWallet,
 				ServiceCharge:  mn.ServiceCharge,
@@ -342,7 +343,7 @@ func TestGetMinerLocations(t *testing.T) {
 func createMiners(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		m := Miner{
-			MinerID:   fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
+
 			N2NHost:   "198.18.0.73",
 			Host:      "198.18.0.73",
 			Port:      7073,
@@ -351,6 +352,7 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) {
 			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 			Delete:    false,
 			Provider: &Provider{
+				ID:             fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
@@ -371,7 +373,7 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) {
 
 func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Miner{Active: i%2 == 0, MinerID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		s := Miner{Active: i%2 == 0, Provider: &Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
 		err := eventDb.addOrOverwriteMiner([]Miner{s})
 		assert.NoError(t, err, "There should be no error")
 	}
@@ -380,7 +382,7 @@ func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 	for i := offset; i < offset+limit; i++ {
 		want := Miner{
-			MinerID:   fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
+
 			N2NHost:   "198.18.0.73",
 			Host:      "198.18.0.73",
 			Port:      7073,
@@ -389,6 +391,7 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 			Delete:    false,
 			Provider: &Provider{
+				ID:             fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
@@ -412,7 +415,7 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 func BenchmarkReturnValueMiner(t *testing.B) {
 	for i := 0; i < t.N; i++ {
 		mi := ReturnValue()
-		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.MinerID)
+		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.ID)
 		t.Log("")
 	}
 }
@@ -420,7 +423,7 @@ func BenchmarkReturnValueMiner(t *testing.B) {
 func BenchmarkReturnPointerValueMiner(t *testing.B) {
 	for i := 0; i < t.N; i++ {
 		mi := ReturnPointer()
-		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.MinerID)
+		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.ID)
 		t.Log("")
 	}
 }
@@ -429,13 +432,13 @@ func (edb *EventDb) GetMinerPointer(id string) (*Miner, error) {
 	miner := &Miner{}
 	return miner, edb.Store.Get().
 		Model(&Miner{}).
-		Where(&Miner{MinerID: id}).
+		Where(&Miner{Provider: &Provider{ID: id}}).
 		First(miner).Error
 }
 
 func ReturnValue() Miner {
 	return Miner{
-		MinerID:   "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
+
 		N2NHost:   "198.18.0.73",
 		Host:      "198.18.0.73",
 		Port:      7073,
@@ -444,6 +447,7 @@ func ReturnValue() Miner {
 		BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 		Delete:    false,
 		Provider: &Provider{
+			ID:             "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
 			NumDelegates:   10,
@@ -460,7 +464,7 @@ func ReturnValue() Miner {
 
 func ReturnPointer() *Miner {
 	return &Miner{
-		MinerID:   "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
+
 		N2NHost:   "198.18.0.73",
 		Host:      "198.18.0.73",
 		Port:      7073,
@@ -469,6 +473,7 @@ func ReturnPointer() *Miner {
 		BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 		Delete:    false,
 		Provider: &Provider{
+			ID:             "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
 			NumDelegates:   10,

@@ -39,7 +39,7 @@ func (ssc *StorageSmartContract) collectReward(
 				return 0, err
 			}
 
-			err = sp.stakeForProvider(crr.ProviderType, crr.ProviderId, balances)
+			err = sp.StakeForProvider(crr.ProviderType, crr.ProviderId, balances)
 			if err != nil {
 				return 0, err
 			}

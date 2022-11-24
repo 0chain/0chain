@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"github.com/0chain/common/core/currency"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -216,7 +216,9 @@ func TestAddAndUpdateStakePoolRewards(t *testing.T) {
 	miners := make([]Miner, 10)
 	for i := 0; i < 10; i++ {
 		miners[i] = Miner{
-			MinerID: fmt.Sprintf("m_%v", i),
+			Provider: &Provider{
+				ID: fmt.Sprintf("m_%v", i),
+			},
 			Rewards: ProviderRewards{
 				ProviderID:   fmt.Sprintf("m_%v", i),
 				Rewards:      currency.Coin((i + 1) * 10),

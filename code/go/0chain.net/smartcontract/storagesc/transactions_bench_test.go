@@ -466,7 +466,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				}
 
 				// 6.3 keep for the benchmark
-				//blobberID = chall.BlobberID
+				//blobberID = chall.ID
 
 				// 6.4 prepare transaction
 				tp += 1

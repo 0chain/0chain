@@ -11,7 +11,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		return err
 	}
 	data := &event.Blobber{
-		BlobberID:        sn.ID,
+
 		BaseURL:          sn.BaseURL,
 		Latitude:         sn.Geolocation.Latitude,
 		Longitude:        sn.Geolocation.Longitude,
@@ -26,6 +26,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
 		Provider: &event.Provider{
+			ID:             sn.ID,
 			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 			MinStake:       sn.StakePoolSettings.MinStake,
 			MaxStake:       sn.StakePoolSettings.MaxStake,
@@ -49,7 +50,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	data := &event.Blobber{
-		BlobberID:        sn.ID,
 		BaseURL:          sn.BaseURL,
 		Latitude:         sn.Geolocation.Latitude,
 		Longitude:        sn.Geolocation.Longitude,
@@ -64,6 +64,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
 		Provider: &event.Provider{
+			ID:             sn.ID,
 			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 			MinStake:       sn.StakePoolSettings.MinStake,
 			MaxStake:       sn.StakePoolSettings.MaxStake,
@@ -88,7 +89,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedHealth, sn.ID, event.Blobber{
-		BlobberID:       sn.ID,
+		Provider:        &event.Provider{ID: sn.ID},
 		Allocated:       sn.Allocated,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 	})

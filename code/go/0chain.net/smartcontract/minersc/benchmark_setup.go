@@ -101,10 +101,11 @@ func AddMockNodes(
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
-					MinerID:         newNode.ID,
+
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
 					Provider: &event.Provider{
+						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
 						MinStake:      newNode.Settings.MinStake,
@@ -115,10 +116,11 @@ func AddMockNodes(
 				_ = eventDb.Store.Get().Create(&minerDb)
 			} else {
 				sharderDb := event.Sharder{
-					SharderID:       newNode.ID,
+
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
 					Provider: &event.Provider{
+						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
 						MinStake:      newNode.Settings.MinStake,

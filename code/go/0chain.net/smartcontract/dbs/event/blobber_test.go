@@ -62,7 +62,6 @@ func TestBlobbers(t *testing.T) {
 	}
 	convertSn := func(sn StorageNode) Blobber {
 		return Blobber{
-			BlobberID:        sn.ID,
 			BaseURL:          sn.BaseURL,
 			Latitude:         sn.Geolocation.Latitude,
 			Longitude:        sn.Geolocation.Longitude,
@@ -74,6 +73,7 @@ func TestBlobbers(t *testing.T) {
 			Allocated:        sn.Allocated,
 			LastHealthCheck:  int64(sn.LastHealthCheck),
 			Provider: &Provider{
+				ID:             sn.ID,
 				DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 				MinStake:       sn.StakePoolSettings.MaxStake,
 				MaxStake:       sn.StakePoolSettings.MaxStake,
@@ -220,7 +220,7 @@ func TestBlobbers(t *testing.T) {
 		TxHash:      "tx hash4",
 		Type:        TypeStats,
 		Tag:         TagDeleteBlobber,
-		Data:        blobber.BlobberID,
+		Data:        blobber.ID,
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
 
@@ -324,7 +324,7 @@ func TestBlobberGetCount(t *testing.T) {
 func setUpBlobbers(t *testing.T, eventDb *EventDb) {
 	for i := 0; i < 10; i++ {
 		res := eventDb.Store.Get().Create(&Blobber{
-			BlobberID: fmt.Sprintf("somethingNew_%v", i),
+			Provider: &Provider{ID: fmt.Sprintf("somethingNew_%v", i)},
 		})
 		if res.Error != nil {
 			t.Errorf("Error while inserting blobber %v", i)

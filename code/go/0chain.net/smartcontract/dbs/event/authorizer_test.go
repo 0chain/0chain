@@ -41,7 +41,7 @@ func TestAuthorizers(t *testing.T) {
 	require.NoError(t, err)
 
 	authorizer_1 := Authorizer{
-		AuthorizerID:    encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
+		ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 		URL:             "http://localhost:8080",
 		Latitude:        0.0,
 		Longitude:       0.0,
@@ -56,7 +56,7 @@ func TestAuthorizers(t *testing.T) {
 	}
 
 	authorizer_2 := Authorizer{
-		AuthorizerID:    encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
+		ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 		URL:             "http://localhost:8888",
 		Latitude:        1.0,
 		Longitude:       1.0,
@@ -83,7 +83,7 @@ func TestAuthorizers(t *testing.T) {
 	eventDb.Get().Table("authorizers").Count(&count)
 	require.Equal(t, int64(2), count, "Authorizer not getting inserted")
 
-	_, err = eventDb.GetValidatorByValidatorID(authorizer_1.AuthorizerID)
+	_, err = eventDb.GetValidatorByValidatorID(authorizer_1.ID)
 	require.NoError(t, err, "Error while getting Authorizer from event Database")
 
 	_, err = authorizer_2.exists(eventDb)

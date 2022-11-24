@@ -1231,7 +1231,7 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 
 func toBlobberStakePoolStats(blobber *event.Blobber, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
 	spStat := new(stakePoolStat)
-	spStat.ID = blobber.BlobberID
+	spStat.ID = blobber.ID
 	spStat.StakeTotal = blobber.TotalStake
 	spStat.UnstakeTotal = blobber.UnstakeTotal
 	spStat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
@@ -1271,7 +1271,7 @@ func toBlobberStakePoolStats(blobber *event.Blobber, delegatePools []event.Deleg
 
 func toValidatorStakePoolStats(validator *event.Validator, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
 	spStat := new(stakePoolStat)
-	spStat.ID = validator.ValidatorID
+	spStat.ID = validator.ID
 	spStat.StakeTotal = validator.TotalStake
 	spStat.UnstakeTotal = validator.UnstakeTotal
 
@@ -1578,7 +1578,7 @@ type validatorNodeResponse struct {
 
 func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 	return &validatorNodeResponse{
-		ValidatorID:              v.ValidatorID,
+		ValidatorID:              v.ID,
 		BaseUrl:                  v.BaseUrl,
 		StakeTotal:               v.TotalStake,
 		UnstakeTotal:             v.UnstakeTotal,
@@ -2405,7 +2405,7 @@ type storageNodeResponse struct {
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: &StorageNode{
-			ID:      blobber.BlobberID,
+			ID:      blobber.ID,
 			BaseURL: blobber.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  blobber.Latitude,

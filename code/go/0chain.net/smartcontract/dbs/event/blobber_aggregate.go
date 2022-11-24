@@ -125,13 +125,13 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 
 	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
-		old, found := oldBlobbers[current.BlobberID]
+		old, found := oldBlobbers[current.ID]
 		if !found {
 			continue
 		}
 		aggregate := BlobberAggregate{
 			Round:     round,
-			BlobberID: current.BlobberID,
+			BlobberID: current.ID,
 		}
 		aggregate.WritePrice = (old.WritePrice + current.WritePrice) / 2
 		aggregate.Capacity = (old.Capacity + current.Capacity) / 2

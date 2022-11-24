@@ -76,7 +76,7 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			settings := getMockStakePoolSettings(id)
 			authorizer := event.Authorizer{
-				AuthorizerID:    authorizer.ID,
+				ID:              authorizer.ID,
 				URL:             authorizer.URL,
 				LastHealthCheck: int64(common.Now()),
 				Provider: &event.Provider{

@@ -396,7 +396,6 @@ func AddMockBlobbers(
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
-				BlobberID:        blobber.ID,
 				BaseURL:          blobber.BaseURL,
 				Latitude:         blobber.Geolocation.Latitude,
 				Longitude:        blobber.Geolocation.Longitude,
@@ -406,9 +405,10 @@ func AddMockBlobbers(
 				MaxOfferDuration: blobber.Terms.MaxOfferDuration.Nanoseconds(),
 				Capacity:         blobber.Capacity,
 				Allocated:        blobber.Allocated,
-				ReadData:             blobber.Allocated * 2,
+				ReadData:         blobber.Allocated * 2,
 				LastHealthCheck:  int64(blobber.LastHealthCheck),
 				Provider: &event.Provider{
+					ID:             blobber.ID,
 					DelegateWallet: blobber.StakePoolSettings.DelegateWallet,
 					MinStake:       blobber.StakePoolSettings.MinStake,
 					MaxStake:       blobber.StakePoolSettings.MaxStake,
@@ -458,7 +458,7 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 	for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
 		aggregate := event.BlobberAggregate{
 			Round:               int64(i),
-			BlobberID:           blobber.BlobberID,
+			BlobberID:           blobber.ID,
 			WritePrice:          blobber.WritePrice,
 			Capacity:            blobber.Capacity,
 			Allocated:           blobber.Allocated,
@@ -544,9 +544,10 @@ func AddMockValidators(
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			validators := event.Validator{
-				ValidatorID: validator.ID,
-				BaseUrl:     validator.BaseURL,
+
+				BaseUrl: validator.BaseURL,
 				Provider: &event.Provider{
+					ID:             validator.ID,
 					DelegateWallet: validator.StakePoolSettings.DelegateWallet,
 					MinStake:       validator.StakePoolSettings.MaxStake,
 					MaxStake:       validator.StakePoolSettings.MaxStake,

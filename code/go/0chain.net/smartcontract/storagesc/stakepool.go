@@ -418,7 +418,6 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
-	_, err = sp.stake()
 	if err != nil {
 		return "", err
 	}
@@ -465,7 +464,6 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
-	_, err = sp.stake()
 	if err != nil {
 		return "", err
 	}
