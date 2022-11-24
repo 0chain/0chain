@@ -46,6 +46,7 @@ dbs:
     max_open_conns: 200
     conn_max_lifetime: 20s
     aggregate_period: 5
+    debug: true
 
 smart_contracts:
   minersc:

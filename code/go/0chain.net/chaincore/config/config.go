@@ -198,7 +198,10 @@ type DbAccess struct {
 	MaxIdleConns    int           `json:"max_idle_conns"`
 	MaxOpenConns    int           `json:"max_open_conns"`
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
-	AggregatePeriod int64         `json:"aggregate_period"`
+
+	Debug           bool  `json:"debug"`
+	AggregatePeriod int64 `json:"aggregate_period"`
+	PageLimit       int64 `json:"page_limit"`
 }
 
 // HealthCheckCycleScan -

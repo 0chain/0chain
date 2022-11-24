@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/chaincore/config"
 	"errors"
 	"fmt"
 	"reflect"
@@ -97,8 +98,16 @@ const (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-func (edb *EventDb) ProcessEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) error {
+func (edb *EventDb) ProcessEvents(
+	ctx context.Context,
+	events []Event,
+	round int64,
+	block string,
+	blockSize int,
+	cfg config.DbAccess,
+) error {
 	ts := time.Now()
+	edb.updateSettings(cfg)
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
 		return err
@@ -398,7 +407,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 		Snapshot: *s,
 	}
 
-	edb.updateBlobberAggregate(round, period, gs)
+	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), gs)
 	gs.update(events)
 
 	gs.Round = round

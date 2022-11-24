@@ -19,6 +19,7 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan blockEvents, 1),
+		settings:      extractSettings(config),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 	if err := eventDb.AutoMigrate(); err != nil {
@@ -31,6 +32,7 @@ type EventDb struct {
 	dbs.Store
 	dbConfig      config.DbAccess
 	eventsChannel chan blockEvents
+	settings      Settings
 }
 
 func (edb *EventDb) Begin() (*EventDb, error) {

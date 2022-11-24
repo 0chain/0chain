@@ -95,7 +95,9 @@ const (
 	DbsEventsMaxIdleConns
 	DbsEventsMaxOpenConns
 	DbsEventsConnMaxLifetime
+	DbsAggregateDebug
 	DbsAggregatePeriod
+	DbsAggregatePageLimit
 
 	HealthCheckDeepScanEnabled                 // todo restart worker
 	HealthCheckDeepScanBatchSize               // todo restart worker
@@ -177,7 +179,9 @@ var GlobalSettingName = []string{
 	"server_chain.dbs.events.max_idle_conns",
 	"server_chain.dbs.events.max_open_conns",
 	"server_chain.dbs.events.conn_max_lifetime",
+	"server_chain.dbs.events.debug",
 	"server_chain.dbs.events.aggregate_period",
+	"server_chain.dbs.events.pageLimit",
 
 	"server_chain.health_check.deep_scan.enabled",
 	"server_chain.health_check.deep_scan.batch_size",
@@ -204,7 +208,9 @@ var GlobalSettingsIgnored = map[string]bool{
 	GlobalSettingName[DbsEventsMaxIdleConns]:    true,
 	GlobalSettingName[DbsEventsMaxOpenConns]:    true,
 	GlobalSettingName[DbsEventsConnMaxLifetime]: true,
+	GlobalSettingName[DbsAggregateDebug]:        true,
 	GlobalSettingName[DbsAggregatePeriod]:       true,
+	GlobalSettingName[DbsAggregatePageLimit]:    true,
 }
 
 // GlobalSettingInfo Indicates the type of each global settings, and whether it is possible to change each setting
@@ -278,7 +284,9 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[DbsEventsMaxIdleConns]:    {smartcontract.Int, false},
 	GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, false},
 	GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, false},
+	GlobalSettingName[DbsAggregateDebug]:        {smartcontract.Int64, false},
 	GlobalSettingName[DbsAggregatePeriod]:       {smartcontract.Int64, false},
+	GlobalSettingName[DbsAggregatePageLimit]:    {smartcontract.Int64, false},
 
 	GlobalSettingName[HealthCheckDeepScanEnabled]:                 {smartcontract.Boolean, false},
 	GlobalSettingName[HealthCheckDeepScanBatchSize]:               {smartcontract.Int64, false},

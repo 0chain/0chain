@@ -219,7 +219,10 @@ const (
 	EventDbMaxIdleConns    = DbsEvents + "max_idle_conns"
 	EventDbOpenConns       = DbsEvents + "max_open_conns"
 	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
+
+	EventDbDebug           = DbsEvents + "debug"
 	EventDbAggregatePeriod = DbsEvents + "aggregate_period"
+	EventDbPageLimit       = DbsEvents + "page_limit"
 )
 
 func (s Source) String() string {

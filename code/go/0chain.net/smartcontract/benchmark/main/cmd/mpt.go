@@ -546,7 +546,9 @@ func newEventsDb() *event.EventDb {
 			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
 			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
 			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+			Debug:           viper.GetBool(benchmark.EventDbDebug),
 			AggregatePeriod: viper.GetInt64(benchmark.EventDbAggregatePeriod),
+			PageLimit:       viper.GetInt64(benchmark.EventDbPageLimit),
 		})
 
 	}
