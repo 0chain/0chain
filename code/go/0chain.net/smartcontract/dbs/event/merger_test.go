@@ -251,7 +251,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 300}},
+					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 200}},
 					"b_2": {Provider: &Provider{ID: "b_2", TotalStake: 200}},
 					"b_3": {Provider: &Provider{ID: "b_3", TotalStake: 300}},
 				},
