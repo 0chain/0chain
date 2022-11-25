@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -55,7 +55,6 @@ func TestDeleteMiner(t *testing.T) {
 			mn.Pools[id] = &dp
 		}
 		for i, amount := range p.pendingPools {
-			id := "pending pool " + strconv.Itoa(i)
 			delegateId := "delegate " + strconv.Itoa(i)
 			var dp stakepool.DelegatePool
 			dp.Status = spenum.Pending
@@ -66,19 +65,7 @@ func TestDeleteMiner(t *testing.T) {
 				ToClientID: delegateId,
 				Amount:     dp.Balance,
 			}).Return(nil).Once()
-
-			un := stakepool.NewUserStakePools()
-			un.Providers = []string{mn.ID}
-			balances.On("GetTrieNode", stakepool.UserStakePoolsKey(spenum.Miner, id), mock.MatchedBy(func(n *stakepool.UserStakePools) bool {
-				return true
-			})).Return(nil).Once()
-			balances.On("DeleteTrieNode", stakepool.UserStakePoolsKey(spenum.Miner, id)).Return("", nil).Once()
 		}
-
-		balances.On(
-			"DeleteTrieNode",
-			stakepool.UserStakePoolsKey(spenum.Miner, mn.Settings.DelegateWallet),
-		).Return("", nil).Once()
 
 		balances.On("GetTrieNode", mn.GetKey(), mock.MatchedBy(func(n *MinerNode) bool {
 			*n = *mn

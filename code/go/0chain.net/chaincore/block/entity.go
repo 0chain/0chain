@@ -919,8 +919,8 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 		b.Events = append(b.Events, event.Event{
 			BlockNumber: b.Round,
 			TxHash:      txn.Hash,
-			Type:        int(event.TypeStats),
-			Tag:         int(event.TagAddTransactions),
+			Type:        event.TypeStats,
+			Tag:         event.TagAddTransactions,
 			Index:       txn.Hash,
 			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),
 		})
@@ -1020,8 +1020,8 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string, round int64) event.Transaction {
 	return event.Transaction{
 		Hash:              tr.Hash,
-		BlockHash:         blockHash,
 		Round:             round,
+		BlockHash:         blockHash,
 		Version:           tr.Version,
 		ClientId:          tr.ClientID,
 		ToClientId:        tr.ToClientID,
@@ -1030,6 +1030,7 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 		Signature:         tr.Signature,
 		CreationDate:      int64(tr.CreationDate.Duration()),
 		Fee:               tr.Fee,
+		Nonce:             tr.Nonce,
 		TransactionType:   tr.TransactionType,
 		TransactionOutput: tr.TransactionOutput,
 		OutputHash:        tr.OutputHash,

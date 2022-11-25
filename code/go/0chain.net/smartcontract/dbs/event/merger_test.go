@@ -3,15 +3,15 @@ package event
 import (
 	"testing"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/currency"
 	"github.com/stretchr/testify/require"
 )
 
 func makeUserEvent(id string, balance currency.Coin) Event {
 	return Event{
-		Type:  int(TypeStats),
-		Tag:   int(TagAddOrOverwriteUser),
+		Type:  TypeStats,
+		Tag:   TagAddOrOverwriteUser,
 		Index: id,
 		Data: User{
 			UserID:  id,
@@ -22,8 +22,8 @@ func makeUserEvent(id string, balance currency.Coin) Event {
 
 func makeBlobberTotalStakeEvent(id string, totalStake currency.Coin) Event {
 	return Event{
-		Type:  int(TypeStats),
-		Tag:   int(TagUpdateBlobberTotalStake),
+		Type:  TypeStats,
+		Tag:   TagUpdateBlobberTotalStake,
 		Index: id,
 		Data: Blobber{
 			BlobberID:  id,
@@ -34,8 +34,8 @@ func makeBlobberTotalStakeEvent(id string, totalStake currency.Coin) Event {
 
 func makeBlobberTotalOffersEvent(id string, totalOffers currency.Coin) Event {
 	return Event{
-		Type:  int(TypeStats),
-		Tag:   int(TagUpdateBlobberTotalOffers),
+		Type:  TypeStats,
+		Tag:   TagUpdateBlobberTotalOffers,
 		Index: id,
 		Data: Blobber{
 			BlobberID:   id,
@@ -674,8 +674,8 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 func makeStakePoolRewardEvent(id string, reward currency.Coin,
 	delegateRewards map[string]int64, delegatePenalties map[string]int64) Event {
 	return Event{
-		Type:  int(TypeStats),
-		Tag:   int(TagStakePoolReward),
+		Type:  TypeStats,
+		Tag:   TagStakePoolReward,
 		Index: id,
 		Data: dbs.StakePoolReward{
 			StakePoolId: dbs.StakePoolId{
