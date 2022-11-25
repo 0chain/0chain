@@ -312,8 +312,7 @@ func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
 
 func withBlobberTotalOffersAdded() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		a.OffersTotal += b.OffersTotal
-		return a, nil
+		return b, nil
 	})
 }
 

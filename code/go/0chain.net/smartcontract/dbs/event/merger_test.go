@@ -219,7 +219,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 300}},
+					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 200}},
 				},
 			},
 		},
@@ -342,7 +342,7 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1"}, OffersTotal: 300},
+					"b_1": {Provider: &Provider{ID: "b_1"}, OffersTotal: 200},
 				},
 			},
 		},
@@ -409,6 +409,8 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 			for _, b := range *blobbers {
 				exp, ok := tc.expect.blobbers[b.ID]
 				require.True(t, ok)
+				require.EqualValues(t, exp.Provider, b.Provider)
+				exp.Provider = b.Provider
 				require.EqualValues(t, exp, b)
 			}
 		})
