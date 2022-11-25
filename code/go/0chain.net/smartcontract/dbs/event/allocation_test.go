@@ -239,7 +239,7 @@ func TestAllocations(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -354,7 +354,7 @@ func TestAllocations(t *testing.T) {
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10, access)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10, nil)
 	time.Sleep(100 * time.Millisecond)
 	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
@@ -374,7 +374,7 @@ func TestAllocations(t *testing.T) {
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10, access)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10, nil)
 
 	alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)

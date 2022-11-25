@@ -22,7 +22,7 @@ func TestAddEvents(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -35,7 +35,7 @@ func TestAddEvents(t *testing.T) {
 			Type:   TypeError,
 			Data:   "someData",
 		},
-	}, 100, "hash", 10, access)
+	}, 100, "hash", 10, nil)
 	errObj := Error{}
 	time.Sleep(100 * time.Millisecond)
 	result := eventDb.Store.Get().Model(&Error{}).Where(&Error{TransactionID: "somehash", Error: "someData"}).Take(&errObj)

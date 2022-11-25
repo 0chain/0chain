@@ -38,10 +38,10 @@ func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagin
 	if len(search.TxHash) > 0 {
 		db = db.Where("tx_hash", search.TxHash).Find(eventTable)
 	}
-	if EventType(search.Type) != TypeNone {
+	if search.Type != TypeNone {
 		db = db.Where("type", search.Type).Find(eventTable)
 	}
-	if EventTag(search.Tag) != TagNone {
+	if search.Tag != TagNone {
 		db = db.Where("tag", search.Tag).Find(eventTable)
 	}
 

@@ -335,6 +335,13 @@ func (c *ConfigImpl) DbsEvents() config.DbAccess {
 	return c.conf.DbsEvents
 }
 
+func (c *ConfigImpl) DbSettings() config.DbSettings {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.DbsSettings
+}
+
 func (c *ConfigImpl) MaxBlockCost() int {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
@@ -419,8 +426,9 @@ type ConfigData struct {
 	RoundTimeoutSofttoMult int `json:"softto_mult"`        // multiplier of mean network time for soft timeout
 	RoundRestartMult       int `json:"round_restart_mult"` // multiplier of soft timeouts to restart a round
 
-	DbsEvents config.DbAccess `json:"dbs_event"`
-	TxnExempt map[string]bool `json:"txn_exempt"`
+	DbsEvents   config.DbAccess   `json:"dbs_event"`
+	DbsSettings config.DbSettings `json:"dbs_settings"`
+	TxnExempt   map[string]bool   `json:"txn_exempt"`
 
 	LastUpdateRound int64
 }
@@ -540,9 +548,9 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
 	conf.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
 
-	conf.DbsEvents.Debug = viper.GetBool("server_chain.dbs.events.debug")
-	conf.DbsEvents.AggregatePeriod = viper.GetInt64("server_chain.dbs.events.aggregate_period")
-	conf.DbsEvents.PageLimit = viper.GetInt64("server_chain.dbs.events.page_limit")
+	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
+	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")
+	conf.DbsSettings.PageLimit = viper.GetInt64("server_chain.dbs.settings.page_limit")
 	return nil
 }
 

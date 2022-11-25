@@ -119,7 +119,7 @@ func TestSharders(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -168,7 +168,7 @@ func TestSharders(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10, access)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10, nil)
 
 	sharder, err := eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -188,7 +188,7 @@ func TestSharders(t *testing.T) {
 		Tag:         TagAddOrOverwriteSharder,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10, access)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10, nil)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -212,7 +212,7 @@ func TestSharders(t *testing.T) {
 		Tag:         TagUpdateSharder,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10, access)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10, nil)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -227,7 +227,7 @@ func TestSharders(t *testing.T) {
 		Tag:         TagDeleteSharder,
 		Data:        sn.ID,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10, access)
+	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10, nil)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.Error(t, err)
@@ -247,7 +247,7 @@ func TestSharderFilter(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -290,7 +290,7 @@ func TestGetSharderLocations(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		t.Skip("only for local debugging, requires local postgresql")
 	}

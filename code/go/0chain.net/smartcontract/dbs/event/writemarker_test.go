@@ -61,7 +61,7 @@ func TestWriteMarker(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -92,7 +92,7 @@ func TestWriteMarker(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddOrOverwriteWm}
-	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10, access)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10, nil)
 
 	wm, err := eventDb.GetWriteMarker(eWriteMarker.TransactionID)
 	require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestGetWriteMarkers(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}

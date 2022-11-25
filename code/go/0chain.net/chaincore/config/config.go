@@ -180,6 +180,7 @@ type ChainConfig interface {
 	RoundTimeoutSofttoMult() int
 	RoundRestartMult() int
 	DbsEvents() DbAccess
+	DbSettings() DbSettings
 	FromViper() error
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
@@ -199,7 +200,9 @@ type DbAccess struct {
 	MaxIdleConns    int           `json:"max_idle_conns"`
 	MaxOpenConns    int           `json:"max_open_conns"`
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
+}
 
+type DbSettings struct {
 	Debug           bool  `json:"debug"`
 	AggregatePeriod int64 `json:"aggregate_period"`
 	PageLimit       int64 `json:"page_limit"`

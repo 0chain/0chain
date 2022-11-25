@@ -27,9 +27,9 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "miner"
+    #- "miner"
     - "miner_rest"
-    - "storage_rest"
+    #- "storage_rest"
   omitted_tests:
   save_path: # do not add a load_path key, this is read from command line options
   load_concurrency: 4
@@ -47,6 +47,10 @@ dbs:
     conn_max_lifetime: 20s
     aggregate_period: 5
     debug: true
+  settings:
+    debug: false
+    aggregate_period: 10
+    page_limit: 50
 
 smart_contracts:
   minersc:
