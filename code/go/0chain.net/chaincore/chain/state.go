@@ -170,24 +170,24 @@ func (c *Chain) UpdateState(ctx context.Context,
 	return c.updateState(ctx, b, bState, txn, waitC...)
 }
 
-type syncNodesOption struct {
+type SyncReplyC struct {
 	sync   bool
 	replyC []chan struct{}
 }
 
 // SyncNodesOption function for setting node syncing option
-type SyncNodesOption func(*syncNodesOption)
+type SyncNodesOption func(*SyncReplyC)
 
 // WithSync enable synching missing nodes if any
 func WithSync() SyncNodesOption {
-	return func(s *syncNodesOption) {
+	return func(s *SyncReplyC) {
 		s.sync = true
 	}
 }
 
 // WithNotifyC subscribe to channel that will be notified when missing nodes syncing is done
 func WithNotifyC(replyC ...chan struct{}) SyncNodesOption {
-	return func(s *syncNodesOption) {
+	return func(s *SyncReplyC) {
 		s.replyC = replyC
 	}
 }
@@ -214,7 +214,7 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 		}
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
 		if missingKeys := sctx.GetMissingNodeKeys(); len(missingKeys) > 0 {
-			syncOpts := &syncNodesOption{}
+			syncOpts := &SyncReplyC{}
 			for _, opt := range opts {
 				opt(syncOpts)
 			}
