@@ -13,3 +13,11 @@ type edbTx struct {
 func (tx edbTx) Get() *gorm.DB {
 	return tx.tx
 }
+
+func (tx edbTx) AggregatePeriod() int64 {
+	return 17
+}
+
+func (tx edbTx) PageLimit() int64 {
+	return 23
+}

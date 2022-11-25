@@ -19,7 +19,6 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan blockEvents, 1),
-		settings:      extractSettings(config),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 	if err := eventDb.AutoMigrate(); err != nil {
@@ -32,7 +31,6 @@ type EventDb struct {
 	dbs.Store
 	dbConfig      config.DbAccess
 	eventsChannel chan blockEvents
-	settings      Settings
 }
 
 func (edb *EventDb) Begin() (*EventDb, error) {
@@ -46,6 +44,7 @@ func (edb *EventDb) Begin() (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
+		dbConfig: edb.dbConfig,
 	}
 	return &edbTx, nil
 }
@@ -62,6 +61,30 @@ func (edb *EventDb) Rollback() error {
 		return errors.New("rollbacking nil transaction")
 	}
 	return edb.Store.Get().Rollback().Error
+}
+
+func (edb *EventDb) updateSettings(config config.DbAccess) {
+	if edb.dbConfig.Debug != config.Debug {
+		edb.dbConfig.Debug = config.Debug
+	}
+	if edb.dbConfig.PageLimit != config.PageLimit {
+		edb.dbConfig.PageLimit = config.PageLimit
+	}
+	if edb.dbConfig.AggregatePeriod != config.AggregatePeriod {
+		edb.dbConfig.AggregatePeriod = config.AggregatePeriod
+	}
+}
+
+func (edb *EventDb) AggregatePeriod() int64 {
+	return edb.dbConfig.AggregatePeriod
+}
+
+func (edb *EventDb) PageLimit() int64 {
+	return edb.dbConfig.PageLimit
+}
+
+func (edb *EventDb) Debug() bool {
+	return edb.dbConfig.Debug
 }
 
 type blockEvents struct {

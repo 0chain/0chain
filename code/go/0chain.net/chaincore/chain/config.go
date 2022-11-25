@@ -533,7 +533,7 @@ func (c *ConfigImpl) FromViper() error {
 
 	conf.DbsEvents.Debug = viper.GetBool("server_chain.dbs.events.debug")
 	conf.DbsEvents.AggregatePeriod = viper.GetInt64("server_chain.dbs.events.aggregate_period")
-	conf.DbsEvents.Debug = viper.GetBool("server_chain.dbs.events.page_limit")
+	conf.DbsEvents.PageLimit = viper.GetInt64("server_chain.dbs.events.page_limit")
 	return nil
 }
 
