@@ -182,7 +182,7 @@ var GlobalSettingName = []string{
 	"server_chain.dbs.events.conn_max_lifetime",
 	"server_chain.dbs.settings.debug",
 	"server_chain.dbs.settings.aggregate_period",
-	"server_chain.dbs.settings.pageLimit",
+	"server_chain.dbs.settings.page_limit",
 
 	"server_chain.health_check.deep_scan.enabled",
 	"server_chain.health_check.deep_scan.batch_size",
@@ -210,9 +210,6 @@ var GlobalSettingsIgnored = map[string]bool{
 	GlobalSettingName[DbsEventsMaxIdleConns]:    true,
 	GlobalSettingName[DbsEventsMaxOpenConns]:    true,
 	GlobalSettingName[DbsEventsConnMaxLifetime]: true,
-	GlobalSettingName[DbsAggregateDebug]:        true,
-	GlobalSettingName[DbsAggregatePeriod]:       true,
-	GlobalSettingName[DbsAggregatePageLimit]:    true,
 }
 
 // GlobalSettingInfo Indicates the type of each global settings, and whether it is possible to change each setting
@@ -557,9 +554,13 @@ func getStringMapFromViper() map[string]string {
 		if _, ok := GlobalSettingsIgnored[key]; ok {
 			continue
 		}
-		if key == "server_chain.transaction.exempt" {
+		switch key {
+		case GlobalSettingName[TransactionExempt]:
 			globals[key] = strings.Join(viper.GetStringSlice(key), ",")
-		} else {
+		case GlobalSettingName[LastUpdateRound]:
+			// If getting settings from file, then we have not had an update yet
+			globals[key] = "0"
+		default:
 			globals[key] = viper.GetString(key)
 		}
 	}

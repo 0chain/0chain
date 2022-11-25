@@ -551,6 +551,7 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
 	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")
 	conf.DbsSettings.PageLimit = viper.GetInt64("server_chain.dbs.settings.page_limit")
+	conf.LastUpdateRound = 0
 	return nil
 }
 

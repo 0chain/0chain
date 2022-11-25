@@ -2285,6 +2285,7 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/
 ```
 
 global object for miner smart contracts
+B
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
