@@ -195,6 +195,13 @@ func (c *ConfigImpl) ValidationBatchSize() int {
 	return c.conf.ValidationBatchSize
 }
 
+func (c *ConfigImpl) LastUpdateRound() int64 {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.LastUpdateRound
+}
+
 func (c *ConfigImpl) TxnMaxPayload() int {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
@@ -414,6 +421,8 @@ type ConfigData struct {
 
 	DbsEvents config.DbAccess `json:"dbs_event"`
 	TxnExempt map[string]bool `json:"txn_exempt"`
+
+	LastUpdateRound int64
 }
 
 func (c *ConfigImpl) FromViper() error {
@@ -554,6 +563,10 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	logging.Logger.Debug("Updating config", zap.Int64("old version", old), zap.Int64("new version", conf.version))
 
 	var err error
+	conf.LastUpdateRound, err = cf.GetInt64(minersc.LastUpdateRound)
+	if err != nil {
+		return err
+	}
 	conf.IsStateEnabled, err = cf.GetBool(minersc.State)
 	if err != nil {
 		return err

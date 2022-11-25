@@ -3,6 +3,7 @@ package minersc
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -112,7 +113,7 @@ const (
 	HealthCheckProximityScanRepeatIntervalMins // todo restart worker
 	HealthCheckProximityScanRejportStatusMins  // todo restart worker
 	HealthCheckShowCounters                    // todo restart worker
-
+	LastUpdateRound
 	NumOfGlobalSettings
 )
 
@@ -196,6 +197,7 @@ var GlobalSettingName = []string{
 	"server_chain.health_check.proximity_scan.repeat_interval_mins",
 	"server_chain.health_check.proximity_scan.report_status_mins",
 	"server_chain.health_check.show_counters",
+	"last_update_round",
 }
 
 var GlobalSettingsIgnored = map[string]bool{
@@ -301,6 +303,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[HealthCheckProximityScanRepeatIntervalMins]: {smartcontract.Duration, false},
 	GlobalSettingName[HealthCheckProximityScanRejportStatusMins]:  {smartcontract.Duration, false},
 	GlobalSettingName[HealthCheckShowCounters]:                    {smartcontract.Boolean, false},
+	GlobalSettingName[LastUpdateRound]:                            {smartcontract.Int64, true},
 }
 
 var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
@@ -337,7 +340,7 @@ func (gl *GlobalSettings) save(balances cstate.StateContextI) error {
 	return err
 }
 
-func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
+func (gl *GlobalSettings) update(inputMap smartcontract.StringMap, round int64) error {
 	var err error
 	for key, value := range inputMap.Fields {
 		info, found := GlobalSettingInfo[key]
@@ -354,6 +357,7 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 		}
 		gl.Fields[key] = value
 	}
+	gl.Fields[GlobalSettingName[LastUpdateRound]] = strconv.FormatInt(round, 10)
 
 	return nil
 }
@@ -600,7 +604,7 @@ func (msc *MinerSmartContract) updateGlobals(
 		}
 	}
 
-	if err = globals.update(changes); err != nil {
+	if err = globals.update(changes, balances.GetBlock().Round); err != nil {
 		return "", common.NewErrorf("update_globals", "validation: %v", err.Error())
 	}
 

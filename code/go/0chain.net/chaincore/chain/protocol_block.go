@@ -380,7 +380,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() {
 			if err := c.GetEventDb().ProcessEvents(
-				ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns), c.ChainConfig.DbsEvents(),
+				ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns), c.ChainConfig,
 			); err != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),

@@ -164,7 +164,7 @@ func main() {
 				b.Round,
 				b.Hash,
 				len(b.Txns),
-				serverChain.ChainConfig.DbsEvents(),
+				serverChain.ChainConfig,
 			); err != nil {
 				logging.Logger.Error("process block saving event failed",
 					zap.Error(err),

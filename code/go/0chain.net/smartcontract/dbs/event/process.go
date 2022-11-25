@@ -24,10 +24,15 @@ func (edb *EventDb) ProcessEvents(
 	round int64,
 	block string,
 	blockSize int,
-	cfg config.DbAccess,
+	cfg config.ChainConfig,
 ) error {
 	ts := time.Now()
-	edb.updateSettings(cfg)
+	if cfg.LastUpdateRound() == round {
+		edb.updateSettings(cfg.DbsEvents())
+	}
+	logging.Logger.Info("piers ProcessEvents",
+		zap.Any("round", round),
+		zap.Any("edb settings", edb.dbConfig))
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
 		return err
