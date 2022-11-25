@@ -3,6 +3,8 @@ package minersc_test
 import (
 	"testing"
 
+	"0chain.net/chaincore/block"
+
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/minersc"
 
@@ -39,6 +41,7 @@ func TestGlobalSettings(t *testing.T) {
 func TestUpdateGlobals(t *testing.T) {
 	const (
 		mockNotASetting = "mock not a setting"
+		mockRoundNumber = 17
 	)
 	type args struct {
 		msc      *minersc.MinerSmartContract
@@ -74,6 +77,10 @@ func TestUpdateGlobals(t *testing.T) {
 				return true
 			}),
 		).Return("", nil).Once()
+
+		var blk block.Block
+		blk.Round = mockRoundNumber
+		balances.On("GetBlock").Return(&blk)
 
 		return args{
 			msc:      msc,
