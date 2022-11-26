@@ -414,11 +414,11 @@ func AddMockBlobbers(
 					MaxStake:       blobber.StakePoolSettings.MaxStake,
 					NumDelegates:   blobber.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:  blobber.StakePoolSettings.ServiceChargeRatio,
+					Rewards:        event.ProviderRewards{ProviderID: blobber.ID},
 				},
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
-				Rewards:             event.ProviderRewards{ProviderID: blobber.ID},
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
@@ -553,8 +553,8 @@ func AddMockValidators(
 					MaxStake:       validator.StakePoolSettings.MaxStake,
 					NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
+					Rewards:        event.ProviderRewards{ProviderID: validator.ID},
 				},
-				Rewards: event.ProviderRewards{ProviderID: validator.ID},
 			}
 			_ = eventDb.Store.Get().Create(&validators)
 		}

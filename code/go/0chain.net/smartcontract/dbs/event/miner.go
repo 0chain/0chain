@@ -30,7 +30,6 @@ type Miner struct {
 	Active          bool
 	Longitude       float64
 	Latitude        float64
-	Rewards         ProviderRewards `json:"rewards" gorm:"foreignKey:ID;references:ProviderID"`
 }
 
 // swagger:model MinerGeolocation

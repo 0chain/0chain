@@ -1099,11 +1099,6 @@ func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) 
 	return
 }
 
-// swagger:model userPoolStat
-type userPoolStat struct {
-	Pools map[datastore.Key][]*delegatePoolStat `json:"pools"`
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat getUserStakePoolStat
 // Gets statistic for a user's stake pools
 //
@@ -1132,10 +1127,10 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		return
 	}
 
-	var ups = new(userPoolStat)
-	ups.Pools = make(map[datastore.Key][]*delegatePoolStat)
+	var ups = new(stakepool.UserPoolStat)
+	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat)
 	for _, pool := range pools {
-		var dps = delegatePoolStat{
+		var dps = stakepool.DelegatePoolStat{
 			ID:           pool.PoolID,
 			DelegateID:   pool.DelegateID,
 			Status:       spenum.PoolStatus(pool.Status).String(),
@@ -1200,14 +1195,14 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, res, nil)
 }
 
-func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakePoolStat, error) {
+func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
 	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
 	}
 
-	spStat := &stakePoolStat{}
-	spStat.Delegate = make([]delegatePoolStat, len(delegatePools))
+	spStat := &stakepool.StakePoolStat{}
+	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
 
 	switch spenum.Provider(providerType) {
 	case spenum.Blobber:
@@ -1216,98 +1211,17 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 			return nil, fmt.Errorf("can't find validator: %s", err.Error())
 		}
 
-		return toBlobberStakePoolStats(blobber, delegatePools)
+		return stakepool.ToProviderStakePoolStats(blobber.Provider, delegatePools)
 	case spenum.Validator:
 		validator, err := edb.GetValidatorByValidatorID(providerID)
 		if err != nil {
 			return nil, fmt.Errorf("can't find validator: %s", err.Error())
 		}
 
-		return toValidatorStakePoolStats(&validator, delegatePools)
+		return stakepool.ToProviderStakePoolStats(validator.Provider, delegatePools)
 	}
 
 	return nil, fmt.Errorf("unknown provider type")
-}
-
-func toBlobberStakePoolStats(blobber *event.Blobber, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
-	spStat := new(stakePoolStat)
-	spStat.ID = blobber.ID
-	spStat.StakeTotal = blobber.TotalStake
-	spStat.UnstakeTotal = blobber.UnstakeTotal
-	spStat.Delegate = make([]delegatePoolStat, 0, len(delegatePools))
-	spStat.Settings = stakepool.Settings{
-		DelegateWallet:     blobber.DelegateWallet,
-		MinStake:           blobber.MinStake,
-		MaxStake:           blobber.MaxStake,
-		MaxNumDelegates:    blobber.NumDelegates,
-		ServiceChargeRatio: blobber.ServiceCharge,
-	}
-	spStat.Rewards = blobber.Rewards.TotalRewards
-	for _, dp := range delegatePools {
-		dpStats := delegatePoolStat{
-			ID:           dp.PoolID,
-			DelegateID:   dp.DelegateID,
-			Status:       spenum.PoolStatus(dp.Status).String(),
-			RoundCreated: dp.RoundCreated,
-		}
-		dpStats.Balance = dp.Balance
-
-		dpStats.Rewards = dp.Reward
-
-		dpStats.TotalPenalty = dp.TotalPenalty
-
-		dpStats.TotalReward = dp.TotalReward
-
-		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
-		if err != nil {
-			return nil, err
-		}
-		spStat.Balance = newBal
-		spStat.Delegate = append(spStat.Delegate, dpStats)
-	}
-
-	return spStat, nil
-}
-
-func toValidatorStakePoolStats(validator *event.Validator, delegatePools []event.DelegatePool) (*stakePoolStat, error) {
-	spStat := new(stakePoolStat)
-	spStat.ID = validator.ID
-	spStat.StakeTotal = validator.TotalStake
-	spStat.UnstakeTotal = validator.UnstakeTotal
-
-	spStat.Settings = stakepool.Settings{
-		DelegateWallet:     validator.DelegateWallet,
-		MinStake:           validator.MinStake,
-		MaxStake:           validator.MaxStake,
-		MaxNumDelegates:    validator.NumDelegates,
-		ServiceChargeRatio: validator.ServiceCharge,
-	}
-	spStat.Rewards = validator.Rewards.TotalRewards
-
-	for _, dp := range delegatePools {
-		dpStats := delegatePoolStat{
-			ID:           dp.PoolID,
-			DelegateID:   dp.DelegateID,
-			Status:       spenum.PoolStatus(dp.Status).String(),
-			RoundCreated: dp.RoundCreated,
-		}
-		dpStats.Balance = dp.Balance
-
-		dpStats.Rewards = dp.Reward
-
-		dpStats.TotalPenalty = dp.TotalPenalty
-
-		dpStats.TotalReward = dp.TotalReward
-
-		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
-		if err != nil {
-			return nil, err
-		}
-		spStat.Balance = newBal
-		spStat.Delegate = append(spStat.Delegate, dpStats)
-	}
-
-	return spStat, nil
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges blobber-challenges

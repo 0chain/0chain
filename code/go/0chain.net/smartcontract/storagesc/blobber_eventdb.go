@@ -72,14 +72,15 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,
+			Rewards: event.ProviderRewards{
+				ProviderID:   sn.ID,
+				Rewards:      sp.Reward,
+				TotalRewards: sp.Reward,
+			},
 		},
 
 		OffersTotal: sp.TotalOffers,
-		Rewards: event.ProviderRewards{
-			ProviderID:   sn.ID,
-			Rewards:      sp.Reward,
-			TotalRewards: sp.Reward,
-		},
+
 		CreationRound: balances.GetBlock().Round,
 	}
 

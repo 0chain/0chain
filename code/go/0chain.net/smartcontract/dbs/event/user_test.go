@@ -218,11 +218,11 @@ func TestAddAndUpdateStakePoolRewards(t *testing.T) {
 		miners[i] = Miner{
 			Provider: &Provider{
 				ID: fmt.Sprintf("m_%v", i),
-			},
-			Rewards: ProviderRewards{
-				ProviderID:   fmt.Sprintf("m_%v", i),
-				Rewards:      currency.Coin((i + 1) * 10),
-				TotalRewards: currency.Coin((i + 1) * 1000),
+				Rewards: ProviderRewards{
+					ProviderID:   fmt.Sprintf("m_%v", i),
+					Rewards:      currency.Coin((i + 1) * 10),
+					TotalRewards: currency.Coin((i + 1) * 1000),
+				},
 			},
 		}
 	}

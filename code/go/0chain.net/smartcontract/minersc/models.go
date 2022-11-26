@@ -748,15 +748,6 @@ func (ps *poolStat) encode() []byte {
 	return buff
 }
 
-// swagger:model
-type delegatePoolStat struct {
-	ID         datastore.Key `json:"id"`
-	Balance    currency.Coin `json:"balance"`
-	Reward     currency.Coin `json:"reward"`      // uncollected reread
-	RewardPaid currency.Coin `json:"reward_paid"` // total reward all time
-	Status     string        `json:"status"`
-}
-
 type deletePool struct {
 	MinerID string `json:"id"`
 }

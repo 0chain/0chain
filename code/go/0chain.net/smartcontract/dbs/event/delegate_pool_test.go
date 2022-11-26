@@ -72,12 +72,12 @@ func TestTagStakePoolReward(t *testing.T) {
 	require.NoError(t, err)
 
 	bl := Blobber{
-		Provider: &Provider{ID: "provider_id"},
-		Rewards: ProviderRewards{
-			ProviderID:   "provider_id",
-			Rewards:      11,
-			TotalRewards: 23,
-		},
+		Provider: &Provider{ID: "provider_id",
+			Rewards: ProviderRewards{
+				ProviderID:   "provider_id",
+				Rewards:      11,
+				TotalRewards: 23,
+			}},
 	}
 	res := eventDb.Store.Get().Create(&bl)
 	if res.Error != nil {

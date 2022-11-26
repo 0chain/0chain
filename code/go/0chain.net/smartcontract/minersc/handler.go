@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"0chain.net/core/datastore"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
+	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -749,11 +752,6 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	}, nil)
 }
 
-// swagger:model userPools
-type userPools struct {
-	Pools map[string][]*delegatePoolStat `json:"pools"`
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools getUserPools
 //
 //	user oriented pools requests handler
@@ -793,38 +791,153 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ups := new(userPools)
-	ups.Pools = make(map[string][]*delegatePoolStat, len(minerPools)+len(sharderPools))
+	var ups = new(stakepool.UserPoolStat)
+	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat, len(minerPools)+len(sharderPools))
 	for _, pool := range minerPools {
-		dp := delegatePoolStat{
+		dp := stakepool.DelegatePoolStat{
 			ID:     pool.PoolID,
 			Status: spenum.PoolStatus(pool.Status).String(),
 		}
 		dp.Balance = pool.Balance
 
-		dp.Reward = pool.Reward
+		dp.Rewards = pool.Reward
 
-		dp.RewardPaid = pool.TotalReward
+		dp.TotalReward = pool.TotalReward
 
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}
 
 	for _, pool := range sharderPools {
-		dp := delegatePoolStat{
+		dp := stakepool.DelegatePoolStat{
 			ID:     pool.PoolID,
 			Status: spenum.PoolStatus(pool.Status).String(),
 		}
 
 		dp.Balance = pool.Balance
 
-		dp.Reward = pool.Reward
+		dp.Rewards = pool.Reward
 
-		dp.RewardPaid = pool.TotalReward
+		dp.TotalReward = pool.TotalReward
 
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}
 
 	common.Respond(w, r, ups, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
+// Gets statistic for all locked tokens of a stake pool
+//
+// parameters:
+//
+//	+name: provider_id
+//	 description: id of a provider
+//	 required: true
+//	 in: query
+//	 type: string
+//	+name: provider_type
+//	 description: type of the provider, ie: blobber. validator
+//	 required: true
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: stakePoolStat
+//	400:
+//	500:
+func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
+	providerID := r.URL.Query().Get("provider_id")
+	providerTypeString := r.URL.Query().Get("provider_type")
+	providerType, err := strconv.Atoi(providerTypeString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
+		return
+	}
+
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := getProviderStakePoolStats(providerType, providerID, edb)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("could not find provider stats: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, res, nil)
+}
+
+func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
+	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
+	}
+
+	spStat := &stakepool.StakePoolStat{}
+	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
+
+	switch spenum.Provider(providerType) {
+	case spenum.Miner:
+		miner, err := edb.GetMiner(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return stakepool.ToProviderStakePoolStats(miner.Provider, delegatePools)
+	case spenum.Sharder:
+		sharder, err := edb.GetSharder(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return stakepool.ToProviderStakePoolStats(sharder.Provider, delegatePools)
+	}
+
+	return nil, fmt.Errorf("unknown provider type")
+}
+
+func toValidatorStakePoolStats(validator *event.Validator, delegatePools []event.DelegatePool) (*stakepool.StakePoolStat, error) {
+	spStat := new(stakepool.StakePoolStat)
+	spStat.ID = validator.ID
+	spStat.StakeTotal = validator.TotalStake
+	spStat.UnstakeTotal = validator.UnstakeTotal
+
+	spStat.Settings = stakepool.Settings{
+		DelegateWallet:     validator.DelegateWallet,
+		MinStake:           validator.MinStake,
+		MaxStake:           validator.MaxStake,
+		MaxNumDelegates:    validator.NumDelegates,
+		ServiceChargeRatio: validator.ServiceCharge,
+	}
+	spStat.Rewards = validator.Rewards.TotalRewards
+
+	for _, dp := range delegatePools {
+		dpStats := stakepool.DelegatePoolStat{
+			ID:           dp.PoolID,
+			DelegateID:   dp.DelegateID,
+			Status:       spenum.PoolStatus(dp.Status).String(),
+			RoundCreated: dp.RoundCreated,
+		}
+		dpStats.Balance = dp.Balance
+
+		dpStats.Rewards = dp.Reward
+
+		dpStats.TotalPenalty = dp.TotalPenalty
+
+		dpStats.TotalReward = dp.TotalReward
+
+		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
+		if err != nil {
+			return nil, err
+		}
+		spStat.Balance = newBal
+		spStat.Delegate = append(spStat.Delegate, dpStats)
+	}
+
+	return spStat, nil
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool getNodepool

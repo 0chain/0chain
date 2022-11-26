@@ -80,8 +80,8 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 			MaxStake:       vn.StakePoolSettings.MaxStake,
 			NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+			Rewards:        event.ProviderRewards{ProviderID: vn.ID},
 		},
-		Rewards: event.ProviderRewards{ProviderID: vn.ID},
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwiteValidator, vn.ID, data)

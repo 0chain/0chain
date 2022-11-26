@@ -53,8 +53,6 @@ type Blobber struct {
 	OpenChallenges      uint64  `json:"open_challenges"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
 
-	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:ID;references:ProviderID"`
-
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:ID"`
 

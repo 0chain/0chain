@@ -110,8 +110,8 @@ func AddMockNodes(
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
 						MinStake:      newNode.Settings.MinStake,
 						MaxStake:      newNode.Settings.MaxStake,
+						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
 					},
-					Rewards: event.ProviderRewards{ProviderID: newNode.ID},
 				}
 				_ = eventDb.Store.Get().Create(&minerDb)
 			} else {
@@ -125,8 +125,8 @@ func AddMockNodes(
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
 						MinStake:      newNode.Settings.MinStake,
 						MaxStake:      newNode.Settings.MaxStake,
+						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
 					},
-					Rewards: event.ProviderRewards{ProviderID: newNode.ID},
 				}
 				_ = eventDb.Store.Get().Create(&sharderDb)
 			}

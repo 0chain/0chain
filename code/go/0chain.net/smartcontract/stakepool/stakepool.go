@@ -63,6 +63,76 @@ type DelegatePool struct {
 	StakedAt     common.Timestamp  `json:"staked_at"`
 }
 
+// swagger:model stakePoolStat
+type StakePoolStat struct {
+	ID           string             `json:"pool_id"` // pool ID
+	Balance      currency.Coin      `json:"balance"` // total balance
+	StakeTotal   currency.Coin      `json:"stake_total"`
+	UnstakeTotal currency.Coin      `json:"unstake_total"`
+	Delegate     []DelegatePoolStat `json:"delegate"` // delegate pools
+	Penalty      currency.Coin      `json:"penalty"`  // total for all
+	Rewards      currency.Coin      `json:"rewards"`  // rewards
+	Settings     Settings           `json:"settings"` // Settings of the stake pool
+}
+
+type DelegatePoolStat struct {
+	ID         string        `json:"id"`          // blobber ID
+	Balance    currency.Coin `json:"balance"`     // current balance
+	DelegateID string        `json:"delegate_id"` // wallet
+	Rewards    currency.Coin `json:"rewards"`     // total for all time
+	UnStake    bool          `json:"unstake"`     // want to unstake
+
+	TotalReward  currency.Coin `json:"total_reward"`
+	TotalPenalty currency.Coin `json:"total_penalty"`
+	Status       string        `json:"status"`
+	RoundCreated int64         `json:"round_created"`
+}
+
+// swagger:model userPoolStat
+type UserPoolStat struct {
+	Pools map[datastore.Key][]*DelegatePoolStat `json:"pools"`
+}
+
+func ToProviderStakePoolStats(miner *event.Provider, delegatePools []event.DelegatePool) (*StakePoolStat, error) {
+	spStat := new(StakePoolStat)
+	spStat.ID = miner.ID
+	spStat.StakeTotal = miner.TotalStake
+	spStat.UnstakeTotal = miner.UnstakeTotal
+	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
+	spStat.Settings = Settings{
+		DelegateWallet:     miner.DelegateWallet,
+		MinStake:           miner.MinStake,
+		MaxStake:           miner.MaxStake,
+		MaxNumDelegates:    miner.NumDelegates,
+		ServiceChargeRatio: miner.ServiceCharge,
+	}
+	spStat.Rewards = miner.Rewards.TotalRewards
+	for _, dp := range delegatePools {
+		dpStats := DelegatePoolStat{
+			ID:           dp.PoolID,
+			DelegateID:   dp.DelegateID,
+			Status:       spenum.PoolStatus(dp.Status).String(),
+			RoundCreated: dp.RoundCreated,
+		}
+		dpStats.Balance = dp.Balance
+
+		dpStats.Rewards = dp.Reward
+
+		dpStats.TotalPenalty = dp.TotalPenalty
+
+		dpStats.TotalReward = dp.TotalReward
+
+		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
+		if err != nil {
+			return nil, err
+		}
+		spStat.Balance = newBal
+		spStat.Delegate = append(spStat.Delegate, dpStats)
+	}
+
+	return spStat, nil
+}
+
 func NewStakePool() *StakePool {
 	return &StakePool{
 		Pools: make(map[string]*DelegatePool),

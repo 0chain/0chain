@@ -98,12 +98,13 @@ func TestSharders(t *testing.T) {
 				NumDelegates:   sn.NumberOfDelegates,
 				MinStake:       sn.MinStake,
 				MaxStake:       sn.MaxStake,
+				Rewards: ProviderRewards{
+					ProviderID: sn.ID,
+					Rewards:    sn.Stat.GeneratorRewards,
+				},
 			},
 			LastHealthCheck: sn.LastHealthCheck,
-			Rewards: ProviderRewards{
-				ProviderID: sn.ID,
-				Rewards:    sn.Stat.GeneratorRewards,
-			},
+
 			Fees:      sn.Stat.GeneratorFees,
 			Longitude: 0,
 			Latitude:  0,

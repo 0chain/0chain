@@ -17,8 +17,6 @@ type Validator struct {
 	PublicKey string `json:"public_key"`
 
 	ServiceCharge float64 `json:"service_charge"`
-
-	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:ID;references:ProviderID"`
 }
 
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
