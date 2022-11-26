@@ -41,7 +41,9 @@ func getTestSuites(
 		}
 		return suites
 	}
+
 	common.ConfigRateLimits()
+
 	for _, name := range bkNames {
 		if code, ok := bk.SourceCode[name]; ok {
 			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
