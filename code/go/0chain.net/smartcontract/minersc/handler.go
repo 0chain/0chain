@@ -766,7 +766,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 //
 // responses:
 //
-//	200: userPools
+//	200: userPoolStat
 //	400:
 //	484:
 func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request) {
@@ -825,7 +825,7 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, ups, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat getStakePoolStat
 // Gets statistic for all locked tokens of a stake pool
 //
 // parameters:
