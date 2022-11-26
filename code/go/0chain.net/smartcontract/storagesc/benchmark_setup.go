@@ -445,7 +445,7 @@ func AddMockBlobbers(
 	}
 	err = partition.Save(balances)
 	if err != nil {
-		log.Fatal("save partition", err)
+		log.Fatal("Save partition", err)
 	}
 	return rtvBlobbers
 }
@@ -632,7 +632,7 @@ func GetMockValidatorStakePools(
 			id := getMockValidatorStakePoolId(i, j)
 			sp.Pools[id] = &stakepool.DelegatePool{}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-			err := sp.save(spenum.Validator, getMockValidatorId(i), balances)
+			err := sp.Save(spenum.Validator, getMockValidatorId(i), balances)
 			if err != nil {
 				panic(err)
 			}
@@ -646,7 +646,7 @@ func SaveMockStakePools(
 ) {
 	for i, sp := range sps {
 		bId := getMockBlobberId(i)
-		err := sp.save(spenum.Blobber, bId, balances)
+		err := sp.Save(spenum.Blobber, bId, balances)
 		if err != nil {
 			panic(err)
 		}

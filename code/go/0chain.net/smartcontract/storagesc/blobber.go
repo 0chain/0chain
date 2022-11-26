@@ -86,7 +86,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			return fmt.Errorf("blobber url update failed, %s already used", blobber.BaseURL)
 		}
 
-		// save url
+		// Save url
 		if blobber.BaseURL != "" {
 			_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 			if err != nil {
@@ -151,8 +151,8 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
-	// save stake pool
-	if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
+	// Save stake pool
+	if err = sp.Save(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
@@ -226,14 +226,14 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return "", common.NewError("add_or_update_blobber_failed", err.Error())
 	}
 
-	// save the blobber
+	// Save the blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"saving blobber: "+err.Error())
 	}
 
-	// save url
+	// Save url
 	if blobber.BaseURL != "" {
 		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 		if err != nil {
@@ -333,7 +333,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 		blobber)
 	if err != nil {
 		return "", common.NewError("blobber_health_check_failed",
-			"can't save blobber: "+err.Error())
+			"can't Save blobber: "+err.Error())
 	}
 
 	return string(blobber.Encode()), nil
@@ -502,32 +502,32 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		}
 	}
 
-	// save pools
-	err = sp.save(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
+	// Save pools
+	err = sp.Save(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
-			"can't save stake pool: %v", err)
+			"can't Save stake pool: %v", err)
 	}
 
 	if err = rp.save(sc.ID, commitRead.ReadMarker.ClientID, balances); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
-			"can't save read pool: %v", err)
+			"can't Save read pool: %v", err)
 	}
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
-			"can't save blobber: %v", err)
+			"can't Save blobber: %v", err)
 	}
 
-	// save allocation
+	// Save allocation
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
-			"can't save allocation: %v", err)
+			"can't Save allocation: %v", err)
 	}
 
-	// save read marker
+	// Save read marker
 	_, err = balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
 	if err != nil {
 		return "", common.NewError("saving read marker", err.Error())
@@ -614,7 +614,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	}
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
-		return 0, fmt.Errorf("can't save challenge pool: %v", err)
+		return 0, fmt.Errorf("can't Save challenge pool: %v", err)
 	}
 
 	return move, nil
@@ -782,14 +782,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 	}
 
-	// save allocation object
+	// Save allocation object
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving allocation object: %v", err)
 	}
 
-	// save blobber
+	// Save blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
@@ -915,7 +915,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("creating stake pool: %v", err)
 	}
 
-	if err = sp.save(spenum.Blobber, blobber.ID, balances); err != nil {
+	if err = sp.Save(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 

@@ -46,7 +46,7 @@ func Test_stakePool_save(t *testing.T) {
 		sp       = newStakePool()
 		balances = newTestBalances(t, false)
 	)
-	require.NoError(t, sp.save(spenum.Blobber, blobID, balances))
+	require.NoError(t, sp.Save(spenum.Blobber, blobID, balances))
 	assert.NotZero(t, balances.tree[stakePoolKey(spenum.Blobber, blobID)])
 }
 
@@ -160,7 +160,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 			RoundCreated: stake.MintAt,
 		}
 	}
-	require.NoError(t, stakePool.save(spenum.Blobber, blobberId, ctx))
+	require.NoError(t, stakePool.Save(spenum.Blobber, blobberId, ctx))
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
 	if err != nil {

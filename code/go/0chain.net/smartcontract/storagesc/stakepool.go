@@ -82,8 +82,8 @@ func (sp *stakePool) Decode(input []byte) error {
 	return json.Unmarshal(input, sp)
 }
 
-// save the stake pool
-func (sp *stakePool) save(providerType spenum.Provider, providerID string,
+// Save the stake pool
+func (sp *stakePool) Save(providerType spenum.Provider, providerID string,
 	balances chainstate.StateContextI) error {
 	_, err := balances.InsertTrieNode(stakePoolKey(providerType, providerID), sp)
 	if err != nil {
@@ -336,7 +336,7 @@ func (ssc *StorageSmartContract) getStakePoolAdapter(providerType spenum.Provide
 		return nil, err
 	}
 
-	return pool.StakePool, nil
+	return pool, nil
 }
 
 func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (
@@ -458,8 +458,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	// the tokens can't be unlocked due to opened offers, but we mark it
 	// as 'unstake' and returns maximal time to wait to unlock the pool
 	if !unstake {
-		// save the pool and return special result
-		if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		// Save the pool and return special result
+		if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
@@ -477,8 +477,8 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}
 
-	// save the pool
-	if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
+	// Save the pool
+	if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}

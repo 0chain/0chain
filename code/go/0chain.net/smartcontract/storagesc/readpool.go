@@ -223,7 +223,7 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	// save read pool
+	// Save read pool
 	if err = rp.save(ssc.ID, targetId, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
@@ -253,7 +253,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, in
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
-	// save read pool
+	// Save read pool
 	if err = rp.save(ssc.ID, txn.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}

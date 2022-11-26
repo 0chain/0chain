@@ -333,7 +333,7 @@ func testCommitBlobberRead(
 			RoundCreated: stake.MintAt,
 		}
 	}
-	require.NoError(t, sPool.save(spenum.Blobber, blobberId, ctx))
+	require.NoError(t, sPool.Save(spenum.Blobber, blobberId, ctx))
 
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {
