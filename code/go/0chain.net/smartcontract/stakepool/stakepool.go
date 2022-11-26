@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"sort"
 
+	"0chain.net/chaincore/transaction"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/maths"
@@ -25,6 +26,15 @@ import (
 
 func stakePoolKey(p spenum.Provider, id string) datastore.Key {
 	return p.String() + ":stakepool:" + id
+}
+
+type AbstractStakePool interface {
+	GetPools() map[string]*DelegatePool
+	HasStakePool(user string) bool
+	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) error
+	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
+	Save(providerType spenum.Provider, providerID string,
+		balances cstate.StateContextI) error
 }
 
 // StakePool holds delegate information for an 0chain providers
@@ -68,6 +78,10 @@ func (sp *StakePool) Encode() (b []byte) {
 
 func (sp *StakePool) Decode(input []byte) error {
 	return json.Unmarshal(input, sp)
+}
+
+func (sp *StakePool) GetPools() map[string]*DelegatePool {
+	return sp.Pools
 }
 
 func (sp *StakePool) OrderedPoolIds() []string {
@@ -481,4 +495,66 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 	}
 
 	return nil
+}
+
+type stakePoolRequest struct {
+	ProviderType spenum.Provider `json:"provider_type,omitempty"`
+	ProviderID   string          `json:"provider_id,omitempty"`
+}
+
+func (spr *stakePoolRequest) decode(p []byte) (err error) {
+	if err = json.Unmarshal(p, spr); err != nil {
+		return
+	}
+	return // ok
+}
+
+func StakePoolLock(t *transaction.Transaction,
+	input []byte, balances cstate.StateContextI, MinLock currency.Coin, MaxDelegates int,
+	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
+
+	if t.Value < MinLock {
+		return "", common.NewError("stake_pool_lock_failed",
+			"too small stake to lock")
+	}
+
+	var spr stakePoolRequest
+	if err = spr.decode(input); err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"invalid request: %v", err)
+	}
+
+	var sp AbstractStakePool
+	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"can't get stake pool: %v", err)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	if len(sp.GetPools()) >= MaxDelegates && !sp.HasStakePool(t.ClientID) {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"max_delegates reached: %v, no more stake pools allowed",
+			MaxDelegates)
+	}
+
+	err = sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"stake pool digging error: %v", err)
+	}
+
+	if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"saving stake pool: %v", err)
+	}
+
+	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"stake pool staking error: %v", err)
+	}
+
+	return
 }

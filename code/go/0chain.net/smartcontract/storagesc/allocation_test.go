@@ -107,7 +107,7 @@ func TestSelectBlobbers(t *testing.T) {
 		for i := 0; i < args.numBlobbers; i++ {
 			sNodes.Nodes.add(makeMockBlobber(i))
 			sp := stakePool{
-				StakePool: stakepool.StakePool{
+				StakePool: &stakepool.StakePool{
 					Pools: map[string]*stakepool.DelegatePool{
 						mockPoolId: {},
 					},
@@ -370,7 +370,7 @@ func TestChangeBlobbers(t *testing.T) {
 		if len(arg.addBlobberID) > 0 {
 
 			sp := stakePool{
-				StakePool: stakepool.StakePool{
+				StakePool: &stakepool.StakePool{
 					Pools: map[string]*stakepool.DelegatePool{
 						mockPoolId: {},
 					},
@@ -653,7 +653,7 @@ func TestExtendAllocation(t *testing.T) {
 					},
 				})
 				sp := stakePool{
-					StakePool: stakepool.StakePool{
+					StakePool: &stakepool.StakePool{
 						Pools: map[string]*stakepool.DelegatePool{
 							mockPoolId: {},
 						},

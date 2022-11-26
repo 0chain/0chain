@@ -48,7 +48,7 @@ func validateStakePoolSettings(
 // stake pool of a blobber
 
 type stakePool struct {
-	stakepool.StakePool
+	*stakepool.StakePool
 	// TotalOffers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	TotalOffers    currency.Coin `json:"total_offers"`
@@ -59,7 +59,7 @@ type stakePool struct {
 func newStakePool() *stakePool {
 	bsp := stakepool.NewStakePool()
 	return &stakePool{
-		StakePool: *bsp,
+		StakePool: bsp,
 	}
 }
 
@@ -328,6 +328,17 @@ func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, prov
 	return getStakePool(providerType, providerID, balances)
 }
 
+// getStakePool of given blobber
+func (ssc *StorageSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
+	balances chainstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+	pool, err := getStakePool(providerType, providerID, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	return pool.StakePool, nil
+}
+
 func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (
 	sp *stakePool, err error) {
 	sp = newStakePool()
@@ -372,6 +383,14 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	return sp, nil
 }
 
+// unlock response
+type unlockResponse struct {
+	// one of the fields is set in a response, the Unstake if can't unstake
+	// for now and the TokenPoolTransferResponse if has a pool had unlocked
+	Unstake bool          `json:"unstake"` // max time to wait to unstake
+	Balance currency.Coin `json:"balance"`
+}
+
 type stakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
 	ProviderID   string          `json:"provider_id,omitempty"`
@@ -384,14 +403,6 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	return // ok
 }
 
-// unlock response
-type unlockResponse struct {
-	// one of the fields is set in a response, the Unstake if can't unstake
-	// for now and the TokenPoolTransferResponse if has a pool had unlocked
-	Unstake bool          `json:"unstake"` // max time to wait to unstake
-	Balance currency.Coin `json:"balance"`
-}
-
 // add delegated stake pool
 func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
@@ -402,50 +413,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	if t.Value < conf.StakePool.MinLock {
-		return "", common.NewError("stake_pool_lock_failed",
-			"too small stake to lock")
-	}
-
-	var spr stakePoolRequest
-	if err = spr.decode(input); err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"invalid request: %v", err)
-	}
-
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(spr.ProviderType, spr.ProviderID, balances); err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"can't get stake pool: %v", err)
-	}
-	if err != nil {
-		return "", err
-	}
-
-	if len(sp.Pools) >= conf.MaxDelegates && !sp.HasStakePool(t.ClientID) {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"max_delegates reached: %v, no more stake pools allowed",
-			conf.MaxDelegates)
-	}
-
-	err = sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"stake pool digging error: %v", err)
-	}
-
-	if err = sp.save(spr.ProviderType, spr.ProviderID, balances); err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"saving stake pool: %v", err)
-	}
-
-	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"stake pool staking error: %v", err)
-	}
-
-	return
+	return stakepool.StakePoolLock(t, input, balances, conf.StakePool.MinLock, conf.MaxDelegates, ssc.getStakePoolAdapter)
 }
 
 // stake pool can return excess tokens from stake pool

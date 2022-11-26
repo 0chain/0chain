@@ -289,14 +289,7 @@ func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
 }
 
 func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withBlobberTotalStakesAdded())
-}
-
-func withBlobberTotalStakesAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		//use the newer one
-		return b, nil
-	})
+	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
@@ -307,13 +300,7 @@ func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
 }
 
 func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberTotalOffers, withBlobberTotalOffersAdded())
-}
-
-func withBlobberTotalOffersAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		return b, nil
-	})
+	return newEventsMerger[Blobber](TagUpdateBlobberTotalOffers, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {

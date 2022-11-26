@@ -580,7 +580,7 @@ func GetMockBlobberStakePools(
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		bId := getMockBlobberId(i)
 		sp := &stakePool{
-			StakePool: stakepool.StakePool{
+			StakePool: &stakepool.StakePool{
 				Pools:    make(map[string]*stakepool.DelegatePool),
 				Reward:   0,
 				Settings: getMockStakePoolSettings(bId),
@@ -622,7 +622,7 @@ func GetMockValidatorStakePools(
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		bId := getMockValidatorId(i)
 		sp := &stakePool{
-			StakePool: stakepool.StakePool{
+			StakePool: &stakepool.StakePool{
 				Pools:    make(map[string]*stakepool.DelegatePool),
 				Reward:   0,
 				Settings: getMockStakePoolSettings(bId),
