@@ -6,13 +6,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"0chain.net/chaincore/smartcontract"
 	"0chain.net/core/datastore"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/stakepool"
-	"github.com/0chain/common/core/currency"
-
-	"0chain.net/chaincore/smartcontract"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -43,6 +41,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/globalSettings", common.UserRateLimit(mrh.getGlobalSettings)),
 		rest.MakeEndpoint(miner+"/getNodepool", common.UserRateLimit(mrh.getNodePool)),
 		rest.MakeEndpoint(miner+"/getUserPools", common.UserRateLimit(mrh.getUserPools)),
+		rest.MakeEndpoint(miner+"/getStakePoolStat", common.UserRateLimit(mrh.getStakePoolStat)),
 		rest.MakeEndpoint(miner+"/getMinerList", common.UserRateLimit(mrh.getMinerList)),
 		rest.MakeEndpoint(miner+"/get_miners_stats", common.UserRateLimit(mrh.getMinersStats)),
 		rest.MakeEndpoint(miner+"/get_miners_stake", common.UserRateLimit(mrh.getMinersStake)),
@@ -825,7 +824,7 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, ups, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat getStakePoolStat
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat getMSStakePoolStat
 // Gets statistic for all locked tokens of a stake pool
 //
 // parameters:
@@ -836,7 +835,7 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 //	 in: query
 //	 type: string
 //	+name: provider_type
-//	 description: type of the provider, ie: blobber. validator
+//	 description: type of the provider, ie: miner. sharder
 //	 required: true
 //	 in: query
 //	 type: string
@@ -897,47 +896,6 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 	}
 
 	return nil, fmt.Errorf("unknown provider type")
-}
-
-func toValidatorStakePoolStats(validator *event.Validator, delegatePools []event.DelegatePool) (*stakepool.StakePoolStat, error) {
-	spStat := new(stakepool.StakePoolStat)
-	spStat.ID = validator.ID
-	spStat.StakeTotal = validator.TotalStake
-	spStat.UnstakeTotal = validator.UnstakeTotal
-
-	spStat.Settings = stakepool.Settings{
-		DelegateWallet:     validator.DelegateWallet,
-		MinStake:           validator.MinStake,
-		MaxStake:           validator.MaxStake,
-		MaxNumDelegates:    validator.NumDelegates,
-		ServiceChargeRatio: validator.ServiceCharge,
-	}
-	spStat.Rewards = validator.Rewards.TotalRewards
-
-	for _, dp := range delegatePools {
-		dpStats := stakepool.DelegatePoolStat{
-			ID:           dp.PoolID,
-			DelegateID:   dp.DelegateID,
-			Status:       spenum.PoolStatus(dp.Status).String(),
-			RoundCreated: dp.RoundCreated,
-		}
-		dpStats.Balance = dp.Balance
-
-		dpStats.Rewards = dp.Reward
-
-		dpStats.TotalPenalty = dp.TotalPenalty
-
-		dpStats.TotalReward = dp.TotalReward
-
-		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
-		if err != nil {
-			return nil, err
-		}
-		spStat.Balance = newBal
-		spStat.Delegate = append(spStat.Delegate, dpStats)
-	}
-
-	return spStat, nil
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool getNodepool
