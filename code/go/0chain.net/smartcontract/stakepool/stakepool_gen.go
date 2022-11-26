@@ -120,6 +120,84 @@ func (z *DelegatePool) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z *Restrictions) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 3
+	// string "MinStake"
+	o = append(o, 0x83, 0xa8, 0x4d, 0x69, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65)
+	o, err = z.MinStake.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MinStake")
+		return
+	}
+	// string "MaxStake"
+	o = append(o, 0xa8, 0x4d, 0x61, 0x78, 0x53, 0x74, 0x61, 0x6b, 0x65)
+	o, err = z.MaxStake.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MaxStake")
+		return
+	}
+	// string "MaxDelegates"
+	o = append(o, 0xac, 0x4d, 0x61, 0x78, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
+	o = msgp.AppendInt(o, z.MaxDelegates)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *Restrictions) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "MinStake":
+			bts, err = z.MinStake.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MinStake")
+				return
+			}
+		case "MaxStake":
+			bts, err = z.MaxStake.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MaxStake")
+				return
+			}
+		case "MaxDelegates":
+			z.MaxDelegates, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MaxDelegates")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *Restrictions) Msgsize() (s int) {
+	s = 1 + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 13 + msgp.IntSize
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z *Settings) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 5
