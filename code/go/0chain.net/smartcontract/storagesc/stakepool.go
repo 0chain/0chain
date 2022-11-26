@@ -413,7 +413,13 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	return stakepool.StakePoolLock(t, input, balances, conf.StakePool.MinLock, conf.MaxDelegates, ssc.getStakePoolAdapter)
+	r := stakepool.Restrictions{
+		MinStake:     conf.MinStake,
+		MaxStake:     conf.MaxStake,
+		MaxDelegates: conf.MaxDelegates,
+	}
+
+	return stakepool.StakePoolLock(t, input, balances, r, ssc.getStakePoolAdapter)
 }
 
 // stake pool can return excess tokens from stake pool

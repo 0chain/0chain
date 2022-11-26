@@ -35,6 +35,7 @@ type AbstractStakePool interface {
 	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
 	Save(providerType spenum.Provider, providerID string,
 		balances cstate.StateContextI) error
+	GetSettings() Settings
 }
 
 // StakePool holds delegate information for an 0chain providers
@@ -80,6 +81,9 @@ func (sp *StakePool) Decode(input []byte) error {
 	return json.Unmarshal(input, sp)
 }
 
+func (sp *StakePool) GetSettings() Settings {
+	return sp.Settings
+}
 func (sp *StakePool) GetPools() map[string]*DelegatePool {
 	return sp.Pools
 }
@@ -509,11 +513,20 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	return // ok
 }
 
-func StakePoolLock(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI, MinLock currency.Coin, MaxDelegates int,
+type Restrictions struct {
+	MinStake     currency.Coin
+	MaxStake     currency.Coin
+	MaxDelegates int
+}
+
+func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI, r Restrictions,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
 
-	if t.Value < MinLock {
+	if t.Value < r.MinStake {
+		return "", common.NewError("stake_pool_lock_failed",
+			"too small stake to lock")
+	}
+	if t.Value > r.MaxStake {
 		return "", common.NewError("stake_pool_lock_failed",
 			"too small stake to lock")
 	}
@@ -529,14 +542,15 @@ func StakePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
+
 	if err != nil {
 		return "", err
 	}
 
-	if len(sp.GetPools()) >= MaxDelegates && !sp.HasStakePool(t.ClientID) {
+	if len(sp.GetPools()) >= r.MaxDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
-			MaxDelegates)
+			r.MaxDelegates)
 	}
 
 	err = sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)

@@ -4,71 +4,38 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	var dp deletePool
-	if err = dp.Decode(inputData); err != nil {
-		return "", common.NewErrorf("delegate_pool_add",
-			"decoding request: %v", err)
+	r := stakepool.Restrictions{
+		MinStake:     gn.MinStake,
+		MaxStake:     gn.MaxStake,
+		MaxDelegates: gn.MaxDelegates,
 	}
+	return stakepool.StakePoolLock(t, input, balances, r, msc.getStakePoolAdapter)
+}
 
+// getStakePool of given blobber
+func (msc *MinerSmartContract) getStakePoolAdapter(_ spenum.Provider, providerID string,
+	balances cstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
 	var mn *MinerNode
-	mn, err = getMinerNode(dp.MinerID, balances)
+	mn, err = getMinerNode(providerID, balances)
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:
-		return "", common.NewErrorf("delegate_pool_add",
+		return mn, common.NewErrorf("delegate_pool_add",
 			"miner not found or genesis miner used")
 	default:
-		return "", common.NewErrorf("delegate_pool_add",
+		return mn, common.NewErrorf("delegate_pool_add",
 			"unexpected DB error: %v", err)
 	}
-
-	if mn.Delete {
-		return "", common.NewError("delegate_pool_add",
-			"can't add delegate pool for miner being deleted")
-	}
-
-	numDelegates := mn.numDelegates()
-	if numDelegates >= mn.Settings.MaxNumDelegates {
-		return "", common.NewErrorf("delegate_pool_add",
-			"max delegates already reached: %d (%d)", numDelegates, mn.Settings.MaxNumDelegates)
-	}
-
-	if numDelegates >= gn.MaxDelegates && !mn.HasStakePool(t.ClientID) {
-		return "", common.NewErrorf("delegate_pool_add",
-			"SC max delegates already reached: %d (%d)", numDelegates, gn.MaxDelegates)
-	}
-
-	if t.Value < mn.Settings.MinStake {
-		return "", common.NewErrorf("delegate_pool_add",
-			"stake is less than min allowed: %d < %d", t.Value, mn.Settings.MinStake)
-	}
-	if t.Value > mn.Settings.MaxStake {
-		return "", common.NewErrorf("delegate_pool_add",
-			"stake is greater than max allowed: %d > %d", t.Value, mn.Settings.MaxStake)
-	}
-
-	if err := mn.LockPool(t, spenum.Provider(mn.NodeType), mn.ID, spenum.Pending, balances); err != nil {
-		return "", common.NewErrorf("delegate_pool_add",
-			"digging delegate pool: %v", err)
-	}
-
-	if err = mn.save(balances); err != nil {
-		return "", common.NewErrorf("delegate_pool_add",
-			"saving miner node: %v", err)
-	}
-
-	err = mn.EmitStakeEvent(spenum.Provider(mn.NodeType), mn.ID, balances)
-
-	resp = string(mn.Encode())
-	return
+	return mn, nil
 }
 
 func (msc *MinerSmartContract) deleteFromDelegatePool(
