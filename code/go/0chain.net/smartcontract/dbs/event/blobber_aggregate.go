@@ -61,7 +61,7 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSn
 	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count)
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
-		"ON COMMIT DROP AS SELECT blobber_id as id FROM blobbers ORDER BY (blobber_id, creation_round) LIMIT ? OFFSET ?",
+		"ON COMMIT DROP AS SELECT id as id FROM blobbers ORDER BY (id, creation_round) LIMIT ? OFFSET ?",
 		size, size*currentPageNumber)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
@@ -102,7 +102,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 
 	var currentBlobbers []Blobber
 	result := edb.Store.Get().
-		Raw("SELECT * FROM blobbers WHERE blobber_id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM blobbers WHERE id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&currentBlobbers)
 	if result.Error != nil {
 		logging.Logger.Error("getting current blobbers", zap.Error(result.Error))

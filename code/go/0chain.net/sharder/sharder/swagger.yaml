@@ -1007,6 +1007,8 @@ definitions:
                 format: int64
                 type: integer
                 x-go-name: NumDelegates
+            rewards:
+                $ref: '#/definitions/ProviderRewards'
             service_charge:
                 format: double
                 type: number
@@ -1830,22 +1832,6 @@ definitions:
                 $ref: '#/definitions/Timestamp'
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
-    delegatePoolStat:
-        properties:
-            balance:
-                $ref: '#/definitions/Coin'
-            id:
-                type: string
-                x-go-name: ID
-            reward:
-                $ref: '#/definitions/Coin'
-            reward_paid:
-                $ref: '#/definitions/Coin'
-            status:
-                type: string
-                x-go-name: Status
-        type: object
-        x-go-package: 0chain.net/smartcontract/minersc
     destInfo:
         properties:
             earned:
@@ -2166,18 +2152,8 @@ definitions:
                 type: object
                 x-go-name: Pools
         type: object
-        x-go-package: 0chain.net/smartcontract/storagesc
-    userPools:
-        properties:
-            pools:
-                additionalProperties:
-                    items:
-                        $ref: '#/definitions/delegatePoolStat'
-                    type: array
-                type: object
-                x-go-name: Pools
-        type: object
-        x-go-package: 0chain.net/smartcontract/minersc
+        x-go-name: UserPoolStat
+        x-go-package: 0chain.net/smartcontract/stakepool
     vestingClientPools:
         properties:
             pools:
@@ -3678,6 +3654,30 @@ paths:
                     description: ""
                 "484":
                     description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat:
+        get:
+            description: Gets statistic for all locked tokens of a stake pool
+            operationId: getMSStakePoolStat
+            parameters:
+                - description: id of a provider
+                  in: query
+                  name: provider_id
+                  required: true
+                  type: string
+                - description: 'type of the provider, ie: miner. sharder'
+                  in: query
+                  name: provider_type
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: stakePoolStat
+                    schema:
+                        $ref: '#/definitions/stakePoolStat'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools:
         get:
             description: user oriented pools requests handler
@@ -3690,9 +3690,9 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: userPools
+                    description: userPoolStat
                     schema:
-                        $ref: '#/definitions/userPools'
+                        $ref: '#/definitions/userPoolStat'
                 "400":
                     description: ""
                 "484":
