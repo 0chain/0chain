@@ -1544,7 +1544,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 //	 required: true
 //	 in: query
 //	 type: string
-//	+name: fileid
+//	+name: file_id
 //	 description: file id
 //	 required: true
 //	 in: query
@@ -1570,7 +1570,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Request) {
 	var (
 		allocationID = r.URL.Query().Get("allocation_id")
-		fileIDStr    = r.URL.Query().Get("fileid")
+		fileIDStr    = r.URL.Query().Get("file_id")
 	)
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2187,18 +2187,10 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 //
 // parameters:
 //
-//	+name: look-up-hash
-//	 description: restrict to transactions by the specific look up hash on write marker
+//	+name: file_id
+//	 description: restrict to transactions by the specific file id on the writemarker
 //	 in: query
-//	 type: string
-//	+name: name
-//	 description: restrict to transactions by the specific file name on write marker
-//	 in: query
-//	 type: string
-//	+name: content-hash
-//	 description: restrict to transactions by the specific content hash on write marker
-//	 in: query
-//	 type: string
+//	 type: integer
 //	+name: offset
 //	 description: offset
 //	 in: query
@@ -2218,10 +2210,10 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 //	400:
 //	500:
 func (srh *StorageRestHandler) getTransactionHashesByFilter(w http.ResponseWriter, r *http.Request) {
-	fileIDStr := r.URL.Query().Get("fileid")
+	fileIDStr := r.URL.Query().Get("file_id")
 	fileID, err := strconv.ParseInt(fileIDStr, 10, 64)
 	if err != nil || fileID <= 0 {
-		common.Respond(w, r, nil, common.NewErrBadRequest("Invalid file id."))
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid file id."))
 		return
 	}
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
