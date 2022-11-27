@@ -56,7 +56,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/getMagicBlock", common.UserRateLimit(mrh.getMagicBlock)),
 		rest.MakeEndpoint(miner+"/getEvents", common.UserRateLimit(mrh.getEvents)),
 		rest.MakeEndpoint(miner+"/nodeStat", common.UserRateLimit(mrh.getNodeStat)),
-		rest.MakeEndpoint(miner+"/nodePoolStat", common.UserRateLimit(mrh.getNodePoolStat)),
 		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
 		rest.MakeEndpoint(miner+"/get_miner_geolocations", common.UserRateLimit(mrh.getMinerGeolocations)),
 		rest.MakeEndpoint(miner+"/get_sharder_geolocations", common.UserRateLimit(mrh.getSharderGeolocations)),
@@ -208,48 +207,6 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 	}
 	rtv, err := gn.getConfigMap()
 	common.Respond(w, r, rtv, err)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat nodePoolStat
-// lists sharders
-//
-// parameters:
-//
-//	+name: id
-//	 description: id
-//	 in: query
-//	 type: string
-//	 required: true
-//
-// responses:
-//
-//	200:
-//	400:
-//	484:
-func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Request) {
-	var (
-		id     = r.URL.Query().Get("id")
-		poolID = r.URL.Query().Get("pool_id")
-		status = r.URL.Query().Get("status")
-		sn     *MinerNode
-		err    error
-	)
-
-	if sn, err = getMinerNode(id, mrh.GetQueryStateContext()); err != nil {
-		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
-		return
-	}
-
-	if poolID == "" {
-		common.Respond(w, r, sn.GetNodePools(status), nil)
-		return
-	}
-
-	if pool := sn.GetNodePool(poolID); pool != nil {
-		common.Respond(w, r, pool, nil)
-		return
-	}
-	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
 }
 
 // swagger:model nodeStat

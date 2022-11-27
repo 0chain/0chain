@@ -22,10 +22,15 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 }
 
 // getStakePool of given blobber
-func (msc *MinerSmartContract) getStakePoolAdapter(_ spenum.Provider, providerID string,
+func (msc *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, providerID string,
 	balances cstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
 	var mn *MinerNode
-	mn, err = getMinerNode(providerID, balances)
+	switch pType {
+	case spenum.Miner:
+		mn, err = getMinerNode(providerID, balances)
+	case spenum.Sharder:
+		mn, err = getSharderNode(providerID, balances)
+	}
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:

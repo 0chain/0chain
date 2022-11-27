@@ -282,7 +282,7 @@ func (_ *MinerSmartContract) getSharderNode(
 
 func getSharderNode(
 	sid string,
-	balances cstate.StateContextI,
+	balances cstate.CommonStateContextI,
 ) (*MinerNode, error) {
 	sn := NewMinerNode()
 	sn.ID = sid
