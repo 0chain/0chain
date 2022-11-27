@@ -3,7 +3,6 @@ package minersc
 import (
 	benchmark "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/rest"
-	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 func BenchmarkRestTests(
@@ -99,15 +98,6 @@ func BenchmarkRestTests(
 				},
 				Endpoint: mrh.getNodeStat,
 			},
-			{
-				FuncName: "nodePoolStat",
-				Params: map[string]string{
-					"id":      data.Miners[0],
-					"pool_id": getMinerDelegatePoolId(0, 0, spenum.Miner),
-				},
-				Endpoint: mrh.getNodePoolStat,
-			},
-
 			{
 				FuncName: "get_miner_geolocations",
 				Params: map[string]string{

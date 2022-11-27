@@ -300,7 +300,7 @@ func TestBlobberGetCount(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	eventDb, err := NewEventDb(access)
 	if err != nil {
 		return
