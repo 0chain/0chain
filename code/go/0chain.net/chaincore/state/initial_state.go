@@ -3,8 +3,8 @@ package state
 import (
 	"io/ioutil"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/core/datastore"
+	"github.com/0chain/common/core/currency"
 
 	"gopkg.in/yaml.v2"
 )

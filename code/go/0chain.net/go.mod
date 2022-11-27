@@ -22,7 +22,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/selvatico/go-mocket v1.0.7
-	github.com/shopspring/decimal v1.3.1
+	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
@@ -42,7 +42,7 @@ require (
 	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
 )
 
-require github.com/0chain/common v0.0.6-0.20221108095012-622480d64186
+require github.com/0chain/common v0.0.6-0.20221113152339-7174fb91b504
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
@@ -104,3 +104,5 @@ require (
 )
 
 replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
+
+//replace github.com/0chain/common => ../../../../0chain_other/common

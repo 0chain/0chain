@@ -87,8 +87,8 @@ func TestWriteMarker(t *testing.T) {
 	eventAddOrOverwriteWm := Event{
 		BlockNumber: eWriteMarker.BlockNumber,
 		TxHash:      eWriteMarker.TransactionID,
-		Type:        int(TypeStats),
-		Tag:         int(TagAddWriteMarker),
+		Type:        TypeStats,
+		Tag:         TagAddWriteMarker,
 		Data:        string(data),
 	}
 	events := []Event{eventAddOrOverwriteWm}
@@ -129,7 +129,6 @@ func TestGetWriteMarkers(t *testing.T) {
 		return
 	}
 	defer eventDb.Drop()
-
 	err = eventDb.addOrOverwriteBlobber([]Blobber{Blobber{BlobberID: "someHash"}})
 	if !assert.NoError(t, err, "Error while writing blobber marker") {
 		return

@@ -244,10 +244,6 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	vts := mr.GetVerificationTickets(b.Hash)
-	if len(vts) == 0 {
-		mc.AddToRoundVerification(ctx, mr, b)
-		return nil
-	}
 
 	// TODO: mc.MergeVerificationTickets does not verify block's own tickets, might be a problem!
 	mc.MergeVerificationTickets(b, vts)

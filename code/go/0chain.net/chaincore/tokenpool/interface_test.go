@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"github.com/stretchr/testify/assert"
 )

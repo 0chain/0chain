@@ -3,7 +3,7 @@ package tokenpool
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"

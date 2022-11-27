@@ -3,7 +3,6 @@ package minersc
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -105,7 +104,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	var update bool
 	if _, ok := allMap[newMiner.GetKey()]; !ok {
 		allMiners.Nodes = append(allMiners.Nodes, newMiner)
-
 		if err = updateMinersList(balances, allMiners); err != nil {
 			return "", common.NewErrorf("add_miner",
 				"saving all miners list: %v", err)
@@ -196,16 +194,11 @@ func (msc *MinerSmartContract) deleteNode(
 		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
 	}
 
-	usp, err := stakepool.GetUserStakePools(nodeType, deleteNode.Settings.DelegateWallet, balances)
-	if err != nil {
-		return nil, fmt.Errorf("can't get user pools list: %v", err)
-	}
-
 	for key, pool := range deleteNode.Pools {
 		switch pool.Status {
 		case spenum.Pending:
 			_, err := deleteNode.UnlockPool(
-				pool.DelegateID, nodeType, key, usp, balances)
+				pool.DelegateID, nodeType, key, balances)
 			if err != nil {
 				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
 			}
