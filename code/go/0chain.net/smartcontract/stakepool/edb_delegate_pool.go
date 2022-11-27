@@ -47,15 +47,13 @@ func (dp DelegatePool) emitNew(
 
 func (dpu DelegatePoolUpdate) emitUpdate(
 	balances cstate.StateContextI,
-) error {
-
+) {
 	balances.EmitEvent(
 		event.TypeStats,
 		event.TagUpdateDelegatePool,
 		dpu.PoolId,
 		delegatePoolUpdateToDbsDelegatePoolUpdate(dpu),
 	)
-	return nil
 }
 
 func delegatePoolUpdateToDbsDelegatePoolUpdate(dpu DelegatePoolUpdate) dbs.DelegatePoolUpdate {

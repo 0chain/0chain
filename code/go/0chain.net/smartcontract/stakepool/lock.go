@@ -4,8 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -86,16 +89,15 @@ func (sp *StakePool) LockPool(
 		dp.StakedAt = txn.CreationDate
 	}
 
-	var usp *UserStakePools
-	usp, err := getOrCreateUserStakePool(providerType, txn.ClientID, balances)
-	if err != nil {
-		return fmt.Errorf("can't get user pools list: %v", err)
-	}
+	i, _ := txn.Value.Int64()
+	logging.Logger.Info("emmit TagLockStakePool", zap.String("client_id", txn.ClientID), zap.String("provider_id", providerId))
 
-	usp.Add(providerId)
-	if err = usp.Save(providerType, txn.ClientID, balances); err != nil {
-		return fmt.Errorf("saving user pools: %v", err)
-	}
+	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, event.DelegatePoolLock{
+		Client:       txn.ClientID,
+		ProviderId:   providerId,
+		ProviderType: providerType,
+		Amount:       i,
+	})
 
 	if err := balances.AddTransfer(state.NewTransfer(
 		txn.ClientID, txn.ToClientID, txn.Value,
