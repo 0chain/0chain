@@ -66,6 +66,10 @@ func (edb *EventDb) Rollback() error {
 	return edb.Store.Get().Rollback().Error
 }
 
+func (edb *EventDb) UpdateSettings(updates map[string]string) error {
+	return edb.settings.Update(updates)
+}
+
 func (edb *EventDb) AggregatePeriod() int64 {
 	return edb.settings.AggregatePeriod
 }

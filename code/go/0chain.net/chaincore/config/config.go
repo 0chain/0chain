@@ -5,6 +5,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"0chain.net/chaincore/config/enums"
+
+	"0chain.net/smartcontract"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/datastore"
@@ -205,6 +209,31 @@ type DbSettings struct {
 	Debug           bool  `json:"debug"`
 	AggregatePeriod int64 `json:"aggregate_period"`
 	PageLimit       int64 `json:"page_limit"`
+}
+
+func (s *DbSettings) Update(updates map[string]string) error {
+	if value, found := updates[enums.DbsAggregateDebug.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Boolean)
+		if err != nil {
+			return err
+		}
+		s.Debug = iValue.(bool)
+	}
+	if value, found := updates[enums.DbsAggregatePeriod.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.AggregatePeriod = iValue.(int64)
+	}
+	if value, found := updates[enums.DbsAggregatePageLimit.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.PageLimit = iValue.(int64)
+	}
+	return nil
 }
 
 // HealthCheckCycleScan -

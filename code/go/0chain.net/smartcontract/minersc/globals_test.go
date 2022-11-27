@@ -3,8 +3,6 @@ package minersc_test
 import (
 	"testing"
 
-	"0chain.net/chaincore/block"
-
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/minersc"
 
@@ -15,28 +13,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGlobalSettings(t *testing.T) {
-	require.Len(t, minersc.GlobalSettingName, int(minersc.NumOfGlobalSettings))
-	require.Len(t, minersc.GlobalSettingInfo, int(minersc.NumOfGlobalSettings))
-
-	for key := range minersc.GlobalSettingInfo {
-		found := false
-		for _, name := range minersc.GlobalSettingName {
-			if key == name {
-				found = true
-				break
-			}
-		}
-		require.True(t, found)
-	}
-
-	for _, name := range minersc.GlobalSettingName {
-		_, ok := minersc.GlobalSettingInfo[name]
-		require.True(t, ok)
-	}
-
-}
 
 func TestUpdateGlobals(t *testing.T) {
 	const (
@@ -77,10 +53,6 @@ func TestUpdateGlobals(t *testing.T) {
 				return true
 			}),
 		).Return("", nil).Once()
-
-		var blk block.Block
-		blk.Round = mockRoundNumber
-		balances.On("GetBlock").Return(&blk)
 
 		return args{
 			msc:      msc,

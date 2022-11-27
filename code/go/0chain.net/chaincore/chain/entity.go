@@ -1417,6 +1417,14 @@ func (c *Chain) updateConfig(pb *block.Block) {
 			zap.Error(err),
 		)
 	}
+	err = c.EventDb.UpdateSettings(configMap.Fields)
+	if err != nil {
+		logging.Logger.Error("updating event database settings",
+			zap.Int64("start of round", pb.Round),
+			zap.Error(err),
+		)
+	}
+
 	logging.Logger.Info("config has been updated successfully",
 		zap.Int64("start of round", pb.Round))
 
