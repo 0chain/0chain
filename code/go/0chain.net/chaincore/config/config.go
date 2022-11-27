@@ -186,7 +186,6 @@ type ChainConfig interface {
 	TxnExempt() map[string]bool
 	MinTxnFee() currency.Coin
 	TxnTransferCost() int
-	LastUpdateRound() int64
 }
 
 type DbAccess struct {

@@ -3,7 +3,6 @@ package minersc
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -112,8 +111,7 @@ const (
 	HealthCheckProximityScanSettleSecs         // todo restart worker
 	HealthCheckProximityScanRepeatIntervalMins // todo restart worker
 	HealthCheckProximityScanRejportStatusMins  // todo restart worker
-	HealthCheckShowCounters                    // todo restart worker
-	LastUpdateRound
+	HealthCheckShowCounters                    // todo restart worke
 	NumOfGlobalSettings
 )
 
@@ -300,7 +298,6 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[HealthCheckProximityScanRepeatIntervalMins]: {smartcontract.Duration, false},
 	GlobalSettingName[HealthCheckProximityScanRejportStatusMins]:  {smartcontract.Duration, false},
 	GlobalSettingName[HealthCheckShowCounters]:                    {smartcontract.Boolean, false},
-	GlobalSettingName[LastUpdateRound]:                            {smartcontract.Int64, true},
 }
 
 var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
@@ -354,8 +351,6 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap, round int64) 
 		}
 		gl.Fields[key] = value
 	}
-	gl.Fields[GlobalSettingName[LastUpdateRound]] = strconv.FormatInt(round, 10)
-
 	return nil
 }
 
@@ -557,9 +552,6 @@ func getStringMapFromViper() map[string]string {
 		switch key {
 		case GlobalSettingName[TransactionExempt]:
 			globals[key] = strings.Join(viper.GetStringSlice(key), ",")
-		case GlobalSettingName[LastUpdateRound]:
-			// If getting settings from file, then we have not had an update yet
-			globals[key] = "0"
 		default:
 			globals[key] = viper.GetString(key)
 		}
