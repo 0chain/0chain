@@ -10,8 +10,8 @@ func TestGlobalSettings(t *testing.T) {
 	initGlobalSettingNames()
 	initGlobalSettings()
 
-	require.Len(t, GlobalSettingName, int(NumOfGlobalSettings))
-	require.Len(t, GlobalSettingInfo, int(NumOfGlobalSettings))
+	require.Len(t, GlobalSettingName, NumOfGlobalSettings.Int()+1)
+	require.Len(t, GlobalSettingInfo, NumOfGlobalSettings.Int())
 
 	for key := range GlobalSettingInfo {
 		found := false
@@ -26,6 +26,6 @@ func TestGlobalSettings(t *testing.T) {
 
 	for _, name := range GlobalSettingName {
 		_, ok := GlobalSettingInfo[name]
-		require.True(t, ok)
+		require.True(t, ok || name == NumOfGlobalSettings.String())
 	}
 }
