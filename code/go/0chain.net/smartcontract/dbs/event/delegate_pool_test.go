@@ -121,8 +121,8 @@ func TestTagStakePoolReward(t *testing.T) {
 	}
 	data, err := json.Marshal(&spr)
 	eventDb.addStat(Event{
-		Type:  int(TypeStats),
-		Tag:   int(TagStakePoolReward),
+		Type:  TypeStats,
+		Tag:   TagStakePoolReward,
 		Index: spr.ProviderId,
 		Data:  string(data),
 	})

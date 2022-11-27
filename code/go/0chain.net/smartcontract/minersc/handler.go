@@ -41,7 +41,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/getNodepool", common.UserRateLimit(mrh.getNodePool)),
 		rest.MakeEndpoint(miner+"/getUserPools", common.UserRateLimit(mrh.getUserPools)),
 		rest.MakeEndpoint(miner+"/getMinerList", common.UserRateLimit(mrh.getMinerList)),
-		rest.MakeEndpoint(miner+"/get_miners_stats",common.UserRateLimit(mrh.getMinersStats)),
+		rest.MakeEndpoint(miner+"/get_miners_stats", common.UserRateLimit(mrh.getMinersStats)),
 		rest.MakeEndpoint(miner+"/get_miners_stake", common.UserRateLimit(mrh.getMinersStake)),
 		rest.MakeEndpoint(miner+"/getSharderList", common.UserRateLimit(mrh.getSharderList)),
 		rest.MakeEndpoint(miner+"/get_sharders_stats", common.UserRateLimit(mrh.getShardersStats)),
@@ -375,8 +375,8 @@ func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 	filter := event.Event{
 		BlockNumber: int64(blockNumber),
 		TxHash:      r.URL.Query().Get("tx_hash"),
-		Type:        eventType,
-		Tag:         eventTag,
+		Type:        event.EventType(eventType),
+		Tag:         event.EventTag(eventTag),
 	}
 	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {

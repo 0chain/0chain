@@ -20,7 +20,7 @@ func AddMockEvents(eventDb *event.EventDb) {
 				event := event.Event{
 					BlockNumber: block_number,
 					TxHash:      GetMockTransactionHash(block_number, i),
-					Type:        int(event.TypeStats),
+					Type:        event.TypeStats,
 					Tag:         3,
 					Index:       "mock index",
 					Data:        "mock data",

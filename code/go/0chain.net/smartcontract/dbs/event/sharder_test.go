@@ -163,8 +163,8 @@ func TestSharders(t *testing.T) {
 	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteSharder),
+		Type:        TypeStats,
+		Tag:         TagAddOrOverwriteSharder,
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
@@ -184,8 +184,8 @@ func TestSharders(t *testing.T) {
 	eventAddOrOverwriteSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteSharder),
+		Type:        TypeStats,
+		Tag:         TagAddOrOverwriteSharder,
 		Data:        string(data),
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10)
@@ -208,8 +208,8 @@ func TestSharders(t *testing.T) {
 	eventUpdateSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
-		Type:        int(TypeStats),
-		Tag:         int(TagUpdateSharder),
+		Type:        TypeStats,
+		Tag:         TagUpdateSharder,
 		Data:        string(data),
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
@@ -223,8 +223,8 @@ func TestSharders(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
-		Type:        int(TypeStats),
-		Tag:         int(TagDeleteSharder),
+		Type:        TypeStats,
+		Tag:         TagDeleteSharder,
 		Data:        sn.ID,
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)

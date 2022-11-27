@@ -33,7 +33,6 @@ func BenchmarkRestTests(
 	if err != nil {
 		panic(err)
 	}
-	common.ConfigRateLimits()
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
