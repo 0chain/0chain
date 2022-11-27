@@ -1743,6 +1743,71 @@ type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
 }
 
+type readMarkerResponse struct {
+	ID			  uint
+	CreatedAt	  time.Time
+	UpdatedAt	  time.Time
+	Timestamp     int64   `json:"timestamp"`
+	ReadCounter   int64   `json:"read_counter"`
+	ReadSize      float64 `json:"read_size"`
+	Signature     string  `json:"signature"`
+	PayerID       string  `json:"payer_id"`
+	AuthTicket    string  `json:"auth_ticket"`   //used in readmarkers
+	BlockNumber   int64   `json:"block_number"` //used in alloc_read_size
+	ClientID	  string  `json:"client_id"`
+	OwnerID	      string  `json:"owner_id"`
+	TransactionID string  `json:"transaction_id"`
+	AllocationID  string  `json:"allocation_id"`
+
+	// TODO: Decide which pieces of information are important to the response
+	// Client 		*event.User
+	// Owner		*event.User
+	// Allocation	*event.Allocation
+}
+
+func toReadMarkerResponse(rm event.ReadMarker) readMarkerResponse {
+	return readMarkerResponse{
+		ID: rm.ID,
+		CreatedAt: rm.CreatedAt,
+		UpdatedAt: rm.UpdatedAt,
+		Timestamp: rm.Timestamp,
+		ReadCounter: rm.ReadCounter,
+		ReadSize: rm.ReadSize,
+		Signature: rm.Signature,
+		PayerID: rm.PayerID,
+		AuthTicket: rm.AuthTicket,
+		BlockNumber: rm.BlockNumber,
+		ClientID: rm.ClientID,
+		OwnerID: rm.OwnerID,
+		TransactionID: rm.TransactionID,
+		AllocationID: rm.AllocationID,
+		
+		// Client: &event.User{
+		// 	// ID: rm.User.ID,
+		// 	UserID: rm.User.UserID,
+		// 	Balance: rm.User.Balance,
+		// 	Change: rm.User.Change,
+		// 	Round: rm.User.Round,
+		// 	Nonce: rm.User.Nonce,
+		// },
+
+		// Owner: &event.User{
+		// 	// ID: rm.User.ID,
+		// 	UserID: rm.User.UserID,
+		// 	Balance: rm.User.Balance,
+		// 	Change: rm.User.Change,
+		// 	Round: rm.User.Round,
+		// 	Nonce: rm.User.Nonce,
+		// },
+
+		// Allocation: &event.Allocation{
+		// 	AllocationID: rm.Allocation.AllocationID,
+		// 	AllocationName: rm.Allocation.AllocationName,
+		// 	TransactionID: rm.Allocation.TransactionID,
+		// }
+	}
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers readmarkers
 // Gets read markers according to a filter
 //
@@ -1805,7 +1870,12 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	common.Respond(w, r, readMarkers, nil)
+	rms := make([]readMarkerResponse, len(readMarkers))
+	for _, rm := range readMarkers {
+		rms = append(rms, toReadMarkerResponse(rm))
+	}
+
+	common.Respond(w, r, rms, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker latestreadmarker
