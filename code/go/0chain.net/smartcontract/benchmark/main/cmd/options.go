@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"0chain.net/core/common"
+
 	bk "0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"
 
@@ -39,6 +41,9 @@ func getTestSuites(
 		}
 		return suites
 	}
+
+	common.ConfigRateLimits()
+
 	for _, name := range bkNames {
 		if code, ok := bk.SourceCode[name]; ok {
 			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
