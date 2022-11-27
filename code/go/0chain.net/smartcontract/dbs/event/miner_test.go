@@ -170,7 +170,7 @@ func TestMiners(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddMn}
-	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10, nil)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 	time.Sleep(100 * time.Millisecond)
 	miner, err := eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -190,7 +190,7 @@ func TestMiners(t *testing.T) {
 		Tag:         TagAddOrOverwriteMiner,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn}, 100, "hash", 10, nil)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn}, 100, "hash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -214,7 +214,7 @@ func TestMiners(t *testing.T) {
 		Tag:         TagUpdateMiner,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateMn}, 100, "bhash", 10, nil)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateMn}, 100, "bhash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -229,7 +229,7 @@ func TestMiners(t *testing.T) {
 		Tag:         TagDeleteMiner,
 		Data:        mn.ID,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "bhash", 10, nil)
+	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "bhash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	assert.Error(t, err)

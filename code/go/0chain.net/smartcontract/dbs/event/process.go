@@ -1,7 +1,6 @@
 package event
 
 import (
-	"0chain.net/chaincore/config"
 	"errors"
 	"fmt"
 	"reflect"
@@ -24,12 +23,8 @@ func (edb *EventDb) ProcessEvents(
 	round int64,
 	block string,
 	blockSize int,
-	cfg config.ChainConfig,
 ) error {
 	ts := time.Now()
-	logging.Logger.Info("piers ProcessEvents",
-		zap.Any("round", round),
-		zap.Any("edb settings", edb.settings))
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
 		return err
