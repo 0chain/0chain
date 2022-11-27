@@ -72,7 +72,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	require.NoError(t, err)
 
 	bl := Blobber{
-		Provider: &Provider{ID: "provider_id",
+		Provider: Provider{ID: "provider_id",
 			Rewards: ProviderRewards{
 				ProviderID:   "provider_id",
 				Rewards:      11,

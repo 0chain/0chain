@@ -885,14 +885,14 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 			return nil, fmt.Errorf("can't find validator: %s", err.Error())
 		}
 
-		return stakepool.ToProviderStakePoolStats(miner.Provider, delegatePools)
+		return stakepool.ToProviderStakePoolStats(&miner.Provider, delegatePools)
 	case spenum.Sharder:
 		sharder, err := edb.GetSharder(providerID)
 		if err != nil {
 			return nil, fmt.Errorf("can't find validator: %s", err.Error())
 		}
 
-		return stakepool.ToProviderStakePoolStats(sharder.Provider, delegatePools)
+		return stakepool.ToProviderStakePoolStats(&sharder.Provider, delegatePools)
 	}
 
 	return nil, fmt.Errorf("unknown provider type")

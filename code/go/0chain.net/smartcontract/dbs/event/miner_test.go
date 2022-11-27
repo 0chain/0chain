@@ -92,7 +92,7 @@ func TestMiners(t *testing.T) {
 			ShortName: mn.ShortName,
 			BuildTag:  mn.BuildTag,
 			Delete:    mn.Delete,
-			Provider: &Provider{
+			Provider: Provider{
 				ID:             mn.ID,
 				TotalStake:     currency.Coin(mn.TotalStaked),
 				DelegateWallet: mn.DelegateWallet,
@@ -352,7 +352,7 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) {
 			ShortName: "localhost.m2",
 			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 			Delete:    false,
-			Provider: &Provider{
+			Provider: Provider{
 				ID:             fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
@@ -375,7 +375,7 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) {
 
 func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Miner{Active: i%2 == 0, Provider: &Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		s := Miner{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
 		err := eventDb.addOrOverwriteMiner([]Miner{s})
 		assert.NoError(t, err, "There should be no error")
 	}
@@ -392,7 +392,7 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 			ShortName: "localhost.m2",
 			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 			Delete:    false,
-			Provider: &Provider{
+			Provider: Provider{
 				ID:             fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
@@ -435,7 +435,7 @@ func (edb *EventDb) GetMinerPointer(id string) (*Miner, error) {
 	miner := &Miner{}
 	return miner, edb.Store.Get().
 		Model(&Miner{}).
-		Where(&Miner{Provider: &Provider{ID: id}}).
+		Where(&Miner{Provider: Provider{ID: id}}).
 		First(miner).Error
 }
 
@@ -449,7 +449,7 @@ func ReturnValue() Miner {
 		ShortName: "localhost.m2",
 		BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 		Delete:    false,
-		Provider: &Provider{
+		Provider: Provider{
 			ID:             "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
@@ -476,7 +476,7 @@ func ReturnPointer() *Miner {
 		ShortName: "localhost.m2",
 		BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 		Delete:    false,
-		Provider: &Provider{
+		Provider: Provider{
 			ID:             "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,

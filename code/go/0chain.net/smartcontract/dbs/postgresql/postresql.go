@@ -42,7 +42,7 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 	var sqldb *sql.DB
 	var err error
 
-	lgr := logger.Default.LogMode(logger.Info)
+	lgr := logger.Default.LogMode(logger.Silent)
 	if viper.GetBool("logging.verbose") {
 		lgr = logger.Default.LogMode(logger.Info)
 	}

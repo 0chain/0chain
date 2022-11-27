@@ -16,7 +16,7 @@ import (
 )
 
 type Sharder struct {
-	*Provider
+	Provider
 	N2NHost         string `gorm:"column:n2n_host"`
 	Host            string
 	Port            int
@@ -44,7 +44,7 @@ func (edb *EventDb) GetSharder(id string) (Sharder, error) {
 	return sharder, edb.Store.Get().
 		Preload("Rewards").
 		Model(&Sharder{}).
-		Where(&Sharder{Provider: &Provider{ID: id}}).
+		Where(&Sharder{Provider: Provider{ID: id}}).
 		First(&sharder).Error
 }
 
@@ -117,7 +117,7 @@ func (sh *Sharder) exists(edb *EventDb) (bool, error) {
 
 	result := edb.Get().
 		Model(&Sharder{}).
-		Where(&Sharder{Provider: &Provider{ID: sh.ID}}).
+		Where(&Sharder{Provider: Provider{ID: sh.ID}}).
 		Take(&sharder)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -186,7 +186,7 @@ func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagina
 
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
 
-	var sharder = Sharder{Provider: &Provider{ID: updates.Id}}
+	var sharder = Sharder{Provider: Provider{ID: updates.Id}}
 	exists, err := sharder.exists(edb)
 
 	if err != nil {
@@ -199,7 +199,7 @@ func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
 
 	result := edb.Store.Get().
 		Model(&Sharder{}).
-		Where(&Sharder{Provider: &Provider{ID: sharder.ID}}).
+		Where(&Sharder{Provider: Provider{ID: sharder.ID}}).
 		Updates(updates.Updates)
 
 	return result.Error
@@ -208,7 +208,7 @@ func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
 func (edb *EventDb) deleteSharder(id string) error {
 
 	result := edb.Store.Get().
-		Where(&Sharder{Provider: &Provider{ID: id}}).
+		Where(&Sharder{Provider: Provider{ID: id}}).
 		Delete(&Sharder{})
 
 	return result.Error
@@ -216,7 +216,7 @@ func (edb *EventDb) deleteSharder(id string) error {
 
 func NewUpdateSharderTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateSharderTotalStake, Sharder{
-		Provider: &Provider{
+		Provider: Provider{
 			ID:         ID,
 			TotalStake: totalStake,
 		},

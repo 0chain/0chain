@@ -15,7 +15,7 @@ import (
 )
 
 type Miner struct {
-	*Provider
+	Provider
 	N2NHost   string `gorm:"column:n2n_host"`
 	Host      string
 	Port      int
@@ -45,7 +45,7 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 	return miner, edb.Store.Get().
 		Preload("Rewards").
 		Model(&Miner{}).
-		Where(&Miner{Provider: &Provider{ID: id}}).
+		Where(&Miner{Provider: Provider{ID: id}}).
 		First(&miner).Error
 }
 
@@ -181,7 +181,7 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 
 	result := edb.Get().
 		Model(&Miner{}).
-		Where(&Miner{Provider: &Provider{ID: mn.ID}}).
+		Where(&Miner{Provider: Provider{ID: mn.ID}}).
 		Take(&miner)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -196,7 +196,7 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 
-	var miner = Miner{Provider: &Provider{ID: updates.Id}}
+	var miner = Miner{Provider: Provider{ID: updates.Id}}
 	exists, err := miner.exists(edb)
 
 	if err != nil {
@@ -209,7 +209,7 @@ func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 
 	result := edb.Store.Get().
 		Model(&Miner{}).
-		Where(&Miner{Provider: &Provider{ID: miner.ID}}).
+		Where(&Miner{Provider: Provider{ID: miner.ID}}).
 		Updates(updates.Updates)
 
 	return result.Error
@@ -218,7 +218,7 @@ func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 func (edb *EventDb) deleteMiner(id string) error {
 
 	result := edb.Store.Get().
-		Where(&Miner{Provider: &Provider{ID: id}}).
+		Where(&Miner{Provider: Provider{ID: id}}).
 		Delete(&Miner{})
 
 	return result.Error
@@ -226,7 +226,7 @@ func (edb *EventDb) deleteMiner(id string) error {
 
 func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateMinerTotalStake, Miner{
-		Provider: &Provider{
+		Provider: Provider{
 			ID:         ID,
 			TotalStake: totalStake,
 		},

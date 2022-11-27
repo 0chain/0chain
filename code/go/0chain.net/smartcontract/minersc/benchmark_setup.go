@@ -104,7 +104,7 @@ func AddMockNodes(
 
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
-					Provider: &event.Provider{
+					Provider: event.Provider{
 						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
@@ -119,7 +119,7 @@ func AddMockNodes(
 
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
-					Provider: &event.Provider{
+					Provider: event.Provider{
 						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,

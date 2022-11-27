@@ -46,7 +46,7 @@ func TestAuthorizers(t *testing.T) {
 		Latitude:        0.0,
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
-		Provider: &Provider{
+		Provider: Provider{
 			DelegateWallet: "delegate wallet",
 			MinStake:       currency.Coin(53),
 			MaxStake:       currency.Coin(57),
@@ -61,7 +61,7 @@ func TestAuthorizers(t *testing.T) {
 		Latitude:        1.0,
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),
-		Provider: &Provider{
+		Provider: Provider{
 			DelegateWallet: "delegate wallet",
 			MinStake:       currency.Coin(52),
 			MaxStake:       currency.Coin(57),

@@ -12,7 +12,7 @@ import (
 
 // swagger:model Validator
 type Validator struct {
-	*Provider
+	Provider
 	BaseUrl   string `json:"url"`
 	PublicKey string `json:"public_key"`
 
@@ -24,7 +24,7 @@ func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, er
 
 	result := edb.Store.Get().
 		Preload("Rewards").
-		Model(&Validator{}).Where(&Validator{Provider: &Provider{ID: validatorID}}).First(&vn)
+		Model(&Validator{}).Where(&Validator{Provider: Provider{ID: validatorID}}).First(&vn)
 
 	if result.Error != nil {
 		return vn, fmt.Errorf("error retrieving Validation node with ID %v; error: %v", validatorID, result.Error)
@@ -77,7 +77,7 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateValidatorStakeTotal, Validator{
-		Provider: &Provider{
+		Provider: Provider{
 			ID:         ID,
 			TotalStake: totalStake},
 	}

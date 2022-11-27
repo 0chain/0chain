@@ -26,7 +26,7 @@ func makeBlobberTotalStakeEvent(id string, totalStake currency.Coin) Event {
 		Tag:   TagUpdateBlobberTotalStake,
 		Index: id,
 		Data: Blobber{
-			Provider: &Provider{
+			Provider: Provider{
 				ID:         id,
 				TotalStake: totalStake,
 			},
@@ -40,7 +40,7 @@ func makeBlobberTotalOffersEvent(id string, totalOffers currency.Coin) Event {
 		Tag:   TagUpdateBlobberTotalOffers,
 		Index: id,
 		Data: Blobber{
-			Provider:    &Provider{ID: id},
+			Provider:    Provider{ID: id},
 			OffersTotal: totalOffers,
 		},
 	}
@@ -194,7 +194,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			events: []Event{makeBlobberTotalStakeEvent("b_1", 100)},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 100}},
+					"b_1": {Provider: Provider{ID: "b_1", TotalStake: 100}},
 				},
 			},
 		},
@@ -206,8 +206,8 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 100}},
-					"b_2": {Provider: &Provider{ID: "b_2", TotalStake: 200}},
+					"b_1": {Provider: Provider{ID: "b_1", TotalStake: 100}},
+					"b_2": {Provider: Provider{ID: "b_2", TotalStake: 200}},
 				},
 			},
 		},
@@ -219,7 +219,7 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 200}},
+					"b_1": {Provider: Provider{ID: "b_1", TotalStake: 200}},
 				},
 			},
 		},
@@ -233,9 +233,9 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 200}},
-					"b_2": {Provider: &Provider{ID: "b_2", TotalStake: 200}},
-					"b_3": {Provider: &Provider{ID: "b_3", TotalStake: 300}},
+					"b_1": {Provider: Provider{ID: "b_1", TotalStake: 200}},
+					"b_2": {Provider: Provider{ID: "b_2", TotalStake: 200}},
+					"b_3": {Provider: Provider{ID: "b_3", TotalStake: 300}},
 				},
 			},
 		},
@@ -251,9 +251,9 @@ func TestMergeBlobberTotalStakesEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1", TotalStake: 200}},
-					"b_2": {Provider: &Provider{ID: "b_2", TotalStake: 200}},
-					"b_3": {Provider: &Provider{ID: "b_3", TotalStake: 300}},
+					"b_1": {Provider: Provider{ID: "b_1", TotalStake: 200}},
+					"b_2": {Provider: Provider{ID: "b_2", TotalStake: 200}},
+					"b_3": {Provider: Provider{ID: "b_3", TotalStake: 300}},
 				},
 			},
 		},
@@ -317,7 +317,7 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 			events: []Event{makeBlobberTotalOffersEvent("b_1", 100)},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1"}, OffersTotal: 100},
+					"b_1": {Provider: Provider{ID: "b_1"}, OffersTotal: 100},
 				},
 			},
 		},
@@ -329,8 +329,8 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1"}, OffersTotal: 100},
-					"b_2": {Provider: &Provider{ID: "b_2"}, OffersTotal: 200},
+					"b_1": {Provider: Provider{ID: "b_1"}, OffersTotal: 100},
+					"b_2": {Provider: Provider{ID: "b_2"}, OffersTotal: 200},
 				},
 			},
 		},
@@ -342,7 +342,7 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1"}, OffersTotal: 200},
+					"b_1": {Provider: Provider{ID: "b_1"}, OffersTotal: 200},
 				},
 			},
 		},
@@ -356,9 +356,9 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1"}, OffersTotal: 200},
-					"b_2": {Provider: &Provider{ID: "b_2"}, OffersTotal: 200},
-					"b_3": {Provider: &Provider{ID: "b_3"}, OffersTotal: 300},
+					"b_1": {Provider: Provider{ID: "b_1"}, OffersTotal: 200},
+					"b_2": {Provider: Provider{ID: "b_2"}, OffersTotal: 200},
+					"b_3": {Provider: Provider{ID: "b_3"}, OffersTotal: 300},
 				},
 			},
 		},
@@ -374,9 +374,9 @@ func TestMergeBlobberTotalOffersEvents(t *testing.T) {
 			},
 			expect: expect{
 				blobbers: map[string]Blobber{
-					"b_1": {Provider: &Provider{ID: "b_1"}, OffersTotal: 200},
-					"b_2": {Provider: &Provider{ID: "b_2"}, OffersTotal: 200},
-					"b_3": {Provider: &Provider{ID: "b_3"}, OffersTotal: 300},
+					"b_1": {Provider: Provider{ID: "b_1"}, OffersTotal: 200},
+					"b_2": {Provider: Provider{ID: "b_2"}, OffersTotal: 200},
+					"b_3": {Provider: Provider{ID: "b_3"}, OffersTotal: 300},
 				},
 			},
 		},

@@ -79,7 +79,7 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 				ID:              authorizer.ID,
 				URL:             authorizer.URL,
 				LastHealthCheck: int64(common.Now()),
-				Provider: &event.Provider{
+				Provider: event.Provider{
 					DelegateWallet: clients[i],
 					MinStake:       settings.MinStake,
 					MaxStake:       settings.MaxStake,

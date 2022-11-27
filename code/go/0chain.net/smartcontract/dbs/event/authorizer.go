@@ -9,7 +9,7 @@ import (
 )
 
 type Authorizer struct {
-	*Provider
+	Provider
 
 	ID  string `json:"id" gorm:"uniqueIndex"`
 	URL string `json:"url"`
@@ -94,7 +94,7 @@ func (a *Authorizer) exists(edb *EventDb) (bool, error) {
 func NewUpdateAuthorizerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateAuthorizerTotalStake, Authorizer{
 		ID: ID,
-		Provider: &Provider{
+		Provider: Provider{
 			TotalStake: totalStake,
 		},
 	}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 
 	"golang.org/x/net/context"
@@ -72,7 +73,7 @@ func TestBlobbers(t *testing.T) {
 			Capacity:         sn.Capacity,
 			Allocated:        sn.Allocated,
 			LastHealthCheck:  int64(sn.LastHealthCheck),
-			Provider: &Provider{
+			Provider: Provider{
 				ID:             sn.ID,
 				DelegateWallet: sn.StakePoolSettings.DelegateWallet,
 				MinStake:       sn.StakePoolSettings.MaxStake,
@@ -289,34 +290,96 @@ func TestBlobberLatLong(t *testing.T) {
 func TestBlobberGetCount(t *testing.T) {
 	access := config.DbAccess{
 		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
+		Name:            "events_db",
+		User:            "zchain_user",
+		Password:        "zchian",
+		Host:            "localhost",
+		Port:            "5432",
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
 
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 	eventDb, err := NewEventDb(access)
 	if err != nil {
 		return
 	}
 	defer eventDb.Close()
+	eventDb.Drop()
 
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
-	defer eventDb.Drop()
+	//defer eventDb.Drop()
 
-	gotCount, err := eventDb.GetBlobberCount()
+	eventDb.addBlobbers([]Blobber{
+		{
+			Provider:            Provider{ID: "one"},
+			BaseURL:             "one.com",
+			Latitude:            0,
+			Longitude:           0,
+			ReadPrice:           0,
+			WritePrice:          0,
+			MinLockDemand:       0,
+			MaxOfferDuration:    0,
+			Capacity:            0,
+			Allocated:           0,
+			Used:                0,
+			LastHealthCheck:     0,
+			SavedData:           0,
+			ReadData:            0,
+			OffersTotal:         0,
+			TotalServiceCharge:  0,
+			Name:                "",
+			WebsiteUrl:          "",
+			LogoUrl:             "",
+			Description:         "",
+			ChallengesPassed:    0,
+			ChallengesCompleted: 0,
+			OpenChallenges:      0,
+			RankMetric:          0,
+			WriteMarkers:        nil,
+			ReadMarkers:         nil,
+			CreationRound:       0,
+			InactiveRounds:      0,
+		}, {
+			Provider:            Provider{ID: "two"},
+			BaseURL:             "two.com",
+			Latitude:            0,
+			Longitude:           0,
+			ReadPrice:           0,
+			WritePrice:          0,
+			MinLockDemand:       0,
+			MaxOfferDuration:    0,
+			Capacity:            0,
+			Allocated:           0,
+			Used:                0,
+			LastHealthCheck:     0,
+			SavedData:           0,
+			ReadData:            0,
+			OffersTotal:         0,
+			TotalServiceCharge:  0,
+			Name:                "",
+			WebsiteUrl:          "",
+			LogoUrl:             "",
+			Description:         "",
+			ChallengesPassed:    0,
+			ChallengesCompleted: 0,
+			OpenChallenges:      0,
+			RankMetric:          0,
+			WriteMarkers:        nil,
+			ReadMarkers:         nil,
+			CreationRound:       0,
+			InactiveRounds:      0,
+		},
+	})
+	gotCount, err := eventDb.GetBlobbers(common2.Pagination{Limit: 10})
 	require.NoError(t, err, "Error should not be present")
 	require.Equal(t, int64(0), gotCount, "Blobber count not working")
 
 	setUpBlobbers(t, eventDb)
 
-	gotCount, err = eventDb.GetBlobberCount()
+	//gotCount, err = eventDb.GetBlobberCount()
 	require.NoError(t, err, "Error should not be present")
 	require.Equal(t, int64(10), gotCount, "Blobber Count should be 10")
 }
@@ -324,7 +387,7 @@ func TestBlobberGetCount(t *testing.T) {
 func setUpBlobbers(t *testing.T, eventDb *EventDb) {
 	for i := 0; i < 10; i++ {
 		res := eventDb.Store.Get().Create(&Blobber{
-			Provider: &Provider{ID: fmt.Sprintf("somethingNew_%v", i)},
+			Provider: Provider{ID: fmt.Sprintf("somethingNew_%v", i)},
 		})
 		if res.Error != nil {
 			t.Errorf("Error while inserting blobber %v", i)

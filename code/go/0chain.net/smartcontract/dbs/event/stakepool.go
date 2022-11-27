@@ -26,7 +26,7 @@ type Provider struct {
 	ServiceCharge  float64         `json:"service_charge"`
 	UnstakeTotal   currency.Coin   `json:"unstake_total"`
 	TotalStake     currency.Coin   `json:"total_stake"`
-	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ID;references:ProviderID"`
+	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID;"`
 }
 
 type providerRewardsDelegates struct {
@@ -218,13 +218,13 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: un
 	var provider interface{}
 	switch spenum.Provider(spu.ProviderType) {
 	case spenum.Blobber:
-		provider = &Blobber{Provider: &Provider{ID: spu.ProviderId}}
+		provider = &Blobber{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Validator:
-		provider = &Validator{Provider: &Provider{ID: spu.ProviderId}}
+		provider = &Validator{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Miner:
-		provider = &Miner{Provider: &Provider{ID: spu.ProviderId}}
+		provider = &Miner{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Sharder:
-		provider = &Sharder{Provider: &Provider{ID: spu.ProviderId}}
+		provider = &Sharder{Provider: Provider{ID: spu.ProviderId}}
 	default:
 		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
 	}

@@ -42,7 +42,7 @@ func TestValidatorNode(t *testing.T) {
 
 	vn := Validator{
 		BaseUrl: "http://localhost:8080",
-		Provider: &Provider{
+		Provider: Provider{
 			ID:         encryption.Hash("mockValidator_" + strconv.Itoa(0)),
 			TotalStake: 100,
 

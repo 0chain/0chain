@@ -61,7 +61,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		ShortName: mn.ShortName,
 		BuildTag:  mn.BuildTag,
 		Delete:    mn.Delete,
-		Provider: &event.Provider{
+		Provider: event.Provider{
 			ID:             mn.ID,
 			TotalStake:     mn.TotalStaked,
 			DelegateWallet: mn.Settings.DelegateWallet,

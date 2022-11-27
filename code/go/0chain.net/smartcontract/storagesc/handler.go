@@ -1211,14 +1211,14 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 			return nil, fmt.Errorf("can't find validator: %s", err.Error())
 		}
 
-		return stakepool.ToProviderStakePoolStats(blobber.Provider, delegatePools)
+		return stakepool.ToProviderStakePoolStats(&blobber.Provider, delegatePools)
 	case spenum.Validator:
 		validator, err := edb.GetValidatorByValidatorID(providerID)
 		if err != nil {
 			return nil, fmt.Errorf("can't find validator: %s", err.Error())
 		}
 
-		return stakepool.ToProviderStakePoolStats(validator.Provider, delegatePools)
+		return stakepool.ToProviderStakePoolStats(&validator.Provider, delegatePools)
 	}
 
 	return nil, fmt.Errorf("unknown provider type")

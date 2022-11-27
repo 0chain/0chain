@@ -19,7 +19,7 @@ import (
 const ActiveBlobbersTimeLimit = 5 * time.Minute // 5 Minutes
 
 type Blobber struct {
-	*Provider
+	Provider
 	BaseURL string `json:"url" gorm:"uniqueIndex"`
 
 	// geolocation
@@ -114,7 +114,7 @@ func (edb *EventDb) TotalUsedData() (int64, error) {
 func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().
-		Preload("Rewards").
+		//Preload("Rewards").
 		Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
@@ -127,7 +127,7 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination) ([]Blobber, erro
 	now := common.Now()
 	var blobbers []Blobber
 	result := edb.Store.Get().
-		Preload("Rewards").
+		//Preload("Rewards").
 		Model(&Blobber{}).Offset(limit.Offset).
 		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix()).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
@@ -265,7 +265,7 @@ func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
 
 func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateBlobberTotalStake, Blobber{
-		Provider: &Provider{
+		Provider: Provider{
 			ID:         ID,
 			TotalStake: totalStake,
 		},
@@ -274,7 +274,7 @@ func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 
 func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateBlobberTotalOffers, Blobber{
-		Provider:    &Provider{ID: ID},
+		Provider:    Provider{ID: ID},
 		OffersTotal: totalOffers,
 	}
 }

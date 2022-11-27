@@ -90,7 +90,7 @@ func TestSharders(t *testing.T) {
 			ShortName: sn.ShortName,
 			BuildTag:  sn.BuildTag,
 			Delete:    sn.Delete,
-			Provider: &Provider{
+			Provider: Provider{
 				ID:             sn.ID,
 				TotalStake:     currency.Coin(sn.TotalStaked),
 				DelegateWallet: sn.DelegateWallet,
@@ -343,7 +343,7 @@ func TestGetSharderLocations(t *testing.T) {
 
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Sharder{Active: i%2 == 0, Provider: &Provider{ID: fmt.Sprintf("%d", i)}}
+		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}}
 		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
@@ -351,7 +351,7 @@ func createSharders(t *testing.T, eventDb *EventDb, count int) {
 
 func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Sharder{Active: i%2 == 0, Provider: &Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
 		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}

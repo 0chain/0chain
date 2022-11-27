@@ -46,7 +46,7 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 
 	data := &event.Validator{
 		BaseUrl: vn.BaseURL,
-		Provider: &event.Provider{
+		Provider: event.Provider{
 			ID:             vn.ID,
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,
@@ -71,7 +71,7 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 	logging.Logger.Info("emitting validator add or overwrite event")
 	data := &event.Validator{
 		BaseUrl: vn.BaseURL,
-		Provider: &event.Provider{
+		Provider: event.Provider{
 			ID:             vn.ID,
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,

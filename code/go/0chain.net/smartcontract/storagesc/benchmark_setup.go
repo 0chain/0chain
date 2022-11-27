@@ -407,7 +407,7 @@ func AddMockBlobbers(
 				Allocated:        blobber.Allocated,
 				ReadData:         blobber.Allocated * 2,
 				LastHealthCheck:  int64(blobber.LastHealthCheck),
-				Provider: &event.Provider{
+				Provider: event.Provider{
 					ID:             blobber.ID,
 					DelegateWallet: blobber.StakePoolSettings.DelegateWallet,
 					MinStake:       blobber.StakePoolSettings.MinStake,
@@ -546,7 +546,7 @@ func AddMockValidators(
 			validators := event.Validator{
 
 				BaseUrl: validator.BaseURL,
-				Provider: &event.Provider{
+				Provider: event.Provider{
 					ID:             validator.ID,
 					DelegateWallet: validator.StakePoolSettings.DelegateWallet,
 					MinStake:       validator.StakePoolSettings.MaxStake,

@@ -86,7 +86,7 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	}
 
 	b := event.Blobber{
-		Provider:            &event.Provider{ID: sc.BlobberID},
+		Provider:            event.Provider{ID: sc.BlobberID},
 		ChallengesCompleted: 1,
 	}
 
