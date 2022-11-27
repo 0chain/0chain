@@ -16,7 +16,7 @@ import (
 )
 
 type Provider struct {
-	ID             string `gorm:"primarykey"`
+	ID             string `gorm:"primaryKey"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DelegateWallet string          `json:"delegate_wallet"`
