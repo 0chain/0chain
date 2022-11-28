@@ -1,6 +1,7 @@
 package blockstore
 
 import (
+	"bytes"
 	"container/list"
 	"crypto/rand"
 	"os"
@@ -16,6 +17,21 @@ import (
 
 func init() {
 	logging.InitLogging("debug", ".")
+}
+
+func TestInitCache(t *testing.T) {
+	config := `
+cache:
+	path: "/path/to/cache"
+	size: 1024*1024*1024
+`
+	err := viper.ReadConfig(bytes.NewReader([]byte(config)))
+	require.NoError(t, err)
+
+	require.NotPanics(t, func() {
+		initCache(viper.Sub("cache"))
+	})
+
 }
 
 func TestLRUAdd(t *testing.T) {
