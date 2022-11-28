@@ -123,7 +123,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 	//}
 	//logging.Logger.Debug("blobber_snapshot", zap.Int("total_old_blobbers", len(oldBlobbers)))
 
-	oldBlobbers := make(map[string]BlobberSnapshot)
 	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
 		//old, found := oldBlobbers[current.ID]
