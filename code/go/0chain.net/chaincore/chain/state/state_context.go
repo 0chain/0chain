@@ -511,8 +511,7 @@ func (sc *StateContext) SetConfig(smartcontract string, config SCConfig) error {
 	case "zcnsc":
 		sc.zcnscConfig = &config
 	default:
-		return nil
-		// return errors.New("smartcontract not found")
+		return errors.New("smartcontract not found")
 	}
 	return nil
 }
