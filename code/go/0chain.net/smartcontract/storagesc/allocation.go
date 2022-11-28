@@ -1132,6 +1132,14 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
+	if t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner {
+		// error if changing any other field than expiration or size
+		if len(request.Name) > 0 || request.SetImmutable || request.UpdateTerms || len(request.AddBlobberId) > 0 || len(request.RemoveBlobberId) > 0 || request.ThirdPartyExtendable || request.SetImmutable || request.FileOptions != 0 {
+			return "", common.NewError("allocation_updating_failed",
+				"only owner can update the allocation")
+		}
+	}
+
 	if err = request.validate(conf, alloc); err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
