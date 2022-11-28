@@ -1,10 +1,13 @@
 package chain
 
 import (
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"container/ring"
 	"context"
 	"errors"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"math"
 	"path/filepath"
 	"sort"
@@ -572,6 +575,10 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
 	}
 
+	if err := c.addInitialStakes(pmt, initStates.Stakes); err != nil {
+		logging.Logger.Panic("init stake failed", zap.Error(err))
+	}
+
 	stateCtx := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(stateCtx)
 
@@ -610,6 +617,69 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	}
 	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func (c *Chain) addInitialStakes(mpt *util.MerklePatriciaTrie, stakes []state.InitStake) error {
+	var edbDelegatePools []event.DelegatePool
+	for _, v := range stakes {
+		key := v.ProviderType + ":stakepool:" + v.ProviderID
+		sp := stakepool.StakePool{}
+		if err := mpt.GetNodeValue(util.Path(encryption.Hash(key)), &sp); err != nil {
+			if err != util.ErrValueNotPresent {
+				continue
+			}
+			sp.Pools = map[string]*stakepool.DelegatePool{}
+		}
+
+		_, ok := sp.Pools[v.ClientID]
+		if ok {
+			continue
+		}
+
+		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
+			Balance:      v.Tokens,
+			Reward:       0,
+			Status:       0,
+			DelegateID:   v.ClientID,
+			RoundCreated: 0,
+			StakedAt:     common.Timestamp(time.Now().UTC().Unix()),
+		}
+
+		edbDelegatePools = append(edbDelegatePools, event.DelegatePool{
+			PoolID:       v.ClientID,
+			ProviderType: int(spenum.ToProviderID(v.ProviderType)),
+			ProviderID:   v.ProviderID,
+			DelegateID:   v.ClientID,
+			Balance:      v.Tokens,
+			Status:       0,
+			RoundCreated: 0,
+		})
+
+		if _, err := mpt.Insert(util.Path(encryption.Hash(key)), &sp); err != nil {
+			logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
+			return err
+		}
+
+		logging.Logger.Debug("init stake", zap.String("sc ID", v.ProviderID), zap.Any("tokens", v.Tokens))
+	}
+
+	if c.EventDb == nil {
+		return nil
+	}
+
+	if len(edbDelegatePools) == 0 {
+		return nil
+	}
+
+	err := c.EventDb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "pool_id"}, {Name: "provider_type"}, {Name: "provider_id"}},
+		UpdateAll: true,
+	}).Create(&edbDelegatePools).Error
+	if err != nil {
+		return fmt.Errorf("creating delegatePools in eventDB from initStakes failed: %s", err.Error())
+	}
+
+	return nil
 }
 
 func mustInitPartitions(state cstate.StateContextI) {

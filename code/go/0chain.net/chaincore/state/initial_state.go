@@ -12,12 +12,20 @@ import (
 // InitStates is a slice of InitState used for all the initial states in the genesis block.
 type InitStates struct {
 	States []InitState `yaml:"initialStates"`
+	Stakes []InitStake `yaml:"initialStakes"`
 }
 
 // InitState is a clients initial state in the genesis block.
 type InitState struct {
 	ID     datastore.Key `yaml:"id"`
 	Tokens currency.Coin `yaml:"tokens"`
+}
+
+type InitStake struct {
+	ProviderID   datastore.Key `yaml:"provider_id"`
+	ProviderType datastore.Key `yaml:"provider_type"`
+	ClientID     datastore.Key `yaml:"client_id"`
+	Tokens       currency.Coin `yaml:"tokens"`
 }
 
 // NewInitStates is used to return a new InitStates.
