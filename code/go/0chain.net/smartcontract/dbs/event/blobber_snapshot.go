@@ -2,6 +2,8 @@ package event
 
 import (
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 // swagger:model BlobberSnapshot
@@ -34,13 +36,15 @@ func (edb *EventDb) getBlobberSnapshots(limit, offset int64) (map[string]Blobber
 	}
 
 	var mapSnapshots = make(map[string]BlobberSnapshot, len(snapshots))
+	logging.Logger.Debug("get_blobber_snapshot", zap.Int("snapshots selected", len(snapshots)))
+	logging.Logger.Debug("get_blobber_snapshot", zap.Int64("snapshots rows selected", result.RowsAffected))
 
 	for _, snapshot := range snapshots {
 		mapSnapshots[snapshot.BlobberID] = snapshot
 	}
 
 	result = edb.Store.Get().Where("blobber_id IN (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&BlobberSnapshot{})
-
+	logging.Logger.Debug("get_blobber_snapshot", zap.Int64("deleted rows", result.RowsAffected))
 	return mapSnapshots, result.Error
 }
 

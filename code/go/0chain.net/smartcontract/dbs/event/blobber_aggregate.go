@@ -116,24 +116,23 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		}
 	}
 
-	//oldBlobbers, err := edb.getBlobberSnapshots(limit, offset)
-	//if err != nil {
-	//	logging.Logger.Error("getting blobber snapshots", zap.Error(err))
-	//	return
-	//}
-	//logging.Logger.Debug("blobber_snapshot", zap.Int("total_old_blobbers", len(oldBlobbers)))
+	oldBlobbers, err := edb.getBlobberSnapshots(limit, offset)
+	if err != nil {
+		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
+		return
+	}
+	logging.Logger.Debug("blobber_snapshot", zap.Int("total_old_blobbers", len(oldBlobbers)))
 
 	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
-		//old, found := oldBlobbers[current.ID]
-		//if !found {
-		//	continue
-		//}
+		old, found := oldBlobbers[current.ID]
+		if !found {
+			continue
+		}
 		aggregate := BlobberAggregate{
 			Round:     round,
 			BlobberID: current.ID,
 		}
-		old := current
 		aggregate.WritePrice = (old.WritePrice + current.WritePrice) / 2
 		aggregate.Capacity = (old.Capacity + current.Capacity) / 2
 		aggregate.Allocated = (old.Allocated + current.Allocated) / 2
