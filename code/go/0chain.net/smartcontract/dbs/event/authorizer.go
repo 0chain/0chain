@@ -108,12 +108,5 @@ func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error 
 }
 
 func mergeUpdateAuthorizerTotalStakesEvents() *eventsMergerImpl[Authorizer] {
-	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalStake, withAuthorizerTotalStakesAdded())
-}
-
-func withAuthorizerTotalStakesAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Authorizer) (*Authorizer, error) {
-		//use the newer one
-		return b, nil
-	})
+	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalStake, withUniqueEventOverwrite())
 }

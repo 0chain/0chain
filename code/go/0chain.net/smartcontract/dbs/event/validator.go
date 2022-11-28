@@ -95,13 +95,6 @@ func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidator, withUniqueEventOverwrite())
 }
 
-func withValidatorTotalStakesAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Validator) (*Validator, error) {
-		//use the newer one
-		return b, nil
-	})
-}
-
 func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
-	return newEventsMerger[Validator](TagUpdateValidatorStakeTotal, withValidatorTotalStakesAdded())
+	return newEventsMerger[Validator](TagUpdateValidatorStakeTotal, withUniqueEventOverwrite())
 }

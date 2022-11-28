@@ -231,12 +231,5 @@ func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
 }
 
 func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
-	return newEventsMerger[Sharder](TagUpdateSharderTotalStake, withSharderTotalStakesAdded())
-}
-
-func withSharderTotalStakesAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Sharder) (*Sharder, error) {
-		//use the newer one
-		return b, nil
-	})
+	return newEventsMerger[Sharder](TagUpdateSharderTotalStake, withUniqueEventOverwrite())
 }

@@ -241,12 +241,5 @@ func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
 }
 
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
-	return newEventsMerger[Miner](TagUpdateMinerTotalStake, withMinerTotalStakesAdded())
-}
-
-func withMinerTotalStakesAdded() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Miner) (*Miner, error) {
-		//use the newer one
-		return b, nil
-	})
+	return newEventsMerger[Miner](TagUpdateMinerTotalStake, withUniqueEventOverwrite())
 }
