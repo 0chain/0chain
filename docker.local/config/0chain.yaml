@@ -234,7 +234,6 @@ storage:
         allowed_block_numbers: 10^3
         allowed_block_size: 500 # In GB
       - path: "/path/to/another/hot/blocks"
-        recovery: false
         size_to_maintain: 1 # In GB
         inodes_to_maintain: 5 # In percent
         allowed_block_numbers: 10^3

@@ -18,7 +18,7 @@ const (
 	Timeout = time.Minute
 )
 
-var coldStoragesMap map[string]*minioClient
+var coldStoragesMap map[string]coldStorageProvider
 
 type selectedColdStorage struct {
 	coldStorage coldStorageProvider
@@ -263,7 +263,7 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 	cTier.StorageSelectorChan = storageSelectorChan
 
 	logging.Logger.Info("Selecting first cold storage")
-	go cTier.SelectNextStorage(cTier.ColdStorages, cTier.PrevInd)
+	go cTier.SelectNextStorage(cTier.ColdStorages, -1)
 
 	return cTier
 }
@@ -271,7 +271,7 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 func startCloudStorages(cloudStorages []map[string]interface{},
 	cTier *coldTier, shouldDelete bool) {
 
-	coldStoragesMap = make(map[string]*minioClient)
+	coldStoragesMap = make(map[string]coldStorageProvider)
 
 	wg := &sync.WaitGroup{}
 	coldMu := &sync.Mutex{}

@@ -610,7 +610,7 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 		volumesMap[vol.Path] = vol
 	}
 
-	go dTier.SelectNextVolume(dTier.Volumes, dTier.PrevVolInd)
+	go dTier.SelectNextVolume(dTier.Volumes, -1)
 
 	return &dTier
 }
