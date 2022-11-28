@@ -290,11 +290,11 @@ func TestBlobberLatLong(t *testing.T) {
 func TestBlobberGetCount(t *testing.T) {
 	access := config.DbAccess{
 		Enabled:         true,
-		Name:            "events_db",
-		User:            "zchain_user",
-		Password:        "zchian",
-		Host:            "localhost",
-		Port:            "5432",
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,

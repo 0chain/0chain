@@ -11,7 +11,6 @@ import (
 type Authorizer struct {
 	Provider
 
-	ID  string `json:"id" gorm:"uniqueIndex"`
 	URL string `json:"url"`
 
 	// Configuration
@@ -45,7 +44,7 @@ func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 
 	result := edb.Store.Get().
 		Model(&Authorizer{}).
-		Where(&Authorizer{ID: id}).
+		Where(&Authorizer{Provider: Provider{ID: id}}).
 		First(&auth)
 
 	if result.Error != nil {
@@ -78,7 +77,7 @@ func (a *Authorizer) exists(edb *EventDb) (bool, error) {
 
 	result := edb.Get().
 		Model(&Authorizer{}).
-		Where(&Authorizer{ID: a.ID}).
+		Where(&Authorizer{Provider: Provider{ID: a.ID}}).
 		Count(&count)
 
 	if result.Error != nil {
@@ -93,8 +92,8 @@ func (a *Authorizer) exists(edb *EventDb) (bool, error) {
 
 func NewUpdateAuthorizerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateAuthorizerTotalStake, Authorizer{
-		ID: ID,
 		Provider: Provider{
+			ID:         ID,
 			TotalStake: totalStake,
 		},
 	}

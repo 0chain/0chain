@@ -41,12 +41,12 @@ func TestAuthorizers(t *testing.T) {
 	require.NoError(t, err)
 
 	authorizer_1 := Authorizer{
-		ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 		URL:             "http://localhost:8080",
 		Latitude:        0.0,
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
 		Provider: Provider{
+			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 			DelegateWallet: "delegate wallet",
 			MinStake:       currency.Coin(53),
 			MaxStake:       currency.Coin(57),
@@ -56,12 +56,12 @@ func TestAuthorizers(t *testing.T) {
 	}
 
 	authorizer_2 := Authorizer{
-		ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 		URL:             "http://localhost:8888",
 		Latitude:        1.0,
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),
 		Provider: Provider{
+			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 			DelegateWallet: "delegate wallet",
 			MinStake:       currency.Coin(52),
 			MaxStake:       currency.Coin(57),
