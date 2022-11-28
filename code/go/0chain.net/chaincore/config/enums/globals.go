@@ -155,6 +155,7 @@ func initGlobalSettingNames() {
 	GlobalSettingName[BlockMaxByteSize] = "server_chain.block.max_byte_size"
 	GlobalSettingName[BlockReplicators] = "server_chain.block.replicators"
 	GlobalSettingName[BlockGenerationTimout] = "server_chain.block.generation.timeout"
+
 	GlobalSettingName[BlockGenerationRetryWaitTime] = "server_chain.block.generation.retry_wait_time"
 	GlobalSettingName[BlockProposalMaxWaitTime] = "server_chain.block.proposal.max_wait_time"
 	GlobalSettingName[BlockProposalWaitMode] = "server_chain.block.proposal.wait_mode"
