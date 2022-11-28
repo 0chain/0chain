@@ -27,7 +27,7 @@ simulation:
 options:
   verbose: true
   test_suites:
-    #- "miner"
+    - "miner"
     - "miner_rest"
     - "storage_rest"
   omitted_tests:
