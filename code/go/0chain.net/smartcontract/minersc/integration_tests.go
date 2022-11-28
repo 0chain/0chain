@@ -73,7 +73,7 @@ func (msc *MinerSmartContract) AddMinerIntegrationTests(
 	ame.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
 	ame.Miner = state.Name(crpc.NodeID(mn.SimpleNode.ID))
 
-	if ame.Miner != crpc.NodeName("") {
+	if ame.Miner == crpc.NodeName("") {
 		return
 	}
 
