@@ -15,8 +15,6 @@ type Validator struct {
 	Provider
 	BaseUrl   string `json:"url"`
 	PublicKey string `json:"public_key"`
-
-	ServiceCharge float64 `json:"service_charge"`
 }
 
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
