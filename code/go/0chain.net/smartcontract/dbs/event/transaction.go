@@ -60,8 +60,6 @@ func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagin
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Preload("ReadMarkers").
-		Preload("WriteMarker").
 		Where(Transaction{ClientId: clientID}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
@@ -79,8 +77,6 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Preload("ReadMarkers").
-		Preload("WriteMarker").
 		Where(Transaction{ToClientId: toClientID}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
@@ -96,8 +92,6 @@ func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit common.Pag
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Preload("ReadMarkers").
-		Preload("WriteMarker").
 		Where(Transaction{BlockHash: blockHash}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
@@ -111,8 +105,6 @@ func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, err
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Preload("ReadMarkers").
-		Preload("WriteMarker").
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
@@ -128,8 +120,6 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 	tr := []Transaction{}
 	res := edb.Store.Get().
 		Model(&Transaction{}).
-		Preload("ReadMarkers").
-		Preload("WriteMarker").
 		Where("round >= ? AND round < ?", blockStart, blockEnd).
 		Offset(limit.Limit).
 		Limit(limit.Offset).
