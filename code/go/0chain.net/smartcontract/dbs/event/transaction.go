@@ -29,8 +29,8 @@ type Transaction struct {
 	Status            int           `json:"status"`
 
 	//ref
-	ReadMarkers []ReadMarker  `gorm:"foreignKey:TransactionID;references:Hash"`
-	WriteMarker []WriteMarker `gorm:"foreignKey:TransactionID;references:Hash"`
+	ReadMarkers []ReadMarker  `json:"-" gorm:"foreignKey:TransactionID;references:Hash"`
+	WriteMarker []WriteMarker `json:"-" gorm:"foreignKey:TransactionID;references:Hash"`
 }
 
 func (edb *EventDb) addTransactions(txns []Transaction) error {
@@ -47,17 +47,6 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Preload("ReadMarkers").
-		Preload("ReadMarkers.User").
-		Preload("ReadMarkers.Owner").
-		Preload("ReadMarkers.Allocation").
-		Preload("ReadMarkers.Allocation.User").
-		Preload("ReadMarkers.Allocation.Terms").
-		Preload("WriteMarker").
-		Preload("WriteMarker.User").
-		Preload("WriteMarker.Allocation").
-		Preload("WriteMarker.Allocation.User").
-		Preload("WriteMarker.Allocation.Terms").
 		Where(Transaction{Hash: hash}).
 		First(&tr)
 	return tr, res.Error
