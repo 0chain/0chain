@@ -85,6 +85,10 @@ func SetupDefaultConfig() {
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
 
 	viper.SetDefault("smart_contracts.storagesc.max_blobbers_per_allocation", 40)
+
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregateDebug], false)
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregatePeriod], 10)
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregatePageLimit], 50)
 }
 
 // SetupConfig setups the main configuration system.
