@@ -208,8 +208,9 @@ type Chain struct {
 }
 
 type syncPathNodes struct {
-	round int64
-	path  util.Path
+	round  int64
+	keys   []util.Key
+	replyC []chan struct{}
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
