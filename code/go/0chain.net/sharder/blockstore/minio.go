@@ -263,7 +263,7 @@ func initCold(cViper *viper.Viper, mode string) *coldTier {
 	cTier.StorageSelectorChan = storageSelectorChan
 
 	logging.Logger.Info("Selecting first cold storage")
-	go cTier.SelectNextStorage(cTier.ColdStorages, -1)
+	go cTier.SelectNextStorage(cTier.ColdStorages, cTier.PrevInd)
 
 	return cTier
 }
