@@ -76,6 +76,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber-challenges", common.UserRateLimit(srh.getBlobberChallenges)),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", common.UserRateLimit(srh.getStakePoolStat)),
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", common.UserRateLimit(srh.getUserStakePoolStat)),
+		rest.MakeEndpoint(storage+"/getUserLockedTotal", common.UserRateLimit(srh.getUserLockedTotal)),
 		rest.MakeEndpoint(storage+"/block", common.UserRateLimit(srh.getBlock)),
 		rest.MakeEndpoint(storage+"/get_blocks", common.UserRateLimit(srh.getBlocks)),
 		rest.MakeEndpoint(storage+"/total-stored-data", common.UserRateLimit(srh.getTotalData)),
@@ -1148,6 +1149,38 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	}
 
 	common.Respond(w, r, ups, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal getUserLockedTotal
+// Gets statistic for a user's stake pools
+//
+// parameters:
+//
+//	+name: client_id
+//	 description: client for which to get stake pool information
+//	 required: true
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: string
+//	400:
+func (srh *StorageRestHandler) getUserLockedTotal(w http.ResponseWriter, r *http.Request) {
+	clientID := r.URL.Query().Get("client_id")
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	locked, err := edb.GetUserTotalLocked(clientID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, locked, nil)
+
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
