@@ -149,6 +149,15 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}
 
+	// if edb.Debug() {
+	if err := edb.insertProviderReward(spus, round); err != nil {
+		return err
+	}
+	if err := edb.insertDelegateReward(spus, round); err != nil {
+		return err
+	}
+	// }
+
 	return nil
 }
 

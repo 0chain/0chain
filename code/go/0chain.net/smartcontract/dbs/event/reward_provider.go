@@ -13,7 +13,7 @@ type RewardProvider struct {
 	gorm.Model
 	Amount      currency.Coin `json:"amount"`
 	BlockNumber int64         `json:"block_number" gorm:"index:idx_block,priority:1"`
-	Provider    string        `json:"provider" gorm:"index:idx_provider,priority:2"`
+	ProviderId  string        `json:"provider_id" gorm:"index:idx_provider,priority:2"`
 	RewardType  spenum.Reward `json:"reward_type" gorm:"index:idx_reward_type,priority:3"`
 }
 
@@ -26,7 +26,7 @@ func (edb *EventDb) insertProviderReward(updates []dbs.StakePoolReward, round in
 		pr := RewardProvider{
 			Amount:      sp.Reward,
 			BlockNumber: round,
-			Provider:    sp.ProviderId,
+			ProviderId:  sp.ProviderId,
 			RewardType:  sp.RewardType,
 		}
 		prs = append(prs, pr)
