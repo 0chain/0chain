@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/config/enums"
+	"0chain.net/smartcontract/minersc/enums"
 
 	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/currency"

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/config/enums"
+	"0chain.net/smartcontract/minersc/enums"
 
 	"github.com/0chain/common/core/currency"
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"0chain.net/chaincore/config/enums"
+	"0chain.net/smartcontract/minersc/enums"
 
 	"0chain.net/smartcontract"
 
