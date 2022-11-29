@@ -48,7 +48,16 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 		Get().
 		Model(&Transaction{}).
 		Preload("ReadMarkers").
+		Preload("ReadMarkers.User").
+		Preload("ReadMarkers.Owner").
+		Preload("ReadMarkers.Allocation").
+		Preload("ReadMarkers.Allocation.User").
+		Preload("ReadMarkers.Allocation.Terms").
 		Preload("WriteMarker").
+		Preload("WriteMarker.User").
+		Preload("WriteMarker.Allocation").
+		Preload("WriteMarker.Allocation.User").
+		Preload("WriteMarker.Allocation.Terms").
 		Where(Transaction{Hash: hash}).
 		First(&tr)
 	return tr, res.Error

@@ -11,7 +11,6 @@ import (
 
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
-	"gorm.io/gorm"
 
 	"github.com/0chain/common/core/currency"
 
@@ -2426,158 +2425,6 @@ func (srh *StorageRestHandler) getTransactionHashesByFilter(w http.ResponseWrite
 	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
 }
 
-type ReadMarkerWithoutRelations struct {
-	ID        	  uint
-	CreatedAt 	  time.Time
-	UpdatedAt 	  time.Time
-	DeletedAt	  gorm.DeletedAt
-	ClientID      string  `json:"client_id"`
-	BlobberID     string  `json:"blobber_id"`
-	AllocationID  string  `json:"allocation_id"`
-	TransactionID string  `json:"transaction_id"`
-	OwnerID       string  `json:"owner_id"`
-	Timestamp     int64   `json:"timestamp"`
-	ReadCounter   int64   `json:"read_counter"`
-	ReadSize      float64 `json:"read_size"`
-	Signature     string  `json:"signature"`
-	PayerID       string  `json:"payer_id"`
-	AuthTicket    string  `json:"auth_ticket"`
-	BlockNumber   int64   `json:"block_number"`
-}
-
-func collectionToReadMarkerWithoutRelations(rms []event.ReadMarker) []ReadMarkerWithoutRelations {
-	rmws := make([]ReadMarkerWithoutRelations, len(rms))
-
-	for _, rm := range rms {
-		if rm.ID > 0 {
-			rmws = append(rmws, ReadMarkerWithoutRelations{
-				ID: rm.ID,
-				CreatedAt: rm.CreatedAt,
-				UpdatedAt: rm.UpdatedAt,
-				DeletedAt: rm.DeletedAt,
-				ClientID: rm.ClientID,
-				BlobberID: rm.BlobberID,
-				AllocationID: rm.AllocationID,
-				TransactionID: rm.TransactionID,
-				OwnerID: rm.OwnerID,
-				Timestamp: rm.Timestamp,
-				ReadCounter: rm.ReadCounter,
-				ReadSize: rm.ReadSize,
-				Signature: rm.Signature,
-				PayerID: rm.PayerID,
-				AuthTicket: rm.AuthTicket,
-				BlockNumber: rm.BlockNumber,
-			})
-		}
-	}
-
-	return rmws
-} 
-
-type WriteMarkerWithoutRelations struct {
-	ID        	  uint
-	CreatedAt 	  time.Time
-	UpdatedAt 	  time.Time
-	DeletedAt	  gorm.DeletedAt
-	ClientID      string `json:"client_id"`
-	BlobberID     string `json:"blobber_id"`
-	AllocationID  string `json:"allocation_id"`
-	TransactionID string `json:"transaction_id"`
-	AllocationRoot         string `json:"allocation_root"`
-	PreviousAllocationRoot string `json:"previous_allocation_root"`
-	Size                   int64  `json:"size"`
-	Timestamp              int64  `json:"timestamp"`
-	Signature              string `json:"signature"`
-	BlockNumber            int64  `json:"block_number"` //used in alloc_written_size
-	LookupHash  string `json:"lookup_hash" gorm:"index:idx_wlookup,priority:1"`
-	Name        string `json:"name" gorm:"index:idx_wname,priority:1;idx_walloc_file,priority:1"`
-	ContentHash string `json:"content_hash" gorm:"index:idx_wcontent,priority:1"`
-	Operation   string `json:"operation"`
-}
-
-func collectionToWriteMarkerWithoutRelations(wms []event.WriteMarker) []WriteMarkerWithoutRelations {
-	wmws := make([]WriteMarkerWithoutRelations, len(wms))
-
-	for _, wm := range wms {
-		if wm.ID > 0 {
-			wmws = append(wmws, WriteMarkerWithoutRelations{
-				ID: wm.ID,
-				CreatedAt: wm.CreatedAt,
-				UpdatedAt: wm.UpdatedAt,
-				DeletedAt: wm.DeletedAt,
-				ClientID: wm.ClientID,
-				BlobberID: wm.BlobberID,
-				AllocationID: wm.AllocationID,
-				TransactionID: wm.TransactionID,
-				AllocationRoot: wm.AllocationRoot,
-				PreviousAllocationRoot: wm.PreviousAllocationRoot,
-				Size: wm.Size,
-				Timestamp: wm.Timestamp,
-				Signature: wm.Signature,
-				BlockNumber: wm.BlockNumber,
-				LookupHash: wm.LookupHash,
-				Name: wm.Name,
-				ContentHash: wm.ContentHash,
-				Operation: wm.Operation,			
-			})
-		}
-	}
-
-	return wmws
-} 
-
-type APITransaction struct {
-	ID        		  uint
-	CreatedAt 		  time.Time
-	UpdatedAt 		  time.Time
-	DeletedAt		  gorm.DeletedAt
-	Hash              string        `json:"hash"`
-	BlockHash         string        `json:"block_hash"`
-	Round             int64         `json:"round"`
-	Version           string        `json:"version"`
-	ClientId          string        `json:"client_id"`
-	ToClientId        string        `json:"to_client_id"`
-	TransactionData   string        `json:"transaction_data"`
-	Value             currency.Coin `json:"value"`
-	Signature         string        `json:"signature"`
-	CreationDate      int64         `json:"creation_date"`
-	Fee               currency.Coin `json:"fee"`
-	Nonce             int64         `json:"nonce"`
-	TransactionType   int           `json:"transaction_type"`
-	TransactionOutput string        `json:"transaction_output"`
-	OutputHash        string        `json:"output_hash"`
-	Status            int           `json:"status"`
-	ReadMarkers		  []ReadMarkerWithoutRelations
-	WriteMarkers 	  []WriteMarkerWithoutRelations
-}
-
-func toAPITransaction(t event.Transaction) APITransaction {
-	return APITransaction{
-		ID: t.ID,
-		CreatedAt: t.CreatedAt,
-		UpdatedAt: t.UpdatedAt,
-		DeletedAt: t.DeletedAt,
-		Hash: t.Hash,
-		BlockHash: t.BlockHash,
-		Round: t.Round,
-		Version: t.Version,
-		ClientId: t.ClientId,
-		ToClientId: t.ToClientId,
-		TransactionData: t.TransactionData,
-		Value: t.Value,
-		Signature: t.Signature,
-		CreationDate: t.CreationDate,
-		Fee: t.Fee,
-		Nonce: t.Nonce,
-		TransactionType: t.TransactionType,
-		TransactionOutput: t.TransactionOutput,
-		OutputHash: t.OutputHash,
-		Status: t.Status,
-		ReadMarkers: collectionToReadMarkerWithoutRelations(t.ReadMarkers),
-		WriteMarkers: collectionToWriteMarkerWithoutRelations(t.WriteMarker),
-	}
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction
 // Gets transaction information from transaction hash
 //
@@ -2604,7 +2451,7 @@ func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *ht
 		return
 	}
 
-	common.Respond(w, r, toAPITransaction(transaction), nil)
+	common.Respond(w, r, transaction, nil)
 }
 
 // swagger:model storageNodesResponse
@@ -3176,7 +3023,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		common.Respond(w, r, toAPITransaction(txn), nil)
+		common.Respond(w, r, txn, nil)
 		return
 	case "BlockHash":
 		blk, err := edb.GetBlockByHash(query)
