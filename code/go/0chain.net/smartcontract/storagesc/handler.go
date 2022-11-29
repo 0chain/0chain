@@ -1151,6 +1151,11 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	common.Respond(w, r, ups, nil)
 }
 
+// swagger:model userLockedTotalResponse
+type userLockedTotalResponse struct {
+	total int64
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal getUserLockedTotal
 // Gets statistic for a user's stake pools
 //
@@ -1164,7 +1169,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 //
 // responses:
 //
-//	200: string
+//	200: userLockedTotalResponse
 //	400:
 func (srh *StorageRestHandler) getUserLockedTotal(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
@@ -1179,7 +1184,7 @@ func (srh *StorageRestHandler) getUserLockedTotal(w http.ResponseWriter, r *http
 		return
 	}
 
-	common.Respond(w, r, locked, nil)
+	common.Respond(w, r, &userLockedTotalResponse{total: locked}, nil)
 
 }
 
