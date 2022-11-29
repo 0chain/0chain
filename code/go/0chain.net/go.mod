@@ -42,7 +42,7 @@ require (
 	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
 )
 
-require github.com/0chain/common v0.0.6-0.20221113152339-7174fb91b504
+require github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
@@ -104,5 +104,3 @@ require (
 )
 
 replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
-
-//replace github.com/0chain/common => ../../../../0chain_other/common
