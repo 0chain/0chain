@@ -64,7 +64,7 @@ func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, erro
 
 func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
 	res := int64(0)
-	err := edb.Store.Get().Table("delegate_pools").Select("sum(balance)").
+	err := edb.Store.Get().Table("delegate_pools").Select("coalesce(sum(balance),0)").
 		Where("delegate_id = ?", id).Row().Scan(&res)
 	return res, err
 }
