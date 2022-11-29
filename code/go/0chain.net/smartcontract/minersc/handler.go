@@ -58,7 +58,103 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
 		rest.MakeEndpoint(miner+"/get_miner_geolocations", common.UserRateLimit(mrh.getMinerGeolocations)),
 		rest.MakeEndpoint(miner+"/get_sharder_geolocations", common.UserRateLimit(mrh.getSharderGeolocations)),
+		rest.MakeEndpoint(miner+"/provider-rewards", mrh.getProviderRewards),
+		rest.MakeEndpoint(miner+"/delegate-rewards", mrh.getDelegateRewards),
 	}
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/delegate-rewards delegate-rewards
+// Gets list of delegate rewards satisfying filter
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: is_descending
+//	 description: is descending
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: []WriteMarker
+//	400:
+//	500:
+func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.Request) {
+	poolId := r.URL.Query().Get("pool_id")
+	start, end, err := common2.GetStartEndBlock(r.URL.Query())
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	rtv, err := edb.GetDelegateRewards(limit, poolId, start, end)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	common.Respond(w, r, rtv, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/provider-rewards provider-rewards
+// Gets list of provider rewards satisfying filter
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: is_descending
+//	 description: is descending
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: []WriteMarker
+//	400:
+//	500:
+func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	start, end, err := common2.GetStartEndBlock(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	rtv, err := edb.GetProviderRewards(limit, id, start, end)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	common.Respond(w, r, rtv, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations get_sharder_geolocations

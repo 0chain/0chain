@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/0chain/common/core/currency"
@@ -27,23 +26,6 @@ type DelegatePool struct {
 	TotalPenalty currency.Coin `json:"total_penalty"`
 	Status       int           `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3"`
 	RoundCreated int64         `json:"round_created"`
-}
-
-func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
-	var dp DelegatePool
-	result := edb.Store.Get().Model(&DelegatePool{}).Where(&DelegatePool{
-		ProviderID:   sp.ProviderID,
-		ProviderType: sp.ProviderType,
-		PoolID:       sp.PoolID,
-	}).Take(&dp)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
-	}
-	if result.Error != nil {
-		return false, fmt.Errorf("failed to check Curator existence %v, error %v",
-			dp, result.Error)
-	}
-	return true, nil
 }
 
 func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, error) {
@@ -83,15 +65,6 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 		ProviderID:   updates.ProviderId,
 		ProviderType: updates.ProviderType,
 		PoolID:       updates.PoolId,
-	}
-	exists, err := dp.exists(edb)
-
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("stakepool %v not in database cannot update",
-			dp.ProviderID)
 	}
 
 	result := edb.Store.Get().

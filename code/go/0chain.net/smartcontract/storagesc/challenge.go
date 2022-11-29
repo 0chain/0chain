@@ -176,7 +176,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return err
 	}
 
-	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, balances)
+	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
@@ -1019,11 +1019,10 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 			"error getting the validators list: %v", err)
 	}
 
-
 	// Check if the length of the list of validators is higher than the lower bound of validators
-	minValidators  := conf.ValidatorsPerChallenge
+	minValidators := conf.ValidatorsPerChallenge
 	currentValidatorsCount, err := validators.Size(balances)
-	
+
 	if err != nil {
 		return fmt.Errorf("can't get validators partition size: %v", err.Error())
 	}

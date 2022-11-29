@@ -41,3 +41,39 @@ func (p PoolStatus) String() string {
 	}
 	return "unknown pool status"
 }
+
+func (p PoolStatus) Int() int {
+	return int(p)
+}
+
+type Reward int
+
+const (
+	BlockReward Reward = iota
+	FeeReward
+	ValidationReward
+	FileDownloadReward
+	ChallengePassReward
+	ChallengeSlashPenalty
+	CancellationChargeReward
+	MinLockDemandReward
+)
+
+var rewardString = []string{
+	"block_reward",
+	"fees",
+	"validation",
+	"file download",
+	"challenge pass",
+	"challenge slash",
+	"cancellation charge",
+	"min lock demand",
+}
+
+func (r Reward) String() string {
+	return rewardString[r]
+}
+
+func (r Reward) Int() int {
+	return int(r)
+}

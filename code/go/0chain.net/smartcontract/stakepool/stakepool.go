@@ -8,7 +8,6 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -180,13 +179,13 @@ func (sp *StakePool) DistributeRewardsRandN(
 	providerType spenum.Provider,
 	seed int64,
 	randN int,
-	desc string,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -254,7 +253,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[pool.DelegateID], err = reward.Int64()
+		spUpdate.DelegateRewards[pool.DelegateID] = reward
 		if err != nil {
 			return err
 		}
@@ -324,12 +323,13 @@ func (sp *StakePool) DistributeRewards(
 	value currency.Coin,
 	providerId string,
 	providerType spenum.Provider,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -396,7 +396,7 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[id], err = reward.Int64()
+		spUpdate.DelegateRewards[id] = reward
 		if err != nil {
 			return err
 		}
@@ -466,7 +466,7 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 		}
 
 		spUpdate.DelegateRewards[pools[i].DelegateID], err =
-			maths.SafeAddInt64(spUpdate.DelegateRewards[pools[i].DelegateID], iShare)
+			currency.AddInt64(spUpdate.DelegateRewards[pools[i].DelegateID], iShare)
 		if err != nil {
 			return err
 		}

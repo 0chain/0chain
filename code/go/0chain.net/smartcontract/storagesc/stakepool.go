@@ -257,7 +257,7 @@ func (sp *stakePool) slash(
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
 	var ratio = float64(slash) / float64(staked)
-	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
+	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty)
 	for id, dp := range sp.Pools {
 		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
 		if err != nil {
@@ -277,7 +277,7 @@ func (sp *stakePool) slash(
 		if err != nil {
 			return 0, err
 		}
-		edbSlash.DelegatePenalties[id] = int64(dpSlash)
+		edbSlash.DelegatePenalties[id] = dpSlash
 	}
 	// todo we should slash from stake pools not rewards. 0chain issue 1495
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
