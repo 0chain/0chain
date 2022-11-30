@@ -793,35 +793,34 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 	var ups = new(stakepool.UserPoolStat)
 	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat, len(minerPools)+len(sharderPools))
 	for _, pool := range minerPools {
-		dp := stakepool.DelegatePoolStat{
-			ID:     pool.PoolID,
-			Status: spenum.PoolStatus(pool.Status).String(),
-		}
-		dp.Balance = pool.Balance
-
-		dp.Rewards = pool.Reward
-
-		dp.TotalReward = pool.TotalReward
-
+		dp := toUPS(pool)
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
 	}
 
 	for _, pool := range sharderPools {
-		dp := stakepool.DelegatePoolStat{
-			ID:     pool.PoolID,
-			Status: spenum.PoolStatus(pool.Status).String(),
-		}
-
-		dp.Balance = pool.Balance
-
-		dp.Rewards = pool.Reward
-
-		dp.TotalReward = pool.TotalReward
-
+		dp := toUPS(pool)
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
+
 	}
 
 	common.Respond(w, r, ups, nil)
+}
+
+func toUPS(pool event.DelegatePool) stakepool.DelegatePoolStat {
+
+	dp := stakepool.DelegatePoolStat{
+		ID:     pool.PoolID,
+		Status: spenum.PoolStatus(pool.Status).String(),
+	}
+
+	dp.Balance = pool.Balance
+	dp.Rewards = pool.Reward
+	dp.TotalReward = pool.TotalReward
+	dp.DelegateID = pool.DelegateID
+	dp.ProviderType = pool.ProviderType
+	dp.ProviderId = pool.ProviderID
+
+	return dp
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat getMSStakePoolStat
