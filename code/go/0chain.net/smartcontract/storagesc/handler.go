@@ -1848,7 +1848,7 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	rmrs := make([]ReadMarkerResponse, len(readMarkers))
+	rmrs := make([]ReadMarkerResponse, 0, len(readMarkers))
 	for _, rm := range readMarkers {
 		rmrs = append(rmrs, toReadMarkerResponse(rm))
 	}
@@ -2238,7 +2238,7 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	wmrs := make([]WriteMarkerResponse, len(rtv))
+	wmrs := make([]WriteMarkerResponse, 0, len(rtv))
 	for _, wm := range rtv {
 		wmrs = append(wmrs, toWriteMarkerResponse(wm))
 	}
