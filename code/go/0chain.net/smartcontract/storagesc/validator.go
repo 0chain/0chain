@@ -1,14 +1,19 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	state "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
@@ -19,6 +24,27 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
+
+	// Check delegate wallet and operational wallet are not the same
+	if ! config.Development() {
+		publicKeyBytes, err := hex.DecodeString(newValidator.PublicKey)
+		if err != nil {
+			logging.Logger.Error("Couldn't decode public key to compare to delegate wallet")
+			return "", common.NewError("add_validator_failed",
+				"Couldn't decode public key to compare to delegate wallet")
+		}
+		operationalClientID := encryption.Hash(publicKeyBytes)
+	
+		logging.Logger.Info("comparing delegate wallet",
+			zap.String("delegate_wallet", newValidator.StakePoolSettings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
+		)
+	
+		if operationalClientID == newValidator.StakePoolSettings.DelegateWallet {
+			logging.Logger.Error("Can't use the same wallet as both operational and delegate")
+			return "", common.NewError("add_validator_failed",
+				"Can't use the same wallet as both operational and delegate")
+		}	
+	}
 
 	tmp := &ValidationNode{}
 	err = balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
