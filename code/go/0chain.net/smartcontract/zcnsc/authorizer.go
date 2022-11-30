@@ -5,8 +5,10 @@ import (
 	"fmt"
 
 	"0chain.net/core/encryption"
+	"0dns.io/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -69,6 +71,21 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", common.NewError(code, "authorizer's delegate_wallet not set")
 	}
 
+	// Check delegate wallet and operational wallet are not the same
+	if ! config.Development() {
+		operationalClientID := authorizerID
+	
+		logging.Logger.Info("comparing delegate wallet",
+			zap.String("delegate_wallet", params.StakePoolSettings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
+		)
+	
+		if operationalClientID == params.StakePoolSettings.DelegateWallet {
+			logging.Logger.Error("Can't use the same wallet as both operational and delegate")
+			return "", common.NewError("add_authorizer_failed",
+				"Can't use the same wallet as both operational and delegate")
+		}
+	}
+	
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
