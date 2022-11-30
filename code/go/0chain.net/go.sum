@@ -36,8 +36,6 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3fOKtUw0Xmo=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/0chain/common v0.0.6-0.20221123010653-519a73e86346 h1:nJerzsyefK5kFNzEWvxWwh2yPThszMXybUpvq/1a5mc=
-github.com/0chain/common v0.0.6-0.20221123010653-519a73e86346/go.mod h1:OxV9kVgVzAPgGHHPcS/aUSL2ZxNvKDU6jPoggKMbqns=
 github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c h1:TDqF7VJa7uLLlEsFnxRKwOP8dx/k6DGOTJQ7OvG5ztw=
 github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c/go.mod h1:OxV9kVgVzAPgGHHPcS/aUSL2ZxNvKDU6jPoggKMbqns=
 github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb h1:FOnCz8xXwqo6cJZpI83T9x/kmjbT0YdYqxzSHIVkMGs=
@@ -166,8 +164,8 @@ github.com/gobuffalo/packd v0.1.0/go.mod h1:M2Juc+hhDXf/PnmBANFCqx4DM3wRbgDvnVWe
 github.com/gobuffalo/packr/v2 v2.0.9/go.mod h1:emmyGweYTm6Kdper+iywB6YK5YzuKchGtJQZ0Odn4pQ=
 github.com/gobuffalo/packr/v2 v2.2.0/go.mod h1:CaAwI0GPIAv+5wKLtv8Afwl+Cm78K/I/VCm/3ptBN+0=
 github.com/gobuffalo/syncx v0.0.0-20190224160051-33c29581e754/go.mod h1:HhnNqWY95UYwwW3uSASeV7vtgYkT2t16hJgV3AEPUpw=
-github.com/gocql/gocql v1.2.1 h1:G/STxUzD6pGvRHzG0Fi7S04SXejMKBbRZb7pwre1edU=
-github.com/gocql/gocql v1.2.1/go.mod h1:3gM2c4D3AnkISwBxGnMMsS8Oy4y2lhbPRsH4xnJrHG8=
+github.com/gocql/gocql v1.3.0 h1:xAopLb2b1xCkWVrfWA5k8sOOr0wUwI4ewl9+ArNu0ag=
+github.com/gocql/gocql v1.3.0/go.mod h1:3gM2c4D3AnkISwBxGnMMsS8Oy4y2lhbPRsH4xnJrHG8=
 github.com/gofrs/uuid v4.0.0+incompatible h1:1SD/1F5pU8p29ybwgQSwpQk+mwdRrXCYuPhW6m+TnJw=
 github.com/gofrs/uuid v4.0.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
