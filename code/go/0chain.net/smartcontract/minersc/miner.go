@@ -7,6 +7,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -62,7 +63,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	msc.verifyMinerState(allMiners, balances,
 		"add_miner: checking all miners list in the beginning")
 
-	if newMiner.Settings.DelegateWallet == "" {
+	if config.Development() && newMiner.Settings.DelegateWallet == "" {
 		newMiner.Settings.DelegateWallet = newMiner.ID
 	}
 
@@ -88,22 +89,24 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 	
 	// Check delegate wallet is not the same as operational wallet (PUK)
-	publicKeyBytes, err := hex.DecodeString(newMiner.PublicKey)
-	if err != nil {
-		logging.Logger.Error("Couldn't decode public key to compare to delegate wallet")
-		return "", common.NewError("add_miner",
-			"Couldn't decode publick key to compare to delegate wallet")
-	}
-	operationalClientID := encryption.Hash(publicKeyBytes)
-
-	logging.Logger.Info("comparing delegate wallet",
-		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
-	)
-
-	if operationalClientID == newMiner.Settings.DelegateWallet {
-		logging.Logger.Error("Can't use the same wallet as both operational and delegate")
-		return "", common.NewError("add_miner",
-			"Can't use the same wallet as both operational and delegate")
+	if ! config.Development() {
+		publicKeyBytes, err := hex.DecodeString(newMiner.PublicKey)
+		if err != nil {
+			logging.Logger.Error("Couldn't decode public key to compare to delegate wallet")
+			return "", common.NewError("add_miner",
+				"Couldn't decode publick key to compare to delegate wallet")
+		}
+		operationalClientID := encryption.Hash(publicKeyBytes)
+	
+		logging.Logger.Info("comparing delegate wallet",
+			zap.String("delegate_wallet", newMiner.Settings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
+		)
+	
+		if operationalClientID == newMiner.Settings.DelegateWallet {
+			logging.Logger.Error("Can't use the same wallet as both operational and delegate")
+			return "", common.NewError("add_miner",
+				"Can't use the same wallet as both operational and delegate")
+		}
 	}
 
 	err = validateNodeSettings(newMiner, gn, "add_miner")
