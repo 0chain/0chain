@@ -27,10 +27,6 @@ type Transaction struct {
 	TransactionOutput string        `json:"transaction_output"`
 	OutputHash        string        `json:"output_hash"`
 	Status            int           `json:"status"`
-
-	//ref
-	ReadMarkers []ReadMarker  `json:"-" gorm:"foreignKey:TransactionID;references:Hash"`
-	WriteMarker []WriteMarker `json:"-" gorm:"foreignKey:TransactionID;references:Hash"`
 }
 
 func (edb *EventDb) addTransactions(txns []Transaction) error {
@@ -133,8 +129,6 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 	tr := []Transaction{}
 	res := edb.Store.Get().
 		Model(&Transaction{}).
-		Preload("ReadMarkers").
-		Preload("WriteMarker").
 		Where("round >= ? AND round < ?", blockStart, blockEnd).
 		Order("round asc").
 		Find(&tr)
