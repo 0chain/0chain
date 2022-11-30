@@ -115,6 +115,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&AllocationBlobberTerm{},
 		&ProviderRewards{},
 		&ChallengePool{},
+		&RewardDelegate{},
+		&RewardProvider{},
 	); err != nil {
 		return err
 	}
