@@ -58,8 +58,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
 		rest.MakeEndpoint(miner+"/get_miner_geolocations", common.UserRateLimit(mrh.getMinerGeolocations)),
 		rest.MakeEndpoint(miner+"/get_sharder_geolocations", common.UserRateLimit(mrh.getSharderGeolocations)),
-		rest.MakeEndpoint(miner+"/provider-rewards", mrh.getProviderRewards),
-		rest.MakeEndpoint(miner+"/delegate-rewards", mrh.getDelegateRewards),
+		rest.MakeEndpoint(miner+"/provider-rewards", common.UserRateLimit(mrh.getProviderRewards)),
+		rest.MakeEndpoint(miner+"/delegate-rewards", common.UserRateLimit(mrh.getDelegateRewards)),
 	}
 }
 
