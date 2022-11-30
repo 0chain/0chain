@@ -108,6 +108,7 @@ const (
 	VestingSc     = "vestingsc."
 	ZcnSc         = "zcnsc."
 	DbsEvents     = "dbs.Events."
+	DbSettings    = "dbs.settings."
 
 	BlockReward = "block_reward."
 
@@ -219,7 +220,10 @@ const (
 	EventDbMaxIdleConns    = DbsEvents + "max_idle_conns"
 	EventDbOpenConns       = DbsEvents + "max_open_conns"
 	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
-	EventDbAggregatePeriod = DbsEvents + "aggregate_period"
+
+	EventDbDebug           = DbSettings + "debug"
+	EventDbAggregatePeriod = DbSettings + "aggregate_period"
+	EventDbPageLimit       = DbSettings + "page_limit"
 )
 
 func (s Source) String() string {

@@ -17,7 +17,13 @@ import (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-func (edb *EventDb) ProcessEvents(ctx context.Context, events []Event, round int64, block string, blockSize int) error {
+func (edb *EventDb) ProcessEvents(
+	ctx context.Context,
+	events []Event,
+	round int64,
+	block string,
+	blockSize int,
+) error {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
@@ -227,7 +233,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
 	defer func() {
 		if r := recover(); r != nil {
-			logging.Logger.Error("piers Recovered in processEvent",
+			logging.Logger.Error("panic recovered in processEvent",
 				zap.Any("r", r),
 				zap.Any("event", event))
 		}
@@ -239,7 +245,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		ts := time.Now()
 		err = edb.addStat(event)
 		if err != nil {
-			logging.Logger.Error("piers addStat typeStats error",
+			logging.Logger.Error("addStat typeStats error",
 				zap.Int64("round", round),
 				zap.String("block", block),
 				zap.Int("block size", blockSize),
@@ -262,16 +268,6 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		tags = append(tags, event.Tag.String())
 		ts := time.Now()
 		err = edb.addStat(event)
-		if err != nil {
-			logging.Logger.Error("piers addStat TypeChain error",
-				zap.Int64("round", round),
-				zap.String("block", block),
-				zap.Int("block size", blockSize),
-				zap.Any("event type", event.Type),
-				zap.Any("event tag", event.Tag),
-				zap.Error(err),
-			)
-		}
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addchain",
@@ -318,7 +314,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 		Snapshot: *s,
 	}
 
-	edb.updateBlobberAggregate(round, period, gs)
+	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), gs)
 	gs.update(events)
 
 	gs.Round = round
@@ -330,19 +326,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 }
 
 func (edb *EventDb) addStat(event Event) (err error) {
-	defer func() {
-		if err != nil {
-			logging.Logger.Info("piers addStat error", zap.Error(err))
-		}
-	}()
-	defer func() {
-		if r := recover(); r != nil {
-			logging.Logger.Error("piers Recovered in addStat",
-				zap.Any("r", r),
-				zap.Any("event", event))
-		}
-	}()
-	switch EventTag(event.Tag) {
+	switch event.Tag {
 	// blobber
 	case TagAddBlobber:
 		blobbers, ok := fromEvent[[]Blobber](event.Data)

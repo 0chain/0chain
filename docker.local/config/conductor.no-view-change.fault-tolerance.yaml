@@ -201,28 +201,30 @@ tests:
       - cleanup_bc: {}
       - wait_add:
           sharders: ["sharder-1", "sharder-2"]
+          start: true
+      - command:
+          name: "sleep_3m"
+      - wait_add:
           miners: ["miner-1", "miner-2", "miner-3"]
           start: true
       - wait_round:
-          shift: 20
+          shift: 50
           timeout: "1m"
       - stop: ["sharder-2"]
-      - wait_round:
-          shift: 10
-          timeout: "1m"
       - command:
           name: "sleep_3m"
-      - stop: ["sharder-1"]
+      - wait_round:
+          shift: 50
+          timeout: "1m"
       - start: ["sharder-2"]
-      - wait_round:
-          shift: 10
-          timeout: "10m"
       - command:
           name: "sleep_3m"
-      - stop: ["sharder-2"]
-      - start: ["sharder-1"]
       - wait_round:
-          shift: 10
+          shift: 50
+          timeout: "10m"
+      - stop: ["sharder-1"]
+      - wait_round:
+          shift: 50
           timeout: "10m"
 
   # NODES GO DOWN AND COME UP
