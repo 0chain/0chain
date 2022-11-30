@@ -1,14 +1,17 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -200,7 +203,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // transfered; if it provides more tokens then required, then all
 // tokens left will be moved to unlocked part of related stake pool;
 // the part can be moved back to the blobber anytime or used to
-// increase blobber's capacity or write_price next time
+// increase blobber's- capacity or write_price next time
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
@@ -220,6 +223,27 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
+
+	// Check delegate wallet and operational wallet are not the same
+	if ! config.Development() {
+		publicKeyBytes, err := hex.DecodeString(blobber.PublicKey)
+		if err != nil {
+			logging.Logger.Error("Couldn't decode public key to compare to delegate wallet")
+			return "", common.NewError("add_or_update_blobber_failed",
+				"Couldn't decode public key to compare to delegate wallet")
+		}
+		operationalClientID := encryption.Hash(publicKeyBytes)
+	
+		logging.Logger.Info("comparing delegate wallet",
+			zap.String("delegate_wallet", blobber.StakePoolSettings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
+		)
+	
+		if operationalClientID == blobber.StakePoolSettings.DelegateWallet {
+			logging.Logger.Error("Can't use the same wallet as both operational and delegate")
+			return "", common.NewError("add_or_update_blobber_failed",
+				"Can't use the same wallet as both operational and delegate")
+		}	
+	}
 
 	// insert, update or remove blobber
 	if err = sc.insertBlobber(t, conf, blobber, balances); err != nil {
