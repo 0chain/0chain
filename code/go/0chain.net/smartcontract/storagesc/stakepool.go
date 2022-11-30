@@ -14,7 +14,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -125,67 +124,6 @@ func (sp *stakePool) stake() (stake currency.Coin, err error) {
 		stake = newStake
 	}
 	return
-}
-
-// empty a delegate pool if possible, call update before the empty
-func (sp *stakePool) empty(
-	sscID,
-	poolID,
-	clientID string,
-	balances chainstate.StateContextI,
-) (bool, error) {
-	var dp, ok = sp.Pools[poolID]
-	if !ok {
-		return false, fmt.Errorf("no such delegate pool: %q", poolID)
-	}
-
-	if dp.DelegateID != clientID {
-		return false, errors.New("trying to unlock not by delegate pool owner")
-	}
-
-	// If insufficient funds in stake pool left after unlock,
-	// we can't do an immediate unlock.
-	// Instead we mark as unstake to prevent being used for further allocations.
-
-	totalBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
-	if err != nil {
-		return false, err
-	}
-
-	staked, err := sp.stake()
-	if err != nil {
-		return false, err
-	}
-	if staked < totalBalance {
-		if dp.Status != spenum.Unstaking {
-			totalUnStake, err := currency.AddCoin(sp.TotalUnStake, dp.Balance)
-			if err != nil {
-				return false, err
-			}
-			sp.TotalUnStake = totalUnStake
-
-			dp.Status = spenum.Unstaking
-		}
-		return true, nil
-	}
-
-	if dp.Status == spenum.Unstaking {
-		totalUnstake, err := currency.MinusCoin(sp.TotalUnStake, dp.Balance)
-		if err != nil {
-			return false, err
-		}
-		sp.TotalUnStake = totalUnstake
-	}
-
-	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
-	if err := balances.AddTransfer(transfer); err != nil {
-		return false, err
-	}
-
-	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = spenum.Deleting
-
-	return true, nil
 }
 
 // add offer of an allocation related to blobber owns this stake pool

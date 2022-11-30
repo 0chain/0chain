@@ -2,10 +2,13 @@ package stakepool
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
+	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"github.com/0chain/common/core/currency"
 
@@ -259,6 +262,67 @@ func (sp *StakePool) MintRewards(
 		dpUpdate.emitUpdate(balances)
 		return delegateReward + serviceCharge, nil
 	}
+}
+
+// empty a delegate pool if possible, call update before the empty
+func (sp *StakePool) empty(
+	sscID,
+	poolID,
+	clientID string,
+	balances cstate.StateContextI,
+) (bool, error) {
+	var dp, ok = sp.Pools[poolID]
+	if !ok {
+		return false, fmt.Errorf("no such delegate pool: %q", poolID)
+	}
+
+	if dp.DelegateID != clientID {
+		return false, errors.New("trying to unlock not by delegate pool owner")
+	}
+
+	// If insufficient funds in stake pool left after unlock,
+	// we can't do an immediate unlock.
+	// Instead we mark as unstake to prevent being used for further allocations.
+
+	totalBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
+	if err != nil {
+		return false, err
+	}
+
+	staked, err := sp.stake()
+	if err != nil {
+		return false, err
+	}
+	if staked < totalBalance {
+		if dp.Status != spenum.Unstaking {
+			totalUnStake, err := currency.AddCoin(sp.TotalUnStake, dp.Balance)
+			if err != nil {
+				return false, err
+			}
+			sp.TotalUnStake = totalUnStake
+
+			dp.Status = spenum.Unstaking
+		}
+		return true, nil
+	}
+
+	if dp.Status == spenum.Unstaking {
+		totalUnstake, err := currency.MinusCoin(sp.TotalUnStake, dp.Balance)
+		if err != nil {
+			return false, err
+		}
+		sp.TotalUnStake = totalUnstake
+	}
+
+	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
+	if err := balances.AddTransfer(transfer); err != nil {
+		return false, err
+	}
+
+	sp.Pools[poolID].Balance = 0
+	sp.Pools[poolID].Status = spenum.Deleting
+
+	return true, nil
 }
 
 // DistributeRewardsRandN distributes rewards to randomly selected N delegate pools
@@ -641,4 +705,81 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	}
 
 	return
+}
+
+// stake pool can return excess tokens from stake pool
+func StakePoolUnlock(
+	t *transaction.Transaction,
+	input []byte,
+	balances cstate.StateContextI,
+	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)
+) (resp string, err error) {
+	var spr stakePoolRequest
+	if err = spr.decode(input); err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"can't decode request: %v", err)
+	}
+	var sp AbstractStakePool
+	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"can't get related stake pool: %v", err)
+	}
+	if err != nil {
+		return "", err
+	}
+	dp, ok := sp.GetPools()[t.ClientID]
+	if !ok {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
+	}
+
+	// if StakeAt has valid value and lock period is less than MinLockPeriod
+	if dp.StakedAt > 0 {
+		stakedAt := common.ToTime(dp.StakedAt)
+		minLockPeriod := config.SmartContractConfig.GetDuration("stakepool.min_lock_period")
+		if !stakedAt.Add(minLockPeriod).Before(time.Now()) {
+			return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(minLockPeriod))
+		}
+	}
+
+	unstake, err := sp.empty(ssc.ID, t.ClientID, t.ClientID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"unlocking tokens: %v", err)
+	}
+
+	// the tokens can't be unlocked due to opened offers, but we mark it
+	// as 'unstake' and returns maximal time to wait to unlock the pool
+	if !unstake {
+		// Save the pool and return special result
+		if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
+			return "", common.NewErrorf("stake_pool_unlock_failed",
+				"saving stake pool: %v", err)
+		}
+		err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
+		if err != nil {
+			return "", common.NewErrorf("stake_pool_unlock_failed",
+				"stake pool staking error: %v", err)
+		}
+
+		return toJson(&unlockResponse{Unstake: false}), nil
+	}
+
+	amount, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
+	}
+
+	// Save the pool
+	if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"saving stake pool: %v", err)
+	}
+
+	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"stake pool staking error: %v", err)
+	}
+
+	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
 }
