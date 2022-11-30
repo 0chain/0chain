@@ -149,14 +149,14 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}
 
-	// if edb.Debug() { todo add lines once https://github.com/0chain/0chain/pull/1834 merged
-	if err := edb.insertProviderReward(spus, round); err != nil {
-		return err
+	if edb.Debug() {
+		if err := edb.insertProviderReward(spus, round); err != nil {
+			return err
+		}
+		if err := edb.insertDelegateReward(spus, round); err != nil {
+			return err
+		}
 	}
-	if err := edb.insertDelegateReward(spus, round); err != nil {
-		return err
-	}
-	// }
 
 	return nil
 }
