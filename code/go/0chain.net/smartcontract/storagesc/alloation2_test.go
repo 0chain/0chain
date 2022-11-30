@@ -725,7 +725,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := event.NewEventDb(access)
+	eventDb, err := event.NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
