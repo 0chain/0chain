@@ -211,6 +211,37 @@ func AddMagicBlock(
 	_, _ = balances.InsertTrieNode(GroupShareOrSignsKey, gsos)
 }
 
+func AddMockProviderRewards(
+	miners, sharders []string,
+	eventDb *event.EventDb,
+) {
+	var mockRewardAmount currency.Coin = 1680000000
+	var pRewards []event.RewardProvider
+	for _, miner := range miners {
+		for j := int64(0); j < viper.GetInt64(benchmark.NumBlocks); j++ {
+			pRewards = append(pRewards, event.RewardProvider{
+				Amount:      mockRewardAmount,
+				BlockNumber: j,
+				ProviderId:  miner,
+				RewardType:  spenum.BlockReward,
+			})
+		}
+	}
+	for _, sharder := range sharders {
+		for j := int64(0); j < viper.GetInt64(benchmark.NumBlocks); j++ {
+			pRewards = append(pRewards, event.RewardProvider{
+				Amount:      mockRewardAmount,
+				BlockNumber: j,
+				ProviderId:  sharder,
+				RewardType:  spenum.BlockReward,
+			})
+		}
+	}
+	if err := eventDb.Store.Get().Create(&pRewards).Error; err != nil {
+		log.Fatal(err)
+	}
+}
+
 func AddPhaseNode(balances cstate.StateContextI) {
 	var pn = PhaseNode{
 		Phase:        Contribute,

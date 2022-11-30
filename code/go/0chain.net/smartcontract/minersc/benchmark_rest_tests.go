@@ -123,6 +123,27 @@ func BenchmarkRestTests(
 				FuncName: "configs",
 				Endpoint: mrh.getConfigs,
 			},
+			{
+				FuncName: "provider-rewards",
+				Params: map[string]string{
+					"id":     data.Miners[0],
+					"limit":  "20",
+					"offset": "1",
+					"start":  "25",
+					"end":    "25",
+				},
+				Endpoint: mrh.getProviderRewards,
+			},
+			{
+				FuncName: "delegate-rewards",
+				Params: map[string]string{
+					"limit":  "20",
+					"offset": "1",
+					"start":  "25",
+					"end":    "75",
+				},
+				Endpoint: mrh.getDelegateRewards,
+			},
 		},
 		ADDRESS,
 		mrh,
