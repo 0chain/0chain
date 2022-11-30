@@ -157,7 +157,14 @@ func main() {
 			rootContext := common.GetRootContext()
 			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
-			if err := serverChain.GetEventDb().ProcessEvents(ctx, []event.Event{ev}, b.Round, b.Hash, len(b.Txns)); err != nil {
+
+			if err := serverChain.GetEventDb().ProcessEvents(
+				ctx,
+				[]event.Event{ev},
+				b.Round,
+				b.Hash,
+				len(b.Txns),
+			); err != nil {
 				logging.Logger.Error("process block saving event failed",
 					zap.Error(err),
 					zap.Int64("round", b.Round),

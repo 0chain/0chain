@@ -236,7 +236,7 @@ func (c *Chain) SetupEventDatabase() error {
 	time.Sleep(time.Second * 2)
 
 	var err error
-	c.EventDb, err = event.NewEventDb(c.ChainConfig.DbsEvents())
+	c.EventDb, err = event.NewEventDb(c.ChainConfig.DbsEvents(), c.ChainConfig.DbSettings())
 	if err != nil {
 		return err
 	}
@@ -1418,6 +1418,17 @@ func (c *Chain) updateConfig(pb *block.Block) {
 			zap.Error(err),
 		)
 	}
+
+	if c.EventDb != nil {
+		err = c.EventDb.UpdateSettings(configMap.Fields)
+		if err != nil {
+			logging.Logger.Error("updating event database settings",
+				zap.Int64("start of round", pb.Round),
+				zap.Error(err),
+			)
+		}
+	}
+
 	logging.Logger.Info("config has been updated successfully",
 		zap.Int64("start of round", pb.Round))
 

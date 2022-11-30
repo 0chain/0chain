@@ -14,31 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGlobalSettings(t *testing.T) {
-	require.Len(t, minersc.GlobalSettingName, int(minersc.NumOfGlobalSettings))
-	require.Len(t, minersc.GlobalSettingInfo, int(minersc.NumOfGlobalSettings))
-
-	for key := range minersc.GlobalSettingInfo {
-		found := false
-		for _, name := range minersc.GlobalSettingName {
-			if key == name {
-				found = true
-				break
-			}
-		}
-		require.True(t, found)
-	}
-
-	for _, name := range minersc.GlobalSettingName {
-		_, ok := minersc.GlobalSettingInfo[name]
-		require.True(t, ok)
-	}
-
-}
-
 func TestUpdateGlobals(t *testing.T) {
 	const (
 		mockNotASetting = "mock not a setting"
+		mockRoundNumber = 17
 	)
 	type args struct {
 		msc      *minersc.MinerSmartContract
