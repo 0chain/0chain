@@ -199,14 +199,12 @@ tests:
     flow:
       - set_monitor: "miner-1"
       - cleanup_bc: {}
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "sharder-1", "sharder-2" ]
+      - unlock: [ "miner-1", "miner-2", "miner-3", "sharder-1", "sharder-2" ]
       - wait_add:
-          sharders: ["sharder-1", "sharder-2"]
-          start: true
-      - command:
-          name: "sleep_3m"
-      - wait_add:
+          sharders: ["sharder-1","sharder-2"]
           miners: ["miner-1", "miner-2", "miner-3"]
-          start: true
+          start: false
       - wait_round:
           shift: 50
           timeout: "1m"
