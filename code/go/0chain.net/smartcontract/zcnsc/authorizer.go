@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"0chain.net/core/encryption"
-	"0dns.io/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -75,12 +74,12 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	if ! config.Development() {
 		operationalClientID := authorizerID
 	
-		logging.Logger.Info("comparing delegate wallet",
+		Logger.Info("comparing delegate wallet",
 			zap.String("delegate_wallet", params.StakePoolSettings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
 		)
 	
 		if operationalClientID == params.StakePoolSettings.DelegateWallet {
-			logging.Logger.Error("Can't use the same wallet as both operational and delegate")
+			Logger.Error("Can't use the same wallet as both operational and delegate")
 			return "", common.NewError("add_authorizer_failed",
 				"Can't use the same wallet as both operational and delegate")
 		}
