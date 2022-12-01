@@ -222,7 +222,7 @@ func initCache(viper *viper.Viper) cacher {
 		panic(err)
 	}
 
-	size, err := getintValueFromYamlConfig(viper.GetString("size"))
+	size, err := getintValueFromYamlConfig(viper.Get("size"))
 	if err != nil {
 		panic(err)
 	}

@@ -22,9 +22,10 @@ func init() {
 func TestInitCache(t *testing.T) {
 	config := `
 cache:
-	path: "/path/to/cache"
-	size: 1024*1024*1024
+    path: "/path/to/cache"
+    size: 1024*1024*1024
 `
+	viper.GetViper().SetConfigType("yaml")
 	err := viper.ReadConfig(bytes.NewReader([]byte(config)))
 	require.NoError(t, err)
 
@@ -83,14 +84,14 @@ func TestCacheWrite(t *testing.T) {
 	p := "./cache"
 	v := viper.New()
 	v.Set("path", p)
-	v.Set("size", "1024*2")
+	v.Set("size", 500*MB)
 
 	var c cacher
 	require.NotPanics(t, func() {
 		c = initCache(v)
 	})
 
-	size := 1024
+	size := 250 * MB
 	hash1 := "hash1"
 	b := generateRandomBytes(t, size)
 	err := c.Write(hash1, b)
@@ -101,13 +102,13 @@ func TestCacheWrite(t *testing.T) {
 
 	require.EqualValues(t, size, finfo.Size())
 
-	size = 1025
+	size = 250 * MB
 	hash2 := "hash2"
 	b = generateRandomBytes(t, size)
 	err = c.Write(hash2, b)
 	require.Nil(t, err)
 
-	size = 1025
+	size = 250 * MB
 	hash3 := "hash3"
 	b = generateRandomBytes(t, size)
 	err = c.Write(hash3, b)
@@ -134,7 +135,7 @@ func TestCacheRead(t *testing.T) {
 	p := "./cache"
 	v := viper.New()
 	v.Set("path", p)
-	v.Set("size", "1024*3")
+	v.Set("size", 500*MB)
 
 	var c cacher
 	require.NotPanics(t, func() {
