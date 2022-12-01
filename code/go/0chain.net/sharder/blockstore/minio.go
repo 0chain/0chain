@@ -397,9 +397,8 @@ func getColdRBStrategyFunc(
 		if prevInd < 0 {
 			prevInd = -1
 		}
-
 		i := prevInd + 1
-		if len(coldStorageProviders) != 0 {
+		if len(coldStorageProviders) > 0 {
 			if i >= len(coldStorageProviders) {
 				i = len(coldStorageProviders) - i
 			}
