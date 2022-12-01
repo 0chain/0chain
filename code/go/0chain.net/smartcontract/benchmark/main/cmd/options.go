@@ -35,7 +35,7 @@ func getTestSuites(
 	var name string
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Recovered benchmark in getTestSuites", r, "test name", name)
+			log.Println("piers Recovered benchmark in getTestSuites", r, "test name", name)
 		}
 	}()
 	var suites []bk.TestSuite
@@ -49,14 +49,14 @@ func getTestSuites(
 	}
 
 	common.ConfigRateLimits()
-	log.Println("bkNames", bkNames)
+	log.Println("piers bkNames", bkNames)
 	for _, name = range bkNames {
 		if code, ok := bk.SourceCode[name]; ok {
-			log.Println("loading test suite", name)
+			log.Println("piers loading test suite", name)
 			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
-			log.Println("loaded test suite", name, "about to omit", omit)
+			log.Println("piers loaded test suite", name, "about to omit", omit)
 			suite.RemoveBenchmarks(omit)
-			log.Println("removed omitted from test suite", name)
+			log.Println("piers removed omitted from test suite", name)
 			suites = append(suites, suite)
 		} else {
 			log.Fatal(fmt.Errorf("Invalid test source %s", name))
