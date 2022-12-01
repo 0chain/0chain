@@ -22,7 +22,7 @@ func (p Provider) String() string {
 	return providerString[p]
 }
 
-func ToProviderID(ps string) Provider {
+func ToProviderType(ps string) Provider {
 	for i, s := range providerString {
 		if s == ps {
 			return Provider(i)

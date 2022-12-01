@@ -23,7 +23,7 @@ import (
 
 //go:generate msgp -v -io=false -tests=false
 
-func stakePoolKey(p spenum.Provider, id string) datastore.Key {
+func StakePoolKey(p spenum.Provider, id string) datastore.Key {
 	return p.String() + ":stakepool:" + id
 }
 
@@ -91,7 +91,16 @@ func (sp *StakePool) Save(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	_, err := balances.InsertTrieNode(stakePoolKey(p, id), sp)
+	_, err := balances.InsertTrieNode(StakePoolKey(p, id), sp)
+	return err
+}
+
+func (sp *StakePool) Get(
+	p spenum.Provider,
+	id string,
+	balances cstate.StateContextI,
+) error {
+	err := balances.GetTrieNode(StakePoolKey(p, id), sp)
 	return err
 }
 

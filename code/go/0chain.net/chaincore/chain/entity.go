@@ -575,12 +575,12 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
 	}
 
-	if err := c.addInitialStakes(pmt, initStates.Stakes); err != nil {
-		logging.Logger.Panic("init stake failed", zap.Error(err))
-	}
-
 	stateCtx := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(stateCtx)
+
+	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
+		logging.Logger.Panic("init stake failed", zap.Error(err))
+	}
 
 	err := faucetsc.InitConfig(stateCtx)
 	if err != nil {
@@ -619,43 +619,49 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	return pmt
 }
 
-func (c *Chain) addInitialStakes(mpt *util.MerklePatriciaTrie, stakes []state.InitStake) error {
-	var edbDelegatePools []event.DelegatePool
+func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {
+	var edbDelegatePools []*event.DelegatePool
+	knownStakePoolKeys := map[string]bool{}
 	for _, v := range stakes {
-		key := v.ProviderType + ":stakepool:" + v.ProviderID
+		providerType := spenum.ToProviderType(v.ProviderType)
+		stakePoolKey := stakepool.StakePoolKey(providerType, v.ProviderID)
 		sp := stakepool.StakePool{}
-		if err := mpt.GetNodeValue(util.Path(encryption.Hash(key)), &sp); err != nil {
-			if err != util.ErrValueNotPresent {
-				continue
+		if knownStakePoolKeys[stakePoolKey] {
+			if err := sp.Get(providerType, v.ProviderID, balances); err != nil {
+				logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
+				return err
 			}
+		} else {
+			knownStakePoolKeys[stakePoolKey] = true
 			sp.Pools = map[string]*stakepool.DelegatePool{}
 		}
 
-		_, ok := sp.Pools[v.ClientID]
-		if ok {
-			continue
+		existingDP, ok := sp.Pools[v.ClientID]
+		if !ok {
+			sp.Pools[v.ClientID] = &stakepool.DelegatePool{
+				Balance:    v.Tokens,
+				DelegateID: v.ClientID,
+				StakedAt:   common.Timestamp(time.Now().UTC().Unix()),
+			}
+			edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
+				PoolID:       v.ClientID,
+				ProviderType: int(providerType),
+				ProviderID:   v.ProviderID,
+				DelegateID:   v.ClientID,
+				Balance:      v.Tokens,
+			})
+		} else {
+			existingDP.Balance = existingDP.Balance + v.Tokens
+			existingDP.StakedAt = common.Timestamp(time.Now().UTC().Unix())
+			for _, edp := range edbDelegatePools {
+				if edp.PoolID == v.ClientID {
+					edp.Balance = existingDP.Balance
+					break
+				}
+			}
 		}
 
-		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
-			Balance:      v.Tokens,
-			Reward:       0,
-			Status:       0,
-			DelegateID:   v.ClientID,
-			RoundCreated: 0,
-			StakedAt:     common.Timestamp(time.Now().UTC().Unix()),
-		}
-
-		edbDelegatePools = append(edbDelegatePools, event.DelegatePool{
-			PoolID:       v.ClientID,
-			ProviderType: int(spenum.ToProviderID(v.ProviderType)),
-			ProviderID:   v.ProviderID,
-			DelegateID:   v.ClientID,
-			Balance:      v.Tokens,
-			Status:       0,
-			RoundCreated: 0,
-		})
-
-		if _, err := mpt.Insert(util.Path(encryption.Hash(key)), &sp); err != nil {
+		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
 			logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
 			return err
 		}
