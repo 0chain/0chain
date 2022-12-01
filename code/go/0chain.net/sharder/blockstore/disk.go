@@ -433,6 +433,12 @@ func initDisk(vViper *viper.Viper, mode string) *diskTier {
 			dTier.Mu.Lock()
 			defer dTier.Mu.Unlock()
 
+			if len(volumes) == 0 {
+				diskVolumeSelectChan <- selectedDiskVolume{
+					err: ErrUnableToSelectVolume,
+				}
+				return
+			}
 			var selectedVolume *volume
 			prevVolume := volumes[prevInd]
 			var selectedIndex int
