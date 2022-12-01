@@ -3,10 +3,10 @@ package blockstore
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
+	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -44,8 +44,7 @@ func setupColdWorker(ctx context.Context) {
 			break
 		case <-ticker.C:
 			upto := time.Now().Add(-store.blockMovementInterval).Unix()
-			maxPrefix := strconv.FormatInt(upto, 10)
-			ch := getUnmovedBlockRecords([]byte(maxPrefix))
+			ch := getUnmovedBlockRecords(common.Timestamp(upto))
 			guideCh := make(chan struct{}, 10)
 			wg := &sync.WaitGroup{}
 			for ubr := range ch {
@@ -57,12 +56,12 @@ func setupColdWorker(ctx context.Context) {
 						<-guideCh
 						wg.Done()
 					}()
-
 					bwr, err := getBWR(ubr.Hash)
 					if err != nil {
 						logging.Logger.Error(fmt.Sprintf("Unexpected error; Error: %v", err))
 						return
 					}
+
 					logging.Logger.Info("Moving block " + bwr.Hash)
 					newColdPath, err := store.coldTier.moveBlock(bwr.Hash, bwr.BlockPath)
 					if err != nil {
@@ -76,7 +75,6 @@ func setupColdWorker(ctx context.Context) {
 						bwr.BlockPath = ""
 					}
 					bwr.ColdPath = newColdPath
-
 					if err := ubr.Delete(); err != nil {
 						logging.Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not delete meta record from unmoved block bucket. Error: %v", bwr.Hash, newColdPath, err))
 					}

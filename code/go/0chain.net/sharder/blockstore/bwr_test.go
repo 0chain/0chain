@@ -15,7 +15,7 @@ func TestInitBlockWhereRecord(t *testing.T) {
 	cacheSize := uint64(100 * MB)
 
 	require.NotPanics(t, func() {
-		initBlockWhereRecord(cacheSize, "start", workDir)
+		initBlockWhereRecord(cacheSize, "start", workDir, "")
 	})
 
 	require.NotNil(t, bmrDB)

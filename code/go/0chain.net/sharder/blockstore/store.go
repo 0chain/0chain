@@ -112,12 +112,17 @@ func Init(ctx context.Context, sViper *viper.Viper, workDir string) {
 	if mode == "" {
 		mode = "start"
 	}
-
-	bwrCacheSize, err := getUint64ValueFromYamlConfig(sViper.Get("rocks.cache_size"))
-	if err != nil {
-		panic(err)
+	var rocksCacheSize uint64
+	rocksCacheI := sViper.Get("rocks.cache_size")
+	var err error
+	if rocksCacheI != nil {
+		rocksCacheSize, err = getUint64ValueFromYamlConfig(sViper.Get("rocks.cache_size"))
+		if err != nil {
+			panic(err)
+		}
 	}
-	initBlockWhereRecord(bwrCacheSize, mode, workDir)
+	dirname := sViper.GetString("rocks.dir_name")
+	initBlockWhereRecord(rocksCacheSize, mode, workDir, dirname)
 
 	store := new(blockStore)
 	switch Tiering(storageType) {
@@ -392,13 +397,14 @@ func (store *blockStore) addToCache(b *block.Block) {
 	}
 }
 
-func (store *blockStore) addToUBR(b *block.Block) {
+func (store *blockStore) addToUBR(b *block.Block) error {
 	ubr := &unmovedBlockRecord{
 		Hash:      b.Hash,
 		CreatedAt: b.CreationDate,
 	}
-
 	if err := ubr.Add(); err != nil {
 		logging.Logger.Error("Error while adding %s to ubr. " + err.Error())
+		return err
 	}
+	return nil
 }

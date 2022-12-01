@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/gorocksdb"
 )
 
@@ -107,9 +107,8 @@ func (ubr *unmovedBlockRecord) Delete() error {
 
 // getUnmovedBlockRecords will return a channel where it will pass
 // all the unmoved blocks that is older than the block movement time interval
-func getUnmovedBlockRecords(maxPrefix []byte) <-chan *unmovedBlockRecord {
+func getUnmovedBlockRecords(uptoDateU common.Timestamp) <-chan *unmovedBlockRecord {
 	ch := make(chan *unmovedBlockRecord)
-
 	go func() {
 		defer close(ch)
 
@@ -118,28 +117,31 @@ func getUnmovedBlockRecords(maxPrefix []byte) <-chan *unmovedBlockRecord {
 
 		it := bmrDB.NewIteratorCF(ro, ubrHandle)
 		defer it.Close()
-		for it.SeekToFirst(); it.Valid() &&
-			bytes.Compare(it.Key().Data(), maxPrefix) != 1; // Key should not be greater than maxPrefix
-		it.Next() {
 
-			keyS := it.Key()
-			valueS := it.Value()
-
-			createdAt, _ := strconv.ParseInt(string(keyS.Data()), 10, 64)
-			ch <- &unmovedBlockRecord{
-				Hash:      string(valueS.Data()),
-				CreatedAt: common.Timestamp(createdAt),
+		var createdAt common.Timestamp
+		for it.SeekToFirst(); it.Valid() && func(it *gorocksdb.Iterator) bool {
+			r := bytes.NewReader(it.Key().Data())
+			err := binary.Read(r, binary.LittleEndian, &createdAt)
+			if err != nil {
+				logging.Logger.Error(err.Error())
+				return false
 			}
-			keyS.Free()
-			valueS.Free()
+			return uptoDateU > createdAt
+		}(it); it.Next() { // Key should not be greater than maxPrefix
+
+			ch <- &unmovedBlockRecord{
+				Hash:      string(it.Value().Data()),
+				CreatedAt: createdAt,
+			}
+			it.Key().Free()
+			it.Value().Free()
 		}
 	}()
 	return ch
 }
 
-func initBlockWhereRecord(cacheSize uint64, mode, workDir string) {
-	dbPath := filepath.Join(workDir, "data/rocksdb", BMR)
-
+func initBlockWhereRecord(cacheSize uint64, mode, workDir, dirname string) {
+	dbPath := filepath.Join(workDir, dirname, "data/rocksdb", BMR)
 	cfs := []string{"default", BWRCF, UBRCF}
 	bwrOpt := gorocksdb.NewDefaultOptions()
 	bwrOpt.OptimizeForPointLookup(cacheSize)
