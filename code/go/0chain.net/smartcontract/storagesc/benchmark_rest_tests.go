@@ -33,6 +33,8 @@ func BenchmarkRestTests(
 	if err != nil {
 		panic(err)
 	}
+	log.Println("in BenchmarkRestTests",
+		"clients length", len(data.Clients))
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
@@ -152,14 +154,6 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.getAllocations,
 			},
-			//{
-			//	FuncName: "blobber-aggregate",
-			//	Params: map[string]string{
-			//		"id":    getMockBlobberId(1),
-			//		"round": "2",
-			//	},
-			//	Endpoint: srh.getBlobberAggregate,
-			//},
 			{
 				FuncName: "allocation-min-lock",
 				Params: map[string]string{
