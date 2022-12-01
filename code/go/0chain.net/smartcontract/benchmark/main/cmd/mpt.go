@@ -470,14 +470,39 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		listLength := viper.GetInt(benchmark.BenchDataListLength)
+
 		benchData.EventDb = eventDb
-		benchData.Clients = clients
-		benchData.PublicKeys = publicKeys
-		benchData.PrivateKeys = privateKeys
-		benchData.Miners = miners
-		benchData.Sharders = sharders
-		benchData.SharderKeys = sharderKeys
-		benchData.Now = common.Now()
+		if len(benchData.Clients) < listLength {
+			benchData.Clients = clients
+		} else {
+			benchData.Clients = clients[:listLength]
+		}
+		if len(benchData.PublicKeys) < listLength {
+			benchData.PublicKeys = publicKeys
+		} else {
+			benchData.PublicKeys = publicKeys[:listLength]
+		}
+		if len(benchData.PrivateKeys) < listLength {
+			benchData.PrivateKeys = privateKeys
+		} else {
+			benchData.PrivateKeys = privateKeys[:listLength]
+		}
+		if len(benchData.Miners) < listLength {
+			benchData.Miners = miners
+		} else {
+			benchData.Miners = miners[:listLength]
+		}
+		if len(benchData.Sharders) < listLength {
+			benchData.Sharders = sharders
+		} else {
+			benchData.Sharders = sharders[:listLength]
+		}
+		if len(benchData.SharderKeys) < listLength {
+			benchData.SharderKeys = sharderKeys
+		} else {
+			benchData.SharderKeys = sharderKeys[:listLength]
+		}
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
