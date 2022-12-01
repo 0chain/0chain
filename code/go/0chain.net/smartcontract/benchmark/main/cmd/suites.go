@@ -55,7 +55,7 @@ func runSuites(
 ) []suiteResults {
 	var results []suiteResults
 	var wg sync.WaitGroup
-	log.Println("piers runSuites")
+
 	_, readOnlyBalances := getBalances(
 		&transaction.Transaction{},
 		extractMpt(mpt, root),
@@ -69,7 +69,6 @@ func runSuites(
 			qsc: timedBalance,
 		},
 	}
-	log.Println("piers about to setup handlers")
 	faucetsc.SetupRestHandler(restSetup)
 	minersc.SetupRestHandler(restSetup)
 	storagesc.SetupRestHandler(restSetup)

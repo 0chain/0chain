@@ -49,14 +49,10 @@ func getTestSuites(
 	}
 
 	common.ConfigRateLimits()
-	log.Println("piers bkNames", bkNames)
 	for _, name = range bkNames {
 		if code, ok := bk.SourceCode[name]; ok {
-			log.Println("piers loading test suite", name)
 			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
-			log.Println("piers loaded test suite", name, "about to omit", omit)
 			suite.RemoveBenchmarks(omit)
-			log.Println("piers removed omitted from test suite", name)
 			suites = append(suites, suite)
 		} else {
 			log.Fatal(fmt.Errorf("Invalid test source %s", name))

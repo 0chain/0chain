@@ -124,7 +124,6 @@ var rootCmd = &cobra.Command{
 		}
 		testsTimer := time.Now()
 		suites := getTestSuites(data, tests, omittedTests)
-		log.Println("got test suites")
 		results := runSuites(suites, mpt, root, data)
 		log.Println()
 		log.Println("tests took", time.Since(testsTimer))
