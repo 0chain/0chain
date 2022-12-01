@@ -35,7 +35,7 @@ func getTestSuites(
 	var name string
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered benchmark in getTestSuites", r, "test name", name)
+			log.Println("Recovered benchmark in getTestSuites", r, "test name", name)
 		}
 	}()
 	var suites []bk.TestSuite
@@ -52,7 +52,9 @@ func getTestSuites(
 
 	for _, name = range bkNames {
 		if code, ok := bk.SourceCode[name]; ok {
+			log.Println("loading test suite", name)
 			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
+			log.Println("loaded test suite", name)
 			suite.RemoveBenchmarks(omit)
 			suites = append(suites, suite)
 		} else {
