@@ -2330,6 +2330,7 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/
 ```
 
 global object for miner smart contracts
+B
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -4933,6 +4934,21 @@ and the other for the allocations that the client (client_id) doesn't own
   
 
 []string
+
+### <span id="timestamp-to-round-resp"></span> timestampToRoundResp
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Rounds | []int64 (formatted integer)| `[]int64` |  | |  |  |
+
+
 
 ### <span id="timestamp-to-round-resp"></span> timestampToRoundResp
 

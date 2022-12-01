@@ -3699,7 +3699,9 @@ paths:
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings:
         get:
-            description: global object for miner smart contracts
+            description: |-
+                global object for miner smart contracts
+                B
             operationId: globalSettings
             responses:
                 "200":

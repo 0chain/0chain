@@ -27,10 +27,6 @@ type Transaction struct {
 	TransactionOutput string        `json:"transaction_output"`
 	OutputHash        string        `json:"output_hash"`
 	Status            int           `json:"status"`
-
-	//ref
-	ReadMarkers []ReadMarker  `gorm:"foreignKey:TransactionID;references:Hash"`
-	WriteMarker []WriteMarker `gorm:"foreignKey:TransactionID;references:Hash"`
 }
 
 func (edb *EventDb) addTransactions(txns []Transaction) error {
@@ -44,43 +40,71 @@ func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
 // GetTransactionByHash finds the transaction record by hash
 func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 	tr := Transaction{}
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{Hash: hash}).First(&tr)
+	res := edb.Store.
+		Get().
+		Model(&Transaction{}).
+		Where(Transaction{Hash: hash}).
+		First(&tr)
 	return tr, res.Error
 }
 
 // GetTransactionByClientId searches for transaction by clientID
 func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ClientId: clientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "creation_date"},
-		Desc:   limit.IsDescending,
-	}).Scan(&tr)
+	res := edb.Store.
+		Get().
+		Model(&Transaction{}).
+		Where(Transaction{ClientId: clientID}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_date"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&tr)
 	return tr, res.Error
 }
 
 // GetTransactionByToClientId searches for transaction by toClientID
 func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{ToClientId: toClientID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "creation_date"},
-		Desc:   limit.IsDescending,
-	}).Scan(&tr)
+	res := edb.Store.
+		Get().
+		Model(&Transaction{}).
+		Where(Transaction{ToClientId: toClientID}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_date"},
+			Desc:   limit.IsDescending,
+		}).Scan(&tr)
 	return tr, res.Error
 }
 
 func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
-	res := edb.Store.Get().Model(Transaction{}).Where(Transaction{BlockHash: blockHash}).Offset(limit.Offset).Limit(limit.Limit).Scan(&tr)
+	res := edb.Store.
+		Get().
+		Model(&Transaction{}).
+		Where(Transaction{BlockHash: blockHash}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Scan(&tr)
 	return tr, res.Error
 }
 
 // GetTransactions finds the transaction
 func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, error) {
 	tr := []Transaction{}
-	res := edb.Store.Get().Model(&Transaction{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "creation_date"},
-		Desc:   limit.IsDescending,
-	}).Find(&tr)
+	res := edb.Store.
+		Get().
+		Model(&Transaction{}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_date"},
+			Desc:   limit.IsDescending,
+		}).Find(&tr)
 
 	return tr, res.Error
 }
@@ -89,7 +113,7 @@ func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, err
 func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, limit common.Pagination) ([]Transaction, error) {
 	tr := []Transaction{}
 	res := edb.Store.Get().
-		Model(Transaction{}).
+		Model(&Transaction{}).
 		Where("round >= ? AND round < ?", blockStart, blockEnd).
 		Offset(limit.Limit).
 		Limit(limit.Offset).
@@ -104,7 +128,7 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Transaction, error) {
 	tr := []Transaction{}
 	res := edb.Store.Get().
-		Model(Transaction{}).
+		Model(&Transaction{}).
 		Where("round >= ? AND round < ?", blockStart, blockEnd).
 		Order("round asc").
 		Find(&tr)

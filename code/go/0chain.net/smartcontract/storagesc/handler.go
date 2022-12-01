@@ -1695,6 +1695,49 @@ type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
 }
 
+type ReadMarkerResponse struct {
+	ID			  uint
+	CreatedAt	  time.Time
+	UpdatedAt	  time.Time
+	Timestamp     int64   `json:"timestamp"`
+	ReadCounter   int64   `json:"read_counter"`
+	ReadSize      float64 `json:"read_size"`
+	Signature     string  `json:"signature"`
+	PayerID       string  `json:"payer_id"`
+	AuthTicket    string  `json:"auth_ticket"`   //used in readmarkers
+	BlockNumber   int64   `json:"block_number"` //used in alloc_read_size
+	ClientID	  string  `json:"client_id"`
+	OwnerID	      string  `json:"owner_id"`
+	TransactionID string  `json:"transaction_id"`
+	AllocationID  string  `json:"allocation_id"`
+
+	// TODO: Decide which pieces of information are important to the response
+	// Client 		*event.User
+	// Owner		*event.User
+	// Allocation	*event.Allocation
+}
+
+func toReadMarkerResponse(rm event.ReadMarker) ReadMarkerResponse {
+	return ReadMarkerResponse{
+		ID: rm.ID,
+		CreatedAt: rm.CreatedAt,
+		UpdatedAt: rm.UpdatedAt,
+		Timestamp: rm.Timestamp,
+		ReadCounter: rm.ReadCounter,
+		ReadSize: rm.ReadSize,
+		Signature: rm.Signature,
+		PayerID: rm.PayerID,
+		AuthTicket: rm.AuthTicket,
+		BlockNumber: rm.BlockNumber,
+		ClientID: rm.ClientID,
+		OwnerID: rm.OwnerID,
+		TransactionID: rm.TransactionID,
+		AllocationID: rm.AllocationID,
+
+		// TODO: Add fields from relationships as needed
+	}
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers readmarkers
 // Gets read markers according to a filter
 //
@@ -1757,7 +1800,12 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	common.Respond(w, r, readMarkers, nil)
+	rmrs := make([]ReadMarkerResponse, 0, len(readMarkers))
+	for _, rm := range readMarkers {
+		rmrs = append(rmrs, toReadMarkerResponse(rm))
+	}
+
+	common.Respond(w, r, rmrs, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker latestreadmarker
@@ -2050,6 +2098,57 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
+type WriteMarkerResponse struct {
+	ID			  uint
+	CreatedAt	  time.Time
+	UpdatedAt	  time.Time
+	ClientID      string `json:"client_id"`
+	BlobberID     string `json:"blobber_id"`
+	AllocationID  string `json:"allocation_id"` //used in alloc_write_marker_count, alloc_written_size
+	TransactionID string `json:"transaction_id"`
+
+	AllocationRoot         string `json:"allocation_root"`
+	PreviousAllocationRoot string `json:"previous_allocation_root"`
+	Size                   int64  `json:"size"`
+	Timestamp              int64  `json:"timestamp"`
+	Signature              string `json:"signature"`
+	BlockNumber            int64  `json:"block_number"` //used in alloc_written_size
+
+	// file info
+	LookupHash  string `json:"lookup_hash"`
+	Name        string `json:"name"`
+	ContentHash string `json:"content_hash"`
+	Operation   string `json:"operation"`
+
+	// TODO: Decide which pieces of information are important to the response
+	// User       User       `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	// Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+}
+
+func toWriteMarkerResponse(wm event.WriteMarker) WriteMarkerResponse {
+	return WriteMarkerResponse{
+		ID: wm.ID,
+		CreatedAt: wm.CreatedAt,
+		UpdatedAt: wm.UpdatedAt,
+		Timestamp: wm.Timestamp,
+		ClientID:  wm.ClientID,
+		BlobberID: wm.BlobberID,
+		AllocationID: wm.AllocationID,
+		TransactionID: wm.TransactionID,
+		AllocationRoot: wm.AllocationRoot,
+		PreviousAllocationRoot: wm.PreviousAllocationRoot,
+		Size: wm.Size,
+		Signature: wm.Signature,
+		BlockNumber: wm.BlockNumber,
+		LookupHash: wm.LookupHash,
+		Name: wm.Name,
+		ContentHash: wm.ContentHash,
+		Operation: wm.Operation,
+
+		// TODO: Add sub-fields or relationships as needed
+	}
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers writemarkers
 // Gets list of write markers satisfying filter
 //
@@ -2090,7 +2189,13 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	common.Respond(w, r, rtv, nil)
+
+	wmrs := make([]WriteMarkerResponse, 0, len(rtv))
+	for _, wm := range rtv {
+		wmrs = append(wmrs, toWriteMarkerResponse(wm))
+	}
+
+	common.Respond(w, r, wmrs, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions transactions

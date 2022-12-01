@@ -134,9 +134,7 @@ func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (
 	return tb.mpts.mpt.Insert(util.Path(clientID), s)
 }
 
-func (tb *testBalances) GetMissingNodesPath() util.Path {
-	return nil
-}
+func (tb *testBalances) GetMissingNodeKeys() []util.Key { return nil }
 
 func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 
