@@ -33,7 +33,7 @@ require (
 	github.com/valyala/gozstd v1.16.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.10.0
-	go.uber.org/zap v1.23.0
+	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
