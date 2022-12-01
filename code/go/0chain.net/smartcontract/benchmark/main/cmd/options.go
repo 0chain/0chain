@@ -32,12 +32,6 @@ func getTestSuites(
 	data bk.BenchData,
 	bkNames, omit []string,
 ) []bk.TestSuite {
-	var name string
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("piers Recovered benchmark in getTestSuites", r, "test name", name)
-		}
-	}()
 	var suites []bk.TestSuite
 	if len(bkNames) == 0 {
 		for _, bks := range benchmarkSources {
@@ -49,7 +43,8 @@ func getTestSuites(
 	}
 
 	common.ConfigRateLimits()
-	for _, name = range bkNames {
+
+	for _, name := range bkNames {
 		if code, ok := bk.SourceCode[name]; ok {
 			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
 			suite.RemoveBenchmarks(omit)
