@@ -14,6 +14,7 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -749,7 +750,8 @@ func (ps *poolStat) encode() []byte {
 }
 
 type deletePool struct {
-	MinerID string `json:"id"`
+	ProviderType spenum.Provider `json:"provider_type,omitempty"`
+	ProviderID   string          `json:"provider_id,omitempty"`
 }
 
 func (dp *deletePool) Encode() []byte {
