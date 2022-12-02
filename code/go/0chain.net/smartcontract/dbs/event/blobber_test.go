@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"golang.org/x/net/context"
 
@@ -94,7 +94,7 @@ func TestBlobbers(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -135,8 +135,8 @@ func TestBlobbers(t *testing.T) {
 	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddBlobber),
+		Type:        TypeStats,
+		Tag:         TagAddBlobber,
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
@@ -162,8 +162,8 @@ func TestBlobbers(t *testing.T) {
 	eventUpdateSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        int(TypeStats),
-		Tag:         int(TagUpdateBlobber),
+		Type:        TypeStats,
+		Tag:         TagUpdateBlobber,
 		Data:        string(data),
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
@@ -204,8 +204,8 @@ func TestBlobbers(t *testing.T) {
 	eventOverwrite := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
-		Type:        int(TypeStats),
-		Tag:         int(TagUpdateBlobber),
+		Type:        TypeStats,
+		Tag:         TagUpdateBlobber,
 		Data:        string(data),
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwrite}, 100, "hash", 10)
@@ -216,8 +216,8 @@ func TestBlobbers(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
-		Type:        int(TypeStats),
-		Tag:         int(TagDeleteBlobber),
+		Type:        TypeStats,
+		Tag:         TagDeleteBlobber,
 		Data:        blobber.BlobberID,
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
@@ -239,7 +239,7 @@ func TestBlobberIds(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -270,7 +270,7 @@ func TestBlobberLatLong(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		t.Skip("only for local debugging, requires local postgresql")
 		return
@@ -298,7 +298,7 @@ func TestBlobberGetCount(t *testing.T) {
 	}
 
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}

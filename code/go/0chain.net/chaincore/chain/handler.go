@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	getBlockV1Pattern = "/v1/block/get"
+	GetBlockV1Pattern = "/v1/block/get"
 )
 
 // chainhandlersMap returns routes of associated with chain
@@ -125,7 +125,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		),
 	}
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		m[getBlockV1Pattern] = common.UserRateLimit(
+		m[GetBlockV1Pattern] = common.UserRateLimit(
 			common.ToJSONResponse(
 				GetBlockHandler,
 			),
@@ -1371,7 +1371,9 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, txn.ClientID)
 	if !isValid(err) {
-		return nil, err
+		// put txn to pool if the miner has 'node not found', we should not ignore the txn because
+		// of the 'error' of the miner itself.
+		return transaction.PutTransaction(ctx, txn)
 	}
 	nonce := int64(0)
 	if s != nil {

@@ -4,9 +4,8 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/currency"
-
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -21,7 +20,7 @@ func AddMockEvents(eventDb *event.EventDb) {
 				event := event.Event{
 					BlockNumber: block_number,
 					TxHash:      GetMockTransactionHash(block_number, i),
-					Type:        int(event.TypeStats),
+					Type:        event.TypeStats,
 					Tag:         3,
 					Index:       "mock index",
 					Data:        "mock data",
@@ -56,8 +55,8 @@ func AddMockTransactions(
 	if !viper.GetBool(benchmark.EventDbEnabled) {
 		return
 	}
-	const txnTypeSmartContract = 1000
-	for blockNumber := int64(0); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
+	const txnTxnSmartContract = 1000
+	for blockNumber := int64(1); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
 		for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			if viper.GetBool(benchmark.EventDbEnabled) {
 				transaction := event.Transaction{
@@ -71,7 +70,8 @@ func AddMockTransactions(
 					Signature:         "mock signature",
 					CreationDate:      int64(common.Now()),
 					Fee:               100,
-					TransactionType:   txnTypeSmartContract,
+					Nonce:             int64(i),
+					TransactionType:   txnTxnSmartContract,
 					TransactionOutput: "mock output",
 					OutputHash:        "mock output hash",
 					Status:            0,
@@ -97,7 +97,7 @@ func AddMockBlocks(
 	if !viper.GetBool(benchmark.EventDbEnabled) {
 		return
 	}
-	for block_number := int64(0); block_number <= viper.GetInt64(benchmark.NumBlocks); block_number++ {
+	for block_number := int64(1); block_number <= viper.GetInt64(benchmark.NumBlocks); block_number++ {
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			block := event.Block{
 				Hash:                  GetMockBlockHash(block_number),

@@ -41,7 +41,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"max delegates already reached: %d (%d)", numDelegates, mn.Settings.MaxNumDelegates)
 	}
 
-	if numDelegates >= gn.MaxDelegates {
+	if numDelegates >= gn.MaxDelegates && !mn.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("delegate_pool_add",
 			"SC max delegates already reached: %d (%d)", numDelegates, gn.MaxDelegates)
 	}
@@ -100,11 +100,6 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	switch pool.Status {
 	case spenum.Pending:
 		{
-			_, err := mn.UnlockClientStakePool(t.ClientID, spenum.Miner, dp.MinerID, balances)
-			if err != nil {
-				return "", common.NewErrorf("delegate_pool_del",
-					"stake_pool_unlock_failed: %v", err)
-			}
 			if err = mn.save(balances); err != nil {
 				return "", common.NewError("delegate_pool_del", err.Error())
 			}

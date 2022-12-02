@@ -21,15 +21,23 @@ simulation:
   num_challenges_blobber: 1
   num_authorizers: 12
   num_reward_partition_blobber: 5
-  num_blocks: 100
+  num_blocks: 200
   num_transactions_per_block: 10
 
 options:
   verbose: true
   test_suites:
+    - "storage"
+    - "storage_rest"
     - "miner"
     - "miner_rest"
-    - "storage_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
   save_path: # do not add a load_path key, this is read from command line options
   load_concurrency: 4
@@ -45,6 +53,11 @@ dbs:
     max_idle_conns: 100
     max_open_conns: 200
     conn_max_lifetime: 20s
+    aggregate_period: 5
+  settings:
+    debug: false
+    aggregate_period: 10
+    page_limit: 50
 
 smart_contracts:
   minersc:

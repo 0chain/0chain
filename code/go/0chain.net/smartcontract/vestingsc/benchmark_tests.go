@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"github.com/spf13/viper"
 

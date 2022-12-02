@@ -22,13 +22,13 @@ func TestRewardEvents(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	reward := Reward{
+	reward := RewardMint{
 		Amount:       500,
 		BlockNumber:  345,
 		ClientID:     "new_wallet_id",
@@ -37,7 +37,7 @@ func TestRewardEvents(t *testing.T) {
 		ProviderID:   "blobber_id",
 	}
 
-	err = eventDb.addReward(reward)
+	err = eventDb.addRewardMint(reward)
 	require.NoError(t, err, "Error while inserting reward data to event Database")
 
 	var count int64
@@ -46,13 +46,13 @@ func TestRewardEvents(t *testing.T) {
 
 	reward.BlockNumber = 890
 	reward.ClientID = "another_wallet_id"
-	err = eventDb.addReward(reward)
+	err = eventDb.addRewardMint(reward)
 	require.NoError(t, err, "Error while inserting reward to event Database")
 
 	eventDb.Get().Table("rewards").Count(&count)
 	require.Equal(t, int64(2), count, "Rewards not getting inserted")
 
-	rewardQuery := RewardQuery{
+	rewardQuery := RewardMintQuery{
 		StartBlock: 0,
 		EndBlock:   900,
 	}
@@ -77,7 +77,7 @@ func TestRewardEvents(t *testing.T) {
 	require.NoError(t, err, "Error while getting sum of rewards")
 	require.Equal(t, int64(0), claimedReward, "Specific reward was not calculated")
 
-	rewardQuery = RewardQuery{
+	rewardQuery = RewardMintQuery{
 		ClientID: "another_wallet_id",
 	}
 	err = removeReward(eventDb, rewardQuery)
@@ -97,14 +97,14 @@ func TestRewardEvents(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func removeReward(edb *EventDb, query RewardQuery) error {
-	reward := Reward{
+func removeReward(edb *EventDb, query RewardMintQuery) error {
+	reward := RewardMint{
 		ClientID:     query.ClientID,
 		PoolID:       query.PoolID,
 		ProviderType: query.ProviderType,
 		ProviderID:   query.ProviderID,
 	}
-	q := edb.Store.Get().Model(&Reward{}).Where(&RewardQuery{ClientID: query.ClientID})
+	q := edb.Store.Get().Model(&RewardMint{}).Where(&RewardMintQuery{ClientID: query.ClientID})
 
 	if query.EndBlock > 0 {
 		q = q.Where("block_number >= ? AND block_number <= ?", query.StartBlock, query.EndBlock)

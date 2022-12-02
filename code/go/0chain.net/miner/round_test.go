@@ -78,41 +78,47 @@ func TestVRFSharesCacheGetAll(t *testing.T) {
 
 func TestVRFSharesCacheClean(t *testing.T) {
 	tt := []struct {
-		name            string
-		sharesNum       int
-		cleanBelowCount int
-		leftNum         int
+		name      string
+		sharesNum int
+		remove    []int
+		leftNum   int
 	}{
 		{
-			name:            "clean 0",
-			sharesNum:       3,
-			cleanBelowCount: -1,
-			leftNum:         3,
+			name:      "clean 0",
+			sharesNum: 3,
+			//cleanBelowCount: -1,
+			remove:  []int{-1},
+			leftNum: 3,
 		},
 		{
-			name:            "clean 1",
-			sharesNum:       3,
-			cleanBelowCount: 0,
-			leftNum:         2,
+			name:      "clean 1",
+			sharesNum: 3,
+			remove:    []int{0},
+			leftNum:   2,
 		},
 		{
-			name:            "clean 2",
-			sharesNum:       3,
-			cleanBelowCount: 1,
-			leftNum:         1,
+			name:      "clean 2",
+			sharesNum: 3,
+			remove:    []int{0, 1},
+			leftNum:   1,
 		},
 		{
-			name:            "clean 3",
-			sharesNum:       3,
-			cleanBelowCount: 3,
-			leftNum:         0,
+			name:      "clean 3",
+			sharesNum: 3,
+			remove:    []int{0, 1, 2},
+			leftNum:   0,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(fmt.Sprintf("%s %d_%d", tc.name, tc.sharesNum, tc.leftNum), func(t *testing.T) {
 			vrfc := setupVRFSharesCache(t, tc.sharesNum)
-			vrfc.clean(tc.cleanBelowCount)
+
+			rms := make(map[string]struct{}, len(tc.remove))
+			for _, i := range tc.remove {
+				rms[fmt.Sprintf("share%d", i)] = struct{}{}
+			}
+			vrfc.clean(rms)
 
 			require.Len(t, vrfc.getAll(), tc.leftNum)
 		})

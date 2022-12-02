@@ -1,7 +1,7 @@
 package event
 
 import (
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm"
 )
 
@@ -11,4 +11,12 @@ type ProviderRewards struct {
 	ProviderID   string        `json:"provider_id" gorm:"uniqueIndex"`
 	Rewards      currency.Coin `json:"rewards"`
 	TotalRewards currency.Coin `json:"total_rewards"`
+}
+
+func (edb *EventDb) collectRewards(providerId string) error {
+	return edb.Get().Model(&ProviderRewards{}).
+		Where("provider_id = ?", providerId).
+		Updates(map[string]interface{}{
+			"rewards": currency.Coin(0),
+		}).Error
 }

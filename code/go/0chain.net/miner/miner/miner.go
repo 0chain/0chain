@@ -210,6 +210,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	http.DefaultServeMux = mux
+	common.ConfigRateLimits()
 
 	common.ConfigRateLimits()
 

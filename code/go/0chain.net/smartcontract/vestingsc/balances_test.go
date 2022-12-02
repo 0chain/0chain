@@ -3,13 +3,13 @@ package vestingsc
 import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/currency"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 )
 
@@ -133,6 +133,4 @@ func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (
 	return nil, nil
 }
 
-func (tb *testBalances) GetMissingNodesPath() util.Path {
-	return nil
-}
+func (tb *testBalances) GetMissingNodeKeys() []util.Key { return nil }

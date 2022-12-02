@@ -67,6 +67,7 @@ jobs:
 
 
         docker tag miner:latest ${MINER_REGISTRY}:$TAG
+        docker tag miner:latest $MINER_REGISTRY:latest
         docker push ${MINER_REGISTRY}:$TAG
 
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
@@ -117,6 +118,9 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: generate swagger
+      run: docker.local/bin/test.swagger.sh
+
     - name: Build & Push
       run: |
         make install-mockery
@@ -125,6 +129,7 @@ jobs:
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
 
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
+        docker tag sharder:latest $SHARDER_REGISTRY:latest
         docker push ${SHARDER_REGISTRY}:$TAG
 
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)

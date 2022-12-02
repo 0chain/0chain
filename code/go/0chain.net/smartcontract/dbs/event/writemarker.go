@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/currency"
 	"0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -118,10 +118,17 @@ func (edb *EventDb) GetWriteMarkerCount(allocationID string) (int64, error) {
 
 func (edb *EventDb) GetWriteMarkers(limit common.Pagination) ([]WriteMarker, error) {
 	var wm []WriteMarker
-	return wm, edb.Get().Model(&WriteMarker{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   limit.IsDescending,
-	}).Scan(&wm).Error
+	return wm, edb.
+		Get().
+		Joins("User").
+		Joins("Allocation").
+		Model(&WriteMarker{}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).Scan(&wm).Error
 }
 
 func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit common.Pagination) ([]WriteMarker, error) {
@@ -176,6 +183,8 @@ func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString s
 	}
 
 	res := edbRef.
+		Joins("User").
+		Joins("Allocation").
 		Model(WriteMarker{}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).

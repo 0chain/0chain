@@ -447,6 +447,7 @@ func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 	if addm.Sender != r.monitor {
 		return // not the monitor node
 	}
+
 	var (
 		sender, sok = r.conf.Nodes.NodeByName(addm.Sender)
 		added, aok  = r.conf.Nodes.NodeByName(addm.Miner)
@@ -905,6 +906,7 @@ func (r *Runner) Run() (err error, success bool) {
 
 	cases:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
+			_ = r.SetMagicBlock("")
 			r.conf.CleanupEnv()
 			var report reportTestCase
 			report.name = testCase.Name

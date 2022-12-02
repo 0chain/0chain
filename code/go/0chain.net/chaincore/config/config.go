@@ -5,7 +5,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"0chain.net/smartcontract/minersc/enums"
+
+	"0chain.net/smartcontract"
+
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
@@ -81,6 +85,10 @@ func SetupDefaultConfig() {
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
 
 	viper.SetDefault("smart_contracts.storagesc.max_blobbers_per_allocation", 40)
+
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregateDebug], false)
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregatePeriod], 10)
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregatePageLimit], 50)
 }
 
 // SetupConfig setups the main configuration system.
@@ -180,6 +188,7 @@ type ChainConfig interface {
 	RoundTimeoutSofttoMult() int
 	RoundRestartMult() int
 	DbsEvents() DbAccess
+	DbSettings() DbSettings
 	FromViper() error
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
@@ -198,6 +207,37 @@ type DbAccess struct {
 	MaxIdleConns    int           `json:"max_idle_conns"`
 	MaxOpenConns    int           `json:"max_open_conns"`
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
+}
+
+type DbSettings struct {
+	Debug           bool  `json:"debug"`
+	AggregatePeriod int64 `json:"aggregate_period"`
+	PageLimit       int64 `json:"page_limit"`
+}
+
+func (s *DbSettings) Update(updates map[string]string) error {
+	if value, found := updates[enums.DbsAggregateDebug.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Boolean)
+		if err != nil {
+			return err
+		}
+		s.Debug = iValue.(bool)
+	}
+	if value, found := updates[enums.DbsAggregatePeriod.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.AggregatePeriod = iValue.(int64)
+	}
+	if value, found := updates[enums.DbsAggregatePageLimit.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.PageLimit = iValue.(int64)
+	}
+	return nil
 }
 
 // HealthCheckCycleScan -

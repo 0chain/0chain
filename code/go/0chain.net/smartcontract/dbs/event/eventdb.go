@@ -3,7 +3,6 @@ package event
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
@@ -11,19 +10,18 @@ import (
 	"0chain.net/smartcontract/dbs/postgresql"
 )
 
-const DefaultQueryTimeout = 5 * time.Second
-
-func NewEventDb(config config.DbAccess) (*EventDb, error) {
+func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)
 	if err != nil {
 		return nil, err
 	}
 	eventDb := &EventDb{
 		Store:         db,
+		dbConfig:      config,
 		eventsChannel: make(chan blockEvents, 1),
+		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
-
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}
@@ -32,6 +30,8 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
+	dbConfig      config.DbAccess   // depends on the sharder, change on restart
+	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan blockEvents
 }
 
@@ -46,6 +46,8 @@ func (edb *EventDb) Begin() (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
+		dbConfig: edb.dbConfig,
+		settings: edb.settings,
 	}
 	return &edbTx, nil
 }
@@ -62,6 +64,22 @@ func (edb *EventDb) Rollback() error {
 		return errors.New("rollbacking nil transaction")
 	}
 	return edb.Store.Get().Rollback().Error
+}
+
+func (edb *EventDb) UpdateSettings(updates map[string]string) error {
+	return edb.settings.Update(updates)
+}
+
+func (edb *EventDb) AggregatePeriod() int64 {
+	return edb.settings.AggregatePeriod
+}
+
+func (edb *EventDb) PageLimit() int64 {
+	return edb.settings.PageLimit
+}
+
+func (edb *EventDb) Debug() bool {
+	return edb.settings.Debug
 }
 
 type blockEvents struct {
@@ -88,9 +106,12 @@ func (edb *EventDb) AutoMigrate() error {
 		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
-		&Reward{},
+		&RewardMint{},
 		&Authorizer{},
 		&Challenge{},
+		&Snapshot{},
+		&BlobberSnapshot{},
+		&BlobberAggregate{},
 		&AllocationBlobberTerm{},
 		&ProviderRewards{},
 		&ChallengePool{},
@@ -98,4 +119,8 @@ func (edb *EventDb) AutoMigrate() error {
 		return err
 	}
 	return nil
+}
+
+func (edb *EventDb) Config() config.DbAccess {
+	return edb.dbConfig
 }

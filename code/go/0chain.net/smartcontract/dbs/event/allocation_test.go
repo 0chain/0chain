@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
 	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
@@ -239,7 +239,7 @@ func TestAllocations(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -349,8 +349,8 @@ func TestAllocations(t *testing.T) {
 		Model:       gorm.Model{},
 		BlockNumber: 1,
 		TxHash:      "txn_hash",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddAllocation),
+		Type:        TypeStats,
+		Tag:         TagAddAllocation,
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}
@@ -369,8 +369,8 @@ func TestAllocations(t *testing.T) {
 		Model:       gorm.Model{},
 		BlockNumber: 2,
 		TxHash:      "txn_hash2",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddAllocation),
+		Type:        TypeStats,
+		Tag:         TagAddAllocation,
 		Index:       saAllocation.AllocationID,
 		Data:        string(data),
 	}

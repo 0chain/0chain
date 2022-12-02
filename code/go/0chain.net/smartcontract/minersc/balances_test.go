@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -167,6 +167,4 @@ func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (
 	return nil, nil
 }
 
-func (tb *testBalances) GetMissingNodesPath() util.Path {
-	return nil
-}
+func (tb *testBalances) GetMissingNodeKeys() []util.Key { return nil }

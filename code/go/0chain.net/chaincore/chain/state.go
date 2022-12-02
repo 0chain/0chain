@@ -8,7 +8,7 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -39,13 +39,13 @@ func init() {
 var ErrWrongNonce = common.NewError("wrong_nonce", "nonce of sender is not valid")
 
 /*ComputeState - compute the state for the block */
-func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
+func (c *Chain) ComputeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) (err error) {
 	return c.ComputeBlockStateWithLock(ctx, func() error {
 		//check whether we already computed it
 		if b.IsStateComputed() {
 			return nil
 		}
-		return c.computeState(ctx, b)
+		return c.computeState(ctx, b, waitC...)
 	})
 }
 
@@ -75,8 +75,8 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
-	return b.ComputeState(ctx, c)
+func (c *Chain) computeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) error {
+	return b.ComputeState(ctx, c, waitC...)
 }
 
 // SaveChanges - persist the state changes
@@ -143,9 +143,8 @@ func (c *Chain) ExecuteSmartContract(
 		return "", transaction.ErrSmartContractContext
 	case r := <-resultC:
 		SmartContractExecutionTimer.Update(time.Since(ts))
-
-		if ierrs := balances.GetInvalidStateErrors(); len(ierrs) > 0 {
-			return "", ierrs[0]
+		if len(balances.GetMissingNodeKeys()) > 0 {
+			return "", util.ErrNodeNotFound
 		}
 
 		return r.output, r.err
@@ -160,16 +159,43 @@ func (c *Chain) ExecuteSmartContract(
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error) {
+func (c *Chain) UpdateState(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	waitC ...chan struct{},
+) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(ctx, b, bState, txn)
+	return c.updateState(ctx, b, bState, txn, waitC...)
+}
+
+type SyncReplyC struct {
+	sync   bool
+	replyC []chan struct{}
+}
+
+// SyncNodesOption function for setting node syncing option
+type SyncNodesOption func(*SyncReplyC)
+
+// WithSync enable synching missing nodes if any
+func WithSync() SyncNodesOption {
+	return func(s *SyncReplyC) {
+		s.sync = true
+	}
+}
+
+// WithNotifyC subscribe to channel that will be notified when missing nodes syncing is done
+func WithNotifyC(replyC ...chan struct{}) SyncNodesOption {
+	return func(s *SyncReplyC) {
+		s.replyC = replyC
+	}
 }
 
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction, sync ...bool) (int, error) {
+	txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
@@ -187,15 +213,20 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 			return math.MaxInt32, err
 		}
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
-		if ierrs := sctx.GetInvalidStateErrors(); len(ierrs) > 0 {
+		if missingKeys := sctx.GetMissingNodeKeys(); len(missingKeys) > 0 {
+			syncOpts := &SyncReplyC{}
+			for _, opt := range opts {
+				opt(syncOpts)
+			}
+
 			logging.Logger.Error("Internal error while estimate transaction cost",
-				zap.Errors("errors", ierrs),
+				zap.Error(util.ErrNodeNotFound),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			if len(sync) > 0 && sync[0] {
-				c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath())
+			if syncOpts.sync {
+				c.SyncMissingNodes(b.Round, missingKeys, syncOpts.replyC...)
 			}
-			return math.MaxInt32, ierrs[0] // return the first one only
+			return math.MaxInt32, util.ErrNodeNotFound
 		}
 
 		return cost, err
@@ -241,7 +272,7 @@ func (c *Chain) NewStateContext(
 }
 
 func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction) (es []event.Event, err error) {
+	txn *transaction.Transaction, waitC ...chan struct{}) (es []event.Event, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
@@ -258,7 +289,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	defer func() {
 		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(b.Round, sctx.GetMissingNodesPath())
+			c.SyncMissingNodes(b.Round, sctx.GetMissingNodeKeys(), waitC...)
 		}
 	}()
 
@@ -444,12 +475,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	for _, e := range ue {
-		if err = c.emitUserEvent(sctx, e); err != nil {
-			logging.Logger.Error("could not emit event", zap.Any("error", err),
-				zap.Any("transaction", txn.Hash),
-				zap.String("clientID", txn.ClientID))
-			return nil, err
-		}
+		c.emitUserEvent(sctx, e)
 	}
 
 	// commit transaction
@@ -488,7 +514,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 
 	defer func() {
 		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodesPath())
+			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodeKeys())
 		}
 	}()
 
@@ -549,7 +575,10 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, err
 	}
 
-	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
+	c.emitSendTransferEvent(sctx, stateToUser(fromClient, fs, amount))
+	c.emitReceiveTransferEvent(sctx, stateToUser(toClient, ts, amount))
+
+	return []*event.User{stateToUser(fromClient, fs, -amount), stateToUser(toClient, ts, amount)}, nil
 }
 
 func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
@@ -564,7 +593,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 
 	defer func() {
 		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodesPath())
+			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodeKeys())
 		}
 	}()
 
@@ -595,7 +624,9 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return nil, common.NewError("mint_amount - insert", err.Error())
 	}
 
-	return stateToUser(toClient, ts), nil
+	c.emitMintEvent(sctx, stateToUser(toClient, ts, amount))
+
+	return stateToUser(toClient, ts, amount), nil
 }
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
@@ -638,7 +669,7 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 		zap.String("client", fromClient),
 		zap.Int64("new_nonce", s.Nonce))
 
-	return stateToUser(fromClient, s), nil
+	return stateToUser(fromClient, s, 0), nil
 }
 
 func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
@@ -705,7 +736,7 @@ func userToState(u *event.User) *state.State {
 	}
 }
 
-func stateToUser(clientID string, s *state.State) *event.User {
+func stateToUser(clientID string, s *state.State, change currency.Coin) *event.User {
 	return &event.User{
 		UserID:  clientID,
 		TxnHash: s.TxnHash,
@@ -715,14 +746,41 @@ func stateToUser(clientID string, s *state.State) *event.User {
 	}
 }
 
-func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) error {
+func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
 	if c.GetEventDb() == nil {
-		return nil
+		return
 	}
 
 	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, usr.UserID, usr,
 		func(events []event.Event, current event.Event) []event.Event {
 			return append([]event.Event{current}, events...)
 		})
-	return nil
+	return
+}
+func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) {
+	if c.GetEventDb() == nil {
+		return
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagAddMint, usr.UserID, usr)
+
+	return
+}
+func (c *Chain) emitSendTransferEvent(sc bcstate.StateContextI, usr *event.User) {
+	if c.GetEventDb() == nil {
+		return
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagSendTransfer, usr.UserID, usr)
+
+	return
+}
+func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.User) {
+	if c.GetEventDb() == nil {
+		return
+	}
+
+	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, usr.UserID, usr)
+
+	return
 }

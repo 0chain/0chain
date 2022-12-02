@@ -5,7 +5,7 @@ import (
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -160,35 +160,6 @@ func AddMockNodes(
 		panic(err)
 	}
 	return nodes, publickKeys
-}
-
-func AddNodeDelegates(
-	clients, miners, sharders []string,
-	balances cstate.StateContextI,
-) {
-	for i := range miners {
-		AddUserNodesForNode(i, spenum.Miner, miners, clients, balances)
-	}
-	for i := range sharders {
-		AddUserNodesForNode(i, spenum.Sharder, sharders, clients, balances)
-	}
-}
-
-func AddUserNodesForNode(
-	nodeIndex int,
-	nodeType spenum.Provider,
-	nodes []string,
-	clients []string,
-	balances cstate.StateContextI,
-) {
-	var numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
-	for j := 0; j < numDelegates; j++ {
-		delegate := (nodeIndex + j) % len(nodes)
-		un := stakepool.NewUserStakePools()
-		un.Providers = []string{nodes[nodeIndex]}
-
-		_, _ = balances.InsertTrieNode(stakepool.UserStakePoolsKey(nodeType, clients[delegate]), un)
-	}
 }
 
 func SetUpNodes(

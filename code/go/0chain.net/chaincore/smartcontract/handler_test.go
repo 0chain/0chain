@@ -11,7 +11,7 @@ import (
 
 	"0chain.net/chaincore/chain"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/setupsc"
@@ -132,7 +132,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 43,
+			restpoints: 45,
 		},
 		{
 			name:       "multisig",

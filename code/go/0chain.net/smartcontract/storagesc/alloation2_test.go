@@ -11,7 +11,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -725,7 +725,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := event.NewEventDb(access)
+	eventDb, err := event.NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}

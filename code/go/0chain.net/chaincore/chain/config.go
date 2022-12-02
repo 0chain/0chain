@@ -4,8 +4,10 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/minersc/enums"
+
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/viper"
 	"github.com/0chain/common/core/logging"
@@ -328,6 +330,13 @@ func (c *ConfigImpl) DbsEvents() config.DbAccess {
 	return c.conf.DbsEvents
 }
 
+func (c *ConfigImpl) DbSettings() config.DbSettings {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.DbsSettings
+}
+
 func (c *ConfigImpl) MaxBlockCost() int {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
@@ -412,8 +421,9 @@ type ConfigData struct {
 	RoundTimeoutSofttoMult int `json:"softto_mult"`        // multiplier of mean network time for soft timeout
 	RoundRestartMult       int `json:"round_restart_mult"` // multiplier of soft timeouts to restart a round
 
-	DbsEvents config.DbAccess `json:"dbs_event"`
-	TxnExempt map[string]bool `json:"txn_exempt"`
+	DbsEvents   config.DbAccess   `json:"dbs_event"`
+	DbsSettings config.DbSettings `json:"dbs_settings"`
+	TxnExempt   map[string]bool   `json:"txn_exempt"`
 }
 
 func (c *ConfigImpl) FromViper() error {
@@ -531,6 +541,9 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
 	conf.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
 
+	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
+	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")
+	conf.DbsSettings.PageLimit = viper.GetInt64("server_chain.dbs.settings.page_limit")
 	return nil
 }
 
@@ -551,71 +564,71 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	logging.Logger.Debug("Updating config", zap.Int64("old version", old), zap.Int64("new version", conf.version))
 
 	var err error
-	conf.IsStateEnabled, err = cf.GetBool(minersc.State)
+	conf.IsStateEnabled, err = cf.GetBool(enums.State)
 	if err != nil {
 		return err
 	}
-	conf.IsDkgEnabled, err = cf.GetBool(minersc.Dkg)
+	conf.IsDkgEnabled, err = cf.GetBool(enums.Dkg)
 	if err != nil {
 		return err
 	}
-	conf.IsViewChangeEnabled, err = cf.GetBool(minersc.ViewChange)
+	conf.IsViewChangeEnabled, err = cf.GetBool(enums.ViewChange)
 	if err != nil {
 		return err
 	}
-	conf.IsBlockRewardsEnabled, err = cf.GetBool(minersc.BlockRewards)
+	conf.IsBlockRewardsEnabled, err = cf.GetBool(enums.BlockRewards)
 	if err != nil {
 		return err
 	}
-	conf.IsStorageEnabled, err = cf.GetBool(minersc.Storage)
+	conf.IsStorageEnabled, err = cf.GetBool(enums.Storage)
 	if err != nil {
 		return err
 	}
-	conf.IsFaucetEnabled, err = cf.GetBool(minersc.Faucet)
+	conf.IsFaucetEnabled, err = cf.GetBool(enums.Faucet)
 	if err != nil {
 		return err
 	}
-	conf.IsFeeEnabled, err = cf.GetBool(minersc.Miner)
+	conf.IsFeeEnabled, err = cf.GetBool(enums.Miner)
 	if err != nil {
 		return err
 	}
-	conf.IsMultisigEnabled, err = cf.GetBool(minersc.Multisig)
+	conf.IsMultisigEnabled, err = cf.GetBool(enums.Multisig)
 	if err != nil {
 		return err
 	}
-	conf.IsVestingEnabled, err = cf.GetBool(minersc.Vesting)
+	conf.IsVestingEnabled, err = cf.GetBool(enums.Vesting)
 	if err != nil {
 		return err
 	}
-	conf.IsZcnEnabled, err = cf.GetBool(minersc.Zcn)
+	conf.IsZcnEnabled, err = cf.GetBool(enums.Zcn)
 	if err != nil {
 		return err
 	}
-	conf.MinBlockSize, err = cf.GetInt32(minersc.BlockMinSize)
+	conf.MinBlockSize, err = cf.GetInt32(enums.BlockMinSize)
 	if err != nil {
 		return err
 	}
-	conf.BlockSize, err = cf.GetInt32(minersc.BlockMaxSize)
+	conf.BlockSize, err = cf.GetInt32(enums.BlockMaxSize)
 	if err != nil {
 		return err
 	}
-	conf.MaxBlockCost, err = cf.GetInt(minersc.BlockMaxCost)
+	conf.MaxBlockCost, err = cf.GetInt(enums.BlockMaxCost)
 	if err != nil {
 		return err
 	}
-	conf.MaxByteSize, err = cf.GetInt64(minersc.BlockMaxByteSize)
+	conf.MaxByteSize, err = cf.GetInt64(enums.BlockMaxByteSize)
 	if err != nil {
 		return err
 	}
-	conf.NumReplicators, err = cf.GetInt(minersc.BlockReplicators)
+	conf.NumReplicators, err = cf.GetInt(enums.BlockReplicators)
 	if err != nil {
 		return err
 	}
-	conf.BlockProposalMaxWaitTime, err = cf.GetDuration(minersc.BlockProposalMaxWaitTime)
+	conf.BlockProposalMaxWaitTime, err = cf.GetDuration(enums.BlockProposalMaxWaitTime)
 	if err != nil {
 		return err
 	}
-	waitMode, err := cf.GetString(minersc.BlockProposalWaitMode)
+	waitMode, err := cf.GetString(enums.BlockProposalWaitMode)
 	if err != nil {
 		return err
 	}
@@ -624,67 +637,67 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	} else if waitMode == "dynamic" {
 		conf.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
-	conf.ThresholdByCount, err = cf.GetInt(minersc.BlockConsensusThresholdByCount)
+	conf.ThresholdByCount, err = cf.GetInt(enums.BlockConsensusThresholdByCount)
 	if err != nil {
 		return err
 	}
-	conf.ThresholdByStake, err = cf.GetInt(minersc.BlockConsensusThresholdByStake)
+	conf.ThresholdByStake, err = cf.GetInt(enums.BlockConsensusThresholdByStake)
 	if err != nil {
 		return err
 	}
-	conf.MinActiveSharders, err = cf.GetInt(minersc.BlockShardingMinActiveSharders)
+	conf.MinActiveSharders, err = cf.GetInt(enums.BlockShardingMinActiveSharders)
 	if err != nil {
 		return err
 	}
-	conf.MinActiveReplicators, err = cf.GetInt(minersc.BlockShardingMinActiveReplicators)
+	conf.MinActiveReplicators, err = cf.GetInt(enums.BlockShardingMinActiveReplicators)
 	if err != nil {
 		return err
 	}
-	conf.ValidationBatchSize, err = cf.GetInt(minersc.BlockValidationBatchSize)
+	conf.ValidationBatchSize, err = cf.GetInt(enums.BlockValidationBatchSize)
 	if err != nil {
 		return err
 	}
-	conf.ReuseTransactions, err = cf.GetBool(minersc.BlockReuseTransactions)
+	conf.ReuseTransactions, err = cf.GetBool(enums.BlockReuseTransactions)
 	if err != nil {
 		return err
 	}
-	conf.MinGenerators, err = cf.GetInt(minersc.BlockMinGenerators)
+	conf.MinGenerators, err = cf.GetInt(enums.BlockMinGenerators)
 	if err != nil {
 		return err
 	}
-	conf.GeneratorsPercent, err = cf.GetFloat64(minersc.BlockGeneratorsPercent)
+	conf.GeneratorsPercent, err = cf.GetFloat64(enums.BlockGeneratorsPercent)
 	if err != nil {
 		return err
 	}
-	conf.RoundRange, err = cf.GetInt64(minersc.RoundRange)
+	conf.RoundRange, err = cf.GetInt64(enums.RoundRange)
 	if err != nil {
 		return err
 	}
-	conf.RoundTimeoutSofttoMin, err = cf.GetInt(minersc.RoundTimeoutsSofttoMin)
+	conf.RoundTimeoutSofttoMin, err = cf.GetInt(enums.RoundTimeoutsSofttoMin)
 	if err != nil {
 		return err
 	}
-	conf.RoundTimeoutSofttoMult, err = cf.GetInt(minersc.RoundTimeoutsSofttoMult)
+	conf.RoundTimeoutSofttoMult, err = cf.GetInt(enums.RoundTimeoutsSofttoMult)
 	if err != nil {
 		return err
 	}
-	conf.RoundRestartMult, err = cf.GetInt(minersc.RoundTimeoutsRoundRestartMult)
+	conf.RoundRestartMult, err = cf.GetInt(enums.RoundTimeoutsRoundRestartMult)
 	if err != nil {
 		return err
 	}
-	conf.TxnMaxPayload, err = cf.GetInt(minersc.TransactionPayloadMaxSize)
+	conf.TxnMaxPayload, err = cf.GetInt(enums.TransactionPayloadMaxSize)
 	if err != nil {
 		return err
 	}
-	conf.MinTxnFee, err = cf.GetCoin(minersc.TransactionMinFee)
+	conf.MinTxnFee, err = cf.GetCoin(enums.TransactionMinFee)
 	if err != nil {
 		return err
 	}
-	conf.ClientSignatureScheme, err = cf.GetString(minersc.ClientSignatureScheme)
+	conf.ClientSignatureScheme, err = cf.GetString(enums.ClientSignatureScheme)
 	if err != nil {
 		return err
 	}
-	verificationTicketsTo, err := cf.GetString(minersc.MessagesVerificationTicketsTo)
+	verificationTicketsTo, err := cf.GetString(enums.MessagesVerificationTicketsTo)
 	if err != nil {
 		return err
 	}
@@ -693,22 +706,22 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	} else {
 		conf.VerificationTicketsTo = Generator
 	}
-	conf.PruneStateBelowCount, err = cf.GetInt(minersc.StatePruneBelowCount)
+	conf.PruneStateBelowCount, err = cf.GetInt(enums.StatePruneBelowCount)
 	if err != nil {
 		return err
 	}
-	conf.SmartContractTimeout, err = cf.GetDuration(minersc.SmartContractTimeout)
+	conf.SmartContractTimeout, err = cf.GetDuration(enums.SmartContractTimeout)
 	if err != nil {
 		return err
 	}
 	if conf.SmartContractTimeout == 0 {
 		conf.SmartContractTimeout = DefaultSmartContractTimeout
 	}
-	conf.SmartContractSettingUpdatePeriod, err = cf.GetInt64(minersc.SmartContractSettingUpdatePeriod)
+	conf.SmartContractSettingUpdatePeriod, err = cf.GetInt64(enums.SmartContractSettingUpdatePeriod)
 	if err != nil {
 		return err
 	}
-	if txnsExempted, err := cf.GetStrings(minersc.TransactionExempt); err != nil {
+	if txnsExempted, err := cf.GetStrings(enums.TransactionExempt); err != nil {
 		return err
 	} else {
 		conf.TxnExempt = make(map[string]bool)
@@ -722,58 +735,58 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 // We don't need this yet, as the health check settings are used to set up a worker thread.
 func (conf *ConfigData) UpdateHealthCheckSettings(cf *minersc.GlobalSettings) error {
 	var err error
-	conf.HealthShowCounters, err = cf.GetBool(minersc.HealthCheckShowCounters)
+	conf.HealthShowCounters, err = cf.GetBool(enums.HealthCheckShowCounters)
 	if err != nil {
 		return err
 	}
 	ds := &conf.HCCycleScan[DeepScan]
-	ds.Enabled, err = cf.GetBool(minersc.HealthCheckDeepScanEnabled)
+	ds.Enabled, err = cf.GetBool(enums.HealthCheckDeepScanEnabled)
 	if err != nil {
 		return err
 	}
-	ds.BatchSize, err = cf.GetInt64(minersc.HealthCheckDeepScanBatchSize)
+	ds.BatchSize, err = cf.GetInt64(enums.HealthCheckDeepScanBatchSize)
 	if err != nil {
 		return err
 	}
-	ds.Window, err = cf.GetInt64(minersc.HealthCheckDeepScanWindow)
+	ds.Window, err = cf.GetInt64(enums.HealthCheckDeepScanWindow)
 	if err != nil {
 		return err
 	}
-	ds.Settle, err = cf.GetDuration(minersc.HealthCheckDeepScanSettleSecs)
+	ds.Settle, err = cf.GetDuration(enums.HealthCheckDeepScanSettleSecs)
 	if err != nil {
 		return err
 	}
-	ds.RepeatInterval, err = cf.GetDuration(minersc.HealthCheckDeepScanIntervalMins)
+	ds.RepeatInterval, err = cf.GetDuration(enums.HealthCheckDeepScanIntervalMins)
 	if err != nil {
 		return err
 	}
-	ds.ReportStatus, err = cf.GetDuration(minersc.HealthCheckDeepScanReportStatusMins)
+	ds.ReportStatus, err = cf.GetDuration(enums.HealthCheckDeepScanReportStatusMins)
 	if err != nil {
 		return err
 	}
 
 	ps := &conf.HCCycleScan[ProximityScan]
-	ps.Enabled, err = cf.GetBool(minersc.HealthCheckProximityScanEnabled)
+	ps.Enabled, err = cf.GetBool(enums.HealthCheckProximityScanEnabled)
 	if err != nil {
 		return err
 	}
-	ps.BatchSize, err = cf.GetInt64(minersc.HealthCheckProximityScanBatchSize)
+	ps.BatchSize, err = cf.GetInt64(enums.HealthCheckProximityScanBatchSize)
 	if err != nil {
 		return err
 	}
-	ps.Window, err = cf.GetInt64(minersc.HealthCheckProximityScanWindow)
+	ps.Window, err = cf.GetInt64(enums.HealthCheckProximityScanWindow)
 	if err != nil {
 		return err
 	}
-	ps.Settle, err = cf.GetDuration(minersc.HealthCheckProximityScanSettleSecs)
+	ps.Settle, err = cf.GetDuration(enums.HealthCheckProximityScanSettleSecs)
 	if err != nil {
 		return err
 	}
-	ps.RepeatInterval, err = cf.GetDuration(minersc.HealthCheckProximityScanRepeatIntervalMins)
+	ps.RepeatInterval, err = cf.GetDuration(enums.HealthCheckProximityScanRepeatIntervalMins)
 	if err != nil {
 		return err
 	}
-	ps.ReportStatus, err = cf.GetDuration(minersc.HealthCheckProximityScanRejportStatusMins)
+	ps.ReportStatus, err = cf.GetDuration(enums.HealthCheckProximityScanRejportStatusMins)
 	if err != nil {
 		return err
 	}

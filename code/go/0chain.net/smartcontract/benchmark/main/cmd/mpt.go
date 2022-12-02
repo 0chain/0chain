@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/context"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/currency"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -204,6 +204,7 @@ func setUpMpt(
 	timer = time.Now()
 
 	bk := &block.Block{}
+	bk.Round = viper.GetInt64(benchmark.NumBlocks)
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 
@@ -252,6 +253,14 @@ func setUpMpt(
 		timer := time.Now()
 		blobbers = storagesc.AddMockBlobbers(eventDb, balances)
 		log.Println("added blobbers\t", time.Since(timer))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer := time.Now()
+		storagesc.AddMockSnapshots(eventDb)
+		log.Println("added snapshots\t", time.Since(timer))
 	}()
 
 	wg.Add(1)
@@ -349,13 +358,6 @@ func setUpMpt(
 		timer := time.Now()
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		minersc.AddNodeDelegates(clients, miners, sharders, balances)
-		log.Println("adding miners and sharders delegates\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
@@ -534,17 +536,24 @@ func newEventsDb() *event.EventDb {
 	timer := time.Now()
 	var eventDb *event.EventDb
 	tick := func() (*event.EventDb, error) {
-		return event.NewEventDb(config.DbAccess{
-			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
-			Name:            viper.GetString(benchmark.EventDbName),
-			User:            viper.GetString(benchmark.EventDbUser),
-			Password:        viper.GetString(benchmark.EventDbPassword),
-			Host:            viper.GetString(benchmark.EventDbHost),
-			Port:            viper.GetString(benchmark.EventDbPort),
-			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
-			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
-			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
-		})
+		return event.NewEventDb(
+			config.DbAccess{
+				Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+				Name:            viper.GetString(benchmark.EventDbName),
+				User:            viper.GetString(benchmark.EventDbUser),
+				Password:        viper.GetString(benchmark.EventDbPassword),
+				Host:            viper.GetString(benchmark.EventDbHost),
+				Port:            viper.GetString(benchmark.EventDbPort),
+				MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+				MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+				ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+			},
+			config.DbSettings{
+				Debug:           viper.GetBool(benchmark.EventDbDebug),
+				AggregatePeriod: viper.GetInt64(benchmark.EventDbAggregatePeriod),
+				PageLimit:       viper.GetInt64(benchmark.EventDbPageLimit),
+			},
+		)
 
 	}
 

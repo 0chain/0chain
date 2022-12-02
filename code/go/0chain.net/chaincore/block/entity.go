@@ -799,9 +799,9 @@ func (b *Block) Clone() *Block {
 type Chainer interface {
 	GetPreviousBlock(ctx context.Context, b *Block) *Block
 	GetBlockStateChange(b *Block) error
-	ComputeState(ctx context.Context, pb *Block) error
+	ComputeState(ctx context.Context, pb *Block, waitC ...chan struct{}) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error)
+	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC ...chan struct{}) ([]event.Event, error)
 	GetEventDb() *event.EventDb
 }
 
@@ -831,7 +831,7 @@ func CreateState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePat
 }
 
 // ComputeState computes block client state
-func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
+func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struct{}) error {
 	select {
 	case <-ctx.Done():
 		logging.Logger.Warn("computeState context done", zap.Error(ctx.Err()))
@@ -919,13 +919,13 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.Events = append(b.Events, event.Event{
 			BlockNumber: b.Round,
 			TxHash:      txn.Hash,
-			Type:        int(event.TypeStats),
-			Tag:         int(event.TagAddTransactions),
+			Type:        event.TypeStats,
+			Tag:         event.TagAddTransactions,
 			Index:       txn.Hash,
 			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),
 		})
 
-		events, err := c.UpdateState(ctx, b, bState, txn)
+		events, err := c.UpdateState(ctx, b, bState, txn, waitC...)
 		switch err {
 		case context.Canceled:
 			b.SetStateStatus(StateCancelled)
@@ -1020,8 +1020,8 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string, round int64) event.Transaction {
 	return event.Transaction{
 		Hash:              tr.Hash,
-		BlockHash:         blockHash,
 		Round:             round,
+		BlockHash:         blockHash,
 		Version:           tr.Version,
 		ClientId:          tr.ClientID,
 		ToClientId:        tr.ToClientID,
@@ -1030,6 +1030,7 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 		Signature:         tr.Signature,
 		CreationDate:      int64(tr.CreationDate.Duration()),
 		Fee:               tr.Fee,
+		Nonce:             tr.Nonce,
 		TransactionType:   tr.TransactionType,
 		TransactionOutput: tr.TransactionOutput,
 		OutputHash:        tr.OutputHash,
