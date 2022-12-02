@@ -54,7 +54,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	}
 
 	var mn *MinerNode
-	if mn, err = getMinerNode(dp.MinerID, balances); err != nil {
+	if mn, err = getMinerNode(dp.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_del",
 			"error getting miner node: %v", err)
 	}
