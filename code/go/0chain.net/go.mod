@@ -41,7 +41,10 @@ require (
 	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
 )
 
-require github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+require (
+	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8
+)
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
@@ -104,7 +107,6 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20220504180219-658193537a64 // indirect
 	go.mongodb.org/mongo-driver v1.9.1 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
