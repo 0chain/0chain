@@ -600,7 +600,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	}
 	if t.Value > r.MaxStake {
 		return "", common.NewError("stake_pool_lock_failed",
-			"too small stake to lock")
+			"too large stake to lock")
 	}
 
 	var spr stakePoolRequest
