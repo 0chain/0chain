@@ -34,10 +34,10 @@ func (msc *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, provid
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:
-		return mn, common.NewErrorf("delegate_pool_add",
+		return mn, common.NewErrorf("get_stake_pool",
 			"miner not found or genesis miner used")
 	default:
-		return mn, common.NewErrorf("delegate_pool_add",
+		return mn, common.NewErrorf("get_stake_pool",
 			"unexpected DB error: %v", err)
 	}
 	return mn, nil
