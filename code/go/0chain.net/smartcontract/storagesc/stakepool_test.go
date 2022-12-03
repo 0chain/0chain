@@ -77,7 +77,8 @@ func TestStakePoolLock(t *testing.T) {
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
-
+		MinStake:     0.1e10,
+		MaxStake:     10.1e10,
 		StakePool: &stakePoolConfig{
 			MinLock: 0.1e10,
 		},

@@ -47,55 +47,5 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	var dp deletePool
-	if err = dp.Decode(inputData); err != nil {
-		return "", common.NewErrorf("delegate_pool_del",
-			"error decoding request: %v", err)
-	}
-
-	var mn *MinerNode
-	if mn, err = getMinerNode(dp.ProviderID, balances); err != nil {
-		return "", common.NewErrorf("delegate_pool_del",
-			"error getting miner node: %v", err)
-	}
-
-	pool, ok := mn.Pools[t.ClientID]
-	if !ok {
-		return "", common.NewError("delegate_pool_del",
-			"pool does not exist for deletion")
-	}
-
-	if pool.DelegateID != t.ClientID {
-		return "", common.NewErrorf("delegate_pool_del",
-			"you (%v) do not own the pool, it belongs to %v",
-			t.ClientID, pool.DelegateID)
-	}
-
-	switch pool.Status {
-	case spenum.Pending:
-		{
-			if err = mn.save(balances); err != nil {
-				return "", common.NewError("delegate_pool_del", err.Error())
-			}
-			return resp, nil
-		}
-	case spenum.Active:
-		{
-			pool.Status = spenum.Deleting
-			if err = mn.save(balances); err != nil {
-				return "", common.NewErrorf("delegate_pool_del",
-					"saving miner node: %v", err)
-			}
-			return `{"action": "pool will be released next VC"}`, nil
-		}
-	case spenum.Deleting:
-		return "", common.NewError("delegate_pool_del",
-			"pool already deleted")
-	case spenum.Deleted:
-		return "", common.NewError("delegate_pool_del",
-			"pool already deleted")
-	default:
-		return "", common.NewErrorf("delegate_pool_del",
-			"unrecognised stakepool status: %v", pool.Status.String())
-	}
+	return stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter)
 }

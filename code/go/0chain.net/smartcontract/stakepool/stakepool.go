@@ -39,6 +39,8 @@ type AbstractStakePool interface {
 	Save(providerType spenum.Provider, providerID string,
 		balances cstate.StateContextI) error
 	GetSettings() Settings
+	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error)
+	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (currency.Coin, error)
 }
 
 // StakePool holds delegate information for an 0chain providers
@@ -266,13 +268,7 @@ func (sp *StakePool) MintRewards(
 	}
 }
 
-// empty a delegate pool if possible, call update before the empty
-func (sp *StakePool) empty(
-	sscID,
-	poolID,
-	clientID string,
-	balances cstate.StateContextI,
-) (bool, error) {
+func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error) {
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
 		return false, fmt.Errorf("no such delegate pool: %q", poolID)
@@ -280,40 +276,6 @@ func (sp *StakePool) empty(
 
 	if dp.DelegateID != clientID {
 		return false, errors.New("trying to unlock not by delegate pool owner")
-	}
-
-	// If insufficient funds in stake pool left after unlock,
-	// we can't do an immediate unlock.
-	// Instead we mark as unstake to prevent being used for further allocations.
-
-	totalBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
-	if err != nil {
-		return false, err
-	}
-
-	staked, err := sp.stake()
-	if err != nil {
-		return false, err
-	}
-	if staked < totalBalance {
-		if dp.Status != spenum.Unstaking {
-			totalUnStake, err := currency.AddCoin(sp.TotalUnStake, dp.Balance)
-			if err != nil {
-				return false, err
-			}
-			sp.TotalUnStake = totalUnStake
-
-			dp.Status = spenum.Unstaking
-		}
-		return true, nil
-	}
-
-	if dp.Status == spenum.Unstaking {
-		totalUnstake, err := currency.MinusCoin(sp.TotalUnStake, dp.Balance)
-		if err != nil {
-			return false, err
-		}
-		sp.TotalUnStake = totalUnstake
 	}
 
 	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
@@ -710,11 +672,8 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 }
 
 // stake pool can return excess tokens from stake pool
-func StakePoolUnlock(
-	t *transaction.Transaction,
-	input []byte,
-	balances cstate.StateContextI,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)
+func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
+	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
 ) (resp string, err error) {
 	var spr stakePoolRequest
 	if err = spr.decode(input); err != nil {
@@ -743,7 +702,7 @@ func StakePoolUnlock(
 		}
 	}
 
-	unstake, err := sp.empty(ssc.ID, t.ClientID, t.ClientID, balances)
+	unstake, err := sp.Empty(t.ToClientID, t.ClientID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
@@ -784,4 +743,20 @@ func StakePoolUnlock(
 	}
 
 	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
+}
+
+func toJson(val interface{}) string {
+	var b, err = json.Marshal(val)
+	if err != nil {
+		panic(err) // must not happen
+	}
+	return string(b)
+}
+
+// unlock response
+type unlockResponse struct {
+	// one of the fields is set in a response, the Unstake if can't unstake
+	// for now and the TokenPoolTransferResponse if has a pool had unlocked
+	Unstake bool          `json:"unstake"` // max time to wait to unstake
+	Balance currency.Coin `json:"balance"`
 }
