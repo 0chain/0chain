@@ -122,9 +122,9 @@ func (z *DelegatePool) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *DelegatePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 9
+	// map header, size 11
 	// string "ID"
-	o = append(o, 0x89, 0xa2, 0x49, 0x44)
+	o = append(o, 0x8b, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Balance"
 	o = append(o, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
@@ -146,6 +146,12 @@ func (z *DelegatePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "UnStake"
 	o = append(o, 0xa7, 0x55, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65)
 	o = msgp.AppendBool(o, z.UnStake)
+	// string "ProviderId"
+	o = append(o, 0xaa, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x49, 0x64)
+	o = msgp.AppendString(o, z.ProviderId)
+	// string "ProviderType"
+	o = append(o, 0xac, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x54, 0x79, 0x70, 0x65)
+	o = msgp.AppendInt(o, z.ProviderType)
 	// string "TotalReward"
 	o = append(o, 0xab, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
 	o, err = z.TotalReward.MarshalMsg(o)
@@ -217,6 +223,18 @@ func (z *DelegatePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "UnStake")
 				return
 			}
+		case "ProviderId":
+			z.ProviderId, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ProviderId")
+				return
+			}
+		case "ProviderType":
+			z.ProviderType, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ProviderType")
+				return
+			}
 		case "TotalReward":
 			bts, err = z.TotalReward.UnmarshalMsg(bts)
 			if err != nil {
@@ -255,7 +273,7 @@ func (z *DelegatePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *DelegatePoolStat) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 8 + z.Rewards.Msgsize() + 8 + msgp.BoolSize + 12 + z.TotalReward.Msgsize() + 13 + z.TotalPenalty.Msgsize() + 7 + msgp.StringPrefixSize + len(z.Status) + 13 + msgp.Int64Size
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 8 + z.Rewards.Msgsize() + 8 + msgp.BoolSize + 11 + msgp.StringPrefixSize + len(z.ProviderId) + 13 + msgp.IntSize + 12 + z.TotalReward.Msgsize() + 13 + z.TotalPenalty.Msgsize() + 7 + msgp.StringPrefixSize + len(z.Status) + 13 + msgp.Int64Size
 	return
 }
 
