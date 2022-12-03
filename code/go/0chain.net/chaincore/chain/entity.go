@@ -579,7 +579,8 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	mustInitPartitions(stateCtx)
 
 	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
-		logging.Logger.Panic("init stake failed", zap.Error(err))
+		logging.Logger.Error("init stake failed", zap.Error(err))
+		panic(err)
 	}
 
 	err := faucetsc.InitConfig(stateCtx)
@@ -621,19 +622,15 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 
 func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {
 	var edbDelegatePools []*event.DelegatePool
-	knownStakePoolKeys := map[string]bool{}
 	for _, v := range stakes {
 		providerType := spenum.ToProviderType(v.ProviderType)
-		stakePoolKey := stakepool.StakePoolKey(providerType, v.ProviderID)
 		sp := stakepool.StakePool{}
-		if knownStakePoolKeys[stakePoolKey] {
-			if err := sp.Get(providerType, v.ProviderID, balances); err != nil {
+		sp.Pools = map[string]*stakepool.DelegatePool{}
+		if err := sp.Get(providerType, v.ProviderID, balances); err != nil {
+			if err != util.ErrValueNotPresent {
 				logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
 				return err
 			}
-		} else {
-			knownStakePoolKeys[stakePoolKey] = true
-			sp.Pools = map[string]*stakepool.DelegatePool{}
 		}
 
 		existingDP, ok := sp.Pools[v.ClientID]
