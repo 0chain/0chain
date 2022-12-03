@@ -97,7 +97,7 @@ func TestBlobbers(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -242,7 +242,7 @@ func TestBlobberIds(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -273,7 +273,7 @@ func TestBlobberLatLong(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		t.Skip("only for local debugging, requires local postgresql")
 		return
@@ -301,7 +301,7 @@ func TestBlobberGetCount(t *testing.T) {
 	}
 
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}

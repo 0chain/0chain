@@ -40,7 +40,7 @@ func TestUserEvent(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
@@ -119,7 +119,7 @@ func prepareEventDB(t *testing.T) (*EventDb, func()) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)

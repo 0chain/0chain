@@ -351,7 +351,7 @@ func BenchmarkTests(
 				CreationDate: creationTime,
 			},
 			input: (&deletePool{
-				MinerID: data.Miners[0],
+				ProviderID: data.Miners[0],
 			}).Encode(),
 		},
 		{
@@ -362,7 +362,7 @@ func BenchmarkTests(
 				CreationDate: creationTime,
 			},
 			input: (&deletePool{
-				MinerID: data.Miners[0],
+				ProviderID: data.Miners[0],
 			}).Encode(),
 		},
 		{
