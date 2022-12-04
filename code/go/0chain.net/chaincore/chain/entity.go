@@ -628,42 +628,40 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 		sp.Pools = map[string]*stakepool.DelegatePool{}
 		if err := sp.Get(providerType, v.ProviderID, balances); err != nil {
 			if err != util.ErrValueNotPresent {
-				logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
+				logging.Logger.Debug("chain.stateDB get failed", zap.Error(err))
 				return err
 			}
 		}
 
-		existingDP, ok := sp.Pools[v.ClientID]
-		if !ok {
-			sp.Pools[v.ClientID] = &stakepool.DelegatePool{
-				Balance:    v.Tokens,
-				DelegateID: v.ClientID,
-				StakedAt:   common.Timestamp(time.Now().UTC().Unix()),
-			}
-			edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
-				PoolID:       v.ClientID,
-				ProviderType: int(providerType),
-				ProviderID:   v.ProviderID,
-				DelegateID:   v.ClientID,
-				Balance:      v.Tokens,
-			})
-		} else {
-			existingDP.Balance = existingDP.Balance + v.Tokens
-			existingDP.StakedAt = common.Timestamp(time.Now().UTC().Unix())
-			for _, edp := range edbDelegatePools {
-				if edp.PoolID == v.ClientID {
-					edp.Balance = existingDP.Balance
-					break
-				}
-			}
+		_, ok := sp.Pools[v.ClientID]
+		if ok {
+			err := fmt.Errorf("initial stake exists with providerID: %s, providerType %s, and clientID: %s",
+				v.ProviderID, v.ProviderType, v.ClientID)
+			logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
+			return err
 		}
 
+		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
+			Balance:      v.Tokens,
+			DelegateID:   v.ClientID,
+			RoundCreated: 1,
+			StakedAt:     common.Timestamp(time.Now().UTC().Unix()),
+		}
+
+		edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
+			PoolID:       v.ClientID,
+			ProviderType: int(providerType),
+			ProviderID:   v.ProviderID,
+			DelegateID:   v.ClientID,
+			Balance:      v.Tokens,
+			RoundCreated: 1,
+		})
 		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
 			logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
 			return err
 		}
 
-		logging.Logger.Debug("init stake", zap.String("sc ID", v.ProviderID), zap.Any("tokens", v.Tokens))
+		logging.Logger.Info("init stake", zap.String("sc ID", v.ProviderID), zap.Any("tokens", v.Tokens))
 	}
 
 	if c.EventDb == nil {
@@ -674,11 +672,11 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 		return nil
 	}
 
-	err := c.EventDb.Store.Get().Clauses(clause.OnConflict{
+	if err := c.EventDb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "pool_id"}, {Name: "provider_type"}, {Name: "provider_id"}},
 		UpdateAll: true,
-	}).Create(&edbDelegatePools).Error
-	if err != nil {
+	}).Create(&edbDelegatePools).Error; err != nil {
+		logging.Logger.Debug("initial stake insert failed", zap.Error(err))
 		return fmt.Errorf("creating delegatePools in eventDB from initStakes failed: %s", err.Error())
 	}
 
