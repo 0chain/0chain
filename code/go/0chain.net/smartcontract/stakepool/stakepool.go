@@ -11,6 +11,8 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -645,6 +647,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 		return "", err
 	}
 
+	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())))
 	if len(sp.GetPools()) >= r.MaxDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
