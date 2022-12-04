@@ -1,4 +1,5 @@
 smart_contracts:
+  txn_cost_fee_coeff: 1000 # 1000 unit cost per 1 ZCN
   faucetsc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     pour_limit: 1
@@ -12,19 +13,6 @@ smart_contracts:
       update-settings: 100
       pour: 100
       refill: 100
-  interestpoolsc:
-    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
-    min_lock: 10
-    interest_rate: 0.0
-    apr: 0.1
-    min_lock_period: 1m
-    max_lock_period: 8760h
-    max_mint: 1500000.0
-    cost:
-      lock: 100
-      unlock: 100
-      updateVariables: 100
-
   minersc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     # miners
@@ -277,3 +265,15 @@ smart_contracts:
       burn: 100
       add-authorizer: 100
       delete-authorizer: 100
+  interestpoolsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_lock: 10
+    interest_rate: 0.0
+    apr: 0.1
+    min_lock_period: 1m
+    max_lock_period: 8760h
+    max_mint: 1500000.0
+    cost:
+      lock: 100
+      unlock: 100
+      updateVariables: 100

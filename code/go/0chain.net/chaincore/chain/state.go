@@ -8,6 +8,7 @@ import (
 	"math"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
@@ -250,6 +251,18 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
 		return math.MaxInt32, fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
+}
+
+func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
+	mpt util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	opts ...SyncNodesOption) (int, currency.Coin, error) {
+	cost, err := c.EstimateTransactionCost(ctx, nil, mpt, txn, opts...)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return cost, currency.Coin(currency.ZCN * cost / config.GetTxnFeeCostCoeff()), nil
 }
 
 // NewStateContext creation helper.

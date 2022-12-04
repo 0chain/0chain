@@ -357,3 +357,8 @@ func AsyncBlocksFetchingMaxSimultaneousFromMiners() int {
 func AsyncBlocksFetchingMaxSimultaneousFromSharders() int {
 	return viper.GetInt("async_blocks_fetching.max_simultaneous_from_sharders")
 }
+
+// GetTxnFeeCostCoeff returns the coefficient between txn cost and fee. fee := cost * 1 / coeff
+func GetTxnFeeCostCoeff() int {
+	return SmartContractConfig.GetInt("smart_contracts.txn_cost_fee_coeff")
+}

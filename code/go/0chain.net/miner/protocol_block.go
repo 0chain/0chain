@@ -36,9 +36,10 @@ const InsufficientTxns = "insufficient_txns"
 var ErrLFBClientStateNil = errors.New("client state of latest finalized block is empty")
 
 var (
-	ErrNotTimeTolerant = common.NewError("not_time_tolerant", "transaction is behind time tolerance")
-	FutureTransaction  = common.NewError("future_transaction", "transaction has future nonce")
-	PastTransaction    = common.NewError("past_transaction", "transaction has past nonce")
+	ErrNotTimeTolerant    = common.NewError("not_time_tolerant", "transaction is behind time tolerance")
+	FutureTransaction     = common.NewError("future_transaction", "transaction has future nonce")
+	PastTransaction       = common.NewError("past_transaction", "transaction has past nonce")
+	ErrTxnInsufficientFee = errors.New("insufficient transaction fee")
 )
 var (
 	bgTimer     metrics.Timer // block generation timer
@@ -893,9 +894,11 @@ func txnIterHandlerFunc(mc *Chain,
 			return false, nil
 		}
 
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
+		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, chain.WithSync())
 		if err != nil {
-			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
+			logging.Logger.Debug("Bad transaction cost fee",
+				zap.Error(err),
+				zap.String("txn_hash", txn.Hash))
 
 			// return error to break iteration due to the invalid state error
 			if cstate.ErrInvalidState(err) {
@@ -905,6 +908,17 @@ func txnIterHandlerFunc(mc *Chain,
 			// skipping and continue
 			return true, nil
 		}
+
+		if mc.IsFeeEnabled() {
+			if txn.Fee < fee {
+				logging.Logger.Debug("Insufficient transaction fee",
+					zap.String("txn", txn.Hash),
+					zap.Any("fee", txn.Fee),
+					zap.Any("estimated fee", fee))
+				return false, ErrTxnInsufficientFee
+			}
+		}
+
 		if tii.cost+cost >= mc.ChainConfig.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			return true, nil
