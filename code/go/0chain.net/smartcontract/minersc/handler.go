@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -80,6 +83,16 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //	 description: is descending
 //	 in: query
 //	 type: string
+//  +name: start
+//   description: start time of interval
+//   required: true
+//   in: query
+//   type: string
+//  +name: end
+//   description: end time of interval
+//   required: true
+//   in: query
+//   type: string
 //
 // responses:
 //
@@ -101,6 +114,8 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 		return
 	}
 	rtv, err := edb.GetDelegateRewards(limit, poolId, start, end)
+	logging.Logger.Info("piers DelegateRewards",
+		zap.Any("rtv", rtv), zap.Error(err))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -125,6 +140,16 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 //	 description: is descending
 //	 in: query
 //	 type: string
+//  +name: start
+//   description: start time of interval
+//   required: true
+//   in: query
+//   type: string
+//  +name: end
+//   description: end time of interval
+//   required: true
+//   in: query
+//   type: string
 //
 // responses:
 //
@@ -150,6 +175,8 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 		return
 	}
 	rtv, err := edb.GetProviderRewards(limit, id, start, end)
+	logging.Logger.Info("piers getProviderRewards",
+		zap.Any("ProviderRewards", rtv), zap.Error(err))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
