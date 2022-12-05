@@ -18,6 +18,7 @@ import (
 const (
 	clientPrefixID     = "fred"
 	authorizerPrefixID = "authorizer"
+	ETH_ADDRESS        = "0xEE4a73cf0CBE6e850E7Be821AEB3A7382D2c02C5"
 )
 
 var (
@@ -207,7 +208,7 @@ func CreateSmartContractGlobalNode() *GlobalNode {
 
 func createBurnPayload() *BurnPayload {
 	return &BurnPayload{
-		EthereumAddress: ADDRESS,
+		EthereumAddress: ETH_ADDRESS,
 	}
 }
 
