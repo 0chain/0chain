@@ -55,5 +55,12 @@ func (ssc *StorageSmartContract) collectReward(
 	if err := conf.saveMints(minted, balances); err != nil {
 		return "", common.NewError("collect_reward_failed", "can't Save config: "+err.Error())
 	}
-	return "", err
+	type mintResponse struct {
+		minted int64 `json:"minted,omitempty"`
+	}
+	i, err := minted.Int64()
+	if err != nil {
+		return "", common.NewError("collect_reward_failed", "bad minted amount: "+err.Error())
+	}
+	return toJson(&mintResponse{minted: i}), err
 }
