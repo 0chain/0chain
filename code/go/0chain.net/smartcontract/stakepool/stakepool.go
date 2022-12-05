@@ -647,7 +647,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 		return "", err
 	}
 
-	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())))
+	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", r.MaxDelegates))
 	if len(sp.GetPools()) >= r.MaxDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
