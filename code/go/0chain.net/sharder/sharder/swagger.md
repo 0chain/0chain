@@ -915,9 +915,11 @@ Gets list of delegate rewards satisfying filter
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
+| end | `query` | string | `string` |  | ✓ |  | end time of interval |
 | is_descending | `query` | string | `string` |  |  |  | is descending |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| start | `query` | string | `string` |  | ✓ |  | start time of interval |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -2598,9 +2600,11 @@ Gets list of provider rewards satisfying filter
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
+| end | `query` | string | `string` |  | ✓ |  | end time of interval |
 | is_descending | `query` | string | `string` |  |  |  | is descending |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| start | `query` | string | `string` |  | ✓ |  | start time of interval |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -4444,7 +4448,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | ID | uint64 (formatted integer)| `uint64` |  | |  |  |
 | Nonce | int64 (formatted integer)| `int64` |  | |  |  |
 | OutputHash | string| `string` |  | |  |  |
-| ReadMarkers | [][ReadMarker](#read-marker)| `[]*ReadMarker` |  | | ref |  |
 | Round | int64 (formatted integer)| `int64` |  | |  |  |
 | Signature | string| `string` |  | |  |  |
 | Status | int64 (formatted integer)| `int64` |  | |  |  |
@@ -4454,7 +4457,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | TransactionType | int64 (formatted integer)| `int64` |  | |  |  |
 | UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | Version | string| `string` |  | |  |  |
-| WriteMarker | [][WriteMarker](#write-marker)| `[]*WriteMarker` |  | |  |  |
 | fee | [Coin](#coin)| `Coin` |  | |  |  |
 | value | [Coin](#coin)| `Coin` |  | |  |  |
 

@@ -49,18 +49,22 @@ func (p PoolStatus) Int() int {
 type Reward int
 
 const (
-	BlockReward Reward = iota
+	MinLockDemandReward Reward = iota
+	BlockRewardMiner
+	BlockRewardSharder
+	BlockRewardBlobber
 	FeeReward
 	ValidationReward
 	FileDownloadReward
 	ChallengePassReward
 	ChallengeSlashPenalty
 	CancellationChargeReward
-	MinLockDemandReward
 )
 
 var rewardString = []string{
-	"block_reward",
+	"block_reward_miner",
+	"block_reward_sharder",
+	"block_reward_blobber",
 	"fees",
 	"validation",
 	"file download",

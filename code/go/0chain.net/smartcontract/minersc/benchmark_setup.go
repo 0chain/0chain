@@ -23,7 +23,7 @@ import (
 )
 
 var mockRewardAmount currency.Coin = 1680000000
-var mockRewardType = spenum.BlockReward
+var mockRewardType = spenum.BlockRewardMiner
 
 func AddMockGlobalNode(balances cstate.StateContextI) {
 	var gn GlobalNode

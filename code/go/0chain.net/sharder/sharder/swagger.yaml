@@ -1493,18 +1493,9 @@ definitions:
             ID:
                 format: uint64
                 type: integer
-            ReadMarkers:
-                description: ref
-                items:
-                    $ref: '#/definitions/ReadMarker'
-                type: array
             UpdatedAt:
                 format: date-time
                 type: string
-            WriteMarker:
-                items:
-                    $ref: '#/definitions/WriteMarker'
-                type: array
             block_hash:
                 type: string
                 x-go-name: BlockHash
@@ -2705,6 +2696,16 @@ paths:
                   in: query
                   name: is_descending
                   type: string
+                - description: start time of interval
+                  in: query
+                  name: start
+                  required: true
+                  type: string
+                - description: end time of interval
+                  in: query
+                  name: end
+                  required: true
+                  type: string
             responses:
                 "200":
                     description: WriteMarker
@@ -3090,6 +3091,16 @@ paths:
                 - description: is descending
                   in: query
                   name: is_descending
+                  type: string
+                - description: start time of interval
+                  in: query
+                  name: start
+                  required: true
+                  type: string
+                - description: end time of interval
+                  in: query
+                  name: end
+                  required: true
                   type: string
             responses:
                 "200":

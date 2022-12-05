@@ -312,11 +312,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		spenum.Miner,
 		b.GetRoundRandomSeed(),
 		gn.NumMinerDelegatesRewarded,
-		spenum.BlockReward,
+		spenum.BlockRewardMiner,
 		balances,
 	); err != nil {
 		return "", err
 	}
+
 	if err := mn.StakePool.DistributeRewardsRandN(
 		minerFees,
 		mn.ID,
@@ -350,7 +351,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		if err := msc.payShardersAndDelegates(
 			gn, mbSharders, sharderRewards,
 			gn.NumShardersRewarded, b.GetRoundRandomSeed(),
-			spenum.BlockReward,
+			spenum.BlockRewardSharder,
 			balances,
 		); err != nil {
 			return "", err

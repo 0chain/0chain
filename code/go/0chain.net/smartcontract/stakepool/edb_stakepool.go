@@ -41,5 +41,6 @@ func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolRe
 		StakePoolId:     spu.StakePoolId,
 		Reward:          spu.Reward,
 		DelegateRewards: spu.DelegateRewards,
+		RewardType:      spu.RewardType,
 	}
 }
