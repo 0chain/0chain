@@ -777,8 +777,8 @@ func getMockAllocationId(allocation int) string {
 }
 
 func getMockOwnerFromAllocationIndex(allocation, numClinets int) int {
-	a := (allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPayerPools)))
-	return a
+	return allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPayerPools))
+
 }
 
 func getMockBlobberBlockFromAllocationIndex(i int) int {
