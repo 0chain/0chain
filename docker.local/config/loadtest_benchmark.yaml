@@ -178,4 +178,4 @@ internal:
   control_m: 25000
   control_n: 90
   show_output: false
-  bench_data_list_length: 5
+  bench_data_list_length: 12

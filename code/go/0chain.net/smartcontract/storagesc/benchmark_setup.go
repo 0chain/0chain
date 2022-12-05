@@ -266,22 +266,6 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 	}
 }
 
-func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
-	fps := make([]fundedPools, len(clients))
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		cIndex := getMockOwnerFromAllocationIndex(i, len(clients))
-		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
-			fps[cIndex] = append(fps[cIndex], getMockWritePoolId(i, cIndex, 0))
-			fps[cIndex] = append(fps[cIndex], getMockReadPoolId(i, cIndex, 0))
-		}
-	}
-	for i, fp := range fps {
-		if _, err := balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp); err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-
 func AddMockChallengePools(balances cstate.StateContextI) {
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		allocationId := getMockAllocationId(i)
@@ -793,7 +777,8 @@ func getMockAllocationId(allocation int) string {
 }
 
 func getMockOwnerFromAllocationIndex(allocation, numClinets int) int {
-	return (allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPayerPools)))
+	a := (allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPayerPools)))
+	return a
 }
 
 func getMockBlobberBlockFromAllocationIndex(i int) int {

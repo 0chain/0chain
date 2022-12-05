@@ -473,32 +473,32 @@ func setUpMpt(
 		listLength := viper.GetInt(benchmark.BenchDataListLength)
 
 		benchData.EventDb = eventDb
-		if len(benchData.Clients) < listLength {
+		if len(clients) < listLength {
 			benchData.Clients = clients
 		} else {
 			benchData.Clients = clients[:listLength]
 		}
-		if len(benchData.PublicKeys) < listLength {
+		if len(publicKeys) < listLength {
 			benchData.PublicKeys = publicKeys
 		} else {
 			benchData.PublicKeys = publicKeys[:listLength]
 		}
-		if len(benchData.PrivateKeys) < listLength {
+		if len(privateKeys) < listLength {
 			benchData.PrivateKeys = privateKeys
 		} else {
 			benchData.PrivateKeys = privateKeys[:listLength]
 		}
-		if len(benchData.Miners) < listLength {
+		if len(miners) < listLength {
 			benchData.Miners = miners
 		} else {
 			benchData.Miners = miners[:listLength]
 		}
-		if len(benchData.Sharders) < listLength {
+		if len(sharders) < listLength {
 			benchData.Sharders = sharders
 		} else {
 			benchData.Sharders = sharders[:listLength]
 		}
-		if len(benchData.SharderKeys) < listLength {
+		if len(sharderKeys) < listLength {
 			benchData.SharderKeys = sharderKeys
 		} else {
 			benchData.SharderKeys = sharderKeys[:listLength]
