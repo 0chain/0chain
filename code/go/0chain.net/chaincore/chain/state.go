@@ -8,7 +8,6 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
@@ -262,7 +261,7 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 		return 0, 0, err
 	}
 
-	return cost, currency.Coin(currency.ZCN * cost / config.GetTxnFeeCostCoeff()), nil
+	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
 }
 
 // NewStateContext creation helper.

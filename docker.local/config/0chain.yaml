@@ -75,6 +75,7 @@ server_chain:
     timeout: 30 # seconds
     min_fee: 0
     transfer_cost: 10
+    cost_fee_coeff: 1000 # 1000 unit cost per 1 ZCN
     exempt:
       - add_miner
       - miner_health_check

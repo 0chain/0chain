@@ -45,12 +45,12 @@ type ConfigImpl struct {
 	guard sync.RWMutex
 }
 
-//FOR TEST PURPOSE ONLY
+// FOR TEST PURPOSE ONLY
 func (c *ConfigImpl) ConfDataForTest() *ConfigData {
 	return c.conf
 }
 
-//TODO: for test usage only, extend with more fields
+// TODO: for test usage only, extend with more fields
 func UpdateConfigImpl(conf *ConfigImpl, data *ConfigData) {
 	if data.BlockSize != 0 {
 		conf.conf.BlockSize = data.BlockSize
@@ -365,7 +365,15 @@ func (c *ConfigImpl) TxnTransferCost() int {
 	return c.conf.TxnTransferCost
 }
 
-//ConfigData - chain Configuration
+func (c *ConfigImpl) TxnCostFeeCoeff() int {
+	c.guard.RLock()
+	coeff := c.conf.TxnCostFeeCoeff
+	c.guard.RUnlock()
+
+	return coeff
+}
+
+// ConfigData - chain Configuration
 type ConfigData struct {
 	version               int64         `json:"-"` //version of config to track updates
 	IsStateEnabled        bool          `json:"state"`
@@ -392,6 +400,7 @@ type ConfigData struct {
 	ValidationBatchSize   int           `json:"validation_size"`           // Batch size of txns for crypto verification
 	TxnMaxPayload         int           `json:"transaction_max_payload"`   // Max payload allowed in the transaction
 	TxnTransferCost       int           `json:"transaction_transfer_cost"` // Transaction transfer cost
+	TxnCostFeeCoeff       int           `json:"txn_cost_fee_coeff"`        // Transaction cost fee coefficient
 	MinTxnFee             currency.Coin `json:"min_txn_fee"`               // Minimum txn fee allowed
 	PruneStateBelowCount  int           `json:"prune_state_below_count"`   // Prune state below these many rounds
 	RoundRange            int64         `json:"round_range"`               // blocks are stored in separate directory for each range of rounds
@@ -468,9 +477,7 @@ func (c *ConfigImpl) FromViper() error {
 		return err
 	}
 	conf.TxnTransferCost = viper.GetInt("server_chain.transaction.transfer_cost")
-	if err != nil {
-		return err
-	}
+	conf.TxnCostFeeCoeff = viper.GetInt("server_chain.transaction.cost_fee_coeff")
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {
@@ -547,7 +554,7 @@ func (c *ConfigImpl) FromViper() error {
 	return nil
 }
 
-//Updates the config fields from GlobalSettings fields
+// Updates the config fields from GlobalSettings fields
 func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	c.guard.Lock()
 	defer c.guard.Unlock()

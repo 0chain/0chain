@@ -32,6 +32,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
 	viper.SetDefault("server_chain.transaction.transfer_cost", 10)
+	viper.SetDefault("server_chain.transaction.txn_cost_fee_coeff", 1000)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 66)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)
@@ -194,6 +195,7 @@ type ChainConfig interface {
 	TxnExempt() map[string]bool
 	MinTxnFee() currency.Coin
 	TxnTransferCost() int
+	TxnCostFeeCoeff() int
 }
 
 type DbAccess struct {
@@ -356,9 +358,4 @@ func AsyncBlocksFetchingMaxSimultaneousFromMiners() int {
 
 func AsyncBlocksFetchingMaxSimultaneousFromSharders() int {
 	return viper.GetInt("async_blocks_fetching.max_simultaneous_from_sharders")
-}
-
-// GetTxnFeeCostCoeff returns the coefficient between txn cost and fee. fee := cost * 1 / coeff
-func GetTxnFeeCostCoeff() int {
-	return SmartContractConfig.GetInt("smart_contracts.txn_cost_fee_coeff")
 }
