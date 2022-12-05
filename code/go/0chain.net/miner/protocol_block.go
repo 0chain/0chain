@@ -36,10 +36,9 @@ const InsufficientTxns = "insufficient_txns"
 var ErrLFBClientStateNil = errors.New("client state of latest finalized block is empty")
 
 var (
-	ErrNotTimeTolerant    = common.NewError("not_time_tolerant", "transaction is behind time tolerance")
-	FutureTransaction     = common.NewError("future_transaction", "transaction has future nonce")
-	PastTransaction       = common.NewError("past_transaction", "transaction has past nonce")
-	ErrTxnInsufficientFee = errors.New("insufficient transaction fee")
+	ErrNotTimeTolerant = common.NewError("not_time_tolerant", "transaction is behind time tolerance")
+	FutureTransaction  = common.NewError("future_transaction", "transaction has future nonce")
+	PastTransaction    = common.NewError("past_transaction", "transaction has past nonce")
 )
 var (
 	bgTimer     metrics.Timer // block generation timer
@@ -910,12 +909,17 @@ func txnIterHandlerFunc(mc *Chain,
 		}
 
 		if mc.IsFeeEnabled() {
-			if txn.Fee < fee {
-				logging.Logger.Debug("Insufficient transaction fee",
-					zap.String("txn", txn.Hash),
-					zap.Any("fee", txn.Fee),
-					zap.Any("estimated fee", fee))
-				return false, ErrTxnInsufficientFee
+			confMinFee := mc.ChainConfig.MinTxnFee()
+			if confMinFee > fee {
+				fee = confMinFee
+			}
+
+			if err := txn.ValidateFee(mc.ChainConfig.TxnExempt(), fee); err != nil {
+				logging.Logger.Error("invalid transaction fee",
+					zap.Any("txn", txn),
+					zap.Any("estimated fee", fee),
+					zap.Error(err))
+				return false, err
 			}
 		}
 

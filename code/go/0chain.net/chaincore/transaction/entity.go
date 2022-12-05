@@ -38,6 +38,7 @@ var redis_txns string
 var (
 	ErrTxnMissingPublicKey = errors.New("transaction missing public key")
 	ErrTxnInvalidPublicKey = errors.New("transaction public key is invalid")
+	ErrTxnInsufficientFee  = errors.New("insufficient transaction fee")
 )
 
 func init() {
@@ -128,7 +129,7 @@ func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currenc
 		}
 	}
 	if t.Fee < minTxnFee {
-		return common.InvalidRequest("The given fee is less than the minimum required fee to process the txn")
+		return ErrTxnInsufficientFee
 	}
 	return nil
 }
