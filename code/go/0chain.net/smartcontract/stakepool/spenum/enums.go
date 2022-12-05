@@ -53,7 +53,8 @@ const (
 	BlockRewardMiner
 	BlockRewardSharder
 	BlockRewardBlobber
-	FeeReward
+	FeeRewardMiner
+	FeeRewardSharder
 	ValidationReward
 	FileDownloadReward
 	ChallengePassReward
