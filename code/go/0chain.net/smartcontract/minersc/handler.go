@@ -275,7 +275,8 @@ type nodeStat struct {
 //	484:
 func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
-		id = r.URL.Query().Get("id")
+		id               = r.URL.Query().Get("id")
+		includeDelegates = r.URL.Query().Get("include_delegates") == "true"
 	)
 	if id == "" {
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
@@ -292,10 +293,19 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("cannot get latest finalised block"))
 		return
 	}
+	var err error
+	var delegates []event.DelegatePool
+	if includeDelegates {
+		delegates, err = edb.GetDelegatePools(id)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("getting delegates"+err.Error()))
+			return
+		}
+	}
 
 	if miner, err := edb.GetMiner(id); err == nil {
 		common.Respond(w, r, nodeStat{
-			MinerNode: minerTableToMinerNode(miner), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
+			MinerNode: minerTableToMinerNode(miner, delegates), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
 		return
 	}
 	sharder, err := edb.GetSharder(id)
@@ -304,7 +314,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	common.Respond(w, r, nodeStat{
-		MinerNode:   sharderTableToSharderNode(sharder),
+		MinerNode:   sharderTableToSharderNode(sharder, delegates),
 		Round:       sCtx.GetBlock().Round,
 		TotalReward: int64(sharder.Rewards.TotalRewards)}, nil)
 }
@@ -611,7 +621,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	shardersArr := make([]nodeStat, len(sharders))
 	for i, sharder := range sharders {
 		shardersArr[i] = nodeStat{
-			MinerNode:   sharderTableToSharderNode(sharder),
+			MinerNode:   sharderTableToSharderNode(sharder, nil),
 			Round:       sCtx.GetBlock().Round,
 			TotalReward: int64(sharder.Rewards.TotalRewards),
 		}
@@ -738,7 +748,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	minersArr := make([]nodeStat, len(miners))
 	for i, miner := range miners {
 		minersArr[i] = nodeStat{
-			MinerNode:   minerTableToMinerNode(miner),
+			MinerNode:   minerTableToMinerNode(miner, nil),
 			Round:       sCtx.GetBlock().Round,
 			TotalReward: int64(miner.Rewards.TotalRewards),
 		}

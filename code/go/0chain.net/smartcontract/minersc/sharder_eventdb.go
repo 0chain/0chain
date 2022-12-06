@@ -6,11 +6,11 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 )
 
-func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
-
+func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.DelegatePool) MinerNode {
 	var status = node.NodeStatusInactive
 	if edbSharder.Active {
 		status = node.NodeStatusActive
@@ -36,7 +36,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		Status:   status,
 	}
 
-	return MinerNode{
+	mn := MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbSharder.Rewards.Rewards,
@@ -49,6 +49,19 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 			},
 		},
 	}
+	if len(delegates) == 0 {
+		return mn
+	}
+	for _, delegate := range delegates {
+		mn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
+			Balance:      delegate.Balance,
+			Reward:       delegate.Reward,
+			Status:       spenum.PoolStatus(delegate.Status),
+			RoundCreated: delegate.RoundCreated,
+			DelegateID:   delegate.DelegateID,
+		}
+	}
+	return mn
 
 }
 

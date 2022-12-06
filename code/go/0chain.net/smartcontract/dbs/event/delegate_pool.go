@@ -46,13 +46,12 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 	return true, nil
 }
 
-func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, error) {
+func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
 		Where(&DelegatePool{
-			ProviderType: pType,
-			ProviderID:   id,
+			ProviderID: id,
 		}).
 		Not(&DelegatePool{Status: int(spenum.Deleted)}).
 		Find(&dps)

@@ -47,6 +47,7 @@ func AddMockNodes(
 		numActive          int
 		numDelegates       int
 		key                string
+		dps                []event.DelegatePool
 	)
 
 	if nodeType == spenum.Miner {
@@ -78,9 +79,11 @@ func AddMockNodes(
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
 			pool := stakepool.DelegatePool{
-				Balance:    100 * 1e10,
-				Reward:     0.3 * 1e10,
-				DelegateID: clients[dId],
+				Balance:      100 * 1e10,
+				Reward:       0.3 * 1e10,
+				DelegateID:   clients[dId],
+				RoundCreated: 1,
+				Status:       spenum.Active,
 			}
 			if i < numActive {
 				pool.Status = spenum.Active
@@ -124,6 +127,19 @@ func AddMockNodes(
 				}
 				_ = eventDb.Store.Get().Create(&sharderDb)
 			}
+			for id, pool := range newNode.Pools {
+				dps = append(dps, event.DelegatePool{
+					PoolID:       id,
+					ProviderType: int(nodeType),
+					ProviderID:   newNode.ID,
+					DelegateID:   pool.DelegateID,
+					Balance:      pool.Balance,
+					Reward:       pool.Reward,
+					TotalReward:  pool.Reward,
+					Status:       int(pool.Status),
+					RoundCreated: pool.RoundCreated,
+				})
+			}
 		}
 	}
 	if nodeType == spenum.Miner {
@@ -158,6 +174,12 @@ func AddMockNodes(
 	_, err = balances.InsertTrieNode(key, &allNodes)
 	if err != nil {
 		panic(err)
+	}
+
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		if err := eventDb.Store.Get().Create(&dps).Error; err != nil {
+			log.Fatal(err)
+		}
 	}
 	return nodes, publickKeys
 }
