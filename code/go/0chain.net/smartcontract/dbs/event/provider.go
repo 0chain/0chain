@@ -17,5 +17,5 @@ type Provider struct {
 	ServiceCharge  float64         `json:"service_charge"`
 	UnstakeTotal   currency.Coin   `json:"unstake_total"`
 	TotalStake     currency.Coin   `json:"total_stake"`
-	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID;"`
+	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID"`
 }

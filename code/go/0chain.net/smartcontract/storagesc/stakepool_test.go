@@ -154,6 +154,12 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	input, err := json.Marshal(spr)
 	require.NoError(t, err)
 	var stakePool = newStakePool()
+	stakePool.Settings = stakepool.Settings{
+		DelegateWallet:  blobberId,
+		MinStake:        value + 1,
+		MaxStake:        value + 100.0,
+		MaxNumDelegates: 20,
+	}
 	for i, stake := range delegates {
 		var id = strconv.Itoa(i)
 		stakePool.Pools["pool"+id] = &stakepool.DelegatePool{

@@ -506,7 +506,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	err = sp.Save(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
-			"can't Save stake pool: %v", err)
+			"can't save stake pool: %v", err)
 	}
 
 	if err = rp.save(sc.ID, commitRead.ReadMarker.ClientID, balances); err != nil {

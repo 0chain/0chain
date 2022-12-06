@@ -102,20 +102,20 @@ type UserPoolStat struct {
 	Pools map[datastore.Key][]*DelegatePoolStat `json:"pools"`
 }
 
-func ToProviderStakePoolStats(miner *event.Provider, delegatePools []event.DelegatePool) (*StakePoolStat, error) {
+func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.DelegatePool) (*StakePoolStat, error) {
 	spStat := new(StakePoolStat)
-	spStat.ID = miner.ID
-	spStat.StakeTotal = miner.TotalStake
-	spStat.UnstakeTotal = miner.UnstakeTotal
+	spStat.ID = provider.ID
+	spStat.StakeTotal = provider.TotalStake
+	spStat.UnstakeTotal = provider.UnstakeTotal
 	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
 	spStat.Settings = Settings{
-		DelegateWallet:     miner.DelegateWallet,
-		MinStake:           miner.MinStake,
-		MaxStake:           miner.MaxStake,
-		MaxNumDelegates:    miner.NumDelegates,
-		ServiceChargeRatio: miner.ServiceCharge,
+		DelegateWallet:     provider.DelegateWallet,
+		MinStake:           provider.MinStake,
+		MaxStake:           provider.MaxStake,
+		MaxNumDelegates:    provider.NumDelegates,
+		ServiceChargeRatio: provider.ServiceCharge,
 	}
-	spStat.Rewards = miner.Rewards.TotalRewards
+	spStat.Rewards = provider.Rewards.TotalRewards
 	for _, dp := range delegatePools {
 		dpStats := DelegatePoolStat{
 			ID:           dp.PoolID,
@@ -607,10 +607,7 @@ type stakePoolRequest struct {
 }
 
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
-	if err = json.Unmarshal(p, spr); err != nil {
-		return
-	}
-	return // ok
+	return json.Unmarshal(p, spr)
 }
 
 func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
@@ -635,10 +632,6 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	if t.Value > sp.GetSettings().MaxStake {
 		return "", common.NewError("stake_pool_lock_failed",
 			"too large stake to lock")
-	}
-
-	if err != nil {
-		return "", err
 	}
 
 	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
