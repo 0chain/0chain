@@ -14,7 +14,6 @@ import (
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/util"
 )
@@ -371,20 +370,7 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 // add delegated stake pool
 func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
-
-	var conf *Config
-	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"can't get SC configurations: %v", err)
-	}
-
-	r := stakepool.Restrictions{
-		MinStake:     conf.MinStake,
-		MaxStake:     conf.MaxStake,
-		MaxDelegates: conf.MaxDelegates,
-	}
-
-	return stakepool.StakePoolLock(t, input, balances, r, ssc.getStakePoolAdapter)
+	return stakepool.StakePoolLock(t, input, balances, ssc.getStakePoolAdapter)
 }
 
 // stake pool can return excess tokens from stake pool

@@ -13,12 +13,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	r := stakepool.Restrictions{
-		MinStake:     gn.MinStake,
-		MaxStake:     gn.MaxStake,
-		MaxDelegates: gn.MaxDelegates,
-	}
-	return stakepool.StakePoolLock(t, input, balances, r, msc.getStakePoolAdapter)
+	return stakepool.StakePoolLock(t, input, balances, msc.getStakePoolAdapter)
 }
 
 // getStakePool of given blobber

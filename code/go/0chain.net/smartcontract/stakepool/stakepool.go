@@ -613,23 +613,8 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	return // ok
 }
 
-type Restrictions struct {
-	MinStake     currency.Coin
-	MaxStake     currency.Coin
-	MaxDelegates int
-}
-
-func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI, r Restrictions,
+func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
-
-	if t.Value < r.MinStake {
-		return "", common.NewError("stake_pool_lock_failed",
-			"too small stake to lock")
-	}
-	if t.Value > r.MaxStake {
-		return "", common.NewError("stake_pool_lock_failed",
-			"too large stake to lock")
-	}
 
 	var spr stakePoolRequest
 	if err = spr.decode(input); err != nil {
@@ -643,15 +628,24 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"can't get stake pool: %v", err)
 	}
 
+	if t.Value < sp.GetSettings().MinStake {
+		return "", common.NewError("stake_pool_lock_failed",
+			"too small stake to lock")
+	}
+	if t.Value > sp.GetSettings().MaxStake {
+		return "", common.NewError("stake_pool_lock_failed",
+			"too large stake to lock")
+	}
+
 	if err != nil {
 		return "", err
 	}
 
-	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", r.MaxDelegates))
-	if len(sp.GetPools()) >= r.MaxDelegates && !sp.HasStakePool(t.ClientID) {
+	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
+	if len(sp.GetPools()) >= sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
-			r.MaxDelegates)
+			sp.GetSettings().MaxNumDelegates)
 	}
 
 	err = sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
