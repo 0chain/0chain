@@ -1707,6 +1707,7 @@ type ReadMarkerResponse struct {
 	AuthTicket    string  `json:"auth_ticket"`   //used in readmarkers
 	BlockNumber   int64   `json:"block_number"` //used in alloc_read_size
 	ClientID	  string  `json:"client_id"`
+	BlobberID     string  `json:"blobber_id"`
 	OwnerID	      string  `json:"owner_id"`
 	TransactionID string  `json:"transaction_id"`
 	AllocationID  string  `json:"allocation_id"`
@@ -1730,6 +1731,7 @@ func toReadMarkerResponse(rm event.ReadMarker) ReadMarkerResponse {
 		AuthTicket: rm.AuthTicket,
 		BlockNumber: rm.BlockNumber,
 		ClientID: rm.ClientID,
+		BlobberID: rm.BlobberID,
 		OwnerID: rm.OwnerID,
 		TransactionID: rm.TransactionID,
 		AllocationID: rm.AllocationID,

@@ -84,21 +84,13 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// get user node
-	un, err := GetUserNode(trans.ClientID, ctx)
-	if err != nil {
-		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
-		logging.Logger.Error(err.Error(), zap.Error(err))
-		return
-	}
-
 	_, exists := gn.WZCNNonceMinted[payload.Nonce]
 	if exists { // global nonce from ETH SC has already been minted
 		err = common.NewError(
 			code,
 			fmt.Sprintf(
 				"nonce given (%v) for receiving client (%s) has alredy been minted for Node.ID: '%s', %s",
-				payload.Nonce, payload.ReceivingClientID, un.ID, info))
+				payload.Nonce, payload.ReceivingClientID, trans.ClientID, info))
 		return
 	}
 
