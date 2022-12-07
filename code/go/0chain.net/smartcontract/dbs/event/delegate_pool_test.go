@@ -42,7 +42,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
-	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
+	dps, err := eventDb.GetDelegatePools("provider_id")
 	require.NoError(t, err)
 	require.Len(t, dps, 1)
 
@@ -130,7 +130,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	var after int64
 	eventDb.Get().Table("delegate_pools").Count(&after)
 
-	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
+	dps, err := eventDb.GetDelegatePools("provider_id")
 	require.NoError(t, err)
 	require.Len(t, dps, 2)
 }
