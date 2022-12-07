@@ -173,6 +173,9 @@ func initTagString() {
 	TagString[TagAllocBlobberValueChange] = "TagAllocBlobberValueChange"
 	TagString[TagUpdateBlobberOpenChallenges] = "TagUpdateBlobberOpenChallenges"
 	TagString[TagUpdateValidatorStakeTotal] = "TagUpdateValidatorStakeTotal"
+	TagString[TagUpdateMinerTotalStake] = "TagUpdateMinerTotalStake"
+	TagString[TagUpdateSharderTotalStake] = "TagUpdateSharderTotalStake"
+	TagString[TagUpdateAuthorizerTotalStake] = "TagUpdateAuthorizerTotalStake"
 	TagString[NumberOfTags] = "invalid"
 }
 
