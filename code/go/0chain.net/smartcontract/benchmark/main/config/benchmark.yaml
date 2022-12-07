@@ -1,18 +1,18 @@
 simulation:
   num_clients: 210
   num_active_clients: 210
-  num_miners: 5
-  num_active_miners: 5
-  nun_sharders: 5
-  nun_active_sharders: 5
+  num_miners: 100
+  num_active_miners: 100
+  nun_sharders: 20
+  nun_active_sharders: 20
   num_allocations: 300
   num_blobbers: 100
   num_validators: 10
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
   num_blobbers_per_Allocation: 4 # ideally make this even
-  num_blobber_delegates: 3
-  num_miner_delegates: 3
+  num_blobber_delegates: 10
+  num_miner_delegates: 10
   num_sharder_delegates: 10
   num_curators: 1
   num_free_storage_assigners: 1
