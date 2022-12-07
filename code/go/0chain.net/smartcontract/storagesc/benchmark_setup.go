@@ -680,8 +680,8 @@ func AddMockWriteRedeems(
 	balances cstate.StateContextI,
 ) {
 	numWriteRedeemAllocation := viper.GetInt(sc.NumWriteRedeemAllocation)
-	for i := 0; i < numWriteRedeemAllocation; i++ {
-		for j := 0; j < viper.GetInt(sc.NumWriteRedeemAllocation); j++ {
+	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
+		for j := 0; j < numWriteRedeemAllocation; j++ {
 			client := getMockOwnerFromAllocationIndex(i, len(clients))
 			rm := ReadMarker{
 				ClientID:        clients[client],
