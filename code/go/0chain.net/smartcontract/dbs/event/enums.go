@@ -40,6 +40,7 @@ const (
 	TagAddOrOverwriteUser
 	TagAddWriteMarker
 	TagAddBlock
+	TagFinalizeBlock
 	TagAddOrOverwiteValidator
 	TagUpdateValidator
 	TagAddReadMarker
@@ -86,6 +87,7 @@ const (
 	TagAllocBlobberValueChange
 	TagUpdateBlobberOpenChallenges
 	TagUpdateValidatorStakeTotal
+	TagUniqueAddress
 	NumberOfTags
 )
 
@@ -124,6 +126,7 @@ func initTagString() {
 	TagString[TagAddOrOverwriteUser] = "TagAddOrOverwriteUser"
 	TagString[TagAddWriteMarker] = "TagAddWriteMarker"
 	TagString[TagAddBlock] = "TagAddBlock"
+	TagString[TagFinalizeBlock] = "TagFinalizeBlock"
 	TagString[TagAddOrOverwiteValidator] = "TagAddOrOverwiteValidator"
 	TagString[TagUpdateValidator] = "TagUpdateValidator"
 	TagString[TagAddReadMarker] = "TagAddReadMarker"
@@ -170,6 +173,7 @@ func initTagString() {
 	TagString[TagAllocBlobberValueChange] = "TagAllocBlobberValueChange"
 	TagString[TagUpdateBlobberOpenChallenges] = "TagUpdateBlobberOpenChallenges"
 	TagString[TagUpdateValidatorStakeTotal] = "TagUpdateValidatorStakeTotal"
+	TagString[TagUniqueAddress] = "TagUniqueAddress"
 	TagString[NumberOfTags] = "invalid"
 }
 

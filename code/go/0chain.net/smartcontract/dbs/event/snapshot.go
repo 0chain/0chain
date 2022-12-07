@@ -38,6 +38,10 @@ type Snapshot struct {
 	MaxCapacityStorage   int64 `json:"max_capacity_storage"`  //*491 SUM all storage from blobber settings
 	StakedStorage        int64 `json:"staked_storage"`        //*491 SUM staked capacity by delegates
 	UsedStorage          int64 `json:"used_storage"`          //*491 SUM this is the actual usage or data that is in the server - write markers (triggers challenge pool / the price).(bytes written used capacity)
+	TransactionsCount    int64 `json:"transactions_count"`    // Total number of transactions in a block
+	UniqueAddresses      int64 `json:"unique_addresses"`      // Total unique address
+	BlockCount           int64 `json:"block_count"`           // Total number of blocks currently
+	AverageTxnFee        int64 `json:"avg_txn_fee"`           // Average transaction fee per block
 }
 
 type FieldType int
@@ -193,6 +197,31 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ClientLocks -= d.Amount
 			gs.TotalValueLocked -= d.Amount
+		case TagFinalizeBlock:
+			block, ok := fromEvent[Block](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			gs.TransactionsCount = int64(block.NumTxns)
+			gs.BlockCount += 1
+		case TagUniqueAddress:
+			gs.UniqueAddresses += 1
+		case TagAddTransactions:
+			txns, ok := fromEvent[[]Transaction](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			averageFee := 0
+			for _, txn := range *txns {
+				averageFee += int(txn.Fee)
+			}
+			averageFee = averageFee / len(*txns)
+			gs.AverageTxnFee = int64(averageFee)
 		}
+
 	}
 }

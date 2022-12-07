@@ -45,3 +45,15 @@ func CreateBlockEvent(block *Block) (error, event.Event) {
 		Data:        blockToBlockEvent(block),
 	}
 }
+
+func FinalizeBlockEvent(block *Block) (error, event.Event) {
+	logging.Logger.Info("finalize block event", zap.Any("block", block))
+	return nil, event.Event{
+		BlockNumber: block.Round,
+		TxHash:      "",
+		Type:        event.TypeChain,
+		Tag:         event.TagFinalizeBlock,
+		Index:       block.Hash,
+		Data:        blockToBlockEvent(block),
+	}
+}

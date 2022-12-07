@@ -661,6 +661,11 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	if err := sctx.SetStateContext(s); err != nil {
 		return nil, err
 	}
+
+	if s.Nonce == 0 {
+		c.emitUniqueAddressEvent(sctx, s)
+	}
+
 	s.Nonce += 1
 	if _, err := sctx.SetClientState(fromClient, s); err != nil {
 		return nil, err
@@ -781,6 +786,15 @@ func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.Us
 	}
 
 	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, usr.UserID, usr)
+
+	return
+}
+
+func (c *Chain) emitUniqueAddressEvent(sc bcstate.StateContextI, s *state.State) {
+	if c.GetEventDb() == nil {
+		return
+	}
+	sc.EmitEvent(event.TypeStats, event.TagUniqueAddress, s.TxnHash, nil)
 
 	return
 }

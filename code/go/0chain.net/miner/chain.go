@@ -60,6 +60,8 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.Chain.OnBlockAdded = func(b *block.Block) {
 	}
+	minerChain.Chain.OnBlockFinalized = func(b *block.Block) {
+	}
 	minerChain.ChainConfig = c.ChainConfig
 
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
