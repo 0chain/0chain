@@ -716,7 +716,7 @@ func AddMockWriteRedeems(
 				if out := eventDb.Store.Get().Create(&readMarker); out.Error != nil {
 					log.Fatal(out.Error)
 				}
-				txnNum = txnNum + numAllocations*numWriteRedeemAllocation
+				txnNum += numAllocations * numWriteRedeemAllocation
 				writeMarker := event.WriteMarker{
 					ClientID:       rm.ClientID,
 					BlobberID:      rm.BlobberID,
