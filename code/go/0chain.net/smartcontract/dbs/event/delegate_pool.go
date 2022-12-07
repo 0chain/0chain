@@ -33,8 +33,7 @@ func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, erro
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
 		Where(&DelegatePool{
-			ProviderType: pType,
-			ProviderID:   id,
+			ProviderID: id,
 		}).
 		Not(&DelegatePool{Status: int(spenum.Deleted)}).
 		Find(&dps)
