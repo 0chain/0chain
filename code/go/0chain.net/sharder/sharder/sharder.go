@@ -174,28 +174,11 @@ func main() {
 	}
 
 	serverChain.OnBlockFinalized = func(b *block.Block) {
-		err, ev := block.FinalizeBlockEvent(b)
+		err, ev := block.CreateFinalizeBlockEvent(b)
 		if err != nil {
 			logging.Logger.Error("emit update block event error", zap.Error(err))
 		}
-		go func() {
-			rootContext := common.GetRootContext()
-			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
-			defer cancel()
-
-			if err := serverChain.GetEventDb().ProcessEvents(
-				ctx,
-				[]event.Event{ev},
-				b.Round,
-				b.Hash,
-				len(b.Txns),
-			); err != nil {
-				logging.Logger.Error("process block updating event failed",
-					zap.Error(err),
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash))
-			}
-		}()
+		b.Events = append(b.Events, ev)
 	}
 
 	sharder.SetupSharderChain(serverChain)

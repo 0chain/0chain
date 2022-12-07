@@ -46,7 +46,7 @@ func CreateBlockEvent(block *Block) (error, event.Event) {
 	}
 }
 
-func FinalizeBlockEvent(block *Block) (error, event.Event) {
+func CreateFinalizeBlockEvent(block *Block) (error, event.Event) {
 	logging.Logger.Info("finalize block event", zap.Any("block", block))
 	return nil, event.Event{
 		BlockNumber: block.Round,
