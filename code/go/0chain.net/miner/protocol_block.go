@@ -56,6 +56,11 @@ func init() {
 
 func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
 	clients[txn.ClientID] = nil
+	if txn.SmartContractData == nil {
+		if err := txn.ComputeProperties(); err != nil {
+			return nil
+		}
+	}
 	events, err := mc.UpdateState(ctx, b, bState, txn)
 	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
