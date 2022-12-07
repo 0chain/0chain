@@ -699,9 +699,8 @@ func AddMockWriteRedeems(
 			}
 			if viper.GetBool(sc.EventDbEnabled) {
 				numBlocks := viper.GetInt(sc.NumBlocks)
-				txnPerBlock := viper.GetInt(sc.NumTransactionPerBlock)
 				mockBlockNumber := int64(i%(numBlocks-1)) + 1
-				txnNum := (i) % txnPerBlock
+				txnNum := i * j
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
