@@ -680,6 +680,7 @@ func AddMockWriteRedeems(
 	balances cstate.StateContextI,
 ) {
 	numWriteRedeemAllocation := viper.GetInt(sc.NumWriteRedeemAllocation)
+	numAllocations := viper.GetInt(sc.NumAllocations)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		for j := 0; j < numWriteRedeemAllocation; j++ {
 			client := getMockOwnerFromAllocationIndex(i, len(clients))
@@ -715,7 +716,7 @@ func AddMockWriteRedeems(
 				if out := eventDb.Store.Get().Create(&readMarker); out.Error != nil {
 					log.Fatal(out.Error)
 				}
-
+				txnNum = txnNum + numAllocations*numWriteRedeemAllocation
 				writeMarker := event.WriteMarker{
 					ClientID:       rm.ClientID,
 					BlobberID:      rm.BlobberID,
