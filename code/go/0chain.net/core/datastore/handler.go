@@ -43,9 +43,15 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 		entity := entityMetadata.Instance()
 		if err := json.NewDecoder(r.Body).Decode(entity); err != nil {
 			logging.Logger.Error("decode err", zap.Error(err))
-			http.Error(w, "Error decoding json", 500)
+			http.Error(w, "Error decoding json", 400)
 			return
 		}
+		if err := entity.ComputeProperties(); err != nil {
+			logging.Logger.Error("compute properties err", zap.Error(err))
+			http.Error(w, "Error computing properties", 400)
+			return
+		}
+
 		ctx := r.Context()
 		rsp, err := handler(ctx, entity)
 		common.Respond(w, r, rsp, err)

@@ -111,8 +111,7 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 // ExecuteSmartContract - executes the smart contract for the transaction
 func (c *Chain) ExecuteSmartContract(
 	ctx context.Context,
-	t *transaction.Transaction,
-	scData *sci.SmartContractTransactionData,
+	txn *transaction.Transaction,
 	balances bcstate.StateContextI) (string, error) {
 
 	type result struct {
@@ -133,7 +132,7 @@ func (c *Chain) ExecuteSmartContract(
 	}
 
 	go func() {
-		output, err := smartcontract.ExecuteSmartContract(t, scData, balances)
+		output, err := smartcontract.ExecuteSmartContract(txn, balances)
 		resultC <- result{output: output, err: err}
 	}()
 	select {
@@ -316,25 +315,14 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:
-		var (
-			scData    sci.SmartContractTransactionData
-			dataBytes = []byte(txn.TransactionData)
-		)
-
-		if err = json.Unmarshal(dataBytes, &scData); err != nil {
-			logging.Logger.Error("Error while decoding the JSON from transaction",
-				zap.Any("input", txn.TransactionData), zap.Any("error", err))
-			return nil, err
-		}
-
 		t := time.Now()
-		output, err := c.ExecuteSmartContract(ctx, txn, &scData, sctx)
+		output, err := c.ExecuteSmartContract(ctx, txn, sctx)
 		switch err {
 		//internal errors
 		case context.DeadlineExceeded, transaction.ErrSmartContractContext, util.ErrNodeNotFound:
 			logging.Logger.Error("Error executing the SC, internal error",
 				zap.Error(err),
-				zap.String("scname", scData.FunctionName),
+				zap.String("scname", txn.FunctionName),
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
@@ -345,7 +333,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		case context.Canceled:
 			logging.Logger.Debug("Error executing the SC, internal error",
 				zap.Error(err),
-				zap.String("scname", scData.FunctionName),
+				zap.String("scname", txn.FunctionName),
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
@@ -358,7 +346,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				if bcstate.ErrInvalidState(err) {
 					logging.Logger.Error("Error executing the SC, internal error",
 						zap.Error(err),
-						zap.String("scname", scData.FunctionName),
+						zap.String("scname", txn.FunctionName),
 						zap.String("block", b.Hash),
 						zap.String("begin client state", util.ToHex(startRoot)),
 						zap.String("prev block", b.PrevBlock.Hash),
@@ -394,7 +382,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
 			zap.String("txn_hash", txn.Hash),
 			zap.Int64("txn_nonce", txn.Nonce),
-			zap.String("txn_func", scData.FunctionName),
+			zap.String("txn_func", txn.FunctionName),
 			zap.Int("txn_status", txn.Status),
 			zap.Duration("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),

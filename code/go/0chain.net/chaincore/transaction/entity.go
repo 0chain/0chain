@@ -59,6 +59,7 @@ type Transaction struct {
 	datastore.HashIDField
 	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
+	*SmartContractData `json:"-" msgpack:"-"`
 
 	ClientID  string `json:"client_id" msgpack:"cid,omitempty"`
 	PublicKey string `json:"public_key,omitempty" msgpack:"puk,omitempty"`
@@ -97,10 +98,18 @@ func (t *Transaction) ComputeProperties() error {
 	if t.ChainID == "" {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
+	if t.TransactionType == TxnTypeSmartContract {
+		std := &SmartContractData{}
+		if err := json.Unmarshal([]byte(t.TransactionData), std); err != nil {
+			return fmt.Errorf("invalid smart contract data: %v", err)
+		}
+		t.SmartContractData = std
+	}
 	return t.ComputeClientID()
 }
 
-type smartContractTransactionData struct {
+// SmartContractData represents the smart contract data
+type SmartContractData struct {
 	FunctionName string          `json:"name"`
 	InputData    json.RawMessage `json:"input"`
 }
@@ -116,15 +125,7 @@ func (t *Transaction) ValidateNonce() error {
 // ValidateFee - Validate fee
 func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currency.Coin) error {
 	if t.TransactionData != "" {
-		var smartContractData smartContractTransactionData
-		dataBytes := []byte(t.TransactionData)
-		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err != nil {
-			logging.Logger.Error("unmarshal txn data failed", zap.Error(err))
-			return errors.New("invalid transaction data")
-		}
-
-		if _, ok := txnExempted[smartContractData.FunctionName]; ok {
+		if _, ok := txnExempted[t.FunctionName]; ok {
 			return nil
 		}
 	}
@@ -455,6 +456,12 @@ func (t *Transaction) Clone() *Transaction {
 		TransactionOutput: t.TransactionOutput,
 		OutputHash:        t.OutputHash,
 		Status:            t.Status,
+	}
+
+	if t.SmartContractData != nil {
+		scData := &SmartContractData{}
+		*scData = *t.SmartContractData
+		clone.SmartContractData = scData
 	}
 
 	if ent := t.CollectionMemberField.EntityCollection; ent != nil {
