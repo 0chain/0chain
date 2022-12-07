@@ -148,8 +148,15 @@ func main() {
 	// TODO: put it in a better place
 	go mc.StartLFMBWorker(ctx)
 
-	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock, initStates)
+	var gb *block.Block
+
+	lfb := miner.GetLatestBlockFromSharders(ctx)
+
+	if mc.GetCurrentRound() == 0 || lfb == nil {
+		gb = mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
+			magicBlock, initStates)
+	}
+
 	mb := mc.GetLatestMagicBlock()
 	logging.Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 
