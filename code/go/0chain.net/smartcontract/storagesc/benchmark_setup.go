@@ -679,7 +679,8 @@ func AddMockWriteRedeems(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
+	numWriteRedeemAllocation := viper.GetInt(sc.NumWriteRedeemAllocation)
+	for i := 0; i < numWriteRedeemAllocation; i++ {
 		for j := 0; j < viper.GetInt(sc.NumWriteRedeemAllocation); j++ {
 			client := getMockOwnerFromAllocationIndex(i, len(clients))
 			rm := ReadMarker{
@@ -700,7 +701,7 @@ func AddMockWriteRedeems(
 			if viper.GetBool(sc.EventDbEnabled) {
 				numBlocks := viper.GetInt(sc.NumBlocks)
 				mockBlockNumber := int64(i%(numBlocks-1)) + 1
-				txnNum := i * j
+				txnNum := i*numWriteRedeemAllocation + j
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
