@@ -2285,7 +2285,6 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/
 ```
 
 global object for miner smart contracts
-B
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -4353,7 +4352,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | ID | uint64 (formatted integer)| `uint64` |  | |  |  |
 | Nonce | int64 (formatted integer)| `int64` |  | |  |  |
 | OutputHash | string| `string` |  | |  |  |
-| ReadMarkers | [][ReadMarker](#read-marker)| `[]*ReadMarker` |  | | ref |  |
 | Round | int64 (formatted integer)| `int64` |  | |  |  |
 | Signature | string| `string` |  | |  |  |
 | Status | int64 (formatted integer)| `int64` |  | |  |  |
@@ -4363,7 +4361,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | TransactionType | int64 (formatted integer)| `int64` |  | |  |  |
 | UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | Version | string| `string` |  | |  |  |
-| WriteMarker | [][WriteMarker](#write-marker)| `[]*WriteMarker` |  | |  |  |
 | fee | [Coin](#coin)| `Coin` |  | |  |  |
 | value | [Coin](#coin)| `Coin` |  | |  |  |
 

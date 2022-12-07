@@ -1493,18 +1493,9 @@ definitions:
             ID:
                 format: uint64
                 type: integer
-            ReadMarkers:
-                description: ref
-                items:
-                    $ref: '#/definitions/ReadMarker'
-                type: array
             UpdatedAt:
                 format: date-time
                 type: string
-            WriteMarker:
-                items:
-                    $ref: '#/definitions/WriteMarker'
-                type: array
             block_hash:
                 type: string
                 x-go-name: BlockHash
@@ -3657,9 +3648,7 @@ paths:
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings:
         get:
-            description: |-
-                global object for miner smart contracts
-                B
+            description: global object for miner smart contracts
             operationId: globalSettings
             responses:
                 "200":

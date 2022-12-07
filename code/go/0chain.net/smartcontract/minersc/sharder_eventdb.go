@@ -36,7 +36,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		Status:   status,
 	}
 
-	mn := MinerNode{
+	sn := MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbSharder.Rewards.Rewards,
@@ -50,10 +50,11 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		},
 	}
 	if len(delegates) == 0 {
-		return mn
+		return sn
 	}
+	sn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
 	for _, delegate := range delegates {
-		mn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
+		sn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
 			Balance:      delegate.Balance,
 			Reward:       delegate.Reward,
 			Status:       spenum.PoolStatus(delegate.Status),
@@ -61,7 +62,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 			DelegateID:   delegate.DelegateID,
 		}
 	}
-	return mn
+	return sn
 
 }
 
