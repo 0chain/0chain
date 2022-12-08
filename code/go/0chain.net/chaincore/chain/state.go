@@ -260,6 +260,10 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 		return 0, 0, err
 	}
 
+	logging.Logger.Debug("estimate txn fee",
+		zap.Any("cost", cost),
+		zap.Int("coeff", c.ChainConfig.TxnCostFeeCoeff()))
+
 	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
 }
 

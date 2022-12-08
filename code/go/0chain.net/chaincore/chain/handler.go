@@ -1391,6 +1391,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			}
 			return nil, fmt.Errorf("could not get estimated txn cost: %v", err)
 		}
+		logging.Logger.Debug("estimate txn fee", zap.Any("fee", minFee), zap.Any("txn", txn))
 
 		confMinFee := sc.ChainConfig.MinTxnFee()
 		if confMinFee > minFee {
@@ -1398,6 +1399,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		}
 
 		if err := txn.ValidateFee(sc.ChainConfig.TxnExempt(), minFee); err != nil {
+			logging.Logger.Error("validate txn fee failed",
+				zap.Any("txn", txn),
+				zap.Any("minFee", minFee),
+				zap.Error(err))
 			return nil, err
 		}
 
@@ -1926,6 +1931,8 @@ func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, err
 			zap.Int("tx-type", tx.TransactionType), zap.Error(err))
 		return nil, err
 	}
+
+	logging.Logger.Debug("estimate txn fee", zap.Any("fee", fee), zap.Any("txn", &tx))
 
 	return map[string]uint64{
 		"fee": uint64(fee),
