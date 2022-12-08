@@ -677,7 +677,7 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	return mc.deleteTxns(modifiedTxns)
 }
 
-func GetLatestBlockFromSharders(ctx context.Context) *block.Block {
+func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	mc := GetMinerChain()
 	mb := mc.GetCurrentMagicBlock()
 	mb.Sharders.OneTimeStatusMonitor(ctx, mb.StartingRound)

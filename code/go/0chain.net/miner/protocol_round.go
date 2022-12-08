@@ -1888,7 +1888,7 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 
 	var (
 		mc  = GetMinerChain()
-		lfb = GetLatestBlockFromSharders(ctx)
+		lfb = getLatestBlockFromSharders(ctx)
 		mr  *Round
 	)
 	if lfb != nil {

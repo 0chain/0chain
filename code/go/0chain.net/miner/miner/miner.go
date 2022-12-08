@@ -150,9 +150,7 @@ func main() {
 
 	var gb *block.Block
 
-	lfb := miner.GetLatestBlockFromSharders(ctx)
-
-	if mc.GetCurrentRound() == 0 || lfb == nil {
+	if mc.GetCurrentRound() == 0 {
 		gb = mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 			magicBlock, initStates)
 	}
