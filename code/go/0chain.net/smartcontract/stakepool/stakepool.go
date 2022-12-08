@@ -627,11 +627,11 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 
 	if t.Value < sp.GetSettings().MinStake {
 		return "", common.NewError("stake_pool_lock_failed",
-			"too small stake to lock")
+		fmt.Sprintf("too small stake to lock: %v < %v", t.Value, sp.GetSettings().MinStake))
 	}
 	if t.Value > sp.GetSettings().MaxStake {
 		return "", common.NewError("stake_pool_lock_failed",
-			"too large stake to lock")
+		fmt.Sprintf("too large stake to lock: %v > %v", t.Value, sp.GetSettings().MaxStake))
 	}
 
 	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
