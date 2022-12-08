@@ -36,13 +36,13 @@ func stakePoolKey(p spenum.Provider, id string) datastore.Key {
 type AbstractStakePool interface {
 	GetPools() map[string]*DelegatePool
 	HasStakePool(user string) bool
-	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) error
+	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) (string, error)
 	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
 	Save(providerType spenum.Provider, providerID string,
 		balances cstate.StateContextI) error
 	GetSettings() Settings
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error)
-	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (currency.Coin, error)
+	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
 }
 
 // StakePool holds delegate information for an 0chain providers
@@ -641,7 +641,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			sp.GetSettings().MaxNumDelegates)
 	}
 
-	err = sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
+	out, err := sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool digging error: %v", err)
@@ -658,7 +658,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"stake pool staking error: %v", err)
 	}
 
-	return
+	return out, err
 }
 
 // stake pool can return excess tokens from stake pool
@@ -715,7 +715,7 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	output, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}
@@ -732,7 +732,7 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 			"stake pool staking error: %v", err)
 	}
 
-	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
+	return output, nil
 }
 
 func toJson(val interface{}) string {

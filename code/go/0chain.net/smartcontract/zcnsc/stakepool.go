@@ -225,7 +225,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 		return "", common.NewErrorf(code, "max_delegates reached: %v, no more stake pools allowed", gn.MaxDelegates)
 	}
 
-	err = sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)
+	out, err := sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "stake pool digging error: %v", err)
 	}
@@ -236,7 +236,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 
 	// TO-DO: Update stake in eventDB
 
-	return
+	return out, err
 }
 
 func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
@@ -260,7 +260,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
+	output, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "%v", err)
 	}
@@ -270,7 +270,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "saving stake pool: %v", err)
 	}
 
-	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
+	return output, nil
 }
 
 func toJson(val interface{}) string {
