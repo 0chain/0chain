@@ -204,8 +204,7 @@ type Chain struct {
 	// compute state
 	computeBlockStateC chan struct{}
 
-	OnBlockAdded     func(b *block.Block)
-	OnBlockFinalized func(b *block.Block)
+	OnBlockAdded func(b *block.Block)
 }
 
 type syncPathNodes struct {
@@ -497,8 +496,6 @@ func (c *Chain) Initialize() {
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
 	c.OnBlockAdded = func(b *block.Block) {
-	}
-	c.OnBlockFinalized = func(b *block.Block) {
 	}
 }
 

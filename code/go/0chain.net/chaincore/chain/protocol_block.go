@@ -376,10 +376,15 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
-	c.OnBlockFinalized(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() {
+			err, ev := block.CreateFinalizeBlockEvent(fb)
+			if err != nil {
+				logging.Logger.Error("emit update block event error", zap.Error(err))
+			}
+			fb.Events = append(fb.Events, ev)
+
 			if err := c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns)); err != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),

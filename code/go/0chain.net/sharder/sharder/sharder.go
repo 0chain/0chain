@@ -173,14 +173,6 @@ func main() {
 		}()
 	}
 
-	serverChain.OnBlockFinalized = func(b *block.Block) {
-		err, ev := block.CreateFinalizeBlockEvent(b)
-		if err != nil {
-			logging.Logger.Error("emit update block event error", zap.Error(err))
-		}
-		b.Events = append(b.Events, ev)
-	}
-
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	sc.SetupConfigInfoDB(workdir)
