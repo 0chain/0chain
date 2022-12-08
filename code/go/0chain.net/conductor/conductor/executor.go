@@ -301,7 +301,6 @@ func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
 }
 
 func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
-
 	if r.verbose {
 		log.Printf(" [INF] wait add miners: %s, sharders: %s, blobbers: %s, authorizers %s",
 			wadd.Miners, wadd.Sharders, wadd.Blobbers, wadd.Authorizers)
@@ -320,12 +319,6 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 				return err
 			}
 		}
-	}
-
-	// filter initialized nodes
-	nodes := r.server.Nodes()
-	for name := range nodes {
-		r.waitAdd.Take(name)
 	}
 
 	return

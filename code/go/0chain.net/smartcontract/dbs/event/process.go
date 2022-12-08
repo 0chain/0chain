@@ -418,8 +418,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 
 		for i := range *rms {
 			(*rms)[i].BlockNumber = event.BlockNumber
-			(*rms)[i].TransactionID = event.TxHash
-
 		}
 		return edb.addOrOverwriteReadMarker(*rms)
 	case TagAddOrOverwriteUser:
