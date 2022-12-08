@@ -615,8 +615,6 @@ func (r *Runner) acceptNodeReady(nodeName NodeName) (err error) {
 	}
 	log.Println("[OK] node ready", nodeName, n.Name)
 
-	r.waitAdd.Take(nodeName)
-
 	return
 }
 

@@ -42,14 +42,6 @@ func (zcn *ZCNSmartContract) Burn(
 		return "", common.NewError(code, msg)
 	}
 
-	// get user node
-	un, err := GetUserNode(trans.ClientID, ctx)
-	if err != nil {
-		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
-		logging.Logger.Error(err.Error(), zap.Error(err))
-		return
-	}
-
 	// check burn amount
 	if trans.Value < gn.MinBurnAmount {
 		msg := fmt.Sprintf(
@@ -74,6 +66,14 @@ func (zcn *ZCNSmartContract) Burn(
 
 	if payload.EthereumAddress == "" {
 		err = common.NewError(code, "ethereum address is required, "+info)
+		logging.Logger.Error(err.Error(), zap.Error(err))
+		return
+	}
+
+	// get user node
+	un, err := GetUserNode(payload.EthereumAddress, ctx)
+	if err != nil {
+		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
 		logging.Logger.Error(err.Error(), zap.Error(err))
 		return
 	}

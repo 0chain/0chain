@@ -115,6 +115,15 @@ func validOrigin(origin string) bool {
 		return true
 	}
 	if host == "0chain.net" || host == "0box.io" ||
+		host == "vult.network" || host == "bolt.holdings" ||
+		host == "chalk.software" || host == "blimp.software" ||
+		host == "chimney.software" || host == "atlus.cloud" ||
+		strings.HasSuffix(host, ".vult.network") ||
+		strings.HasSuffix(host, ".bolt.holdings") ||
+		strings.HasSuffix(host, ".chalk.software") ||
+		strings.HasSuffix(host, ".blimp.software") ||
+		strings.HasSuffix(host, ".chimney.software") ||
+		strings.HasSuffix(host, ".atlus.cloud") ||
 		strings.HasSuffix(host, ".0chain.net") ||
 		strings.HasSuffix(host, ".alphanet-0chain.net") ||
 		strings.HasSuffix(host, ".testnet-0chain.net") ||

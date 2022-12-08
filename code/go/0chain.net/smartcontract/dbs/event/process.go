@@ -181,24 +181,17 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			}
 		}
 
-		if gs == nil && es.round == 1 {
-			gs = &Snapshot{Round: 1}
-		}
-		if gs == nil && es.round > 1 {
-			g, err := tx.GetGlobal()
+		// process snapshot for none adding block events only
+		if isNotAddBlockEvent(es) {
+			gs, err = updateSnapshots(gs, es, tx)
 			if err != nil {
-				logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
+				logging.Logger.Error("snapshot could not be processed",
+					zap.Int64("round", es.round),
+					zap.String("block", es.block),
+					zap.Int("block size", es.blockSize),
+					zap.Error(err),
+				)
 			}
-			gs = &g
-		}
-		gs, err = tx.updateSnapshots(es, gs)
-		if err != nil {
-			logging.Logger.Error("event could not be processed",
-				zap.Int64("round", es.round),
-				zap.String("block", es.block),
-				zap.Int("block size", es.blockSize),
-				zap.Error(err),
-			)
 		}
 
 		if err := tx.Commit(); err != nil {
@@ -228,6 +221,28 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		}
 		es.doneC <- struct{}{}
 	}
+}
+
+func isNotAddBlockEvent(es blockEvents) bool {
+	return !(len(es.events) == 1 && es.events[0].Type == TypeChain)
+}
+
+func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, error) {
+	if gs != nil {
+		return tx.updateSnapshots(es, gs)
+	}
+
+	if es.round == 1 {
+		return tx.updateSnapshots(es, &Snapshot{Round: 1})
+	}
+
+	g, err := tx.GetGlobal()
+	if err != nil {
+		logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
+	}
+	gs = &g
+
+	return tx.updateSnapshots(es, gs)
 }
 
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
@@ -403,8 +418,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 
 		for i := range *rms {
 			(*rms)[i].BlockNumber = event.BlockNumber
-			(*rms)[i].TransactionID = event.TxHash
-
 		}
 		return edb.addOrOverwriteReadMarker(*rms)
 	case TagAddOrOverwriteUser:
