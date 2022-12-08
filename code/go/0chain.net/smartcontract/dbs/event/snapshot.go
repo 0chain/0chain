@@ -217,7 +217,6 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			averageFee := 0
 			for _, txn := range *txns {
-				logging.Logger.Debug("Txn Fee: ", zap.Any("fee", txn.Fee))
 				averageFee += int(txn.Fee)
 			}
 			averageFee = averageFee / len(*txns)
