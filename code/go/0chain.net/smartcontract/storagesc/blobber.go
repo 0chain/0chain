@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -11,13 +10,14 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
+
 )
 
 const (
@@ -226,23 +226,9 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 	// Check delegate wallet and operational wallet are not the same
 	if ! config.Development() {
-		publicKeyBytes, err := hex.DecodeString(blobber.PublicKey)
-		if err != nil {
-			logging.Logger.Error("Couldn't decode public key to compare to delegate wallet")
-			return "", common.NewError("add_or_update_blobber_failed",
-				"Couldn't decode public key to compare to delegate wallet")
+		if err := commonsc.ValidateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
+			return "", err
 		}
-		operationalClientID := encryption.Hash(publicKeyBytes)
-	
-		logging.Logger.Info("comparing delegate wallet",
-			zap.String("delegate_wallet", blobber.StakePoolSettings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
-		)
-	
-		if operationalClientID == blobber.StakePoolSettings.DelegateWallet {
-			logging.Logger.Error("Can't use the same wallet as both operational and delegate")
-			return "", common.NewError("add_or_update_blobber_failed",
-				"Can't use the same wallet as both operational and delegate")
-		}	
 	}
 
 	// insert, update or remove blobber

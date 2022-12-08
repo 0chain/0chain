@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -11,10 +10,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
 )
 
 func doesMinerExist(pkey datastore.Key,
@@ -90,22 +89,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	
 	// Check delegate wallet is not the same as operational wallet (PUK)
 	if ! config.Development() {
-		publicKeyBytes, err := hex.DecodeString(newMiner.PublicKey)
-		if err != nil {
-			logging.Logger.Error("Couldn't decode public key to compare to delegate wallet")
-			return "", common.NewError("add_miner",
-				"Couldn't decode publick key to compare to delegate wallet")
-		}
-		operationalClientID := encryption.Hash(publicKeyBytes)
-	
-		logging.Logger.Info("comparing delegate wallet",
-			zap.String("delegate_wallet", newMiner.Settings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
-		)
-	
-		if operationalClientID == newMiner.Settings.DelegateWallet {
-			logging.Logger.Error("Can't use the same wallet as both operational and delegate")
-			return "", common.NewError("add_miner",
-				"Can't use the same wallet as both operational and delegate")
+		if err := commonsc.ValidateWallet(newMiner.PublicKey, newMiner.Settings.DelegateWallet); err != nil {
+			return "", err
 		}
 	}
 

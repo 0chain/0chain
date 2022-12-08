@@ -17,6 +17,7 @@ import (
 	. "github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
 )
 
 // AddAuthorizer sc API function
@@ -72,16 +73,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 
 	// Check delegate wallet and operational wallet are not the same
 	if ! config.Development() {
-		operationalClientID := authorizerID
-	
-		Logger.Info("comparing delegate wallet",
-			zap.String("delegate_wallet", params.StakePoolSettings.DelegateWallet), zap.String("operational_wallet", operationalClientID),
-		)
-	
-		if operationalClientID == params.StakePoolSettings.DelegateWallet {
-			Logger.Error("Can't use the same wallet as both operational and delegate")
-			return "", common.NewError("add_authorizer_failed",
-				"Can't use the same wallet as both operational and delegate")
+		if err := commonsc.ValidateWallet(params.PublicKey, params.StakePoolSettings.DelegateWallet); err != nil {
+			return "", err
 		}
 	}
 	

@@ -1,18 +1,17 @@
 package minersc
 
 import (
-	"encoding/hex"
 	"errors"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
 
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
 )
 
 func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
@@ -118,18 +117,8 @@ func (msc *MinerSmartContract) AddSharder(
 
 	// Check delegate wallet differs from operationl wallet
 	if ! config.Development() {
-		publicKeyBytes, err := hex.DecodeString(newSharder.PublicKey)
-		if err != nil {
-			logging.Logger.Error("Couldn't decode public key to compare to delegate wallet")
-			return "", common.NewError("add_sharder",
-				"Couldn't decode publick key to compare to delegate wallet")
-		}
-		operationalClientID := encryption.Hash(publicKeyBytes)
-	
-		if operationalClientID == newSharder.Settings.DelegateWallet {
-			logging.Logger.Error("Can't use the same wallet as both operational and delegate")
-			return "", common.NewError("add_sharder",
-				"Can't use the same wallet as both operational and delegate")
+		if err := commonsc.ValidateWallet(newSharder.PublicKey, newSharder.Settings.DelegateWallet); err != nil {
+			return "", err
 		}
 	}
 	
