@@ -204,7 +204,7 @@ func (gs *globalSnapshot) update(e []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.TransactionsCount = int64(block.NumTxns)
+			gs.TransactionsCount += int64(block.NumTxns)
 			gs.BlockCount += 1
 		case TagUniqueAddress:
 			gs.UniqueAddresses += 1
