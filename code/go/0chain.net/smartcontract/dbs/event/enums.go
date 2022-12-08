@@ -40,6 +40,7 @@ const (
 	TagAddOrOverwriteUser
 	TagAddWriteMarker
 	TagAddBlock
+	TagFinalizeBlock
 	TagAddOrOverwiteValidator
 	TagUpdateValidator
 	TagAddReadMarker
@@ -89,6 +90,7 @@ const (
 	TagUpdateMinerTotalStake
 	TagUpdateSharderTotalStake
 	TagUpdateAuthorizerTotalStake
+	TagUniqueAddress
 	NumberOfTags
 )
 
@@ -127,6 +129,7 @@ func initTagString() {
 	TagString[TagAddOrOverwriteUser] = "TagAddOrOverwriteUser"
 	TagString[TagAddWriteMarker] = "TagAddWriteMarker"
 	TagString[TagAddBlock] = "TagAddBlock"
+	TagString[TagFinalizeBlock] = "TagFinalizeBlock"
 	TagString[TagAddOrOverwiteValidator] = "TagAddOrOverwiteValidator"
 	TagString[TagUpdateValidator] = "TagUpdateValidator"
 	TagString[TagAddReadMarker] = "TagAddReadMarker"
@@ -176,6 +179,7 @@ func initTagString() {
 	TagString[TagUpdateMinerTotalStake] = "TagUpdateMinerTotalStake"
 	TagString[TagUpdateSharderTotalStake] = "TagUpdateSharderTotalStake"
 	TagString[TagUpdateAuthorizerTotalStake] = "TagUpdateAuthorizerTotalStake"
+	TagString[TagUniqueAddress] = "TagUniqueAddress"
 	TagString[NumberOfTags] = "invalid"
 }
 
