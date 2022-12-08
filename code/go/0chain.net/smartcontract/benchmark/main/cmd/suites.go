@@ -101,9 +101,9 @@ func runSuites(
 
 func runReadOnlySuite(
 	suite benchmark.TestSuite,
-	mpt *util.MerklePatriciaTrie,
-	root util.Key,
-	data benchmark.BenchData,
+	_ *util.MerklePatriciaTrie,
+	_ util.Key,
+	_ benchmark.BenchData,
 	balances cstate.TimedQueryStateContext,
 ) []benchmarkResults {
 	if !viper.GetBool(benchmark.EventDbEnabled) || balances.GetEventDB() == nil {

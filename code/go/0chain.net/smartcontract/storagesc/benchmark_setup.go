@@ -266,22 +266,6 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 	}
 }
 
-func AddMockFundedPools(clients []string, balances cstate.StateContextI) {
-	fps := make([]fundedPools, len(clients))
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		cIndex := getMockOwnerFromAllocationIndex(i, len(clients))
-		for j := 0; j < viper.GetInt(sc.NumAllocationPayer); j++ {
-			fps[cIndex] = append(fps[cIndex], getMockWritePoolId(i, cIndex, 0))
-			fps[cIndex] = append(fps[cIndex], getMockReadPoolId(i, cIndex, 0))
-		}
-	}
-	for i, fp := range fps {
-		if _, err := balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp); err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-
 func AddMockChallengePools(balances cstate.StateContextI) {
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		allocationId := getMockAllocationId(i)
@@ -679,8 +663,10 @@ func AddMockWriteRedeems(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		for j := 0; j < viper.GetInt(sc.NumWriteRedeemAllocation); j++ {
+	numWriteRedeemAllocation := viper.GetInt(sc.NumWriteRedeemAllocation)
+	numAllocations := viper.GetInt(sc.NumAllocations)
+	for i := 0; i < numAllocations; i++ {
+		for j := 0; j < numWriteRedeemAllocation; j++ {
 			client := getMockOwnerFromAllocationIndex(i, len(clients))
 			rm := ReadMarker{
 				ClientID:        clients[client],
@@ -699,9 +685,8 @@ func AddMockWriteRedeems(
 			}
 			if viper.GetBool(sc.EventDbEnabled) {
 				numBlocks := viper.GetInt(sc.NumBlocks)
-				txnPerBlock := viper.GetInt(sc.NumTransactionPerBlock)
 				mockBlockNumber := int64(i%(numBlocks-1)) + 1
-				txnNum := (i) % txnPerBlock
+				txnNum := i*numWriteRedeemAllocation + j
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
@@ -715,7 +700,7 @@ func AddMockWriteRedeems(
 				if out := eventDb.Store.Get().Create(&readMarker); out.Error != nil {
 					log.Fatal(out.Error)
 				}
-
+				txnNum += numAllocations * numWriteRedeemAllocation
 				writeMarker := event.WriteMarker{
 					ClientID:       rm.ClientID,
 					BlobberID:      rm.BlobberID,
@@ -793,7 +778,8 @@ func getMockAllocationId(allocation int) string {
 }
 
 func getMockOwnerFromAllocationIndex(allocation, numClinets int) int {
-	return (allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPayerPools)))
+	return allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPayerPools))
+
 }
 
 func getMockBlobberBlockFromAllocationIndex(i int) int {
