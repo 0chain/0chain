@@ -12,7 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"gorm.io/gorm/clause"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/faucetsc"
@@ -563,7 +566,7 @@ func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 }
 
 /*setupInitialState - setup the initial state based on configuration */
-func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatriciaTrieI {
+func (c *Chain) setupInitialState(initStates *state.InitStates, creationDate common.Timestamp) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
 		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
@@ -574,6 +577,11 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 
 	stateCtx := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(stateCtx)
+
+	if err := c.addInitialStakes(initStates.Stakes, creationDate, stateCtx); err != nil {
+		logging.Logger.Error("init stake failed", zap.Error(err))
+		panic(err)
+	}
 
 	err := faucetsc.InitConfig(stateCtx)
 	if err != nil {
@@ -612,6 +620,72 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	return pmt
 }
 
+func (c *Chain) addInitialStakes(stakes []state.InitStake, creationDate common.Timestamp, balances cstate.StateContextI) error {
+	edbDelegatePools := make([]*event.DelegatePool, 0, len(stakes))
+	for _, v := range stakes {
+		providerType := spenum.ToProviderType(v.ProviderType)
+		sp := stakepool.StakePool{}
+		sp.Pools = map[string]*stakepool.DelegatePool{}
+		if err := sp.Get(providerType, v.ProviderID, balances); err != nil {
+			if err != util.ErrValueNotPresent {
+				logging.Logger.Debug("init stake - invalid state", zap.Error(err))
+				return err
+			}
+		}
+
+		_, ok := sp.Pools[v.ClientID]
+		if ok {
+			logging.Logger.Debug("init stake - duplicate item",
+				zap.String("provider type", v.ProviderType),
+				zap.String("provider ID", v.ProviderType),
+				zap.String("client ID", v.ClientID))
+			return fmt.Errorf("initial stake exists with provider type: %s, provider ID %s, client ID: %s",
+				v.ProviderType, v.ProviderID, v.ClientID)
+		}
+
+		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
+			Balance:      v.Tokens,
+			DelegateID:   v.ClientID,
+			RoundCreated: 1,
+			StakedAt:     creationDate,
+		}
+
+		edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
+			PoolID:       v.ClientID,
+			ProviderType: int(providerType),
+			ProviderID:   v.ProviderID,
+			DelegateID:   v.ClientID,
+			Balance:      v.Tokens,
+			RoundCreated: 1,
+		})
+
+		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
+			logging.Logger.Debug("init stake - save staking pool failed", zap.Error(err))
+			return err
+		}
+
+		logging.Logger.Info("init stake", zap.String("sc ID", v.ProviderID), zap.Any("tokens", v.Tokens))
+	}
+
+	if c.EventDb == nil {
+		return nil
+	}
+
+	if len(edbDelegatePools) == 0 {
+		return nil
+	}
+
+	if err := c.EventDb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "pool_id"}, {Name: "provider_type"}, {Name: "provider_id"}},
+		UpdateAll: true,
+	}).Create(&edbDelegatePools).Error; err != nil {
+		logging.Logger.Debug("initial stake insert failed", zap.Error(err))
+		return fmt.Errorf("creating delegatePools in eventDB from initStakes failed: %s", err.Error())
+	}
+
+	return nil
+}
+
 func mustInitPartitions(state cstate.StateContextI) {
 	if err := storagesc.InitPartitions(state); err != nil {
 		logging.Logger.Panic("storagesc init partitions failed", zap.Error(err))
@@ -623,7 +697,7 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.ClientState = c.setupInitialState(initStates)
+	gb.ClientState = c.setupInitialState(initStates, gb.CreationDate)
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()

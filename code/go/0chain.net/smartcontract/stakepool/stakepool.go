@@ -95,6 +95,14 @@ func (sp *StakePool) Save(
 	return err
 }
 
+func (sp *StakePool) Get(
+	p spenum.Provider,
+	id string,
+	balances cstate.StateContextI,
+) error {
+	return balances.GetTrieNode(stakePoolKey(p, id), sp)
+}
+
 func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.Coin, error) {
 	minter, err := cstate.GetMinter(sp.Minter)
 	if err != nil {
