@@ -31,17 +31,12 @@ import (
 var TXN_TIME_TOLERANCE int64
 
 var transactionCount uint64 = 0
-// var redis_txns string
 
 // ErrTxnMissingPublicKey is returned if the transaction does not have ClientID and public key
 var (
 	ErrTxnMissingPublicKey = errors.New("transaction missing public key")
 	ErrTxnInvalidPublicKey = errors.New("transaction public key is invalid")
 )
-
-// func init() {
-// 	redis_txns = os.Getenv("REDIS_TXNS")
-// }
 
 func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
 	if len(redisTxnsHost) > 0 && redisTxnsPort > 0 {
