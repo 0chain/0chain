@@ -100,8 +100,7 @@ func (sp *StakePool) Get(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	err := balances.GetTrieNode(stakePoolKey(p, id), sp)
-	return err
+	return balances.GetTrieNode(stakePoolKey(p, id), sp)
 }
 
 func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.Coin, error) {

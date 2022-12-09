@@ -21,6 +21,7 @@ type InitState struct {
 	Tokens currency.Coin `yaml:"tokens"`
 }
 
+// InitStake represents the initial stakings for active set providers
 type InitStake struct {
 	ProviderID   datastore.Key `yaml:"provider_id"`
 	ProviderType datastore.Key `yaml:"provider_type"`

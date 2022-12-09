@@ -1,13 +1,10 @@
 package chain
 
 import (
-	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"container/ring"
 	"context"
 	"errors"
 	"fmt"
-	"gorm.io/gorm/clause"
 	"math"
 	"path/filepath"
 	"sort"
@@ -15,7 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"gorm.io/gorm/clause"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/faucetsc"
@@ -566,7 +566,7 @@ func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 }
 
 /*setupInitialState - setup the initial state based on configuration */
-func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatriciaTrieI {
+func (c *Chain) setupInitialState(initStates *state.InitStates, creationDate common.Timestamp) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
 		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
@@ -578,7 +578,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	stateCtx := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(stateCtx)
 
-	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
+	if err := c.addInitialStakes(initStates.Stakes, creationDate, stateCtx); err != nil {
 		logging.Logger.Error("init stake failed", zap.Error(err))
 		panic(err)
 	}
@@ -620,32 +620,31 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	return pmt
 }
 
-func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {
-	var edbDelegatePools []*event.DelegatePool
+func (c *Chain) addInitialStakes(stakes []state.InitStake, creationDate common.Timestamp, balances cstate.StateContextI) error {
+	edbDelegatePools := make([]*event.DelegatePool, 0, len(stakes))
 	for _, v := range stakes {
 		providerType := spenum.ToProviderType(v.ProviderType)
 		sp := stakepool.StakePool{}
 		sp.Pools = map[string]*stakepool.DelegatePool{}
 		if err := sp.Get(providerType, v.ProviderID, balances); err != nil {
 			if err != util.ErrValueNotPresent {
-				logging.Logger.Debug("chain.stateDB get failed", zap.Error(err))
+				logging.Logger.Debug("init stake - invalid state", zap.Error(err))
 				return err
 			}
 		}
 
 		_, ok := sp.Pools[v.ClientID]
 		if ok {
-			err := fmt.Errorf("initial stake exists with providerID: %s, providerType %s, and clientID: %s",
-				v.ProviderID, v.ProviderType, v.ClientID)
-			logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
-			return err
+			// stake already exist, means re-entered the genesis block generation.
+			// TODO: return err if we implemented code to avoid genesis block generation re-entering.
+			return nil
 		}
 
 		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
 			Balance:      v.Tokens,
 			DelegateID:   v.ClientID,
 			RoundCreated: 1,
-			StakedAt:     common.Timestamp(time.Now().UTC().Unix()),
+			StakedAt:     creationDate,
 		}
 
 		edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
@@ -656,8 +655,9 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 			Balance:      v.Tokens,
 			RoundCreated: 1,
 		})
+
 		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
-			logging.Logger.Debug("chain.stateDB insert failed", zap.Error(err))
+			logging.Logger.Debug("init stake - save staking pool failed", zap.Error(err))
 			return err
 		}
 
@@ -694,7 +694,7 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.ClientState = c.setupInitialState(initStates)
+	gb.ClientState = c.setupInitialState(initStates, gb.CreationDate)
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
