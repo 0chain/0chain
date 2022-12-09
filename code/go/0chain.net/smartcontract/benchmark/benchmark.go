@@ -128,6 +128,7 @@ const (
 	MptRoot                 = Internal + "mpt_root"
 	ShowOutput              = Internal + "show_output"
 	MptCreationTime         = Internal + "mpt_creation_time"
+	BenchDataListLength     = Internal + "bench_data_list_length"
 
 	OptionVerbose          = Options + "verbose"
 	OptionTestSuites       = Options + "test_suites"
