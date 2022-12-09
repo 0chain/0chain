@@ -175,8 +175,8 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 	go mc.FinalizeRound(r.Round)
 }
 
-//Creates the next round, if next round exists and has RRS returns existent.
-//If RRS is not present, starts VRF phase for this round
+// Creates the next round, if next round exists and has RRS returns existent.
+// If RRS is not present, starts VRF phase for this round
 func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 
 	var (
@@ -256,7 +256,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-//TryProposeBlock generates block and sends it to the network if generator
+// TryProposeBlock generates block and sends it to the network if generator
 func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 	var rn = mr.GetRoundNumber()
 
