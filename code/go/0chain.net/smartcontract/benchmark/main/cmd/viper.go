@@ -118,4 +118,7 @@ func validateConfig() {
 		log.Fatal(fmt.Errorf("number of active sharders %d cannot exceed the number of sharders %d",
 			viper.GetInt(bk.NumActiveSharders), viper.GetInt(bk.NumSharders)))
 	}
+	if viper.GetInt(bk.BenchDataListLength) <= 0 {
+		log.Fatal(fmt.Errorf("bench_data_list_length %d, must be greater than zero", viper.GetInt(bk.BenchDataListLength)))
+	}
 }
