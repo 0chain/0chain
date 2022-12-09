@@ -635,9 +635,12 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, creationDate common.T
 
 		_, ok := sp.Pools[v.ClientID]
 		if ok {
-			// stake already exist, means re-entered the genesis block generation.
-			// TODO: return err if we implemented code to avoid genesis block generation re-entering.
-			return nil
+			logging.Logger.Debug("init stake - duplicate item",
+				zap.String("provider type", v.ProviderType),
+				zap.String("provider ID", v.ProviderType),
+				zap.String("client ID", v.ClientID))
+			return fmt.Errorf("initial stake exists with provider type: %s, provider ID %s, client ID: %s",
+				v.ProviderType, v.ProviderID, v.ClientID)
 		}
 
 		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
