@@ -28,7 +28,7 @@ type DelegatePool struct {
 	RoundCreated int64         `json:"round_created"`
 }
 
-func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, error) {
+func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
