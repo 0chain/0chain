@@ -22,6 +22,15 @@ func (p Provider) String() string {
 	return providerString[p]
 }
 
+func ToProviderType(ps string) Provider {
+	for i, s := range providerString {
+		if s == ps {
+			return Provider(i)
+		}
+	}
+	return 0
+}
+
 type PoolStatus int
 
 const (
