@@ -45,6 +45,9 @@ type Allocation struct {
 	FailedChallenges         int64         `json:"failed_challenges"`
 	LatestClosedChallengeTxn string        `json:"latest_closed_challenge_txn"`
 	WritePool                currency.Coin `json:"write_pool"`
+	ThirdPartyExtendable	 bool		   `json:"third_party_extendable"`
+	FileOptions				 uint8		   `json:"file_options"`
+
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:AllocationID"`
@@ -140,6 +143,8 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"successful_challenges",
 		"failed_challenges",
 		"latest_closed_challenge_txn",
+		"third_party_extendable",
+		"file_options",
 	}
 
 	defer func() {
