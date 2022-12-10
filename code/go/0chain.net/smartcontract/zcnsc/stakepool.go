@@ -21,14 +21,6 @@ import (
 
 //go:generate msgp -v -io=false -tests=false -unexported
 
-// unlock response
-type unlockResponse struct {
-	// one of the fields is set in a response, the Unstake if can't unstake
-	// for now and the TokenPoolTransferResponse if it has a pool had unlocked
-	Unstake bool          `json:"unstake"` // max time to wait to unstake
-	Balance currency.Coin `json:"balance"`
-}
-
 type stakePoolRequest struct {
 	AuthorizerID string `json:"authorizer_id,omitempty"`
 }

@@ -725,11 +725,3 @@ func toJson(val interface{}) string {
 	}
 	return string(b)
 }
-
-// unlock response
-type unlockResponse struct {
-	// one of the fields is set in a response, the Unstake if can't unstake
-	// for now and the TokenPoolTransferResponse if has a pool had unlocked
-	Unstake bool          `json:"unstake"` // max time to wait to unstake
-	Balance currency.Coin `json:"balance"`
-}

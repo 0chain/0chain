@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -91,7 +92,8 @@ func TestStakePoolLock(t *testing.T) {
 		var delegates = []mockStakePool{{5, 0}}
 		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall)
+		cond := fmt.Sprintf(": %v < %v", value, scYaml.StakePool.MinLock)
+		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall+cond)
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
