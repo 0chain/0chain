@@ -41,7 +41,7 @@ type AbstractStakePool interface {
 	Save(providerType spenum.Provider, providerID string,
 		balances cstate.StateContextI) error
 	GetSettings() Settings
-	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error)
+	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
 }
 
@@ -270,25 +270,25 @@ func (sp *StakePool) MintRewards(
 	}
 }
 
-func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error) {
+func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error {
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
-		return false, fmt.Errorf("no such delegate pool: %q", poolID)
+		return fmt.Errorf("no such delegate pool: %q", poolID)
 	}
 
 	if dp.DelegateID != clientID {
-		return false, errors.New("trying to unlock not by delegate pool owner")
+		return errors.New("trying to unlock not by delegate pool owner")
 	}
 
 	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
 	if err := balances.AddTransfer(transfer); err != nil {
-		return false, err
+		return err
 	}
 
 	sp.Pools[poolID].Balance = 0
 	sp.Pools[poolID].Status = spenum.Deleting
 
-	return true, nil
+	return nil
 }
 
 // DistributeRewardsRandN distributes rewards to randomly selected N delegate pools
@@ -627,11 +627,11 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 
 	if t.Value < sp.GetSettings().MinStake {
 		return "", common.NewError("stake_pool_lock_failed",
-		fmt.Sprintf("too small stake to lock: %v < %v", t.Value, sp.GetSettings().MinStake))
+			fmt.Sprintf("too small stake to lock: %v < %v", t.Value, sp.GetSettings().MinStake))
 	}
 	if t.Value > sp.GetSettings().MaxStake {
 		return "", common.NewError("stake_pool_lock_failed",
-		fmt.Sprintf("too large stake to lock: %v > %v", t.Value, sp.GetSettings().MaxStake))
+			fmt.Sprintf("too large stake to lock: %v > %v", t.Value, sp.GetSettings().MaxStake))
 	}
 
 	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
@@ -692,27 +692,10 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		}
 	}
 
-	unstake, err := sp.Empty(t.ToClientID, t.ClientID, t.ClientID, balances)
+	err = sp.Empty(t.ToClientID, t.ClientID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
-	}
-
-	// the tokens can't be unlocked due to opened offers, but we mark it
-	// as 'unstake' and returns maximal time to wait to unlock the pool
-	if !unstake {
-		// Save the pool and return special result
-		if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
-			return "", common.NewErrorf("stake_pool_unlock_failed",
-				"saving stake pool: %v", err)
-		}
-		err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
-		if err != nil {
-			return "", common.NewErrorf("stake_pool_unlock_failed",
-				"stake pool staking error: %v", err)
-		}
-
-		return toJson(&unlockResponse{Unstake: false}), nil
 	}
 
 	output, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)

@@ -130,14 +130,14 @@ func (sp *stakePool) Empty(
 	poolID,
 	clientID string,
 	balances chainstate.StateContextI,
-) (bool, error) {
+) error {
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
-		return false, fmt.Errorf("no such delegate pool: %q", poolID)
+		return fmt.Errorf("no such delegate pool: %q", poolID)
 	}
 
 	if dp.DelegateID != clientID {
-		return false, errors.New("trying to unlock not by delegate pool owner")
+		return errors.New("trying to unlock not by delegate pool owner")
 	}
 
 	// If insufficient funds in stake pool left after unlock,
@@ -146,43 +146,43 @@ func (sp *stakePool) Empty(
 
 	totalBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	staked, err := sp.stake()
 	if err != nil {
-		return false, err
+		return err
 	}
 	if staked < totalBalance {
 		if dp.Status != spenum.Unstaking {
 			totalUnStake, err := currency.AddCoin(sp.TotalUnStake, dp.Balance)
 			if err != nil {
-				return false, err
+				return err
 			}
 			sp.TotalUnStake = totalUnStake
 
 			dp.Status = spenum.Unstaking
 		}
-		return true, nil
+		return nil
 	}
 
 	if dp.Status == spenum.Unstaking {
 		totalUnstake, err := currency.MinusCoin(sp.TotalUnStake, dp.Balance)
 		if err != nil {
-			return false, err
+			return err
 		}
 		sp.TotalUnStake = totalUnstake
 	}
 
 	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
 	if err := balances.AddTransfer(transfer); err != nil {
-		return false, err
+		return err
 	}
 
 	sp.Pools[poolID].Balance = 0
 	sp.Pools[poolID].Status = spenum.Deleting
 
-	return true, nil
+	return nil
 }
 
 // add offer of an allocation related to blobber owns this stake pool
