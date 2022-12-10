@@ -53,13 +53,13 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &StorageNode{
-			ID:      b.BlobberID,
+			ID:      b.ID,
 			BaseURL: b.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  b.Latitude,
 				Longitude: b.Longitude,
 			},
-			Terms:           blobberTermsMap[b.BlobberID],
+			Terms:           blobberTermsMap[b.ID],
 			Capacity:        b.Capacity,
 			Allocated:       b.Allocated,
 			SavedData:       b.SavedData,
@@ -73,7 +73,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			},
 		})
 
-		terms := blobberTermsMap[b.BlobberID]
+		terms := blobberTermsMap[b.ID]
 
 		bwF := gbSize * terms.MinLockDemand * rdtu
 		minLockDemand, err := currency.MultFloat64(terms.WritePrice, bwF)
@@ -82,14 +82,14 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		}
 
 		ba := &BlobberAllocation{
-			BlobberID:     b.BlobberID,
+			BlobberID:     b.ID,
 			AllocationID:  alloc.AllocationID,
 			Size:          b.Allocated,
 			Terms:         terms,
 			MinLockDemand: minLockDemand,
 		}
 		blobberDetails = append(blobberDetails, ba)
-		blobberMap[b.BlobberID] = ba
+		blobberMap[b.ID] = ba
 	}
 
 	sa := &StorageAllocation{

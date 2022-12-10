@@ -25,6 +25,13 @@ func BenchmarkRestTests(
 				Endpoint: mrh.getUserPools,
 			},
 			{
+				FuncName: "getStakePoolStat",
+				Params: map[string]string{
+					"miner_id": data.Miners[0],
+				},
+				Endpoint: mrh.getStakePoolStat,
+			},
+			{
 				FuncName: "globalSettings",
 				Endpoint: mrh.getGlobalSettings,
 			},
