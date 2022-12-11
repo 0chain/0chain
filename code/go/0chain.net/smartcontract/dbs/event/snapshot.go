@@ -91,6 +91,7 @@ type globalSnapshot struct {
 }
 
 func (edb *EventDb) addSnapshot(s Snapshot) error {
+	logging.Logger.Info("add_snapshot", zap.Any("snapshot", s))
 	return edb.Store.Get().Create(&s).Error
 }
 
@@ -151,6 +152,7 @@ func (gs *globalSnapshot) update(e []Event) {
 				continue
 			}
 			gs.TotalValueLocked += d.Amount
+			gs.TotalStaked += d.Amount
 			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", d.Amount),
 				zap.Int64("total_amount", gs.TotalValueLocked))
 		case TagUnlockStakePool:
@@ -161,6 +163,7 @@ func (gs *globalSnapshot) update(e []Event) {
 				continue
 			}
 			gs.TotalValueLocked -= d.Amount
+			gs.TotalStaked -= d.Amount
 		case TagLockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
