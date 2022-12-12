@@ -1,8 +1,11 @@
 package event
 
 import (
+	"time"
+
 	"0chain.net/chaincore/state"
 	"github.com/0chain/common/core/logging"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"go.uber.org/zap"
@@ -68,6 +71,7 @@ type AllocationBlobberValueChanged struct {
 func (edb *EventDb) ReplicateSnapshots(offset int, limit int) ([]Snapshot, error) {
 	var snapshots []Snapshot
 
+	before := time.Now()
 	queryBuilder := edb.Store.Get().
 		Model(&Snapshot{}).Offset(offset).Limit(limit)
 
@@ -77,6 +81,16 @@ func (edb *EventDb) ReplicateSnapshots(offset int, limit int) ([]Snapshot, error
 	})
 
 	result := queryBuilder.Scan(&snapshots)
+
+	logging.Logger.Info("replicate_snapshot", zap.Int64("time", time.Now().UnixMicro()-before.UnixMicro()),
+		zap.Int64("rows", result.RowsAffected),
+		zap.String("sql", edb.Store.Get().ToSQL(func(tx *gorm.DB) *gorm.DB {
+			return tx.Model(&Snapshot{}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
+				Column: clause.Column{Name: "round"},
+				Desc:   false,
+			})
+		})))
+
 	if result.Error != nil {
 		return nil, result.Error
 	}

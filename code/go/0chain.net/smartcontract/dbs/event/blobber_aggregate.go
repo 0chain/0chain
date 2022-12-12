@@ -2,6 +2,7 @@ package event
 
 import (
 	"math"
+	"time"
 
 	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
@@ -37,6 +38,7 @@ type BlobberAggregate struct {
 func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAggregate, error) {
 	var snapshots []BlobberAggregate
 
+	before := time.Now()
 	queryBuilder := edb.Store.Get().
 		Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit)
 
@@ -46,6 +48,15 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 	})
 
 	result := queryBuilder.Scan(&snapshots)
+
+	logging.Logger.Info("replicate_blobber", zap.Int64("time", time.Now().UnixMicro()-before.UnixMicro()),
+		zap.Int64("rows", result.RowsAffected),
+		zap.String("sql", edb.Store.Get().ToSQL(func(tx *gorm.DB) *gorm.DB {
+			return tx.Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
+				Column: clause.Column{Name: "id"},
+				Desc:   false,
+			})
+		})))
 	if result.Error != nil {
 		return nil, result.Error
 	}

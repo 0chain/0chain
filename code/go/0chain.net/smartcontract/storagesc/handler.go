@@ -3087,7 +3087,24 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http.Request) {
-	common.Respond(w, r, []event.Snapshot{{}}, nil)
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobbers, err := edb.ReplicateSnapshots(limit.Offset, limit.Limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get snapshots" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, blobbers, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate replicateBlobberAggregates
@@ -3113,5 +3130,25 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter, r *http.Request) {
-	common.Respond(w, r, []event.BlobberAggregate{{}}, nil)
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobbers, err := edb.ReplicateBlobberAggregate(limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(blobbers) == 0 {
+		blobbers = []event.BlobberAggregate{}
+	}
+	common.Respond(w, r, blobbers, nil)
 }
