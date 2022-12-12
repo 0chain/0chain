@@ -42,7 +42,10 @@ require (
 	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
 )
 
-require github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+require (
+	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+	moul.io/zapgorm2 v1.1.3
+)
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect

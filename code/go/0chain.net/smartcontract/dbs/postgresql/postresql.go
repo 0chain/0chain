@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/core/viper"
-
-	"gorm.io/gorm/logger"
-
 	"0chain.net/chaincore/config"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/dbs"
-
+	"github.com/0chain/common/core/logging"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"moul.io/zapgorm2"
 )
 
 func GetPostgresSqlDb(config config.DbAccess) (dbs.Store, error) {
@@ -44,7 +43,8 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 
 	lgr := logger.Default.LogMode(logger.Silent)
 	if viper.GetBool("logging.verbose") {
-		lgr = logger.Default.LogMode(logger.Info)
+		lgr := zapgorm2.New(logging.Logger)
+		lgr.SetAsDefault()
 	}
 
 	maxRetries := 60 * 1 // 1 minutes
