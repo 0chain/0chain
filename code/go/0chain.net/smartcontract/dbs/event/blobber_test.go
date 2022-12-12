@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 
 	"golang.org/x/net/context"
@@ -62,7 +63,6 @@ func TestBlobbers(t *testing.T) {
 	}
 	convertSn := func(sn StorageNode) Blobber {
 		return Blobber{
-			BlobberID:        sn.ID,
 			BaseURL:          sn.BaseURL,
 			Latitude:         sn.Geolocation.Latitude,
 			Longitude:        sn.Geolocation.Longitude,
@@ -73,12 +73,15 @@ func TestBlobbers(t *testing.T) {
 			Capacity:         sn.Capacity,
 			Allocated:        sn.Allocated,
 			LastHealthCheck:  int64(sn.LastHealthCheck),
-			DelegateWallet:   sn.StakePoolSettings.DelegateWallet,
-			MinStake:         sn.StakePoolSettings.MaxStake,
-			MaxStake:         sn.StakePoolSettings.MaxStake,
-			NumDelegates:     sn.StakePoolSettings.NumDelegates,
-			ServiceCharge:    sn.StakePoolSettings.ServiceCharge,
-			SavedData:        sn.SavedData,
+			Provider: Provider{
+				ID:             sn.ID,
+				DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+				MinStake:       sn.StakePoolSettings.MaxStake,
+				MaxStake:       sn.StakePoolSettings.MaxStake,
+				NumDelegates:   sn.StakePoolSettings.NumDelegates,
+				ServiceCharge:  sn.StakePoolSettings.ServiceCharge,
+			},
+			SavedData: sn.SavedData,
 		}
 
 	}
@@ -218,7 +221,7 @@ func TestBlobbers(t *testing.T) {
 		TxHash:      "tx hash4",
 		Type:        TypeStats,
 		Tag:         TagDeleteBlobber,
-		Data:        blobber.BlobberID,
+		Data:        blobber.ID,
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
 
@@ -303,18 +306,28 @@ func TestBlobberGetCount(t *testing.T) {
 		return
 	}
 	defer eventDb.Close()
+	eventDb.Drop()
 
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
-	defer eventDb.Drop()
+	//defer eventDb.Drop()
 
-	gotCount, err := eventDb.GetBlobberCount()
+	eventDb.addBlobbers([]Blobber{
+		{
+			Provider: Provider{ID: "one"},
+			BaseURL:  "one.com",
+		}, {
+			Provider: Provider{ID: "two"},
+			BaseURL:  "two.com",
+		},
+	})
+	gotCount, err := eventDb.GetBlobbers(common2.Pagination{Limit: 10})
 	require.NoError(t, err, "Error should not be present")
 	require.Equal(t, int64(0), gotCount, "Blobber count not working")
 
 	setUpBlobbers(t, eventDb)
 
-	gotCount, err = eventDb.GetBlobberCount()
+	//gotCount, err = eventDb.GetBlobberCount()
 	require.NoError(t, err, "Error should not be present")
 	require.Equal(t, int64(10), gotCount, "Blobber Count should be 10")
 }
@@ -322,7 +335,7 @@ func TestBlobberGetCount(t *testing.T) {
 func setUpBlobbers(t *testing.T, eventDb *EventDb) {
 	for i := 0; i < 10; i++ {
 		res := eventDb.Store.Get().Create(&Blobber{
-			BlobberID: fmt.Sprintf("somethingNew_%v", i),
+			Provider: Provider{ID: fmt.Sprintf("somethingNew_%v", i)},
 		})
 		if res.Error != nil {
 			t.Errorf("Error while inserting blobber %v", i)

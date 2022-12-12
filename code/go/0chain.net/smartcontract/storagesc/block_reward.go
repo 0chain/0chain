@@ -219,7 +219,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	for i, qsp := range stakePools {
-		if err = qsp.save(spenum.Blobber, qualifyingBlobberIds[i], balances); err != nil {
+		if err = qsp.Save(spenum.Blobber, qualifyingBlobberIds[i], balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}

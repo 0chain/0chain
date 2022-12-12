@@ -68,7 +68,7 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 func (cp *challengePool) save(sscKey string, alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
 	cpKey := challengePoolKey(sscKey, alloc.ID)
 	r, err := balances.InsertTrieNode(cpKey, cp)
-	logging.Logger.Debug("after save challenge pool", zap.String("root", util.ToHex([]byte(r))))
+	logging.Logger.Debug("after Save challenge pool", zap.String("root", util.ToHex([]byte(r))))
 
 	//emit challenge pool event
 	emitChallengePoolEvent(cpKey, cp.GetBalance(), alloc, balances)
@@ -182,7 +182,7 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 	}
 }
 
-// create, fill and save challenge pool for new allocation
+// create, fill and Save challenge pool for new allocation
 func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	alloc *StorageAllocation, balances cstate.StateContextI, conf *Config) (err error) {
 
@@ -198,9 +198,9 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 
 	// don't lock anything here
 
-	// save the challenge pool
+	// Save the challenge pool
 	if err = cp.save(ssc.ID, alloc, balances); err != nil {
-		return fmt.Errorf("can't save challenge pool: %v", err)
+		return fmt.Errorf("can't Save challenge pool: %v", err)
 	}
 
 	return

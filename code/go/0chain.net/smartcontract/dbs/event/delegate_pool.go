@@ -18,7 +18,7 @@ type DelegatePool struct {
 	PoolID       string `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
 	ProviderType int    `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
 	ProviderID   string `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
-	DelegateID   string `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2"`
+	DelegateID   string `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id"` //todo think of changing priority for idx_ddel_active
 
 	Balance      currency.Coin `json:"balance"`
 	Reward       currency.Coin `json:"reward"`       // unclaimed reward
@@ -41,6 +41,13 @@ func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
 		return nil, fmt.Errorf("error getting delegate pools, %v", result.Error)
 	}
 	return dps, nil
+}
+
+func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
+	res := int64(0)
+	err := edb.Store.Get().Table("delegate_pools").Select("coalesce(sum(balance),0)").
+		Where("delegate_id = ?", id).Row().Scan(&res)
+	return res, err
 }
 
 func (edb *EventDb) GetUserDelegatePools(userId string, pType int) ([]DelegatePool, error) {
