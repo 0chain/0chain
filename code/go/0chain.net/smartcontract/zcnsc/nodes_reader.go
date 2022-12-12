@@ -2,7 +2,7 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/config"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/chain/state"
 )
@@ -24,31 +24,29 @@ func GetAuthorizerNode(id string, ctx state.StateContextI) (*AuthorizerNode, err
 
 // GetUserNode returns error if node not found
 func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
-	node := NewUserNode(id, 0)
+	node := NewUserNode(id)
 	err := ctx.GetTrieNode(node.GetKey(), node)
-	return node, err
-}
-
-func GetGlobalSavedNode(balances state.StateContextI) (*GlobalNode, error) {
-	node := &GlobalNode{ID: ADDRESS}
-	err := balances.GetTrieNode(node.GetKey(), node)
 	switch err {
 	case nil, util.ErrValueNotPresent:
-		return node, err
+		return node, nil
 	default:
 		return nil, err
 	}
 }
 
-func GetGlobalNode(ctx state.StateContextI) (*GlobalNode, error) {
-	gn, err := GetGlobalSavedNode(ctx)
-	if err == nil {
-		return gn, nil
-	}
-
-	if gn == nil {
+func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
+	node := &GlobalNode{ID: ADDRESS}
+	err := ctx.GetTrieNode(node.GetKey(), node)
+	switch err {
+	case nil, util.ErrValueNotPresent:
+		if node.ZCNSConfig == nil {
+			node.ZCNSConfig = getConfig()
+		}
+		if node.WZCNNonceMinted == nil {
+			node.WZCNNonceMinted = make(map[int64]bool)
+		}
+		return node, nil
+	default:
 		return nil, err
 	}
-
-	return gn, nil
 }

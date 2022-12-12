@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"log"
 	"sync"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 
@@ -18,7 +19,7 @@ import (
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	cfg "0chain.net/conductor/config/cases"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
@@ -138,7 +139,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		return
 	}
 
-	resendProposedBlockIfNeeded(msg.Block)
+	resendProposedBlockIfNeeded(ctx, msg.Block, mc)
 
 	mc.handleVerifyBlockMessage(ctx, msg)
 }
@@ -172,15 +173,15 @@ func isIgnoringProposal(round int64) bool {
 	return testCfg.IsOnRound(round) && nodeType == replica && typeRank == 0
 }
 
-func resendProposedBlockIfNeeded(b *block.Block) {
-	testCfg := crpc.Client().State().ResendProposedBlock
+func resendProposedBlockIfNeeded(ctx context.Context, b *block.Block, mc *Chain) {
+	resendProposedBlockTestCfg := crpc.Client().State().ResendProposedBlock
 
-	testCfg.Lock()
-	defer testCfg.Unlock()
+	resendProposedBlockTestCfg.Lock()
+	defer resendProposedBlockTestCfg.Unlock()
 
 	var (
 		nodeType, typeRank = chain.GetNodeTypeAndTypeRank(b.Round)
-		resending          = testCfg != nil && testCfg.IsTesting(b.Round, nodeType == generator, typeRank) && !testCfg.Resent
+		resending          = resendProposedBlockTestCfg != nil && resendProposedBlockTestCfg.IsTesting(b.Round, nodeType == generator, typeRank) && !resendProposedBlockTestCfg.Resent
 	)
 	if !resending {
 		return
@@ -189,7 +190,7 @@ func resendProposedBlockIfNeeded(b *block.Block) {
 	miners := GetMinerChain().GetMiners(b.Round)
 	miners.SendAll(context.Background(), VerifyBlockSender(b))
 
-	crpc.Client().State().ResendProposedBlock.Resent = true
+	resendProposedBlockTestCfg.Resent = true
 
 	if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
 		log.Panicf("Conductor: error while configuring test case: %#v", err)
@@ -198,22 +199,23 @@ func resendProposedBlockIfNeeded(b *block.Block) {
 
 // HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	if isIgnoringNotarisation(msg.Notarization.Round) {
+	state := crpc.Client().State()
+
+	if isIgnoringNotarisation(msg.Notarization.Round, state) {
 		return
 	}
 
-	obtainNotarisationIfNeeded(msg.Notarization)
+	obtainNotarisationIfNeeded(msg.Notarization, state)
 
-	resendNotarisationIfNeeded(msg.Notarization.Round)
+	resendNotarisationIfNeeded(msg.Notarization.Round, state)
 
 	configureBlockStateChangeRequestorTestCaseIfNeeded(msg.Notarization)
 
 	mc.handleNotarizationMessage(ctx, msg)
 }
 
-func isIgnoringNotarisation(round int64) bool {
+func isIgnoringNotarisation(round int64, state *crpc.State) bool {
 	var (
-		state   = crpc.Client().State()
 		testCfg cfg.TestReporter
 	)
 	switch {
@@ -231,8 +233,8 @@ func isIgnoringNotarisation(round int64) bool {
 	return testCfg.IsOnRound(round) && nodeType == replica && typeRank == 0
 }
 
-func obtainNotarisationIfNeeded(not *Notarization) {
-	testCfg := crpc.Client().State().ResendNotarisation
+func obtainNotarisationIfNeeded(not *Notarization, state *crpc.State) {
+	testCfg := state.ResendNotarisation
 
 	testCfg.Lock()
 	defer testCfg.Unlock()
@@ -251,8 +253,8 @@ func obtainNotarisationIfNeeded(not *Notarization) {
 	crpc.Client().State().ResendNotarisation.Notarisation = blob
 }
 
-func resendNotarisationIfNeeded(round int64) {
-	testCfg := crpc.Client().State().ResendNotarisation
+func resendNotarisationIfNeeded(round int64, state *crpc.State) {
+	testCfg := state.ResendNotarisation
 
 	testCfg.Lock()
 	defer testCfg.Unlock()
@@ -306,6 +308,28 @@ func getNotarisationInfo(not *Notarization) *cases.NotarisationInfo {
 		BlockID:             not.BlockID,
 		Round:               not.Round,
 	}
+}
+
+// HandleNotarizedBlockMessage - handles a notarized block for a previous round.
+func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
+	msg *BlockMessage) {
+	mc.handleNotarizedBlockMessage(ctx, msg)
+}
+
+// handleVRFShare - handles the vrf share.
+func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+	state := crpc.Client().State()
+
+	if state.LockNotarizationAndSendNextRoundVRF != nil && state.LockNotarizationAndSendNextRoundVRF.Round+1 == int(msg.VRFShare.Round) {
+		counter := int(atomic.LoadInt32(&sendVerificationTicketCounter))
+		logging.Logger.Debug("Unlocking notarization", zap.Int("Round", int(msg.VRFShare.Round-1)), zap.Int32("Counter", sendVerificationTicketCounter))
+		for i := 0; i < counter; i++ {
+			sendVerificationTicketC <- true
+			atomic.AddInt32(&sendVerificationTicketCounter, -1)
+		}
+	}
+
+	mc.handleVRFShare(ctx, msg)
 }
 
 const (

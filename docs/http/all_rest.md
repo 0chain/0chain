@@ -95,7 +95,7 @@ File: 0Chain/code/go/0chain.net/smartcontract/setupsc/setupsc.go
 ```sh
 func SetupSmartContracts() {
 	for _, sc := range scs {
-		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", sc.GetName())) {
+		if viper.GetBool(fmt.Sprintf("server_chain.smart_contract.%v", sc.GetName())) {
 			sc.InitSC()
 			smartcontract.ContractMap[sc.GetAddress()] = sc
 		}
@@ -304,7 +304,6 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | Endpoint: http.HandleFunc | Handler |
 | ------ | ------ |
 | /v1/chain/get | GetChainHandler |
-| /v1/chain/put | PutChainHandler |
 | /v1/block/get | GetBlockHandler |
 | /v1/block/get/latest_finalized | LatestFinalizedBlockHandler |
 | /v1/block/get/latest_finalized_magic_block_summary | LatestFinalizedMagicBlockSummaryHandler |
@@ -583,7 +582,7 @@ File: 0Chain/code/go/0chain.net/sharder/handler.go
 | /v1/transaction/get/confirmation | TransactionConfirmationHandler |
 | /v1/chain/get/stats | ChainStatsHandlerr |
 | /_chain_stats | ChainStatsWriter |
-| /_health_check | HealthCheckWriter |
+| /_healthcheck | HealthCheckWriter |
 | /v1/sharder/get/stats | SharderStatsHandler |
 
 ```sh

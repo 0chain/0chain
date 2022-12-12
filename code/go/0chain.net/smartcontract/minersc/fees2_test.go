@@ -5,17 +5,21 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/config/mocks"
+	"github.com/0chain/common/core/currency"
+
+	"0chain.net/smartcontract/stakepool"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/require"
 )
@@ -65,8 +69,8 @@ type runtimeValues struct {
 	phase          Phase
 	phaseRound     int64
 	nextViewChange int64
-	minted         state.Balance
-	fees           []int64
+	minted         currency.Coin
+	fees           []currency.Coin
 }
 
 type MinerDelegates []float64
@@ -102,7 +106,7 @@ var (
 		phaseRound:     35,
 		nextViewChange: 100,
 		minted:         0,
-		fees:           []int64{200, 300, 500},
+		fees:           []currency.Coin{200, 300, 500},
 	}
 )
 
@@ -238,14 +242,17 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var globalNode = &GlobalNode{
 		//ViewChange:           runtime.nextViewChange,
-		LastRound:            runtime.lastRound,
-		RewardRate:           scYaml.rewardRate,
-		BlockReward:          zcnToBalance(scYaml.blockReward),
-		Epoch:                scYaml.epoch,
-		ShareRatio:           scYaml.shareRatio,
-		MaxMint:              zcnToBalance(scYaml.maxMint),
-		Minted:               runtime.minted,
-		RewardRoundFrequency: scYaml.rewardRoundPeriod,
+		LastRound:                   runtime.lastRound,
+		RewardRate:                  scYaml.rewardRate,
+		BlockReward:                 zcnToBalance(scYaml.blockReward),
+		Epoch:                       scYaml.epoch,
+		ShareRatio:                  scYaml.shareRatio,
+		MaxMint:                     zcnToBalance(scYaml.maxMint),
+		Minted:                      runtime.minted,
+		RewardRoundFrequency:        scYaml.rewardRoundPeriod,
+		NumShardersRewarded:         5,
+		NumSharderDelegatesRewarded: 1,
+		NumMinerDelegatesRewarded:   10,
 	}
 	var msc = &MinerSmartContract{
 		SmartContract: &sci.SmartContract{
@@ -259,10 +266,15 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		ToClientID: minerScId,
 	}
 	var ctx = &mockStateContext{
-		ctx: *cstate.NewStateContext(
+		StateContext: *cstate.NewStateContext(
 			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
+			func(round int64) *block.MagicBlock {
+				return &block.MagicBlock{
+					Sharders: shardersPool,
+				}
+			},
 			nil,
 			nil,
 			nil,
@@ -280,8 +292,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			},
 			PrevBlock: &block.Block{},
 		},
-		sharders: sharderIDs,
-		store:    make(map[datastore.Key]util.MPTSerializable),
+		store: make(map[datastore.Key]util.MPTSerializable),
 		LastestFinalizedMagicBlock: &block.Block{
 			MagicBlock: &block.MagicBlock{
 				Miners:   minersPool,
@@ -310,13 +321,14 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var miner = &MinerNode{
 		SimpleNode: &SimpleNode{
-			ID:             minerID,
-			TotalStaked:    100,
-			ServiceCharge:  zChainYaml.ServiceCharge,
-			DelegateWallet: minerID,
+			ID:          minerID,
+			TotalStaked: 100,
 		},
-		Active: make(map[string]*sci.DelegatePool),
+		StakePool: stakepool.NewStakePool(),
 	}
+	miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+	miner.Settings.DelegateWallet = minerID
+	miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
 	}
@@ -326,15 +338,17 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var sharders []*MinerNode
 	for i := 0; i < numberOfSharders; i++ {
-		sharders = append(sharders, &MinerNode{
+		sharder := &MinerNode{
 			SimpleNode: &SimpleNode{
-				ID:             sharderIDs[i],
-				TotalStaked:    100,
-				ServiceCharge:  zChainYaml.ServiceCharge,
-				DelegateWallet: sharderIDs[i],
+				ID:          sharderIDs[i],
+				TotalStaked: 100,
 			},
-			Active: make(map[string]*sci.DelegatePool),
-		})
+			StakePool: stakepool.NewStakePool(),
+		}
+		miner.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+		miner.Settings.DelegateWallet = minerID
+		miner.StakePool.Settings.ServiceChargeRatio = zChainYaml.ServiceCharge
+		sharders = append(sharders, sharder)
 	}
 
 	populateDelegates(t, append([]*MinerNode{miner}, sharders...), minerStakes, sharderStakes)
@@ -350,20 +364,27 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	err = updateAllShardersList(ctx, allSharders)
 	require.NoError(t, err)
 
+	mockChainConfig := mocks.NewChainConfig(t)
+	mockChainConfig.On("IsViewChangeEnabled").Return(true)
 	// Add information only relevant to view change rounds
-	config.DevConfiguration.ViewChange = zChainYaml.viewChange
+	config.Configuration().ChainConfig = mockChainConfig
+
 	globalNode.ViewChange = 100
 	if runValues.blockRound == runValues.nextViewChange {
-		var allMinersList = NewDKGMinerNodes()
-		err = updateDKGMinersList(ctx, allMinersList)
+		var allMinersList = &MinerNodes{}
+		err = updateAllShardersList(ctx, allMinersList)
 	}
 
 	_, err = msc.payFees(txn, nil, globalNode, ctx)
 	if err != nil {
 		return err
 	}
+	require.NoError(t, err)
 
-	confirmResults(t, *globalNode, runtime, f, ctx)
+	mn, err := getMinerNode(txn.ClientID, ctx)
+	require.NoError(t, err)
+
+	confirmResults(t, *globalNode, runtime, f, mn, ctx)
 
 	return err
 }

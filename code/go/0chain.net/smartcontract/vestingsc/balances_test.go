@@ -2,13 +2,15 @@ package vestingsc
 
 import (
 	"0chain.net/chaincore/block"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 )
 
 //
@@ -16,7 +18,7 @@ import (
 //
 
 type testBalances struct {
-	balances  map[datastore.Key]state.Balance
+	balances  map[datastore.Key]currency.Coin
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
@@ -24,32 +26,34 @@ type testBalances struct {
 
 func newTestBalances() *testBalances {
 	return &testBalances{
-		balances: make(map[datastore.Key]state.Balance),
+		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 	}
 }
 
-func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) { //nolint
+func (tb *testBalances) setBalance(key datastore.Key, b currency.Coin) { //nolint
 	tb.balances[key] = b
 }
 
 // stubs
-func (tb *testBalances) GetBlock() *block.Block                                    { return nil }
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction                  { return nil }
-func (tb *testBalances) GetBlockSharders(b *block.Block) []string                  { return nil }
-func (tb *testBalances) Validate() error                                           { return nil }
-func (tb *testBalances) GetMints() []*state.Mint                                   { return nil }
-func (tb *testBalances) SetStateContext(*state.State) error                        { return nil }
-func (tb *testBalances) AddMint(*state.Mint) error                                 { return nil }
-func (tb *testBalances) GetTransfers() []*state.Transfer                           { return nil }
-func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
-func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)                {}
-func (tb *testBalances) GetEventDB() *event.EventDb                                { return nil }
-func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, string) {}
-func (tb *testBalances) EmitError(error)                                           {}
-func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
-func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)                     {}
+func (tb *testBalances) GetBlock() *block.Block                       { return nil }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI           { return nil }
+func (tb *testBalances) GetTransaction() *transaction.Transaction     { return nil }
+func (tb *testBalances) Validate() error                              { return nil }
+func (tb *testBalances) GetMints() []*state.Mint                      { return nil }
+func (tb *testBalances) SetStateContext(*state.State) error           { return nil }
+func (tb *testBalances) AddMint(*state.Mint) error                    { return nil }
+func (tb *testBalances) GetTransfers() []*state.Transfer              { return nil }
+func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
+func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)   {}
+func (tb *testBalances) GetEventDB() *event.EventDb                   { return nil }
+func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, interface{}, ...cstate.Appender) {
+}
+func (tb *testBalances) EmitError(error)                             {}
+func (tb *testBalances) GetEvents() []event.Event                    { return nil }
+func (tb *testBalances) GetLatestFinalizedBlock() *block.Block       { return nil }
+func (tb *testBalances) GetMagicBlock(round int64) *block.MagicBlock { return nil }
+func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)       {}
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
 }
@@ -68,7 +72,7 @@ func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
-	b state.Balance, err error) {
+	b currency.Coin, err error) {
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {
@@ -118,3 +122,15 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	tb.transfers = append(tb.transfers, t)
 	return nil
 }
+
+func (tb *testBalances) GetInvalidStateErrors() []error { return nil }
+
+func (tb *testBalances) GetClientState(clientID datastore.Key) (*state.State, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (util.Key, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) GetMissingNodeKeys() []util.Key { return nil }

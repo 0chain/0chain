@@ -9,10 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/config"
+	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/logging"
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,10 +30,10 @@ func TestSharders(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 
 	type Stat struct {
-		GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
-		GeneratorFees    state.Balance `json:"generator_fees,omitempty"`
-		SharderRewards   state.Balance `json:"sharder_rewards,omitempty"`
-		SharderFees      state.Balance `json:"sharder_fees,omitempty"`
+		GeneratorRewards currency.Coin `json:"generator_rewards,omitempty"`
+		GeneratorFees    currency.Coin `json:"generator_fees,omitempty"`
+		SharderRewards   currency.Coin `json:"sharder_rewards,omitempty"`
+		SharderFees      currency.Coin `json:"sharder_fees,omitempty"`
 	}
 
 	type NodeType int
@@ -58,9 +61,9 @@ func TestSharders(t *testing.T) {
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
 		// MinStake allowed by node.
-		MinStake state.Balance `json:"min_stake"`
+		MinStake currency.Coin `json:"min_stake"`
 		// MaxStake allowed by node.
-		MaxStake state.Balance `json:"max_stake"`
+		MaxStake currency.Coin `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -78,30 +81,37 @@ func TestSharders(t *testing.T) {
 
 	convertSn := func(sn SharderNode) Sharder {
 		return Sharder{
-			SharderID:         sn.ID,
-			N2NHost:           sn.N2NHost,
-			Host:              sn.Host,
-			Port:              sn.Port,
-			Path:              sn.Path,
-			PublicKey:         sn.PublicKey,
-			ShortName:         sn.ShortName,
-			BuildTag:          sn.BuildTag,
-			TotalStaked:       state.Balance(sn.TotalStaked),
-			Delete:            sn.Delete,
-			DelegateWallet:    sn.DelegateWallet,
-			ServiceCharge:     sn.ServiceCharge,
-			NumberOfDelegates: sn.NumberOfDelegates,
-			MinStake:          sn.MinStake,
-			MaxStake:          sn.MaxStake,
-			LastHealthCheck:   sn.LastHealthCheck,
-			Rewards:           sn.Stat.GeneratorRewards,
-			Fees:              sn.Stat.GeneratorFees,
-			Longitude:         0,
-			Latitude:          0,
+
+			N2NHost:   sn.N2NHost,
+			Host:      sn.Host,
+			Port:      sn.Port,
+			Path:      sn.Path,
+			PublicKey: sn.PublicKey,
+			ShortName: sn.ShortName,
+			BuildTag:  sn.BuildTag,
+			Delete:    sn.Delete,
+			Provider: Provider{
+				ID:             sn.ID,
+				TotalStake:     currency.Coin(sn.TotalStaked),
+				DelegateWallet: sn.DelegateWallet,
+				ServiceCharge:  sn.ServiceCharge,
+				NumDelegates:   sn.NumberOfDelegates,
+				MinStake:       sn.MinStake,
+				MaxStake:       sn.MaxStake,
+				Rewards: ProviderRewards{
+					ProviderID: sn.ID,
+					Rewards:    sn.Stat.GeneratorRewards,
+				},
+			},
+			LastHealthCheck: sn.LastHealthCheck,
+
+			Fees:      sn.Stat.GeneratorFees,
+			Longitude: 0,
+			Latitude:  0,
 		}
 	}
 
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -113,7 +123,7 @@ func TestSharders(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -157,12 +167,12 @@ func TestSharders(t *testing.T) {
 	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddSharder),
+		Type:        TypeStats,
+		Tag:         TagAddOrOverwriteSharder,
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.AddEvents(context.TODO(), events)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 
 	sharder, err := eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -178,11 +188,11 @@ func TestSharders(t *testing.T) {
 	eventAddOrOverwriteSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteSharder),
+		Type:        TypeStats,
+		Tag:         TagAddOrOverwriteSharder,
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventAddOrOverwriteSn})
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -202,11 +212,11 @@ func TestSharders(t *testing.T) {
 	eventUpdateSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
-		Type:        int(TypeStats),
-		Tag:         int(TagUpdateSharder),
+		Type:        TypeStats,
+		Tag:         TagUpdateSharder,
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventUpdateSn})
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -217,11 +227,11 @@ func TestSharders(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
-		Type:        int(TypeStats),
-		Tag:         int(TagDeleteSharder),
+		Type:        TypeStats,
+		Tag:         TagDeleteSharder,
 		Data:        sn.ID,
 	}
-	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
+	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.Error(t, err)
@@ -229,7 +239,7 @@ func TestSharders(t *testing.T) {
 }
 
 func TestSharderFilter(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -240,9 +250,10 @@ func TestSharderFilter(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
+		return
 	}
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
@@ -253,7 +264,7 @@ func TestSharderFilter(t *testing.T) {
 	assert.NoError(t, err, "error while migrating database")
 	createSharders(t, eventDb, 10)
 	t.Run("sharders which are active", func(t *testing.T) {
-		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(true)}, 0, 10)
+		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
 		for _, sharder := range sharders {
 			assert.Equal(t, true, sharder.Active, "all sharder should be active")
@@ -261,7 +272,7 @@ func TestSharderFilter(t *testing.T) {
 		assert.Equal(t, 5, len(sharders), "only active sharders should be returned")
 	})
 	t.Run("sharders which are not active", func(t *testing.T) {
-		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(false)}, 0, 10)
+		sharders, err := eventDb.GetShardersWithFilterAndPagination(SharderQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
 		for _, sharder := range sharders {
 			assert.Equal(t, false, sharder.Active, "all sharder should be inactive")
@@ -271,7 +282,8 @@ func TestSharderFilter(t *testing.T) {
 }
 
 func TestGetSharderLocations(t *testing.T) {
-	access := dbs.DbAccess{
+	t.Skip("only for local debugging, requires local postgresql")
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -282,7 +294,7 @@ func TestGetSharderLocations(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		t.Skip("only for local debugging, requires local postgresql")
 	}
@@ -295,7 +307,7 @@ func TestGetSharderLocations(t *testing.T) {
 	assert.NoError(t, err, "error while migrating database")
 	createShardersWithLocation(t, eventDb, 12)
 	t.Run("sharder locations without any filters", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{}, 0, 0)
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{}, common2.Pagination{})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 12, len(locations), "all sharders should be returned")
 		for _, location := range locations {
@@ -306,9 +318,9 @@ func TestGetSharderLocations(t *testing.T) {
 		}
 	})
 	t.Run("locations for sharders which are active", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(true)}, 0, 10)
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 5, len(locations), "locations of only active sharders should be returned")
+		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
 			id, err := strconv.ParseInt(location.SharderID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
@@ -317,9 +329,9 @@ func TestGetSharderLocations(t *testing.T) {
 		}
 	})
 	t.Run("locations for sharders which are inactive", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(false)}, 0, 10)
+		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 5, len(locations), "locations of only active sharders should be returned")
+		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
 			id, err := strconv.ParseInt(location.SharderID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
@@ -331,16 +343,16 @@ func TestGetSharderLocations(t *testing.T) {
 
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i)}
-		err := eventDb.addSharder(s)
+		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}}
+		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }
 
 func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
-		err := eventDb.addSharder(s)
+		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }

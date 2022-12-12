@@ -6,15 +6,15 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 //msgp:ignore State
 
 //go:generate msgp -io=false -tests=false -v
-//Balance - any quantity that is represented as an integer in the lowest denomination
-type Balance int64
 
 //State - state that needs consensus within the blockchain.
 type State struct {
@@ -23,11 +23,11 @@ type State struct {
 	having the origin (round in the blockchain) part of the state ensures that the same logical leaf has a new hash and avoid this issue. We are getting
 	parallelism without explicit locks with this approach.
 	*/
-	TxnHash      string  `json:"txn" msgpack:"-"`
-	TxnHashBytes []byte  `json:"-" msgpack:"t"`
-	Round        int64   `json:"round" msgpack:"r"`
-	Balance      Balance `json:"balance" msgpack:"b"`
-	Nonce        int64   `json:"nonce" msgpack:"n"`
+	TxnHash      string        `json:"txn" msgpack:"-"`
+	TxnHashBytes []byte        `json:"-" msgpack:"t"`
+	Round        int64         `json:"round" msgpack:"r"`
+	Balance      currency.Coin `json:"balance" msgpack:"b"`
+	Nonce        int64         `json:"nonce" msgpack:"n"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */
@@ -64,7 +64,7 @@ func (s *State) Encode() []byte {
 func (s *State) Decode(data []byte) error {
 	buf := bytes.NewBuffer(data)
 	var origin int64
-	var balance Balance
+	var balance currency.Coin
 	var nonce int64
 	s.TxnHashBytes = make([]byte, 32)
 	if n, err := buf.Read(s.TxnHashBytes); err != nil || n != 32 {

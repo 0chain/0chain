@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -15,9 +17,11 @@ import (
 )
 
 func init() {
+	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{})
 	common.SetupRootContext(node.GetNodeContext())
 
 	transaction.SetupEntity(memorystore.GetStorageProvider())
+
 }
 
 func initDefaultTxnPool(t *testing.T) {
@@ -48,16 +52,16 @@ func addTxnsToCollection(t *testing.T, txns ...*transaction.Transaction) {
 }
 
 func makeTestCollectionIterationHandler() datastore.CollectionIteratorHandler {
-	return func(ctx context.Context, ce datastore.CollectionEntity) bool {
+	return func(ctx context.Context, ce datastore.CollectionEntity) (bool, error) {
 		if ce.GetEntityMetadata().GetName() == "txn" {
 			ent := ce.(*transaction.Transaction)
 			if ent.Value > 5 {
 				ent.Value++
-				return true
+				return true, nil
 			}
-			return false
+			return false, nil
 		}
-		return false
+		return false, nil
 	}
 }
 

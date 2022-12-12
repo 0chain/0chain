@@ -9,12 +9,12 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
-// HandleVRFShare - handles the vrf share.
-func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+// handleVRFShare - handles the vrf share.
+func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
 
 	var mr = mc.getOrCreateRound(ctx, msg.VRFShare.Round)
 	if mr == nil {
@@ -244,10 +244,6 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	vts := mr.GetVerificationTickets(b.Hash)
-	if len(vts) == 0 {
-		mc.AddToRoundVerification(ctx, mr, b)
-		return nil
-	}
 
 	// TODO: mc.MergeVerificationTickets does not verify block's own tickets, might be a problem!
 	mc.MergeVerificationTickets(b, vts)
@@ -296,6 +292,12 @@ func (mc *Chain) handleVerificationTicketMessage(ctx context.Context,
 			zap.String("block", bvt.BlockID))
 		return
 	}
+
+	sender := mc.GetMiners(bvt.Round).GetNode(bvt.VerifierID)
+	logging.Logger.Debug("handle vt. msg - verify ticket successfully",
+		zap.Int64("round", bvt.Round),
+		zap.String("block", bvt.BlockID),
+		zap.Int("verifier", sender.SetIndex))
 
 	b, err := mc.GetBlock(ctx, bvt.BlockID)
 	if err != nil {
@@ -507,8 +509,8 @@ func (mc *Chain) handleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	mc.processNotarization(ctx, msg.Notarization)
 }
 
-// HandleNotarizedBlockMessage - handles a notarized block for a previous round.
-func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
+// handleNotarizedBlockMessage - handles a notarized block for a previous round.
+func (mc *Chain) handleNotarizedBlockMessage(ctx context.Context,
 	msg *BlockMessage) {
 
 	nb := msg.Block
@@ -545,7 +547,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 		return
 	}
 
-	//TODO remove it, we do exactly the same logic in VerifyBlockNotarization->
 	var b = mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(mr, b) {
 		finish(false)

@@ -1,66 +1,74 @@
 package storagesc
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"time"
 
-	"0chain.net/smartcontract"
+	"github.com/0chain/common/core/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 func scConfigKey(scKey string) datastore.Key {
-	return scKey + ":configurations"
+	return scKey + encryption.Hash("storagesc_config")
 }
 
 type freeAllocationSettings struct {
-	DataShards                 int           `json:"data_shards"`
-	ParityShards               int           `json:"parity_shards"`
-	Size                       int64         `json:"size"`
-	Duration                   time.Duration `json:"duration"`
-	ReadPriceRange             PriceRange    `json:"read_price_range"`
-	WritePriceRange            PriceRange    `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
-	ReadPoolFraction           float64       `json:"read_pool_fraction"`
+	DataShards       int           `json:"data_shards"`
+	ParityShards     int           `json:"parity_shards"`
+	Size             int64         `json:"size"`
+	Duration         time.Duration `json:"duration"`
+	ReadPriceRange   PriceRange    `json:"read_price_range"`
+	WritePriceRange  PriceRange    `json:"write_price_range"`
+	ReadPoolFraction float64       `json:"read_pool_fraction"`
 }
 
 type stakePoolConfig struct {
-	MinLock int64 `json:"min_lock"`
+	MinLock       currency.Coin `json:"min_lock"`
+	MinLockPeriod time.Duration `json:"min_lock_period"`
 }
 
 type readPoolConfig struct {
-	MinLock       int64         `json:"min_lock"`
-	MinLockPeriod time.Duration `json:"min_lock_period"`
-	MaxLockPeriod time.Duration `json:"max_lock_period"`
+	MinLock currency.Coin `json:"min_lock"`
 }
 
 type writePoolConfig struct {
-	MinLock       int64         `json:"min_lock"`
-	MinLockPeriod time.Duration `json:"min_lock_period"`
-	MaxLockPeriod time.Duration `json:"max_lock_period"`
+	MinLock currency.Coin `json:"min_lock"`
 }
 
 type blockReward struct {
-	BlockReward             state.Balance `json:"block_reward"`
-	BlockRewardChangePeriod int64         `json:"block_reward_change_period"`
-	BlockRewardChangeRatio  float64       `json:"block_reward_change_ratio"`
-	QualifyingStake         state.Balance `json:"qualifying_stake"`
-	SharderWeight           float64       `json:"sharder_weight"`
-	MinerWeight             float64       `json:"miner_weight"`
-	BlobberWeight           float64       `json:"blobber_weight"`
-	TriggerPeriod           int64         `json:"trigger_period"`
+	BlockReward             currency.Coin    `json:"block_reward"`
+	BlockRewardChangePeriod int64            `json:"block_reward_change_period"`
+	BlockRewardChangeRatio  float64          `json:"block_reward_change_ratio"`
+	QualifyingStake         currency.Coin    `json:"qualifying_stake"`
+	SharderWeight           float64          `json:"sharder_weight"`
+	MinerWeight             float64          `json:"miner_weight"`
+	BlobberWeight           float64          `json:"blobber_weight"`
+	TriggerPeriod           int64            `json:"trigger_period"`
+	Gamma                   blockRewardGamma `json:"gamma"`
+	Zeta                    blockRewardZeta  `json:"zeta"`
 }
 
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) {
+type blockRewardGamma struct {
+	Alpha float64 `json:"alpha"`
+	A     float64 `json:"a"`
+	B     float64 `json:"b"`
+}
+
+type blockRewardZeta struct {
+	I  float64 `json:"i"`
+	K  float64 `json:"k"`
+	Mu float64 `json:"mu"`
+}
+
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) error {
 	total := sharderRatio + minerRatio + bRatio
 	if total == 0 {
 		br.SharderWeight = 0
@@ -72,6 +80,26 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio floa
 		br.BlobberWeight = bRatio / total
 	}
 
+	totalWeight := br.SharderWeight + br.MinerWeight + br.BlobberWeight
+	switch totalWeight {
+	case 0:
+	case 1:
+		return nil
+	default:
+		return fmt.Errorf("total weight is not 1: %v", totalWeight)
+	}
+	return nil
+}
+
+func newConfig() *Config {
+	return &Config{
+		ReadPool:               &readPoolConfig{},
+		WritePool:              &writePoolConfig{},
+		StakePool:              &stakePoolConfig{},
+		FreeAllocationSettings: freeAllocationSettings{},
+		BlockReward:            &blockReward{},
+		Cost:                   make(map[string]int),
+	}
 }
 
 // Config represents SC configurations ('storagesc:' from sc.yaml).
@@ -81,9 +109,9 @@ type Config struct {
 	// configuration.
 	TimeUnit time.Duration `json:"time_unit"`
 	// MaxMint is max minting.
-	MaxMint state.Balance `json:"max_mint"`
+	MaxMint currency.Coin `json:"max_mint"`
 	// Minted tokens by entire SC.
-	Minted state.Balance `json:"minted"`
+	Minted currency.Coin `json:"minted"`
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
@@ -99,7 +127,7 @@ type Config struct {
 	// ReadPool related configurations.
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
-	WritePool *writePoolConfig `json:"writepool"`
+	WritePool *writePoolConfig `json:"write_pool"`
 	// StakePool related configurations.
 	StakePool *stakePoolConfig `json:"stakepool"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
@@ -110,15 +138,19 @@ type Config struct {
 	// tokens penalized on challenge not passed.
 	BlobberSlash float64 `json:"blobber_slash"`
 
+	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
+	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation"`
+
 	// price limits for blobbers
 
 	// MaxReadPrice allowed for a blobber.
-	MaxReadPrice state.Balance `json:"max_read_price"`
+	MaxReadPrice currency.Coin `json:"max_read_price"`
 	// MaxWrtiePrice
-	MaxWritePrice state.Balance `json:"max_write_price"`
-	MinWritePrice state.Balance `json:"min_write_price"`
+	MaxWritePrice currency.Coin `json:"max_write_price"`
+	MinWritePrice currency.Coin `json:"min_write_price"`
 
 	// allocation cancellation
+	CancellationCharge float64 `json:"cancellation_charge"`
 
 	// FailedChallengesToCancel is number of failed challenges of an allocation
 	// to be able to cancel an allocation.
@@ -129,8 +161,8 @@ type Config struct {
 	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
 
 	// free allocations
-	MaxTotalFreeAllocation      state.Balance          `json:"max_total_free_allocation"`
-	MaxIndividualFreeAllocation state.Balance          `json:"max_individual_free_allocation"`
+	MaxTotalFreeAllocation      currency.Coin          `json:"max_total_free_allocation"`
+	MaxIndividualFreeAllocation currency.Coin          `json:"max_individual_free_allocation"`
 	FreeAllocationSettings      freeAllocationSettings `json:"free_allocation_settings"`
 
 	// challenges generating
@@ -148,9 +180,9 @@ type Config struct {
 	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
-	MinStake state.Balance `json:"min_stake"`
+	MinStake currency.Coin `json:"min_stake"`
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
-	MaxStake state.Balance `json:"max_stake"`
+	MaxStake currency.Coin `json:"max_stake"`
 
 	// MaxDelegates per stake pool
 	MaxDelegates int `json:"max_delegates"`
@@ -160,167 +192,163 @@ type Config struct {
 
 	BlockReward *blockReward `json:"block_reward"`
 
-	// Allow direct access to MPT
-	ExposeMpt bool           `json:"expose_mpt"`
-	OwnerId   string         `json:"owner_id"`
-	Cost      map[string]int `json:"cost"`
+	OwnerId string         `json:"owner_id"`
+	Cost    map[string]int `json:"cost"`
 }
 
-func (sc *Config) validate() (err error) {
-	if sc.TimeUnit <= 1*time.Second {
-		return fmt.Errorf("time_unit less than 1s: %v", sc.TimeUnit)
+func (conf *Config) validate() (err error) {
+	if conf.TimeUnit <= 1*time.Second {
+		return fmt.Errorf("time_unit less than 1s: %v", conf.TimeUnit)
 	}
-	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
+	if conf.ValidatorReward < 0.0 || 1.0 < conf.ValidatorReward {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
-			sc.ValidatorReward)
+			conf.ValidatorReward)
 	}
-	if sc.BlobberSlash < 0.0 || 1.0 < sc.BlobberSlash {
+	if conf.BlobberSlash < 0.0 || 1.0 < conf.BlobberSlash {
 		return fmt.Errorf("blobber_slash not in [0; 1] range: %v",
-			sc.BlobberSlash)
+			conf.BlobberSlash)
 	}
-	if sc.MinBlobberCapacity < 0 {
+	if conf.CancellationCharge < 0.0 || 1.0 < conf.CancellationCharge {
+		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
+			conf.CancellationCharge)
+	}
+	if conf.MaxBlobbersPerAllocation <= 0 {
+		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
+			conf.MaxBlobbersPerAllocation)
+	}
+	if conf.MinBlobberCapacity < 0 {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
-			sc.MinBlobberCapacity)
+			conf.MinBlobberCapacity)
 	}
-	if sc.MinOfferDuration < 0 {
+	if conf.MinOfferDuration < 0 {
 		return fmt.Errorf("negative min_offer_duration: %v",
-			sc.MinOfferDuration)
+			conf.MinOfferDuration)
 	}
-	if sc.MaxChallengeCompletionTime < 0 {
+	if conf.MaxChallengeCompletionTime < 0 {
 		return fmt.Errorf("negative max_challenge_completion_time: %v",
-			sc.MaxChallengeCompletionTime)
+			conf.MaxChallengeCompletionTime)
 	}
-	if sc.MinAllocDuration < 0 {
+	if conf.MinAllocDuration < 0 {
 		return fmt.Errorf("negative min_alloc_duration: %v",
-			sc.MinAllocDuration)
+			conf.MinAllocDuration)
 	}
-	if sc.MaxMint < 0 {
-		return fmt.Errorf("negative max_mint: %v", sc.MaxMint)
+	if conf.MinAllocSize < 0 {
+		return fmt.Errorf("negative min_alloc_size: %v", conf.MinAllocSize)
 	}
-	if sc.MinAllocSize < 0 {
-		return fmt.Errorf("negative min_alloc_size: %v", sc.MinAllocSize)
-	}
-	if sc.MaxReadPrice < 0 {
-		return fmt.Errorf("negative max_read_price: %v", sc.MaxReadPrice)
-	}
-	if sc.MaxWritePrice < 0 {
-		return fmt.Errorf("negative max_write_price: %v", sc.MaxWritePrice)
-	}
-	if sc.MinWritePrice < 0 {
-		return fmt.Errorf("negative min_write_price: %v", sc.MaxWritePrice)
-	}
-	if sc.MaxWritePrice < sc.MinWritePrice {
+
+	if conf.MaxWritePrice < conf.MinWritePrice {
 		return fmt.Errorf("max wirte price %v must be more than min_write_price: %v",
-			sc.MaxWritePrice, sc.MinWritePrice)
+			conf.MaxWritePrice, conf.MinWritePrice)
 	}
-	if sc.StakePool.MinLock <= 1 {
+	if conf.StakePool.MinLock <= 1 {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
-			sc.StakePool.MinLock)
-	}
-	if sc.MaxTotalFreeAllocation < 0 {
-		return fmt.Errorf("negative max_total_free_allocation: %v", sc.MaxTotalFreeAllocation)
-	}
-	if sc.MaxIndividualFreeAllocation < 0 {
-		return fmt.Errorf("negative max_individual_free_allocation: %v", sc.MaxIndividualFreeAllocation)
+			conf.StakePool.MinLock)
 	}
 
-	if sc.FreeAllocationSettings.DataShards < 0 {
+	if conf.FreeAllocationSettings.DataShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
-			sc.FreeAllocationSettings.DataShards)
+			conf.FreeAllocationSettings.DataShards)
 	}
-	if sc.FreeAllocationSettings.ParityShards < 0 {
+	if conf.FreeAllocationSettings.ParityShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.parity_shards: %v",
-			sc.FreeAllocationSettings.ParityShards)
+			conf.FreeAllocationSettings.ParityShards)
 	}
-	if sc.FreeAllocationSettings.Size < 0 {
+	if conf.FreeAllocationSettings.Size < 0 {
 		return fmt.Errorf("negative free_allocation_settings.size: %v",
-			sc.FreeAllocationSettings.Size)
+			conf.FreeAllocationSettings.Size)
 	}
-	if sc.FreeAllocationSettings.Duration <= 0 {
+	if conf.FreeAllocationSettings.Duration <= 0 {
 		return fmt.Errorf("negative free_allocation_settings.expiration_date: %v",
-			sc.FreeAllocationSettings.Duration)
+			conf.FreeAllocationSettings.Duration)
 	}
-	if !sc.FreeAllocationSettings.ReadPriceRange.isValid() {
+	if !conf.FreeAllocationSettings.ReadPriceRange.isValid() {
 		return fmt.Errorf("invalid free_allocation_settings.read_price_range: %v",
-			sc.FreeAllocationSettings.ReadPriceRange)
+			conf.FreeAllocationSettings.ReadPriceRange)
 	}
-	if !sc.FreeAllocationSettings.WritePriceRange.isValid() {
+	if !conf.FreeAllocationSettings.WritePriceRange.isValid() {
 		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
-			sc.FreeAllocationSettings.WritePriceRange)
+			conf.FreeAllocationSettings.WritePriceRange)
 	}
-	if sc.FreeAllocationSettings.MaxChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
-			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
-	}
-	if sc.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < sc.FreeAllocationSettings.ReadPoolFraction {
+	if conf.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < conf.FreeAllocationSettings.ReadPoolFraction {
 		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
-			sc.FreeAllocationSettings.ReadPoolFraction)
+			conf.FreeAllocationSettings.ReadPoolFraction)
 	}
 
-	if sc.FailedChallengesToCancel < 0 {
+	if conf.FailedChallengesToCancel < 0 {
 		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
-			sc.FailedChallengesToCancel)
+			conf.FailedChallengesToCancel)
 	}
-	if sc.FailedChallengesToRevokeMinLock < 0 {
+	if conf.FailedChallengesToRevokeMinLock < 0 {
 		return fmt.Errorf("negative failed_challenges_to_revoke_min_lock: %v",
-			sc.FailedChallengesToRevokeMinLock)
+			conf.FailedChallengesToRevokeMinLock)
 	}
-	if sc.MaxChallengesPerGeneration <= 0 {
+	if conf.MaxChallengesPerGeneration <= 0 {
 		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
-			sc.MaxChallengesPerGeneration)
+			conf.MaxChallengesPerGeneration)
 	}
-	if sc.ValidatorsPerChallenge <= 0 {
+	if conf.ValidatorsPerChallenge <= 0 {
 		return fmt.Errorf("invalid validators_per_challenge <= 0: %v",
-			sc.ValidatorsPerChallenge)
+			conf.ValidatorsPerChallenge)
 	}
-	if sc.ChallengeGenerationRate < 0 {
+	if conf.ChallengeGenerationRate < 0 {
 		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
-			sc.ChallengeGenerationRate)
+			conf.ChallengeGenerationRate)
 	}
-	if sc.MinStake < 0 {
-		return fmt.Errorf("negative min_stake: %v", sc.MinStake)
+
+	if conf.MaxStake < conf.MinStake {
+		return fmt.Errorf("max_stake less than min_stake: %v < %v", conf.MinStake,
+			conf.MaxStake)
 	}
-	if sc.MaxStake < sc.MinStake {
-		return fmt.Errorf("max_stake less than min_stake: %v < %v", sc.MinStake,
-			sc.MaxStake)
+	if conf.MaxDelegates < 1 {
+		return fmt.Errorf("max_delegates is too small %v", conf.MaxDelegates)
 	}
-	if sc.MaxDelegates < 1 {
-		return fmt.Errorf("max_delegates is too small %v", sc.MaxDelegates)
+	if conf.MaxCharge < 0 {
+		return fmt.Errorf("negative max_charge: %v", conf.MaxCharge)
 	}
-	if sc.MaxCharge < 0 {
-		return fmt.Errorf("negative max_charge: %v", sc.MaxCharge)
-	}
-	if sc.MaxCharge > 1.0 {
+	if conf.MaxCharge > 1.0 {
 		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
-			sc.MaxCharge)
+			conf.MaxCharge)
 	}
-	if sc.BlockReward.BlockReward < 0 {
-		return fmt.Errorf("negative block_reward.block_reward: %v",
-			sc.BlockReward.BlockReward)
-	}
-	if sc.BlockReward.QualifyingStake < 0 {
-		return fmt.Errorf("negative block_reward.qualifying_stake: %v",
-			sc.BlockReward.QualifyingStake)
-	}
-	if sc.BlockReward.SharderWeight < 0 {
+
+	if conf.BlockReward.SharderWeight < 0 {
 		return fmt.Errorf("negative block_reward.sharder_weight: %v",
-			sc.BlockReward.SharderWeight)
+			conf.BlockReward.SharderWeight)
 	}
-	if sc.BlockReward.MinerWeight < 0 {
+	if conf.BlockReward.MinerWeight < 0 {
 		return fmt.Errorf("negative block_reward.miner_weight: %v",
-			sc.BlockReward.MinerWeight)
+			conf.BlockReward.MinerWeight)
 	}
-	if sc.BlockReward.BlobberWeight < 0 {
+	if conf.BlockReward.BlobberWeight < 0 {
 		return fmt.Errorf("negative block_reward.blobber_capacity_weight: %v",
-			sc.BlockReward.BlobberWeight)
+			conf.BlockReward.BlobberWeight)
 	}
-	if len(sc.OwnerId) == 0 {
+	if len(conf.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
 	}
+
+	if conf.BlockReward.Gamma.A <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.a <= 0: %v", conf.BlockReward.Gamma.A)
+	}
+	if conf.BlockReward.Gamma.B <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.b <= 0: %v", conf.BlockReward.Gamma.B)
+	}
+	if conf.BlockReward.Gamma.Alpha <= 0 {
+		return fmt.Errorf("invalid block_reward.gamma.alpha <= 0: %v", conf.BlockReward.Gamma.Alpha)
+	}
+	if conf.BlockReward.Zeta.Mu <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.mu <= 0: %v", conf.BlockReward.Zeta.Mu)
+	}
+	if conf.BlockReward.Zeta.I <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.i <= 0: %v", conf.BlockReward.Zeta.I)
+	}
+	if conf.BlockReward.Zeta.K <= 0 {
+		return fmt.Errorf("invalid block_reward.zeta.k <=0: %v", conf.BlockReward.Zeta.K)
+	}
+
 	return
 }
 
-func (conf *Config) validateStakeRange(min, max state.Balance) (err error) {
+func (conf *Config) validateStakeRange(min, max currency.Coin) (err error) {
 	if min < conf.MinStake {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,
 			conf.MinStake)
@@ -351,17 +379,40 @@ func (conf *Config) Decode(b []byte) error {
 // rest handler and update function
 //
 
+func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateContextI) error {
+	minted, err := currency.AddCoin(conf.Minted, toMint)
+	if err != nil {
+		return err
+	}
+
+	if minted > conf.MaxMint {
+		return fmt.Errorf("max min %v exceeded by: %v", conf.MaxMint, minted)
+	}
+	conf.Minted = minted
+	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	return err
+}
+
 // configs from sc.yaml
 func getConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
 
-	conf = new(Config)
+	conf = newConfig()
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
-	conf.MaxMint = state.Balance(scc.GetFloat64(pfx+"max_mint") * 1e10)
-	conf.MinStake = state.Balance(scc.GetFloat64(pfx+"min_stake") * 1e10)
-	conf.MaxStake = state.Balance(scc.GetFloat64(pfx+"max_stake") * 1e10)
+	conf.MaxMint, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_mint"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MaxStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_stake"))
+	if err != nil {
+		return nil, err
+	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
@@ -369,46 +420,86 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
-	conf.MaxReadPrice = state.Balance(
-		scc.GetFloat64(pfx+"max_read_price") * 1e10)
-	conf.MinWritePrice = state.Balance(
-		scc.GetFloat64(pfx+"min_write_price") * 1e10)
-	conf.MaxWritePrice = state.Balance(
-		scc.GetFloat64(pfx+"max_write_price") * 1e10)
+	conf.CancellationCharge = scc.GetFloat64(pfx + "cancellation_charge")
+	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
+	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinWritePrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_write_price"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MaxWritePrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_write_price"))
+	if err != nil {
+		return nil, err
+	}
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
-	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
-	conf.ReadPool.MinLockPeriod = scc.GetDuration(
-		pfx + "readpool.min_lock_period")
-	conf.ReadPool.MaxLockPeriod = scc.GetDuration(
-		pfx + "readpool.max_lock_period")
+	conf.ReadPool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "readpool.min_lock"))
+	if err != nil {
+		return nil, err
+	}
+
 	// write pool
 	conf.WritePool = new(writePoolConfig)
-	conf.WritePool.MinLock = int64(scc.GetFloat64(pfx+"writepool.min_lock") * 1e10)
-	conf.WritePool.MinLockPeriod = scc.GetDuration(
-		pfx + "writepool.min_lock_period")
-	conf.WritePool.MaxLockPeriod = scc.GetDuration(
-		pfx + "writepool.max_lock_period")
+	conf.WritePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "writepool.min_lock"))
+	if err != nil {
+		return nil, err
+	}
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
-	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
+	conf.StakePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "stakepool.min_lock"))
+	if err != nil {
+		return nil, err
+	}
+	conf.StakePool.MinLockPeriod = scc.GetDuration(pfx + "stakepool.min_lock_period")
 
-	conf.MaxTotalFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
-	conf.MaxIndividualFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
+	conf.MaxTotalFreeAllocation, err = currency.MultFloat64(1e10, scc.GetFloat64(pfx+"max_total_free_allocation"))
+	if err != nil {
+		return nil, err
+	}
+
+	conf.MaxIndividualFreeAllocation, err = currency.MultFloat64(1e10, scc.GetFloat64(pfx+"max_individual_free_allocation"))
+	if err != nil {
+		return nil, err
+	}
+
 	fas := pfx + "free_allocation_settings."
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
 	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
 	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
+
+	readPriceRangeMin, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"read_price_range.min"))
+	if err != nil {
+		return nil, err
+	}
+
+	readPriceRangeMax, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"read_price_range.max"))
+	if err != nil {
+		return nil, err
+	}
+
 	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
-		Min: state.Balance(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
-		Max: state.Balance(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
+		Min: readPriceRangeMin,
+		Max: readPriceRangeMax,
 	}
+
+	writePriceRangeMin, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"write_price_range.min"))
+	if err != nil {
+		return nil, err
+	}
+
+	writePriceRangeMax, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"write_price_range.max"))
+	if err != nil {
+		return nil, err
+	}
+
 	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
-		Min: state.Balance(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
-		Max: state.Balance(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
+		Min: writePriceRangeMin,
+		Max: writePriceRangeMax,
 	}
-	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
 
 	// allocation cancellation
@@ -429,35 +520,50 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
 	conf.BlockReward = new(blockReward)
-	conf.BlockReward.BlockReward = state.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
+	conf.BlockReward.BlockReward, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.block_reward"))
+	if err != nil {
+		return nil, err
+	}
 	conf.BlockReward.BlockRewardChangePeriod = scc.GetInt64(pfx + "block_reward.block_reward_change_period")
 	conf.BlockReward.BlockRewardChangeRatio = scc.GetFloat64(pfx + "block_reward.block_reward_change_ratio")
-	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
-
+	conf.BlockReward.QualifyingStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "block_reward.qualifying_stake"))
+	if err != nil {
+		return nil, err
+	}
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
-	conf.BlockReward.setWeightsFromRatio(
+	err = conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
 	)
-	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
+	if err != nil {
+		return nil, err
+	}
+	conf.BlockReward.Gamma.Alpha = scc.GetFloat64(pfx + "block_reward.gamma.alpha")
+	conf.BlockReward.Gamma.A = scc.GetFloat64(pfx + "block_reward.gamma.a")
+	conf.BlockReward.Gamma.B = scc.GetFloat64(pfx + "block_reward.gamma.b")
+	conf.BlockReward.Zeta.I = scc.GetFloat64(pfx + "block_reward.zeta.i")
+	conf.BlockReward.Zeta.K = scc.GetFloat64(pfx + "block_reward.zeta.k")
+	conf.BlockReward.Zeta.Mu = scc.GetFloat64(pfx + "block_reward.zeta.mu")
+
 	conf.OwnerId = scc.GetString(pfx + "owner_id")
 	conf.Cost = scc.GetStringMapInt(pfx + "cost")
+
 	err = conf.validate()
 	return
 }
 
-func (ssc *StorageSmartContract) setupConfig(
-	balances chainState.StateContextI) (conf *Config, err error) {
-
-	if conf, err = getConfiguredConfig(); err != nil {
-		return
+func InitConfig(balances chainState.StateContextI) error {
+	err := balances.GetTrieNode(scConfigKey(ADDRESS), &Config{})
+	if err == util.ErrValueNotPresent {
+		conf, err := getConfiguredConfig()
+		if err != nil {
+			return err
+		}
+		_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+		return err
 	}
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
-	if err != nil {
-		return nil, err
-	}
-	return
+	return err
 }
 
 // getConfig
@@ -465,56 +571,12 @@ func (ssc *StorageSmartContract) getConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *Config, err error) {
 
-	conf = new(Config)
-	err = balances.GetTrieNode(scConfigKey(ssc.ID), conf)
-	switch err {
-	case util.ErrValueNotPresent:
-		if !setup {
-			return // value not present
-		}
-		return ssc.setupConfig(balances)
-	case nil:
-		return conf, nil
-	default:
+	conf = newConfig()
+	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
+	if err != nil {
 		return nil, err
 	}
-}
-
-const cantGetConfigErrMsg = "can't get config"
-
-func (ssc *StorageSmartContract) getConfigHandler(
-	ctx context.Context,
-	params url.Values,
-	balances chainState.StateContextI,
-) (resp interface{}, err error) {
-	var conf *Config
-	conf, err = ssc.getConfig(balances, false)
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
-	}
-
-	// return configurations from sc.yaml not saving them
-	if err == util.ErrValueNotPresent {
-		conf, err = getConfiguredConfig()
-		if err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
-		}
-	}
-
-	return conf.getConfigMap() // actual value
-}
-
-// getWritePoolConfig
-func (ssc *StorageSmartContract) getWritePoolConfig(
-	balances chainState.StateContextI, setup bool) (
-	conf *writePoolConfig, err error) {
-
-	var scconf *Config
-	if scconf, err = ssc.getConfig(balances, setup); err != nil {
-		return
-	}
-	return scconf.WritePool, nil
+	return conf, nil
 }
 
 // getReadPoolConfig

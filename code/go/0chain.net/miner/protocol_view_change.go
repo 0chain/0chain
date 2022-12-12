@@ -14,7 +14,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
@@ -22,10 +21,10 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/util"
 
 	hbls "github.com/herumi/bls/ffi/go/bls"
 
@@ -218,7 +217,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.Any("next_phase", pn),
 			zap.Any("txn", txn))
 
-		if txn == nil || (txn != nil && mc.ConfirmTransaction(ctx, txn)) {
+		if txn == nil || (txn != nil && mc.ConfirmTransaction(ctx, txn, 0)) {
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)
 			phaseStartRound = pn.StartRound
@@ -579,14 +578,14 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 	tx.ToClientID = minersc.ADDRESS
 
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		mb.Miners.N2NURLs())
+		mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	return
 }
 
 // NextViewChangeOfBlock returns next view change value based on given block.
 func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {
 
-	if !config.DevConfiguration.ViewChange {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
 		return lfb.LatestFinalizedMagicBlockRound, nil
 	}
 
@@ -894,7 +893,7 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 // previous MB and corresponding DKG. The previous MB can be useless in
 // some cases but this method just makes sure it is.
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
-	if !config.DevConfiguration.ViewChange {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
 		return
 	}
 

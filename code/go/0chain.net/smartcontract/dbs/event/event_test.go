@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/chaincore/config"
+	"github.com/0chain/common/core/logging"
 )
 
 func init() {
@@ -17,7 +17,7 @@ func init() {
 
 func TestSetupDatabase(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -28,7 +28,7 @@ func TestSetupDatabase(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 

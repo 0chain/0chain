@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/alicebob/miniredis/v2"
 	"log"
 	"os"
 	"os/user"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/setupsc"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -24,13 +26,12 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
 	"0chain.net/sharder/blockstore"
+	"github.com/0chain/common/core/logging"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/require"
-
-	"github.com/alicebob/miniredis/v2"
 )
 
 var numOfTransactions int
@@ -58,10 +59,10 @@ func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block,
 	}
 	b.ChainID = prevBlock.ChainID
 	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
-	if mc.Config != nil {
-		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
+	if mc.ChainConfig != nil {
+		chain.UpdateConfigImpl(mc.ChainConfig.(*chain.ConfigImpl), data)
 	} else {
-		mc.Config = chain.NewConfigImpl(data)
+		mc.ChainConfig = chain.NewConfigImpl(data)
 	}
 
 	usr, err := user.Current()
@@ -148,7 +149,7 @@ func setupMinerChain() (*Chain, func()) {
 		mc.Chain = chain.Provider().(*chain.Chain)
 	}
 
-	mc.Config = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
+	mc.ChainConfig = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -170,6 +171,8 @@ func TestBlockGeneration(t *testing.T) {
 
 	mc, stopAndClean := setupMinerChain()
 	defer stopAndClean()
+
+	config.SetupSmartContractConfig("testdata")
 
 	gb := SetupGenesisBlock()
 	mc.AddGenesisBlock(gb)
@@ -372,10 +375,10 @@ func setupSelfNodeKeys() { //nolint
 func SetupGenesisBlock() *block.Block {
 	mc := GetMinerChain()
 	data := &chain.ConfigData{BlockSize: int32(numOfTransactions)}
-	if mc.Config != nil {
-		chain.UpdateConfigImpl(mc.Config.(*chain.ConfigImpl), data)
+	if mc.ChainConfig != nil {
+		chain.UpdateConfigImpl(mc.ChainConfig.(*chain.ConfigImpl), data)
 	} else {
-		mc.Config = chain.NewConfigImpl(data)
+		mc.ChainConfig = chain.NewConfigImpl(data)
 	}
 
 	mb := mc.GetMagicBlock(0)
@@ -396,6 +399,14 @@ func SetupGenesisBlock() *block.Block {
 }
 
 func SetUpSingleSelf() func() {
+	viper.Set("server_chain.smart_contract.faucet", true)
+	viper.Set("server_chain.smart_contract.storage", true)
+	viper.Set("server_chain.smart_contract.zcn", true)
+	viper.Set("server_chain.smart_contract.multisig", true)
+	viper.Set("server_chain.smart_contract.miner", true)
+	viper.Set("server_chain.smart_contract.vesting", true)
+	setupsc.SetupSmartContracts()
+
 	// create rocksdb state dir
 	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
@@ -409,6 +420,18 @@ func SetUpSingleSelf() func() {
 	memorystore.InitDefaultPool(s.Host(), p)
 
 	memorystore.AddPool("txndb", &redis.Pool{
+		MaxIdle:   80,
+		MaxActive: 1000, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", s.Addr())
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	})
+
+	memorystore.AddPool("clientdb", &redis.Pool{
 		MaxIdle:   80,
 		MaxActive: 1000, // max number of connections
 		Dial: func() (redis.Conn, error) {
@@ -473,9 +496,8 @@ func SetUpSingleSelf() func() {
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
-	data := &chain.ConfigData{BlockSize: 1024}
-	c.Config = chain.NewConfigImpl(data)
-	data.BlockSize = int32(numOfTransactions)
+	data := &chain.ConfigData{}
+	c.ChainConfig = chain.NewConfigImpl(data)
 
 	data.MinGenerators = 1
 	data.RoundRange = 10000000

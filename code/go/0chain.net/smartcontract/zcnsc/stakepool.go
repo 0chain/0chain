@@ -5,26 +5,23 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/0chain/common/core/currency"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/util"
 )
 
-// unlock response
-type unlockResponse struct {
-	// one of the fields is set in a response, the Unstake if can't unstake
-	// for now and the TokenPoolTransferResponse if it has a pool had unlocked
-	Unstake bool          `json:"unstake"` // max time to wait to unstake
-	Balance state.Balance `json:"balance"`
-}
+//msgp:ignore unlockResponse stakePoolRequest
+
+//go:generate msgp -v -io=false -tests=false -unexported
 
 type stakePoolRequest struct {
-	PoolID       string `json:"pool_id,omitempty"`
 	AuthorizerID string `json:"authorizer_id,omitempty"`
 }
 
@@ -35,9 +32,14 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	return // ok
 }
 
+func (spr *stakePoolRequest) encode() []byte {
+	bytes, _ := json.Marshal(spr)
+	return bytes
+}
+
 // ----------- LockingPool pool --------------------------
 
-//type stakePool stakepool.StakePool
+//type stakePool stakepool.Provider
 
 type StakePool struct {
 	stakepool.StakePool
@@ -66,10 +68,10 @@ func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContex
 }
 
 // empty a delegate pool if possible, call update before the empty
-func (sp *StakePool) empty(sscID, poolID, clientID string, balances cstate.StateContextI) (bool, error) {
-	var dp, ok = sp.Pools[poolID]
+func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI) (bool, error) {
+	var dp, ok = sp.Pools[clientID]
 	if !ok {
-		return false, fmt.Errorf("no such delegate pool: %q", poolID)
+		return false, fmt.Errorf("no such delegate pool: %q", clientID)
 	}
 
 	if dp.DelegateID != clientID {
@@ -81,8 +83,8 @@ func (sp *StakePool) empty(sscID, poolID, clientID string, balances cstate.State
 		return false, err
 	}
 
-	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = spenum.Deleting
+	sp.Pools[clientID].Balance = 0
+	sp.Pools[clientID].Status = spenum.Deleting
 
 	return true, nil
 }
@@ -110,7 +112,7 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	gn *GlobalNode,
 	authorizerID datastore.Key,
-	settings stakepool.StakePoolSettings,
+	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
 	if err := validateStakePoolSettings(settings, gn); err != nil {
@@ -141,8 +143,8 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		changed = true
 	}
 
-	if sp.Settings.ServiceCharge != settings.ServiceCharge {
-		sp.Settings.ServiceCharge = settings.ServiceCharge
+	if sp.Settings.ServiceChargeRatio != settings.ServiceChargeRatio {
+		sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 		changed = true
 	}
 
@@ -158,12 +160,12 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
 
-func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *GlobalNode) error {
+func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode) error {
 	err := conf.validateStakeRange(poolSettings.MinStake, poolSettings.MaxStake)
 	if err != nil {
 		return err
 	}
-	if poolSettings.ServiceCharge < 0.0 {
+	if poolSettings.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
 	}
 	if poolSettings.MaxNumDelegates <= 0 {
@@ -173,7 +175,7 @@ func validateStakePoolSettings(poolSettings stakepool.StakePoolSettings, conf *G
 	return nil
 }
 
-func (gn *GlobalNode) validateStakeRange(min, max state.Balance) (err error) {
+func (gn *GlobalNode) validateStakeRange(min, max currency.Coin) (err error) {
 	if min < gn.MinStakeAmount {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min, gn.MinStakeAmount)
 	}
@@ -198,7 +200,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 	}
 
 	if t.Value < gn.MinLockAmount {
-		return "", common.NewError(code, "too small stake to lock")
+		return "", common.NewError(code, fmt.Sprintf("too small stake to lock: %v < %v", t.Value, gn.MinLockAmount))
 	}
 
 	var spr stakePoolRequest
@@ -211,11 +213,11 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 		return "", common.NewErrorf(code, "can't get stake pool: %v", err)
 	}
 
-	if len(sp.Pools) >= gn.MaxDelegates {
+	if len(sp.Pools) >= gn.MaxDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf(code, "max_delegates reached: %v, no more stake pools allowed", gn.MaxDelegates)
 	}
 
-	err = sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)
+	out, err := sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "stake pool digging error: %v", err)
 	}
@@ -226,7 +228,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 
 	// TO-DO: Update stake in eventDB
 
-	return
+	return out, err
 }
 
 func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
@@ -245,12 +247,12 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
 	}
 
-	_, err = sp.empty(zcn.ID, spr.PoolID, t.ClientID, ctx)
+	_, err = sp.empty(zcn.ID, t.ClientID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, spr.PoolID, ctx)
+	output, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "%v", err)
 	}
@@ -260,7 +262,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "saving stake pool: %v", err)
 	}
 
-	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
+	return output, nil
 }
 
 func toJson(val interface{}) string {

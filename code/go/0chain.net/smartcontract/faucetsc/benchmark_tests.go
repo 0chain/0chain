@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"0chain.net/core/common"
 	"testing"
 
 	"0chain.net/core/viper"
@@ -39,7 +40,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
 	var fsc = FaucetSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -65,13 +66,20 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
+	creationTimeRaw := viper.GetInt64("MptCreationTime")
+	creationTime := common.Now()
+	if creationTimeRaw != 0 {
+		creationTime = common.Timestamp(creationTimeRaw)
+	}
+
 	var tests = []BenchTest{
 		{
 			name:     "faucet.update-settings",
 			endpoint: "updateSettings",
 			txn: &transaction.Transaction{
-				ClientID: viper.GetString(bk.FaucetOwner),
-				Value:    3,
+				ClientID:     viper.GetString(bk.FaucetOwner),
+				Value:        3,
+				CreationDate: creationTime,
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
@@ -89,8 +97,9 @@ func BenchmarkTests(
 			name:     "faucet.pour",
 			endpoint: "pour",
 			txn: &transaction.Transaction{
-				ClientID: data.Clients[0],
-				Value:    3,
+				ClientID:     data.Clients[0],
+				Value:        3,
+				CreationDate: creationTime,
 			},
 			input: nil,
 		},
@@ -98,9 +107,10 @@ func BenchmarkTests(
 			name:     "faucet.refill",
 			endpoint: "refill",
 			txn: &transaction.Transaction{
-				ClientID:   data.Clients[0],
-				Value:      23,
-				ToClientID: ADDRESS,
+				ClientID:     data.Clients[0],
+				Value:        23,
+				ToClientID:   ADDRESS,
+				CreationDate: creationTime,
 			},
 			input: nil,
 		},

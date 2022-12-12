@@ -19,10 +19,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/mocks"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 func init() {
@@ -1037,7 +1037,9 @@ func TestBlock_GetScore(t *testing.T) {
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
-			if got := b.GetScore(); got != tt.want {
+			got, err := b.GetScore()
+			require.NoError(t, err)
+			if got != tt.want {
 				t.Errorf("GetScore() = %v, want %v", got, tt.want)
 			}
 		})

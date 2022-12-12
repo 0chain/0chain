@@ -2,13 +2,15 @@ package sharder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -20,7 +22,6 @@ import (
 
 	"github.com/0chain/gorocksdb"
 
-	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -29,14 +30,11 @@ var sharderChain = &Chain{}
 /*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = c
-	sharderChain.BlockChannel = make(chan *block.Block, 1)
+	sharderChain.blockChannel = make(chan *block.Block, 1)
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
-	transactionCacheSize := int(c.BlockSize()) * blockCacheSize
-	if transactionCacheSize > 5000 {
-		transactionCacheSize = 5000
-	}
+	transactionCacheSize := 5 * blockCacheSize
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	c.SetViewChanger(sharderChain)
@@ -62,7 +60,7 @@ type MinioStats struct {
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
 	*chain.Chain
-	BlockChannel   chan *block.Block
+	blockChannel   chan *block.Block
 	RoundChannel   chan *round.Round
 	BlockCache     cache.Cache
 	BlockTxnCache  cache.Cache
@@ -74,9 +72,14 @@ type Chain struct {
 	pbMutex          sync.RWMutex
 }
 
-/*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
-func (sc *Chain) GetBlockChannel() chan *block.Block {
-	return sc.BlockChannel
+// PushToBlockProcessor pushs the block to processor,
+func (sc *Chain) PushToBlockProcessor(b *block.Block) error {
+	select {
+	case sc.blockChannel <- b:
+		return nil
+	case <-time.After(3 * time.Second):
+		return errors.New("push to block processor timeout")
+	}
 }
 
 /*GetRoundChannel - get the round channel where the finalized rounds are put into for further processing */
@@ -86,22 +89,28 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
 func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
-	_, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
-	//sc.AddRound(gr)
+	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
+	sc.AddRound(gr)
 	sc.AddGenesisBlock(gb)
+
+	// Save the round
+	if err := sc.StoreRound(gr.(*round.Round)); err != nil {
+		logging.Logger.Panic("setup genesis block, save genesis round failed", zap.Error(err))
+	}
+
 	// Save the block
 	err := sc.storeBlock(gb)
 	if err != nil {
-		Logger.Error("Failed to save genesis block",
-			zap.Error(err))
+		logging.Logger.Panic("setup genesis block, save genesis block failed", zap.Error(err))
 	}
+
 	if gb.MagicBlock != nil {
 		var tries int64
 		bs := gb.GetSummary()
 		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		for err != nil {
 			tries++
-			Logger.Error("setup genesis block -- failed to store magic block map", zap.Any("error", err), zap.Any("tries", tries))
+			logging.Logger.Error("setup genesis block -- failed to store magic block map", zap.Any("error", err), zap.Any("tries", tries))
 			time.Sleep(time.Millisecond * 100)
 			err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		}
@@ -136,25 +145,22 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	return r, err
 }
 
-/*GetBlockHash - get the block hash for a given round */
+// GetBlockHash - get the block hash for a given round
 func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, error) {
+	if roundNumber > sc.GetCurrentRound() {
+		return "", fmt.Errorf("round %d does not exist", roundNumber)
+	}
+
 	var err error
-	var fromStore bool
 	r := sc.GetSharderRound(roundNumber)
 	if r == nil {
 		r, err = sc.GetRoundFromStore(ctx, roundNumber)
 		if err != nil {
 			return "", err
 		}
-		fromStore = true
 	}
 	if r.BlockHash == "" {
-		err = fmt.Errorf("round %d has empty block hash", roundNumber)
-		Logger.Error("get_block_hash",
-			zap.Int64("round", roundNumber),
-			zap.Bool("from_store", fromStore),
-			zap.Error(err))
-		return "", err
+		return "", fmt.Errorf("round %d has empty block hash", roundNumber)
 	}
 	return r.BlockHash, nil
 }
@@ -187,7 +193,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	bl.lfb.SetStateStatus(block.StateSuccessful)
 	if err = sc.InitBlockState(bl.lfb); err != nil {
 		bl.lfb.SetStateStatus(0)
-		Logger.Info("load_lfb -- can't initialize stored block state",
+		logging.Logger.Info("load_lfb -- can't initialize stored block state",
 			zap.Error(err))
 		// return common.NewErrorf("load_lfb",
 		//	"can't init block state: %v", err) // fatal
@@ -201,14 +207,15 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 
 	sc.SetRandomSeed(bl.r, bl.r.GetRandomSeed())
 	bl.r.Block = bl.lfb
+	bl.r.BlockHash = bl.lfb.Hash
 
 	// set LFB and LFMB of the Chain, add the block to internal Chain's map
-	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb)
+	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb, bl.r)
 
 	// check is it notarized
 	err = sc.VerifyBlockNotarization(ctx, bl.lfb)
 	if err != nil {
-		Logger.Error("load_lfb - verify notarization failed",
+		logging.Logger.Error("load_lfb - verify notarization failed",
 			zap.Error(err),
 			zap.Int64("round", bl.lfb.Round),
 			zap.String("block", bl.lfb.Hash))
@@ -219,7 +226,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 
 	// add as notarized
 	bl.lfb.SetBlockState(block.StateNotarized)
-	_, _ = bl.r.AddNotarizedBlock(bl.lfb)
+	bl.r.AddNotarizedBlock(bl.lfb)
 
 	// setup nlfmb
 	if bl.nlfmb != nil && bl.nlfmb.Round > bl.lfmb.Round {
@@ -253,7 +260,7 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 
 	// load from store
 
-	Logger.Debug("load_lfb (lfmb) from store",
+	logging.Logger.Debug("load_lfb (lfmb) from store",
 		zap.String("block_with_magic_block_hash",
 			lfb.LatestFinalizedMagicBlockHash),
 		zap.Int64("block_with_magic_block_round",
@@ -274,7 +281,7 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 			"related magic block not found (no error)")
 	}
 
-	Logger.Debug("load_lfb (lfmb) from store", zap.Int64("round", lfmb.Round),
+	logging.Logger.Debug("load_lfb (lfmb) from store", zap.Int64("round", lfmb.Round),
 		zap.String("hash", lfmb.Hash))
 
 	if lfmb.MagicBlock == nil {
@@ -299,7 +306,7 @@ func (sc *Chain) loadHighestMagicBlock(ctx context.Context,
 			"getting highest MB map: %v", err) // critical
 	}
 
-	Logger.Debug("load_lfb (lfmb), got round",
+	logging.Logger.Debug("load_lfb (lfmb), got round",
 		zap.Int64("round", hmbm.BlockRound),
 		zap.String("block_hash", hmbm.Hash))
 
@@ -317,22 +324,52 @@ func (sc *Chain) loadHighestMagicBlock(ctx context.Context,
 	return // not found
 }
 
-func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
-	r *round.Round) (lfb *block.Block, err error) {
+func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator, r *round.Round) (lfb *block.Block, err error) {
 
+	var rollBackCount int
 	for ; iter.Valid(); iter.Prev() {
+		if rollBackCount >= sc.PruneStateBelowCount() {
+			// could not recovery as the state of round below prune count may have nodes missing, and
+			// we can not sync from remote neither, so just panic.
+			logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
+				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+		}
+
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
 			return nil, common.NewErrorf("load_lfb",
 				"decoding round info: %v", err) // critical
 		}
 
-		Logger.Debug("load_lfb, got round", zap.Int64("round", r.Number),
+		logging.Logger.Debug("load_lfb, got round", zap.Int64("round", r.Number),
 			zap.String("block_hash", r.BlockHash))
 
 		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
 		if err != nil {
-			Logger.Error("load_lfb, could not get block from store", zap.Error(err))
+			logging.Logger.Error("load_lfb, could not get block from store", zap.Error(err))
+			rollBackCount++
 			continue // TODO: can we use os.IsNotExist(err) or should not
+		}
+
+		lfnb, er := func() (*block.Block, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			return sc.GetNotarizedBlockFromSharders(ctx, "", lfb.Round)
+		}()
+
+		if er != nil {
+			logging.Logger.Warn("load_lfb, could not sync LFB from remote",
+				zap.Int64("round", lfb.Round),
+				zap.String("lfb", lfb.Hash))
+			return
+		}
+
+		if lfnb.Hash != lfb.Hash {
+			logging.Logger.Warn("load_lfb, see different lfb, roll back",
+				zap.Int64("round", lfb.Round),
+				zap.String("local lfb", lfb.Hash),
+				zap.String("remote lfb", lfnb.Hash))
+			rollBackCount++
+			continue
 		}
 
 		// check out required corresponding state
@@ -340,13 +377,24 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 		// Don't check the state. It can be missing if the state had synced.
 		// But it works fine anyway.
 
-		// if !sc.HasClientStateStored(lfb.ClientStateHash) {
-		// 	Logger.Warn("load_lfb, missing corresponding state",
-		// 		zap.Int64("round", r.Number),
-		// 		zap.String("block_hash", r.BlockHash))
-		// 	// we can't use this block, because of missing or malformed state
-		// 	continue
-		// }
+		if !sc.HasClientStateStored(lfb.ClientStateHash) {
+			logging.Logger.Warn("load_lfb, missing corresponding state",
+				zap.Int64("round", r.Number),
+				zap.String("block_hash", r.BlockHash))
+			// we can't use this block, because of missing or malformed state
+			rollBackCount++
+			continue
+		}
+
+		// check if lfb has full state
+		if !sc.ValidateState(lfb) {
+			logging.Logger.Warn("load_lfb, lfb state missing nodes",
+				zap.Int64("round", r.Number),
+				zap.String("block_hash", r.BlockHash))
+			rollBackCount++
+
+			continue
+		}
 
 		return // got it
 	}
@@ -384,16 +432,19 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 	}
 
 	if bl.lfb, err = sc.walkDownLookingForLFB(iter, bl.r); err != nil {
-		Logger.Warn("load_lfb, can't load lfb",
+		logging.Logger.Warn("load_lfb, can't load lfb",
 			zap.Int64("round_stopped", bl.r.Number),
 			zap.Error(err))
 		return nil // the nil is 'use genesis'
 	}
 
+	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
+	bl.r.SetRandomSeedForNotarizedBlock(bl.lfb.GetRoundRandomSeed(), magicBlockMiners.Size())
+
 	// and then, check out related LFMB can be missing
 	bl.lfmb, err = sc.loadLatestFinalizedMagicBlockFromStore(ctx, bl.lfb)
 	if err != nil {
-		Logger.Warn("load_lfb, missing corresponding lfmb",
+		logging.Logger.Warn("load_lfb, missing corresponding lfmb",
 			zap.Int64("round", bl.r.Number),
 			zap.String("block_hash", bl.r.BlockHash),
 			zap.String("lfmb_hash", bl.lfb.LatestFinalizedMagicBlockHash))
@@ -409,7 +460,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 	// using another round instance
 	bl.nlfmb, err = sc.loadHighestMagicBlock(ctx, bl.lfb)
 	if err != nil {
-		Logger.Warn("load_lfb, loading highest magic block", zap.Error(err))
+		logging.Logger.Warn("load_lfb, loading highest magic block", zap.Error(err))
 	}
 
 	return bl // got them all (or excluding the nlfmb)
@@ -425,13 +476,13 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		return // use genesis blocks
 	}
 
-	Logger.Debug("load_lfb from store",
+	logging.Logger.Debug("load_lfb from store",
 		zap.Int64("round", bl.lfb.Round),
 		zap.String("hash", bl.lfb.Hash),
 		zap.Int64("lfmb", bl.lfmb.Round))
 
 	if bl.nlfmb != nil && bl.nlfmb.Round != bl.lfmb.Round {
-		Logger.Debug("load_lfb from store (nlfmb)",
+		logging.Logger.Debug("load_lfb from store (nlfmb)",
 			zap.Int64("round", bl.nlfmb.Round))
 	}
 
@@ -444,7 +495,7 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 func (sc *Chain) SaveMagicBlockHandler(ctx context.Context,
 	b *block.Block) (err error) {
 
-	Logger.Info("save received magic block verifying chain",
+	logging.Logger.Info("save received magic block verifying chain",
 		zap.Int64("round", b.Round), zap.String("hash", b.Hash),
 		zap.Int64("starting_round", b.MagicBlock.StartingRound),
 		zap.String("mb_hash", b.MagicBlock.Hash))
@@ -459,4 +510,31 @@ func (sc *Chain) SaveMagicBlockHandler(ctx context.Context,
 // SaveMagicBlock function.
 func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 	return chain.MagicBlockSaveFunc(sc.SaveMagicBlockHandler)
+}
+
+func (sc *Chain) ValidateState(b *block.Block) bool {
+	if err := b.InitStateDB(sc.GetStateDB()); err != nil {
+		logging.Logger.Warn("load_lfb, init block state failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.String("state", util.ToHex(b.ClientStateHash)),
+			zap.Error(err))
+
+		return false
+	}
+
+	missing, err := b.ClientState.HasMissingNodes(context.Background())
+	if err != nil {
+		logging.Logger.Warn("load_lfb, find missing nodes failed",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		return false
+	}
+
+	if missing {
+		logging.Logger.Warn("load_lfb, lfb has missing nodes",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return false
+	}
+
+	return true
 }

@@ -1,5 +1,7 @@
 package dbs
 
+import "github.com/0chain/common/core/currency"
+
 type DbUpdates struct {
 	Id      string                 `json:"id"`
 	Updates map[string]interface{} `json:"updates"`
@@ -19,14 +21,11 @@ type StakePoolId struct {
 
 type StakePoolReward struct {
 	StakePoolId
-	Reward          int64            `json:"reward"`
+	Reward currency.Coin `json:"reward"`
+	// rewards delegate pools
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
-}
-
-type StakePoolUpdate struct {
-	StakePoolId
-	Updates         map[string]interface{} `json:"updates"`
-	DelegateUpdates map[string]map[string]interface{}
+	// penalties delegate pools
+	DelegatePenalties map[string]int64 `json:"delegate_penalties"`
 }
 
 type DelegatePoolId struct {
@@ -58,4 +57,9 @@ type SpReward struct {
 	StakePoolId
 	SpReward       int64            `json:"sp_reward"`
 	DelegateReward map[string]int64 `json:"delegate_reward"`
+}
+
+type ChallengeResult struct {
+	BlobberId string `json:"blobberId"`
+	Passed    bool   `json:"passed"`
 }

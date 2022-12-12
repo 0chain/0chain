@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0chain/common/core/currency"
+
 	"github.com/spf13/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -40,7 +42,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, _ *testing.B) error {
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	return err
 }
@@ -48,8 +50,18 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
+	creationTimeRaw := viper.GetInt64("MptCreationTime")
+	creationTime := common.Now()
+	if creationTimeRaw != 0 {
+		creationTime = common.Timestamp(creationTimeRaw)
+	}
+
 	var vsc = VestingSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
+	}
+	vestingMinLock, err := currency.ParseZCN(viper.GetFloat64(bk.VestingMinLock))
+	if err != nil {
+		panic(err)
 	}
 	vsc.setSC(vsc.SmartContract, &smartcontract.BCContext{})
 	var tests = []BenchTest{
@@ -58,7 +70,7 @@ func BenchmarkTests(
 			endpoint: vsc.trigger,
 			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
-				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&poolRequest{
@@ -72,7 +84,7 @@ func BenchmarkTests(
 			endpoint: vsc.updateConfig,
 			txn: &transaction.Transaction{
 				ClientID:     viper.GetString(bk.VestingPoolOwner),
-				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+				CreationDate: creationTime,
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
@@ -89,7 +101,7 @@ func BenchmarkTests(
 			endpoint: vsc.unlock,
 			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
-				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&poolRequest{
@@ -102,8 +114,9 @@ func BenchmarkTests(
 			name:     "vesting.add",
 			endpoint: vsc.add,
 			txn: &transaction.Transaction{
-				ClientID: data.Clients[0],
-				Value:    int64(viper.GetFloat64(bk.VestingMinLock) * 1e10),
+				ClientID:     data.Clients[0],
+				Value:        vestingMinLock,
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				var dests destinations
@@ -124,7 +137,7 @@ func BenchmarkTests(
 			endpoint: vsc.stop,
 			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
-				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stopRequest{
@@ -139,7 +152,7 @@ func BenchmarkTests(
 			endpoint: vsc.delete,
 			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
-				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&poolRequest{

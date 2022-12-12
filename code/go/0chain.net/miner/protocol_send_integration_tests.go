@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -16,17 +18,21 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
 func getBadVRFS(vrfs *round.VRFShare) (bad *round.VRFShare) {
 	bad = new(round.VRFShare)
 	*bad = *vrfs
-	bad.Share = revertString(bad.Share) // bad share
+	bad.Share = util.RevertString(bad.Share) // bad share
 	return
 }
 
@@ -49,10 +55,10 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	switch {
 	case state.VRFS != nil:
 		badVRFS = getBadVRFS(vrfs)
-		good, bad = crpcutils.Split(state, state.VRFS, mb.Miners.CopyNodes())
+		good, bad = chain.SplitGoodAndBadNodes(state, state.VRFS, mb.Miners.CopyNodes())
 	case state.RoundTimeout != nil:
 		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1) // just increase
-		good, bad = crpcutils.Split(state, state.RoundTimeout,
+		good, bad = chain.SplitGoodAndBadNodes(state, state.RoundTimeout,
 			mb.Miners.CopyNodes())
 
 	default:
@@ -67,6 +73,83 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	if len(bad) > 0 {
 		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(badVRFS), bad)
 	}
+}
+
+var VRFSSpamFlag bool
+var sendSpamMutex sync.RWMutex
+
+var globalVrfsSpamSetup *vrfsspam
+
+type vrfsspam struct {
+	Vrfs      *round.VRFShare
+	Miners    *node.Pool
+	completed bool
+}
+
+func (mc *Chain) SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
+	sendSpamMutex.Lock()
+	defer sendSpamMutex.Unlock()
+
+	if globalVrfsSpamSetup == nil {
+		globalVrfsSpamSetup = &vrfsspam{}
+	}
+
+	setup := globalVrfsSpamSetup
+	mb := mc.GetMagicBlock(vrfs.Round)
+	setup.Miners = mb.Miners
+
+	if setup.Miners == nil {
+		return
+	}
+
+	if vrfs != nil {
+		logging.Logger.Info("sendVRFSSpam() invoked by actual SendVRFShare()")
+		if setup.Vrfs != nil {
+			logging.Logger.Info("sendVRFSSpam() nothing to do")
+			return
+		}
+
+		setup.Vrfs = vrfs
+		logging.Logger.Info("sendVRFSSpam() first send ", zap.Int64("Round", setup.Vrfs.Round))
+		setup.Miners.SendAll(ctx, RoundVRFSender(setup.Vrfs))
+	}
+
+	// spam with next round VRF only once
+	if setup.completed {
+		return
+	}
+
+	var (
+		v   = &round.VRFShare{}
+		err error
+	)
+	currentRoundId := mc.GetCurrentRound()
+	currentRound := mc.GetMinerRound(currentRoundId)
+
+	r := mc.StartNextRound(ctx, currentRound)
+	v.RoundTimeoutCount = r.GetTimeoutCount()
+	v.Round = r.GetRoundNumber()
+	v.Share, err = mc.GetBlsShare(ctx, r.Round)
+
+	if err := configureRoundHasFinalizedTest(int(currentRoundId)); err != nil {
+		log.Fatalf("Conductor: RoundHasFinalized: error while configuring test case: %v", err)
+		return
+	}
+
+	if err != nil {
+		return
+	}
+
+	v.SetParty(node.Self.Underlying())
+	setup.Vrfs = v
+
+	logging.Logger.Info("sendVRFSSpam() subsequent send ", zap.Int64("Round", setup.Vrfs.Round))
+	setup.Miners.SendAll(ctx, RoundVRFSender(setup.Vrfs))
+	setup.completed = true
+}
+
+func configureRoundHasFinalizedTest(roundID int) error {
+	return crpc.Client().ConfigureTestCase([]byte(strconv.Itoa(roundID)))
 }
 
 func sendBadTimeoutVRFSIfNeeded(vrfs *round.VRFShare, mb *block.MagicBlock) {
@@ -116,7 +199,7 @@ func getBadBVTHash(ctx context.Context, b *block.Block) (
 		err  error
 	)
 	bad.VerifierID = self.Underlying().GetKey()
-	bad.Signature, err = self.Sign(revertString(b.Hash)) // wrong hash
+	bad.Signature, err = self.Sign(util.RevertString(b.Hash)) // wrong hash
 	if err != nil {
 		panic(err)
 	}
@@ -141,6 +224,11 @@ func getBadBVTKey(ctx context.Context, b *block.Block) (
 	return
 }
 
+var (
+	sendVerificationTicketC       chan bool = make(chan bool)
+	sendVerificationTicketCounter int32
+)
+
 // SendVerificationTicket - send the block verification ticket
 func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
 	if isShuttingDown(b.Round) {
@@ -160,6 +248,25 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt
 
 		good, bad []*node.Node
 	)
+
+	if state.LockNotarizationAndSendNextRoundVRF != nil && state.LockNotarizationAndSendNextRoundVRF.Round == int(b.Round) {
+		logging.Logger.Debug("Lock notarization by holding the sending of verification tickets", zap.Int("Round", int(b.Round)))
+
+		if selfNodeKey == state.LockNotarizationAndSendNextRoundVRF.Adversarial {
+			logging.Logger.Debug("Sending next round VRF", zap.Int("Round", int(b.Round+1)))
+			currentRound := mc.GetMinerRound(b.Round)
+
+			nr := mc.StartNextRound(ctx, currentRound)
+			mc.addMyVRFShare(ctx, currentRound, nr)
+		}
+
+		atomic.AddInt32(&sendVerificationTicketCounter, 1)
+		<-sendVerificationTicketC
+
+		mc.sendVerificationTicket(ctx, b, bvt)
+
+		return
+	}
 
 	if mc.VerificationTicketsTo() == chain.Generator && b.MinerID != selfNodeKey {
 		switch {
@@ -192,12 +299,12 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt
 	case state.WrongVerificationTicketHash != nil:
 		// (wrong hash)
 		badvt = getBadBVTHash(ctx, b)
-		good, bad = crpcutils.Split(state, state.WrongVerificationTicketHash,
+		good, bad = chain.SplitGoodAndBadNodes(state, state.WrongVerificationTicketHash,
 			mb.Miners.CopyNodes())
 	case state.WrongVerificationTicketKey != nil:
 		// (wrong secret key)
 		badvt = getBadBVTKey(ctx, b)
-		good, bad = crpcutils.Split(state, state.WrongVerificationTicketKey,
+		good, bad = chain.SplitGoodAndBadNodes(state, state.WrongVerificationTicketKey,
 			mb.Miners.CopyNodes())
 	default:
 	}
@@ -265,7 +372,7 @@ func isSendingDifferentBlocksFromFirstGenerator(r int64) bool {
 	isGenerator0 := currRound.GetMinerRank(node.Self.Node) == 0
 	testCfg := crpc.Client().State().SendDifferentBlocksFromFirstGenerator
 	// we need to send different blocks on configured round with 0 timeout count from the Generator0
-	return testCfg != nil && testCfg.OnRound == r && isGenerator0 && currRound.GetTimeoutCount() == 0
+	return testCfg != nil && int64(testCfg.Round) == r && isGenerator0 && currRound.GetTimeoutCount() == 0
 }
 
 func isSendingDifferentBlocksFromAllGenerators(r int64) bool {
@@ -275,7 +382,7 @@ func isSendingDifferentBlocksFromAllGenerators(r int64) bool {
 	isGenerator := mc.IsRoundGenerator(mc.GetRound(r), node.Self.Node)
 	testCfg := crpc.Client().State().SendDifferentBlocksFromAllGenerators
 	// we need to send different blocks on configured round with 0 timeout count from all generators
-	return testCfg != nil && testCfg.OnRound == r && isGenerator && currRound.GetTimeoutCount() == 0
+	return testCfg != nil && int64(testCfg.Round) == r && isGenerator && currRound.GetTimeoutCount() == 0
 }
 
 func sendDifferentBlocks(ctx context.Context, b *block.Block) {
@@ -292,6 +399,9 @@ func sendDifferentBlocks(ctx context.Context, b *block.Block) {
 		}
 
 		b := blocks[ind]
+		if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
+			log.Panicf("Conductor: error while configuring test case: %v", err)
+		}
 		handler := VerifyBlockSender(b)
 		ok := handler(ctx, n)
 		if !ok {

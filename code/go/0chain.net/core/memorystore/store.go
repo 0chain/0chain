@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -87,8 +87,8 @@ func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) erro
 		return nil
 	}
 	if ce.GetCollectionScore() == 0 {
-		if entity.GetScore() != 0 {
-			ce.SetCollectionScore(entity.GetScore())
+		if score, err := entity.GetScore(); score != 0 && err == nil {
+			ce.SetCollectionScore(score)
 		} else {
 			ce.InitCollectionScore()
 		}
@@ -302,10 +302,10 @@ func (ms *Store) multiAddToCollectionAux(ctx context.Context, entityMetadata dat
 		ind := offset + 2*idx
 		score := ce.GetCollectionScore()
 		if score == 0 {
-			if entity.GetScore() == 0 {
+			if score, err := entity.GetScore(); score == 0 || err != nil {
 				ce.InitCollectionScore()
 			} else {
-				ce.SetCollectionScore(entity.GetScore())
+				ce.SetCollectionScore(score)
 			}
 		}
 		svpair[ind] = ce.GetCollectionScore()

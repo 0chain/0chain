@@ -1,4 +1,4 @@
-# TestNet Setup with Docker Containers
+            # TestNet Setup with Docker Containers
 
 [![Build](https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml/badge.svg)](https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml)
 [![Test](https://github.com/0chain/0chain/actions/workflows/unit-test.yml/badge.svg)](https://github.com/0chain/0chain/actions/workflows/unit-test.yml)
@@ -25,8 +25,10 @@
   - [Cleanup](#cleanup)
   - [Minio Setup](#minio)
 - [Integration tests](#integration-tests)
+- [Benchmarks](#benchmarks)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
 - [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
+- [Swagger documentation](#swagger-documentation)
 
 ## Changelog
 [CHANGELOG.md](CHANGELOG.md)
@@ -54,12 +56,12 @@ In the git/0chain run the following command
 
 ### Setup Network
 
-Setup a network called testnet0 for each of these node containers to talk to each other.
+Set up a network called testnet0 for each of these node containers to talk to each other.
 
 **_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
 
 ```
-./docker.local/bin/setup_network.sh
+./docker.local/bin/setup.network.sh
 ```
 
 ## Building the Nodes
@@ -67,8 +69,6 @@ Setup a network called testnet0 for each of these node containers to talk to eac
 1. Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
 
 1.1) First build the base containers, zchain_build_base and zchain_run_base
-
-Use **-m1** flag to build for Apple m1 chip
 
 ```
 ./docker.local/bin/build.base.sh
@@ -98,7 +98,7 @@ for building the 1 sharder.
 
 ## Configuring the nodes
 
-1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are setup for running the blockchain fast in development.
+1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
 
 1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
 
@@ -207,7 +207,7 @@ However, you can use the <a href='https://github.com/0chain/block-explorer'>bloc
 docker ps
 ```
 
-This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
+This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner, and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
 
 2. Confirming the servers are up and running. From a browser, visit
 
@@ -265,6 +265,8 @@ When we need to add a new data struct to MPT, for example:
 
 ```go
 //go:generate msgp -io=false -tests=false -v
+package main
+
 type Foo struct {
 	Name string
 }
@@ -318,9 +320,9 @@ three machines to for a working 0chain.
 
 ### Log files
 
-The logs of the nodes are stored in log directory (/0chain/log on the container and docker.local/miner|sharder[n]/log in the host). The 0chain.log contains all the logs related to the protocol and the n2n.log contains all the node to node communication logs. The typical issues that need to be debugged is errors in the log, why certain things have not happeend which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
+The logs of the nodes are stored in log directory (/0chain/log on the container and docker.local/miner|sharder[n]/log in the host). The 0chain.log contains all the logs related to the protocol and the n2n.log contains all the node to node communication logs. The typical issues that need to be debugged is errors in the log, why certain things have not happened which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
 
-Find arrors in all the miner nodes (from git/0chain)
+Find errors in all the miner nodes (from git/0chain)
 
 ```
 grep ERROR docker.local/miner*/log/0chain.log
@@ -424,7 +426,7 @@ The RUN command is an image build step which allows installing of application an
 
 #### Step 6: RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd@v1.5. &&     chmod -R +w . &&  make clean libzstd.a
 
-This step runs the gozstd package and provides write permissions to the directory. gozstd which is a go wrapper for zstd (library) provides Go bindings for the libzstd C library. The `make clean` is ran in the last to clean up the code and remove all the compiled object files from the source code
+This step runs the gozstd package and provides write permissions to the directory. gozstd which is a go wrapper for zstd (library) provides Go bindings for the libzstd C library. The `make clean` is run in the last to clean up the code and remove all the compiled object files from the source code
 
 #### Step 7: WORKDIR $SRC_DIR/go
 
@@ -435,69 +437,6 @@ ok      0chain.net/chaincore/block      0.128s  coverage: 98.9% of statements
 ```
 
 The above output shows 98.9% of code statements was covered with tests.
-
-Here is a sample output for all the unit test cases:
-
-```
-?       0chain.net/chaincore    [no test files]
-ok      0chain.net/chaincore/block      0.128s  coverage: 98.9% of statements
-?       0chain.net/chaincore/block/magicBlock   [no test files]
-ok      0chain.net/chaincore/chain      0.254s  coverage: 6.0% of statements
-?       0chain.net/chaincore/chain/state        [no test files]
-ok      0chain.net/chaincore/client     0.328s  coverage: 30.8% of statements
-?       0chain.net/chaincore/config     [no test files]
-?       0chain.net/chaincore/diagnostics        [no test files]
-ok      0chain.net/chaincore/httpclientutil     2.048s  coverage: 91.7% of statements
-ok      0chain.net/chaincore/node       0.011s  coverage: 8.9% of statements
-ok      0chain.net/chaincore/round      0.048s  coverage: 97.1% of statements
-ok      0chain.net/chaincore/smartcontract      0.032s  coverage: 9.1% of statements
-ok      0chain.net/chaincore/smartcontractinterface     0.032s  coverage: 97.3%
-?       0chain.net/chaincore/state      [no test files]
-ok      0chain.net/chaincore/threshold/bls      9.912s  coverage: 1.1% of statem
-ok      0chain.net/chaincore/tokenpool  10.034s coverage: 100.0% of statements
-ok      0chain.net/chaincore/transaction        0.029s  coverage: 0.4% of statements [no tests to run]
-ok      0chain.net/chaincore/wallet     6.600s  coverage: 40.0% of statements
-?       0chain.net/conductor    [no test files]
-?       0chain.net/conductor/conductor  [no test files]
-?       0chain.net/conductor/conductrpc [no test files]
-?       0chain.net/conductor/config     [no test files]
-?       0chain.net/conductor/sdkproxy   [no test files]
-?       0chain.net/conductor/utils      [no test files]
-?       0chain.net/core [no test files]
-?       0chain.net/core/build   [no test files]
-ok      0chain.net/core/cache   0.004s  coverage: 100.0% of statements
-ok      0chain.net/core/common  0.238s  coverage: 87.4% of statements
-ok      0chain.net/core/datastore       0.033s  coverage: 92.0% of statements
-ok      0chain.net/core/ememorystore    1.018s  coverage: 91.7% of statements
-ok      0chain.net/core/encryption      1.290s  coverage: 95.3% of statements
-?       0chain.net/core/encryption/keys [no test files]
-ok      0chain.net/core/logging 0.069s  coverage: 96.5% of statements
-ok      0chain.net/core/memorystore     0.281s  coverage: 93.8% of statements
-?       0chain.net/core/metric  [no test files]
-ok      0chain.net/core/persistencestore        0.036s  coverage: 73.5% of statements
-ok      0chain.net/core/util    22.237s coverage: 76.5% of statements
-ok      0chain.net/miner        0.303s  coverage: 8.0% of statements
-?       0chain.net/miner/miner  [no test files]
-?       0chain.net/miner/mocks  [no test files]
-?       0chain.net/mocks        [no test files]
-?       0chain.net/mocks/core/datastore [no test files]
-?       0chain.net/mocks/core/encryption        [no test files]
-ok      0chain.net/sharder      0.168s  coverage: 20.8% of statements
-ok      0chain.net/sharder/blockdb      0.004s  coverage: 79.3% of statements
-ok      0chain.net/sharder/blockstore   0.045s  coverage: 79.7% of statements
-?       0chain.net/sharder/sharder      [no test files]
-?       0chain.net/smartcontract        [no test files]
-?       0chain.net/smartcontract/faucetsc       [no test files]
-ok      0chain.net/smartcontract/interestpoolsc 0.030s  coverage: 45.0% of statements
-ok      0chain.net/smartcontract/minersc        0.104s  coverage: 30.9% of statements
-?       0chain.net/smartcontract/multisigsc     [no test files]
-?       0chain.net/smartcontract/multisigsc/test        [no test files]
-?       0chain.net/smartcontract/setupsc        [no test files]
-ok      0chain.net/smartcontract/storagesc      1.877s  coverage: 58.8% of statements
-ok      0chain.net/smartcontract/vestingsc      0.034s  coverage: 81.8% of statements
-ok      0chain.net/smartcontract/zrc20sc        0.030s  coverage: 23.3% of statements
-
-```
 
 ## Creating The Magic Block
 
@@ -519,11 +458,11 @@ The magic block and the dkg summary json files will appear in the docker.local/c
 
 The magic_block_file setting in the 0chain.yaml file needs to be updated with the new name of the magic block created.
 
-Update the miner config file so it is set to the new dkg summaries. To do this edit the docker.local/build.miner/b0docker-compose.yml file. On line 55 is a flag "--dkg_file" set it to the dkg summary files created with the magic block.
+Update the miner config file, so it is set to the new dkg summaries. To do this edit the docker.local/build.miner/b0docker-compose.yml file. On line 55 is a flag "--dkg_file" set it to the dkg summary files created with the magic block.
 
 ## Initial states
 
-The balance for the various nodes is setup in a `initial_state.yaml` file.
+The balance for the various nodes is set up in a `initial_state.yaml` file.
 This file is a list of node ids and token amounts.
 
 The initial state yaml file is entered as a command line argument when
@@ -531,7 +470,7 @@ running a sharder or miner, falling that the `0chain.yaml`
 `network.inital_states` entry is used to find the initial state file.
 
 An example, that can be used with the preset ids, can be found at
-[0chian/docker.local/config/inital_state.yaml`](https://github.com/0chain/0chain/blob/master/docker.local/config/initial_state.yaml)
+[0chain/docker.local/config/initial_state.yaml`](https://github.com/0chain/0chain/blob/master/docker.local/config/initial_state.yaml)
 
 ## Miscellaneous
 
@@ -557,9 +496,9 @@ docker system prune
 
 ### Minio
 
-- You can use the inbuild minio support to store blocks on cloud
+- You can use the inbuilt minio support to store blocks on cloud
 
-You have to update minio_config file with the cloud creds data, The file can found at `docker.local/config/minio_config.txt`.
+You have to update minio_config file with the cloud creds data, The file can be found at `docker.local/config/minio_config.txt`.
 The following order is used for the content :
 
 ```
@@ -609,9 +548,14 @@ minio:
 
 Integration testing combines individual 0chain modules and test them as a group. Integration testing evaluates the compliance of a system for specific functional requirements and usually occurs after unit testing .
 
-For integration testing, A conductor which is a RPC(Remote Procedure Call) server is implemented to control behaviour of nodes .To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
+For integration testing, A conductor which is RPC(Remote Procedure Call) server is implemented to control behaviour of nodes .To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
 
+## Benchmarks
+Benchmark 0chain smart-contract endpoints.
 
+Runs testing.Benchmark on each 0chain endpoint. The blockchain database used in these tests is constructed from the parameters in the benchmark.yaml. file. Smartcontracts do not (or should not) access tha chain so a populated MPT database is enough to give a realistic benchmark.
+
+More info in [read.me](code/go/0chain.net/smartcontract/benchmark/main/readme.md)
 
 ### Architecture
 A conductor requires the nodes to be built in a certain order to control them during the tests. A config file is defined in [conductor.config.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.config.yaml) which contains important details such as details of all nodes used and custom commands used in integration testing.
@@ -739,107 +683,18 @@ Run sharders test
 (cd 0chain && ./docker.local/bin/start.conductor.sh sharders)
 ```
 
-### Running view-change tests
+### Running complex scenario suites
 
-1. Set `view_change: true` on `0chain/docker.local/config.yaml`
-2. Run view-change tests
-
-```
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-2)
-(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-3)
-```
+1. These 2 scripts should be run with `view_change: false` in `0chain/docker.local/config.yaml`
+  1.1. `(cd 0chain && ./docker.local/bin/start.conductor.sh no-view-change.byzantine)`
+  1.2. `(cd 0chain && ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance)`
+2. Set `view_change: true` in `0chain/docker.local/config.yaml` for the following 2 scripts
+  2.1. `(cd 0chain && ./docker.local/bin/start.conductor.sh view-change.byzantine)`
+  2.2. `(cd 0chain && ./docker.local/bin/start.conductor.sh view-change.fault-tolerance*)`
 
 ### Running blobber tests
 
-Blobber tests require cloning of below services.
-
- [blobber](https://github.com/0chain/blobber)
-
-```
-git clone https://github.com/0chain/blobber.git
-```
-
-Refer to [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
-
-[zboxcli](https://github.com/0chain/zboxcli)
-
-```
-git clone https://github.com/0chain/zboxcli.git
-```
-
- [zwalletcli](https://github.com/0chain/zwalletcli)
-
-```
-git clone https://github.com/0chain/zwalletcli.git
-```
-
- [0dns](https://github.com/0chain/0dns)
-
-```
-git clone https://github.com/0chain/0dns.git
-```
-
-Confirm whether all the cloned directories exists.
-
-```
-0chain/
-blobber/
-zboxcli/
-zwalletcli/
-0dns/
-```
-
-Install zboxcli
-
-```
-(cd zboxcli && make install)
-```
-
-Install zwalletcli
-
-```
-(cd zwalletcli && make install)
-```
-
-Patch 0dns for the latest 0chain network configuration .
-
-```
-(cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch)
-(cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch)
-```
-
-Patch blobbers for the latest blobber tests
-
- ```
-(cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch)
-(cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
-```
-
-Add `~/.zcn/config.yaml` as follows
-
-```
-block_worker: http://127.0.0.1:9091
-signature_scheme: bls0chain
-min_submit: 50
-min_confirmation: 50
-confirmation_chain_length: 3
-max_txn_query: 5
-query_sleep_time: 5
-```
-
-Apply if on Ubuntu 18.04
-
-https://github.com/docker/for-linux/issues/563#issuecomment-547962928
-
-The bug in Ubuntu 18.04 related. It relates to docker-credential-secretservice package required by docker-compose and used by docker. A docker process (a build, for example) can sometimes fail due to the bug. Some tests have internal docker builds and can fail due to this bug.
-
-Run blobber tests
-
-```
-(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2)
-```
+Refer to [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#blobber)
 
 ### Adding new Tests
 
@@ -856,3 +711,12 @@ Check the [supported directives](https://github.com/0chain/0chain/blob/master/co
 
 Check [Custom Commands](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#custom-commands) in the conductor documentation for more information
 
+## Swagger documentation
+
+To generate swagger documentation you need go-swagger installed, visit https://goswagger.io/install.html for details.
+
+You then need to run the makefile
+```bash
+make swagger
+```
+The documentation will be in `docs/swagger.md` and `docs/swagger.yaml`.

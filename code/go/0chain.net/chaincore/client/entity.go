@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"0chain.net/core/cache"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/core/common"
@@ -29,6 +29,11 @@ var cacher cache.Cache
 
 func init() {
 	cacher = cache.NewLFUCache(10 * 1024)
+}
+
+// SetupClientDB sets up client DB
+func SetupClientDB() {
+	memorystore.AddPool("clientdb", memorystore.DefaultPool)
 }
 
 //go:generate msgp -io=false -tests=false -v
@@ -239,6 +244,7 @@ func (c *Client) GetBLSPublicKey() (*bls.PublicKey, error) {
 func SetupEntity(store datastore.Store) {
 	clientEntityMetadata = datastore.MetadataProvider()
 	clientEntityMetadata.Name = "client"
+	clientEntityMetadata.DB = "clientdb"
 	clientEntityMetadata.Provider = Provider
 	clientEntityMetadata.Store = store
 

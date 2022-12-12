@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/stretchr/testify/assert"
@@ -127,16 +128,17 @@ func Test_vestingPool(t *testing.T) {
 	require.NoError(t, vpd.Decode(vp.Encode()))
 	assert.Equal(t, vp, vpd)
 
-	var inf = vpd.info(11)
+	inf, err := vpd.info(11)
+	require.NoError(t, err)
 	assert.Equal(t, vp.Description, inf.Description)
 	assert.Equal(t, vp.StartTime, inf.StartTime)
 	assert.Equal(t, vp.ExpireAt, inf.ExpireAt)
 	assert.EqualValues(t, []*destInfo{
-		&destInfo{ID: "one", Wanted: 10, Earned: 5, Vested: 0, Last: 10},
-		&destInfo{ID: "two", Wanted: 20, Earned: 10, Vested: 0, Last: 10},
+		{ID: "one", Wanted: 10, Earned: 5, Vested: 0, Last: 10},
+		{ID: "two", Wanted: 20, Earned: 10, Vested: 0, Last: 10},
 	}, inf.Destinations) // TODO
-	assert.Equal(t, state.Balance(40), inf.Balance)
-	assert.Equal(t, state.Balance(10), inf.Left)
+	assert.Equal(t, currency.Coin(40), inf.Balance)
+	assert.Equal(t, currency.Coin(10), inf.Left)
 }
 
 func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
@@ -173,8 +175,9 @@ func TestVestingSmartContract_add(t *testing.T) {
 		client   = newClient(0, balances)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		ar       addRequest
-		err      error
+		err      = InitConfig(balances)
 	)
+	require.NoError(t, err)
 
 	balances.txn = tx
 
@@ -228,7 +231,7 @@ func TestVestingSmartContract_add(t *testing.T) {
 	require.NoError(t, deco.Decode([]byte(resp)))
 	assert.NotZero(t, deco.ID)
 	assert.Equal(t, client.id, deco.ClientID)
-	assert.Equal(t, state.Balance(800e10), deco.Balance)
+	assert.Equal(t, currency.Coin(800e10), deco.Balance)
 
 	// 7. client pools
 	var cp *clientPools
@@ -245,8 +248,9 @@ func TestVestingSmartContract_delete(t *testing.T) {
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		dr       poolRequest
-		err      error
+		err      = InitConfig(balances)
 	)
+	require.NoError(t, err)
 
 	balances.txn = tx
 	configureConfig()
@@ -314,8 +318,9 @@ func TestVestingSmartContract_stop(t *testing.T) {
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		sr       stopRequest
-		err      error
+		err      = InitConfig(balances)
 	)
+	require.NoError(t, err)
 
 	balances.txn = tx
 	configureConfig()
@@ -375,7 +380,7 @@ func TestVestingSmartContract_stop(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(8e12), got.Balance)
+	assert.Equal(t, currency.Coin(8e12), got.Balance)
 
 }
 
@@ -387,8 +392,9 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		lr       poolRequest
-		err      error
+		err      = InitConfig(balances)
 	)
+	require.NoError(t, err)
 
 	balances.txn = tx
 	configureConfig()
@@ -440,7 +446,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(30), got.Balance)
+	assert.Equal(t, currency.Coin(30), got.Balance)
 }
 
 func TestVestingSmartContract_trigger(t *testing.T) {
@@ -451,8 +457,9 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		lr       poolRequest
-		err      error
+		err      = InitConfig(balances)
 	)
+	require.NoError(t, err)
 
 	balances.txn = tx
 	configureConfig()
@@ -507,7 +514,7 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(29000), got.Balance)
+	assert.Equal(t, currency.Coin(29000), got.Balance)
 }
 
 func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
@@ -518,8 +525,10 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 		params   = make(url.Values)
 		client   = newClient(0, balances)
 		resp     interface{}
-		err      error
+		err      = InitConfig(balances)
 	)
+	require.NoError(t, err)
+
 	configureConfig()
 	params.Set("pool_id", "pool_unknown")
 

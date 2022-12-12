@@ -301,22 +301,26 @@ func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
 }
 
 func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
-
 	if r.verbose {
-		log.Printf(" [INF] wait add miners: %s, sharders: %s, blobbers: %s",
-			wadd.Miners, wadd.Sharders, wadd.Blobbers)
+		log.Printf(" [INF] wait add miners: %s, sharders: %s, blobbers: %s, authorizers %s",
+			wadd.Miners, wadd.Sharders, wadd.Blobbers, wadd.Authorizers)
 	}
 
 	r.setupTimeout(tm)
 	r.waitAdd = wadd
 	if wadd.Start {
 		// start nodes that haven't been started yet
-		for _, name := range append(wadd.Sharders, append(wadd.Miners, wadd.Blobbers...)...) {
+		allNodes := append(wadd.Sharders, wadd.Miners...)
+		allNodes = append(allNodes, wadd.Blobbers...)
+		allNodes = append(allNodes, wadd.Authorizers...)
+
+		for _, name := range allNodes {
 			if err := r.doStart(name, false, false); err != nil {
 				return err
 			}
 		}
 	}
+
 	return
 }
 
@@ -438,6 +442,30 @@ func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
 	})
 	if err != nil {
 		return fmt.Errorf("setting 'wrong block hash': %v", err)
+	}
+	return
+}
+
+func (r *Runner) WrongBlockRandomSeed(wb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong block random seed", wb)
+
+	err = r.server.UpdateStates(wb.By, func(state *conductrpc.State) {
+		state.WrongBlockRandomSeed = wb
+	})
+	if err != nil {
+		return fmt.Errorf("setting 'wrong block random seed': %v", err)
+	}
+	return
+}
+
+func (r *Runner) WrongBlockDDoS(wb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong block ddos", wb)
+
+	err = r.server.UpdateStates(wb.By, func(state *conductrpc.State) {
+		state.WrongBlockDDoS = wb
+	})
+	if err != nil {
+		return fmt.Errorf("setting 'wrong block ddos': %v", err)
 	}
 	return
 }
@@ -837,6 +865,12 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 		case *cases.MissingLFBTickets:
 			state.MissingLFBTicket = cfg
 
+		case *cases.CheckChallengeIsValid:
+			state.CheckChallengeIsValid = cfg
+
+		case *cases.RoundHasFinalized:
+			state.RoundHasFinalizedConfig = cfg
+
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())
 		}
@@ -870,5 +904,38 @@ func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	if !success {
 		return errors.New("check failed")
 	}
+	return nil
+}
+
+// SetServerState implements config.Executor interface.
+func (r *Runner) SetServerState(update interface{}) error {
+	err := r.server.UpdateAllStates(func(state *conductrpc.State) {
+		switch update := update.(type) {
+		case *config.BlobberList:
+			state.BlobberList = update
+		case *config.BlobberDownload:
+			state.BlobberDownload = update
+		case *config.BlobberUpload:
+			state.BlobberUpload = update
+		case *config.BlobberDelete:
+			state.BlobberDelete = update
+		case *config.AdversarialValidator:
+			state.AdversarialValidator = update
+		case *config.LockNotarizationAndSendNextRoundVRF:
+			state.LockNotarizationAndSendNextRoundVRF = update
+		}
+	})
+
+	return err
+}
+
+// SetMagicBlock implements config.Executor interface.
+func (r *Runner) SetMagicBlock(configFile string) error {
+	if r.verbose {
+		log.Print(" [INF] Setting magic block configuration file ", configFile)
+	}
+
+	r.server.SetMagicBlock(configFile)
+
 	return nil
 }

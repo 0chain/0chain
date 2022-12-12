@@ -1,9 +1,13 @@
 package sharder
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -13,7 +17,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 )
 
 var (
@@ -74,9 +78,54 @@ func x2sRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+type wrappedResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	response   bytes.Buffer
+}
+
+func newWrappedResponseWriter(w http.ResponseWriter) *wrappedResponseWriter {
+	return &wrappedResponseWriter{
+		ResponseWriter: w,
+		statusCode:     http.StatusOK,
+		response:       bytes.Buffer{},
+	}
+}
+
+func (lrw *wrappedResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
+}
+
+func (lrw *wrappedResponseWriter) Write(buff []byte) (int, error) {
+	retVal, err := lrw.ResponseWriter.Write(buff)
+	if lrw.statusCode >= 400 {
+		lrw.response.Write(buff)
+	}
+	return retVal, err
+}
+
+func elapsedHandler(handler func(http.ResponseWriter, *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lrw := newWrappedResponseWriter(w)
+		start := time.Now()
+		handler(lrw, r)
+
+		if lrw.statusCode != http.StatusTooManyRequests {
+			N2n.Debug("API",
+				zap.String("src", r.RemoteAddr),
+				zap.Int("status", lrw.statusCode),
+				zap.String("method", r.Method),
+				zap.String("url", r.URL.Path),
+				zap.Duration("time", time.Since(start)),
+				zap.String("rsp", lrw.response.String()))
+		}
+	}
+}
+
 func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request)) {
 	for pattern, handler := range handlers {
-		http.HandleFunc(pattern, handler)
+		http.HandleFunc(pattern, elapsedHandler(handler))
 	}
 }
 
@@ -220,23 +269,31 @@ func BlockSummaryRequestHandler(ctx context.Context, r *http.Request) (interface
 func roundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	hash := r.FormValue("hash")
-	var b *block.Block
-	var roundNumber int64
-	if hash == "" {
-		return nil, common.InvalidRequest("block hash is required")
-	}
-	b, err := sc.GetBlock(ctx, hash)
-	if err == nil {
-		return b, nil
-	}
-	roundNumber, err = strconv.ParseInt(r.FormValue("round"), 10, 64)
-	if err == nil {
-		b, err = sc.GetBlockFromStore(hash, roundNumber)
+	if hash != "" {
+		b, err := sc.GetBlock(ctx, hash)
 		if err == nil {
 			return b, nil
 		}
 	}
-	return nil, err
+
+	rs := r.FormValue("round")
+	if rs == "" {
+		return nil, errors.New("round number is missing")
+	}
+
+	roundNum, err := strconv.ParseInt(rs, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid round number: %v, err: %v", rs, err)
+	}
+
+	if hash == "" {
+		hash, err = sc.GetBlockHash(ctx, roundNum)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return sc.GetBlockFromStore(hash, roundNum)
 }
 
 func (sc *Chain) getRoundSummaries(ctx context.Context, bounds RangeBounds) []*round.Round {

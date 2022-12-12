@@ -9,14 +9,13 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
 
 	"go.uber.org/zap"
 )
@@ -24,7 +23,7 @@ import (
 // The sendDKGShare sends the generated secShare to the given node.
 func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 
-	if !config.DevConfiguration.IsDkgEnabled {
+	if !mc.ChainConfig.IsDkgEnabled() {
 		return common.NewError("send_dkg_share", "dkg is not enabled")
 	}
 
@@ -175,7 +174,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		minerUrls)
+		minerUrls, mb.Sharders.N2NURLs())
 	return
 }
 
@@ -233,7 +232,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	tx.ToClientID = minersc.ADDRESS
 
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		mb.Miners.N2NURLs())
+		mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	return
 }
 

@@ -3,15 +3,16 @@ package faucetsc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/benchmark"
+	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 	"github.com/spf13/viper"
 )
 
 func FundMockFaucetSmartContract(pMpt *util.MerklePatriciaTrie) {
 	is := &state.State{}
 	_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
+	is.Balance = currency.Coin(viper.GetInt64(benchmark.StartTokens))
 	_, _ = pMpt.Insert(util.Path(ADDRESS), is)
 }
 

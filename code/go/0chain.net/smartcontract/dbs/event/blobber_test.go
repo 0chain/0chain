@@ -7,13 +7,16 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
+	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/common/core/currency"
+
 	"golang.org/x/net/context"
 
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 
 	"github.com/stretchr/testify/require"
@@ -33,16 +36,15 @@ func TestBlobbers(t *testing.T) {
 		Longitude float64 `json:"longitude"`
 	}
 	type Terms struct {
-		ReadPrice               state.Balance `json:"read_price"`
-		WritePrice              state.Balance `json:"write_price"`
-		MinLockDemand           float64       `json:"min_lock_demand"`
-		MaxOfferDuration        time.Duration `json:"max_offer_duration"`
-		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+		ReadPrice        currency.Coin `json:"read_price"`
+		WritePrice       currency.Coin `json:"write_price"`
+		MinLockDemand    float64       `json:"min_lock_demand"`
+		MaxOfferDuration time.Duration `json:"max_offer_duration"`
 	}
 	type stakePoolSettings struct {
 		DelegateWallet string        `json:"delegate_wallet"`
-		MinStake       state.Balance `json:"min_stake"`
-		MaxStake       state.Balance `json:"max_stake"`
+		MinStake       currency.Coin `json:"min_stake"`
+		MaxStake       currency.Coin `json:"max_stake"`
 		NumDelegates   int           `json:"num_delegates"`
 		ServiceCharge  float64       `json:"service_charge"`
 	}
@@ -50,9 +52,9 @@ func TestBlobbers(t *testing.T) {
 		ID              string                 `json:"id"`
 		BaseURL         string                 `json:"url"`
 		Geolocation     StorageNodeGeolocation `json:"geolocation"`
-		Terms           Terms                  `json:"terms"`    // terms
-		Capacity        int64                  `json:"capacity"` // total blobber capacity
-		Used            int64                  `json:"used"`     // allocated capacity
+		Terms           Terms                  `json:"terms"`     // terms
+		Capacity        int64                  `json:"capacity"`  // total blobber capacity
+		Allocated       int64                  `json:"allocated"` // allocated capacity
 		LastHealthCheck common.Timestamp       `json:"last_health_check"`
 		PublicKey       string                 `json:"-"`
 		SavedData       int64                  `json:"saved_data"`
@@ -61,29 +63,30 @@ func TestBlobbers(t *testing.T) {
 	}
 	convertSn := func(sn StorageNode) Blobber {
 		return Blobber{
-			BlobberID:               sn.ID,
-			BaseURL:                 sn.BaseURL,
-			Latitude:                sn.Geolocation.Latitude,
-			Longitude:               sn.Geolocation.Longitude,
-			ReadPrice:               int64(sn.Terms.ReadPrice),
-			WritePrice:              int64(sn.Terms.WritePrice),
-			MinLockDemand:           sn.Terms.MinLockDemand,
-			MaxOfferDuration:        sn.Terms.MaxOfferDuration.String(),
-			ChallengeCompletionTime: sn.Terms.ChallengeCompletionTime.String(),
-			Capacity:                sn.Capacity,
-			Used:                    sn.Used,
-			LastHealthCheck:         int64(sn.LastHealthCheck),
-			DelegateWallet:          sn.StakePoolSettings.DelegateWallet,
-			MinStake:                int64(sn.StakePoolSettings.MaxStake),
-			MaxStake:                int64(sn.StakePoolSettings.MaxStake),
-			NumDelegates:            sn.StakePoolSettings.NumDelegates,
-			ServiceCharge:           sn.StakePoolSettings.ServiceCharge,
-			SavedData:               sn.SavedData,
+			BaseURL:          sn.BaseURL,
+			Latitude:         sn.Geolocation.Latitude,
+			Longitude:        sn.Geolocation.Longitude,
+			ReadPrice:        sn.Terms.ReadPrice,
+			WritePrice:       sn.Terms.WritePrice,
+			MinLockDemand:    sn.Terms.MinLockDemand,
+			MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
+			Capacity:         sn.Capacity,
+			Allocated:        sn.Allocated,
+			LastHealthCheck:  int64(sn.LastHealthCheck),
+			Provider: Provider{
+				ID:             sn.ID,
+				DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+				MinStake:       sn.StakePoolSettings.MaxStake,
+				MaxStake:       sn.StakePoolSettings.MaxStake,
+				NumDelegates:   sn.StakePoolSettings.NumDelegates,
+				ServiceCharge:  sn.StakePoolSettings.ServiceCharge,
+			},
+			SavedData: sn.SavedData,
 		}
 
 	}
 
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -94,7 +97,7 @@ func TestBlobbers(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -110,20 +113,19 @@ func TestBlobbers(t *testing.T) {
 			Latitude:  23,
 		},
 		Terms: Terms{
-			ReadPrice:               state.Balance(29),
-			WritePrice:              state.Balance(31),
-			MinLockDemand:           37.0,
-			MaxOfferDuration:        39 * time.Minute,
-			ChallengeCompletionTime: 41 * time.Minute,
+			ReadPrice:        currency.Coin(29),
+			WritePrice:       currency.Coin(31),
+			MinLockDemand:    37.0,
+			MaxOfferDuration: 39 * time.Minute,
 		},
 		Capacity:        43,
-		Used:            47,
+		Allocated:       47,
 		LastHealthCheck: common.Timestamp(51),
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
 			DelegateWallet: "delegate wallet",
-			MinStake:       state.Balance(53),
-			MaxStake:       state.Balance(57),
+			MinStake:       currency.Coin(53),
+			MaxStake:       currency.Coin(57),
 			NumDelegates:   59,
 			ServiceCharge:  61.0,
 		},
@@ -136,12 +138,12 @@ func TestBlobbers(t *testing.T) {
 	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Type:        TypeStats,
+		Tag:         TagAddBlobber,
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.AddEvents(context.TODO(), events)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 
 	blobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
@@ -163,11 +165,11 @@ func TestBlobbers(t *testing.T) {
 	eventUpdateSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        int(TypeStats),
-		Tag:         int(TagUpdateBlobber),
+		Type:        TypeStats,
+		Tag:         TagUpdateBlobber,
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventUpdateSn})
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
@@ -181,20 +183,19 @@ func TestBlobbers(t *testing.T) {
 			Latitude:  93,
 		},
 		Terms: Terms{
-			ReadPrice:               state.Balance(97),
-			WritePrice:              state.Balance(101),
-			MinLockDemand:           103.0,
-			MaxOfferDuration:        107 * time.Minute,
-			ChallengeCompletionTime: 113 * time.Minute,
+			ReadPrice:        currency.Coin(97),
+			WritePrice:       currency.Coin(101),
+			MinLockDemand:    103.0,
+			MaxOfferDuration: 107 * time.Minute,
 		},
 		Capacity:        119,
-		Used:            127,
+		Allocated:       127,
 		LastHealthCheck: common.Timestamp(131),
 		PublicKey:       "public key",
 		StakePoolSettings: stakePoolSettings{
 			DelegateWallet: "delegate wallet",
-			MinStake:       state.Balance(137),
-			MaxStake:       state.Balance(139),
+			MinStake:       currency.Coin(137),
+			MaxStake:       currency.Coin(139),
 			NumDelegates:   143,
 			ServiceCharge:  149.0,
 		},
@@ -206,11 +207,11 @@ func TestBlobbers(t *testing.T) {
 	eventOverwrite := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
-		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Type:        TypeStats,
+		Tag:         TagUpdateBlobber,
 		Data:        string(data),
 	}
-	eventDb.AddEvents(context.TODO(), []Event{eventOverwrite})
+	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwrite}, 100, "hash", 10)
 	overWrittenBlobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, sn2.BaseURL, overWrittenBlobber.BaseURL)
@@ -218,63 +219,18 @@ func TestBlobbers(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
-		Type:        int(TypeStats),
-		Tag:         int(TagDeleteBlobber),
-		Data:        blobber.BlobberID,
+		Type:        TypeStats,
+		Tag:         TagDeleteBlobber,
+		Data:        blobber.ID,
 	}
-	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
+	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.Error(t, err)
 }
 
-func TestBlobberExists(t *testing.T) {
-	access := dbs.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	eventDb, err := NewEventDb(access)
-	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
-		return
-	}
-	defer eventDb.Close()
-
-	err = eventDb.AutoMigrate()
-	require.NoError(t, err)
-	bl := Blobber{
-		BlobberID: "something",
-	}
-	res := eventDb.Store.Get().Create(&bl)
-	if res.Error != nil {
-		t.Errorf("Error while inserting blobber %v", bl)
-		return
-	}
-	gotExists, err := bl.exists(eventDb)
-
-	if !gotExists || err != nil {
-		t.Errorf("Exists function did not work want true got %v and err was %v", gotExists, err)
-	}
-	b2 := Blobber{
-		BlobberID: "somethingNew",
-	}
-	gotExists, err = b2.exists(eventDb)
-	if gotExists || err != nil {
-		t.Errorf("Exists function did not work want false got %v and err was %v", gotExists, err)
-	}
-	err = eventDb.Drop()
-	require.NoError(t, err)
-}
-
 func TestBlobberIds(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -285,9 +241,9 @@ func TestBlobberIds(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
 		return
 	}
 	defer eventDb.Close()
@@ -305,7 +261,8 @@ func TestBlobberIds(t *testing.T) {
 }
 
 func TestBlobberLatLong(t *testing.T) {
-	access := dbs.DbAccess{
+	t.Skip("only for local debugging, requires local postgresql")
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -316,7 +273,7 @@ func TestBlobberLatLong(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		t.Skip("only for local debugging, requires local postgresql")
 		return
@@ -328,14 +285,10 @@ func TestBlobberLatLong(t *testing.T) {
 	defer eventDb.Drop()
 
 	setUpBlobbers(t, eventDb)
-
-	blobbers, err := eventDb.GetAllBlobberLatLong()
-	require.NoError(t, err, "There should be no error")
-	require.Equal(t, 10, len(blobbers), "Not all lat long were returned")
 }
 
 func TestBlobberGetCount(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -346,24 +299,35 @@ func TestBlobberGetCount(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
 		return
 	}
 	defer eventDb.Close()
+	eventDb.Drop()
 
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
-	defer eventDb.Drop()
+	//defer eventDb.Drop()
 
-	gotCount, err := eventDb.GetBlobberCount()
+	eventDb.addBlobbers([]Blobber{
+		{
+			Provider: Provider{ID: "one"},
+			BaseURL:  "one.com",
+		}, {
+			Provider: Provider{ID: "two"},
+			BaseURL:  "two.com",
+		},
+	})
+	gotCount, err := eventDb.GetBlobbers(common2.Pagination{Limit: 10})
 	require.NoError(t, err, "Error should not be present")
 	require.Equal(t, int64(0), gotCount, "Blobber count not working")
 
 	setUpBlobbers(t, eventDb)
 
-	gotCount, err = eventDb.GetBlobberCount()
+	//gotCount, err = eventDb.GetBlobberCount()
 	require.NoError(t, err, "Error should not be present")
 	require.Equal(t, int64(10), gotCount, "Blobber Count should be 10")
 }
@@ -371,7 +335,7 @@ func TestBlobberGetCount(t *testing.T) {
 func setUpBlobbers(t *testing.T, eventDb *EventDb) {
 	for i := 0; i < 10; i++ {
 		res := eventDb.Store.Get().Create(&Blobber{
-			BlobberID: fmt.Sprintf("somethingNew_%v", i),
+			Provider: Provider{ID: fmt.Sprintf("somethingNew_%v", i)},
 		})
 		if res.Error != nil {
 			t.Errorf("Error while inserting blobber %v", i)

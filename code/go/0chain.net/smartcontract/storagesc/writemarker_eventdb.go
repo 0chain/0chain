@@ -1,16 +1,14 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/currency"
 )
 
 // TransactionID and BlockNumber is added at the time of emitting event
-func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
+func writeMarkerToWriteMarkerTable(wm *WriteMarker, movedTokens currency.Coin, txnHash string) *event.WriteMarker {
 	return &event.WriteMarker{
 		ClientID:               wm.ClientID,
 		BlobberID:              wm.BlobberID,
@@ -23,17 +21,17 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker) *event.WriteMarker {
 		LookupHash:             wm.LookupHash,
 		Name:                   wm.Name,
 		ContentHash:            wm.ContentHash,
+		Operation:              wm.Operation,
+		MovedTokens:            movedTokens,
+		TransactionID:          txnHash,
 	}
 }
 
-func emitAddOrOverwriteWriteMarker(wm *WriteMarker, balances cstate.StateContextI, t *transaction.Transaction) error {
+func emitAddWriteMarker(t *transaction.Transaction, wm *WriteMarker, movedTokens currency.Coin,
+	balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker,
+		t.Hash, writeMarkerToWriteMarkerTable(wm, movedTokens, t.Hash))
 
-	data, err := json.Marshal(writeMarkerToWriteMarkerTable(wm))
-	if err != nil {
-		return fmt.Errorf("failed to marshal writemarker: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteWriteMarker, t.Hash, string(data))
-
-	return nil
+	emitUpdateAllocationStatEvent(wm, movedTokens, balances)
+	emitUpdateBlobberWriteStatEvent(wm, movedTokens, balances)
 }

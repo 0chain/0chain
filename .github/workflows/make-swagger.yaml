@@ -1,0 +1,54 @@
+name: "MAKE-SWAGGER-FILE"
+
+on: [workflow_dispatch]
+
+jobs:
+  swagger_file:
+    runs-on: make-swagger
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: "Desrired branch"
+        run: |
+          echo "Branch name is ${{ steps.extract_branch.outputs.branch }}"
+
+      - name: build zchain_build_base image
+        run: docker build -f docker.local/build.base/Dockerfile.build_base . -t zchain_build_base
+
+      - name: build swagger image
+        run: docker build -f docker.local/build.swagger/Dockerfile . -t make_swagger
+
+      - name: build swagger docs
+        run: |
+          docker run -v $(pwd):/codecov make_swagger bash -c "\
+            cd /codecov/code/go/0chain.net/sharder/sharder; \
+            swagger generate spec -w . -m -o swagger.yaml; \
+            swagger generate markdown -f swagger.yaml --output=swagger.md"
+
+          mkdir swaggerfiles
+          cp code/go/0chain.net/sharder/sharder/swagger.yaml ./swaggerfiles/
+          cp code/go/0chain.net/sharder/sharder/swagger.md ./swaggerfiles/
+          ls swaggerfiles/
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.ACCESS_TOKEN }}
+          publish_dir: ./swaggerfiles
+          destination_dir: ./swaggerfiles
+          publish_branch: swagger_report
+          keep_files: true
+          external_repository: "0chain/actions"
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+
+      - name: Links for swagger files
+        run: |
+          echo "https://github.com/0chain/actions/blob/swagger_report/swaggerfiles/swagger.md"
+          echo "https://github.com/0chain/actions/blob/swagger_report/swaggerfiles/swagger.yaml"

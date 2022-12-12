@@ -14,7 +14,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -277,14 +277,14 @@ func validateEntityMetadata(sender *Node, r *http.Request) bool {
 	}
 	entityName := r.Header.Get(HeaderRequestEntityName)
 	if entityName == "" {
-		logging.N2n.Error("message received - entity name blank", zap.Int("from", sender.SetIndex),
-			zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
+		logging.N2n.Error("message received - entity name blank", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI))
 		return false
 	}
 	entityMetadata := datastore.GetEntityMetadata(entityName)
 	if entityMetadata == nil {
-		logging.N2n.Error("message received - unknown entity", zap.Int("from", sender.SetIndex),
-			zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
+		logging.N2n.Error("message received - unknown entity", zap.String("from", sender.GetPseudoName()),
+			zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 		return false
 	}
 	return true

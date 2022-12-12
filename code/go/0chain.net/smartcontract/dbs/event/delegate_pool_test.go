@@ -5,15 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
-
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDelegatePoolsEvent(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -24,7 +24,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
@@ -39,7 +39,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 		Balance: 29,
 	}
 
-	err = eventDb.addOrOverwriteDelegatePool(dp)
+	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
 	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
@@ -52,7 +52,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 
 func TestTagStakePoolReward(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -63,7 +63,7 @@ func TestTagStakePoolReward(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -72,9 +72,12 @@ func TestTagStakePoolReward(t *testing.T) {
 	require.NoError(t, err)
 
 	bl := Blobber{
-		BlobberID:          "provider_id",
-		Reward:             11,
-		TotalServiceCharge: 23,
+		Provider: Provider{ID: "provider_id",
+			Rewards: ProviderRewards{
+				ProviderID:   "provider_id",
+				Rewards:      11,
+				TotalRewards: 23,
+			}},
 	}
 	res := eventDb.Store.Get().Create(&bl)
 	if res.Error != nil {
@@ -100,9 +103,9 @@ func TestTagStakePoolReward(t *testing.T) {
 		Balance: 5,
 	}
 
-	err = eventDb.addOrOverwriteDelegatePool(dp)
+	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
-	err = eventDb.addOrOverwriteDelegatePool(dp2)
+	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp2})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
 	var before int64
@@ -118,8 +121,8 @@ func TestTagStakePoolReward(t *testing.T) {
 	}
 	data, err := json.Marshal(&spr)
 	eventDb.addStat(Event{
-		Type:  int(TypeStats),
-		Tag:   int(TagStakePoolReward),
+		Type:  TypeStats,
+		Tag:   TagStakePoolReward,
 		Index: spr.ProviderId,
 		Data:  string(data),
 	})

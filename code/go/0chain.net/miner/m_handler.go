@@ -13,8 +13,8 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -136,8 +136,8 @@ func SetupM2MRequestors() {
 	DKGShareSender = node.RequestEntityHandler("/v1/_m2m/dkg/share", options, dkgShareEntityMetadata)
 }
 
-// VRFShareHandler - handle the vrf share.
-func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
+// vrfShareHandler - handle the vrf share.
+func vrfShareHandler(ctx context.Context, entity datastore.Entity) (
 	interface{}, error) {
 	vrfs, ok := entity.(*round.VRFShare)
 	if !ok {

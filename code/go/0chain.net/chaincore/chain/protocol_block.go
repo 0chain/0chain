@@ -3,18 +3,19 @@ package chain
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/dbs/event"
-
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
-	"0chain.net/core/encryption"
-
-	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/maths"
+	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -80,8 +81,7 @@ func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) err
 		return err
 	}
 
-	_, _, err := c.createRoundIfNotExist(ctx, b)
-	return err
+	return nil
 }
 
 // VerifyNotarization - verify that the notarization is correct.
@@ -181,6 +181,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		mb        = c.GetMagicBlock(round)
 		num       = mb.Miners.Size()
 		threshold = c.GetNotarizationThresholdCount(num)
+		err       error
 	)
 
 	if c.ThresholdByCount() > 0 {
@@ -197,14 +198,19 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		}
 	}
 	if c.ThresholdByStake() > 0 {
-		verifiersStake := 0
+		verifiersStake := uint64(0)
 		for _, ticket := range bvt {
-			verifiersStake += c.getMiningStake(ticket.VerifierID)
+			verifiersStake, err = maths.SafeAddUInt64(verifiersStake, c.getMiningStake(ticket.VerifierID))
+			if err != nil {
+				logging.Logger.Error("reached_notarization", zap.Error(err))
+				return false
+			}
 		}
-		if verifiersStake < c.ThresholdByStake() {
+
+		if verifiersStake < uint64(c.ThresholdByStake()) {
 			logging.Logger.Info("not reached notarization - stake < threshold stake",
 				zap.Int64("mb_sr", mb.StartingRound),
-				zap.Int("verify stake", verifiersStake),
+				zap.Uint64("verify stake", verifiersStake),
 				zap.Int("threshold", c.ThresholdByStake()),
 				zap.Int("active_miners", num),
 				zap.Int("num_signatures", len(bvt)),
@@ -218,15 +224,18 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 	return true
 }
 
-/*UpdateNodeState - based on the incoming valid blocks, update the nodes that notarized the block to be active
- Useful to increase the speed of node status discovery which increases the reliablity of the network
+/*
+UpdateNodeState - based on the incoming valid blocks, update the nodes that notarized the block to be active
+
+	Useful to increase the speed of node status discovery which increases the reliablity of the network
+
 Simple 3 miner scenario :
 
-1) a discovered b & c.
-2) b discovered a.
-3) b and c are yet to discover each other
-4) a generated a block and sent it to b & c, got it notarized and next round started
-5) c is the generator who generated the block. He will only send it to a as b is not discovered to be active.
+ 1. a discovered b & c.
+ 2. b discovered a.
+ 3. b and c are yet to discover each other
+ 4. a generated a block and sent it to b & c, got it notarized and next round started
+ 5. c is the generator who generated the block. He will only send it to a as b is not discovered to be active.
     But if the prior block has b's signature (may or may not, but if it did), c can discover b is active before generating the block and so will send it to b
 */
 func (c *Chain) UpdateNodeState(b *block.Block) {
@@ -284,6 +293,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	logging.Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
+	ts := time.Now()
 	numGenerators := c.GetGeneratorsNum()
 	if fb.RoundRank >= numGenerators || fb.RoundRank < 0 {
 		logging.Logger.Warn("finalize block - round rank is invalid or greater than num_generators",
@@ -310,7 +320,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 	fr := c.GetRound(fb.Round)
 
-	logging.Logger.Info("finalize block -- round", zap.Any("round", fr))
+	logging.Logger.Info("finalize block -- round", zap.Any("round", fr), zap.String("block", fb.Hash))
 
 	if fr != nil {
 		generators := c.GetGenerators(fr)
@@ -333,24 +343,56 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
+	wg := newWaitGroupSync()
+
+	deletedNode := fb.ClientState.GetDeletes()
+
 	if err := c.SaveChanges(ctx, fb); err != nil {
-		logging.Logger.Error("finalize block save changes failed",
+		logging.Logger.Panic("finalize block save changes failed",
 			zap.Error(err),
 			zap.Int64("round", fb.Round),
 			zap.String("hash", fb.Hash))
 		return
 	}
+
 	c.rebaseState(fb)
-	c.updateFeeStats(fb)
+	wg.Run("finalize block - record dead nodes", fb.Round, func() {
+		err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
+		if err != nil {
+			logging.Logger.Panic("finalize block - record dead nodes failed",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash),
+				zap.Error(err))
+			return
+		}
+	})
+
+	if err := c.updateFeeStats(fb); err != nil {
+		logging.Logger.Error("finalize block - update fee stats failed",
+			zap.Int64("round", fb.Round),
+			zap.Int64("mb_starting_round", fb.StartingRound),
+			zap.Error(err))
+	}
 
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		go func(events []event.Event) {
-			c.GetEventDb().AddEvents(ctx, events)
-		}(fb.Events)
-		fb.Events = nil
+		wg.Run("finalize block - add events", fb.Round, func() {
+			err, ev := block.CreateFinalizeBlockEvent(fb)
+			if err != nil {
+				logging.Logger.Error("emit update block event error", zap.Error(err))
+			}
+			fb.Events = append(fb.Events, ev)
+
+			if err := c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns)); err != nil {
+				logging.Logger.Error("finalize block - add events failed",
+					zap.Error(err),
+					zap.Int64("round", fb.Round),
+					zap.String("hash", fb.Hash))
+			}
+			fb.Events = nil
+		})
 	}
 
 	if fb.MagicBlock != nil {
@@ -370,7 +412,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
 	}
-	go bsh.UpdateFinalizedBlock(ctx, fb)
+
+	wg.Run("finalize block - update finalized block", fb.Round, func() {
+		bsh.UpdateFinalizedBlock(ctx, fb)
+	})
+
+	fr.Finalize(fb)
+
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
 
@@ -381,26 +429,62 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
-	// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
-	pfb := fb
-	for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
+	wg.Run("finalize block - delete dead blocks", fb.Round, func() {
+		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
+		pfb := fb
+		for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
 
-	}
-	if pfb == nil {
-		return
-	}
-	frb := c.GetRoundBlocks(pfb.Round)
-	var deadBlocks []*block.Block
-	for _, b := range frb {
-		if b.Hash != pfb.Hash {
-			deadBlocks = append(deadBlocks, b)
 		}
-	}
-	// Prune all the dead blocks
-	c.DeleteBlocks(deadBlocks)
+		if pfb == nil {
+			return
+		}
+		frb := c.GetRoundBlocks(pfb.Round)
+		var deadBlocks []*block.Block
+		for _, b := range frb {
+			if b.Hash != pfb.Hash {
+				deadBlocks = append(deadBlocks, b)
+			}
+		}
+		// Prune all the dead blocks
+		c.DeleteBlocks(deadBlocks)
+	})
+
+	wg.Wait()
+	logging.Logger.Debug("finalized block - done",
+		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+		zap.Any("duration", time.Since(ts)))
 }
 
-//IsFinalizedDeterministically - checks if a block is finalized deterministically
+type waitGroupSync struct {
+	wg *sync.WaitGroup
+}
+
+func newWaitGroupSync() *waitGroupSync {
+	return &waitGroupSync{
+		wg: &sync.WaitGroup{},
+	}
+}
+
+func (wgs *waitGroupSync) Run(name string, round int64, f func()) {
+	wgs.wg.Add(1)
+	ts := time.Now()
+	go func() {
+		defer wgs.wg.Done()
+		f()
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Debug("Run slow on", zap.String("name", name),
+				zap.Int64("round", round),
+				zap.Any("duration", du))
+		}
+	}()
+}
+
+func (wgs *waitGroupSync) Wait() {
+	wgs.wg.Wait()
+}
+
+// IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	//TODO: The threshold count should happen w.r.t the view of the block
 	mb := c.GetMagicBlock(b.Round)
@@ -699,26 +783,7 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 	return pb
 }
 
-// SyncStateOrComputeLocal syncs state changes from remote first, if failed, then
-// try to execute the blocks locally without fetching from remote.
-func (c *Chain) SyncStateOrComputeLocal(ctx context.Context, b *block.Block) error {
-	if err := c.GetBlockStateChange(b); err != nil {
-		logging.Logger.Error("sync_blocks - sync state change failed",
-			zap.Error(err), zap.Int64("round", b.Round))
-
-		if err := b.ComputeStateLocal(ctx, c); err != nil {
-			logging.Logger.Error("sync_blocks - compute state local failed",
-				zap.Error(err), zap.Int64("round", b.Round))
-			// continue as later blocks may be able to get state changes from remote or compute state successfully
-			return common.NewErrorf("sync_blocks", "sync or compute state failed, round: %v, block: %v",
-				b.Round, b.Hash)
-		}
-	}
-
-	return nil
-}
-
-//Note: this is expected to work only for small forks
+// Note: this is expected to work only for small forks
 func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.Block) *block.Block {
 	if b1 == nil || b2 == nil {
 		return nil
@@ -748,16 +813,25 @@ func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.B
 	return b1
 }
 
-func (c *Chain) updateFeeStats(fb *block.Block) {
-	var totalFees int64
+func (c *Chain) updateFeeStats(fb *block.Block) error {
+	var (
+		totalFees currency.Coin
+		err       error
+	)
 	if len(fb.Txns) == 0 {
-		return
+		return nil
 	}
 
 	for _, txn := range fb.Txns {
-		totalFees += txn.Fee
+		totalFees, err = currency.AddCoin(totalFees, txn.Fee)
+		if err != nil {
+			return err
+		}
 	}
-	meanFees := totalFees / int64(len(fb.Txns))
+	meanFees, _, err := currency.DistributeCoin(totalFees, int64(len(fb.Txns)))
+	if err != nil {
+		return err
+	}
 	c.FeeStats.MeanFees = meanFees
 	if meanFees > c.FeeStats.MaxFees {
 		c.FeeStats.MaxFees = meanFees
@@ -765,4 +839,5 @@ func (c *Chain) updateFeeStats(fb *block.Block) {
 	if meanFees < c.FeeStats.MinFees {
 		c.FeeStats.MinFees = meanFees
 	}
+	return nil
 }

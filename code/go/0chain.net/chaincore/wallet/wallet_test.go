@@ -10,8 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/currency"
 
+	"github.com/0chain/common/core/logging"
+
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -19,7 +23,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 var randTime = time.Now().UnixNano()
@@ -33,6 +37,7 @@ const (
 )
 
 func init() {
+	config.Configuration().ChainConfig = chain.NewConfigImpl(&chain.ConfigData{})
 	logging.InitLogging("development", "")
 	var rs = rand.NewSource(randTime)
 	prng = rand.New(rs)
@@ -143,7 +148,7 @@ func GetMPT(dbType int, version util.Sequence, root util.Key) util.MerklePatrici
 func saveWallets(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 	if mpt != nil {
 		for _, w := range wallets {
-			balance := state.Balance(w.Balance)
+			balance := currency.Coin(w.Balance)
 			s := state.State{Balance: balance}
 			s.SetTxnHash(strings.Repeat("00", 32))
 			if _, err := mpt.Insert(util.Path(w.ClientID), &s); err != nil {
@@ -188,7 +193,10 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 				if err != nil {
 					panic(err)
 				}
-				s.Balance -= state.Balance(value)
+				s.Balance, err = currency.MinusInt64(s.Balance, value)
+				if err != nil {
+					panic(err)
+				}
 				if _, err := mpt.Insert(util.Path(wf.ClientID), s); err != nil {
 					panic(err)
 				}
@@ -203,7 +211,10 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 			if err != nil {
 				panic(err)
 			}
-			s.Balance += state.Balance(value)
+			s.Balance, err = currency.AddInt64(s.Balance, value)
+			if err != nil {
+				panic(err)
+			}
 			if _, err := mpt.Insert(util.Path(wt.ClientID), s); err != nil {
 				panic(err)
 			}
@@ -223,7 +234,7 @@ func verifyBalance(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 		if err != nil {
 			panic(err)
 		} else {
-			if s.Balance != state.Balance(w.Balance) {
+			if s.Balance != currency.Coin(w.Balance) {
 				panic(fmt.Sprintf("balance mismatch (%v): %d; Found : %d\n", w.ClientID, w.Balance, s.Balance))
 			}
 		}
@@ -280,10 +291,13 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 		if wf == nil || wt == nil {
 			panic("expected non nil wallets")
 		}
-		value := prng.Int63n(wf.Balance) + 1
+		value, err := currency.Int64ToCoin(prng.Int63n(wf.Balance) + 1)
+		if err != nil {
+			panic(err)
+		}
 		txn := wf.CreateSendTransaction(wt.ClientID, value, "", 0)
 		data := common.ToMsgpack(txn)
-		err := ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
+		err = ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
 		if err != nil {
 			panic(err)
 		}

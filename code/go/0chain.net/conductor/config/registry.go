@@ -190,6 +190,24 @@ func init() {
 		return ex.WrongBlockHash(&wbh)
 	})
 
+	register("wrong_block_random_seed", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wb Bad
+		if err = wb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockRandomSeed(&wb)
+	})
+
+	register("wrong_block_ddos", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wb Bad
+		if err = wb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockDDoS(&wb)
+	})
+
 	register("verification_ticket_group", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var vtg Bad
@@ -548,11 +566,125 @@ func init() {
 		return ex.ConfigureTestCase(cfg)
 	})
 
+	register("configure_check_challenge_is_valid_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := cases.NewCheckChallengeIsValid()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
+	register("lock_notarization_and_send_next_round_vrf", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewLockNotarizationAndSendNextRoundVRF()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("round_has_finalized", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := cases.NewRoundHasFinalized()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
 		return ex.MakeTestCaseCheck(cfg)
+	})
+
+	register("blobber_list", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberList()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_download", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberDownload()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_upload", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberUpload()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_delete", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberDelete()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("adversarial_validator", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewAdversarialValidator()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("magic_block_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := val.(string)
+		return ex.SetMagicBlock(cfg)
+	})
+
+	register("blobber_list", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberList()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_download", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberDownload()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_upload", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberUpload()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("blobber_delete", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewBlobberDelete()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
 	})
 }

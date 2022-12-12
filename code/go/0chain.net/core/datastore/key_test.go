@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestToKey(t *testing.T) {
@@ -68,7 +72,8 @@ func TestHashIDField_ComputeProperties(t *testing.T) {
 				Hash: tt.fields.Hash,
 			}
 
-			h.ComputeProperties()
+			err := h.ComputeProperties()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -198,7 +203,8 @@ func TestIDField_ComputeProperties(t *testing.T) {
 				ID: tt.fields.ID,
 			}
 
-			k.ComputeProperties()
+			err := k.ComputeProperties()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -293,7 +299,9 @@ func TestIDField_GetScore(t *testing.T) {
 			k := &IDField{
 				ID: tt.fields.ID,
 			}
-			if got := k.GetScore(); got != tt.want {
+			got, err := k.GetScore()
+			require.NoError(t, err)
+			if got != tt.want {
 				t.Errorf("GetScore() = %v, want %v", got, tt.want)
 			}
 		})
@@ -526,7 +534,8 @@ func TestNOIDField_ComputeProperties(t *testing.T) {
 
 			nif := &NOIDField{}
 
-			nif.ComputeProperties()
+			err := nif.ComputeProperties()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -602,7 +611,9 @@ func TestNOIDField_GetScore(t *testing.T) {
 			t.Parallel()
 
 			nif := &NOIDField{}
-			if got := nif.GetScore(); got != tt.want {
+			got, err := nif.GetScore()
+			require.NoError(t, err)
+			if got != tt.want {
 				t.Errorf("GetScore() = %v, want %v", got, tt.want)
 			}
 		})

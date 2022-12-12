@@ -6,12 +6,12 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
-//SetupWorkers - setup workers */
+// SetupWorkers - setup workers */
 func SetupWorkers(ctx context.Context) {
 	go CleanupWorker(ctx)
 }
@@ -33,7 +33,7 @@ func CleanupWorker(ctx context.Context) {
 	txn := transactionEntityMetadata.Instance().(*Transaction)
 	collectionName := txn.GetCollectionName()
 
-	var handler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+	var handler = func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
 		txn, ok := qe.(*Transaction)
 		if !ok {
 			err := qe.Delete(ctx)
@@ -49,7 +49,7 @@ func CleanupWorker(ctx context.Context) {
 		if ok && cerr.Code == datastore.EntityNotFound {
 			invalidHashes = append(invalidHashes, txn)
 		}
-		return true
+		return true, nil
 	}
 
 	for {
@@ -91,8 +91,42 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	txn := transactionEntityMetadata.Instance().(*Transaction)
 	collectionName := txn.GetCollectionName()
 
+	logging.Logger.Debug("cleaning past transactions")
+	clientMaxNonce := make(map[string]int64)
+	for _, e := range txns {
+		blockTx, ok := e.(*Transaction)
+		if !ok {
+			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", e))
+			continue
+		}
+		nonce := clientMaxNonce[blockTx.ClientID]
+		if blockTx.Nonce > nonce {
+			clientMaxNonce[blockTx.ClientID] = blockTx.Nonce
+		}
+	}
+
+	var past []datastore.Entity
+	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName,
+		func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
+			current, ok := qe.(*Transaction)
+			if !ok {
+				logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
+				return true, nil
+			}
+
+			maxNonce := clientMaxNonce[current.ClientID]
+			if current.Nonce <= maxNonce {
+				past = append(past, current)
+			}
+			return true, nil
+		})
+	if err != nil {
+		logging.Logger.Error("error finding past transactions", zap.Error(err))
+		//try to delete what we can, so no return here
+	}
+	txns = append(past, txns...)
 	logging.Logger.Info("cleaning transactions", zap.String("collection", collectionName), zap.Int("missing_count", len(txns)))
-	err := transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
+	err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
 	if err != nil {
 		logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
 	}

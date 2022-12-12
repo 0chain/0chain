@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 /*Confirmation - a data structure that provides the confirmation that a transaction is included into the block chain */
@@ -69,8 +69,8 @@ func (c *Confirmation) Delete(ctx context.Context) error {
 }
 
 /*GetScore - score for write*/
-func (c *Confirmation) GetScore() int64 {
-	return c.Round
+func (c *Confirmation) GetScore() (int64, error) {
+	return c.Round, nil
 }
 
 /*GetHash - hashable implementation */

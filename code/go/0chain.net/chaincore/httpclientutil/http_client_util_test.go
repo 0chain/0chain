@@ -13,6 +13,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/0chain/common/core/currency"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -21,9 +23,10 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/mocks"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	utilmocks "github.com/0chain/common/core/mocks"
+	"github.com/0chain/common/core/util"
 )
 
 func init() {
@@ -478,7 +481,7 @@ func TestMakeGetRequest(t *testing.T) {
 func TestMakeClientBalanceRequest(t *testing.T) {
 	t.Parallel()
 
-	balance := state.Balance(5)
+	balance := currency.Coin(5)
 	makeValidServer := func() string {
 		validServer := httptest.NewServer(
 			http.HandlerFunc(
@@ -524,7 +527,7 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		want        state.Balance
+		want        currency.Coin
 		makeServers []makeServer
 		wantErr     bool
 	}{
@@ -581,7 +584,7 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 				tt.args.urls = append(tt.args.urls, URL)
 			}
 
-			got, err := MakeClientBalanceRequest(tt.args.clientID, tt.args.urls, tt.args.consensus)
+			got, err := MakeClientBalanceRequest(context.TODO(), tt.args.clientID, tt.args.urls, tt.args.consensus)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MakeClientBalanceRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -737,7 +740,7 @@ func TestGetTransactionStatus(t *testing.T) {
 }
 
 type mokeErrEntity struct {
-	mocks.Serializable
+	utilmocks.Serializable
 }
 
 func (ee *mokeErrEntity) Decode([]byte) error {
@@ -745,7 +748,7 @@ func (ee *mokeErrEntity) Decode([]byte) error {
 }
 
 type mokeEntity struct {
-	mocks.Serializable
+	utilmocks.Serializable
 }
 
 func (me *mokeEntity) Decode([]byte) error {
@@ -1146,7 +1149,7 @@ func TestSendSmartContractTxn(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if err := SendSmartContractTxn(tt.args.txn, tt.args.address, tt.args.value, tt.args.fee, tt.args.scData, tt.args.minerUrls); (err != nil) != tt.wantErr {
+			if err := SendSmartContractTxn(tt.args.txn, tt.args.address, tt.args.value, tt.args.fee, tt.args.scData, tt.args.minerUrls, tt.args.minerUrls); (err != nil) != tt.wantErr {
 				t.Errorf("SendSmartContractTxn() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, nonce+2, node.Self.GetNextNonce())

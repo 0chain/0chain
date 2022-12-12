@@ -4,8 +4,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/0chain/common/core/currency"
+
 	c_state "0chain.net/chaincore/chain/state"
-	cstate "0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/partitions"
 )
@@ -15,12 +16,12 @@ import (
 const blobberRewardsPartitionSize = 5
 
 type BlobberRewardNode struct {
-	ID                string         `json:"id"`
-	SuccessChallenges int            `json:"success_challenges"`
-	WritePrice        cstate.Balance `json:"write_price"`
-	ReadPrice         cstate.Balance `json:"read_price"`
-	TotalData         float64        `json:"total_data"`
-	DataRead          float64        `json:"data_read"`
+	ID                string        `json:"id"`
+	SuccessChallenges int           `json:"success_challenges"`
+	WritePrice        currency.Coin `json:"write_price"`
+	ReadPrice         currency.Coin `json:"read_price"`
+	TotalData         float64       `json:"total_data"`
+	DataRead          float64       `json:"data_read"`
 }
 
 func (bn *BlobberRewardNode) GetID() string {
@@ -38,12 +39,12 @@ func BlobberRewardKey(round int64) datastore.Key {
 
 // getActivePassedBlobberRewardsPartitions gets blobbers passed challenge from last challenge period
 func getActivePassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
-	name := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
-	return partitions.CreateIfNotExists(balances, name, blobberRewardsPartitionSize)
+	key := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
+	return partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
 }
 
 // getOngoingPassedBlobberRewardsPartitions gets blobbers passed challenge from ongoing challenge period
 func getOngoingPassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
-	name := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
-	return partitions.CreateIfNotExists(balances, name, blobberRewardsPartitionSize)
+	key := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
+	return partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
 }

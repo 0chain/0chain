@@ -6,15 +6,18 @@ import (
 	"fmt"
 	"strings"
 
+	"0chain.net/chaincore/block"
+
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/storagesc"
 	. "0chain.net/smartcontract/zcnsc"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -23,11 +26,9 @@ const (
 	startTime = common.Timestamp(100)
 )
 
-const x10 = 10 * 1000 * 1000 * 1000
-
-func zcnToBalance(token float64) state.Balance {
-	return state.Balance(token * float64(x10))
-}
+var (
+	_ cstate.StateContextI = (*mocks.StateContextI)(nil)
+)
 
 type mockStateContext struct {
 	*mocks.StateContextI
@@ -35,6 +36,12 @@ type mockStateContext struct {
 	authorizers  map[string]*Authorizer
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
+	authCount    *AuthCount
+}
+
+func (ctx *mockStateContext) GetLatestFinalizedBlock() *block.Block {
+	//TODO implement me
+	panic("implement me")
 }
 
 func MakeMockStateContext() *mockStateContext {
@@ -52,13 +59,19 @@ func MakeMockStateContext() *mockStateContext {
 
 	// Global Node
 
-	ctx.globalNode = &GlobalNode{ID: ADDRESS, MinStakeAmount: 11}
+	ctx.globalNode = &GlobalNode{
+		ID: ADDRESS,
+		ZCNSConfig: &ZCNSConfig{
+			MinStakeAmount: 11,
+			OwnerId:        "8a15e216a3b4237330c1fff19c7b3916ece5b0f47341013ceb64d53595a4cebb",
+		},
+	}
 
 	// User Node
 
 	ctx.userNodes = make(map[string]*UserNode)
 	for _, client := range clients {
-		userNode := createUserNode(client, int64(0))
+		userNode := createUserNode(client)
 		ctx.userNodes[userNode.GetKey()] = userNode
 	}
 
@@ -183,7 +196,7 @@ func MakeMockStateContext() *mockStateContext {
 		mock.AnythingOfType("event.EventType"),
 		mock.AnythingOfType("event.EventTag"),
 		mock.AnythingOfType("string"), // authorizerID
-		mock.AnythingOfType("string"), // authorizer payload
+		mock.Anything,                 // authorizer payload
 	).Return(
 		func(_ event.EventType, _ event.EventTag, id string, body string) {
 			fmt.Println(".")
@@ -193,10 +206,10 @@ func MakeMockStateContext() *mockStateContext {
 		event.TypeStats,
 		event.TagAddAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID
-		mock.AnythingOfType("string"), // authorizer payload
+		mock.Anything,                 // authorizer payload
 	).Return(
-		func(_ event.EventType, _ event.EventTag, id string, body string) {
-			authorizerNode, err := AuthorizerFromEvent([]byte(body))
+		func(_ event.EventType, _ event.EventTag, id string, ev *event.Authorizer) {
+			authorizerNode, err := AuthorizerFromEvent(ev)
 			if err != nil {
 				panic(err)
 			}
@@ -210,10 +223,10 @@ func MakeMockStateContext() *mockStateContext {
 		event.TypeStats,
 		event.TagUpdateAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID
-		mock.AnythingOfType("string"), // authorizer payload
+		mock.Anything,                 // authorizer payload
 	).Return(
-		func(_ event.EventType, _ event.EventTag, id string, body string) {
-			authorizerNode, err := AuthorizerFromEvent([]byte(body))
+		func(_ event.EventType, _ event.EventTag, id string, ev *event.Authorizer) {
+			authorizerNode, err := AuthorizerFromEvent(ev)
 			if err != nil {
 				panic(err)
 			}
@@ -246,6 +259,18 @@ func createTestAuthorizer(ctx *mockStateContext, id string) *Authorizer {
 		Scheme: scheme,
 		Node:   node,
 	}
+
+	numAuth := &AuthCount{}
+	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	if err == util.ErrValueNotPresent {
+		numAuth.Count = 0
+	} else if err != nil {
+		panic(err)
+	}
+
+	numAuth.Count++
+
+	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
 
 	return ctx.authorizers[node.GetKey()]
 }
@@ -334,6 +359,21 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 		return nil
 	}
 
+	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
+		if ctx.authCount == nil {
+			return util.ErrValueNotPresent
+		}
+		b, err := ctx.authCount.MarshalMsg(nil)
+		if err != nil {
+			return err
+		}
+		_, err = node.UnmarshalMsg(b)
+		if err != nil {
+			panic(err)
+		}
+		return nil
+	}
+
 	return util.ErrValueNotPresent
 }
 
@@ -370,7 +410,16 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 			return key, nil
 		}
 
-		return key, fmt.Errorf("failed to convert key: %s to StakePool: %v", key, node)
+		return key, fmt.Errorf("failed to convert key: %s to Provider: %v", key, node)
+	}
+
+	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {
+		if authCount, ok := node.(*AuthCount); ok {
+			ctx.authCount = authCount
+			return key, nil
+		}
+
+		return key, fmt.Errorf("failed to convert key: %s to authCount: %v", key, node)
 	}
 
 	return "", fmt.Errorf("node with key: %s is not supported", key)

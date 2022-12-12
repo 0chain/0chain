@@ -4,16 +4,17 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 )
 
 func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI) {
 	_ = balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, txn.ToClientID, state.Balance(txn.Value)),
+		txn.ClientID, txn.ToClientID, txn.Value),
 	)
 	_ = balances.AddTransfer(state.NewTransfer(
-		txn.ClientID, minersc.ADDRESS, state.Balance(txn.Fee)),
+		txn.ClientID, minersc.ADDRESS, txn.Fee),
 	)
 
 	clientState := balances.GetState()
@@ -49,7 +50,7 @@ func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI
 
 func mockMint(
 	to []byte,
-	amount state.Balance,
+	amount currency.Coin,
 	clientState util.MerklePatriciaTrieI,
 	balances cstate.StateContextI,
 ) {
@@ -59,13 +60,18 @@ func mockMint(
 		return
 	}
 	_ = balances.SetStateContext(&toState)
-	toState.Balance += amount
+
+	newBal, err := currency.AddCoin(toState.Balance, amount)
+	if err != nil {
+		return
+	}
+	toState.Balance = newBal
 	_, _ = clientState.Insert(util.Path(to), &toState)
 }
 
 func mockTransferAmount(
 	from, to []byte,
-	amount state.Balance,
+	amount currency.Coin,
 	clientState util.MerklePatriciaTrieI,
 	balances cstate.StateContextI,
 ) {
@@ -86,6 +92,11 @@ func mockTransferAmount(
 		return
 	}
 	_ = balances.SetStateContext(&toState)
-	toState.Balance += amount
+
+	newBal, err := currency.AddCoin(toState.Balance, amount)
+	if err != nil {
+		return
+	}
+	toState.Balance = newBal
 	_, _ = clientState.Insert(util.Path(to), &toState)
 }

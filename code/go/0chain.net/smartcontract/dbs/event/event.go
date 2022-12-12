@@ -3,22 +3,24 @@ package event
 import (
 	"errors"
 
+	"0chain.net/smartcontract/common"
 	"golang.org/x/net/context"
+	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
 )
 
 type Event struct {
 	gorm.Model
-	BlockNumber int64  `json:"block_number" gorm:"index:idx_event"`
-	TxHash      string `json:"tx_hash" gorm:"index:idx_event"`
-	Type        int    `json:"type" gorm:"index:idx_event"`
-	Tag         int    `json:"tag" gorm:"index:idx_event"`
-	Index       string `json:"index" gorm:"index:idx_event"`
-	Data        string `json:"data"`
+	BlockNumber int64       `json:"block_number" gorm:"index:idx_event"`
+	TxHash      string      `json:"tx_hash" gorm:"index:idx_event"`
+	Type        EventType   `json:"type" gorm:"index:idx_event"`
+	Tag         EventTag    `json:"tag" gorm:"index:idx_event"`
+	Index       string      `json:"index" gorm:"index:idx_event"`
+	Data        interface{} `json:"data" gorm:"-"`
 }
 
-func (edb *EventDb) FindEvents(ctx context.Context, search Event) ([]Event, error) {
+func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
 	if edb.Store == nil {
 		return nil, errors.New("cannot find event database")
 	}
@@ -36,12 +38,17 @@ func (edb *EventDb) FindEvents(ctx context.Context, search Event) ([]Event, erro
 	if len(search.TxHash) > 0 {
 		db = db.Where("tx_hash", search.TxHash).Find(eventTable)
 	}
-	if EventType(search.Type) != TypeNone {
+	if search.Type != TypeNone {
 		db = db.Where("type", search.Type).Find(eventTable)
 	}
-	if EventTag(search.Tag) != TagNone {
+	if search.Tag != TagNone {
 		db = db.Where("tag", search.Tag).Find(eventTable)
 	}
+
+	db = db.Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "created_at"},
+		Desc:   p.IsDescending,
+	})
 
 	var events []Event
 	db.WithContext(ctx).Find(&events)
@@ -57,9 +64,9 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-func (edb *EventDb) addEvents(ctx context.Context, events []Event) {
-	if edb.Store != nil && len(events) > 0 {
-		edb.Store.Get().WithContext(ctx).Create(&events)
+func (edb *EventDb) addEvents(ctx context.Context, events blockEvents) {
+	if edb.Store != nil && len(events.events) > 0 {
+		edb.Store.Get().WithContext(ctx).Create(&events.events)
 	}
 }
 
@@ -70,6 +77,16 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Blobber{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&BlobberAggregate{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&BlobberSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -125,6 +142,31 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Allocation{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&User{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&RewardMint{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Challenge{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Snapshot{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&AllocationBlobberTerm{})
 	if err != nil {
 		return err
 	}

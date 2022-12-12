@@ -13,13 +13,16 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.17'
+          go-version: '1.18'
 
       - name: Check msgp changes
         run: ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
+
+      - name: Check swagger generation
+        run: docker.local/bin/test.swagger.sh
 
       - name: Run unit tests
         run: ./docker.local/bin/unit_test_build.sh
@@ -37,13 +40,16 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.17'
+          go-version: '1.18'
 
       - name: Check msgp changes
         run: ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
+
+      - name: Check swagger generation
+        run: docker.local/bin/test.swagger.sh
 
       - name: Run Linter
         run: ./docker.local/bin/linter.sh

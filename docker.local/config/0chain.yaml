@@ -1,162 +1,80 @@
-cassandra:
-  connection:
-    delay: 10
-    retries: 10
-delegate_wallet: ""
+version: 1.0
+
+logging:
+  level: "debug"
+  verbose: false
+  console: false # printing log to console is only supported in development mode
+  goroutines: false
+  memlog: false
+
 development:
-  block_rewards: true
-  dkg: true
+  smart_contract:
+    zrc20: true
+  txn_generation:
+    wallets: 50
+    max_transactions: 0
+    max_txn_fee: 10000
+    min_txn_fee: 0
+    max_txn_value: 10000000000
+    min_txn_value: 100
   faucet:
     refill_amount: 1000000000000000
-  smart_contract:
-    faucet: true
-    fee: false
-    interest: true
-    magma: false
-    miner: true
-    multisig: true
-    storage: true
-    vesting: true
-    zcn: true
-    zrc20: true
-  state: true
-  txn_generation:
-    max_transactions: 0
-    max_txn_fee: 1000
-    max_txn_value: 10000000000
-    min_txn_fee: 0
-    min_txn_value: 100
-    pour_amount: 10000
-    pour_point: 100
-    transactions: 70
-    wallets: 50
-  view_change: false
-integration_tests:
-  address: host.docker.internal:15210
-  lock_interval: 1s
-latitude: 28.6448
-logging:
-  console: false
-  goroutines: false
-  level: debug
-  memlog: false
-longitude: 77.216721
-max_stake: 100
-min_stake: 0
-minio:
-  delete_local_copy: true
-  enabled: false
-  num_workers: 5
-  old_block_round_range: 250000
-  use_ssl: false
-  worker_frequency: 1800
-network:
-  dns_url: ""
-  genesis_dkg: 0
-  initial_states: config/initial-state.yaml
-  large_message_th_size: 5120
-  magic_block_file: config/magicBlock.json
-  max_concurrent_requests: 40
-  n2n_handlers:
-    rate_limit: 10000000000
-  nodes_file: config/single_machine_3_nodes.yaml
-  relay_time: 200
-  timeout:
-    large_message: 3000
-    small_message: 1000
-  user_handlers:
-    rate_limit: 100000000
-number_of_delegates: 10
-server_chain:
-  async_blocks_fetching:
-    max_simultaneous_from_miners: 100
-    max_simultaneous_from_sharders: 30
-  block:
-    consensus:
-      threshold_by_count: 66
-      threshold_by_stake: 0
-    generation:
-      retry_wait_time: 5
-      timeout: 15
-    generators: 2
-    generators_percent: 0.2
-    max_block_cost: 10000
-    max_block_size: 1000
-    max_byte_size: 16384000
-    min_block_size: 1
-    min_generators: 2
-    proposal:
-      max_wait_time: 180ms
-      wait_mode: static
-    replicators: 0
-    reuse_txns: false
-    sharding:
-      min_active_replicators: 25
-      min_active_sharders: 25
-    storage:
-      provider: blockstore.FSBlockStore
-    validation:
-      batch_size: 1000
-  client:
-    discover: true
-    signature_scheme: bls0chain
-  dbs:
-    events:
-      conn_max_lifetime: 20s
-      enabled: true
-      host: helm-sharder-postgres-01
-      max_idle_conns: 100
-      max_open_conns: 200
-      name: events_db
-      password: zchian
-      port: 5432
-      user: zchain_user
+  pprof: true
+
+zerochain:
+  id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
   decimals: 10
   genesis_block:
-    id: ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4
-  health_check:
-    deep_scan:
-      batch_size: 50
-      enabled: false
-      repeat_interval_mins: 3m
-      report_status_mins: 1m
-      settle_secs: 30s
-      window: 0
-    proximity_scan:
-      batch_size: 50
-      enabled: true
-      repeat_interval_mins: 1m
-      report_status_mins: 1m
-      settle_secs: 30s
-      window: 100000
-    show_counters: true
-  id: 0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe
-  lfb_ticket:
-    ahead: 5
-    fb_fetching_lifetime: 10s
-    rebroadcast_timeout: 15s
-  messages:
-    verification_tickets_to: all_miners
-  owner: edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759
-  round_range: 10000000
-  round_timeouts:
-    round_restart_mult: 10
-    softto_min: 1500
-    softto_mult: 1
-    timeout_cap: 1
-    vrfs_timeout_mismatch_tolerance: 5
-  smart_contract:
-    setting_update_period: 200
-    timeout: 8000ms
-  state:
-    prune_below_count: 100
-    sync:
-      timeout: 10
-  stuck:
-    check_interval: 10
-    time_threshold: 60
+    id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
+
+server_chain:
+  id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
+  owner: "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
+  decimals: 10
   tokens: 200000000
+  genesis_block:
+    id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
+  block:
+    min_block_size: 1
+    max_block_size: 10
+    max_block_cost: 10000 #equal to 100ms
+    max_byte_size: 1638400
+    min_generators: 2
+    generators_percent: 0.2
+    replicators: 0
+    generation:
+      timeout: 15
+      retry_wait_time: 5 #milliseconds
+    proposal:
+      max_wait_time: 180ms
+      wait_mode: static # static or dynamic
+    consensus:
+      threshold_by_count: 66 # percentage (registration)
+      threshold_by_stake: 0 # percent
+    sharding:
+      min_active_sharders: 25 # percentage
+      min_active_replicators: 25 # percentageRF
+    validation:
+      batch_size: 1000
+    reuse_txns: false
+    storage:
+      provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
+
+  round_range: 10000000
+  dkg: true
+  view_change: false
+  round_timeouts:
+    softto_min: 1500 # in miliseconds
+    softto_mult: 1 # multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
+    round_restart_mult: 10 # number of soft timeouts before round is restarted
+    timeout_cap: 1 # 0 indicates no cap
+    vrfs_timeout_mismatch_tolerance: 5
   transaction:
+    payload:
+      max_size: 98304 # bytes
+    timeout: 30 # seconds
+    min_fee: 0
+    transfer_cost: 10
     exempt:
       - add_miner
       - miner_health_check
@@ -166,14 +84,124 @@ server_chain:
       - sharder_keep
       - shareSignsOrShares
       - wait
-    min_fee: 0
-    payload:
-      max_size: 98304
-    timeout: 300
-service_charge: 0.1
-version: 1
-zerochain:
-  decimals: 10
-  genesis_block:
-    id: ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4
-  id: 0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe
+  client:
+    signature_scheme: bls0chain # ed25519 or bls0chain
+    discover: true
+  messages:
+    verification_tickets_to: all_miners # generator or all_miners
+  state:
+    enabled: true
+    prune_below_count: 100 # rounds
+    sync:
+      timeout: 10 # seconds
+  block_rewards: true
+  stuck:
+    check_interval: 10 # seconds
+    time_threshold: 60 #seconds
+  smart_contract:
+    setting_update_period: 200 #rounds
+    timeout: 8000ms
+    storage: true
+    faucet: true
+    interest: true
+    miner: true
+    multisig: true
+    vesting: true
+    zcn: true
+  health_check:
+    show_counters: true
+    deep_scan:
+      enabled: false
+      settle_secs: 30s
+      window: 0 #Full scan till round 0
+      repeat_interval_mins: 3m #minutes
+      report_status_mins: 1m #minutes
+      batch_size: 50
+    proximity_scan:
+      enabled: true
+      settle_secs: 30s
+      window: 100000 #number of blocks, Do not make 0 with minio ON, Should be less than minio old block round range
+      repeat_interval_mins: 1m #minutes
+      report_status_mins: 1m #minutes
+      batch_size: 50
+  lfb_ticket:
+    rebroadcast_timeout: "15s" #
+    ahead: 5 # should be >= 5
+    fb_fetching_lifetime: "10s" #
+  async_blocks_fetching:
+    max_simultaneous_from_miners: 100
+    max_simultaneous_from_sharders: 30
+  dbs:
+    events:
+      # event database configuration local
+      enabled: true
+      name: events_db
+      user: zchain_user
+      password: zchian
+      host: postgres #localhost
+      port: 5432
+      max_idle_conns: 100
+      max_open_conns: 200
+      conn_max_lifetime: 20s
+    settings:
+      # event database settings blockchain
+      debug: false
+      aggregate_period: 10
+      page_limit: 50
+
+network:
+  magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
+  initial_states: config/initial_state.yaml
+  genesis_dkg: 0
+  dns_url: "" # http://198.18.0.98:9091
+  relay_time: 200 # milliseconds
+  max_concurrent_requests: 40
+  timeout:
+    small_message: 1000 # milliseconds
+    large_message: 3000 # milliseconds
+  large_message_th_size: 5120 # anything greater than this size in bytes
+  user_handlers:
+    rate_limit: 100000000 # 100 per second
+  n2n_handlers:
+    rate_limit: 10000000000 # 10000 per second
+
+# delegate wallet is wallet that used to configure node in Miner SC; if its
+# empty, then node ID used
+delegate_wallet: ""
+# % of fees and rewards for generator
+service_charge: 0.10 # [0; 1) of all fees
+# max number of delegate pools allowed by a node in miner SC
+number_of_delegates: 10 # max number of delegate pools
+# min stake pool amount allowed by node; should not conflict with
+# SC min_stake
+min_stake: 0.0 # tokens
+# max stake pool amount allowed by node; should not conflict with
+# SC max_stake
+max_stake: 100.0 # tokens
+# latitude is miner/sharder latitude geolocation
+latitude: 28.644800
+# longitude is miner/sharder longitude geolocation
+longitude: 77.216721
+
+minio:
+  enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
+  worker_frequency: 1800 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
+  num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
+  use_ssl: false # Use SSL for connection or not
+  old_block_round_range: 250000 # How old the block should be to be considered for moving to cloud, Should be greater than proximity scan window
+  delete_local_copy: true # Delete local copy of block once it's moved to cloud
+
+cassandra:
+  connection:
+    delay: 10 # in seconds
+    retries: 10
+#   host: cassandra
+#   port: 9042
+
+# integration tests related configurations
+integration_tests:
+  # address of the server
+  address: host.docker.internal:15210
+  # lock_interval used by nodes to request server to connect to blockchain
+  # after start
+  lock_interval: 1s

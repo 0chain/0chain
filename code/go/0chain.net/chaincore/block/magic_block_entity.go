@@ -10,11 +10,12 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -v
 
+// swagger:model MagicBlock
 type MagicBlock struct {
 	datastore.HashIDField
 	mutex                  sync.RWMutex        `json:"-" msgpack:"-" msg:"-"`

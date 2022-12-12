@@ -1,0 +1,42 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:14
+    command: postgres -c stats_temp_directory=/tmp
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "15432:5432" #for testing purpose only
+    volumes:
+      - ../benchmarks/data/postgresql:/var/lib/postgresql/data
+      - ../sql_script/:/docker-entrypoint-initdb.d/
+    networks:
+      default:
+
+  benchmark:
+    image: "zchain_benchmarks"
+    environment:
+      - LOAD
+      - TESTS
+      - CONFIG
+      - VERBOSE
+      - OMIT
+    volumes:
+      - ../config:/config
+      - ../benchmarks/saved_data:/saved_data
+    command: ./bin/main  benchmark
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    networks:
+      default:
+volumes:
+  saved_data:
+  config:
+networks:
+  default:
+    driver: bridge

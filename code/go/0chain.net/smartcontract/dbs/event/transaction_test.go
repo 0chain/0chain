@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/dbs"
+	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -14,7 +15,7 @@ import (
 
 func TestAddTransaction(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            os.Getenv("POSTGRES_USER"),
@@ -25,14 +26,14 @@ func TestAddTransaction(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
 	tr := Transaction{}
-	err = eventDb.addTransaction(tr)
+	err = eventDb.addTransactions([]Transaction{tr})
 	require.NoError(t, err, "Error while inserting Transaction to event Database")
 	var count int64
 	eventDb.Get().Table("transactions").Count(&count)
@@ -42,7 +43,7 @@ func TestAddTransaction(t *testing.T) {
 }
 
 func TestFindTransactionByHash(t *testing.T) {
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            os.Getenv("POSTGRES_DB"),
 		User:            os.Getenv("POSTGRES_USER"),
@@ -53,9 +54,10 @@ func TestFindTransactionByHash(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	t.Skip("only for local debugging, requires local postgresql")
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
+		return
 	}
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
@@ -82,38 +84,38 @@ func TestFindTransactionByHash(t *testing.T) {
 	})
 
 	t.Run("GetTransactionByClientId", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", 0, 10)
+		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", common.Pagination{Limit: 10, IsDescending: true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClient", 0, 10)
+		gotTrs, err = eventDb.GetTransactionByClientId("someClient", common.Pagination{Limit: 10, IsDescending: true})
 		require.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", 0, 5)
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", common.Pagination{Limit: 5, IsDescending: true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", 5, 5)
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", common.Pagination{Offset: 5, Limit: 5, IsDescending: true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 
 	})
 
 	t.Run("GetTransactionByBlockHash", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", 0, 10)
+		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Limit: 10, IsDescending: true})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", 0, 10)
+		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", common.Pagination{Limit: 10, IsDescending: true})
 		assert.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", 0, 5)
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Limit: 5, IsDescending: true})
 		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", 5, 5)
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Offset: 5, Limit: 5, IsDescending: true})
 		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 	})
@@ -143,7 +145,7 @@ func SetUpTransactionData(t *testing.T, eventDb *EventDb) {
 			ClientId:  "someClientID",
 			BlockHash: "blockHash",
 		}
-		err := eventDb.addTransaction(tr)
+		err := eventDb.addTransactions([]Transaction{tr})
 		require.NoError(t, err, "Error while inserting Transaction to event Database")
 	}
 }

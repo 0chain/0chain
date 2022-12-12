@@ -1,6 +1,7 @@
 package multisigsc
 
 import (
+	"0chain.net/core/common"
 	"encoding/json"
 	"testing"
 
@@ -38,7 +39,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, _ *testing.B) error {
 	var msc = MultiSigSmartContract{
 		SmartContract: sci.NewSC(Address),
 	}
@@ -69,12 +70,19 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 func BenchmarkTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuite {
+	creationTimeRaw := viper.GetInt64("MptCreationTime")
+	creationTime := common.Now()
+	if creationTimeRaw != 0 {
+		creationTime = common.Timestamp(creationTimeRaw)
+	}
+
 	var tests = []BenchTest{
 		{
 			name:     "multi_sig." + RegisterFuncName,
 			endpoint: RegisterFuncName,
 			txn: &transaction.Transaction{
-				ClientID: data.Clients[len(data.Clients)-1],
+				ClientID:     data.Clients[len(data.Clients)-1],
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				wallet := &Wallet{
@@ -96,6 +104,7 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: "my hash",
 				},
+				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				st := &state.SignedTransfer{

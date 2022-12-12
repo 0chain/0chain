@@ -17,9 +17,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -340,7 +340,7 @@ func (c *Chain) getInfraHealth() InfraHealth {
 			logging.Logger.Warn("get block state node failed", zap.Error(err))
 		}
 
-		if !config.DevConfiguration.ViewChange {
+		if !c.ChainConfig.IsViewChangeEnabled() {
 			isDKGProcessDisabled = true
 		} else {
 			dkgPhase = phase.String()

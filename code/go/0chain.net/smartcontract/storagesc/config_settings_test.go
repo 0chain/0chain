@@ -1,14 +1,14 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/block"
+	"github.com/0chain/common/core/currency"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/block"
 
 	"0chain.net/smartcontract"
 
@@ -25,7 +25,7 @@ func TestSettings(t *testing.T) {
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[strings.ToLower(name)].setting])
+		require.EqualValues(t, name, SettingName[Settings[name].setting])
 	}
 }
 
@@ -92,7 +92,7 @@ func TestUpdateSettings(t *testing.T) {
 		var conf = &Config{
 			OwnerId: owner,
 		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
+		balances.On("GetTrieNode", scConfigKey(ADDRESS),
 			mock.MatchedBy(func(c *Config) bool {
 				*c = *conf
 				return true
@@ -126,33 +126,27 @@ func TestUpdateSettings(t *testing.T) {
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
 					"min_alloc_duration":            "5m",
-					"max_challenge_completion_time": "30m",
+					"max_challenge_completion_time": "3m",
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        "10",
-					"readpool.min_lock_period": "1h",
-					"readpool.max_lock_period": "8760h",
-
-					"writepool.min_lock":        "10",
-					"writepool.min_lock_period": "2m",
-					"writepool.max_lock_period": "8760h",
-
+					"readpool.min_lock":  "10",
+					"writepool.min_lock": "10",
 					"stakepool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
+					"cancellation_charge":            "0.2",
 
-					"free_allocation_settings.data_shards":                   "10",
-					"free_allocation_settings.parity_shards":                 "5",
-					"free_allocation_settings.size":                          "10000000000",
-					"free_allocation_settings.duration":                      "5000h",
-					"free_allocation_settings.read_price_range.min":          "0.0",
-					"free_allocation_settings.read_price_range.max":          "0.04",
-					"free_allocation_settings.write_price_range.min":         "0.0",
-					"free_allocation_settings.write_price_range.max":         "0.1",
-					"free_allocation_settings.max_challenge_completion_time": "1m",
-					"free_allocation_settings.read_pool_fraction":            "0.2",
+					"free_allocation_settings.data_shards":           "10",
+					"free_allocation_settings.parity_shards":         "5",
+					"free_allocation_settings.size":                  "10000000000",
+					"free_allocation_settings.duration":              "5000h",
+					"free_allocation_settings.read_price_range.min":  "0.0",
+					"free_allocation_settings.read_price_range.max":  "0.04",
+					"free_allocation_settings.write_price_range.min": "0.0",
+					"free_allocation_settings.write_price_range.max": "0.1",
+					"free_allocation_settings.read_pool_fraction":    "0.2",
 
 					"validator_reward":                     "0.025",
 					"blobber_slash":                        "0.1",
@@ -165,15 +159,50 @@ func TestUpdateSettings(t *testing.T) {
 					"max_challenges_per_generation":        "100",
 					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
-
-					"block_reward.block_reward":           "1000",
-					"block_reward.qualifying_stake":       "1",
-					"block_reward.sharder_ratio":          "80.0",
-					"block_reward.miner_ratio":            "20.0",
-					"block_reward.blobber_capacity_ratio": "20.0",
-					"block_reward.blobber_usage_ratio":    "80.0",
-
-					"expose_mpt": "false",
+					"owner_id":                             "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
+					"block_reward.block_reward":            "1000",
+					"block_reward.qualifying_stake":        "1",
+					"block_reward.sharder_ratio":           "80.0",
+					"block_reward.miner_ratio":             "20.0",
+					"block_reward.blobber_ratio":           "20.0",
+					"block_reward.gamma.alpha":             "0.2",
+					"block_reward.gamma.a":                 "10",
+					"block_reward.gamma.b":                 "9",
+					"block_reward.zeta.i":                  "1",
+					"block_reward.zeta.k":                  "0.9",
+					"block_reward.zeta.mu":                 "0.2",
+					"cost.update_settings":                 "105",
+					"cost.read_redeem":                     "105",
+					"cost.commit_connection":               "105",
+					"cost.new_allocation_request":          "105",
+					"cost.update_allocation_request":       "105",
+					"cost.finalize_allocation":             "105",
+					"cost.cancel_allocation":               "105",
+					"cost.add_free_storage_assigner":       "105",
+					"cost.free_allocation_request":         "105",
+					"cost.free_update_allocation":          "105",
+					"cost.add_curator":                     "105",
+					"cost.remove_curator":                  "105",
+					"cost.blobber_health_check":            "105",
+					"cost.update_blobber_settings":         "105",
+					"cost.pay_blobber_block_rewards":       "105",
+					"cost.curator_transfer_allocation":     "105",
+					"cost.challenge_request":               "105",
+					"cost.challenge_response":              "105",
+					"cost.generate_challenges":             "105",
+					"cost.add_validator":                   "105",
+					"cost.update_validator_settings":       "105",
+					"cost.add_blobber":                     "105",
+					"cost.new_read_pool":                   "105",
+					"cost.read_pool_lock":                  "105",
+					"cost.read_pool_unlock":                "105",
+					"cost.write_pool_lock":                 "105",
+					"cost.write_pool_unlock":               "105",
+					"cost.stake_pool_lock":                 "105",
+					"cost.stake_pool_unlock":               "105",
+					"cost.stake_pool_pay_interests":        "105",
+					"cost.commit_settings_changes":         "105",
+					"cost.collect_reward":                  "105",
 				},
 			},
 		},
@@ -220,11 +249,10 @@ func TestCommitSettingChanges(t *testing.T) {
 		}
 		var thisBlock = block.Block{}
 		thisBlock.MinerID = mockMinerId
-
-		balances.On("GetTrieNode", scConfigKey(ssc.ID),
-			mockSetValue(&Config{
-				OwnerId: owner,
-			})).Return(nil).Once()
+		conf := newConfig()
+		conf.OwnerId = owner
+		balances.On("GetTrieNode", scConfigKey(ADDRESS),
+			mockSetValue(conf)).Return(nil).Once()
 		balances.On("GetTrieNode", settingChangesKey,
 			mockSetValue(&smartcontract.StringMap{
 				Fields: p.inputMap,
@@ -232,7 +260,7 @@ func TestCommitSettingChanges(t *testing.T) {
 
 		balances.On(
 			"InsertTrieNode",
-			scConfigKey(ssc.ID),
+			scConfigKey(ADDRESS),
 			mock.MatchedBy(func(conf *Config) bool {
 				for key, value := range p.inputMap {
 					setting := getConfField(*conf, key)
@@ -287,17 +315,39 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.StateBalance:
+					case smartcontract.CurrencyCoin:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
 							expected = x10 * expected
 							require.NoError(t, err)
-							actual, ok := setting.(state.Balance)
+							actual, ok := setting.(currency.Coin)
 							require.True(t, ok)
-							if state.Balance(expected) != actual {
+							if currency.Coin(expected) != actual {
 								return false
 							}
 						}
+					case smartcontract.Cost:
+						{
+							expected, err := strconv.Atoi(value)
+							require.NoError(t, err)
+							actual, ok := setting.(int)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Key:
+						{
+							_, err := hex.DecodeString(value)
+							require.NoError(t, err)
+							actual, ok := setting.(string)
+							require.True(t, ok)
+							if value != actual {
+								return false
+							}
+						}
+					default:
+						return false
 					}
 				}
 				return true
@@ -331,38 +381,32 @@ func TestCommitSettingChanges(t *testing.T) {
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
 					"min_alloc_duration":            "5m",
-					"max_challenge_completion_time": "30m",
+					"max_challenge_completion_time": "3m",
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        "10",
-					"readpool.min_lock_period": "1h",
-					"readpool.max_lock_period": "8760h",
-
-					"writepool.min_lock":        "10",
-					"writepool.min_lock_period": "2m",
-					"writepool.max_lock_period": "8760h",
-
+					"readpool.min_lock":  "10",
 					"stakepool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
+					"cancellation_charge":            "0.2",
 
-					"free_allocation_settings.data_shards":                   "10",
-					"free_allocation_settings.parity_shards":                 "5",
-					"free_allocation_settings.size":                          "10000000000",
-					"free_allocation_settings.duration":                      "5000h",
-					"free_allocation_settings.read_price_range.min":          "0.0",
-					"free_allocation_settings.read_price_range.max":          "0.04",
-					"free_allocation_settings.write_price_range.min":         "0.0",
-					"free_allocation_settings.write_price_range.max":         "0.1",
-					"free_allocation_settings.max_challenge_completion_time": "1m",
-					"free_allocation_settings.read_pool_fraction":            "0.2",
+					"free_allocation_settings.data_shards":           "10",
+					"free_allocation_settings.parity_shards":         "5",
+					"free_allocation_settings.size":                  "10000000000",
+					"free_allocation_settings.duration":              "5000h",
+					"free_allocation_settings.read_price_range.min":  "0.0",
+					"free_allocation_settings.read_price_range.max":  "0.04",
+					"free_allocation_settings.write_price_range.min": "0.0",
+					"free_allocation_settings.write_price_range.max": "0.1",
+					"free_allocation_settings.read_pool_fraction":    "0.2",
 
 					"validator_reward":                     "0.025",
 					"blobber_slash":                        "0.1",
 					"max_read_price":                       "100",
 					"max_write_price":                      "100",
+					"max_blobbers_per_allocation":          "40",
 					"failed_challenges_to_cancel":          "20",
 					"failed_challenges_to_revoke_min_lock": "0",
 					"challenge_enabled":                    "true",
@@ -371,13 +415,50 @@ func TestCommitSettingChanges(t *testing.T) {
 					"validators_per_challenge":             "2",
 					"max_delegates":                        "100",
 
-					"block_reward.block_reward":     "1000",
-					"block_reward.qualifying_stake": "1",
-					"block_reward.sharder_ratio":    "80.0",
-					"block_reward.miner_ratio":      "20.0",
-					"block_reward.blobber_ratio":    "100.0",
-
-					"expose_mpt": "false",
+					"block_reward.block_reward":        "1000",
+					"block_reward.qualifying_stake":    "1",
+					"block_reward.sharder_ratio":       "80.0",
+					"block_reward.miner_ratio":         "20.0",
+					"block_reward.blobber_ratio":       "100.0",
+					"block_reward.gamma.alpha":         "0.2",
+					"block_reward.gamma.a":             "10",
+					"block_reward.gamma.b":             "9",
+					"block_reward.zeta.i":              "1",
+					"block_reward.zeta.k":              "0.9",
+					"block_reward.zeta.mu":             "0.2",
+					"owner_id":                         "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
+					"cost.update_settings":             "105",
+					"cost.read_redeem":                 "105",
+					"cost.commit_connection":           "105",
+					"cost.new_allocation_request":      "105",
+					"cost.update_allocation_request":   "105",
+					"cost.finalize_allocation":         "105",
+					"cost.cancel_allocation":           "105",
+					"cost.add_free_storage_assigner":   "105",
+					"cost.free_allocation_request":     "105",
+					"cost.free_update_allocation":      "105",
+					"cost.add_curator":                 "105",
+					"cost.remove_curator":              "105",
+					"cost.blobber_health_check":        "105",
+					"cost.update_blobber_settings":     "105",
+					"cost.pay_blobber_block_rewards":   "105",
+					"cost.curator_transfer_allocation": "105",
+					"cost.challenge_request":           "105",
+					"cost.challenge_response":          "105",
+					"cost.generate_challenges":         "105",
+					"cost.add_validator":               "105",
+					"cost.update_validator_settings":   "105",
+					"cost.add_blobber":                 "105",
+					"cost.new_read_pool":               "105",
+					"cost.read_pool_lock":              "105",
+					"cost.read_pool_unlock":            "105",
+					"cost.write_pool_lock":             "105",
+					"cost.write_pool_unlock":           "105",
+					"cost.stake_pool_lock":             "105",
+					"cost.stake_pool_unlock":           "105",
+					"cost.stake_pool_pay_interests":    "105",
+					"cost.commit_settings_changes":     "105",
+					"cost.collect_reward":              "105",
 				},
 			},
 		},
@@ -385,21 +466,22 @@ func TestCommitSettingChanges(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.title, func(t *testing.T) {
 			test := test
-			//t.Parallel()
 			args := setExpectations(t, test.parameters)
-
 			_, err := args.ssc.commitSettingChanges(args.txn, args.input, args.balances)
-			require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
-				require.EqualValues(t, test.want.msg, err.Error())
+				t.Fatal("commitSettingChanges err: ", err.Error())
 				return
 			}
-			//require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
 }
 
 func getConfField(conf Config, field string) interface{} {
+	if isCost(field) {
+		value, _ := conf.getCost(field)
+		return value
+	}
+
 	switch Settings[field].setting {
 	case MaxMint:
 		return conf.MaxMint
@@ -418,17 +500,8 @@ func getConfField(conf Config, field string) interface{} {
 
 	case ReadPoolMinLock:
 		return conf.ReadPool.MinLock
-	case ReadPoolMinLockPeriod:
-		return conf.ReadPool.MinLockPeriod
-	case ReadPoolMaxLockPeriod:
-		return conf.ReadPool.MaxLockPeriod
-
 	case WritePoolMinLock:
 		return conf.WritePool.MinLock
-	case WritePoolMinLockPeriod:
-		return conf.WritePool.MinLockPeriod
-	case WritePoolMaxLockPeriod:
-		return conf.WritePool.MaxLockPeriod
 
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
@@ -437,6 +510,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
 		return conf.MaxIndividualFreeAllocation
+	case CancellationCharge:
+		return conf.CancellationCharge
 
 	case FreeAllocationDataShards:
 		return conf.FreeAllocationSettings.DataShards
@@ -454,8 +529,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.FreeAllocationSettings.WritePriceRange.Min
 	case FreeAllocationWritePriceRangeMax:
 		return conf.FreeAllocationSettings.WritePriceRange.Max
-	case FreeAllocationMaxChallengeCompletionTime:
-		return conf.FreeAllocationSettings.MaxChallengeCompletionTime
 	case FreeAllocationReadPoolFraction:
 		return conf.FreeAllocationSettings.ReadPoolFraction
 
@@ -493,9 +566,22 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.MinerWeight
 	case BlockRewardBlobberWeight:
 		return conf.BlockReward.BlobberWeight
-
-	case ExposeMpt:
-		return conf.ExposeMpt
+	case MaxBlobbersPerAllocation:
+		return conf.MaxBlobbersPerAllocation
+	case BlockRewardGammaAlpha:
+		return conf.BlockReward.Gamma.Alpha
+	case BlockRewardGammaA:
+		return conf.BlockReward.Gamma.A
+	case BlockRewardGammaB:
+		return conf.BlockReward.Gamma.B
+	case BlockRewardZetaI:
+		return conf.BlockReward.Zeta.I
+	case BlockRewardZetaK:
+		return conf.BlockReward.Zeta.K
+	case BlockRewardZetaMu:
+		return conf.BlockReward.Zeta.Mu
+	case OwnerId:
+		return conf.OwnerId
 	default:
 		panic("unknown field: " + field)
 	}

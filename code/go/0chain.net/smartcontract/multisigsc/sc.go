@@ -14,8 +14,8 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
-	"0chain.net/core/util"
+	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -53,10 +53,6 @@ func (ms *MultiSigSmartContract) GetName() string {
 
 func (ms *MultiSigSmartContract) GetAddress() string {
 	return Address
-}
-
-func (ms *MultiSigSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
-	return ms.SmartContract.RestHandlers
 }
 
 func (ms *MultiSigSmartContract) setSC(sc *smartcontractinterface.SmartContract, bc smartcontractinterface.BCContextI) {

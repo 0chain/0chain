@@ -13,8 +13,8 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 var ErrNodeNull = common.NewError("node_null", "Node is not available")
@@ -33,7 +33,7 @@ func (c *Chain) GetBlockStateChangeForce(ctx context.Context, b *block.Block) er
 	})
 }
 
-//GetBlockStateChange - get the state change of the block from the network
+// GetBlockStateChange - get the state change of the block from the network
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	ts := time.Now()
 	if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
@@ -71,34 +71,18 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	return nil
 }
 
-//GetStateNodes - get a bunch of state nodes from the network
-func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
+// GetStateNodes - get a bunch of state nodes from the network
+func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) error {
 	ns, err := c.getStateNodes(ctx, keys)
 	if err != nil {
-		skeys := make([]string, len(keys))
-		for idx, key := range keys {
-			skeys[idx] = util.ToHex(key)
-		}
-		logging.Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
-			zap.Any("keys", skeys), zap.Error(err))
-		return
+		return common.NewError("sync state nodes failed", err.Error())
 	}
-	keysStr := make([]string, len(keys))
-	for i := range keys {
-		keysStr[i] = util.ToHex(keys[i])
+
+	if err := c.SaveStateNodes(ctx, ns); err != nil {
+		return common.NewError("saving synced state nodes failed", err.Error())
 	}
-	err = c.SaveStateNodes(ctx, ns)
-	if err != nil {
-		logging.Logger.Error("get state nodes - error saving",
-			zap.Int("num_keys", len(keys)),
-			zap.Strings("keys:", keysStr),
-			zap.Error(err))
-	} else {
-		logging.Logger.Info("get state nodes - saving",
-			zap.Int("num_keys", len(keys)),
-			zap.Strings("keys:", keysStr),
-			zap.Int("nodes", len(ns.Nodes)))
-	}
+
+	return nil
 }
 
 // UpdateStateFromNetwork get a bunch of state nodes from the network
@@ -113,7 +97,7 @@ func (c *Chain) UpdateStateFromNetwork(ctx context.Context, mpt util.MerklePatri
 	return ns.SaveState(ctx, mpt.GetNodeDB())
 }
 
-//GetStateNodesSharders - get a bunch of state nodes from the network
+// GetStateNodesSharders - get a bunch of state nodes from the network
 func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) {
 	ns, err := c.getStateNodesFromSharders(ctx, keys)
 	if err != nil {
@@ -143,7 +127,7 @@ func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	}
 }
 
-//GetStateFrom - get the state from a given node
+// GetStateFrom - get the state from a given node
 func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialState, error) {
 	partialState := &state.PartialState{}
 	partialState.Hash = key
@@ -172,7 +156,7 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 	return nil, util.ErrNodeNotFound
 }
 
-//GetStateNodesFrom - get the state nodes from db
+// GetStateNodesFrom - get the state nodes from db
 func (c *Chain) GetStateNodesFrom(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
 	var stateNodes = state.NewStateNodes()
 	nodes, err := c.stateDB.MultiGetNode(keys)
@@ -185,7 +169,7 @@ func (c *Chain) GetStateNodesFrom(ctx context.Context, keys []util.Key) (*state.
 	return stateNodes, nil
 }
 
-//SyncPartialState - sync partial state
+// SyncPartialState - sync partial state
 func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) error {
 	if ps.GetRoot() == nil {
 		return ErrNodeNull
@@ -193,14 +177,14 @@ func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) er
 	return c.SavePartialState(ctx, ps)
 }
 
-//SavePartialState - save the partial state
+// SavePartialState - save the partial state
 func (c *Chain) SavePartialState(ctx context.Context, ps *state.PartialState) error {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return ps.SaveState(ctx, c.stateDB)
 }
 
-//SaveStateNodes - save the state nodes
+// SaveStateNodes - save the state nodes
 func (c *Chain) SaveStateNodes(ctx context.Context, ns *state.Nodes) error {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()

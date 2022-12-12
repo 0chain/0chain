@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package minersc
@@ -68,11 +69,18 @@ func (msc *MinerSmartContract) AddMinerIntegrationTests(
 		state  = client.State()
 		ame    crpc.AddMinerEvent
 	)
+
 	ame.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
-	ame.Miner = state.Name(crpc.NodeID(mn.ID))
+	ame.Miner = state.Name(crpc.NodeID(mn.SimpleNode.ID))
+
+	if ame.Miner == crpc.NodeName("") {
+		return
+	}
+
 	if err = client.AddMiner(&ame); err != nil {
 		panic(err)
 	}
+
 	return
 }
 

@@ -10,7 +10,7 @@ import (
 
 	"0chain.net/chaincore/node"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 var blsPublicKeys []string
@@ -68,21 +68,22 @@ func TestBCContext_GetNodepoolInfo(t *testing.T) {
 		members := &PoolMembersInfo{
 			MembersInfo: []PoolMemberInfo{
 				{
+					N2NHost:   bn.N2NHost,
+					Port:      strconv.Itoa(bn.Port),
+					Type:      "Blobber",
+					PublicKey: bn.PublicKey,
+				},
+				{
 					N2NHost:   mn.N2NHost,
 					Port:      strconv.Itoa(mn.Port),
-					Type:      Miner,
+					Type:      "Miner",
 					PublicKey: mn.PublicKey,
 				},
 				{
 					N2NHost:   sn.N2NHost,
 					Port:      strconv.Itoa(sn.Port),
-					Type:      Sharder,
+					Type:      "Sharder",
 					PublicKey: sn.PublicKey,
-				},
-				{
-					N2NHost:   bn.N2NHost,
-					Port:      strconv.Itoa(bn.Port),
-					PublicKey: bn.PublicKey,
 				},
 			},
 		}

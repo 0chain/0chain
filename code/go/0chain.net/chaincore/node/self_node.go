@@ -138,3 +138,7 @@ func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {
 	sn.Node.Info.BuildTag = build.BuildTag
 	sn.Node.Status = NodeStatusActive
 }
+
+func (sn *SelfNode) IsSharder() bool {
+	return sn.Type == NodeTypeSharder
+}

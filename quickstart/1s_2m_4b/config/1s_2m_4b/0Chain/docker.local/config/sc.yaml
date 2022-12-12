@@ -9,7 +9,7 @@ smart_contracts:
     global_reset: 48h # in hours
   interestpoolsc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
-    min_lock: 10 
+    min_lock: 10
     apr: 0.1
     min_lock_period: 1m
     max_mint: 4000000.0
@@ -54,8 +54,13 @@ smart_contracts:
     interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     # no mints after miner SC total mints reaches this boundary
     max_mint: 4000000.0 # tokens
-    # if view change is false then reward round frequency is used to send rewards and interests 
+    # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
+    num_miner_delegates_rewarded: 10
+    # sharders rewarded each round
+    num_sharders_rewarded: 5
+    # sharder delegates to get paid each round when paying fees and rewards
+    num_sharder_delegates_rewarded: 1
 
   storagesc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
@@ -72,7 +77,7 @@ smart_contracts:
     # min possible allocation duration allowed by the SC
     min_alloc_duration: '5m'
     # max challenge completion time of a blobber allowed by the SC
-    max_challenge_completion_time: '30m'
+    max_challenge_completion_time: '3m'
     # min blobber's offer duration allowed by the SC
     min_offer_duration: '10h'
     # min blobber capacity allowed by the SC
@@ -80,8 +85,6 @@ smart_contracts:
     # users' read pool related configurations
     readpool:
       min_lock: 0.1 # toekns
-      min_lock_period: 1m
-      max_lock_period: 8760h
     # users' write pool related configurations
     writepool:
       min_lock: 0.1 # tokens

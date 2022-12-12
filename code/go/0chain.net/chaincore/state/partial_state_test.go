@@ -8,11 +8,13 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/mocks"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -150,7 +152,9 @@ func TestPartialState_GetScore(t *testing.T) {
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
 			}
-			if got := ps.GetScore(); got != tt.want {
+			got, err := ps.GetScore()
+			require.NoError(t, err)
+			if got != tt.want {
 				t.Errorf("GetScore() = %v, want %v", got, tt.want)
 			}
 		})

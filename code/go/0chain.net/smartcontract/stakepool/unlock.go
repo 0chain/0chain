@@ -3,9 +3,9 @@ package stakepool
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
@@ -15,31 +15,29 @@ func (sp *StakePool) UnlockPool(
 	clientID string,
 	providerType spenum.Provider,
 	providerId datastore.Key,
-	poolId datastore.Key,
 	balances cstate.StateContextI,
-) (state.Balance, error) {
-	var usp *UserStakePools
-	usp, err := getOrCreateUserStakePool(providerType, clientID, balances)
-	if err != nil {
-		return 0, fmt.Errorf("can't get user pools list: %v", err)
-	}
-	foundProvider := usp.Find(poolId)
-	if len(foundProvider) == 0 || providerId != foundProvider {
-		return 0, fmt.Errorf("user %v does not own stake pool %v", clientID, poolId)
-	}
-
-	dp, ok := sp.Pools[poolId]
+) (string, error) {
+	dp, ok := sp.Pools[clientID]
 	if !ok {
-		return 0, fmt.Errorf("can't find pool: %v", poolId)
+		return "", fmt.Errorf("can't find pool of %v", clientID)
 	}
 
 	dp.Status = spenum.Deleting
 	amount, err := sp.MintRewards(
-		clientID, poolId, providerId, providerType, usp, balances,
+		clientID, providerId, providerType, balances,
 	)
+
+	i, _ := amount.Int64()
+	lock := event.DelegatePoolLock{
+		Client:       clientID,
+		ProviderId:   providerId,
+		ProviderType: providerType,
+		Amount:       i,
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, lock)
 	if err != nil {
-		return 0, fmt.Errorf("error emptying account, %v", err)
+		return "", fmt.Errorf("error emptying account, %v", err)
 	}
 
-	return amount, nil
+	return toJson(lock), nil
 }

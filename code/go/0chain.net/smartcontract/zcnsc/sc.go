@@ -7,6 +7,8 @@ import (
 	"math"
 	"net/url"
 
+	"github.com/0chain/common/core/util"
+
 	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -60,7 +62,7 @@ func (zcn *ZCNSmartContract) InitSC() {
 	// Authorizer
 	zcn.smartContractFunctions[AddAuthorizerFunc] = zcn.AddAuthorizer
 	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
-	// StakePool
+	// Provider
 	zcn.smartContractFunctions[UpdateAuthorizerStakePoolFunc] = zcn.UpdateAuthorizerStakePool
 	// Rewards
 	zcn.smartContractFunctions[CollectRewardsFunc] = zcn.CollectRewards
@@ -71,12 +73,6 @@ func (zcn *ZCNSmartContract) InitSC() {
 // SetSC ...
 func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
-
-	// REST
-
-	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.GetAuthorizerNodes
-	zcn.SmartContract.RestHandlers["/getGlobalConfig"] = zcn.GetGlobalConfig
-	zcn.SmartContract.RestHandlers["/getAuthorizer"] = zcn.GetAuthorizer
 
 	// Smart contract functions
 
@@ -107,11 +103,6 @@ func (zcn *ZCNSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-// GetRestPoints ...
-func (zcn *ZCNSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
-	return zcn.RestHandlers
-}
-
 func (zcn *ZCNSmartContract) GetExecutionStats() map[string]interface{} {
 	return zcn.SmartContractExecutionStats
 }
@@ -122,12 +113,14 @@ func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Val
 
 func (zcn *ZCNSmartContract) GetCost(_ *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
 	node, err := GetGlobalNode(balances)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return math.MaxInt32, err
 	}
+
 	if node.Cost == nil {
 		return math.MaxInt32, errors.New("can't get cost")
 	}
+
 	cost, ok := node.Cost[funcName]
 	if !ok {
 		return math.MaxInt32, errors.New("no cost given for " + funcName)

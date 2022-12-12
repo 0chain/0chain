@@ -6,7 +6,37 @@ The blockchain database used in these tests is constructed from the parameters i
 file. Smartcontracts do not (or should not) access tha chain so a populated 
 MPT database is enough to give a realistic benchmark.
 
-To run
+## To run
+### DOCKER
+1. run init
+```shell
+./docker.local/bin/init.setup.sh
+```
+2. build base image
+```shell
+./docker.local/bin/build.base.sh
+```
+3. build docker image
+```shell
+./docker.local/bin/build.benchmark.sh
+```
+4. change dir to benchmarks
+```shell
+cd docker.local/benchmarks
+```
+5. run tests
+```shell
+../bin/start.benchmarks.sh
+```
+
+Script can be run with different options:
+- load 
+- tests
+- config
+- verbose
+- omit
+
+### BARE METAL
 ```bash
 go build -tags bn256 && ./main benchmark | column -t -s,
 ```
@@ -26,6 +56,8 @@ go build -tags bn256 && ./main benchmark --load saved_data  | column -t -s,
 -
 
 To run only a subset of the test suits
+
+_Note: when run from docker list of tests should be passed as space delimited list, not comma delimited, it caused with bug in viper https://github.com/spf13/viper/issues/380_
 ```bash
 go build -tags bn256
 ./main benchmark benchmark --tests "miner, storage" | column -t -s,
@@ -46,7 +78,35 @@ go build -tags bn256
 
 To use the event database you need a to set up a local postgreSQL database. Login in parameters
 are read from the benchmark yaml, dbs.events section.
-```yanl
+- MacOS
+  1. brew install postgres
+  2. initdb /usr/local/var/postgres
+  3. pg_ctl -D /usr/local/var/postgres start
+  4. /usr/local/opt/postgres/bin/createuser -s postgres
+
+Create zchain_user
+```sql
+CREATE ROLE zchain_user WITH
+LOGIN
+NOSUPERUSER
+NOCREATEDB
+NOCREATEROLE
+INHERIT
+NOREPLICATION
+CONNECTION LIMIT -1
+PASSWORD 'zchian';
+```
+
+Create events_ds database
+```sql
+CREATE DATABASE events_db
+WITH
+OWNER = zchain_user
+ENCODING = 'UTF8'
+CONNECTION LIMIT = -1;
+```
+Add connectivity details to the config 
+```yaml
 dbs:
   events:
     enabled: true

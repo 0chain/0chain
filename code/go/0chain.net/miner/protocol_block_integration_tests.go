@@ -5,9 +5,11 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"math/rand"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -19,7 +21,9 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/storagesc"
+	"github.com/0chain/common/core/logging"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -46,11 +50,15 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	b.HashBlock()
 
 	switch {
-	case state.WrongBlockHash != nil:
-		b.Hash = revertString(b.Hash) // just wrong block hash
+	case state.WrongBlockHash != nil || state.WrongBlockDDoS != nil:
+		b.Hash = util.ShuffleString(b.Hash)
+		b.Signature, err = self.Sign(b.Hash)
+	case state.WrongBlockRandomSeed != nil:
+		b.RoundRandomSeed = b.RoundRandomSeed - 1
+		b.HashBlock()
 		b.Signature, err = self.Sign(b.Hash)
 	case state.WrongBlockSignHash != nil:
-		b.Signature, err = self.Sign(revertString(b.Hash)) // sign another hash
+		b.Signature, err = self.Sign(util.RevertString(b.Hash)) // sign another hash
 	case state.WrongBlockSignKey != nil:
 		b.Signature, err = crpcutils.Sign(b.Hash) // wrong secret key
 	default:
@@ -78,19 +86,67 @@ func hasDST(pb, b []*transaction.Transaction) (has bool) {
 	return false // has not
 }
 
+type ChallengeResponseTxData struct {
+	Name  string                      "json:'name'"
+	Input storagesc.ChallengeResponse "json:'input'"
+}
+
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.updateFinalizedBlock(ctx, b)
 
-	if isTestingOnUpdateFinalizedBlock(b.Round) {
+	addResultIfAdversarialValidatorTest(b)
+
+	state := crpc.Client().State()
+
+	if isTestingOnUpdateFinalizedBlock(b.Round, state) || isTestingRoundHasFinalized(state, int(b.Round)) {
 		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
 	}
 }
 
-func isTestingOnUpdateFinalizedBlock(round int64) bool {
+func addResultIfAdversarialValidatorTest(b *block.Block) {
 	s := crpc.Client().State()
+
+	if s.AdversarialValidator == nil || !s.IsMonitor {
+		return
+	}
+
+	for _, tx := range b.Txns {
+		var transactionData ChallengeResponseTxData
+		err := json.Unmarshal([]byte(tx.TransactionData), &transactionData)
+		if err != nil {
+			return
+		}
+
+		if (s.AdversarialValidator.DenialOfService || s.AdversarialValidator.FailValidChallenge) && tx.TransactionOutput == "challenge passed by blobber" {
+			if len(transactionData.Input.ValidationTickets) > 2 {
+				for _, vt := range transactionData.Input.ValidationTickets {
+					if (vt != nil && vt.ValidatorID == s.AdversarialValidator.ID) || (s.AdversarialValidator.DenialOfService && vt == nil) {
+						input, _ := json.Marshal(transactionData.Input)
+						crpc.Client().AddTestCaseResult(input)
+						return
+					}
+				}
+			}
+		} else if s.AdversarialValidator.PassAllChallenges && strings.Contains(tx.TransactionOutput, "challenge_penalty_error") {
+			for _, vt := range transactionData.Input.ValidationTickets {
+				if vt.ValidatorID == s.AdversarialValidator.ID {
+					input, _ := json.Marshal(transactionData.Input)
+					crpc.Client().AddTestCaseResult(input)
+					return
+				}
+			}
+		}
+	}
+}
+
+func isTestingRoundHasFinalized(s *crpc.State, blockRound int) bool {
+	return s.RoundHasFinalizedConfig != nil && s.RoundHasFinalizedConfig.Round == blockRound && chain.IsSpamReceiver(s, int64(blockRound))
+}
+
+func isTestingOnUpdateFinalizedBlock(round int64, s *crpc.State) bool {
 	var isTestingFunc func(round int64, generator bool, typeRank int) bool
 	switch {
 	case s.ExtendNotNotarisedBlock != nil:
@@ -122,6 +178,12 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 
 	case s.FBRequestor != nil:
 		isTestingFunc = s.FBRequestor.IsTesting
+
+	case s.SendDifferentBlocksFromFirstGenerator != nil:
+		isTestingFunc = s.SendDifferentBlocksFromFirstGenerator.IsTesting
+
+	case s.SendDifferentBlocksFromAllGenerators != nil:
+		isTestingFunc = s.SendDifferentBlocksFromAllGenerators.IsTesting
 
 	default:
 		return false

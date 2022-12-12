@@ -1,0 +1,81 @@
+name: CONDUCTOR BYZANTINE TESTS
+
+on:
+  schedule:
+    # Runs everyday at 01:00 am
+    - cron: '0 5 * * * '
+  workflow_dispatch:
+
+env:
+  ZCHAIN_BUILDBASE: zchain_build_base
+  ZCHAIN_BUILDRUN: zchain_run_base
+
+jobs:
+  CONDUCTOR_BYZANTINE_TESTS:
+    name: CONDUCTOR-BYZANTINE-TESTS
+    runs-on: [self-hosted, arc-runner]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Go 1.18 setup.
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+
+    - name: Docker Compose Setup.
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    
+    - name: Docker Init Setup.
+      run: |
+        make install-mockery
+        make build-mocks
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: Running No VC Byzantine Tests.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+
+    - name: Creating Artifact con-byz-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-byz-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-byz-tests-logs.tar.gz
+
+  notify_slack:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_BYZANTINE_TESTS]
+    if: always() && (needs.CONDUCTOR_BYZANTINE_TESTS.result == 'failure')
+    steps:
+      - name: "Notify Slack"
+        run: |
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

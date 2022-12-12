@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
@@ -166,7 +165,8 @@ func TestStore_Read_Closed_Conn_ERR(t *testing.T) {
 func TestStore_Write(t *testing.T) {
 	initDefaultTxnPool(t)
 
-	config.DevConfiguration.IsFeeEnabled = true
+	// No sure if this configuration is needed for this test!
+	// config.DevConfiguration.IsFeeEnabled = true
 
 	b := block.NewBlock("", 1)
 	b.Hash = b.ComputeHash()
@@ -934,7 +934,7 @@ func TestStore_MultiAddToCollection(t *testing.T) {
 	memorystore.AddPool("txndb", memorystore.DefaultPool)
 	memorystore.AddPool("roundsummarydb", memorystore.DefaultPool)
 
-	config.DevConfiguration.IsFeeEnabled = true
+	//config.DevConfiguration.IsFeeEnabled = true
 
 	txn := transaction.Transaction{}
 	txn.CollectionMemberField.EntityCollection = &datastore.EntityCollection{}

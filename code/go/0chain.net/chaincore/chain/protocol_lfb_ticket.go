@@ -16,7 +16,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 )
 
 // compile-time resolution
@@ -134,7 +134,7 @@ func (*LFBTicket) GetEntityMetadata() datastore.EntityMetadata {
 }
 
 func (*LFBTicket) SetKey(datastore.Key)                      {}
-func (*LFBTicket) GetScore() int64                           { return 0 }
+func (*LFBTicket) GetScore() (int64, error)                  { return 0, nil }
 func (*LFBTicket) ComputeProperties() error                  { return nil }
 func (*LFBTicket) Validate(context.Context) error            { return nil }
 func (*LFBTicket) Read(context.Context, datastore.Key) error { return nil }
@@ -204,8 +204,6 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 func (c *Chain) sendLFBTicketEventToSubscribers(
 	subs map[chan *LFBTicket]struct{}, ticket *LFBTicket) {
 
-	logging.Logger.Debug("[send LFB-ticket event to subscribers]",
-		zap.Int("subs", len(subs)), zap.Int64("round", ticket.Round))
 	for s := range subs {
 		select {
 		case s <- ticket: // the sending must be non-blocking
@@ -287,23 +285,11 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 				continue // don't need a block for the blank kick ticket
 			}
 
-			// only if updated, only for sharders
-			// (don't rebroadcast without a block verification)
-
-			if isSharder {
-				if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
-					c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket,
-						c.afterFetcher)
-					continue // if haven't the block, then don't update the latest
-				}
-			}
-
 			// send for all subscribers
 			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
 			// update latest
 			latest = ticket //
-			logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
 
 			// don't broadcast a received LFB ticket, since its already
 			// broadcasted by its sender
@@ -337,8 +323,10 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			// send for all subscribers, if any
 			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
-			latest = ticket // update the latest
-			logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
+			if latest.Round < ticket.Round {
+				latest = ticket // update the latest
+				logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
+			}
 
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
@@ -387,8 +375,6 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 
-	logging.Logger.Debug("handle LFB ticket", zap.String("sharder", r.RemoteAddr),
-		zap.Int64("round", ticket.Round))
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)
 }

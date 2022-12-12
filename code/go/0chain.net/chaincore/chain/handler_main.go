@@ -33,7 +33,12 @@ func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 	}
 }
 
-// SetupHandlers sets up the necessary API end points.
-func SetupHandlers(c Chainer) {
-	setupHandlers(handlersMap(c))
+// LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
+func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	c := GetServerChain()
+	if lfmb := c.GetLatestFinalizedMagicBlockClone(ctx); lfmb != nil {
+		return lfmb.GetSummary(), nil
+	}
+
+	return nil, errors.New("could not find latest finalized magic block")
 }

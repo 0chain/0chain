@@ -1,6 +1,8 @@
 FROM zchain_build_base
 ENV SRC_DIR=/0chain
-ENV GO111MODULE=on
+
+RUN apk add --update --no-cache curl
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
 
 # Download the dependencies:
 # Will be cached if we don't change mod/sum files
@@ -13,11 +15,6 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
     chmod -R +w . && \
     make clean libzstd.a
 
-RUN go get github.com/vektra/mockery/v2/.../
-
 COPY ./code/go/0chain.net $SRC_DIR/code/go/0chain.net
-COPY ./generate_mocks.sh $SRC_DIR/generate_mocks.sh
-
-RUN cd $SRC_DIR && ls && ./generate_mocks.sh
 
 WORKDIR $SRC_DIR/code/go

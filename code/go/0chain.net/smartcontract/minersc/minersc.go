@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package minersc
@@ -37,6 +38,7 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
 	msc.smartContractFunctions["delete_miner"] = msc.DeleteMiner
 	msc.smartContractFunctions["delete_sharder"] = msc.DeleteSharder
+	msc.smartContractFunctions["collect_reward"] = msc.collectReward
 
 	msc.smartContractFunctions["miner_health_check"] = msc.minerHealthCheck
 	msc.smartContractFunctions["sharder_health_check"] = msc.sharderHealthCheck

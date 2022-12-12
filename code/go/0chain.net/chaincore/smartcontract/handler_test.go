@@ -7,125 +7,45 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"testing"
 
-	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/chaincore/chain"
+
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/smartcontract/multisigsc"
+	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 
+	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
 
 	chstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
-	"0chain.net/chaincore/config"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
+	"github.com/0chain/common/core/util"
 )
 
 func init() {
 	metrics.DefaultRegistry = metrics.NewRegistry()
-	viper.Set("development.smart_contract.faucet", true)
-	viper.Set("development.smart_contract.storage", true)
-	viper.Set("development.smart_contract.zcn", true)
-	viper.Set("development.smart_contract.interest", true)
-	viper.Set("development.smart_contract.multisig", true)
-	viper.Set("development.smart_contract.miner", true)
-	viper.Set("development.smart_contract.vesting", true)
-
-	config.SmartContractConfig = viper.New()
-	config.SmartContractConfig.Set("smart_contracts.faucetsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.minersc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.interestpoolsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.vestingsc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-	config.SmartContractConfig.Set("smart_contracts.storagesc.ownerId", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
-
+	viper.Set("server_chain.smart_contract.faucet", true)
+	viper.Set("server_chain.smart_contract.storage", true)
+	viper.Set("server_chain.smart_contract.zcn", true)
+	viper.Set("server_chain.smart_contract.multisig", true)
+	viper.Set("server_chain.smart_contract.miner", true)
+	viper.Set("server_chain.smart_contract.vesting", true)
 	setupsc.SetupSmartContracts()
-	logging.InitLogging("testing", "")
-}
-
-func TestExecuteRestAPI(t *testing.T) {
-	t.Parallel()
-
-	gn := &faucetsc.GlobalNode{}
-	blob, err := gn.MarshalMsg(nil)
-	require.NoError(t, err)
-
-	sc := mocks.StateContextI{}
-	sc.On("GetTrieNode", mock.AnythingOfType("string"), mock.Anything).Return(nil).Run(
-		func(args mock.Arguments) {
-			v := args.Get(1).(*faucetsc.GlobalNode)
-			_, err := v.UnmarshalMsg(blob)
-			require.NoError(t, err)
-		})
-
-	type args struct {
-		ctx      context.Context
-		scAdress string
-		restpath string
-		params   url.Values
-		balances chstate.StateContextI
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    interface{}
-		wantErr bool
-	}{
-		{
-			name: "Unregistered_SC_ERR",
-			args: args{
-				scAdress: storagesc.ADDRESS,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Unknown_REST_Path_ERR",
-			args: args{
-				restpath: "unknown path",
-				scAdress: faucetsc.ADDRESS,
-			},
-			wantErr: true,
-		},
-		{
-			name: "OK",
-			args: args{
-				restpath: "/pourAmount",
-				scAdress: faucetsc.ADDRESS,
-				balances: &sc,
-			},
-			want:    "Pour amount per request: 0",
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := ExecuteRestAPI(tt.args.ctx, tt.args.scAdress, tt.args.restpath, tt.args.params, tt.args.balances)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExecuteRestAPI() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ExecuteRestAPI() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }
 
 func TestExecuteStats(t *testing.T) {
@@ -197,6 +117,7 @@ tr.header { background-color: #E0E0E0;  }
 func TestGetSmartContract(t *testing.T) {
 	t.Parallel()
 
+	common.ConfigRateLimits()
 	tests := []struct {
 		name       string
 		address    string
@@ -211,12 +132,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 30,
-		},
-		{
-			name:       "interest",
-			address:    interestpoolsc.ADDRESS,
-			restpoints: 3,
+			restpoints: 46,
 		},
 		{
 			name:       "multisig",
@@ -226,7 +142,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "miner",
 			address:    minersc.ADDRESS,
-			restpoints: 21,
+			restpoints: 22,
 		},
 		{
 			name:       "vesting",
@@ -255,7 +171,7 @@ func TestGetSmartContract(t *testing.T) {
 			}
 			require.EqualValues(t, tt.name, got.GetName())
 			require.EqualValues(t, tt.address, got.GetAddress())
-			require.EqualValues(t, tt.restpoints, len(got.GetRestPoints()))
+			require.EqualValues(t, tt.restpoints, len(chain.GetFunctionNames(tt.address)))
 		})
 	}
 }
@@ -263,7 +179,7 @@ func TestGetSmartContract(t *testing.T) {
 func makeTestStateContextIMock() *mocks.StateContextI {
 	stateContextI := mocks.StateContextI{}
 	stateContextI.On("GetClientBalance", mock.AnythingOfType("string")).Return(
-		func(_ datastore.Key) state.Balance {
+		func(_ datastore.Key) currency.Coin {
 			return 5
 		},
 		func(_ datastore.Key) error {
@@ -312,7 +228,9 @@ func TestExecuteWithStats(t *testing.T) {
 	smcoi.SmartContract.SmartContractExecutionStats["token refills"] = metrics.NewHistogram(metrics.NilSample{})
 	smcoi.SmartContract.SmartContractExecutionStats["refill"] = metrics.NewTimer()
 
-	gn := &faucetsc.GlobalNode{}
+	gn := &faucetsc.GlobalNode{
+		FaucetConfig: &faucetsc.FaucetConfig{},
+	}
 	blob, err := gn.MarshalMsg(nil)
 	require.NoError(t, err)
 
@@ -386,12 +304,6 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.MinerNodes) bool {
-			minerNodes := &minersc.MinerNodes{}
-			blob, err := minerNodes.MarshalMsg(nil)
-			require.NoError(t, err)
-
-			_, err = v.UnmarshalMsg(blob)
-			require.NoError(t, err)
 			return true
 		})).Return(nil)
 	stateContextIMock.On("GetTrieNode",
@@ -430,7 +342,9 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *faucetsc.GlobalNode) bool {
-			gn := &faucetsc.GlobalNode{}
+			gn := &faucetsc.GlobalNode{
+				FaucetConfig: &faucetsc.FaucetConfig{},
+			}
 			blob, err := gn.MarshalMsg(nil)
 			require.NoError(t, err)
 
@@ -500,7 +414,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					InputData:    scData,
 				},
 			},
-			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0,\"last_setting_update_round\":0}}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":null}",
 			wantErr: false,
 		},
 	}

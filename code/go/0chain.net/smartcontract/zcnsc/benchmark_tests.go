@@ -1,9 +1,17 @@
 package zcnsc
 
 import (
+	"log"
 	"math/rand"
 	"strconv"
 	"testing"
+
+	"github.com/0chain/common/core/currency"
+
+	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/spf13/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -12,6 +20,10 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
+)
+
+const (
+	owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 )
 
 type benchTest struct {
@@ -33,7 +45,7 @@ func (bt benchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
-func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) error {
+func (bt benchTest) Run(state cstate.TimedQueryStateContext, b *testing.B) error {
 	b.Logf("Running test '%s' from ZCNSC Bridge", bt.name)
 	_, err := bt.endpoint(bt.Transaction(), bt.input, state)
 	return err
@@ -73,37 +85,91 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				input:    createBurnPayloadForZCNSCBurn(),
 			},
 			{
-				name:     benchmark.ZcnSc + MintFunc + ".1Confirmation",
+				name:     benchmark.ZcnSc + MintFunc + strconv.Itoa(viper.GetInt(benchmark.NumAuthorizers)) + "Confirmations",
 				endpoint: sc.Mint,
 				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
-				input:    createMintPayloadForZCNSCMint(scheme, data, 0, 1),
+				input:    createMintPayloadForZCNSCMint(scheme, data),
 			},
 			{
-				name:     benchmark.ZcnSc + MintFunc + ".10Confirmation",
-				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
-				input:    createMintPayloadForZCNSCMint(scheme, data, 1, 10),
+				name:     benchmark.ZcnSc + UpdateGlobalConfigFunc,
+				endpoint: sc.UpdateGlobalConfig,
+				txn:      createTransaction(owner, ""),
+				input: (&smartcontract.StringMap{
+					Fields: map[string]string{
+						MinMintAmount:      "2",
+						MinBurnAmount:      "3",
+						MinStakeAmount:     "1",
+						MinLockAmount:      "4",
+						MinAuthorizers:     "17",
+						PercentAuthorizers: "73",
+						MaxFee:             "800",
+						BurnAddress:        "7000000000000000000000000000000000000000000000000000000000000000",
+					},
+				}).Encode(),
 			},
 			{
-				name:     benchmark.ZcnSc + MintFunc + "100Confirmation",
-				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients[0], data.PublicKeys[0]),
-				input:    createMintPayloadForZCNSCMint(scheme, data, 10, 110),
+				name:     benchmark.ZcnSc + UpdateAuthorizerConfigFunc,
+				endpoint: sc.UpdateAuthorizerConfig,
+				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
+				input: (&AuthorizerNode{
+					ID:        data.Clients[0],
+					PublicKey: data.PublicKeys[0],
+					URL:       "http://localhost:3030",
+					Config: &AuthorizerConfig{
+						Fee: currency.Coin(viper.GetInt(benchmark.ZcnMaxFee) / 2),
+					},
+				}).Encode(),
+			},
+			{
+				name:     benchmark.ZcnSc + UpdateAuthorizerStakePoolFunc,
+				endpoint: sc.UpdateAuthorizerStakePool,
+				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
+				input: (&UpdateAuthorizerStakePoolPayload{
+					StakePoolSettings: stakepool.Settings{
+						DelegateWallet:     data.Clients[0],
+						MinStake:           currency.Coin(1.1 * 1e10),
+						MaxStake:           currency.Coin(103 * 1e10),
+						MaxNumDelegates:    7,
+						ServiceChargeRatio: 0.17,
+					},
+				}).Encode(),
+			},
+			{
+				name:     benchmark.ZcnSc + CollectRewardsFunc,
+				endpoint: sc.CollectRewards,
+				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
+				input: (&stakepool.CollectRewardRequest{
+					ProviderType: spenum.Authorizer,
+					//PoolId:       getMockAuthoriserStakePoolId(data.Clients[0], 0),
+				}).Encode(),
+			},
+			{
+				name:     benchmark.ZcnSc + AddToDelegatePoolFunc,
+				endpoint: sc.AddToDelegatePool,
+				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
+				input: (&stakePoolRequest{
+					AuthorizerID: data.Clients[0],
+				}).encode(),
+			},
+			{
+				name:     benchmark.ZcnSc + DeleteFromDelegatePoolFunc,
+				endpoint: sc.DeleteFromDelegatePool,
+				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
+				input: (&stakePoolRequest{
+					//PoolID:       getMockAuthoriserStakePoolId(data.Clients[0], 0),
+					AuthorizerID: data.Clients[0],
+				}).encode(),
 			},
 		},
 	)
 }
 
-func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchmark.BenchData, from, to int) []byte {
+func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchmark.BenchData) []byte {
 	var sigs []*AuthorizerSignature
 
 	client := data.Clients[1]
-	lim := len(authorizers)
 
-	for i := from; i < to && i < lim; i++ {
-
-		auth := authorizers[i]
-
+	for i := 0; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		pb := &proofOfBurn{
 			TxnID:             encryption.Hash(strconv.Itoa(i)),
 			Amount:            100,
@@ -118,11 +184,11 @@ func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchm
 		}
 
 		sig := &AuthorizerSignature{
-			ID:        auth.ID,
+			ID:        data.Clients[i],
 			Signature: pb.Signature,
 		}
 
-		err = pb.verifySignature(auth.PublicKey)
+		err = pb.verifySignature(data.PublicKeys[i])
 		if err != nil {
 			panic(err)
 		}
@@ -143,9 +209,7 @@ func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchm
 }
 
 func createBurnPayloadForZCNSCBurn() []byte {
-	burnNonce = burnNonce + 1
 	payload := &BurnPayload{
-		Nonce:           burnNonce,
 		EthereumAddress: "0xc8285f5304b1B7aAB09a7d26721D6F585448D0ed",
 	}
 
@@ -153,12 +217,16 @@ func createBurnPayloadForZCNSCBurn() []byte {
 }
 
 func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
-	an := &authorizerNodeArg{
-		PublicKey: data.PublicKeys[index],
-		URL:       "http://localhost:303" + strconv.Itoa(index),
+	an := &AddAuthorizerPayload{
+		PublicKey:         data.PublicKeys[index],
+		URL:               "http://localhost:303" + strconv.Itoa(index),
+		StakePoolSettings: getMockStakePoolSettings(data.Clients[index]),
 	}
-
-	return an.Encode()
+	ap, err := an.Encode()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ap
 }
 
 func createRandomTransaction(id, publicKey string) *transaction.Transaction {
@@ -177,13 +245,18 @@ func createBurnTransaction(clientId, publicKey string) *transaction.Transaction 
 		},
 		ClientID:     clientId,
 		PublicKey:    publicKey,
-		ToClientID:   config.SmartContractConfig.GetString(benchmark.BurnAddress),
+		ToClientID:   config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress),
 		Value:        3000,
 		CreationDate: common.Now(),
 	}
 }
 
 func createTransaction(clientId, publicKey string) *transaction.Transaction {
+	creationTimeRaw := viper.GetInt64(benchmark.MptCreationTime)
+	creationTime := common.Now()
+	if creationTimeRaw != 0 {
+		creationTime = common.Timestamp(creationTimeRaw)
+	}
 	return &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("mock transaction hash"),
@@ -192,7 +265,7 @@ func createTransaction(clientId, publicKey string) *transaction.Transaction {
 		PublicKey:    publicKey,
 		ToClientID:   ADDRESS,
 		Value:        3000,
-		CreationDate: common.Now(),
+		CreationDate: creationTime,
 	}
 }
 

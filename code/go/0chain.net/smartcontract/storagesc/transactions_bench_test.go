@@ -14,7 +14,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"github.com/stretchr/testify/require"
 )
@@ -148,7 +148,6 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 					nar.ReadPriceRange = PriceRange{1e10, 10e10}
 					nar.WritePriceRange = PriceRange{2e10, 20e10}
 					nar.Size = 1 * KB // 2 GB
-					nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 					input = mustEncode(b, nar)                        //
 					tx = newTransaction(client.id, ADDRESS, 1e10, tp) //
@@ -156,7 +155,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 				}
 				b.StartTimer()
 
-				_, err = ssc.newAllocationRequest(tx, input, balances)
+				_, err = ssc.newAllocationRequest(tx, input, balances, nil)
 				require.NoError(b, err)
 			}
 			b.ReportAllocs()
@@ -225,7 +224,6 @@ func Benchmark_generateChallenges(b *testing.B) {
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 1 * KB
-		nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 		var resp, err = nar.callNewAllocReq(b, client.id, 15*x10, ssc, tp,
 			balances)
@@ -245,7 +243,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 		require.NoError(b, err)
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
-		for _, d := range alloc.BlobberDetails {
+		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
@@ -267,7 +265,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 	} {
 
 		conf.MaxChallengesPerGeneration = mcpg
-		mustSave(b, scConfigKey(ssc.ID), conf, balances)
+		mustSave(b, scConfigKey(ADDRESS), conf, balances)
 
 		b.Run(fmt.Sprintf("max chall per gen %d", mcpg), func(b *testing.B) {
 
@@ -360,7 +358,6 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 1 * KB
-		nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 		var resp, err = nar.callNewAllocReq(b, client.id, 15*x10, ssc, tp,
 			balances)
@@ -380,7 +377,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		require.NoError(b, err)
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
-		for _, d := range alloc.BlobberDetails {
+		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
@@ -424,7 +421,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				require.NoError(b, err)
 
 				// 6.3 keep for the benchmark
-				blobberID = alloc.BlobberDetails[rand.Intn(len(alloc.BlobberDetails))].BlobberID
+				blobberID = alloc.BlobberAllocs[rand.Intn(len(alloc.BlobberAllocs))].BlobberID
 
 				var (
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))
@@ -433,14 +430,18 @@ func Benchmark_verifyChallenge(b *testing.B) {
 
 				storageChall, err := ssc.getStorageChallenge(challID, balances)
 				require.NoError(b, err)
-				blobberChall, err := ssc.getBlobberChallenge(blobberID, balances)
+				allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 				require.NoError(b, err)
-				allocChall, err := ssc.getAllocationChallenge(allocID, balances)
-				require.NoError(b, err)
-				blobberAllocChall, ok := alloc.BlobberMap[blobberID]
-				require.True(b, ok)
+				challInfo := &StorageChallengeResponse{
+					StorageChallenge: storageChall,
+				}
 
-				challBytes, err = ssc.addChallenge(alloc, storageChall, blobberChall, allocChall, blobberAllocChall, balances)
+				err = ssc.addChallenge(
+					alloc,
+					storageChall,
+					allocChall,
+					challInfo,
+					balances)
 
 				require.NoError(b, err)
 
@@ -465,7 +466,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				}
 
 				// 6.3 keep for the benchmark
-				//blobberID = chall.BlobberID
+				//blobberID = chall.ID
 
 				// 6.4 prepare transaction
 				tp += 1

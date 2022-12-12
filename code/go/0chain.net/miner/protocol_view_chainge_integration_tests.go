@@ -9,33 +9,24 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc" // integration tests
-	crpcutils "0chain.net/conductor/utils"
 )
-
-func revertString(s string) string {
-	r := []rune(s)
-	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {
-		r[i], r[j] = r[j], r[i]
-	}
-	return string(r)
-}
 
 // The sendDKGShare sends the generated secShare to the given node.
 func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 
-	if !config.DevConfiguration.IsDkgEnabled {
+	if !mc.ChainConfig.IsDkgEnabled() {
 		return common.NewError("send_dkg_share", "dkg is not enabled")
 	}
 
@@ -65,7 +56,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	case state.Shares.IsGood(state, nodeID):
 		params.Add("secret_share", secShare.GetHexString())
 	case state.Shares.IsBad(state, nodeID):
-		params.Add("secret_share", revertString(secShare.GetHexString()))
+		params.Add("secret_share", util.RevertString(secShare.GetHexString()))
 	default:
 		return common.NewError("failed to send DKG share", "skipped by tests")
 	}
@@ -175,9 +166,9 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	for id, share := range clone.ShareOrSigns {
 		switch {
 		case state.Publish.IsBad(state, id):
-			share.Sign = revertString(share.Sign)
-			share.Share = revertString(share.Share)
-			share.Message = revertString(share.Message)
+			share.Sign = util.RevertString(share.Sign)
+			share.Share = util.RevertString(share.Share)
+			share.Message = util.RevertString(share.Message)
 		case state.Publish.IsGood(state, id):
 			// keep as is
 		default:
@@ -204,7 +195,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		minerUrls)
+		minerUrls, mb.Sharders.N2NURLs())
 	return
 }
 
@@ -213,7 +204,7 @@ func getBadMPK(mpk *block.MPK) (bad *block.MPK) {
 	bad.ID = mpk.ID
 	bad.Mpk = make([]string, 0, len(mpk.Mpk))
 	for _, x := range mpk.Mpk {
-		bad.Mpk = append(bad.Mpk, revertString(x))
+		bad.Mpk = append(bad.Mpk, util.RevertString(x))
 	}
 	return
 }
@@ -227,7 +218,7 @@ func getBaseN2NURLs(nodes []*node.Node) (urls []string) {
 }
 
 func (mc *Chain) sendMpkTransaction(selfNode *node.Node, mpk *block.MPK,
-	urls []string) (tx *httpclientutil.Transaction, err error) {
+	urls []string, sharders []string) (tx *httpclientutil.Transaction, err error) {
 
 	var scData = new(httpclientutil.SmartContractTxnData)
 	scData.Name = scNameContributeMpk
@@ -236,7 +227,7 @@ func (mc *Chain) sendMpkTransaction(selfNode *node.Node, mpk *block.MPK,
 		selfNode.PublicKey)
 	tx.ToClientID = minersc.ADDRESS
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0,
-		scData, urls)
+		scData, urls, sharders)
 	return
 }
 
@@ -283,14 +274,15 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 
 	var (
 		state             = crpc.Client().State()
-		good, bad         = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
+		good, bad         = chain.SplitGoodAndBadNodes(state, state.MPK, mb.Miners.Nodes)
 		goodurls, badurls = getBaseN2NURLs(good), getBaseN2NURLs(bad)
 		badMPK            = getBadMPK(mpk)
+		shardersUrls      = mb.Sharders.N2NURLs()
 	)
 
 	// send bad MPK first
 	if len(bad) > 0 {
-		tx, err = mc.sendMpkTransaction(selfNode, badMPK, badurls)
+		tx, err = mc.sendMpkTransaction(selfNode, badMPK, badurls, shardersUrls)
 		if err != nil {
 			return
 		}
@@ -298,7 +290,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 
 	// send good MPK second
 	if len(good) > 0 {
-		tx, err = mc.sendMpkTransaction(selfNode, mpk, goodurls)
+		tx, err = mc.sendMpkTransaction(selfNode, mpk, goodurls, shardersUrls)
 	}
 
 	return
@@ -310,7 +302,7 @@ func afterSignShareRequestHandler(message *bls.DKGKeyShare, nodeID string) (mess
 
 	switch {
 	case state.Signatures.IsBad(state, nodeID):
-		message.Sign = revertString(message.Sign)
+		message.Sign = util.RevertString(message.Sign)
 	default:
 		return nil, common.NewError("integration_tests", "send_no_signatures")
 	case state.Signatures.IsGood(state, nodeID):

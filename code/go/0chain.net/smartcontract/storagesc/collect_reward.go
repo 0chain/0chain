@@ -1,15 +1,15 @@
 package storagesc
 
 import (
-	"encoding/json"
+	"strconv"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 )
 
 // collectReward mints tokens for delegate rewards.
@@ -19,54 +19,53 @@ func (ssc *StorageSmartContract) collectReward(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-
-	var prr stakepool.CollectRewardRequest
-	if err := prr.Decode(input); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"can't decode request: %v", err)
-	}
-
-	usp, err := stakepool.GetUserStakePool(prr.ProviderType, txn.ClientID, balances)
+	conf, err := getConfig(balances)
 	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"can't get related user stake pools: %v", err)
+		return "", common.NewError("collect_reward_failed", "can't get config: "+err.Error())
 	}
+	var req stakepool.CollectRewardRequest
+	minted, err := stakepool.CollectReward(
+		input, func(
+			crr stakepool.CollectRewardRequest, balances cstate.StateContextI,
+		) (currency.Coin, error) {
+			req = crr
+			sp, err := ssc.getStakePool(crr.ProviderType, crr.ProviderId, balances)
+			if err != nil {
+				return 0, err
+			}
 
-	providerId := usp.Find(prr.PoolId)
-	if len(providerId) == 0 {
-		return "", common.NewErrorf("pay_reward_failed",
-			"user %v does not own stake pool %v", txn.ClientID, prr.PoolId)
-	}
+			minted, err := sp.MintRewards(
+				txn.ClientID, crr.ProviderId, crr.ProviderType, balances)
+			if err != nil {
+				return 0, err
+			}
 
-	sp, err := ssc.getStakePool(providerId, balances)
-	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"can't get related stake pool: %v", err)
-	}
+			if err := sp.Save(crr.ProviderType, crr.ProviderId, balances); err != nil {
+				return 0, err
+			}
 
-	_, err = sp.MintRewards(
-		txn.ClientID, prr.PoolId, providerId, prr.ProviderType, usp, balances)
-	if err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"error emptying account, %v", err)
-	}
+			//err = sp.EmitStakeEvent(crr.ProviderType, crr.ProviderId, balances)
+			if err != nil {
+				return 0, err
+			}
 
-	if err := usp.Save(spenum.Blobber, txn.ClientID, balances); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"error saving user stake pool, %v", err)
-	}
-
-	if err := sp.save(ssc.ID, providerId, balances); err != nil {
-		return "", common.NewErrorf("pay_reward_failed",
-			"error saving stake pool, %v", err)
-	}
-	data, _ := json.Marshal(dbs.DbUpdates{
-		Id: providerId,
-		Updates: map[string]interface{}{
-			"total_stake": int64(sp.stake()),
+			return minted, nil
 		},
-	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, providerId, string(data))
+		balances,
+	)
+	if err != nil {
+		return "", common.NewError("collect_reward_failed", err.Error())
+	}
 
-	return "", nil
+	if err := conf.saveMints(minted, balances); err != nil {
+		return "", common.NewError("collect_reward_failed", "can't Save config: "+err.Error())
+	}
+
+	return toJson(&event.RewardMint{
+		Amount:       int64(minted),
+		BlockNumber:  balances.GetBlock().Round,
+		ClientID:     txn.ClientID,
+		ProviderType: strconv.Itoa(int(req.ProviderType)),
+		ProviderID:   req.ProviderId,
+	}), err
 }

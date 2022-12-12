@@ -3,109 +3,96 @@ package event
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/currency"
 
-	"gorm.io/gorm"
+	common2 "0chain.net/smartcontract/common"
 
-	"0chain.net/chaincore/state"
+	"gorm.io/gorm/clause"
 )
 
+// swagger:model Validator
 type Validator struct {
-	gorm.Model
-	ValidatorID string `json:"validator_id" gorm:"index:validator_id"`
-	BaseUrl     string `json:"url" gorm:"index:url"`
-	Stake       int64  `json:"stake" gorm:"index:stake"`
-
-	// StakePoolSettings
-	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       state.Balance `json:"min_stake"`
-	MaxStake       state.Balance `json:"max_stake"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
-
-	Reward      int64 `json:"reward"`
-	TotalReward int64 `json:"total_reward"`
-}
-
-func (vn *Validator) exists(edb *EventDb) (bool, error) {
-	var count int64
-	result := edb.Get().
-		Model(&Validator{}).
-		Where(&Validator{ValidatorID: vn.ValidatorID}).
-		Count(&count)
-	if result.Error != nil {
-		return false, fmt.Errorf("error searching for Validator %v, error %v",
-			vn.ValidatorID, result.Error)
-	}
-	return count > 0, nil
+	Provider
+	BaseUrl   string `json:"url"`
+	PublicKey string `json:"public_key"`
 }
 
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
 	var vn Validator
 
-	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(&vn)
+	result := edb.Store.Get().
+		Preload("Rewards").
+		Model(&Validator{}).Where(&Validator{Provider: Provider{ID: validatorID}}).First(&vn)
 
 	if result.Error != nil {
-		return vn, fmt.Errorf("error retriving Validation node with ID %v; error: %v", validatorID, result.Error)
+		return vn, fmt.Errorf("error retrieving Validation node with ID %v; error: %v", validatorID, result.Error)
 	}
 
 	return vn, nil
 }
 
-func (edb *EventDb) overwriteValidator(vn Validator) error {
+func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
+	var validators []Validator
+	result := edb.Store.Get().Preload("Rewards").
+		Model(&Validator{}).Where("id IN ?", ids).Find(&validators)
 
-	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: vn.ValidatorID}).Updates(&vn)
-	return result.Error
+	return validators, result.Error
 }
 
-func (edb *EventDb) addOrOverwriteValidator(vn Validator) error {
-	exists, err := vn.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteValidator(vn)
-	}
-
-	result := edb.Store.Get().Create(&vn)
-
-	return result.Error
+func (edb *EventDb) addOrOverwriteValidators(validators []Validator) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		UpdateAll: true,
+	}).Create(&validators).Error
 }
 
-type validatorAggregateStats struct {
-	Reward      int64 `json:"reward"`
-	TotalReward int64 `json:"total_reward"`
-}
-
-func (edb *EventDb) validatorAggregateStats(id string) (*validatorAggregateStats, error) {
-	var validator validatorAggregateStats
+func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
+	var validators []Validator
 	result := edb.Store.Get().
+		Preload("Rewards").
 		Model(&Validator{}).
-		Where(&Validator{ValidatorID: id}).
-		First(&validator)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retrieving validator %v, error %v",
-			id, result.Error)
-	}
+		Offset(pg.Offset).Limit(pg.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pg.IsDescending,
+		}).Find(&validators)
 
-	return &validator, nil
+	return validators, result.Error
 }
 
-func (edb *EventDb) updateValidator(updates dbs.DbUpdates) error {
-	var validator = Validator{ValidatorID: updates.Id}
-	exists, err := validator.exists(edb)
-
-	if err != nil {
-		return err
+func (edb *EventDb) updateValidators(validators []Validator) error {
+	updateFields := []string{
+		"base_url", "public_key", "total_stake",
+		"unstake_total", "min_stake", "max_stake",
+		"delegate_wallet", "num_delegates",
+		"service_charge",
 	}
-	if !exists {
-		return fmt.Errorf("validator %v not in database cannot update",
-			validator.ValidatorID)
-	}
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns(updateFields),
+	}).Create(&validators).Error
+}
 
-	result := edb.Store.Get().
-		Model(&Validator{}).
-		Where(&Validator{ValidatorID: validator.ValidatorID}).
-		Updates(updates.Updates)
-	return result.Error
+func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateValidatorStakeTotal, Validator{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalStake},
+	}
+}
+
+func (edb *EventDb) updateValidatorStakes(validators []Validator) error {
+	updateFields := []string{"stake_total"}
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns(updateFields),
+	}).Create(&validators).Error
+}
+
+func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
+	return newEventsMerger[Validator](TagUpdateValidator, withUniqueEventOverwrite())
+}
+
+func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
+	return newEventsMerger[Validator](TagUpdateValidatorStakeTotal, withUniqueEventOverwrite())
 }

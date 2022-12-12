@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/config"
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -20,7 +21,7 @@ func init() {
 func TestAuthorizers(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgres")
 
-	access := dbs.DbAccess{
+	access := config.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -31,7 +32,7 @@ func TestAuthorizers(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -40,29 +41,33 @@ func TestAuthorizers(t *testing.T) {
 	require.NoError(t, err)
 
 	authorizer_1 := Authorizer{
-		AuthorizerID:    encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 		URL:             "http://localhost:8080",
 		Latitude:        0.0,
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
-		DelegateWallet:  "delegate wallet",
-		MinStake:        state.Balance(53),
-		MaxStake:        state.Balance(57),
-		NumDelegates:    59,
-		ServiceCharge:   61.0,
+		Provider: Provider{
+			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
+			DelegateWallet: "delegate wallet",
+			MinStake:       currency.Coin(53),
+			MaxStake:       currency.Coin(57),
+			NumDelegates:   59,
+			ServiceCharge:  61.0,
+		},
 	}
 
 	authorizer_2 := Authorizer{
-		AuthorizerID:    encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 		URL:             "http://localhost:8888",
 		Latitude:        1.0,
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),
-		DelegateWallet:  "delegate wallet",
-		MinStake:        state.Balance(52),
-		MaxStake:        state.Balance(57),
-		NumDelegates:    60,
-		ServiceCharge:   50.0,
+		Provider: Provider{
+			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
+			DelegateWallet: "delegate wallet",
+			MinStake:       currency.Coin(52),
+			MaxStake:       currency.Coin(57),
+			NumDelegates:   60,
+			ServiceCharge:  50.0,
+		},
 	}
 
 	err = eventDb.AddAuthorizer(&authorizer_1)
@@ -78,7 +83,7 @@ func TestAuthorizers(t *testing.T) {
 	eventDb.Get().Table("authorizers").Count(&count)
 	require.Equal(t, int64(2), count, "Authorizer not getting inserted")
 
-	_, err = eventDb.GetValidatorByValidatorID(authorizer_1.AuthorizerID)
+	_, err = eventDb.GetValidatorByValidatorID(authorizer_1.ID)
 	require.NoError(t, err, "Error while getting Authorizer from event Database")
 
 	_, err = authorizer_2.exists(eventDb)

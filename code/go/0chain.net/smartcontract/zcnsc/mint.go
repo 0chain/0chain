@@ -2,13 +2,15 @@ package zcnsc
 
 import (
 	"fmt"
+	"math"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 // Mint inputData - is a MintPayload
@@ -40,6 +42,36 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	if len(payload.Signatures) == 0 {
+		msg := fmt.Sprintf("payload doesn't contain signatures: %v, %s", err, info)
+		err = common.NewError(code, msg)
+		return
+	}
+
+	numAuth, err := getAuthorizerCount(ctx)
+	threshold := int(math.RoundToEven(gn.PercentAuthorizers * float64(numAuth)))
+
+	// if number of slices exceeds limits the check only withing required range
+	if len(payload.Signatures) < threshold {
+		msg := fmt.Sprintf("no of signatures lesser than threshold %d: %v, %s", threshold, err, info)
+		err = common.NewError(code, msg)
+		return
+	}
+
+	if len(payload.Signatures) > numAuth {
+		logging.Logger.Info("no of signatures execeed the no of available authorizers", zap.Int("available", numAuth))
+		payload.Signatures = payload.Signatures[0:numAuth]
+	}
+
+	// ClientID - is a client who broadcasts this transaction to mint token
+	// ToClientID - is an address of the smart contract
+	if payload.ReceivingClientID != trans.ClientID {
+		msg := fmt.Sprintf("transaction made from different account who made burn,  Original: %s, Current: %s",
+			payload.ReceivingClientID, trans.ClientID)
+		err = common.NewError(code, msg)
+		return
+	}
+
 	// check mint amount
 	if payload.Amount < gn.MinMintAmount {
 		msg := fmt.Sprintf(
@@ -52,42 +84,35 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// get user node
-	un, err := GetUserNode(trans.ClientID, ctx)
-	switch err {
-	case nil:
-		if un.Nonce+1 != payload.Nonce {
-			err = common.NewError(
-				code,
-				fmt.Sprintf(
-					"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s', %s",
-					payload.Nonce,
-					payload.ReceivingClientID,
-					un.Nonce,
-					un.ID,
-					info,
-				),
-			)
-			return
-		}
-	case util.ErrValueNotPresent:
-		err = common.NewError(code, "user node is nil "+info)
-		return
-	default:
-		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
+	_, exists := gn.WZCNNonceMinted[payload.Nonce]
+	if exists { // global nonce from ETH SC has already been minted
+		err = common.NewError(
+			code,
+			fmt.Sprintf(
+				"nonce given (%v) for receiving client (%s) has alredy been minted for Node.ID: '%s', %s",
+				payload.Nonce, payload.ReceivingClientID, trans.ClientID, info))
 		return
 	}
 
+	uniqueSignatures := payload.getUniqueSignatures()
+
 	// verify signatures of authorizers
-	err = payload.verifySignatures(ctx)
+	err = payload.verifySignatures(uniqueSignatures, ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to verify signatures with error: %v, %s", err, info)
 		err = common.NewError(code, msg)
+	}
+
+	if len(uniqueSignatures) < threshold {
+		err = common.NewError(
+			code,
+			"not enough valid signatures for minting",
+		)
 		return
 	}
 
-	// increase the nonce
-	un.Nonce++
+	// record the global nonce from solidity smart contract
+	gn.WZCNNonceMinted[payload.Nonce] = true
 
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
@@ -101,9 +126,9 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// Save the user node
-	err = un.Save(ctx)
+	err = gn.Save(ctx)
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, save MPR operation, %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
 		return
 	}
 

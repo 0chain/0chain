@@ -5,8 +5,9 @@ import (
 	"0chain.net/chaincore/state"
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
 	"0chain.net/smartcontract/multisigsc"
+	"github.com/0chain/common/core/currency"
+	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -128,7 +129,7 @@ func (t testWallet) newProposal(proposalID string, toClientID string, value int6
 	transfer := state.Transfer{
 		ClientID:   t.groupClientID,
 		ToClientID: toClientID,
-		Amount:     state.Balance(value),
+		Amount:     currency.Coin(value),
 	}
 
 	votes := make(map[string]multisigsc.Vote)

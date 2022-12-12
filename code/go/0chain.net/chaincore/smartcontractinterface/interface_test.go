@@ -23,7 +23,6 @@ func TestNewSC(t *testing.T) {
 			args: args{id: id},
 			want: &SmartContract{
 				ID:                          id,
-				RestHandlers:                make(map[string]SmartContractRestHandler),
 				SmartContractExecutionStats: make(map[string]interface{}),
 			},
 		},

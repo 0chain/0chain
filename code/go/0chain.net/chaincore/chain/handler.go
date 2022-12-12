@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -16,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
@@ -29,19 +32,19 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/minersc"
 )
 
 const (
-	getBlockV1Pattern = "/v1/block/get"
+	GetBlockV1Pattern = "/v1/block/get"
 )
 
-func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
-	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+// chainhandlersMap returns routes of associated with chain
+func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/chain/get": common.Recover(
 			common.ToJSONResponse(
@@ -50,40 +53,42 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 			),
 		),
-		"/v1/chain/put": common.Recover(
-			datastore.ToJSONEntityReqResponse(
-				memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata),
-				chainEntityMetadata,
-			),
-		),
-		"/v1/block/get/latest_finalized": common.UserRateLimit(
+	}
+	return m
+}
+
+func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	m := map[string]func(http.ResponseWriter, *http.Request){
+
+		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
 			),
-		),
-		"/v1/block/get/latest_finalized_magic_block_summary": common.UserRateLimit(
+		)),
+		"/v1/block/get/latest_finalized_magic_block_summary": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
-		),
-		"/v1/block/get/latest_finalized_magic_block": common.UserRateLimit(
+		)),
+		"/v1/block/get/latest_finalized_magic_block": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockHandler(c),
 			),
-		),
-		"/v1/block/get/recent_finalized": common.UserRateLimit(
+		)),
+		"/v1/block/get/recent_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				RecentFinalizedBlockHandler,
 			),
-		),
-		"/v1/block/get/fee_stats": common.UserRateLimit(
+		)),
+		"/v1/block/get/fee_stats": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestBlockFeeStatsHandler,
 			),
-		),
-		"/": common.UserRateLimit(
+		)),
+		"/": common.WithCORS(common.UserRateLimit(
 			HomePageAndNotFoundHandler,
-		),
+		)),
 		"/_diagnostics": common.UserRateLimit(
 			DiagnosticsHomepageHandler,
 		),
@@ -96,7 +101,12 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/round_info": common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
-		"/v1/transaction/put": common.UserRateLimit(
+		"/v1/estimate_tx_cost": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				SuggestedFeeHandler,
+			),
+		)),
+		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
 					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
@@ -104,7 +114,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 				transactionEntityMetadata,
 			),
-		),
+		)),
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
@@ -115,7 +125,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		),
 	}
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		m[getBlockV1Pattern] = common.UserRateLimit(
+		m[GetBlockV1Pattern] = common.UserRateLimit(
 			common.ToJSONResponse(
 				GetBlockHandler,
 			),
@@ -128,7 +138,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 /*setupHandlers sets up the necessary API end points */
 func setupHandlers(handlersMap map[string]func(http.ResponseWriter, *http.Request)) {
 	for pattern, handler := range handlersMap {
-		http.HandleFunc(pattern, handler)
+		http.HandleFunc(pattern, common.WithCORS(handler))
 	}
 }
 
@@ -179,11 +189,13 @@ func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 	if content == "" {
 		content = "header"
 	}
-	parts := strings.Split(content, ",")
-	b, err := GetServerChain().GetBlock(ctx, hash)
+
+	b, err := GetServerChain().GetBlockClone(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
+
+	parts := strings.Split(content, ",")
 	return GetBlockResponse(b, parts)
 }
 
@@ -244,6 +256,42 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>Health Summary</div>")
 	c.healthSummaryInTables(w, r)
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
+}
+
+func (c *Chain) txnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
+	//Row start
+	fmt.Fprintf(w, "<tr>")
+
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, txn.ClientID)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", txn.Value)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", txn.CreationDate)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", txn.Fee)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", txn.Nonce)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", s.Nonce)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", s.Balance)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "</tr>")
+	//Row end
 }
 
 func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
@@ -486,7 +534,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 			if ok {
 				fmt.Fprintf(w, "<tr class='active'>")
 				fmt.Fprintf(w, "<td>")
-				fmt.Fprintf(w, "Redis Collection")
+				fmt.Fprintf(w, "<a href='_diagnostics/txns_in_pool'>Redis Collection</a>")
 				fmt.Fprintf(w, "</td>")
 				fmt.Fprintf(w, "<td class='number'>")
 				fmt.Fprintf(w, "%v", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName))
@@ -526,7 +574,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "DKG phase / restarts")
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "<td class='number'>")
-		if !config.DevConfiguration.ViewChange {
+		if !c.ChainConfig.IsViewChangeEnabled() {
 			fmt.Fprint(w, "DKG process disabled")
 		} else {
 			fmt.Fprintf(w, "%s / %d", phase.String(), restarts)
@@ -711,7 +759,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeSharder {
-		fmt.Fprintf(w, "<li><a href='_health_check'>/_health_check</a></li>")
+		fmt.Fprintf(w, "<li><a href='_healthcheck'>/_healthcheck</a></li>")
 	}
 
 	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
@@ -939,8 +987,8 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 }
 
 func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
-
-	if !config.DevConfiguration.ViewChange {
+	c := GetServerChain()
+	if !c.ChainConfig.IsViewChangeEnabled() {
 		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 		ss := []byte(`<doctype html><html><head>
 <title>DKG process informations</title></head><body>
@@ -953,7 +1001,6 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		c         = GetServerChain()
 		cmb       = c.GetCurrentMagicBlock()
 		dkgi, err = c.dkgInfo(cmb)
 	)
@@ -1240,7 +1287,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-//N2NStatsWriter - writes the n2n stats of all the nodes
+// N2NStatsWriter - writes the n2n stats of all the nodes
 func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
@@ -1299,7 +1346,11 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*transaction.Transaction)
 	if !ok {
-		return nil, fmt.Errorf("invalid request %T", entity)
+		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
+	}
+
+	if txn.CreationDate < common.Now()-common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
+		return nil, fmt.Errorf("put_transaction: time out of sync with server time")
 	}
 
 	sc := GetServerChain()
@@ -1311,19 +1362,32 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	// Calculate and update fee
-	if err := txn.ValidateFee(sc.Config.TxnExempt(), sc.Config.MinTxnFee()); err != nil {
+	if err := txn.ValidateFee(sc.ChainConfig.TxnExempt(), sc.ChainConfig.MinTxnFee()); err != nil {
+		return nil, err
+	}
+	if err := txn.ValidateNonce(); err != nil {
 		return nil, err
 	}
 
-	// save validated transactions to cache for miners only
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
+	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, txn.ClientID)
+	if !isValid(err) {
+		// put txn to pool if the miner has 'node not found', we should not ignore the txn because
+		// of the 'error' of the miner itself.
 		return transaction.PutTransaction(ctx, txn)
+	}
+	nonce := int64(0)
+	if s != nil {
+		nonce = s.Nonce
+	}
+	if txn.Nonce <= nonce {
+		logging.Logger.Error("invalid transaction nonce", zap.Int64("txn_nonce", txn.Nonce), zap.Int64("nonce", nonce))
+		return nil, errors.New("invalid transaction nonce")
 	}
 
 	return transaction.PutTransaction(ctx, txn)
 }
 
-//RoundInfoHandler collects and writes information about current round
+// RoundInfoHandler collects and writes information about current round
 func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -1574,6 +1638,63 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(context.Context, datastore.CollectionEntity) (bool, error) {
+	return func(ctx context.Context, ce datastore.CollectionEntity) (bool, error) {
+		txn, ok := ce.(*transaction.Transaction)
+		if !ok {
+			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", ce))
+			return false, nil
+		}
+
+		c.txnsInPoolTableRows(w, txn, s)
+		return true, nil
+	}
+}
+
+func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if recover() != nil {
+			http.Error(w, fmt.Sprintf("<pre>%s</pre>", string(debug.Stack())), http.StatusInternalServerError)
+		}
+	}()
+
+	// Print Styles and miner info
+	PrintCSS(w)
+	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
+		node.Self.Underlying().Description)
+
+	// Print page title
+	fmt.Fprintf(w, "<div>Transation Pool Summary</div>")
+
+	// Print table and heading
+	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<th align='center' colspan='7'>Transactions in pool</th>")
+	fmt.Fprintf(w, "<tr class='header'><td>Client ID</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
+
+	ctx := common.GetRootContext()
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
+	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
+	collectionName := txn.GetCollectionName()
+
+	s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
+	if !isValid(err) {
+		logging.Logger.Error(err.Error(), zap.Any("clientState", s))
+	}
+
+	var txnIterHandler = txnIterHandlerFunc(c, w, s)
+
+	_ = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
+
+	// End table
+	fmt.Fprintf(w, "</table>")
+
+	fmt.Fprintf(w, "<div>&nbsp;</div>")
+
+}
+
 func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	mb := c.GetCurrentMagicBlock()
 	generatorsNum := c.GetGeneratorsNumOfMagicBlock(mb)
@@ -1681,7 +1802,7 @@ func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter, numGenerators i
 	fmt.Fprintf(w, "</table>")
 }
 
-//PrintCSS - print the common css elements
+// PrintCSS - print the common css elements
 func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
@@ -1700,7 +1821,7 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</style>")
 }
 
-//StateDumpHandler - a handler to dump the state
+// StateDumpHandler - a handler to dump the state
 func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 	c := GetServerChain()
 	lfb := c.GetLatestFinalizedBlock()
@@ -1749,12 +1870,45 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
 }
 
-// LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
-func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlockClone(ctx); lfmb != nil {
-		return lfmb.GetSummary(), nil
+// SetupHandlers sets up the necessary API end points for miners
+func SetupMinerHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
+	setupHandlers(chainhandlersMap(c))
+}
+
+// SetupHandlers sets up the necessary API end points for sharders
+func SetupSharderHandlers(c Chainer) {
+	setupHandlers(handlersMap(c))
+}
+
+func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	// Tx fee = cost * coeff + fix
+
+	txData, err := io.ReadAll(r.Body)
+	if err != nil {
+		logging.Logger.Error("failed to get transaction data from request body",
+			zap.Error(err))
+		return nil, err
+	}
+	defer r.Body.Close()
+
+	var tx transaction.Transaction
+	if err := json.Unmarshal(txData, &tx); err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("could not find latest finalized magic block")
+	c := GetServerChain()
+	lfb := c.GetLatestFinalizedBlock()
+
+	cost, err := c.EstimateTransactionCost(ctx, lfb, lfb.ClientState, &tx)
+	if err != nil {
+		logging.Logger.Error("failed to calculate the transaction cost",
+			zap.Int("tx-type", tx.TransactionType), zap.Error(err))
+		return nil, err
+	}
+
+	return map[string]float64{
+		// TODO: add coeff
+		"fee": float64(cost),
+	}, nil
 }

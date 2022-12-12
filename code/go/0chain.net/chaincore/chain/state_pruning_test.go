@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,8 +58,12 @@ func (fndb *failingNodeDB) Size(ctx context.Context) int64 {
 }
 
 /*PruneBelowVersion - implement interface */
-func (fndb *failingNodeDB) PruneBelowVersion(ctx context.Context, version util.Sequence) error {
+func (fndb *failingNodeDB) PruneBelowVersion(ctx context.Context, version int64) error {
 	return fndb.underlying.PruneBelowVersion(ctx, version)
+}
+
+func (fndb *failingNodeDB) RecordDeadNodes(nodes []util.Node, version int64) error {
+	return fndb.underlying.RecordDeadNodes(nodes, version)
 }
 
 func Test_pruneClientState_withFailingMutliPutNode(t *testing.T) {
@@ -74,7 +78,7 @@ func Test_pruneClientState_withFailingMutliPutNode(t *testing.T) {
 	}
 	c := NewChainFromConfig()
 	// todo: setup a real-life situation
-	conf := c.Config.(*ConfigImpl)
+	conf := c.ChainConfig.(*ConfigImpl)
 	conf.ConfDataForTest().PruneStateBelowCount = 0
 	/*
 		for i := 0; i < c.BlockChain.Len(); i++ {

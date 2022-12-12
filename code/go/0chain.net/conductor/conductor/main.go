@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -63,7 +64,7 @@ func main() {
 
 	log.Print("read configurations files: ", configFile, ", ", testsFile)
 	var (
-		conf = readConfigs(configFile, testsFile)
+		conf = readConfigs(configFile, strings.Fields(testsFile))
 		r    Runner
 		err  error
 	)
@@ -122,13 +123,26 @@ func readConfig(configFile string) (conf *config.Config) {
 	return
 }
 
-func readConfigs(configFile, testsFile string) (conf *config.Config) {
+func readConfigs(configFile string, testsFilesArr []string) (conf *config.Config) {
 	conf = readConfig(configFile)
-	var tests = readConfig(testsFile)
-	conf.Tests = tests.Tests   // set
-	conf.Enable = tests.Enable // set
-	conf.Sets = tests.Sets     // set
+
+	for _, testsFile := range testsFilesArr {
+		matches, err := filepath.Glob(testsFile)
+		if err != nil {
+			panic(err)
+		}
+		for _, filename := range matches {
+			log.Printf("Adding tests of %s", filename)
+			appendTests(conf, readConfig(filename))
+		}
+	}
 	return
+}
+
+func appendTests(conf *config.Config, tests *config.Config) {
+	conf.Tests = append(conf.Tests, tests.Tests...)
+	conf.Enable = append(conf.Enable, tests.Enable...)
+	conf.Sets = append(conf.Sets, tests.Sets...)
 }
 
 type reportTestCase struct {
@@ -188,24 +202,34 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		log.Printf("wait for %d nodes", len(r.waitNodes))
 		return tm, true
 	case !r.waitRound.IsZero():
+		log.Println("wait for round")
 		return tm, true
 	case !r.waitPhase.IsZero():
+		log.Println("wait for phase")
 		return tm, true
 	case !r.waitContributeMPK.IsZero():
+		log.Println("wait for mpk contributes")
 		return tm, true
 	case !r.waitShareSignsOrShares.IsZero():
+		log.Println("wait for share signs")
 		return tm, true
 	case !r.waitViewChange.IsZero():
+		fmt.Printf("wait for view change %v\n", r.waitViewChange)
 		return tm, true
 	case !r.waitAdd.IsZero():
+		log.Printf("wait for adding sharders (%+v), miners (%+v), blobbers (%+v) and authorizers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers, r.waitAdd.Authorizers)
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
+		log.Println("wait for sharder keep")
 		return tm, true
 	case !r.waitNoProgress.IsZero():
+		log.Println("wait for no progress")
 		return tm, true
 	case !r.waitNoViewChange.IsZero():
+		log.Println("wait for no view change")
 		return tm, true
 	case r.waitCommand != nil:
+		// log.Println("wait for command")
 		return tm, true
 	}
 
@@ -423,6 +447,7 @@ func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 	if addm.Sender != r.monitor {
 		return // not the monitor node
 	}
+
 	var (
 		sender, sok = r.conf.Nodes.NodeByName(addm.Sender)
 		added, aok  = r.conf.Nodes.NodeByName(addm.Miner)
@@ -511,6 +536,38 @@ func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
 	return
 }
 
+func (r *Runner) acceptAddAuthorizer(addb *conductrpc.AddAuthorizerEvent) (
+	err error) {
+	if addb.Sender != r.monitor {
+		return // not the monitor node
+	}
+	var (
+		sender, sok = r.conf.Nodes.NodeByName(addb.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(addb.Authorizer)
+	)
+	if !sok {
+		return fmt.Errorf("unexpected add_miner sender: %q", addb.Sender)
+	}
+	if !aok {
+		return fmt.Errorf("unexpected authorizer %q added by add_authorizer of %q",
+			addb.Authorizer, sender.Name)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] add_authorizer ", added.Name)
+	}
+
+	if r.waitAdd.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	fmt.Printf("Take authorizer %v %v\n", added.Name, r.waitAdd.Authorizers)
+	if r.waitAdd.TakeAuthorizer(added.Name) {
+		log.Print("[OK] add_authorizer ", added.Name)
+	}
+	return
+}
+
 func (r *Runner) acceptSharderKeep(ske *conductrpc.SharderKeepEvent) (
 	err error) {
 
@@ -557,6 +614,7 @@ func (r *Runner) acceptNodeReady(nodeName NodeName) (err error) {
 		return fmt.Errorf("unknown node: %s", nodeName)
 	}
 	log.Println("[OK] node ready", nodeName, n.Name)
+
 	return
 }
 
@@ -615,7 +673,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	switch {
 	case r.waitRound.Round > re.Round:
 		return // not this round
-	case !r.waitRound.AllowBeyond && r.waitRound.Round < re.Round:
+	case r.waitRound.ForbidBeyond && r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,
 			re.Round)
 	}
@@ -723,6 +781,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptAddSharder(adds)
 		case addb := <-r.server.OnAddBlobber():
 			err = r.acceptAddBlobber(addb)
+		case adda := <-r.server.OnAddAuthorizer():
+			err = r.acceptAddAuthorizer(adda)
 		case sk := <-r.server.OnSharderKeep():
 			err = r.acceptSharderKeep(sk)
 		case nid := <-r.server.OnNodeReady():
@@ -791,7 +851,6 @@ func (r *Runner) processReport() (success bool) {
 
 		if caseError != nil {
 			fmt.Printf("  - [ERR] %v\n", caseError)
-			break
 		}
 	}
 
@@ -845,6 +904,7 @@ func (r *Runner) Run() (err error, success bool) {
 
 	cases:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
+			_ = r.SetMagicBlock("")
 			r.conf.CleanupEnv()
 			var report reportTestCase
 			report.name = testCase.Name

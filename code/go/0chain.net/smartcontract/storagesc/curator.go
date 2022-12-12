@@ -2,15 +2,14 @@ package storagesc
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
 )
 
 type curatorInput struct {
@@ -67,7 +66,7 @@ func (sc *StorageSmartContract) removeCurator(
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("remove_curator_failed",
-			"cannot save allocation"+err.Error())
+			"cannot Save allocation"+err.Error())
 	}
 
 	err = emitCuratorEvent(&rci, balances, event.TagRemoveCurator)
@@ -75,12 +74,7 @@ func (sc *StorageSmartContract) removeCurator(
 		logging.Logger.Error("error while emitting remove curator event", zap.Error(err))
 	}
 
-	err = emitAddOrOverwriteAllocation(alloc, balances)
-	if err != nil {
-		return "", common.NewErrorf("remove_curator_failed",
-			"saving allocation in db: %v", err)
-	}
-
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	return "", nil
 }
 
@@ -117,23 +111,20 @@ func (sc *StorageSmartContract) addCurator(
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("add_curator_failed",
-			"cannot save allocation"+err.Error())
+			"cannot Save allocation"+err.Error())
 	}
 
 	err = emitCuratorEvent(&aci, balances, event.TagAddOrOverwriteCurator)
 	if err != nil {
 		logging.Logger.Error("error while emitting add curator event", zap.Error(err))
 	}
-	err = emitAddOrOverwriteAllocation(alloc, balances)
-	if err != nil {
-		return "", common.NewErrorf("add_curator_failed",
-			"saving allocation in db: %v", err)
-	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return "", nil
 }
 
-func (sa StorageAllocation) isCurator(id string) bool {
+func (sa *StorageAllocation) isCurator(id string) bool {
 	for _, curator := range sa.Curators {
 		if curator == id {
 			return true
@@ -150,10 +141,7 @@ func curatorToCuratorEvent(ci *curatorInput) *event.Curator {
 }
 
 func emitCuratorEvent(ci *curatorInput, balances chainstate.StateContextI, eventTag event.EventTag) error {
-	data, err := json.Marshal(curatorToCuratorEvent(ci))
-	if err != nil {
-		return fmt.Errorf("failed to marshal curator: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, eventTag, ci.AllocationId, string(data))
+
+	balances.EmitEvent(event.TypeStats, eventTag, ci.AllocationId, curatorToCuratorEvent(ci))
 	return nil
 }

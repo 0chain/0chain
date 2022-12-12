@@ -9,7 +9,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -480,8 +480,8 @@ func TestClose(t *testing.T) {
 
 	cMap := connections{
 		cons: map[common.ContextKey]*Conn{
-			getConnectionCtxKey(dbid):        &Conn{Conn: DefaultPool.Get(), Pool: DefaultPool},
-			getConnectionCtxKey(anotherDbid): &Conn{Conn: anotherConn, Pool: anotherPool},
+			getConnectionCtxKey(dbid):        {Conn: DefaultPool.Get(), Pool: DefaultPool},
+			getConnectionCtxKey(anotherDbid): {Conn: anotherConn, Pool: anotherPool},
 		},
 		mutex: &sync.RWMutex{},
 	}

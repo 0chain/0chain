@@ -10,11 +10,11 @@ import (
 func (z *readPool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
-	// string "Pools"
-	o = append(o, 0x81, 0xa5, 0x50, 0x6f, 0x6f, 0x6c, 0x73)
-	o, err = z.Pools.MarshalMsg(o)
+	// string "Balance"
+	o = append(o, 0x81, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
+	o, err = z.Balance.MarshalMsg(o)
 	if err != nil {
-		err = msgp.WrapError(err, "Pools")
+		err = msgp.WrapError(err, "Balance")
 		return
 	}
 	return
@@ -38,10 +38,10 @@ func (z *readPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "Pools":
-			bts, err = z.Pools.UnmarshalMsg(bts)
+		case "Balance":
+			bts, err = z.Balance.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Pools")
+				err = msgp.WrapError(err, "Balance")
 				return
 			}
 		default:
@@ -58,6 +58,58 @@ func (z *readPool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *readPool) Msgsize() (s int) {
-	s = 1 + 6 + z.Pools.Msgsize()
+	s = 1 + 8 + z.Balance.Msgsize()
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z readPoolLockRequest) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 1
+	// string "TargetId"
+	o = append(o, 0x81, 0xa8, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x49, 0x64)
+	o = msgp.AppendString(o, z.TargetId)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *readPoolLockRequest) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "TargetId":
+			z.TargetId, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "TargetId")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z readPoolLockRequest) Msgsize() (s int) {
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.TargetId)
 	return
 }

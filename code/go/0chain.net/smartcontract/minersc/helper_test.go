@@ -9,21 +9,22 @@ import (
 	"testing"
 	"time"
 
-	// "0chain.net/chaincore/chain"
+	"0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/util"
 
 	"github.com/rcrowley/go-metrics"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"github.com/stretchr/testify/require"
@@ -69,10 +70,10 @@ type Client struct {
 	id      string                     // identifier
 	pk      string                     // public key
 	scheme  encryption.SignatureScheme // pk/sk
-	balance state.Balance              // client wallet balance
+	balance currency.Coin              // client wallet balance
 }
 
-func newClient(balance state.Balance, balances cstate.StateContextI) (
+func newClient(balance currency.Coin, balances cstate.StateContextI) (
 	client *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -85,7 +86,9 @@ func newClient(balance state.Balance, balances cstate.StateContextI) (
 	client.scheme = scheme
 
 	client.pk = scheme.GetPublicKey()
-	client.id = encryption.Hash(client.pk)
+	pub := bls.PublicKey{}
+	pub.DeserializeHexStr(client.pk)
+	client.id = encryption.Hash(pub.Serialize())
 
 	balances.(*testBalances).balances[client.id] = balance
 	return
@@ -103,15 +106,15 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	mn.PublicKey = c.pk
 	mn.ShortName = "test_miner(" + c.id + ")"
 	mn.BuildTag = "commit"
-	mn.DelegateWallet = delegateWallet
-	mn.ServiceCharge = minerServiceCharge
-	mn.NumberOfDelegates = 10
-	mn.MinStake = 1e10
-	mn.MaxStake = 100e10
+	mn.Settings.DelegateWallet = delegateWallet
+	mn.Settings.ServiceChargeRatio = minerServiceCharge
+	mn.Settings.MaxNumDelegates = 10
+	mn.Settings.MinStake = 1e10
+	mn.Settings.MaxStake = 100e10
 	return mustEncode(t, mn)
 }
 
-func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
+func newTransaction(f, t string, val currency.Coin, now int64) (tx *transaction.Transaction) {
 	tx = new(transaction.Transaction)
 	tx.Hash = randString(32)
 	tx.ClientID = f
@@ -173,13 +176,13 @@ func addSharder(t *testing.T, msc *MinerSmartContract, now int64,
 
 func (c *Client) addToDelegatePoolRequest(t *testing.T, nodeID string) []byte {
 	var dp deletePool
-	dp.MinerID = nodeID
+	dp.ProviderID = nodeID
 	return mustEncode(t, &dp)
 }
 
 // stake a miner or a sharder
 func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
-	now, val int64, nodeID string, balances cstate.StateContextI) (resp string,
+	now int64, val currency.Coin, nodeID string, balances cstate.StateContextI) (resp string,
 	err error) {
 
 	t.Helper()
@@ -218,18 +221,21 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.MaxS = 30
 	gn.MinS = 1
 	gn.MaxDelegates = 10 // for tests
-	gn.TPercent = 0.51   // %
-	gn.KPercent = 0.75   // %
+	gn.NumMinerDelegatesRewarded = 10
+	gn.NumShardersRewarded = 5
+	gn.NumSharderDelegatesRewarded = 1
+	gn.TPercent = 0.51 // %
+	gn.KPercent = 0.75 // %
 	gn.LastRound = 0
-	gn.MaxStake = state.Balance(100.0e10)
-	gn.MinStake = state.Balance(0.01e10)
+	gn.MaxStake = currency.Coin(100.0e10)
+	gn.MinStake = currency.Coin(0.01e10)
 	gn.RewardRate = 1.0
 	gn.ShareRatio = 0.10
-	gn.BlockReward = state.Balance(0.7e10)
+	gn.BlockReward = currency.Coin(0.7e10)
 	gn.MaxCharge = 0.5 // %
 	gn.Epoch = 15e6    // 15M
 	gn.RewardDeclineRate = 0.1
-	gn.MaxMint = state.Balance(4e6 * 1e10)
+	gn.MaxMint = currency.Coin(4e6 * 1e10)
 	gn.Minted = 0
 
 	mustSave(t, GlobalNodeKey, gn, balances)
@@ -293,6 +299,18 @@ func (msc *MinerSmartContract) ConfigHandler(
 	balances cstate.StateContextI,
 ) (interface{}, error) {
 	return msc.configHandler(ctx, values, balances)
+}
+
+func (msc *MinerSmartContract) configHandler(
+	_ context.Context,
+	_ url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	gn, err := getGlobalNode(balances)
+	if err != nil {
+		return nil, common.NewErrInternal(err.Error())
+	}
+	return gn.getConfigMap()
 }
 
 func (msc *MinerSmartContract) UpdateSettings(

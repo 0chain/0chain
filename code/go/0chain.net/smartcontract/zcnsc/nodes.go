@@ -7,36 +7,39 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/smartcontract/dbs/event"
-	"gorm.io/gorm"
+	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/util"
 )
 
-//msgp:ignore AuthorizerNode
 //go:generate msgp -v -io=false -tests=false -unexported
 
 // ------------- GlobalNode ------------------------
 
-type GlobalNode struct {
-	ID                 string         `json:"id"`
-	MinMintAmount      state.Balance  `json:"min_mint_amount"`
-	MinBurnAmount      state.Balance  `json:"min_burn_amount"`
-	MinStakeAmount     state.Balance  `json:"min_stake_amount"`
-	MinLockAmount      int64          `json:"min_lock_amount"`
+type ZCNSConfig struct {
+	MinMintAmount      currency.Coin  `json:"min_mint"`
+	MinBurnAmount      currency.Coin  `json:"min_burn"`
+	MinStakeAmount     currency.Coin  `json:"min_stake"`
+	MinLockAmount      currency.Coin  `json:"min_lock"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
-	MaxFee             state.Balance  `json:"max_fee"`
+	MaxFee             currency.Coin  `json:"max_fee"`
 	BurnAddress        string         `json:"burn_address"`
 	OwnerId            string         `json:"owner_id"`
 	Cost               map[string]int `json:"cost"`
 	MaxDelegates       int            `json:"max_delegates"` // MaxDelegates per stake pool
+}
+
+type GlobalNode struct {
+	*ZCNSConfig     `json:"zcnsc_config"`
+	ID              string         `json:"id"`
+	WZCNNonceMinted map[int64]bool `json:"user_nonce_minted"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
@@ -45,15 +48,21 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 		case MinMintAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinMintAmount = state.Balance(amount * 1e10)
+			gn.MinMintAmount, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
 		case MinBurnAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinBurnAmount = state.Balance(amount * 1e10)
+			gn.MinBurnAmount, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
 		case BurnAddress:
 			if value == "" {
 				return fmt.Errorf("key %s is empty", key)
@@ -72,15 +81,21 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 		case MinStakeAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MinStakeAmount = state.Balance(amount * 1e10)
+			gn.MinStakeAmount, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
 		case MaxFee:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MaxFee = state.Balance(amount * 1e10)
+			gn.MaxFee, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
 		case OwnerID:
 			gn.OwnerId = value
 		case Cost:
@@ -89,17 +104,18 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 				return err
 			}
 		case MinLockAmount:
-			gn.MinLockAmount, err = strconv.ParseInt(value, 10, 64)
+			minLockAmount, err := strconv.ParseUint(value, 10, 64)
 			if err != nil {
-				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
+				return fmt.Errorf("key %s, unable to convert %v to uint64", key, value)
 			}
+			gn.MinLockAmount = currency.Coin(minLockAmount)
 		case MaxDelegates:
 			gn.MaxDelegates, err = strconv.Atoi(value)
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
 			}
 		default:
-			return fmt.Errorf("key %s, unable to convert %v to state.Balance", key, value)
+			return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 		}
 	}
 
@@ -137,7 +153,7 @@ func (gn *GlobalNode) Validate() error {
 	const (
 		Code = "failed to validate global node"
 	)
-
+	// todo stop using hard coded values here
 	switch {
 	case gn.MinStakeAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min stake amount (%v) is less than 1", gn.MinStakeAmount))
@@ -145,20 +161,20 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than 1", gn.MinMintAmount))
 	case gn.MaxFee < 1:
 		return common.NewError(Code, fmt.Sprintf("max fee (%v) is less than 1", gn.MaxFee))
-	case gn.MinAuthorizers < 20:
-		return common.NewError(Code, fmt.Sprintf("min quantity of authorizers (%v) is less than 20", gn.MinAuthorizers))
+	case gn.MinAuthorizers < 1:
+		return common.NewError(Code, fmt.Sprintf("min quantity of authorizers (%v) is less than 1", gn.MinAuthorizers))
 	case gn.MinBurnAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min burn amount (%v) is less than 1", gn.MinBurnAmount))
-	case gn.PercentAuthorizers < 70:
-		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 70", gn.PercentAuthorizers))
+	case gn.PercentAuthorizers < 0:
+		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 0", gn.PercentAuthorizers))
 	case gn.BurnAddress == "":
 		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.BurnAddress))
 	case gn.OwnerId == "":
 		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.OwnerId))
 	case gn.MaxDelegates <= 0:
 		return common.NewError(Code, fmt.Sprintf("max delegate count (%v) is less than 0", gn.MaxDelegates))
-	case gn.MinLockAmount <= 0:
-		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is less than 0", gn.MinLockAmount))
+	case gn.MinLockAmount == 0:
+		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is equal to 0", gn.MinLockAmount))
 	}
 	return nil
 }
@@ -193,7 +209,7 @@ func (gn *GlobalNode) Save(balances cstate.StateContextI) (err error) {
 // ----- AuthorizerConfig --------------------
 
 type AuthorizerConfig struct {
-	Fee state.Balance `json:"fee"`
+	Fee currency.Coin `json:"fee"`
 }
 
 func (c *AuthorizerConfig) Decode(input []byte) (err error) {
@@ -297,24 +313,6 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 	return nil
 }
 
-type authorizerNodeDecode AuthorizerNode
-
-func (an *AuthorizerNode) MarshalMsg(o []byte) ([]byte, error) {
-	d := authorizerNodeDecode(*an)
-	return d.MarshalMsg(o)
-}
-
-func (an *AuthorizerNode) UnmarshalMsg(data []byte) ([]byte, error) {
-	d := authorizerNodeDecode{}
-	o, err := d.UnmarshalMsg(data)
-	if err != nil {
-		return nil, err
-	}
-
-	*an = AuthorizerNode(d)
-	return o, nil
-}
-
 func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 	_, err = ctx.InsertTrieNode(an.GetKey(), an)
 	if err != nil {
@@ -323,44 +321,33 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 	return nil
 }
 
-func (an *AuthorizerNode) ToEvent() ([]byte, error) {
+func (an *AuthorizerNode) ToEvent() *event.Authorizer {
 	if an.Config == nil {
 		an.Config = new(AuthorizerConfig)
 	}
-	data, err := json.Marshal(&event.Authorizer{
-		Model:        gorm.Model{},
-		Fee:          an.Config.Fee,
-		AuthorizerID: an.ID,
-		URL:          an.URL,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("marshalling authorizer event: %v", err)
-	}
+	return &event.Authorizer{
+		Provider: event.Provider{ID: an.ID},
+		Fee:      an.Config.Fee,
 
-	return data, nil
+		URL: an.URL,
+	}
 }
 
-func AuthorizerFromEvent(buf []byte) (*AuthorizerNode, error) {
-	ev := &event.Authorizer{}
-	err := json.Unmarshal(buf, ev)
-	if err != nil {
-		return nil, err
-	}
+func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 
-	return NewAuthorizer(ev.AuthorizerID, "", ev.URL), nil
+	return NewAuthorizer(ev.ID, "", ev.URL), nil
 }
 
 // ----- UserNode ------------------
 
 type UserNode struct {
-	ID    string `json:"id"`
-	Nonce int64  `json:"nonce"`
+	ID        string `json:"id"`
+	BurnNonce int64  `json:"burn_nonce"`
 }
 
-func NewUserNode(id string, nonce int64) *UserNode {
+func NewUserNode(id string) *UserNode {
 	return &UserNode{
-		ID:    id,
-		Nonce: nonce,
+		ID: id,
 	}
 }
 

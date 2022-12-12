@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +40,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		err error
 	)
 
-	if allMinersList, err = msc.GetMinersList(balances); err != nil {
+	if allMinersList, err = msc.getMinersList(balances); err != nil {
 		return common.NewError("move_to_contribute_failed", err.Error())
 	}
 
@@ -202,7 +202,7 @@ func (msc *MinerSmartContract) moveToStart(balances cstate.StateContextI,
 }
 
 // GetPhaseNode gets phase nodes from client state
-func GetPhaseNode(statectx cstate.StateContextI) (
+func GetPhaseNode(statectx cstate.CommonStateContextI) (
 	*PhaseNode, error) {
 
 	pn := &PhaseNode{}
@@ -223,9 +223,10 @@ func GetPhaseNode(statectx cstate.StateContextI) (
 }
 
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
-	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
+	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction, isViewChange bool) error {
+
 	// move phase condition
-	var movePhase = config.DevConfiguration.ViewChange &&
+	var movePhase = isViewChange &&
 		pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
 
 	// move
@@ -237,13 +238,29 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 
 		currentMoveFunc := moveFunctions[pn.Phase]
 		if err := currentMoveFunc(balances, pn, gn); err != nil {
-			Logger.Error("failed to move phase",
+			if strings.Contains(err.Error(), util.ErrNodeNotFound.Error()) {
+				Logger.Error("setPhaseNode failed",
+					zap.Error(err),
+					zap.String("phase", pn.Phase.String()),
+					zap.Int64("phase current round", pn.CurrentRound),
+					zap.Int64("phase start round", pn.StartRound))
+				return err
+			}
+
+			Logger.Error("failed to move phase, restartDKG",
 				zap.Any("phase", pn.Phase),
 				zap.Int64("phase start round", pn.StartRound),
 				zap.Int64("phase current round", pn.CurrentRound),
 				zap.Any("move_func", getFunctionName(currentMoveFunc)),
 				zap.Error(err))
-			msc.RestartDKG(pn, balances)
+			if err := msc.RestartDKG(pn, balances); err != nil {
+				Logger.Error("setPhaseNode restart DKG failed",
+					zap.Error(err),
+					zap.Int64("phase start round", pn.StartRound),
+					zap.Int64("phase current round", pn.CurrentRound),
+					zap.Any("move_func", getFunctionName(currentMoveFunc)))
+				return err
+			}
 		} else {
 			Logger.Debug("setPhaseNode move phase success", zap.String("phase", pn.Phase.String()))
 			var err error
@@ -257,10 +274,23 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 				}
 
 				if err != nil {
-					msc.RestartDKG(pn, balances)
-					Logger.Error("failed to set phase node",
+					if strings.Contains(err.Error(), util.ErrNodeNotFound.Error()) {
+						Logger.Debug("setPhaseNode move phase failed",
+							zap.Error(err),
+							zap.String("phase", pn.Phase.String()))
+						return err
+					}
+
+					Logger.Error("setPhaseNode failed to set phase node - restarting DKG",
 						zap.Any("error", err),
 						zap.Any("phase", pn.Phase))
+
+					if err := msc.RestartDKG(pn, balances); err != nil {
+						Logger.Debug("setPhaseNode move phase failed",
+							zap.Error(err),
+							zap.String("phase", pn.Phase.String()))
+						return err
+					}
 				}
 			}
 			if err == nil {
@@ -278,7 +308,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 
 	_, err := balances.InsertTrieNode(pn.GetKey(), pn)
 	if err != nil && err != util.ErrValueNotPresent {
-		Logger.DPanic("failed to set phase node -- insert failed",
+		Logger.Error("failed to set phase node -- insert failed",
 			zap.Any("error", err))
 		return err
 	}
@@ -289,7 +319,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 func (msc *MinerSmartContract) createDKGMinersForContribute(
 	balances cstate.StateContextI, gn *GlobalNode) error {
 
-	allMinersList, err := msc.GetMinersList(balances)
+	allMinersList, err := msc.getMinersList(balances)
 	if err != nil {
 		Logger.Error("createDKGMinersForContribute -- failed to get miner list",
 			zap.Any("error", err))
@@ -837,13 +867,14 @@ func (msc *MinerSmartContract) createMagicBlock(
 }
 
 func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
-	balances cstate.StateContextI) {
+	balances cstate.StateContextI) error {
 	Logger.Debug("RestartDKG", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
 	mpks := block.NewMpks()
 	if err := updateMinersMPKs(balances, mpks); err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
+		return err
 	}
 
 	Logger.Debug("create_mpks in RestartDKG", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
@@ -851,28 +882,32 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 	gsos := block.NewGroupSharesOrSigns()
 	if err := updateGroupShareOrSigns(balances, gsos); err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
+		return err
 	}
 	dkgMinersList := NewDKGMinerNodes()
 	dkgMinersList.StartRound = pn.CurrentRound
 	if err := updateDKGMinersList(balances, dkgMinersList); err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
+		return err
 	}
 
 	sharderKeepList := new(MinerNodes)
 	if err := updateShardersKeepList(balances, sharderKeepList); err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
+		return err
 	}
 	pn.Phase = Start
 	pn.Restarts++
 	pn.StartRound = pn.CurrentRound
+	return nil
 }
 
 func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
-	balances cstate.StateContextI) bool {
+	balances cstate.StateContextI) error {
 	magicBlock, err := getMagicBlock(balances)
 	if err != nil {
 		Logger.Error("could not get magic block from MPT", zap.Error(err))
-		return false
+		return err
 	}
 
 	if magicBlock.StartingRound == 0 && magicBlock.MagicBlockNumber == 0 {
@@ -884,7 +919,7 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 	gn.PrevMagicBlock = magicBlock
 
 	balances.SetMagicBlock(magicBlock)
-	return true
+	return nil
 }
 
 func getFunctionName(i interface{}) string {

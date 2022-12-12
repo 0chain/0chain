@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/0chain/common/core/currency"
+	"gorm.io/gorm/clause"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
@@ -13,43 +16,23 @@ import (
 type DelegatePool struct {
 	gorm.Model
 
-	PoolID       string `json:"pool_id"`
-	ProviderType int    `json:"provider_type"`
-	ProviderID   string `json:"provider_id"`
-	DelegateID   string `json:"delegate_id"`
+	PoolID       string `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
+	ProviderType int    `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
+	ProviderID   string `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
+	DelegateID   string `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id"` //todo think of changing priority for idx_ddel_active
 
-	Balance      int64 `json:"balance"`
-	Reward       int64 `json:"reward"`       // unclaimed reward
-	TotalReward  int64 `json:"total_reward"` // total reward paid to pool
-	TotalPenalty int64 `json:"total_penalty"`
-	Status       int   `json:"status"`
-	RoundCreated int64 `json:"round_created"`
-}
-
-func (edb *EventDb) overwriteDelegatePool(sp DelegatePool) error {
-	result := edb.Store.Get().
-		Model(&DelegatePool{}).
-		Where(&DelegatePool{
-			PoolID:       sp.PoolID,
-			ProviderType: sp.ProviderType,
-		}).Updates(map[string]interface{}{
-		"delegate_id":   sp.DelegateID,
-		"provider_type": sp.ProviderType,
-		"provider_id":   sp.ProviderID,
-		"pool_id":       sp.PoolID,
-		"balance":       sp.Balance,
-		"reward":        sp.Reward,
-		"total_reward":  sp.TotalReward,
-		"total_penalty": sp.TotalPenalty,
-		"status":        sp.Status,
-		"round_created": sp.RoundCreated,
-	})
-	return result.Error
+	Balance      currency.Coin `json:"balance"`
+	Reward       currency.Coin `json:"reward"`       // unclaimed reward
+	TotalReward  currency.Coin `json:"total_reward"` // total reward paid to pool
+	TotalPenalty currency.Coin `json:"total_penalty"`
+	Status       int           `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3"`
+	RoundCreated int64         `json:"round_created"`
 }
 
 func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 	var dp DelegatePool
 	result := edb.Store.Get().Model(&DelegatePool{}).Where(&DelegatePool{
+		ProviderID:   sp.ProviderID,
 		ProviderType: sp.ProviderType,
 		PoolID:       sp.PoolID,
 	}).Take(&dp)
@@ -61,21 +44,6 @@ func (sp *DelegatePool) exists(edb *EventDb) (bool, error) {
 			dp, result.Error)
 	}
 	return true, nil
-}
-
-func (edb *EventDb) updateReward(reward int64, dp DelegatePool) error {
-	dpu := dbs.NewDelegatePoolUpdate(dp.PoolID, dp.ProviderID, dp.ProviderType)
-
-	if dp.ProviderType == int(spenum.Blobber) && reward < 0 {
-		dpu.Updates["total_penalty"] = dp.TotalPenalty - reward
-	} else {
-		dpu.Updates["reward"] = dp.Reward + reward
-		dpu.Updates["total_reward"] = dp.TotalReward + reward
-	}
-	if err := edb.updateDelegatePool(*dpu); err != nil {
-		return nil
-	}
-	return nil
 }
 
 func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, error) {
@@ -92,6 +60,13 @@ func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, erro
 		return nil, fmt.Errorf("error getting delegate pools, %v", result.Error)
 	}
 	return dps, nil
+}
+
+func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
+	res := int64(0)
+	err := edb.Store.Get().Table("delegate_pools").Select("coalesce(sum(balance),0)").
+		Where("delegate_id = ?", id).Row().Scan(&res)
+	return res, err
 }
 
 func (edb *EventDb) GetUserDelegatePools(userId string, pType int) ([]DelegatePool, error) {
@@ -131,20 +106,19 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 		Where(&DelegatePool{
 			ProviderType: dp.ProviderType,
 			ProviderID:   dp.ProviderID,
+			PoolID:       dp.PoolID,
 		}).
 		Updates(updates.Updates)
 	return result.Error
 }
 
-func (edb *EventDb) addOrOverwriteDelegatePool(dp DelegatePool) error {
-	exists, err := dp.exists(edb)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return edb.overwriteDelegatePool(dp)
-	}
+func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
+	return newEventsMerger[DelegatePool](TagAddOrOverwriteDelegatePool, withUniqueEventOverwrite())
+}
 
-	result := edb.Store.Get().Create(&dp)
-	return result.Error
+func (edb *EventDb) addOrOverwriteDelegatePools(dps []DelegatePool) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
+		UpdateAll: true,
+	}).Create(&dps).Error
 }

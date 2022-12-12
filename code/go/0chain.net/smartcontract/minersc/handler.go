@@ -1,510 +1,939 @@
 package minersc
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"net/url"
+	"net/http"
 	"strconv"
 
-	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/chaincore/smartcontract"
+	"0chain.net/core/datastore"
+	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/rest"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/core/common"
-	"0chain.net/core/util"
-	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/guregu/null"
 
-	cstate "0chain.net/chaincore/chain/state"
-
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/core/common"
+	sc "0chain.net/smartcontract"
+	"github.com/0chain/common/core/util"
 )
 
-const (
-	cantGetMinerNodeMsg = "can't get miner node"
-)
-
-// user oriented pools requests handler
-func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		clientID = params.Get("client_id")
-		un       *UserNode
-	)
-	if un, err = msc.getUserNode(clientID, balances); err != nil {
-		return nil, common.NewErrInternal("can't get user node", err.Error())
-	}
-
-	var ups = newUserPools()
-	for nodeID, poolIDs := range un.Pools {
-		var mn *MinerNode
-		if mn, err = getMinerNode(nodeID, balances); err != nil {
-			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID))
-		}
-		if ups.Pools[mn.NodeType.String()] == nil {
-			ups.Pools[mn.NodeType.String()] = make(map[string][]*delegatePoolStat)
-		}
-		for _, id := range poolIDs {
-			var dp, ok = mn.Pending[id]
-			if ok {
-				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
-			}
-			if dp, ok = mn.Active[id]; ok {
-				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
-			}
-		}
-	}
-
-	return ups, nil
+type MinerRestHandler struct {
+	rest.RestHandlerI
 }
 
-//REST API Handlers
+func NewMinerRestHandler(rh rest.RestHandlerI) *MinerRestHandler {
+	return &MinerRestHandler{rh}
 
-//GetNodepoolHandler API to provide nodepool information for registered miners
-func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params url.Values, statectx cstate.StateContextI) (interface{}, error) {
-
-	regMiner := NewMinerNode()
-	err := regMiner.decodeFromValues(params)
-	if err != nil {
-		Logger.Info("Returing error from GetNodePoolHandler", zap.Error(err))
-		return nil, common.NewErrBadRequest("can't decode miner from passed params", err.Error())
-	}
-	if !msc.doesMinerExist(regMiner.GetKey(), statectx) {
-		return "", common.NewErrNoResource("unknown miner")
-	}
-	npi := msc.bcContext.GetNodepoolInfo()
-
-	return npi, nil
 }
 
-func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	var (
-		offsetString = params.Get("offset")
-		limitString  = params.Get("limit")
-		activeString = params.Get("active")
-	)
-
-	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
-	if err != nil {
-		return nil, err
-	}
-
-	filter := event.MinerQuery{}
-	if activeString != "" {
-		active, err := strconv.ParseBool(activeString)
-		if err != nil {
-			return nil, common.NewErrBadRequest("active parameter is not valid")
-		}
-		filter.Active = null.BoolFrom(active)
-	}
-
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get miners. no db connection")
-	}
-
-	miners, err := balances.GetEventDB().GetMinersWithFiltersAndPagination(filter, offset, limit)
-	if err != nil {
-		return "", common.NewErrInternal("can't get miners list", err.Error())
-	}
-	minersArr := make([]MinerNode, len(miners))
-	for i, miner := range miners {
-		minersArr[i] = minerTableToMinerNode(miner)
-	}
-	return map[string]interface{}{
-		"Nodes": minersArr,
-	}, nil
+func SetupRestHandler(rh rest.RestHandlerI) {
+	rh.Register(GetEndpoints(rh))
 }
 
-// GetMinerGeolocationsHandler returns a list of all miners latitude and longitude
-func (msc *MinerSmartContract) GetMinerGeolocationsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get miners. no db connection")
+func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
+	mrh := NewMinerRestHandler(rh)
+	miner := "/v1/screst/" + ADDRESS
+	return []rest.Endpoint{
+		rest.MakeEndpoint(miner+"/globalSettings", common.UserRateLimit(mrh.getGlobalSettings)),
+		rest.MakeEndpoint(miner+"/getNodepool", common.UserRateLimit(mrh.getNodePool)),
+		rest.MakeEndpoint(miner+"/getUserPools", common.UserRateLimit(mrh.getUserPools)),
+		rest.MakeEndpoint(miner+"/getStakePoolStat", common.UserRateLimit(mrh.getStakePoolStat)),
+		rest.MakeEndpoint(miner+"/getMinerList", common.UserRateLimit(mrh.getMinerList)),
+		rest.MakeEndpoint(miner+"/get_miners_stats", common.UserRateLimit(mrh.getMinersStats)),
+		rest.MakeEndpoint(miner+"/get_miners_stake", common.UserRateLimit(mrh.getMinersStake)),
+		rest.MakeEndpoint(miner+"/getSharderList", common.UserRateLimit(mrh.getSharderList)),
+		rest.MakeEndpoint(miner+"/get_sharders_stats", common.UserRateLimit(mrh.getShardersStats)),
+		rest.MakeEndpoint(miner+"/get_sharders_stake", common.UserRateLimit(mrh.getShardersStake)),
+		rest.MakeEndpoint(miner+"/getSharderKeepList", common.UserRateLimit(mrh.getSharderKeepList)),
+		rest.MakeEndpoint(miner+"/getPhase", common.UserRateLimit(mrh.getPhase)),
+		rest.MakeEndpoint(miner+"/getDkgList", common.UserRateLimit(mrh.getDkgList)),
+		rest.MakeEndpoint(miner+"/getMpksList", common.UserRateLimit(mrh.getMpksList)),
+		rest.MakeEndpoint(miner+"/getGroupShareOrSigns", common.UserRateLimit(mrh.getGroupShareOrSigns)),
+		rest.MakeEndpoint(miner+"/getMagicBlock", common.UserRateLimit(mrh.getMagicBlock)),
+		rest.MakeEndpoint(miner+"/getEvents", common.UserRateLimit(mrh.getEvents)),
+		rest.MakeEndpoint(miner+"/nodeStat", common.UserRateLimit(mrh.getNodeStat)),
+		rest.MakeEndpoint(miner+"/nodePoolStat", common.UserRateLimit(mrh.getNodePoolStat)),
+		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
+		rest.MakeEndpoint(miner+"/get_miner_geolocations", common.UserRateLimit(mrh.getMinerGeolocations)),
+		rest.MakeEndpoint(miner+"/get_sharder_geolocations", common.UserRateLimit(mrh.getSharderGeolocations)),
 	}
+}
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations get_sharder_geolocations
+// list minersc config settings
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	 required: true
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	 required: true
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: active
+//	 description: active
+//	 in: query
+//	 type: string
+//	 required: true
+//
+// responses:
+//
+//	200: SharderGeolocation
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *http.Request) {
 	var (
-		offsetString = params.Get("offset")
-		limitString  = params.Get("limit")
-		activeString = params.Get("active")
+		activeString = r.URL.Query().Get("active")
 	)
 
-	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
-		return nil, err
-	}
-
-	filter := event.MinerQuery{}
-	if activeString != "" {
-		active, err := strconv.ParseBool(activeString)
-		if err != nil {
-			return nil, common.NewErrBadRequest("active parameter is not valid")
-		}
-		filter.Active = null.BoolFrom(active)
-	}
-
-	geolocations, err := balances.GetEventDB().GetMinerGeolocations(filter, offset, limit)
-	if err != nil {
-		return nil, err
-	}
-
-	return geolocations, nil
-}
-
-func (msc *MinerSmartContract) GetMinersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get miners. no db connection")
-	}
-
-	active, err := balances.GetEventDB().CountActiveMiners()
-	if err != nil {
-		return nil, common.NewErrNoResource("db error", err.Error())
-	}
-
-	inactive, err := balances.GetEventDB().CountInactiveMiners()
-	if err != nil {
-		return nil, common.NewErrNoResource("db error", err.Error())
-	}
-
-	return map[string]int64{
-		"active_miners":   active,
-		"inactive_miners": inactive,
-	}, nil
-
-}
-
-func (msc *MinerSmartContract) GetMinersStateHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get miners. no db connection")
-	}
-
-	ts, err := balances.GetEventDB().GetMinersTotalStake()
-	if err != nil {
-		return nil, common.NewErrNoResource("db error", err.Error())
-	}
-
-	return map[string]int64{
-		"miners_total_stake": ts,
-	}, nil
-
-}
-
-const cantGetShardersListMsg = "can't get sharders list"
-
-func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	var (
-		offsetString = params.Get("offset")
-		limitString  = params.Get("limit")
-		activeString = params.Get("active")
-	)
-
-	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
-	if err != nil {
-		return nil, err
+		common.Respond(w, r, nil, err)
+		return
 	}
 
 	filter := event.SharderQuery{}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
-			return nil, common.NewErrBadRequest("active string is not valid")
+			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
+			return
 		}
 		filter.Active = null.BoolFrom(active)
 	}
 
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get miners. no db connection")
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	geolocations, err := edb.GetSharderGeolocations(filter, pagination)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
 	}
 
-	sharders, err := balances.GetEventDB().GetShardersWithFilterAndPagination(filter, offset, limit)
-	if err != nil {
-		return "", common.NewErrInternal("can't get miners list", err.Error())
-	}
-	shardersArr := make([]MinerNode, len(sharders))
-	for i, sharder := range sharders {
-		shardersArr[i] = sharderTableToSharderNode(sharder)
-	}
-	return map[string]interface{}{
-		"Nodes": shardersArr,
-	}, nil
+	common.Respond(w, r, geolocations, nil)
 }
 
-// GetSharderGeolocationsHandler returns a list of all sharders latitude and longitude
-func (msc *MinerSmartContract) GetSharderGeolocationsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get sharders. no db connection")
-	}
-
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations get_miner_geolocations
+// list minersc config settings
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	 required: true
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	 required: true
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: active
+//	 description: active
+//	 in: query
+//	 type: string
+//	 required: true
+//
+// responses:
+//
+//	200: MinerGeolocation
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http.Request) {
 	var (
-		offsetString = params.Get("offset")
-		limitString  = params.Get("limit")
-		activeString = params.Get("active")
+		activeString = r.URL.Query().Get("active")
 	)
 
-	offset, limit, err := getOffsetLimitParam(offsetString, limitString)
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
-		return nil, err
+		common.Respond(w, r, nil, err)
+		return
 	}
 
-	filter := event.SharderQuery{}
+	filter := event.MinerQuery{}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
-			return nil, common.NewErrBadRequest("active parameter is not valid")
+			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
+			return
 		}
 		filter.Active = null.BoolFrom(active)
 	}
-
-	geolocations, err := balances.GetEventDB().GetSharderGeolocations(filter, offset, limit)
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	geolocations, err := edb.GetMinerGeolocations(filter, pagination)
 	if err != nil {
-		return nil, err
+		common.Respond(w, r, nil, err)
+		return
 	}
 
-	return geolocations, nil
+	common.Respond(w, r, geolocations, nil)
 }
 
-func (msc *MinerSmartContract) GetShardersStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get sharders. no db connection")
-	}
-
-	active, err := balances.GetEventDB().CountActiveSharders()
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs configs
+// list minersc config settings
+//
+// responses:
+//
+//	200: StringMap
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) {
+	gn, err := getGlobalNode(mrh.GetQueryStateContext())
 	if err != nil {
-		return nil, common.NewErrNoResource("db error", err.Error())
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
 	}
-
-	inactive, err := balances.GetEventDB().CountInactiveSharders()
-	if err != nil {
-		return nil, common.NewErrNoResource("db error", err.Error())
-	}
-
-	return map[string]int64{
-		"active_sharders":   active,
-		"inactive_sharders": inactive,
-	}, nil
-
+	rtv, err := gn.getConfigMap()
+	common.Respond(w, r, rtv, err)
 }
 
-func (msc *MinerSmartContract) GetShardersStateHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat nodePoolStat
+// lists sharders
+//
+// parameters:
+//
+//	+name: id
+//	 description: id
+//	 in: query
+//	 type: string
+//	 required: true
+//
+// responses:
+//
+//	200:
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Request) {
+	var (
+		id     = r.URL.Query().Get("id")
+		poolID = r.URL.Query().Get("pool_id")
+		status = r.URL.Query().Get("status")
+		sn     *MinerNode
+		err    error
+	)
 
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("can't get sharders. no db connection")
+	if sn, err = getMinerNode(id, mrh.GetQueryStateContext()); err != nil {
+		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
+		return
 	}
 
-	ts, err := balances.GetEventDB().GetShardersTotalStake()
-	if err != nil {
-		return nil, common.NewErrNoResource("db error", err.Error())
+	if poolID == "" {
+		common.Respond(w, r, sn.GetNodePools(status), nil)
+		return
 	}
 
-	return map[string]int64{
-		"sharders_total_stake": ts,
-	}, nil
-
+	if pool := sn.GetNodePool(poolID); pool != nil {
+		common.Respond(w, r, pool, nil)
+		return
+	}
+	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
 }
 
-func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allShardersList, err := getShardersKeepList(balances)
-	if err != nil {
-		return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
-	}
-	return allShardersList, nil
+// swagger:model nodeStat
+type nodeStat struct {
+	MinerNode
+	Round       int64 `json:"round"`
+	TotalReward int64 `json:"total_reward"`
 }
 
-func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	dkgMinersList, err := getDKGMinersList(balances)
-	if err != nil {
-		return "", common.NewErrInternal("can't get miners dkg list", err.Error())
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat nodeStat
+// lists sharders
+//
+// parameters:
+//
+//	+name: id
+//	 description: id
+//	 in: query
+//	 type: string
+//	 required: true
+//
+// responses:
+//
+//	200: nodeStat
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
+	var (
+		id = r.URL.Query().Get("id")
+	)
+	if id == "" {
+		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
+		return
 	}
-	return dkgMinersList, nil
-}
-
-func (msc *MinerSmartContract) GetMinersMpksListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	msc.mutexMinerMPK.Lock()
-	defer msc.mutexMinerMPK.Unlock()
-	mpks, err := getMinersMPKs(balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
-	}
-
-	return mpks, nil
-}
-
-func (msc *MinerSmartContract) GetGroupShareOrSignsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	sos, err := getGroupShareOrSigns(balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
-	}
-
-	return sos, nil
-}
-
-func (msc *MinerSmartContract) GetPhaseHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	pn, err := GetPhaseNode(balances)
-	if err != nil {
-		return "", common.NewErrNoResource("can't get phase node", err.Error())
-	}
-	return pn, nil
-}
-
-func (msc *MinerSmartContract) GetMagicBlockHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	mb, err := getMagicBlock(balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
+	sCtx := mrh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
 	}
 
-	return mb, nil
-}
-
-/*
-
-new zwallet commands
-
-*/
-
-func (msc *MinerSmartContract) getGlobalsHandler(
-	_ context.Context,
-	_ url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	globals, err := getGlobalSettings(balances)
-
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, common.NewErrInternal(err.Error())
-		}
-		return GlobalSettings{
-			Fields: getStringMapFromViper(),
-		}, nil
+	if sCtx.GetBlock() == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("cannot get latest finalised block"))
+		return
 	}
-	return globals, nil
+
+	if miner, err := edb.GetMiner(id); err == nil {
+		common.Respond(w, r, nodeStat{
+			MinerNode: minerTableToMinerNode(miner), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
+		return
+	}
+	sharder, err := edb.GetSharder(id)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("miner/sharder not found"))
+		return
+	}
+	common.Respond(w, r, nodeStat{
+		MinerNode:   sharderTableToSharderNode(sharder),
+		Round:       sCtx.GetBlock().Round,
+		TotalReward: int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
-func (msc *MinerSmartContract) GetEventsHandler(
-	ctx context.Context,
-	params url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
+// events for block
+//
+// parameters:
+//
+//	+name: block_number
+//	 description: block number
+//	 in: query
+//	 type: string
+//	+name: type
+//	 description: type
+//	 in: query
+//	 type: string
+//	+name: tag
+//	 description: tag
+//	 in: query
+//	 type: string
+//	+name: tx_hash
+//	 description: hash of transaction
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: eventList
+//	400:
+func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 	var blockNumber = 0
-	var blockNumberString = params.Get("block_number")
+	var blockNumberString = r.URL.Query().Get("block_number")
+
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+
 	if len(blockNumberString) > 0 {
 		var err error
 		blockNumber, err = strconv.Atoi(blockNumberString)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse block number %v", err)
+			common.Respond(w, r, nil, fmt.Errorf("cannot parse block number %v", err))
+			return
 		}
 	}
 
-	if balances.GetEventDB() == nil {
-		return nil, errors.New("no event database found")
-	}
-
-	eventType, err := strconv.Atoi(params.Get("type"))
+	eventType, err := strconv.Atoi(r.URL.Query().Get("type"))
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse type %s: %v", params.Get("type"), err)
+		common.Respond(w, r, nil, fmt.Errorf("cannot parse type %s: %v", r.URL.Query().Get("type"), err))
+		return
 	}
-	eventTag, err := strconv.Atoi(params.Get("tag"))
+	eventTag, err := strconv.Atoi(r.URL.Query().Get("tag"))
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse tag %s: %v", params.Get("type"), err)
+		common.Respond(w, r, nil, fmt.Errorf("cannot parse tag %s: %v", r.URL.Query().Get("type"), err))
+		return
 	}
 	filter := event.Event{
 		BlockNumber: int64(blockNumber),
-		TxHash:      params.Get("tx_hash"),
-		Type:        eventType,
-		Tag:         eventTag,
+		TxHash:      r.URL.Query().Get("tx_hash"),
+		Type:        event.EventType(eventType),
+		Tag:         event.EventTag(eventTag),
 	}
-
-	events, err := balances.GetEventDB().FindEvents(ctx, filter)
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	events, err := edb.FindEvents(r.Context(), filter, pagination)
 	if err != nil {
-		return nil, err
+		common.Respond(w, r, nil, err)
+		return
 	}
 
-	return struct {
-		Events []event.Event `json:"events"`
-	}{
+	common.Respond(w, r, eventList{
 		Events: events,
-	}, nil
+	}, nil)
 }
 
-func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		id = params.Get("id")
-	)
-	if id == "" {
-		return nil, common.NewErrBadRequest("id parameter is compulsary")
-	}
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("cannot connect to eventdb database")
-	}
-	if miner, err := balances.GetEventDB().GetMiner(id); err == nil {
-		return minerTableToMinerNode(miner), nil
-	}
-	if sharder, err := balances.GetEventDB().GetSharder(id); err == nil {
-		return sharderTableToSharderNode(sharder), nil
-	}
-	return nil, common.NewErrBadRequest("miner/sharder not found")
-}
-
-func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
-	var (
-		id     = params.Get("id")
-		poolID = params.Get("pool_id")
-		status = params.Get("status")
-		sn     *MinerNode
-	)
-
-	if sn, err = getMinerNode(id, balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
-	}
-
-	if poolID == "" {
-		return sn.GetNodePools(status), nil
-	}
-
-	if pool, ok := sn.Pending[poolID]; ok {
-		return pool, nil
-	} else if pool, ok = sn.Active[poolID]; ok {
-		return pool, nil
-	} else if pool, ok = sn.Deleting[poolID]; ok {
-		return pool, nil
-	}
-
-	return nil, common.NewErrNoResource("can't find pool stats")
-}
-
-func (msc *MinerSmartContract) configHandler(
-	_ context.Context,
-	_ url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	gn, err := getGlobalNode(balances)
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock getMagicBlock
+// gets magic block
+//
+// responses:
+//
+//	200: MagicBlock
+//	400:
+func (mrh *MinerRestHandler) getMagicBlock(w http.ResponseWriter, r *http.Request) {
+	mb, err := getMagicBlock(mrh.GetQueryStateContext())
 	if err != nil {
-		return nil, common.NewErrInternal(err.Error())
+		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true))
+		return
 	}
-	return gn.getConfigMap()
+
+	common.Respond(w, r, mb, nil)
 }
 
-func getOffsetLimitParam(offsetString, limitString string) (offset, limit int, err error) {
-	if offsetString != "" {
-		offset, err = strconv.Atoi(offsetString)
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns getGroupShareOrSigns
+// gets group share or signs
+//
+// responses:
+//
+//	200: GroupSharesOrSigns
+//	400:
+func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http.Request) {
+	sos, err := getGroupShareOrSigns(mrh.GetQueryStateContext())
+	if err != nil {
+		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true))
+		return
+	}
+
+	common.Respond(w, r, sos, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList getMpksList
+// gets dkg miners list
+//
+// responses:
+//
+//	200: Mpks
+//	400:
+func (mrh *MinerRestHandler) getMpksList(w http.ResponseWriter, r *http.Request) {
+	mpks, err := getMinersMPKs(mrh.GetQueryStateContext())
+	if err != nil {
+		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true))
+		return
+	}
+
+	common.Respond(w, r, mpks, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList getDkgList
+// gets dkg miners list
+//
+// responses:
+//
+//	200: DKGMinerNodes
+//	500:
+func (mrh *MinerRestHandler) getDkgList(w http.ResponseWriter, r *http.Request) {
+	dkgMinersList, err := getDKGMinersList(mrh.GetQueryStateContext())
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("can't get miners dkg list", err.Error()))
+		return
+	}
+	common.Respond(w, r, dkgMinersList, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase getPhase
+// get phase nodes
+//
+// responses:
+//
+//	200: PhaseNode
+//	400:
+func (mrh *MinerRestHandler) getPhase(w http.ResponseWriter, r *http.Request) {
+	pn, err := GetPhaseNode(mrh.GetQueryStateContext())
+	if err != nil {
+		common.Respond(w, r, "", common.NewErrNoResource("can't get phase node", err.Error()))
+		return
+	}
+	common.Respond(w, r, pn, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList getSharderKeepList
+// get total sharder stake
+//
+// responses:
+//
+//	200: MinerNodes
+//	500:
+func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.Request) {
+	allShardersList, err := getShardersKeepList(mrh.GetQueryStateContext())
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("cannot get sharder list", err.Error()))
+		return
+	}
+	common.Respond(w, r, allShardersList, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake get_sharders_stake
+// get total sharder stake
+//
+// responses:
+//
+//	200: Int64Map
+//	404:
+func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Request) {
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	ts, err := edb.GetShardersTotalStake()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
+		return
+	}
+
+	common.Respond(w, r, rest.Int64Map{
+		"sharders_total_stake": ts,
+	}, nil)
+
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats get_sharders_stats
+// get count of active and inactive miners
+//
+// responses:
+//
+//	200: Int64Map
+//	404:
+func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Request) {
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	active, err := edb.CountActiveSharders()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
+		return
+	}
+
+	inactive, err := edb.CountInactiveSharders()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
+		return
+	}
+
+	common.Respond(w, r, rest.Int64Map{
+		"active_sharders":   active,
+		"inactive_sharders": inactive,
+	}, nil)
+
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList getSharderList
+// lists sharders
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: active
+//	 description: active
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: InterfaceMap
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Request) {
+	var (
+		activeString = r.URL.Query().Get("active")
+	)
+
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	filter := event.SharderQuery{}
+	if activeString != "" {
+		active, err := strconv.ParseBool(activeString)
 		if err != nil {
-			return 0, 0, common.NewErrBadRequest("offset parameter is not valid")
+			common.Respond(w, r, nil, common.NewErrBadRequest("active string is not valid"))
+			return
+		}
+		filter.Active = null.BoolFrom(active)
+	}
+	sCtx := mrh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	sharders, err := edb.GetShardersWithFilterAndPagination(filter, pagination)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
+		return
+	}
+	shardersArr := make([]nodeStat, len(sharders))
+	for i, sharder := range sharders {
+		shardersArr[i] = nodeStat{
+			MinerNode:   sharderTableToSharderNode(sharder),
+			Round:       sCtx.GetBlock().Round,
+			TotalReward: int64(sharder.Rewards.TotalRewards),
 		}
 	}
-	if limitString != "" {
-		limit, err = strconv.Atoi(limitString)
+	common.Respond(w, r, rest.InterfaceMap{
+		"Nodes": shardersArr,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake get_miners_stake
+// get total miner stake
+//
+// responses:
+//
+//	200: Int64Map
+//	404:
+func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Request) {
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	ts, err := edb.GetMinersTotalStake()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
+		return
+	}
+
+	common.Respond(w, r, rest.Int64Map{
+		"miners_total_stake": ts,
+	}, nil)
+
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats get_miners_stats
+// get count of active and inactive miners
+//
+// responses:
+//
+//	200: Int64Map
+//	404:
+func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Request) {
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	active, err := edb.CountActiveMiners()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
+		return
+	}
+
+	inactive, err := edb.CountInactiveMiners()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
+		return
+	}
+
+	common.Respond(w, r, rest.Int64Map{
+		"active_miners":   active,
+		"inactive_miners": inactive,
+	}, nil)
+
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList getMinerList
+// lists miners
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: active
+//	 description: active
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: InterfaceMap
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request) {
+	var (
+		activeString = r.URL.Query().Get("active")
+	)
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	filter := event.MinerQuery{}
+	if activeString != "" {
+		active, err := strconv.ParseBool(activeString)
 		if err != nil {
-			return 0, 0, common.NewErrBadRequest("limit parameter is not valid")
+			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid: "+err.Error()))
+			return
+		}
+		filter.Active = null.BoolFrom(active)
+	}
+	sCtx := mrh.GetQueryStateContext()
+	edb := sCtx.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	miners, err := edb.GetMinersWithFiltersAndPagination(filter, pagination)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
+		return
+	}
+	minersArr := make([]nodeStat, len(miners))
+	for i, miner := range miners {
+		minersArr[i] = nodeStat{
+			MinerNode:   minerTableToMinerNode(miner),
+			Round:       sCtx.GetBlock().Round,
+			TotalReward: int64(miner.Rewards.TotalRewards),
 		}
 	}
 
-	return
+	common.Respond(w, r, rest.InterfaceMap{
+		"Nodes": minersArr,
+	}, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools getUserPools
+//
+//	user oriented pools requests handler
+//
+// parameters:
+//
+//	+name: client_id
+//	 description: client for which to get write pools statistics
+//	 required: true
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: userPoolStat
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request) {
+	clientID := r.URL.Query().Get("client_id")
+
+	balances := mrh.GetQueryStateContext()
+
+	if balances.GetEventDB() == nil {
+		common.Respond(w, r, nil, errors.New("no event database found"))
+		return
+	}
+
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Miner))
+	if err != nil {
+		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
+		return
+	}
+
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Sharder))
+	if err != nil {
+		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
+		return
+	}
+
+	var ups = new(stakepool.UserPoolStat)
+	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat, len(minerPools)+len(sharderPools))
+	for _, pool := range minerPools {
+		dp := toUPS(pool)
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
+	}
+
+	for _, pool := range sharderPools {
+		dp := toUPS(pool)
+		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
+
+	}
+
+	common.Respond(w, r, ups, nil)
+}
+
+func toUPS(pool event.DelegatePool) stakepool.DelegatePoolStat {
+
+	dp := stakepool.DelegatePoolStat{
+		ID:     pool.PoolID,
+		Status: spenum.PoolStatus(pool.Status).String(),
+	}
+
+	dp.Balance = pool.Balance
+	dp.Rewards = pool.Reward
+	dp.TotalReward = pool.TotalReward
+	dp.DelegateID = pool.DelegateID
+	dp.ProviderType = pool.ProviderType
+	dp.ProviderId = pool.ProviderID
+
+	return dp
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat getMSStakePoolStat
+// Gets statistic for all locked tokens of a stake pool
+//
+// parameters:
+//
+//	+name: provider_id
+//	 description: id of a provider
+//	 required: true
+//	 in: query
+//	 type: string
+//	+name: provider_type
+//	 description: type of the provider, ie: miner. sharder
+//	 required: true
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: stakePoolStat
+//	400:
+//	500:
+func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
+	providerID := r.URL.Query().Get("provider_id")
+	providerTypeString := r.URL.Query().Get("provider_type")
+	providerType, err := strconv.Atoi(providerTypeString)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
+		return
+	}
+
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	res, err := getProviderStakePoolStats(providerType, providerID, edb)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("could not find provider stats: "+err.Error()))
+		return
+	}
+
+	common.Respond(w, r, res, nil)
+}
+
+func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
+	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
+	}
+
+	spStat := &stakepool.StakePoolStat{}
+	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
+
+	switch spenum.Provider(providerType) {
+	case spenum.Miner:
+		miner, err := edb.GetMiner(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return stakepool.ToProviderStakePoolStats(&miner.Provider, delegatePools)
+	case spenum.Sharder:
+		sharder, err := edb.GetSharder(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return stakepool.ToProviderStakePoolStats(&sharder.Provider, delegatePools)
+	}
+
+	return nil, fmt.Errorf("unknown provider type")
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool getNodepool
+// provides nodepool information for registered miners
+//
+// responses:
+//
+//	200: PoolMembersInfo
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getNodePool(w http.ResponseWriter, r *http.Request) {
+	npi := (&smartcontract.BCContext{}).GetNodepoolInfo()
+	common.Respond(w, r, npi, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings globalSettings
+// global object for miner smart contracts
+//
+// responses:
+//
+//	200: MinerGlobalSettings
+//	400:
+func (mrh *MinerRestHandler) getGlobalSettings(w http.ResponseWriter, r *http.Request) {
+	globals, err := getGlobalSettings(mrh.GetQueryStateContext())
+
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, GlobalSettings{
+			Fields: getStringMapFromViper(),
+		}, nil)
+		return
+	}
+	common.Respond(w, r, globals, nil)
+}
+
+// swagger:model eventList
+type eventList struct {
+	Events []event.Event `json:"events"`
 }

@@ -4,19 +4,17 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/state"
-
-	"gorm.io/gorm"
+	"github.com/0chain/common/core/currency"
+	"gorm.io/gorm/clause"
 )
 
 type Authorizer struct {
-	gorm.Model
+	Provider
 
-	AuthorizerID string `json:"id" gorm:"uniqueIndex"`
-	URL          string `json:"url"`
+	URL string `json:"url"`
 
 	// Configuration
-	Fee state.Balance `json:"fee"`
+	Fee currency.Coin `json:"fee"`
 
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
@@ -24,13 +22,6 @@ type Authorizer struct {
 
 	// Stats
 	LastHealthCheck int64 `json:"last_health_check"`
-
-	// stake_pool_settings
-	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       state.Balance `json:"min_stake"`
-	MaxStake       state.Balance `json:"max_stake"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
@@ -53,7 +44,7 @@ func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 
 	result := edb.Store.Get().
 		Model(&Authorizer{}).
-		Where(&Authorizer{AuthorizerID: id}).
+		Where(&Authorizer{Provider: Provider{ID: id}}).
 		First(&auth)
 
 	if result.Error != nil {
@@ -86,15 +77,35 @@ func (a *Authorizer) exists(edb *EventDb) (bool, error) {
 
 	result := edb.Get().
 		Model(&Authorizer{}).
-		Where(&Authorizer{AuthorizerID: a.AuthorizerID}).
+		Where(&Authorizer{Provider: Provider{ID: a.ID}}).
 		Count(&count)
 
 	if result.Error != nil {
 		return false,
 			fmt.Errorf(
 				"error searching for authorizer %v, error %v",
-				a.AuthorizerID, result.Error,
+				a.ID, result.Error,
 			)
 	}
 	return count > 0, nil
+}
+
+func NewUpdateAuthorizerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateAuthorizerTotalStake, Authorizer{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalStake,
+		},
+	}
+}
+
+func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
+	}).Create(&authorizer).Error
+}
+
+func mergeUpdateAuthorizerTotalStakesEvents() *eventsMergerImpl[Authorizer] {
+	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalStake, withUniqueEventOverwrite())
 }

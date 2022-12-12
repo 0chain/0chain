@@ -7,7 +7,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -110,13 +110,11 @@ func (v *vrfSharesCache) getAll() []*round.VRFShare {
 	return vrfShares
 }
 
-// clean deletes shares that has round time out count <= the 'count' value
-func (v *vrfSharesCache) clean(count int) {
+// clean deletes shares of given keys
+func (v *vrfSharesCache) clean(keys map[string]struct{}) {
 	v.mutex.Lock()
-	for s, vrf := range v.vrfShares {
-		if vrf.GetRoundTimeoutCount() <= count {
-			delete(v.vrfShares, s)
-		}
+	for k := range keys {
+		delete(v.vrfShares, k)
 	}
 	v.mutex.Unlock()
 }
@@ -223,8 +221,8 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
 	r.cancelGuard.Lock()
-	r.SetPhase(round.Notarize)
 	defer r.cancelGuard.Unlock()
+	r.SetPhase(round.Notarize)
 	f := r.verificationCancelf
 	if f == nil {
 		return
@@ -241,7 +239,7 @@ func (r *Round) Clear() {
 	r.CancelVerification()
 }
 
-//IsVRFComplete - is the VRF process complete?
+// IsVRFComplete - is the VRF process complete?
 func (r *Round) IsVRFComplete() bool {
 	return r.HasRandomSeed()
 }

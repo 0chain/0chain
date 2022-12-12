@@ -22,9 +22,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -143,7 +143,9 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 	}
 
 	if round+1 <= tk.Round+int64(ahead) {
-		logging.Logger.Debug("[wait not ahead] [2] not ahead, can move on")
+		logging.Logger.Debug("[wait not ahead] [2] not ahead, can move on",
+			zap.Int64("round", round),
+			zap.Int64("lfb tk round", tk.Round))
 		return true // not ahead, can move on
 	}
 
@@ -173,8 +175,8 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 	go mc.FinalizeRound(r.Round)
 }
 
-//Creates the next round, if next round exists and has RRS returns existent.
-//If RRS is not present, starts VRF phase for this round
+// Creates the next round, if next round exists and has RRS returns existent.
+// If RRS is not present, starts VRF phase for this round
 func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 
 	var (
@@ -254,7 +256,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-//TryProposeBlock generates block and sends it to the network if generator
+// TryProposeBlock generates block and sends it to the network if generator
 func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 	var rn = mr.GetRoundNumber()
 
@@ -366,8 +368,8 @@ func (mc *Chain) getBlockToExtend(ctx context.Context, r round.RoundI) (
 	return // bnb
 }
 
-// GenerateRoundBlock - given a round number generates a block.
-func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
+// generateRoundBlock - given a round number generates a block.
+func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
 	var ts = time.Now()
 	defer func() { rbgTimer.UpdateSince(ts) }()
 
@@ -511,7 +513,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				}
 			}
 			if startLogging.IsZero() || time.Since(startLogging) > time.Second {
-				startLogging = time.Now()
 				logging.Logger.Info("generate block", zap.Any("round", roundNumber),
 					zap.Any("txn_count", txnCount),
 					zap.Any("t.txn_count", transaction.GetTransactionCount()),
@@ -521,7 +522,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 
 		//todo actually it is not a problem, since RRS can be changed only during timeout and this block can be reused
-		if r.GetRandomSeed() != b.GetRoundRandomSeed() {
+		if !areRoundAndBlockSeedsEqual(r, b) {
 			logging.Logger.Error("round random seed mismatch",
 				zap.Int64("round", b.Round),
 				zap.Int64("round_rrs", r.GetRandomSeed()),
@@ -835,10 +836,17 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			logging.Logger.Debug("verifyAndSend - got error on verify round block",
 				zap.String("phase", round.GetPhaseName(r.GetPhase())), zap.Error(err))
 			switch err {
-			case context.Canceled, context.DeadlineExceeded:
+			case context.DeadlineExceeded:
 				if !r.isVerificationComplete() {
 					b.SetBlockState(block.StateVerificationFailed)
-					logging.Logger.Error("verifyAndSend - canceled or deadline exceed without round verification completed",
+					logging.Logger.Error("verifyAndSend - deadline exceed without round verification completed",
+						zap.Int64("round", b.Round), zap.Error(err))
+				}
+				return false
+			case context.Canceled:
+				if !r.isVerificationComplete() {
+					b.SetBlockState(block.StateVerificationFailed)
+					logging.Logger.Debug("verifyAndSend - canceled without round verification completed",
 						zap.Int64("round", b.Round), zap.Error(err))
 				}
 				return false
@@ -888,7 +896,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			minerStats.VerificationTicketsByRank[b.RoundRank]++
 		}
-		logging.Logger.Debug("verifyAndSend - finished successfully", zap.Any("block", b.Hash))
+		logging.Logger.Debug("verifyAndSend - finished successfully",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash))
 		return true
 	}
 	var sendVerification = false
@@ -998,7 +1008,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 		return nil, common.NewErrorf("verify_round_block", "block with no RRS, %d, %s", b.Round, b.Hash)
 	}
 
-	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
+	if !areRoundAndBlockSeedsEqual(r, b) {
 		return nil, common.NewError("seed_mismatch", "block RRS mismatch")
 	}
 
@@ -1778,7 +1788,7 @@ func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
 	if mb == nil {
 		return
 	}
-	if !config.DevConfiguration.ViewChange {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
 		return
 	}
 	var err error

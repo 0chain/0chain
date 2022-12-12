@@ -4,7 +4,7 @@ import (
 	"log"
 	"strconv"
 
-	"0chain.net/chaincore/state"
+	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
@@ -30,15 +30,22 @@ func AddMockClientPools(
 }
 
 func AddMockConfig(balances cstate.StateContextI) {
-	var conf config
+	var (
+		conf config
+		err  error
+	)
 	conf.OwnerId = viper.GetString(benchmark.VestingPoolOwner)
-	conf.MinLock = state.Balance(viper.GetFloat64(benchmark.VestingMinLock) * 1e10)
+	conf.MinLock, err = currency.MultFloat64(1e10, viper.GetFloat64(benchmark.VestingMinLock))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	conf.MinDuration = viper.GetDuration(benchmark.VestingMinDuration)
 	conf.MaxDuration = viper.GetDuration(benchmark.VestingMaxDuration)
 	conf.MaxDestinations = viper.GetInt(benchmark.VestingMaxDestinations)
 	conf.MaxDescriptionLength = viper.GetInt(benchmark.VestingMaxDescriptionLength)
 
-	_, err := balances.InsertTrieNode(scConfigKey(ADDRESS), &conf)
+	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), &conf)
 	if err != nil {
 		log.Fatal(err)
 	}

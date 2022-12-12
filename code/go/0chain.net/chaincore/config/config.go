@@ -5,6 +5,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"0chain.net/smartcontract/minersc/enums"
+
+	"0chain.net/smartcontract"
+
+	"github.com/0chain/common/core/currency"
+
+	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
 )
 
@@ -14,7 +21,7 @@ var (
 	SmartContractConfig = viper.New()
 )
 
-//SetupDefaultConfig - setup the default config options that can be overridden via the config file
+// SetupDefaultConfig - setup the default config options that can be overridden via the config file
 func SetupDefaultConfig() {
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("network.relay_time", 200)
@@ -24,6 +31,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.messages.verification_tickets_to", "generator")
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
+	viper.SetDefault("server_chain.transaction.transfer_cost", 10)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 66)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)
@@ -75,6 +83,12 @@ func SetupDefaultConfig() {
 	// Asynchronous blocks fetching.
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_miners", 100)
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
+
+	viper.SetDefault("smart_contracts.storagesc.max_blobbers_per_allocation", 40)
+
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregateDebug], false)
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregatePeriod], 10)
+	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregatePageLimit], 50)
 }
 
 // SetupConfig setups the main configuration system.
@@ -97,12 +111,10 @@ func SetupDefaultSmartContractConfig() {
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_limit", 100000000)
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.individual_reset", "2h")
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_reset", "24h")
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.min_lock", 100)
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.lock_period", "2160h")
-	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.interest_rate", 0.01)
 
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_enabled", true)
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_rate_per_mb_min", 1)
+	SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", "3m")
 }
 
 // SetupSmartContractConfig setups the smart contracts configuration system.
@@ -134,30 +146,146 @@ const (
 	DeploymentMainNet     = 2
 )
 
+//go:generate mockery --case underscore --name=ChainConfig --output=./mocks
+type ChainConfig interface {
+	IsStateEnabled() bool
+	IsDkgEnabled() bool
+	IsViewChangeEnabled() bool
+	IsBlockRewardsEnabled() bool
+	IsStorageEnabled() bool
+	IsFaucetEnabled() bool
+	IsInterestEnabled() bool
+	IsFeeEnabled() bool
+	IsMultisigEnabled() bool
+	IsVestingEnabled() bool
+	IsZcnEnabled() bool
+	OwnerID() datastore.Key
+	MinBlockSize() int32
+	MaxBlockCost() int
+	MaxByteSize() int64
+	MinGenerators() int
+	GeneratorsPercent() float64
+	NumReplicators() int
+	ThresholdByCount() int
+	ThresholdByStake() int
+	ValidationBatchSize() int
+	TxnMaxPayload() int
+	PruneStateBelowCount() int
+	RoundRange() int64
+	BlocksToSharder() int
+	VerificationTicketsTo() int
+	HealthShowCounters() bool
+	HCCycleScan() [2]HealthCheckCycleScan
+	BlockProposalMaxWaitTime() time.Duration
+	BlockProposalWaitMode() int8
+	ReuseTransactions() bool
+	ClientSignatureScheme() string
+	MinActiveSharders() int
+	MinActiveReplicators() int
+	SmartContractTimeout() time.Duration
+	SmartContractSettingUpdatePeriod() int64
+	RoundTimeoutSofttoMin() int
+	RoundTimeoutSofttoMult() int
+	RoundRestartMult() int
+	DbsEvents() DbAccess
+	DbSettings() DbSettings
+	FromViper() error
+	Update(configMap map[string]string, version int64) error
+	TxnExempt() map[string]bool
+	MinTxnFee() currency.Coin
+	TxnTransferCost() int
+}
+
+type DbAccess struct {
+	Enabled  bool   `json:"enabled"`
+	Name     string `json:"name"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+
+	MaxIdleConns    int           `json:"max_idle_conns"`
+	MaxOpenConns    int           `json:"max_open_conns"`
+	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
+}
+
+type DbSettings struct {
+	Debug           bool  `json:"debug"`
+	AggregatePeriod int64 `json:"aggregate_period"`
+	PageLimit       int64 `json:"page_limit"`
+}
+
+func (s *DbSettings) Update(updates map[string]string) error {
+	if value, found := updates[enums.DbsAggregateDebug.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Boolean)
+		if err != nil {
+			return err
+		}
+		s.Debug = iValue.(bool)
+	}
+	if value, found := updates[enums.DbsAggregatePeriod.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.AggregatePeriod = iValue.(int64)
+	}
+	if value, found := updates[enums.DbsAggregatePageLimit.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.PageLimit = iValue.(int64)
+	}
+	return nil
+}
+
+// HealthCheckCycleScan -
+type HealthCheckCycleScan struct {
+	Settle time.Duration `json:"settle"`
+	//SettleSecs int           `json:"settle_period_secs"`
+
+	Enabled   bool  `json:"scan_enable"`
+	BatchSize int64 `json:"batch_size"`
+
+	Window int64 `json:"scan_window"`
+
+	RepeatInterval time.Duration `json:"repeat_interval"`
+	//RepeatIntervalMins int           `json:"repeat_interval_mins"`
+
+	//ReportStatusMins int `json:"report_status_mins"`
+	ReportStatus time.Duration `json:"report_status"`
+}
+
 /*Config - all the config options passed from the command line*/
 type Config struct {
 	Host           string
 	Port           int
 	ChainID        string
 	DeploymentMode byte
+	ChainConfig
 }
 
 /*Configuration of the system */
-var Configuration Config
+var configuration Config
+
+func Configuration() *Config {
+	return &configuration
+}
 
 /*TestNet - is the server running in TestNet mode? */
 func TestNet() bool {
-	return Configuration.DeploymentMode == DeploymentTestNet
+	return Configuration().DeploymentMode == DeploymentTestNet
 }
 
 /*Development - is the server running in development mode? */
 func Development() bool {
-	return Configuration.DeploymentMode == DeploymentDevelopment
+	return Configuration().DeploymentMode == DeploymentDevelopment
 }
 
 /*MainNet - is the server running in mainnet mode? */
 func MainNet() bool {
-	return Configuration.DeploymentMode == DeploymentMainNet
+	return Configuration().DeploymentMode == DeploymentMainNet
 }
 
 /*ErrSupportedChain error for indicating which chain is supported by the server */

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"strings"
 
+	"0chain.net/chaincore/chain/state"
+	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
+
 	"0chain.net/core/common"
 
-	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract"
 	"github.com/pkg/errors"
@@ -20,12 +22,12 @@ const (
 )
 
 const (
-	MinMintAmount      = "min_mint_amount"
+	MinMintAmount      = "min_mint"
 	PercentAuthorizers = "percent_authorizers"
 	MinAuthorizers     = "min_authorizers"
-	MinBurnAmount      = "min_burn_amount"
-	MinStakeAmount     = "min_stake_amount"
-	MinLockAmount      = "min_lock_amount"
+	MinBurnAmount      = "min_burn"
+	MinStakeAmount     = "min_stake"
+	MinLockAmount      = "min_lock"
 	BurnAddress        = "burn_address"
 	MaxFee             = "max_fee"
 	OwnerID            = "owner_id"
@@ -40,7 +42,23 @@ var CostFunctions = []string{
 	AddAuthorizerFunc,
 }
 
-func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx chain.StateContextI) (string, error) {
+// InitConfig initializes global node config to MPT
+func InitConfig(ctx state.StateContextI) error {
+	node := &GlobalNode{ID: ADDRESS}
+	err := ctx.GetTrieNode(node.GetKey(), node)
+	if err == util.ErrValueNotPresent {
+		node.ZCNSConfig = getConfig()
+		_, err := ctx.InsertTrieNode(node.GetKey(), node)
+		return err
+	}
+	return err
+}
+
+func GetGlobalNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
+	return GetGlobalSavedNode(ctx)
+}
+
+func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx state.StateContextI) (string, error) {
 	const (
 		Code     = "failed to update configuration"
 		FuncName = "UpdateGlobalConfig"
@@ -90,7 +108,6 @@ func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 		MaxFee:             fmt.Sprintf("%v", gn.MaxFee),
 		BurnAddress:        fmt.Sprintf("%v", gn.BurnAddress),
 		OwnerID:            fmt.Sprintf("%v", gn.OwnerId),
-		Cost:               fmt.Sprintf("%v", gn.Cost),
 		MaxDelegates:       fmt.Sprintf("%v", gn.MaxDelegates),
 	}
 
@@ -103,23 +120,23 @@ func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 	}
 }
 
-func section(section string) string {
+func postfix(section string) string {
 	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
 
-func loadSettings() (conf *GlobalNode) {
-	conf = new(GlobalNode)
-	conf.MinMintAmount = state.Balance(cfg.GetInt(section(MinMintAmount)))
-	conf.MinBurnAmount = state.Balance(cfg.GetInt64(section(MinBurnAmount)))
-	conf.MinStakeAmount = state.Balance(cfg.GetInt64(section(MinStakeAmount)))
-	conf.PercentAuthorizers = cfg.GetFloat64(section(PercentAuthorizers))
-	conf.MinAuthorizers = cfg.GetInt64(section(MinAuthorizers))
-	conf.MinLockAmount = cfg.GetInt64(section(MinLockAmount))
-	conf.MaxFee = state.Balance(cfg.GetInt64(section(MaxFee)))
-	conf.BurnAddress = cfg.GetString(section(BurnAddress))
-	conf.OwnerId = cfg.GetString(section(OwnerID))
-	conf.Cost = cfg.GetStringMapInt(Cost)
-	conf.MaxDelegates = cfg.GetInt(section(MaxDelegates))
+func getConfig() (conf *ZCNSConfig) {
+	conf = new(ZCNSConfig)
+	conf.MinMintAmount = currency.Coin(cfg.GetInt(postfix(MinMintAmount)))
+	conf.MinBurnAmount = currency.Coin(cfg.GetInt64(postfix(MinBurnAmount)))
+	conf.MinStakeAmount = currency.Coin(cfg.GetInt64(postfix(MinStakeAmount)))
+	conf.PercentAuthorizers = cfg.GetFloat64(postfix(PercentAuthorizers))
+	conf.MinAuthorizers = cfg.GetInt64(postfix(MinAuthorizers))
+	conf.MinLockAmount = currency.Coin(cfg.GetUint64(postfix(MinLockAmount)))
+	conf.MaxFee = currency.Coin(cfg.GetInt64(postfix(MaxFee)))
+	conf.BurnAddress = cfg.GetString(postfix(BurnAddress))
+	conf.OwnerId = cfg.GetString(postfix(OwnerID))
+	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
+	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
 
 	return conf
 }

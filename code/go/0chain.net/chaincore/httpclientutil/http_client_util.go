@@ -17,14 +17,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -32,7 +34,7 @@ import (
   ToDo: This is adapted from blobber code. Need to find a way to reuse this
 */
 
-//SleepBetweenRetries suggested time to sleep between retries
+// SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
 
 const clientBalanceURL = "v1/client/get/balance?client_id="
@@ -43,7 +45,7 @@ const scRestAPIURL = "v1/screst/"
 const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
 const finalizeBlockURL = "v1/block/get/latest_finalized"
 
-//RegisterClient path to RegisterClient
+// RegisterClient path to RegisterClient
 const RegisterClient = "/v1/client/put"
 
 var httpClient *http.Client
@@ -63,10 +65,10 @@ func init() {
 	httpClient = &http.Client{Transport: transport}
 }
 
-//Signer for the transaction hash
+// Signer for the transaction hash
 type Signer func(h string) (string, error)
 
-//ComputeHashAndSign compute Hash and sign the transaction
+// ComputeHashAndSign compute Hash and sign the transaction
 func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v:%v", t.CreationDate, t.Nonce, t.ClientID,
 		t.ToClientID, t.Value, encryption.Hash(t.TransactionData))
@@ -81,7 +83,7 @@ func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 
 /////////////// Plain Transaction ///////////
 
-//NewHTTPRequest to use in sending http requests
+// NewHTTPRequest to use in sending http requests
 func NewHTTPRequest(method string, url string, data []byte, ID string, pkey string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
 	if err != nil {
@@ -98,7 +100,7 @@ func NewHTTPRequest(method string, url string, data []byte, ID string, pkey stri
 	return req, err
 }
 
-//SendMultiPostRequest send same request to multiple URLs
+// SendMultiPostRequest send same request to multiple URLs
 func SendMultiPostRequest(urls []string, data []byte, ID string, pkey string) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(urls))
@@ -115,7 +117,7 @@ func SendMultiPostRequest(urls []string, data []byte, ID string, pkey string) {
 	wg.Wait()
 }
 
-//SendPostRequest function to send post requests
+// SendPostRequest function to send post requests
 func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.WaitGroup) ([]byte, error) {
 	//ToDo: Add more error handling
 	if wg != nil {
@@ -138,12 +140,15 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	return body, err
 }
 
-//SendTransaction send a transaction
+// SendTransaction send a transaction
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	for _, u := range urls {
 		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
 		go func(url string) {
 			if _, err := sendTransactionToURL(url, txn, ID, pkey, nil); err != nil {
+				logging.Logger.Error("send transaction failed",
+					zap.String("url", url),
+					zap.Error(err))
 				logging.N2n.Error("send transaction failed",
 					zap.String("url", url),
 					zap.Error(err))
@@ -152,7 +157,7 @@ func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	}
 }
 
-//GetTransactionStatus check the status of the transaction.
+// GetTransactionStatus check the status of the transaction.
 func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, error) {
 	//ToDo: Add more error handling
 	numSuccess := 0
@@ -265,24 +270,24 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 	return // ok
 }
 
-func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (state.Balance, error) {
-	s, err := MakeClientStateRequest(clientID, urls, consensus)
+func MakeClientBalanceRequest(ctx context.Context, clientID string, urls []string, consensus int) (currency.Coin, error) {
+	s, err := MakeClientStateRequest(ctx, clientID, urls, consensus)
 	if err != nil {
 		return 0, err
 	}
 	return s.Balance, nil
 }
 
-func MakeClientNonceRequest(clientID string, urls []string, consensus int) (int64, error) {
-	s, err := MakeClientStateRequest(clientID, urls, consensus)
+func MakeClientNonceRequest(ctx context.Context, clientID string, urls []string, consensus int) (int64, error) {
+	s, err := MakeClientStateRequest(ctx, clientID, urls, consensus)
 	if err != nil {
 		return 0, err
 	}
 	return s.Nonce, nil
 }
 
-//MakeClientBalanceRequest to get a client's balance
-func MakeClientStateRequest(clientID string, urls []string, consensus int) (state.State, error) {
+// MakeClientStateRequest to get a client's balance
+func MakeClientStateRequest(ctx context.Context, clientID string, urls []string, consensus int) (state.State, error) {
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
 
 	//maxCount := 0
@@ -297,7 +302,15 @@ func MakeClientStateRequest(clientID string, urls []string, consensus int) (stat
 
 		logging.N2n.Info("Running GetClientBalance on", zap.String("url", u))
 
-		response, err := http.Get(u)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+		if err != nil {
+			logging.N2n.Error("Error creating request for sc rest api", zap.Any("error", err))
+			numErrs++
+			errString = errString + sharder + ":" + err.Error()
+			continue
+		}
+
+		response, err := httpClient.Do(req)
 		if err != nil {
 			logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
@@ -350,7 +363,7 @@ func MakeClientStateRequest(clientID string, urls []string, consensus int) (stat
 	return clientState, common.NewError("unknown_err", "Not able to run the request. unknown reason")
 }
 
-//MakeSCRestAPICall for smart contract REST API Call
+// MakeSCRestAPICall for smart contract REST API Call
 func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath string, params map[string]string, urls []string, entity util.Serializable, consensus int) error {
 
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
@@ -636,8 +649,8 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 	}
 }
 
-//GetMagicBlockCall for smart contract to get magic block
-//TODO not used, remove this func
+// GetMagicBlockCall for smart contract to get magic block
+// TODO not used, remove this func
 func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*block.Block, error) {
 	var retObj interface{}
 	numSuccess := 0
@@ -726,7 +739,19 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 
 }
 
-func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, scData *SmartContractTxnData, minerUrls []string) error {
+func syncClientNonce(sharders []string) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	return MakeClientNonceRequest(ctx, node.Self.Underlying().GetKey(), sharders, 33)
+}
+
+func SendSmartContractTxn(txn *Transaction,
+	address string,
+	value, fee int64,
+	scData *SmartContractTxnData,
+	minerUrls []string,
+	sharderUrls []string,
+) error {
 	txn.ToClientID = address
 	txn.Value = value
 	txn.Fee = fee
@@ -740,11 +765,11 @@ func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, sc
 
 	nextNonce := node.Self.GetNextNonce()
 	if nextNonce == 0 {
-		request, err := MakeClientNonceRequest(node.Self.Underlying().GetKey(), minerUrls, 33)
+		nonce, err := syncClientNonce(sharderUrls)
 		if err != nil {
-			logging.Logger.Error("Can't get nonce from remote", zap.Error(err))
+			logging.Logger.Error("can't get nonce from remote", zap.Error(err))
 		}
-		node.Self.SetNonce(request)
+		node.Self.SetNonce(nonce)
 		nextNonce = node.Self.GetNextNonce()
 	}
 	txn.Nonce = nextNonce

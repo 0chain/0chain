@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/chaincore/smartcontract"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -14,9 +16,9 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	sc "0chain.net/smartcontract"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -54,10 +56,6 @@ func (fc *FaucetSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
-	return fc.SmartContract.RestHandlers
-}
-
 func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
 	node, err := fc.getGlobalVariables(t, balances)
 	if err != nil {
@@ -75,10 +73,6 @@ func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName stri
 
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
-	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
-	fc.SmartContract.RestHandlers["/globalPeriodicLimit"] = fc.globalPeriodicLimit
-	fc.SmartContract.RestHandlers["/pourAmount"] = fc.pourAmount
-	fc.SmartContract.RestHandlers["/getConfig"] = fc.getConfigHandler
 	fc.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "update-settings"), nil)
 	fc.SmartContractExecutionStats["pour"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "pour"), nil)
 	fc.SmartContractExecutionStats["refill"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "refill"), nil)
@@ -89,6 +83,7 @@ func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _
 func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
 	if err == util.ErrValueNotPresent {
+		logging.Logger.Error("faucet sc state was not initialized", zap.String("ID", gn.ID))
 		return false, common.NewError("invalid_request", "faucet has no tokens and needs to be refilled")
 	}
 	if err != nil {
@@ -97,17 +92,34 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	if gn.PourAmount > smartContractBalance {
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance))
 	}
-	if state.Balance(gn.PourAmount)+un.Used > gn.PeriodicLimit {
+
+	totalAmount, err := currency.AddCoin(gn.PourAmount, un.Used)
+	if err != nil {
+		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus previous amount (%v) is not a valid currency. error: %v", gn.PourAmount, un.Used, err))
+	}
+	if totalAmount > gn.PeriodicLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)",
 				t.Value, un.Used, gn.PeriodicLimit, gn.IndividualReset.String()))
 	}
-	if state.Balance(gn.PourAmount)+gn.Used > gn.GlobalLimit {
+
+	totalGAmount, err := currency.AddCoin(gn.PourAmount, gn.Used)
+	if err != nil {
+		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) is not a valid currency. error: %v", gn.PourAmount, gn.Used, err))
+	}
+	if totalGAmount > gn.GlobalLimit {
 		return false, common.NewError("invalid_request",
 			fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)",
 				t.Value, gn.Used, gn.GlobalLimit, gn.GlobalReset.String()))
 	}
-	logging.Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.PourAmount), zap.Any("periodic_used+t.Value", state.Balance(t.Value)+un.Used), zap.Any("periodic_limit", gn.PeriodicLimit), zap.Any("global_used+txn.Value", state.Balance(t.Value)+gn.Used), zap.Any("global_limit", gn.GlobalLimit))
+	logging.Logger.Info("Valid sc request",
+		zap.Any("contract_balance", smartContractBalance),
+		zap.Any("txn.Value", t.Value),
+		zap.Any("max_pour", gn.PourAmount),
+		zap.Any("periodic_used+t.Value", currency.Coin(t.Value)+un.Used),
+		zap.Any("periodic_limit", gn.PeriodicLimit),
+		zap.Any("global_used+txn.Value", currency.Coin(t.Value)+gn.Used),
+		zap.Any("global_limit", gn.GlobalLimit))
 	return true, nil
 }
 
@@ -152,23 +164,42 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
 		var pourAmount = gn.PourAmount
-		if t.Value > 0 && t.Value < int64(gn.MaxPourAmount) {
-			pourAmount = state.Balance(t.Value)
+		if t.Value > 0 && t.Value < gn.MaxPourAmount {
+			pourAmount = t.Value
 		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
 		if err := balances.AddTransfer(transfer); err != nil {
-			return "", err
+			logging.Logger.Error("pour_failed: error adding transfer",
+				zap.String("txn", t.Hash),
+				zap.Error(err))
+			return "", common.NewErrorf("pour", "error adding transfer: %v", err)
 		}
-		user.Used += transfer.Amount
-		gn.Used += transfer.Amount
+
+		usedByUser, err := currency.AddCoin(user.Used, transfer.Amount)
+		if err != nil {
+			return "", common.NewError("pour", fmt.Sprintf("adding tokens to user's used amount resulted in an error: %v", err.Error()))
+		}
+		user.Used = usedByUser
+
+		gnUsed, err := currency.AddCoin(gn.Used, transfer.Amount)
+		if err != nil {
+			return "", common.NewError("pour", fmt.Sprintf("adding tokens to global used amount resulted in an error: %v", err.Error()))
+		}
+		gn.Used = gnUsed
 		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
 		if err != nil {
-			return "", err
+			logging.Logger.Error("pour_failed: error inserting user",
+				zap.String("txn", t.Hash),
+				zap.Error(err))
+			return "", common.NewErrorf("pour", "error inserting user: %v", err)
 		}
-		_, err := balances.InsertTrieNode(gn.GetKey(), gn)
+		_, err = balances.InsertTrieNode(gn.GetKey(), gn)
 		if err != nil {
-			return "", err
+			logging.Logger.Error("pour_failed: error inserting global node",
+				zap.String("txn", t.Hash),
+				zap.Error(err))
+			return "", common.NewErrorf("pour", "error inserting global node: %v", err)
 		}
 		tokensPoured.Update(int64(transfer.Amount))
 		return string(transfer.Encode()), nil
@@ -181,9 +212,9 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 	if err != nil {
 		return "", err
 	}
-	if clientBalance >= state.Balance(t.Value) {
+	if clientBalance >= t.Value {
 		tokenRefills := fc.SmartContractExecutionStats["token refills"].(metrics.Histogram)
-		transfer := state.NewTransfer(t.ClientID, t.ToClientID, state.Balance(t.Value))
+		transfer := state.NewTransfer(t.ClientID, t.ToClientID, t.Value)
 		if err := balances.AddTransfer(transfer); err != nil {
 			return "", err
 		}
@@ -219,33 +250,25 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
 	gn := &GlobalNode{ID: fc.ID}
-	err := balances.GetTrieNode(gn.GetKey(), gn)
-	switch err {
-	case nil, util.ErrValueNotPresent:
-		if gn.FaucetConfig == nil {
-			gn.FaucetConfig = getConfig()
-		}
-		return gn, err
-	default:
+	err := balances.GetTrieNode(globalNodeKey, gn)
+	if err != nil {
 		return nil, err
 	}
+
+	return gn, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) (*GlobalNode, error) {
 	gn, err := fc.getGlobalNode(balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil {
 		return nil, err
 	}
 
-	if err == nil {
-		if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
-			gn.StartTime = common.ToTime(t.CreationDate)
-			gn.Used = 0
-		}
-		return gn, nil
+	if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
+		gn.StartTime = common.ToTime(t.CreationDate)
+		gn.Used = 0
 	}
-	gn.Used = 0
-	gn.StartTime = common.ToTime(t.CreationDate)
+
 	return gn, nil
 }
 

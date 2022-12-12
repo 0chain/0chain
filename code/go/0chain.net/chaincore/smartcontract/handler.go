@@ -2,6 +2,7 @@ package smartcontract
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,27 +13,13 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	"github.com/0chain/common/core/logging"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
-//ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
+// ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
-
-//ExecuteRestAPI - executes the rest api on the smart contract
-func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	scI := getSmartContract(scAdress)
-	if scI != nil {
-		//add bc context here
-		handler, restpathok := scI.GetRestPoints()[restpath]
-		if !restpathok {
-			return nil, common.NewError("invalid_path", "Invalid path")
-		}
-		return handler(ctx, params, balances)
-	}
-	return nil, common.NewError("invalid_sc", "Invalid Smart contract address")
-}
 
 func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
 	scI := getSmartContract(scAdress)
@@ -61,7 +48,7 @@ func GetSmartContract(scAddress string) sci.SmartContractInterface {
 
 func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 	ts := time.Now()
-	inter, err := smcoi.Execute(t, funcName, input, balances)
+	inter, err := smcoi.Execute(t.Clone(), funcName, input, balances)
 	if err == nil {
 		if tm := smcoi.GetExecutionStats()[funcName]; tm != nil {
 			if timer, ok := tm.(metrics.Timer); ok {
@@ -72,7 +59,7 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 	return inter, err
 }
 
-//ExecuteSmartContract - executes the smart contract in the context of the given transaction
+// ExecuteSmartContract - executes the smart contract in the context of the given transaction
 func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
 	contractObj := getSmartContract(t.ToClientID)
 	if contractObj != nil {
@@ -87,5 +74,8 @@ func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractT
 
 func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContractTransactionData, balances c_state.StateContextI) (int, error) {
 	contractObj := getSmartContract(t.ToClientID)
+	if contractObj == nil {
+		return 0, errors.New("estimate transaction cost - invalid to client id")
+	}
 	return contractObj.GetCost(t, strings.ToLower(scData.FunctionName), balances)
 }

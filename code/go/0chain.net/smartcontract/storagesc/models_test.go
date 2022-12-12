@@ -4,14 +4,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"0chain.net/core/common"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestStorageAllocation_validate(t *testing.T) {
+func TestNewAllocationRequest_validate(t *testing.T) {
 
 	const (
 		errMsg1 = "invalid read_price range"
@@ -24,43 +23,34 @@ func TestStorageAllocation_validate(t *testing.T) {
 	)
 
 	var (
-		now   common.Timestamp = 150
-		alloc StorageAllocation
-		conf  Config
+		now  = time.Unix(150, 0)
+		nar  newAllocationRequest
+		conf Config
 	)
 
 	conf.MinAllocSize = 10 * 1024
 	conf.MinAllocDuration = 48 * time.Hour
+	nar.DataShards = 1
+	nar.Blobbers = []string{"1", "2"}
 
-	alloc.ReadPriceRange = PriceRange{Min: 20, Max: 10}
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg1)
+	nar.ReadPriceRange = PriceRange{Min: 20, Max: 10}
+	requireErrMsg(t, nar.validate(now, &conf), errMsg1)
 
-	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 20}
-	alloc.WritePriceRange = PriceRange{Min: 20, Max: 10}
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg2)
+	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
+	nar.WritePriceRange = PriceRange{Min: 20, Max: 10}
+	requireErrMsg(t, nar.validate(now, &conf), errMsg2)
 
-	alloc.WritePriceRange = PriceRange{Min: 10, Max: 20}
-	alloc.Size = 5 * 1024
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg3)
+	nar.WritePriceRange = PriceRange{Min: 10, Max: 20}
+	nar.Size = 5 * 1024
+	requireErrMsg(t, nar.validate(now, &conf), errMsg3)
 
-	alloc.Size = 10 * 1024
-	alloc.Expiration = 170
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg4)
+	nar.Size = 10 * 1024
+	nar.Expiration = 170
+	requireErrMsg(t, nar.validate(now, &conf), errMsg4)
 
-	alloc.Expiration = 150 + toSeconds(48*time.Hour)
-	alloc.DataShards = 0
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg5)
-
-	alloc.DataShards = 1
-	alloc.OwnerPublicKey = ""
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg6)
-
-	alloc.OwnerPublicKey = "pk_hex"
-	alloc.Owner = ""
-	requireErrMsg(t, alloc.validate(now, &conf), errMsg7)
-
-	alloc.Owner = "client_hex"
-	assert.NoError(t, alloc.validate(now, &conf))
+	nar.Expiration = 150 + toSeconds(48*time.Hour)
+	nar.DataShards = 0
+	requireErrMsg(t, nar.validate(now, &conf), errMsg5)
 }
 
 func TestStorageAllocation_filterBlobbers(t *testing.T) {
@@ -73,20 +63,20 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	)
 
 	list = []*StorageNode{
-		&StorageNode{Terms: Terms{
-			MaxOfferDuration:        8 * time.Second,
-			ChallengeCompletionTime: 10 * time.Second,
+		{Terms: Terms{
+			MaxOfferDuration: 8 * time.Second,
 		}},
-		&StorageNode{Terms: Terms{
-			MaxOfferDuration:        6 * time.Second,
-			ChallengeCompletionTime: 20 * time.Second,
+		{Terms: Terms{
+			MaxOfferDuration: 6 * time.Second,
 		}},
 	}
 
 	// 1. filter all by max offer duration
 
 	alloc.Expiration = now + 10 // one second duration
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err := alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 2. filter all by read price range
 	alloc.Expiration = now + 5
@@ -94,7 +84,9 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	list[0].Terms.ReadPrice = 100
 	list[1].Terms.ReadPrice = 150
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 3. filter all by write price range
 	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 200}
@@ -102,113 +94,84 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 40}
 	list[0].Terms.WritePrice = 100
 	list[1].Terms.WritePrice = 150
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// 4. filter all by size
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 200}
-	list[0].Capacity, list[0].Used = 100, 90
-	list[1].Capacity, list[1].Used = 100, 50
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
-
-	// 5. filter all by max CCT
-	alloc.MaxChallengeCompletionTime = 5 * time.Second
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	list[0].Capacity, list[0].Allocated = 100, 90
+	list[1].Capacity, list[1].Allocated = 100, 50
+	bs, err = alloc.filterBlobbers(list, now, size)
+	require.NoError(t, err)
+	assert.Len(t, bs, 0)
 
 	// accept one
-	alloc.MaxChallengeCompletionTime = 30 * time.Second
-	list[0].Capacity, list[0].Used = 330, 100
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
+	list[0].Capacity, list[0].Allocated = 330, 100
+	bs, err = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bs, 1)
 
 	// accept all
-	list[1].Capacity, list[1].Used = 330, 100
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 2)
+	list[1].Capacity, list[1].Allocated = 330, 100
+	bs, err = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bs, 2)
 }
 
-func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
-	type args struct {
-		params []*StorageNode
-		size   int
+func TestVerifyClientID(t *testing.T) {
+	type input struct {
+		name     string
+		clientID string
+		pk       string
+		wantErr  bool
 	}
 
-	type want struct {
-		params []*StorageNode
-	}
-
-	var locations = []*StorageNode{
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 37.773972, Longitude: -122.431297}}, // San Francisco
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: -33.918861, Longitude: 18.423300}},  // Cape Town
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 59.937500, Longitude: 30.308611}},   // St Petersburg
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 22.633333, Longitude: 120.266670}},  // Kaohsiung City
-	}
-
-	tests := []struct {
-		name string
-		args args
-		want want
-	}{
+	tests := []input{
 		{
-			name: "OK optimal geo diversification (2 of 3)",
-			args: args{
-				params: []*StorageNode{locations[0], locations[1], locations[2]},
-				size:   2,
-			},
-			want: want{
-				params: []*StorageNode{locations[0], locations[1]},
-			},
+			name:     "Client id verification ok #1",
+			clientID: "7c7a336dc27306b76044e9492402e840768a8abb4347a2c5eef0afdf26d0350f",
+			pk: "563351287055d5d1b37cc36ce2c46e5a7c9ccc7325db44df01ef63713bd53013a673" +
+				"4b2ebb76f97366ad42a1f06abeef4376f67a37814b5a5aa64584e882a112",
 		},
 		{
-			name: "OK optimal geo diversification (3 of 4)",
-			args: args{
-				params: []*StorageNode{locations[0], locations[1], locations[2], locations[3]},
-				size:   3,
-			},
-			want: want{
-				params: []*StorageNode{locations[0], locations[1], locations[3]},
-			},
+			name:     "Client id verification ok #2",
+			clientID: "f07d2f9551cfc4d2e45411106732127e7d4f3ee5b068bb8a511f7d6d288a5dba",
+			pk: "a05f35f954e7a96e36c6ea970225c98561434da80c2c7e2a35a213fa7a38310c" +
+				"53df6f04284e30a54b99e6090d7f892b869e3e166e0194cc5d4779ac2cab5810",
 		},
 		{
-			name: "OK optimal geo diversification not applied",
-			args: args{
-				params: []*StorageNode{locations[1]},
-				size:   2,
-			},
-			want: want{
-				params: []*StorageNode{locations[1]},
-			},
+			name:     "Client id verification ok #3",
+			clientID: "5b3ac53beeb2a6e678395683fb7fa04ffb94104c3829207364badfb632134dd7",
+			pk: "ff9a3ce40caceacbd937be3318d0cb1599781d11e4f202050c15646332395401" +
+				"2946f0287c181ec3068a6611f0db40bd6f95b02679d3933c9a10c26a355a238a",
 		},
 		{
-			name: "OK zero nodes",
-			args: args{
-				params: []*StorageNode{
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-				},
-				size: 2,
-			},
-			want: want{
-				params: []*StorageNode{
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
-				},
-			},
+			name:    "Invalid public key",
+			pk:      "invalid public key",
+			wantErr: true,
+		},
+		{
+			name:     "Invalid client id",
+			clientID: "5b3ac53beeb2a6e678395683fb7fa04ffb94104c3829207364badfb632134dd7",
+			pk: "a05f35f954e7a96e36c6ea970225c98561434da80c2c7e2a35a213fa7a38310c" +
+				"53df6f04284e30a54b99e6090d7f892b869e3e166e0194cc5d4779ac2cab5810",
+			wantErr: true,
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	for _, test := range tests {
 
-			var sa = &StorageAllocation{
-				DiverseBlobbers: len(tt.args.params) > len(tt.want.params),
+		t.Run(test.name, func(t *testing.T) {
+			rm := ReadMarker{
+				ClientID:        test.clientID,
+				ClientPublicKey: test.pk,
 			}
 
-			got := sa.diversifyBlobbers(tt.args.params, tt.args.size)
-			for i, blobber := range got {
-				require.EqualValues(t, *tt.want.params[i], *blobber)
+			err := rm.VerifyClientID()
+			if test.wantErr {
+				require.Error(t, err)
+				return
 			}
+			require.NoError(t, err)
 		})
 	}
 }

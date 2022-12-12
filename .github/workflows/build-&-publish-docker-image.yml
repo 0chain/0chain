@@ -26,7 +26,7 @@ jobs:
   miner:
     runs-on: [self-hosted, build]
     steps:
-    
+
     - name: Set docker image tag
       id: get_info
       run: |
@@ -41,6 +41,11 @@ jobs:
 
     - uses: actions/checkout@v2
 
+    - name: Setup go 1.18
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18' # The Go version to download (if necessary) and use.
+
     - name: Build base images
       run: |
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
@@ -54,10 +59,15 @@ jobs:
 
     - name: Build & Push
       run: |
+        make install-mockery
+        make build-mocks
+
         sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
-        
+
+
         docker tag miner:latest ${MINER_REGISTRY}:$TAG
+        docker tag miner:latest $MINER_REGISTRY:latest
         docker push ${MINER_REGISTRY}:$TAG
 
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
@@ -67,7 +77,7 @@ jobs:
       env:
         DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
-    - name: Push latest 
+    - name: Push latest
       if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
       run: |
           docker push $MINER_REGISTRY:latest
@@ -91,6 +101,12 @@ jobs:
 
     - uses: actions/checkout@v1
 
+    - name: Setup go 1.18
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18' # The Go version to download (if necessary) and use.
+
+
     - name: Build base images
       run: |
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
@@ -102,16 +118,23 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: generate swagger
+      run: docker.local/bin/test.swagger.sh
+
     - name: Build & Push
       run: |
+        make install-mockery
+        make build-mocks
+
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
 
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
+        docker tag sharder:latest $SHARDER_REGISTRY:latest
         docker push ${SHARDER_REGISTRY}:$TAG
 
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
-        docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA  
+        docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
 
 
     - name: Push latest
@@ -132,17 +155,16 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: "Set PR status as pending"
-        uses: niteoweb/pull_request_status_action@v1.0.0
+        uses: 0chain/actions/set-pr-status@master
         if: steps.findPr.outputs.number
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
           description: "System tests running with default config..."
           state: "pending"
           repository: ${{ github.repository }}
-          context: "0Chain System Tests"
+          status_name: "0Chain System Tests"
           target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          github_token: ${{ github.token }}
 
       - name: "Setup"
         run: |
@@ -155,7 +177,7 @@ jobs:
 
           echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
           echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
-        
+
           echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
@@ -173,7 +195,6 @@ jobs:
           zblock_image: staging
           zdns_image: staging
           explorer_image: latest
-          zproxy_image: staging
           zsearch_image: staging
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
@@ -191,16 +212,16 @@ jobs:
           archive_results: true
           run_flaky_tests: false
           retry_failures: true
+          DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
-        uses: niteoweb/pull_request_status_action@v1.0.0
+        uses: 0chain/actions/set-pr-status@master
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
           description: "System tests with default config"
           state: ${{ job.status }}
           repository: ${{ github.repository }}
-          context: "0Chain System Tests"
+          status_name: "0Chain System Tests"
           target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          github_token: ${{ github.token }}

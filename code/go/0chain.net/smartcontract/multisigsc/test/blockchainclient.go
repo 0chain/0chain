@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -8,15 +9,16 @@ import (
 	"sort"
 	"time"
 
+	"github.com/0chain/common/core/currency"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/chaincore/state"
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
+	. "github.com/0chain/common/core/logging"
 )
 
 const (
@@ -269,16 +271,10 @@ func confirmTransaction(hash string) (httpclientutil.Transaction, error) {
 	return httpclientutil.Transaction{}, e
 }
 
-func getBalance(clientID string) state.Balance {
-	balance, err := httpclientutil.MakeClientBalanceRequest(clientID, members.Sharders, confirmationQuorum)
-	if err != nil {
-		Logger.Fatal("Couldn't get client balance", zap.Error(err))
-	}
-
-	return balance
-}
-func getNonce(clientID string) int64 {
-	balance, err := httpclientutil.MakeClientNonceRequest(clientID, members.Sharders, confirmationQuorum)
+func getBalance(clientID string) currency.Coin {
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	balance, err := httpclientutil.MakeClientBalanceRequest(ctx, clientID, members.Sharders, confirmationQuorum)
 	if err != nil {
 		Logger.Fatal("Couldn't get client balance", zap.Error(err))
 	}
