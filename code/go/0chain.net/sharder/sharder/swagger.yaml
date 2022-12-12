@@ -525,6 +525,13 @@ definitions:
             id:
                 type: string
                 x-go-name: ID
+            provider_id:
+                type: string
+                x-go-name: ProviderId
+            provider_type:
+                format: int64
+                type: integer
+                x-go-name: ProviderType
             rewards:
                 $ref: '#/definitions/Coin'
             round_created:
@@ -2133,6 +2140,14 @@ definitions:
                 x-go-name: Rounds
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
+    userLockedTotalResponse:
+        properties:
+            total:
+                format: int64
+                type: integer
+                x-go-name: Total
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
     userPoolStat:
         properties:
             pools:
@@ -2934,6 +2949,23 @@ paths:
                 "400":
                     description: ""
                 "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal:
+        get:
+            description: Gets statistic for a user's stake pools
+            operationId: getUserLockedTotal
+            parameters:
+                - description: client for which to get stake pool information
+                  in: query
+                  name: client_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: userLockedTotalResponse
+                    schema:
+                        $ref: '#/definitions/userLockedTotalResponse'
+                "400":
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat:
         get:

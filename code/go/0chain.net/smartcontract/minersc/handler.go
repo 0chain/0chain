@@ -13,12 +13,11 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/smartcontract/dbs/event"
-	"github.com/guregu/null"
-
 	"0chain.net/core/common"
 	sc "0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
+	"github.com/guregu/null"
 )
 
 type MinerRestHandler struct {
@@ -113,8 +112,6 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 		return
 	}
 	rtv, err := edb.GetDelegateRewards(limit, poolId, start, end)
-	logging.Logger.Info("piers DelegateRewards",
-		zap.Any("rtv", rtv), zap.Error(err))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -174,8 +171,6 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 		return
 	}
 	rtv, err := edb.GetProviderRewards(limit, id, start, end)
-	logging.Logger.Info("piers getProviderRewards",
-		zap.Any("ProviderRewards", rtv), zap.Error(err))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return

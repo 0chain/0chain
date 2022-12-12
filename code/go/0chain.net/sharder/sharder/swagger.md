@@ -74,6 +74,7 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList | [get sharder keep list](#get-sharder-keep-list) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList | [get sharder list](#get-sharder-list) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat | [get stake pool stat](#get-stake-pool-stat) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal | [get user locked total](#get-user-locked-total) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools | [get user pools](#get-user-pools) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat | [get user stake pool stat](#get-user-stake-pool-stat) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers | [get write markers](#get-write-markers) |  |
@@ -1843,6 +1844,43 @@ Status: Internal Server Error
 
 ###### <span id="get-stake-pool-stat-500-schema"></span> Schema
 
+### <span id="get-user-locked-total"></span> get user locked total (*getUserLockedTotal*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal
+```
+
+Gets statistic for a user's stake pools
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| client_id | `query` | string | `string` |  | ✓ |  | client for which to get stake pool information |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#get-user-locked-total-200) | OK | userLockedTotalResponse |  | [schema](#get-user-locked-total-200-schema) |
+| [400](#get-user-locked-total-400) | Bad Request |  |  | [schema](#get-user-locked-total-400-schema) |
+
+#### Responses
+
+
+##### <span id="get-user-locked-total-200"></span> 200 - userLockedTotalResponse
+Status: OK
+
+###### <span id="get-user-locked-total-200-schema"></span> Schema
+   
+  
+
+[UserLockedTotalResponse](#user-locked-total-response)
+
+##### <span id="get-user-locked-total-400"></span> 400
+Status: Bad Request
+
+###### <span id="get-user-locked-total-400-schema"></span> Schema
+
 ### <span id="get-user-pools"></span> get user pools (*getUserPools*)
 
 ```
@@ -3541,6 +3579,8 @@ CreationDateField - Can be used to add a creation date functionality to an entit
 |------|------|---------|:--------:| ------- |-------------|---------|
 | DelegateID | string| `string` |  | |  |  |
 | ID | string| `string` |  | |  |  |
+| ProviderId | string| `string` |  | |  |  |
+| ProviderType | int64 (formatted integer)| `int64` |  | |  |  |
 | RoundCreated | int64 (formatted integer)| `int64` |  | |  |  |
 | Status | string| `string` |  | |  |  |
 | UnStake | boolean| `bool` |  | |  |  |
@@ -5043,7 +5083,7 @@ and the other for the allocations that the client (client_id) doesn't own
 
 
 
-### <span id="timestamp-to-round-resp"></span> timestampToRoundResp
+### <span id="user-locked-total-response"></span> userLockedTotalResponse
 
 
   
@@ -5054,6 +5094,6 @@ and the other for the allocations that the client (client_id) doesn't own
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| Rounds | []int64 (formatted integer)| `[]int64` |  | |  |  |
+| Total | int64 (formatted integer)| `int64` |  | |  |  |
 
 
