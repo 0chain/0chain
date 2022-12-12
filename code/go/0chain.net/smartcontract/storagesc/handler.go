@@ -1696,19 +1696,19 @@ type readMarkersCount struct {
 }
 
 type ReadMarkerResponse struct {
-	ID			  uint
-	CreatedAt	  time.Time
-	UpdatedAt	  time.Time
+	ID            uint
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	Timestamp     int64   `json:"timestamp"`
 	ReadCounter   int64   `json:"read_counter"`
 	ReadSize      float64 `json:"read_size"`
 	Signature     string  `json:"signature"`
 	PayerID       string  `json:"payer_id"`
-	AuthTicket    string  `json:"auth_ticket"`   //used in readmarkers
+	AuthTicket    string  `json:"auth_ticket"`  //used in readmarkers
 	BlockNumber   int64   `json:"block_number"` //used in alloc_read_size
-	ClientID	  string  `json:"client_id"`
+	ClientID      string  `json:"client_id"`
 	BlobberID     string  `json:"blobber_id"`
-	OwnerID	      string  `json:"owner_id"`
+	OwnerID       string  `json:"owner_id"`
 	TransactionID string  `json:"transaction_id"`
 	AllocationID  string  `json:"allocation_id"`
 
@@ -1720,21 +1720,21 @@ type ReadMarkerResponse struct {
 
 func toReadMarkerResponse(rm event.ReadMarker) ReadMarkerResponse {
 	return ReadMarkerResponse{
-		ID: rm.ID,
-		CreatedAt: rm.CreatedAt,
-		UpdatedAt: rm.UpdatedAt,
-		Timestamp: rm.Timestamp,
-		ReadCounter: rm.ReadCounter,
-		ReadSize: rm.ReadSize,
-		Signature: rm.Signature,
-		PayerID: rm.PayerID,
-		AuthTicket: rm.AuthTicket,
-		BlockNumber: rm.BlockNumber,
-		ClientID: rm.ClientID,
-		BlobberID: rm.BlobberID,
-		OwnerID: rm.OwnerID,
+		ID:            rm.ID,
+		CreatedAt:     rm.CreatedAt,
+		UpdatedAt:     rm.UpdatedAt,
+		Timestamp:     rm.Timestamp,
+		ReadCounter:   rm.ReadCounter,
+		ReadSize:      rm.ReadSize,
+		Signature:     rm.Signature,
+		PayerID:       rm.PayerID,
+		AuthTicket:    rm.AuthTicket,
+		BlockNumber:   rm.BlockNumber,
+		ClientID:      rm.ClientID,
+		BlobberID:     rm.BlobberID,
+		OwnerID:       rm.OwnerID,
 		TransactionID: rm.TransactionID,
-		AllocationID: rm.AllocationID,
+		AllocationID:  rm.AllocationID,
 
 		// TODO: Add fields from relationships as needed
 	}
@@ -2101,9 +2101,9 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 }
 
 type WriteMarkerResponse struct {
-	ID			  uint
-	CreatedAt	  time.Time
-	UpdatedAt	  time.Time
+	ID            uint
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
 	AllocationID  string `json:"allocation_id"` //used in alloc_write_marker_count, alloc_written_size
@@ -2129,23 +2129,23 @@ type WriteMarkerResponse struct {
 
 func toWriteMarkerResponse(wm event.WriteMarker) WriteMarkerResponse {
 	return WriteMarkerResponse{
-		ID: wm.ID,
-		CreatedAt: wm.CreatedAt,
-		UpdatedAt: wm.UpdatedAt,
-		Timestamp: wm.Timestamp,
-		ClientID:  wm.ClientID,
-		BlobberID: wm.BlobberID,
-		AllocationID: wm.AllocationID,
-		TransactionID: wm.TransactionID,
-		AllocationRoot: wm.AllocationRoot,
+		ID:                     wm.ID,
+		CreatedAt:              wm.CreatedAt,
+		UpdatedAt:              wm.UpdatedAt,
+		Timestamp:              wm.Timestamp,
+		ClientID:               wm.ClientID,
+		BlobberID:              wm.BlobberID,
+		AllocationID:           wm.AllocationID,
+		TransactionID:          wm.TransactionID,
+		AllocationRoot:         wm.AllocationRoot,
 		PreviousAllocationRoot: wm.PreviousAllocationRoot,
-		Size: wm.Size,
-		Signature: wm.Signature,
-		BlockNumber: wm.BlockNumber,
-		LookupHash: wm.LookupHash,
-		Name: wm.Name,
-		ContentHash: wm.ContentHash,
-		Operation: wm.Operation,
+		Size:                   wm.Size,
+		Signature:              wm.Signature,
+		BlockNumber:            wm.BlockNumber,
+		LookupHash:             wm.LookupHash,
+		Name:                   wm.Name,
+		ContentHash:            wm.ContentHash,
+		Operation:              wm.Operation,
 
 		// TODO: Add sub-fields or relationships as needed
 	}
@@ -3087,24 +3087,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	blobbers, err := edb.ReplicateSnapshots(limit.Offset, limit.Limit)
-	if err != nil {
-		err := common.NewErrInternal("cannot get snapshots" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, blobbers, nil)
+	common.Respond(w, r, "{}", nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate replicateBlobberAggregates
@@ -3130,25 +3113,5 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	blobbers, err := edb.ReplicateBlobberAggregate(limit)
-	if err != nil {
-		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-	if len(blobbers) == 0 {
-		blobbers = []event.BlobberAggregate{}
-	}
-	common.Respond(w, r, blobbers, nil)
+	common.Respond(w, r, "{}", nil)
 }
