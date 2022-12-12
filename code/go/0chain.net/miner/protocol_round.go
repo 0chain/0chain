@@ -473,7 +473,7 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		//b.SetStateDB(pb, mc.GetStateDB())
 
 		if err := mc.syncAndRetry(cctx, b, "generate block", func(ctx context.Context, waitC chan struct{}) error {
-			return mc.GenerateBlock(ctx, b, mc, makeBlock)
+			return mc.GenerateBlock(ctx, b, makeBlock, waitC)
 		}); err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
