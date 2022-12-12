@@ -635,13 +635,26 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 		var totalBlocksCount, totalBlocksSize uint64
 		var err error
 		if shouldDelete {
-			if err := os.RemoveAll(vPath); err != nil {
+			vStat, err := os.Stat(vPath)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				logging.Logger.Error(err.Error())
 				continue
 			}
-			if err := os.MkdirAll(vPath, 0777); err != nil {
-				logging.Logger.Error(err.Error())
-				continue
+			if vStat == nil {
+				if err := os.MkdirAll(vPath, 0777); err != nil {
+					logging.Logger.Error(err.Error())
+					continue
+				}
+			} else {
+				if !vStat.IsDir() {
+					logging.Logger.Error("Invalid path " + vPath + ". Should be dir")
+					continue
+				}
+
+				if err := clearDirectory(vPath); err != nil {
+					logging.Logger.Error(err.Error())
+					continue
+				}
 			}
 
 			if err := updateCurIndexes(filepath.Join(vPath, IndexStateFileName), 0, 0); err != nil {
@@ -745,4 +758,20 @@ func startVolumes(volumes []map[string]interface{}, dTier *diskTier) {
 
 func restartVolumes(volumes []map[string]interface{}, dTier *diskTier) {
 	startvolumes(volumes, false, dTier)
+}
+
+func clearDirectory(p string) error {
+	dirents, err := os.ReadDir(p)
+	if err != nil {
+		return err
+	}
+
+	for _, dirent := range dirents {
+		err = os.RemoveAll(filepath.Join(p, dirent.Name()))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
