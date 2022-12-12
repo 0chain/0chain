@@ -88,7 +88,7 @@ func (edb *EventDb) ReplicateSnapshots(offset int, limit int) ([]Snapshot, error
 			return tx.Model(&Snapshot{}).Offset(offset).Limit(limit).Order(clause.OrderByColumn{
 				Column: clause.Column{Name: "round"},
 				Desc:   false,
-			})
+			}).Scan(&snapshots)
 		})))
 
 	if result.Error != nil {

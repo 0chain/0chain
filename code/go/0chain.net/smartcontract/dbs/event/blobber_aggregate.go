@@ -55,7 +55,7 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 			return tx.Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
 				Column: clause.Column{Name: "id"},
 				Desc:   false,
-			})
+			}).Scan(&snapshots)
 		})))
 	if result.Error != nil {
 		return nil, result.Error
