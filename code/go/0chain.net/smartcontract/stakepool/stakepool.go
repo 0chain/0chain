@@ -144,7 +144,8 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 
 func NewStakePool() *StakePool {
 	return &StakePool{
-		Pools: make(map[string]*DelegatePool),
+		Pools:    make(map[string]*DelegatePool),
+		Settings: Settings{},
 	}
 }
 
