@@ -3087,7 +3087,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http.Request) {
-	common.Respond(w, r, "{}", nil)
+	common.Respond(w, r, []event.Snapshot{{}}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate replicateBlobberAggregates
@@ -3113,5 +3113,5 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter, r *http.Request) {
-	common.Respond(w, r, "{}", nil)
+	common.Respond(w, r, []event.BlobberAggregate{{}}, nil)
 }
