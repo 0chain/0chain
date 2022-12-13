@@ -173,7 +173,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sp, balances := setup(t, tt.args)
-			err := sp.DistributeRewards(tt.args.value, providerID, providerType, spenum.BlockReward, balances)
+			err := sp.DistributeRewards(tt.args.value, providerID, providerType, spenum.BlockRewardBlobber, balances)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
