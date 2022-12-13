@@ -194,6 +194,8 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 		er = mc.AddRound(mr).(*Round)
 	)
 
+	mc.SetCurrentRound(er.GetRoundNumber())
+
 	if er != mr && mc.isStarted() && er.HasRandomSeed() {
 		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
 			zap.Int64("er_round", er.GetRoundNumber()),
@@ -1124,8 +1126,7 @@ func (mc *Chain) moveToNextRoundNotAheadImpl(ctx context.Context, r *Round, befo
 	beforeStartNextRound()
 
 	//TODO start if not started, atm we  resend vrf share here
-	nr := mc.StartNextRound(ctx, r)
-	mc.SetCurrentRound(nr.Number)
+	mc.StartNextRound(ctx, r)
 }
 
 // MergeNotarization - merge a notarization.
@@ -1532,7 +1533,6 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	var (
 		sr = round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
-		nr *Round
 	)
 
 	if !mc.ensureState(ctx, lfb) { //nolint: staticcheck
@@ -1543,10 +1543,7 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 	mc.AddBlock(lfb)
 	//it is not necessary to check next round is ahead, since we are processing lfb and we are not ahead
-	if nr = mc.StartNextRound(ctx, mr); nr == nil {
-		return
-	}
-	mc.SetCurrentRound(nr.Number)
+	mc.StartNextRound(ctx, mr)
 }
 
 func (mc *Chain) getRoundRandomSeed(rn int64) (seed int64) {
@@ -1920,7 +1917,6 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		}
 		nr = mc.StartNextRound(ctx, mr)
 	}
-	mc.SetCurrentRound(nr.Number)
 	logging.Logger.Info("starting the blockchain ...", zap.Int64("round", nr.Number))
 }
 
