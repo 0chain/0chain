@@ -42,6 +42,7 @@ type Snapshot struct {
 	UniqueAddresses      int64 `json:"unique_addresses"`      // Total unique address
 	BlockCount           int64 `json:"block_count"`           // Total number of blocks currently
 	AverageTxnFee        int64 `json:"avg_txn_fee"`           // Average transaction fee per block
+	CreatedAt            int64 `gorm:"autoCreateTime" json:"created_at"` // Snapshot creation date
 }
 
 type FieldType int
