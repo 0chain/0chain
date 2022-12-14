@@ -89,6 +89,14 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 			<-delayedBlock
 		}()
 	}
+
+	cfg := crpc.Client().State().CollectVerificationTicketsWhenMissedVRF
+
+	if cfg != nil && cfg.Miner == node.Self.ID && int64(cfg.Round) == not.Round {
+		logging.Logger.Debug("Ignoring notarization receipt")
+		return nil, nil
+	}
+
 	return notarizationReceiptHandler(ctx, entity)
 }
 
@@ -252,5 +260,35 @@ func blockWithValidTicketsForOldRound(r *http.Request) (*block.Block, error) {
 // VRFShareHandler - handle the vrf share.
 func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	interface{}, error) {
+	cfg := crpc.Client().State().CollectVerificationTicketsWhenMissedVRF
+
+	vrfs, ok := entity.(*round.VRFShare)
+	if !ok {
+		log.Panicf("unexpected type")
+	}
+
+	if cfg != nil && cfg.Miner == node.Self.ID && int64(cfg.Round) == vrfs.Round {
+		logging.Logger.Debug("Skipping VRF share handling")
+		return nil, nil
+	}
+
 	return vrfShareHandler(ctx, entity)
+}
+
+// NotarizedBlockHandler - handles a notarized block.
+func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
+	interface{}, error) {
+	var nb, ok = entity.(*block.Block)
+	if !ok {
+		log.Panicf("unexpected type")
+	}
+
+	cfg := crpc.Client().State().CollectVerificationTicketsWhenMissedVRF
+
+	if cfg != nil && cfg.Miner == node.Self.ID && int64(cfg.Round) == nb.Round {
+		logging.Logger.Debug("Skipping processing of notarized block")
+		return nil, nil
+	}
+
+	return notarizedBlockHandler(ctx, entity)
 }
