@@ -35,7 +35,6 @@ func (sp *StakePool) UnlockPool(
 		Amount:       i,
 	}
 	dpUpdate := newDelegatePoolUpdate(clientID, providerId, providerType)
-	dpUpdate.Updates["reward"] = 0
 	dpUpdate.Updates["status"] = spenum.Deleting
 	dpUpdate.emitUpdate(balances)
 
