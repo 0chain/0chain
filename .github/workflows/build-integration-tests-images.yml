@@ -12,44 +12,29 @@ jobs:
     runs-on: [self-hosted, arc-runner]
 
     steps:
-    - name: Go 1.18 setup.
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.18'
-
-    - name: Docker Compose Setup.
-      run: |
-        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-
-    - name: Git clone 0chain
-      run: |
-        git clone https://github.com/0chain/0chain.git
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.18'
 
     - name: Docker Init Setup.
       run: |
-        cd 0chain
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
       run: |
-        cd 0chain
         bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.base.sh
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.miners-integration-tests.sh
 
     - name: Build Sharder Docker Image For Integration Test.
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.sharders-integration-tests.sh
