@@ -34,6 +34,11 @@ func (sp *StakePool) UnlockPool(
 		ProviderType: providerType,
 		Amount:       i,
 	}
+	dpUpdate := newDelegatePoolUpdate(clientID, providerId, providerType)
+	dpUpdate.Updates["reward"] = 0
+	dpUpdate.Updates["status"] = spenum.Deleting
+	dpUpdate.emitUpdate(balances)
+
 	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, lock)
 	if err != nil {
 		return "", fmt.Errorf("error emptying account, %v", err)
