@@ -2,6 +2,10 @@ package spenum
 
 //go:generate msgp -v -io=false -tests=false
 
+func init() {
+	initRewardString()
+}
+
 type Provider int
 
 const (
@@ -69,23 +73,31 @@ const (
 	ChallengePassReward
 	ChallengeSlashPenalty
 	CancellationChargeReward
+	NumOfRewards
 )
 
-var rewardString = []string{
-	"block_reward_miner",
-	"block_reward_sharder",
-	"block_reward_blobber",
-	"fees",
-	"validation",
-	"file download",
-	"challenge pass",
-	"challenge slash",
-	"cancellation charge",
-	"min lock demand",
+var rewardString []string
+
+func initRewardString() {
+	rewardString = make([]string, NumOfRewards+1)
+	rewardString[MinLockDemandReward] = "min_lock_demand"
+	rewardString[BlockRewardMiner] = "block_reward_miner"
+	rewardString[BlockRewardSharder] = "block_reward_sharder"
+	rewardString[BlockRewardBlobber] = "TagUpdateBlobber"
+	rewardString[FeeRewardMiner] = "none"
+	rewardString[ValidationReward] = "TagAddBlobber"
+	rewardString[FileDownloadReward] = "TagUpdateBlobber"
+	rewardString[ChallengePassReward] = "none"
+	rewardString[ChallengeSlashPenalty] = "TagAddBlobber"
+	rewardString[CancellationChargeReward] = "TagUpdateBlobber"
+	rewardString[NumOfRewards] = "invalid"
 }
 
 func (r Reward) String() string {
-	return rewardString[r]
+	if int(r) < len(rewardString) && int(r) >= 0 {
+		return rewardString[r]
+	}
+	return "unknown_reward"
 }
 
 func (r Reward) Int() int {

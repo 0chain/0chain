@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 
@@ -458,17 +457,16 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) error {
-	sn := len(sharders)
-	if sn <= 0 {
-		return errors.New("no sharders to pay")
+	shardersPaid := randN
+	if randN > len(sharders) {
+		shardersPaid = len(sharders)
 	}
-
-	sharderShare, totalCoinLeft, err := currency.DistributeCoin(reward, int64(sn))
+	sharderShare, totalCoinLeft, err := currency.DistributeCoin(reward, int64(shardersPaid))
 	if err != nil {
 		return err
 	}
-	if totalCoinLeft > currency.Coin(sn) {
-		clShare, cl, err := currency.DistributeCoin(totalCoinLeft, int64(sn))
+	if totalCoinLeft > currency.Coin(shardersPaid) {
+		clShare, cl, err := currency.DistributeCoin(totalCoinLeft, int64(shardersPaid))
 		if err != nil {
 			return err
 		}
@@ -511,15 +509,9 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	}
 
 	var perm []int
-	if sn > randN {
-		// select randN sharders to distribute rewards
-		perm = randS.Perm(randN)
-	} else {
-		// randN >= sharders number
-		perm = make([]int, 0, randN)
-		for i := 0; i < randN; i++ {
-			perm = append(perm, randS.Intn(sn))
-		}
+	perm = randS.Perm(len(sharders))
+	if shardersPaid < len(perm) {
+		perm = perm[:shardersPaid]
 	}
 
 	for _, i := range perm {
