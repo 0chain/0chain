@@ -117,6 +117,9 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 	}
 	spStat.Rewards = provider.Rewards.TotalRewards
 	for _, dp := range delegatePools {
+		if spenum.PoolStatus(dp.Status) == spenum.Deleting || spenum.PoolStatus(dp.Status) == spenum.Deleted {
+			continue
+		}
 		dpStats := DelegatePoolStat{
 			ID:           dp.PoolID,
 			DelegateID:   dp.DelegateID,
