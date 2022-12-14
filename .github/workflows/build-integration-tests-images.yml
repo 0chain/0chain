@@ -12,10 +12,10 @@ jobs:
     runs-on: [self-hosted, arc-runner]
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.18'
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
 
     - name: Docker Init Setup.
       run: |
