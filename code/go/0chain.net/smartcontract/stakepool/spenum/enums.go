@@ -61,6 +61,8 @@ func (p PoolStatus) Int() int {
 
 type Reward int
 
+var rewardString []string
+
 const (
 	MinLockDemandReward Reward = iota
 	BlockRewardMiner
@@ -75,8 +77,6 @@ const (
 	CancellationChargeReward
 	NumOfRewards
 )
-
-var rewardString []string
 
 func initRewardString() {
 	rewardString = make([]string, NumOfRewards+1)
