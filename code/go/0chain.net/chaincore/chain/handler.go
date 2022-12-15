@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -1381,7 +1380,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	if txn.Nonce <= nonce {
 		logging.Logger.Error("invalid transaction nonce", zap.Int64("txn_nonce", txn.Nonce), zap.Int64("nonce", nonce))
-		return nil, errors.New("invalid transaction nonce")
+		return nil, fmt.Errorf("invalid transaction nonce, txn nonce: %d, state nonce: %d", txn.Nonce, nonce)
 	}
 
 	return transaction.PutTransaction(ctx, txn)
