@@ -98,6 +98,13 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats["add_blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_blobber (add/update/remove SC function)"), nil)
 	ssc.SmartContractExecutionStats["update_blobber_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_blobber_settings"), nil)
 	ssc.SmartContractExecutionStats["blobber_block_rewards"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "blobber_block_rewards"), nil)
+	ssc.SmartContractExecutionStats["shut-down-blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "shut-down-blobber"), nil)
+	ssc.SmartContractExecutionStats["kill-blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "kill-blobber"), nil)
+	ssc.SmartContractExecutionStats["blobber_health_check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "blobber_health_check"), nil)
+	ssc.SmartContractExecutionStats["validator-health-check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "validator-health-check"), nil)
+	ssc.SmartContractExecutionStats["shut-down-validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "shut-down-validator"), nil)
+	ssc.SmartContractExecutionStats["kill-validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "kill-validator"), nil)
+
 	// blobber statistic (not function calls)
 	ssc.SmartContractExecutionStats[statNumberOfBlobbers] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stat: number of blobbers"), nil)
 	ssc.SmartContractExecutionStats[statAddBlobber] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stat: add bblober"), nil)
@@ -220,16 +227,27 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	case "add_blobber":
 		resp, err = sc.addBlobber(t, input, balances)
-	case "add_validator":
-		resp, err = sc.addValidator(t, input, balances)
-	case "blobber_health_check":
-		resp, err = sc.blobberHealthCheck(t, input, balances)
 	case "update_blobber_settings":
 		resp, err = sc.updateBlobberSettings(t, input, balances)
 	case "update_validator_settings":
 		resp, err = sc.updateValidatorSettings(t, input, balances)
 	case "blobber_block_rewards":
 		err = sc.blobberBlockRewards(balances)
+	case "blobber_health_check":
+		resp, err = sc.blobberHealthCheck(t, input, balances)
+	case "shut-down-blobber":
+		_, err = sc.shutDownBlobber(t, input, balances)
+	case "kill-blobber":
+		_, err = sc.killBlobber(t, input, balances)
+
+	case "add_validator":
+		resp, err = sc.addValidator(t, input, balances)
+	case "validator-health-check":
+		resp, err = sc.validatorHealthCheck(t, input, balances)
+	case "shut-down-validator":
+		_, err = sc.shutDownValidator(t, input, balances)
+	case "kill-validator":
+		_, err = sc.killValidator(t, input, balances)
 
 	// read_pool
 

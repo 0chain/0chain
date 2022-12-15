@@ -33,6 +33,7 @@ type freeAllocationSettings struct {
 type stakePoolConfig struct {
 	MinLock       currency.Coin `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
+	KillSlash     float64       `json:"kill_slash"`
 }
 
 type readPoolConfig struct {
@@ -136,8 +137,8 @@ type Config struct {
 	ValidatorReward float64 `json:"validator_reward"`
 	// BlobberSlash represents % (value in [0; 1] range) of blobbers' stake
 	// tokens penalized on challenge not passed.
-	BlobberSlash float64 `json:"blobber_slash"`
-
+	BlobberSlash      float64       `json:"blobber_slash"`
+	HealthCheckPeriod time.Duration `json:"health_check_period"`
 	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
 	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation"`
 
@@ -228,6 +229,9 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("negative max_challenge_completion_time: %v",
 			conf.MaxChallengeCompletionTime)
 	}
+	if conf.HealthCheckPeriod <= 0 {
+		return fmt.Errorf("non-positive health check period: %v", conf.HealthCheckPeriod)
+	}
 	if conf.MinAllocDuration < 0 {
 		return fmt.Errorf("negative min_alloc_duration: %v",
 			conf.MinAllocDuration)
@@ -244,7 +248,9 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
 			conf.StakePool.MinLock)
 	}
-
+	if conf.StakePool.KillSlash < 0 || conf.StakePool.KillSlash > 1 {
+		return fmt.Errorf("stakepool.kill_slash, %v must be in interval [0.1]", conf.StakePool.KillSlash)
+	}
 	if conf.FreeAllocationSettings.DataShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
 			conf.FreeAllocationSettings.DataShards)
@@ -415,6 +421,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
+	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
 	conf.MinOfferDuration = scc.GetDuration(pfx + "min_offer_duration")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
@@ -454,7 +461,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.StakePool.MinLockPeriod = scc.GetDuration(pfx + "stakepool.min_lock_period")
-
+	conf.StakePool.KillSlash = scc.GetFloat64(pfx + "stakepool.kill_slash")
 	conf.MaxTotalFreeAllocation, err = currency.MultFloat64(1e10, scc.GetFloat64(pfx+"max_total_free_allocation"))
 	if err != nil {
 		return nil, err

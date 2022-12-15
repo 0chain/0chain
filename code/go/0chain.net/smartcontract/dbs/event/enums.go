@@ -91,6 +91,7 @@ const (
 	TagUpdateSharderTotalStake
 	TagUpdateAuthorizerTotalStake
 	TagUniqueAddress
+	TagProviderHealthCheck
 	NumberOfTags
 )
 
@@ -180,6 +181,7 @@ func initTagString() {
 	TagString[TagUpdateSharderTotalStake] = "TagUpdateSharderTotalStake"
 	TagString[TagUpdateAuthorizerTotalStake] = "TagUpdateAuthorizerTotalStake"
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
+	TagString[TagProviderHealthCheck] = "TagProviderHealthCheck"
 	TagString[NumberOfTags] = "invalid"
 }
 

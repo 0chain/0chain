@@ -102,4 +102,8 @@ func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, v i
 	return p.rs.GetRandomItems(state, r, v)
 }
 
+func (p *Partitions) SetCallback(f ChangePartitionCallback) {
+	p.rs.SetCallback(f)
+}
+
 type ChangePartitionCallback = func(string, []byte, int, int, state.StateContextI) error

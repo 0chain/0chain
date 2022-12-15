@@ -32,12 +32,11 @@ type Blobber struct {
 	MinLockDemand    float64       `json:"min_lock_demand"`
 	MaxOfferDuration int64         `json:"max_offer_duration"`
 
-	Capacity        int64 `json:"capacity"`  // total blobber capacity
-	Allocated       int64 `json:"allocated"` // allocated capacity
-	Used            int64 `json:"used"`      // total of files saved on blobber
-	LastHealthCheck int64 `json:"last_health_check"`
-	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
-	ReadData        int64 `json:"read_data"`
+	Capacity  int64 `json:"capacity"`   // total blobber capacity
+	Allocated int64 `json:"allocated"`  // allocated capacity
+	Used      int64 `json:"used"`       // total of files saved on blobber
+	SavedData int64 `json:"saved_data"` // total of files saved on blobber
+	ReadData  int64 `json:"read_data"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	//todo update
@@ -94,6 +93,7 @@ func (edb *EventDb) BlobberTotalCapacity() (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&Blobber{}).
 		Select("SUM(capacity)").
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
 		Find(&total).Error
 }
 
@@ -101,6 +101,7 @@ func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
 	var average float64
 	return average, edb.Store.Get().Model(&Blobber{}).
 		Select("AVG(write_price)").
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
 		Find(&average).Error
 }
 
@@ -108,14 +109,17 @@ func (edb *EventDb) TotalUsedData() (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&Blobber{}).
 		Select("sum(used)").
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
 		Find(&total).Error
 }
 
-func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
+func (edb *EventDb) GetBlobbers(limit common2.Pagination, killed, shutdown bool) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().
 		Preload("Rewards").
-		Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
+		Model(&Blobber{}).
+		Where("is_killed = ? AND is_shut_down = ?", killed, shutdown).
+		Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,
 	}).Find(&blobbers)
@@ -153,8 +157,11 @@ func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error
 
 func (edb *EventDb) GetAllBlobberId() ([]string, error) {
 	var blobberIDs []string
-	result := edb.Store.Get().Model(&Blobber{}).Select("id").Find(&blobberIDs)
-
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Select("id").
+		Where("is_killed = ? AND is_shut_down = ?", false, false).
+		Find(&blobberIDs)
 	return blobberIDs, result.Error
 }
 
@@ -165,11 +172,14 @@ func (edb *EventDb) GeBlobberByLatLong(
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Select("id").
-		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
-			maxLatitude, minLatitude, maxLongitude, minLongitude).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "capacity"},
-		Desc:   true,
-	}).Find(&blobberIDs)
+		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND is_killed = ? AND is_shut_down = ?",
+			maxLatitude, minLatitude, maxLongitude, minLongitude, false, false).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "capacity"},
+			Desc:   true,
+		}).Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -236,6 +246,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-time.Hour).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
+	dbStore = dbStore.Where("is_killed = ? AND is_shut_down = ?", false, false)
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "capacity"},
 		Desc:   limit.IsDescending,

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 
@@ -422,8 +424,18 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	return
 }
 
-func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI) (resp string, err error) {
+func (sc *StorageSmartContract) verifyChallenge(
+	t *transaction.Transaction, input []byte, balances cstate.StateContextI,
+) (resp string, err error) {
+	blobber, err := sc.getBlobber(t.ClientID, balances)
+	if err != nil {
+		return "", common.NewError("verify_challenge",
+			"can't get blobber"+err.Error())
+	}
+	if blobber.IsKilled() {
+		return "", common.NewError("verify_challenge",
+			"blobber had been killed")
+	}
 
 	var challResp ChallengeResponse
 	conf, err := sc.getConfig(balances, true)
@@ -550,7 +562,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	// verification, or partial verification
 	if pass && fresh {
-		return sc.challengePassed(t,
+		return sc.challengePassed(
+			t,
 			alloc,
 			allocChallenges,
 			challenge,
@@ -562,6 +575,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			threshold,
 			ongoingParts,
 			latestCompletedChallTime,
+			blobber,
 			balances)
 	}
 
@@ -597,13 +611,9 @@ func (sc *StorageSmartContract) challengePassed(
 	success, threshold int,
 	ongoingParts *partitions.Partitions,
 	latestCompletedChallTime common.Timestamp,
-	balances cstate.StateContextI) (string, error) {
-	blobber, err := sc.getBlobber(t.ClientID, balances)
-	if err != nil {
-		return "", common.NewError("verify_challenge",
-			"can't get blobber"+err.Error())
-	}
-
+	blobber *StorageNode,
+	balances cstate.StateContextI,
+) (string, error) {
 	// this expiry of blobber needs to be corrected once logic is finalized
 
 	if blobber.RewardPartition.StartRound != rewardRound ||
@@ -628,7 +638,7 @@ func (sc *StorageSmartContract) challengePassed(
 			return "", common.NewError("verify_challenge",
 				"can't add to ongoing partition list "+err.Error())
 		}
-
+		blobber.LastRewardPartition = blobber.RewardPartition
 		blobber.RewardPartition = RewardPartitionLocation{
 			Index:      partIndex,
 			StartRound: rewardRound,
@@ -669,7 +679,7 @@ func (sc *StorageSmartContract) challengePassed(
 
 	emitUpdateChallenge(challenge, true, balances)
 
-	err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
+	err := ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
 	if err != nil {
 		return "", common.NewErrorf("verify_challenge",
 			"error updating blobber reward item: %v", err)
@@ -957,7 +967,9 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if randValidator.Id != blobberID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
-					ID:      randValidator.Id,
+					Provider: &provider.Provider{
+						ID: randValidator.Id,
+					},
 					BaseURL: randValidator.Url,
 				})
 		}

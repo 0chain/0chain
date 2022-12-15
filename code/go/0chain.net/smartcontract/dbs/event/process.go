@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
 	"fmt"
 	"reflect"
@@ -654,6 +655,15 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateBlobbersStats(*stats)
+	case TagProviderHealthCheck:
+		provider, ok := fromEvent[dbs.HealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		if provider.ProviderType == spenum.Validator {
+			return errors.New("validator health checks not implemented yet")
+		}
+		return edb.healthCheck(*provider)
 	case TagAddOrUpdateChallengePool:
 		// challenge pool
 		cps, ok := fromEvent[[]ChallengePool](event.Data)

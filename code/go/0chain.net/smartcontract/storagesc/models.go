@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -195,15 +197,35 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 }
 
 type ValidationNode struct {
-	ID                string             `json:"id"`
+	*provider.Provider
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	PartitionPosition int                `json:"partition_position"`
+}
+
+func newValidatorNode(id string) *ValidationNode {
+	return &ValidationNode{
+		Provider: &provider.Provider{ID: id},
+	}
+}
+
+func (vn *ValidationNode) Type() spenum.Provider {
+	return spenum.Validator
+}
+
+func (vn *ValidationNode) Save(balances cstate.StateContextI) error {
+	_, err := balances.InsertTrieNode(vn.GetKey(ADDRESS), vn)
+	return err
+}
+
+func (vn *ValidationNode) ValidatorStatus(now common.Timestamp, conf *Config) (provider.Status, string) {
+	return vn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
 }
 
 // validate the validator configurations
-func (sn *ValidationNode) validate(conf *Config) (err error) {
-	if strings.Contains(sn.BaseURL, "localhost") &&
+func (vn *ValidationNode) validate(conf *Config) (err error) {
+	if strings.Contains(vn.BaseURL, "localhost") &&
 		node.Self.Host != "localhost" {
 		return errors.New("invalid validator base url")
 	}
@@ -211,33 +233,33 @@ func (sn *ValidationNode) validate(conf *Config) (err error) {
 	return
 }
 
-func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.ID)
+func (vn *ValidationNode) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + "validator:" + vn.ID)
 }
 
-func (sn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.BaseURL)
+func (vn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + "validator:" + vn.BaseURL)
 }
 
-func (sn *ValidationNode) Encode() []byte {
-	buff, _ := json.Marshal(sn)
+func (vn *ValidationNode) Encode() []byte {
+	buff, _ := json.Marshal(vn)
 	return buff
 }
 
-func (sn *ValidationNode) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
+func (vn *ValidationNode) Decode(input []byte) error {
+	err := json.Unmarshal(input, vn)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (sn *ValidationNode) GetHash() string {
-	return util.ToHex(sn.GetHashBytes())
+func (vn *ValidationNode) GetHash() string {
+	return util.ToHex(vn.GetHashBytes())
 }
 
-func (sn *ValidationNode) GetHashBytes() []byte {
-	return encryption.RawHash(sn.Encode())
+func (vn *ValidationNode) GetHashBytes() []byte {
+	return encryption.RawHash(vn.Encode())
 }
 
 type ValidatorNodes struct {
@@ -323,6 +345,10 @@ type RewardPartitionLocation struct {
 	Timestamp  common.Timestamp `json:"timestamp"`
 }
 
+func (rpl *RewardPartitionLocation) valid() bool {
+	return rpl.StartRound > 0 && rpl.Timestamp > 0
+}
+
 // Info represents general information about blobber node
 type Info struct {
 	Name        string `json:"name"`
@@ -333,20 +359,61 @@ type Info struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID                      string                 `json:"id"`
+	*provider.Provider
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
 	Allocated               int64                  `json:"allocated"` // allocated capacity
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
-	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
+	StakePoolSettings   stakepool.Settings      `json:"stake_pool_settings"`
+	LastRewardPartition RewardPartitionLocation `json:"last_reward_partition"`
+	RewardPartition     RewardPartitionLocation `json:"reward_partition"`
+}
+
+func newStorageNode(id string) *StorageNode {
+	return &StorageNode{
+		Provider: &provider.Provider{
+			ID: id,
+		},
+	}
+}
+
+func (sn *StorageNode) Type() spenum.Provider {
+	return spenum.Blobber
+}
+
+func (sn *StorageNode) Save(balances cstate.StateContextI) error {
+	_, err := balances.InsertTrieNode(sn.GetKey(ADDRESS), sn)
+	return err
+}
+
+func (sn *StorageNode) BlobberStatus(now common.Timestamp, conf *Config) (provider.Status, string) {
+	status, reason := sn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
+	if status == provider.Killed || status == provider.ShutDown {
+		return status, reason
+	}
+	if sn.Terms.WritePrice > conf.MaxWritePrice {
+		status = provider.Inactive
+		reason += fmt.Sprintf(" write price %v, max write prive %v.",
+			sn.Terms.WritePrice, conf.MaxWritePrice)
+	}
+	if sn.Terms.ReadPrice > conf.MaxReadPrice {
+		status = provider.Inactive
+		reason += fmt.Sprintf(" read price %v, max read prive %v.",
+			sn.Terms.ReadPrice, conf.MaxReadPrice)
+	}
+	if sn.Capacity < conf.MinBlobberCapacity {
+		status = provider.Inactive
+		reason += fmt.Sprintf(" capacity %v, lsess than minimum blobber capcaity %v",
+			sn.Capacity, conf.MinBlobberCapacity)
+	}
+
+	return status, reason
 }
 
 // validate the blobber configurations

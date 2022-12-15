@@ -25,8 +25,7 @@ func getBlobber(
 	blobberID string,
 	balances cstate.CommonStateContextI,
 ) (*StorageNode, error) {
-	blobber := new(StorageNode)
-	blobber.ID = blobberID
+	blobber := newStorageNode(blobberID)
 	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
 	if err != nil {
 		return nil, err
@@ -43,7 +42,7 @@ func (_ *StorageSmartContract) getBlobber(
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	balances cstate.StateContextI) (bool, error) {
-	blobber := new(StorageNode)
+	blobber := newStorageNode("")
 	blobber.BaseURL = blobberURL
 	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 	switch err {
@@ -156,7 +155,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+	if err := emitUpdateBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 	return
@@ -211,7 +210,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var blobber = new(StorageNode)
+	var blobber = newStorageNode("")
 	if err = blobber.Decode(input); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"malformed request: "+err.Error())
@@ -263,7 +262,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"can't get config: "+err.Error())
 	}
 
-	var updatedBlobber = new(StorageNode)
+	var updatedBlobber = newStorageNode("")
 	if err = updatedBlobber.Decode(input); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())
@@ -311,32 +310,6 @@ func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
 		return b.LastHealthCheck <= (now - blobberHealthTime), nil
 	})
-}
-
-func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
-	_ []byte, balances cstate.StateContextI,
-) (string, error) {
-	var (
-		blobber *StorageNode
-		err     error
-	)
-	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't get the blobber "+t.ClientID+": "+err.Error())
-	}
-
-	blobber.LastHealthCheck = t.CreationDate
-
-	emitUpdateBlobber(blobber, balances)
-
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
-		blobber)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't Save blobber: "+err.Error())
-	}
-
-	return string(blobber.Encode()), nil
 }
 
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
@@ -418,6 +391,11 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"error fetching blobber object: %v", err)
+	}
+
+	if blobber.IsKilled() {
+		return "", common.NewError("commit_blobber_read",
+			"blobber had been killed")
 	}
 
 	const CHUNK_SIZE = 64 * KB
@@ -684,6 +662,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"error fetching blobber: %v", err)
+	}
+
+	if blobber.IsKilled() {
+		return "", common.NewError("commit_connection_failed",
+			"blobber had been killed")
 	}
 
 	if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {

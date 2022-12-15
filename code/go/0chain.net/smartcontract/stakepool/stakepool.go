@@ -564,6 +564,30 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 	return equallyDistributeRewards(coins, pools, spUpdate)
 }
 
+// slash stake pools funds, if a provider is killed
+func (sp *StakePool) SlashFraction(
+	fraction float64,
+	providerId string,
+	providerType spenum.Provider,
+	balances cstate.StateContextI,
+) error {
+	if fraction == 0.0 {
+		return nil
+	}
+	for _, dp := range sp.Pools {
+		dpSlash, err := currency.Float64ToCoin(float64(dp.Balance) * fraction)
+		if err != nil {
+			return err
+		}
+		dp.Balance, err = currency.MinusCoin(dp.Balance, dpSlash)
+		if err != nil {
+			return err
+		}
+	}
+	sp.EmitStakePoolBalanceUpdate(providerId, providerType, balances)
+	return nil
+}
+
 func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpdate *StakePoolReward) error {
 	share, r, err := currency.DistributeCoin(coins, int64(len(pools)))
 	if err != nil {

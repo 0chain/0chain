@@ -1062,7 +1062,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 				return fmt.Errorf("can't Save stake pool of %s: %v", ba.BlobberID,
 					err)
 			}
-			emitUpdateBlobber(b, balances)
+			emitUpdateBlobber(b, sp, balances)
 		}
 	}
 

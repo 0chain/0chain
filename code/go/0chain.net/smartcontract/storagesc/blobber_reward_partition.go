@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -37,14 +39,56 @@ func BlobberRewardKey(round int64) datastore.Key {
 	return sb.String()
 }
 
+func passedCallback(id string, data []byte, toPartition, _ int, sCtx c_state.StateContextI) error {
+	replace := &StorageNode{
+		Provider: &provider.Provider{
+			ID: id,
+		},
+	}
+	if err := sCtx.GetTrieNode(replace.GetKey(ADDRESS), replace); err != nil {
+		return err
+	}
+	replace.LastRewardPartition.Index = toPartition
+	if _, err := sCtx.InsertTrieNode(replace.GetKey(ADDRESS), replace); err != nil {
+		return err
+	}
+	return nil
+}
+
 // getActivePassedBlobberRewardsPartitions gets blobbers passed challenge from last challenge period
 func getActivePassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
 	key := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
-	return partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
+	blobbers, err := partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
+	if err != nil {
+		return nil, err
+	}
+	blobbers.SetCallback(passedCallback)
+	return blobbers, nil
+}
+
+func ongoingCallback(id string, data []byte, toPartition, _ int, sCtx c_state.StateContextI) error {
+	replace := &StorageNode{
+		Provider: &provider.Provider{
+			ID: id,
+		},
+	}
+	if err := sCtx.GetTrieNode(replace.GetKey(ADDRESS), replace); err != nil {
+		return err
+	}
+	replace.RewardPartition.Index = toPartition
+	if _, err := sCtx.InsertTrieNode(replace.GetKey(ADDRESS), replace); err != nil {
+		return err
+	}
+	return nil
 }
 
 // getOngoingPassedBlobberRewardsPartitions gets blobbers passed challenge from ongoing challenge period
 func getOngoingPassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
 	key := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
-	return partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
+	blobbers, err := partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
+	if err != nil {
+		return nil, err
+	}
+	blobbers.SetCallback(ongoingCallback)
+	return blobbers, nil
 }

@@ -44,6 +44,7 @@ const (
 
 	StakePoolMinLock
 	StakePoolMinLockPeriod
+	StakePoolKillSlash
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
@@ -72,6 +73,7 @@ const (
 	MaxChallengesPerGeneration
 	ValidatorsPerChallenge
 	MaxDelegates
+	HealthCheckPeriod
 
 	BlockRewardBlockReward
 	BlockRewardQualifyingStake
@@ -100,6 +102,11 @@ const (
 	CostAddCurator
 	CostRemoveCurator
 	CostBlobberHealthCheck
+	CostShutDownBlobber
+	CostKillBlobber
+	CostValidatorHealthCheck
+	CostShutDownValidator
+	CostKillValidator
 	CostUpdateBlobberSettings
 	CostPayBlobberBlockRewards
 	CostCuratorTransferAllocation
@@ -154,6 +161,7 @@ func initSettingName() {
 	SettingName[WritePoolMinLock] = "writepool.min_lock"
 	SettingName[StakePoolMinLock] = "stakepool.min_lock"
 	SettingName[StakePoolMinLockPeriod] = "stakepool.min_lock_period"
+	SettingName[StakePoolKillSlash] = "stakepool.kill_slash"
 	SettingName[MaxTotalFreeAllocation] = "max_total_free_allocation"
 	SettingName[MaxIndividualFreeAllocation] = "max_individual_free_allocation"
 	SettingName[CancellationCharge] = "cancellation_charge"
@@ -179,6 +187,7 @@ func initSettingName() {
 	SettingName[MaxChallengesPerGeneration] = "max_challenges_per_generation"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
 	SettingName[MaxDelegates] = "max_delegates"
+	SettingName[HealthCheckPeriod] = "health_check_period"
 	SettingName[BlockRewardBlockReward] = "block_reward.block_reward"
 	SettingName[BlockRewardQualifyingStake] = "block_reward.qualifying_stake"
 	SettingName[BlockRewardSharderWeight] = "block_reward.sharder_ratio"
@@ -204,6 +213,11 @@ func initSettingName() {
 	SettingName[CostAddCurator] = "cost.add_curator"
 	SettingName[CostRemoveCurator] = "cost.remove_curator"
 	SettingName[CostBlobberHealthCheck] = "cost.blobber_health_check"
+	SettingName[CostShutDownBlobber] = "cost.shut-down-blobber"
+	SettingName[CostKillBlobber] = "cost.kill-blobber"
+	SettingName[CostValidatorHealthCheck] = "cost.validator-health-check"
+	SettingName[CostShutDownValidator] = "cost.shut-down-validator"
+	SettingName[CostKillValidator] = "cost.kill-validator"
 	SettingName[CostUpdateBlobberSettings] = "cost.update_blobber_settings"
 	SettingName[CostPayBlobberBlockRewards] = "cost.pay_blobber_block_rewards"
 	SettingName[CostCuratorTransferAllocation] = "cost.curator_transfer_allocation"
@@ -241,6 +255,7 @@ func initSettings() {
 		WritePoolMinLock.String():                 {WritePoolMinLock, smartcontract.CurrencyCoin},
 		StakePoolMinLock.String():                 {StakePoolMinLock, smartcontract.CurrencyCoin},
 		StakePoolMinLockPeriod.String():           {StakePoolMinLockPeriod, smartcontract.Duration},
+		StakePoolKillSlash.String():               {StakePoolKillSlash, smartcontract.Float64},
 		MaxTotalFreeAllocation.String():           {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		MaxIndividualFreeAllocation.String():      {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
 		CancellationCharge.String():               {CancellationCharge, smartcontract.Float64},
@@ -266,6 +281,7 @@ func initSettings() {
 		MaxChallengesPerGeneration.String():       {MaxChallengesPerGeneration, smartcontract.Int},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, smartcontract.Int},
 		MaxDelegates.String():                     {MaxDelegates, smartcontract.Int},
+		HealthCheckPeriod.String():                {HealthCheckPeriod, smartcontract.Duration},
 		BlockRewardBlockReward.String():           {BlockRewardBlockReward, smartcontract.CurrencyCoin},
 		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
 		BlockRewardSharderWeight.String():         {BlockRewardSharderWeight, smartcontract.Float64},
@@ -291,6 +307,11 @@ func initSettings() {
 		CostAddCurator.String():                   {CostAddCurator, smartcontract.Cost},
 		CostRemoveCurator.String():                {CostRemoveCurator, smartcontract.Cost},
 		CostBlobberHealthCheck.String():           {CostBlobberHealthCheck, smartcontract.Cost},
+		CostShutDownBlobber.String():              {CostShutDownBlobber, smartcontract.Cost},
+		CostKillBlobber.String():                  {CostKillBlobber, smartcontract.Cost},
+		CostValidatorHealthCheck.String():         {CostValidatorHealthCheck, smartcontract.Cost},
+		CostShutDownValidator.String():            {CostShutDownValidator, smartcontract.Cost},
+		CostKillValidator.String():                {CostKillValidator, smartcontract.Cost},
 		CostUpdateBlobberSettings.String():        {CostUpdateBlobberSettings, smartcontract.Cost},
 		CostPayBlobberBlockRewards.String():       {CostPayBlobberBlockRewards, smartcontract.Cost},
 		CostCuratorTransferAllocation.String():    {CostCuratorTransferAllocation, smartcontract.Cost},

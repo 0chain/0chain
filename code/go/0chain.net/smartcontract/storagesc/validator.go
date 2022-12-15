@@ -32,7 +32,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 				"Failed to get validator list."+err.Error())
 		}
 
-		_, err = validatorPartitions.AddItem(
+		newValidator.PartitionPosition, err = validatorPartitions.AddItem(
 			balances,
 			&ValidationPartitionNode{
 				Id:  t.ClientID,
@@ -89,8 +89,7 @@ func getValidator(
 	validatorID string,
 	balances state.CommonStateContextI,
 ) (*ValidationNode, error) {
-	validator := new(ValidationNode)
-	validator.ID = validatorID
+	validator := newValidatorNode(validatorID)
 	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
 	if err != nil {
 		return nil, err

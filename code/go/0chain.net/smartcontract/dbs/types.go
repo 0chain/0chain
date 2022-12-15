@@ -1,6 +1,13 @@
 package dbs
 
-import "github.com/0chain/common/core/currency"
+import (
+	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+
+	"0chain.net/core/common"
+	"github.com/0chain/common/core/currency"
+)
 
 type DbUpdates struct {
 	Id      string                 `json:"id"`
@@ -14,13 +21,13 @@ func NewDbUpdates(id string) *DbUpdates {
 	}
 }
 
-type StakePoolId struct {
-	ProviderId   string `json:"provider_id"`
-	ProviderType int    `json:"provider_type"`
+type Provider struct {
+	ProviderId   string          `json:"provider_id"`
+	ProviderType spenum.Provider `json:"provider_type"`
 }
 
 type StakePoolReward struct {
-	StakePoolId
+	Provider
 	Reward currency.Coin `json:"reward"`
 	// rewards delegate pools
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
@@ -29,7 +36,7 @@ type StakePoolReward struct {
 }
 
 type DelegatePoolId struct {
-	StakePoolId
+	Provider
 	PoolId string `json:"pool_id"`
 }
 
@@ -38,7 +45,7 @@ type DelegatePoolUpdate struct {
 	Updates map[string]interface{} `json:"updates"`
 }
 
-func NewDelegatePoolUpdate(pool, provider string, pType int) *DelegatePoolUpdate {
+func NewDelegatePoolUpdate(pool, provider string, pType spenum.Provider) *DelegatePoolUpdate {
 	var dpu DelegatePoolUpdate
 	dpu.PoolId = pool
 	dpu.ProviderId = provider
@@ -48,13 +55,13 @@ func NewDelegatePoolUpdate(pool, provider string, pType int) *DelegatePoolUpdate
 }
 
 type SpBalance struct {
-	StakePoolId
+	Provider
 	Balance         int64            `json:"sp_reward"`
 	DelegateBalance map[string]int64 `json:"delegate_reward"`
 }
 
 type SpReward struct {
-	StakePoolId
+	Provider
 	SpReward       int64            `json:"sp_reward"`
 	DelegateReward map[string]int64 `json:"delegate_reward"`
 }
@@ -62,4 +69,11 @@ type SpReward struct {
 type ChallengeResult struct {
 	BlobberId string `json:"blobberId"`
 	Passed    bool   `json:"passed"`
+}
+
+type HealthCheck struct {
+	Provider
+	LastHealthCheck   common.Timestamp `json:"last_heath_check"`
+	Now               common.Timestamp `json:"now"`
+	HealthCheckPeriod time.Duration    `json:"healch_check_period"`
 }

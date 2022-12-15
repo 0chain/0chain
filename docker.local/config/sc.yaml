@@ -128,12 +128,10 @@ smart_contracts:
     stakepool:
       # minimal lock for a delegate pool
       min_lock: 0.1 # tokens
-      # interest_rate is tokens earned by a blobber for its stake
-      interest_rate: 0.0
-      # interest_interval is interval to pay interests for a stake
-      interest_interval: 1m
       # min_lock_period is min lock period. Default lock period is 3 years worth of blocks.
       min_lock_period: 36m
+      # the amount to slash stakeholders if a blobber or validator is killed
+      kill_slash: 0.5
     # following settings are for free storage rewards
     #
     # largest value you can have for the total allowed free storage
@@ -161,6 +159,8 @@ smart_contracts:
     # blobber_slash represents blobber's stake penalty when a challenge not
     # passed
     blobber_slash: 0.10
+    # duration between health check after which a blobber or validator is considered inactive
+    health_check_period: 1m
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
     max_write_price: 100.0
@@ -230,10 +230,15 @@ smart_contracts:
       update_blobber_settings: 100
       update_validator_settings: 100
       pay_blobber_block_rewards: 100
+      shut-down-blobber: 100
+      kill-blobber: 100
       curator_transfer_allocation: 100
       challenge_request: 100
       challenge_response: 1600
       add_validator: 100
+      validator-health-check: 100
+      shut-down-validator: 100
+      kill-validator: 100
       add_blobber: 100
       new_read_pool: 100
       read_pool_lock: 100
