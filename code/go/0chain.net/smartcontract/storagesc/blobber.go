@@ -155,7 +155,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	if err := emitUpdateBlobber(blobber, sp, balances); err != nil {
+	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 	return

@@ -29,9 +29,6 @@ func (ssc *StorageSmartContract) blobberHealthCheck(
 		return "", common.NewError("blobber_health_check_failed", err.Error())
 	}
 
-	if err = blobber.EmitUpdate(nil, balances); err != nil {
-		return "", common.NewError("blobber_health_check_failed", err.Error())
-	}
 	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't save blobber: "+err.Error())
@@ -51,13 +48,17 @@ func (ssc *StorageSmartContract) validatorHealthCheck(
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
 
-	validator.HealthCheck(t.CreationDate)
-
-	err := validator.EmitUpdate(nil, balances)
+	conf, err := getConfig(balances)
 	if err != nil {
-		return "", common.NewErrorf("add_validator_failed", "emitting Validation node failed: %v", err.Error())
+		return "", common.NewError("blobber_health_check_failed",
+			"can't get configs"+err.Error())
 	}
-	if _, err = balances.InsertTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
+
+	if err := provider.HealthCheck(t.CreationDate, validator, conf.HealthCheckPeriod, balances); err != nil {
+		return "", common.NewError("blobber_health_check_failed", err.Error())
+	}
+
+	if _, err := balances.InsertTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't save blobber: "+err.Error())
 	}

@@ -43,14 +43,18 @@ type AbstractStakePool interface {
 	GetSettings() Settings
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
+	Kill()
+	IsDead()
+	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
 }
 
 // StakePool holds delegate information for an 0chain providers
 type StakePool struct {
-	Pools    map[string]*DelegatePool `json:"pools"`
-	Reward   currency.Coin            `json:"rewards"`
-	Settings Settings                 `json:"settings"`
-	Minter   cstate.ApprovedMinter    `json:"minter"`
+	Pools         map[string]*DelegatePool `json:"pools"`
+	Reward        currency.Coin            `json:"rewards"`
+	Settings      Settings                 `json:"settings"`
+	Minter        cstate.ApprovedMinter    `json:"minter"`
+	HasBeenKilled bool                     `json:"is_dead"`
 }
 
 type Settings struct {
@@ -167,6 +171,14 @@ func (sp *StakePool) GetPools() map[string]*DelegatePool {
 	return sp.Pools
 }
 
+func (sp *StakePool) IsDead() bool {
+	return sp.HasBeenKilled
+}
+
+func (sp *StakePool) Kill() {
+	sp.HasBeenKilled = true
+}
+
 func (sp *StakePool) OrderedPoolIds() []string {
 	ids := make([]string, 0, len(sp.Pools))
 	for id := range sp.Pools {
@@ -267,7 +279,7 @@ func (sp *StakePool) MintRewards(
 	var dpUpdate = newDelegatePoolUpdate(clientId, providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
 
-	if dPool.Status == spenum.Deleting {
+	if dPool.Status == spenum.Deleting || sp.IsDead() {
 		delete(sp.Pools, clientId)
 		dpUpdate.Updates["status"] = spenum.Deleted
 		dpUpdate.emitUpdate(balances)
@@ -306,7 +318,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	providerType spenum.Provider,
 	seed int64,
 	randN int,
-	desc string,
+	_ string,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
@@ -452,6 +464,9 @@ func (sp *StakePool) DistributeRewards(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) (err error) {
+	if sp.IsDead() {
+		return nil
+	}
 	if value == 0 {
 		return nil // nothing to move
 	}
