@@ -62,6 +62,7 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList | [get dkg list](#get-dkg-list) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents | [get events](#get-events) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns | [get group share or signs](#get-group-share-or-signs) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat | [get m s stake pool stat](#get-m-s-stake-pool-stat) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock | [get magic block](#get-magic-block) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList | [get miner list](#get-miner-list) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList | [get mpks list](#get-mpks-list) |  |
@@ -1384,6 +1385,50 @@ Status: Bad Request
 
 ###### <span id="get-group-share-or-signs-400-schema"></span> Schema
 
+### <span id="get-m-s-stake-pool-stat"></span> get m s stake pool stat (*getMSStakePoolStat*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat
+```
+
+Gets statistic for all locked tokens of a stake pool
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| provider_id | `query` | string | `string` |  | ✓ |  | id of a provider |
+| provider_type | `query` | string | `string` |  | ✓ |  | type of the provider, ie: miner. sharder |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#get-m-s-stake-pool-stat-200) | OK | stakePoolStat |  | [schema](#get-m-s-stake-pool-stat-200-schema) |
+| [400](#get-m-s-stake-pool-stat-400) | Bad Request |  |  | [schema](#get-m-s-stake-pool-stat-400-schema) |
+| [500](#get-m-s-stake-pool-stat-500) | Internal Server Error |  |  | [schema](#get-m-s-stake-pool-stat-500-schema) |
+
+#### Responses
+
+
+##### <span id="get-m-s-stake-pool-stat-200"></span> 200 - stakePoolStat
+Status: OK
+
+###### <span id="get-m-s-stake-pool-stat-200-schema"></span> Schema
+   
+  
+
+[StakePoolStat](#stake-pool-stat)
+
+##### <span id="get-m-s-stake-pool-stat-400"></span> 400
+Status: Bad Request
+
+###### <span id="get-m-s-stake-pool-stat-400-schema"></span> Schema
+
+##### <span id="get-m-s-stake-pool-stat-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="get-m-s-stake-pool-stat-500-schema"></span> Schema
+
 ### <span id="get-magic-block"></span> get magic block (*getMagicBlock*)
 
 ```
@@ -1766,21 +1811,21 @@ user oriented pools requests handler
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-user-pools-200) | OK | userPools |  | [schema](#get-user-pools-200-schema) |
+| [200](#get-user-pools-200) | OK | userPoolStat |  | [schema](#get-user-pools-200-schema) |
 | [400](#get-user-pools-400) | Bad Request |  |  | [schema](#get-user-pools-400-schema) |
 | [484](#get-user-pools-484) | Status 484 |  |  | [schema](#get-user-pools-484-schema) |
 
 #### Responses
 
 
-##### <span id="get-user-pools-200"></span> 200 - userPools
+##### <span id="get-user-pools-200"></span> 200 - userPoolStat
 Status: OK
 
 ###### <span id="get-user-pools-200-schema"></span> Schema
    
   
 
-[UserPools](#user-pools)
+[UserPoolStat](#user-pool-stat)
 
 ##### <span id="get-user-pools-400"></span> 400
 Status: Bad Request
@@ -3388,6 +3433,29 @@ CreationDateField - Can be used to add a creation date functionality to an entit
 
 
 
+### <span id="delegate-pool-stat"></span> DelegatePoolStat
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| DelegateID | string| `string` |  | |  |  |
+| ID | string| `string` |  | |  |  |
+| RoundCreated | int64 (formatted integer)| `int64` |  | |  |  |
+| Status | string| `string` |  | |  |  |
+| UnStake | boolean| `bool` |  | |  |  |
+| balance | [Coin](#coin)| `Coin` |  | |  |  |
+| rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| total_penalty | [Coin](#coin)| `Coin` |  | |  |  |
+| total_reward | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
 ### <span id="deleted-at"></span> DeletedAt
 
 
@@ -3911,6 +3979,31 @@ it can be used as a scan destination, similar to NullString.
 
 
 
+### <span id="provider"></span> Provider
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| DelegateWallet | string| `string` |  | |  |  |
+| ID | string| `string` |  | |  |  |
+| NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| max_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| min_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| rewards | [ProviderRewards](#provider-rewards)| `ProviderRewards` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
 ### <span id="provider-rewards"></span> ProviderRewards
 
 
@@ -4109,6 +4202,28 @@ it can be used as a scan destination, similar to NullString.
 | minter | [ApprovedMinter](#approved-minter)| `ApprovedMinter` |  | |  |  |
 | rewards | [Coin](#coin)| `Coin` |  | |  |  |
 | settings | [Settings](#settings)| `Settings` |  | |  |  |
+
+
+
+### <span id="stake-pool-stat"></span> StakePoolStat
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Delegate | [][DelegatePoolStat](#delegate-pool-stat)| `[]*DelegatePoolStat` |  | |  |  |
+| ID | string| `string` |  | |  |  |
+| balance | [Coin](#coin)| `Coin` |  | |  |  |
+| penalty | [Coin](#coin)| `Coin` |  | |  |  |
+| rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| settings | [Settings](#settings)| `Settings` |  | |  |  |
+| stake_total | [Coin](#coin)| `Coin` |  | |  |  |
+| unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 
@@ -4393,6 +4508,21 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 
 
 
+### <span id="user-pool-stat"></span> UserPoolStat
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Pools | map of [[]*DelegatePoolStat](#delegate-pool-stat)| `map[string][]DelegatePoolStat` |  | |  |  |
+
+
+
 ### <span id="validation-node"></span> ValidationNode
 
 
@@ -4424,17 +4554,15 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | BaseUrl | string| `string` |  | |  |  |
 | CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | DelegateWallet | string| `string` |  | |  |  |
-| DeletedAt | [DeletedAt](#deleted-at)| `DeletedAt` |  | |  |  |
-| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| ID | string| `string` |  | |  |  |
 | NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
 | PublicKey | string| `string` |  | |  |  |
 | ServiceCharge | double (formatted number)| `float64` |  | |  |  |
 | UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
-| ValidatorID | string| `string` |  | |  |  |
 | max_stake | [Coin](#coin)| `Coin` |  | |  |  |
 | min_stake | [Coin](#coin)| `Coin` |  | |  |  |
 | rewards | [ProviderRewards](#provider-rewards)| `ProviderRewards` |  | |  |  |
-| stake_total | [Coin](#coin)| `Coin` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
 | unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
 
 
@@ -4570,29 +4698,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
 | Pools | []string| `[]string` |  | |  |  |
-
-
-
-### <span id="delegate-pool-stat"></span> delegatePoolStat
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| DelegateID | string| `string` |  | |  |  |
-| ID | string| `string` |  | |  |  |
-| RoundCreated | int64 (formatted integer)| `int64` |  | |  |  |
-| Status | string| `string` |  | |  |  |
-| UnStake | boolean| `bool` |  | |  |  |
-| balance | [Coin](#coin)| `Coin` |  | |  |  |
-| rewards | [Coin](#coin)| `Coin` |  | |  |  |
-| total_penalty | [Coin](#coin)| `Coin` |  | |  |  |
-| total_reward | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 
@@ -4775,28 +4880,6 @@ and the other for the allocations that the client (client_id) doesn't own
 
 
 
-### <span id="stake-pool-stat"></span> stakePoolStat
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| Delegate | [][DelegatePoolStat](#delegate-pool-stat)| `[]*DelegatePoolStat` |  | |  |  |
-| ID | string| `string` |  | |  |  |
-| balance | [Coin](#coin)| `Coin` |  | |  |  |
-| penalty | [Coin](#coin)| `Coin` |  | |  |  |
-| rewards | [Coin](#coin)| `Coin` |  | |  |  |
-| settings | [Settings](#settings)| `Settings` |  | |  |  |
-| stake_total | [Coin](#coin)| `Coin` |  | |  |  |
-| unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
-
-
-
 ### <span id="storage-node-response"></span> storageNodeResponse
 
 
@@ -4867,7 +4950,7 @@ and the other for the allocations that the client (client_id) doesn't own
 
 
 
-### <span id="user-pool-stat"></span> userPoolStat
+### <span id="timestamp-to-round-resp"></span> timestampToRoundResp
 
 
   
@@ -4878,21 +4961,6 @@ and the other for the allocations that the client (client_id) doesn't own
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| Pools | map of [[]*DelegatePoolStat](#delegate-pool-stat)| `map[string][]DelegatePoolStat` |  | |  |  |
-
-
-
-### <span id="user-pools"></span> userPools
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| Pools | map of [[]*DelegatePoolStat](#delegate-pool-stat)| `map[string][]DelegatePoolStat` |  | |  |  |
+| Rounds | []int64 (formatted integer)| `[]int64` |  | |  |  |
 
 

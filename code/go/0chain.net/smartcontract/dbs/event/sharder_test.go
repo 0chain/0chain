@@ -81,26 +81,30 @@ func TestSharders(t *testing.T) {
 
 	convertSn := func(sn SharderNode) Sharder {
 		return Sharder{
-			SharderID:         sn.ID,
-			N2NHost:           sn.N2NHost,
-			Host:              sn.Host,
-			Port:              sn.Port,
-			Path:              sn.Path,
-			PublicKey:         sn.PublicKey,
-			ShortName:         sn.ShortName,
-			BuildTag:          sn.BuildTag,
-			TotalStaked:       currency.Coin(sn.TotalStaked),
-			Delete:            sn.Delete,
-			DelegateWallet:    sn.DelegateWallet,
-			ServiceCharge:     sn.ServiceCharge,
-			NumberOfDelegates: sn.NumberOfDelegates,
-			MinStake:          sn.MinStake,
-			MaxStake:          sn.MaxStake,
-			LastHealthCheck:   sn.LastHealthCheck,
-			Rewards: ProviderRewards{
-				ProviderID: sn.ID,
-				Rewards:    sn.Stat.GeneratorRewards,
+
+			N2NHost:   sn.N2NHost,
+			Host:      sn.Host,
+			Port:      sn.Port,
+			Path:      sn.Path,
+			PublicKey: sn.PublicKey,
+			ShortName: sn.ShortName,
+			BuildTag:  sn.BuildTag,
+			Delete:    sn.Delete,
+			Provider: Provider{
+				ID:             sn.ID,
+				TotalStake:     currency.Coin(sn.TotalStaked),
+				DelegateWallet: sn.DelegateWallet,
+				ServiceCharge:  sn.ServiceCharge,
+				NumDelegates:   sn.NumberOfDelegates,
+				MinStake:       sn.MinStake,
+				MaxStake:       sn.MaxStake,
+				Rewards: ProviderRewards{
+					ProviderID: sn.ID,
+					Rewards:    sn.Stat.GeneratorRewards,
+				},
 			},
+			LastHealthCheck: sn.LastHealthCheck,
+
 			Fees:      sn.Stat.GeneratorFees,
 			Longitude: 0,
 			Latitude:  0,
@@ -339,7 +343,7 @@ func TestGetSharderLocations(t *testing.T) {
 
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i)}
+		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}}
 		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
@@ -347,7 +351,7 @@ func createSharders(t *testing.T, eventDb *EventDb, count int) {
 
 func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Sharder{Active: i%2 == 0, SharderID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
 		err := eventDb.addOrOverwriteSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}

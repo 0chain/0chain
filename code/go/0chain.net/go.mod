@@ -8,7 +8,7 @@ require (
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-playground/validator/v10 v10.11.1
-	github.com/gocql/gocql v1.3.0
+	github.com/gocql/gocql v1.3.1
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
@@ -42,7 +42,10 @@ require (
 	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
 )
 
-require github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+require (
+	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+	moul.io/zapgorm2 v1.1.3
+)
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect

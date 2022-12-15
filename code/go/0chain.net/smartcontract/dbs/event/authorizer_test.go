@@ -41,29 +41,33 @@ func TestAuthorizers(t *testing.T) {
 	require.NoError(t, err)
 
 	authorizer_1 := Authorizer{
-		AuthorizerID:    encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 		URL:             "http://localhost:8080",
 		Latitude:        0.0,
 		Longitude:       0.0,
 		LastHealthCheck: time.Now().Unix(),
-		DelegateWallet:  "delegate wallet",
-		MinStake:        currency.Coin(53),
-		MaxStake:        currency.Coin(57),
-		NumDelegates:    59,
-		ServiceCharge:   61.0,
+		Provider: Provider{
+			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
+			DelegateWallet: "delegate wallet",
+			MinStake:       currency.Coin(53),
+			MaxStake:       currency.Coin(57),
+			NumDelegates:   59,
+			ServiceCharge:  61.0,
+		},
 	}
 
 	authorizer_2 := Authorizer{
-		AuthorizerID:    encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 		URL:             "http://localhost:8888",
 		Latitude:        1.0,
 		Longitude:       1.0,
 		LastHealthCheck: time.Now().Unix(),
-		DelegateWallet:  "delegate wallet",
-		MinStake:        currency.Coin(52),
-		MaxStake:        currency.Coin(57),
-		NumDelegates:    60,
-		ServiceCharge:   50.0,
+		Provider: Provider{
+			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
+			DelegateWallet: "delegate wallet",
+			MinStake:       currency.Coin(52),
+			MaxStake:       currency.Coin(57),
+			NumDelegates:   60,
+			ServiceCharge:  50.0,
+		},
 	}
 
 	err = eventDb.AddAuthorizer(&authorizer_1)
@@ -79,7 +83,7 @@ func TestAuthorizers(t *testing.T) {
 	eventDb.Get().Table("authorizers").Count(&count)
 	require.Equal(t, int64(2), count, "Authorizer not getting inserted")
 
-	_, err = eventDb.GetValidatorByValidatorID(authorizer_1.AuthorizerID)
+	_, err = eventDb.GetValidatorByValidatorID(authorizer_1.ID)
 	require.NoError(t, err, "Error while getting Authorizer from event Database")
 
 	_, err = authorizer_2.exists(eventDb)

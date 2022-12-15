@@ -66,7 +66,7 @@ func (sc *StorageSmartContract) removeCurator(
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("remove_curator_failed",
-			"cannot save allocation"+err.Error())
+			"cannot Save allocation"+err.Error())
 	}
 
 	err = emitCuratorEvent(&rci, balances, event.TagRemoveCurator)
@@ -111,7 +111,7 @@ func (sc *StorageSmartContract) addCurator(
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("add_curator_failed",
-			"cannot save allocation"+err.Error())
+			"cannot Save allocation"+err.Error())
 	}
 
 	err = emitCuratorEvent(&aci, balances, event.TagAddOrOverwriteCurator)

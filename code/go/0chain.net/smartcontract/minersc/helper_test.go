@@ -176,7 +176,7 @@ func addSharder(t *testing.T, msc *MinerSmartContract, now int64,
 
 func (c *Client) addToDelegatePoolRequest(t *testing.T, nodeID string) []byte {
 	var dp deletePool
-	dp.MinerID = nodeID
+	dp.ProviderID = nodeID
 	return mustEncode(t, &dp)
 }
 

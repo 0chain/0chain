@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"0chain.net/smartcontract/dbs/event"
-	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -17,10 +16,10 @@ func (sp *StakePool) UnlockPool(
 	providerType spenum.Provider,
 	providerId datastore.Key,
 	balances cstate.StateContextI,
-) (currency.Coin, error) {
+) (string, error) {
 	dp, ok := sp.Pools[clientID]
 	if !ok {
-		return 0, fmt.Errorf("can't find pool of %v", clientID)
+		return "", fmt.Errorf("can't find pool of %v", clientID)
 	}
 
 	dp.Status = spenum.Deleting
@@ -29,15 +28,16 @@ func (sp *StakePool) UnlockPool(
 	)
 
 	i, _ := amount.Int64()
-	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, event.DelegatePoolLock{
+	lock := event.DelegatePoolLock{
 		Client:       clientID,
 		ProviderId:   providerId,
 		ProviderType: providerType,
 		Amount:       i,
-	})
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, lock)
 	if err != nil {
-		return 0, fmt.Errorf("error emptying account, %v", err)
+		return "", fmt.Errorf("error emptying account, %v", err)
 	}
 
-	return amount, nil
+	return toJson(lock), nil
 }
