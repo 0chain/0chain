@@ -193,13 +193,13 @@ func isTestingOnUpdateFinalizedBlock(round int64, s *crpc.State) bool {
 	return isTestingFunc(round, nodeType == generator, typeRank)
 }
 
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, waitOver bool, waitC chan struct{}) error {
 	if isIgnoringGenerateBlock(b.Round) {
 		return nil
 	}
 
 	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
+		return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
 	})
 }
 
