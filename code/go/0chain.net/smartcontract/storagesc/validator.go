@@ -13,18 +13,6 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
-func getValidator(id string, balances state.StateContextI) (*ValidationNode, error) {
-	newNode := &ValidationNode{}
-	err := balances.GetTrieNode(provider.GetKey(id), newNode)
-	if err != nil {
-		return nil, err
-	}
-	if newNode.Type != spenum.Validator {
-		return nil, fmt.Errorf("provider is %s should be %s", newNode.Type, spenum.Validator)
-	}
-	return newNode, nil
-}
-
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
 	newValidator := &ValidationNode{}
 	err := newValidator.Decode(input) //json.Unmarshal(input, &newValidator)
@@ -98,6 +86,18 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	buff := newValidator.Encode()
 	return string(buff), nil
+}
+
+func getValidator(id string, balances state.StateContextI) (*ValidationNode, error) {
+	newNode := &ValidationNode{}
+	err := balances.GetTrieNode(provider.GetKey(id), newNode)
+	if err != nil {
+		return nil, err
+	}
+	if newNode.Type != spenum.Validator {
+		return nil, fmt.Errorf("provider is %s should be %s", newNode.Type, spenum.Validator)
+	}
+	return newNode, nil
 }
 
 func (_ *StorageSmartContract) getValidator(
