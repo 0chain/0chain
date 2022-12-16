@@ -23,8 +23,16 @@ func (msc *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, provid
 	switch pType {
 	case spenum.Miner:
 		mn, err = getMinerNode(providerID, balances)
+		if mn.NodeType != NodeTypeMiner {
+			return nil, common.NewErrorf("get_stake_pool",
+				"wrong provider type")
+		}
 	case spenum.Sharder:
 		mn, err = getSharderNode(providerID, balances)
+		if mn.NodeType != NodeTypeSharder {
+			return nil, common.NewErrorf("get_stake_pool",
+				"wrong provider type")
+		}
 	default:
 		return mn, common.NewErrorf("get_stake_pool",
 			"unknown provider type")
