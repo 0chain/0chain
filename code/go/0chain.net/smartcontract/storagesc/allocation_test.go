@@ -1055,6 +1055,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 		{
 			ID:      "b2",
 			BaseURL: "http://blobber2.test.ru:9100/api",
+			Type:    spenum.Blobber,
 			Terms: Terms{
 				ReadPrice:        25,
 				WritePrice:       250,
