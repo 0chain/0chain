@@ -158,9 +158,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		gs.MaxCapacityStorage += aggregate.Capacity - old.Capacity
 		gs.UsedStorage += aggregate.SavedData - old.SavedData
 
-		logging.Logger.Info("update_allocated_storage", zap.Int64("gs", gs.AllocatedStorage), zap.Int64("aggregate", aggregate.Allocated),
-			zap.Int64("old", old.Allocated))
-
 		const GB = currency.Coin(1024 * 1024 * 1024)
 		ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
 		if err != nil {
