@@ -160,6 +160,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = blobberTemplate
 		nextBlobber.ID = strconv.Itoa(i)
+		nextBlobber.Type = spenum.Blobber
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
 		writePrice *= 0.9
 		var minLockDemand = float64(allocation.Size) * writePrice * blobberYaml.minLockDemand
@@ -278,6 +279,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = blobberTemplate
 		nextBlobber.ID = strconv.Itoa(i)
+		nextBlobber.Type = spenum.Blobber
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
 		writePrice *= 0.9
 		var minLockDemand = float64(allocation.Size) * writePrice * blobberYaml.minLockDemand
