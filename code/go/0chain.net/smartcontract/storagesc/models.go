@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -197,22 +199,23 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 type ValidationNode struct {
 	ID                string             `json:"id"`
 	BaseURL           string             `json:"url"`
+	Type              spenum.Provider    `json:"type"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 }
 
 // validate the validator configurations
-func (sn *ValidationNode) validate(conf *Config) (err error) {
+func (sn *ValidationNode) validate(_ *Config) (err error) {
 	if strings.Contains(sn.BaseURL, "localhost") &&
 		node.Self.Host != "localhost" {
-		return errors.New("invalid validator base url")
+		return errors.New("invalid vali1dator base url")
 	}
 
 	return
 }
 
-func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.ID)
+func (sn *ValidationNode) GetKey(_ string) datastore.Key {
+	return provider.GetKey(sn.ID)
 }
 
 func (sn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
@@ -335,6 +338,7 @@ type Info struct {
 type StorageNode struct {
 	ID                      string                 `json:"id"`
 	BaseURL                 string                 `json:"url"`
+	Type                    spenum.Provider        `json:"type"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
@@ -370,8 +374,8 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 	return
 }
 
-func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ID)
+func (sn *StorageNode) GetKey(_ string) datastore.Key {
+	return provider.GetKey(sn.ID)
 }
 
 func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {

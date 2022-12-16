@@ -3,6 +3,8 @@ package storagesc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -10,6 +12,18 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
 )
+
+func getValidator(id string, balances state.StateContextI) (*ValidationNode, error) {
+	newNode := &ValidationNode{}
+	err := balances.GetTrieNode(provider.GetKey(id), newNode)
+	if err != nil {
+		return nil, err
+	}
+	if newNode.Type != spenum.Validator {
+		return nil, fmt.Errorf("provider is %s should be %s", newNode.Type, spenum.Validator)
+	}
+	return newNode, nil
+}
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
 	newValidator := &ValidationNode{}
@@ -19,12 +33,13 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
+	newValidator.Type = spenum.Validator
 
-	tmp := &ValidationNode{}
-	err = balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
+	_, err = getValidator(t.ClientID, balances)
 	switch err {
 	case nil:
-		sc.statIncr(statUpdateValidator)
+		return "", common.NewError("add_validator_failed",
+			"provider already exist at id:"+t.ClientID)
 	case util.ErrValueNotPresent:
 		validatorPartitions, err := getValidatorsList(balances)
 		if err != nil {
@@ -83,19 +98,6 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	buff := newValidator.Encode()
 	return string(buff), nil
-}
-
-func getValidator(
-	validatorID string,
-	balances state.CommonStateContextI,
-) (*ValidationNode, error) {
-	validator := new(ValidationNode)
-	validator.ID = validatorID
-	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
-	if err != nil {
-		return nil, err
-	}
-	return validator, nil
 }
 
 func (_ *StorageSmartContract) getValidator(

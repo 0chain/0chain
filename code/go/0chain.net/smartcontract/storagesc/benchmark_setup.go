@@ -355,6 +355,7 @@ func AddMockBlobbers(
 		const mockUsedData = 1000
 		blobber := &StorageNode{
 			ID:      id,
+			Type:    spenum.Blobber,
 			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
@@ -513,6 +514,7 @@ func AddMockValidators(
 		url := getMockValidatorUrl(i)
 		validator := &ValidationNode{
 			ID:                id,
+			Type:              spenum.Validator,
 			BaseURL:           url,
 			PublicKey:         publicKeys[i%len(publicKeys)],
 			StakePoolSettings: getMockStakePoolSettings(id),
