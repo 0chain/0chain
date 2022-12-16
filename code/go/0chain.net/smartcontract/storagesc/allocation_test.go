@@ -73,6 +73,7 @@ func TestSelectBlobbers(t *testing.T) {
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
 			ID:              mockBlobberId + strconv.Itoa(index),
+			Type:            spenum.Blobber,
 			BaseURL:         mockURL + strconv.Itoa(index),
 			Capacity:        mockBlobberCapacity,
 			LastHealthCheck: common.Timestamp(now.Unix()),
@@ -340,6 +341,7 @@ func TestChangeBlobbers(t *testing.T) {
 
 			blobber := &StorageNode{
 				ID:       ba.BlobberID,
+				Type:     spenum.Blobber,
 				Capacity: mockBlobberCapacity,
 				Terms: Terms{
 					MaxOfferDuration: mockMaxOffDuration,
@@ -577,6 +579,7 @@ func TestExtendAllocation(t *testing.T) {
 		return &StorageNode{
 			ID:              mockBlobberId + strconv.Itoa(index),
 			BaseURL:         mockURL + strconv.Itoa(index),
+			Type:            spenum.Blobber,
 			Capacity:        mockBlobberCapacity,
 			LastHealthCheck: now - blobberHealthTime + 1,
 			Terms: Terms{
@@ -1038,6 +1041,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 		{
 			ID:      "b1",
 			BaseURL: "http://blobber1.test.ru:9100/api",
+			Type:    spenum.Blobber,
 			Terms: Terms{
 				ReadPrice:        20,
 				WritePrice:       200,

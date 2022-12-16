@@ -248,6 +248,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
 			ID:        blob[i],
+			Type:      spenum.Blobber,
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
@@ -614,6 +615,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
 			ID:        strconv.Itoa(i),
+			Type:      spenum.Blobber,
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
