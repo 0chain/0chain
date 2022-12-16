@@ -535,6 +535,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateShardersTotalStakes(*s)
+	case TagUpdateProvider:
+		updates, ok := fromEvent[dbs.DbUpdateProvider](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvider(*updates)
 	case TagRemoveCurator:
 		c, ok := fromEvent[Curator](event.Data)
 		if !ok {

@@ -3,11 +3,16 @@ package provider
 import (
 	"errors"
 	"fmt"
+	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
 
 	"0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -37,14 +42,15 @@ type StatusInfo struct {
 
 type ProviderI interface {
 	Status(common.Timestamp, common.Timestamp) (Status, string)
-	HealthCheck(common.Timestamp) common.Timestamp
-	ShutDown()
 	Kill()
 	IsKilled() bool
 	IsShutDown() bool
 	Id() string
 	Save(state.StateContextI) error
 	Type() spenum.Provider
+	HealthCheck(common.Timestamp, time.Duration, cstate.StateContextI)
+	ShutDown()
+	EmitUpdate(stakepool.AbstractStakePool, cstate.StateContextI)
 }
 
 type Provider struct {
@@ -79,12 +85,6 @@ func (p *Provider) IsKilled() bool {
 	return p.HasBeenKilled
 }
 
-func (p *Provider) HealthCheck(now common.Timestamp) common.Timestamp {
-	lastHealthCheck := p.LastHealthCheck
-	p.LastHealthCheck = now
-	return lastHealthCheck
-}
-
 func (p *Provider) ShutDown() {
 	p.HasBeenShutDown = true
 }
@@ -95,4 +95,48 @@ func (p *Provider) Kill() {
 
 func (p *Provider) Save(i state.StateContextI) error {
 	return errors.New("save should be called from main provider object")
+}
+
+func (p *Provider) Type() spenum.Provider {
+	return spenum.Invalid
+}
+
+func (p *Provider) EmitUpdate(sp stakepool.AbstractStakePool, balances cstate.StateContextI) {
+	updates := dbs.NewDbUpdateProvider(p.Id(), p.Type())
+	updates.Updates = map[string]interface{}{
+		"primaryKey":        p.Id(),
+		"last_health_check": p.LastHealthCheck,
+		"is_killed":         p.IsKilled(),
+		"is_shut_down":      p.IsShutDown(),
+	}
+	if sp != nil {
+		updates.Updates["delegate_wallet"] = sp.GetSettings().DelegateWallet
+		updates.Updates["min_stake"] = sp.GetSettings().MinStake
+		updates.Updates["max_stake"] = sp.GetSettings().MaxStake
+		updates.Updates["num_delegates"] = sp.GetSettings().MaxNumDelegates
+		updates.Updates["service_charge"] = sp.GetSettings().ServiceChargeRatio
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateProvider, p.ID, updates)
+}
+
+func (p *Provider) HealthCheck(
+	now common.Timestamp,
+	healthCheckPeriod time.Duration,
+	balances cstate.StateContextI,
+) {
+	balances.EmitEvent(
+		event.TypeStats,
+		event.TagProviderHealthCheck,
+		p.Id(),
+		dbs.HealthCheck{
+			Provider: dbs.Provider{
+				ProviderId:   p.Id(),
+				ProviderType: p.Type(),
+			},
+			Now:               now,
+			LastHealthCheck:   p.LastHealthCheck,
+			HealthCheckPeriod: healthCheckPeriod,
+		})
+
+	p.LastHealthCheck = now
 }

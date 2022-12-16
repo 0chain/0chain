@@ -21,6 +21,22 @@ func NewDbUpdates(id string) *DbUpdates {
 	}
 }
 
+type DbUpdateProvider struct {
+	DbUpdates
+	Type spenum.Provider `json:"type"`
+}
+
+func NewDbUpdateProvider(id string, typ spenum.Provider) *DbUpdateProvider {
+	return &DbUpdateProvider{
+		DbUpdates: DbUpdates{
+			Id:      id,
+			Updates: make(map[string]interface{}),
+		},
+		Type: typ,
+	}
+
+}
+
 type Provider struct {
 	ProviderId   string          `json:"provider_id"`
 	ProviderType spenum.Provider `json:"provider_type"`

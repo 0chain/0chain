@@ -12,18 +12,20 @@ import (
 )
 
 type Provider struct {
-	ID             string `gorm:"primaryKey"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DelegateWallet string          `json:"delegate_wallet"`
-	MinStake       currency.Coin   `json:"min_stake"`
-	MaxStake       currency.Coin   `json:"max_stake"`
-	NumDelegates   int             `json:"num_delegates"`
-	ServiceCharge  float64         `json:"service_charge"`
-	UnstakeTotal   currency.Coin   `json:"unstake_total"`
-	TotalStake     currency.Coin   `json:"total_stake"`
-	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID"`
-
+	ID        string `gorm:"primaryKey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	// settings
+	DelegateWallet string        `json:"delegate_wallet"`
+	MinStake       currency.Coin `json:"min_stake"`
+	MaxStake       currency.Coin `json:"max_stake"`
+	NumDelegates   int           `json:"num_delegates"`
+	ServiceCharge  float64       `json:"service_charge"`
+	// stake pool aggregates
+	UnstakeTotal currency.Coin   `json:"unstake_total"`
+	TotalStake   currency.Coin   `json:"total_stake"`
+	Rewards      ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID"`
+	// provider
 	LastHealthCheck int64 `json:"last_health_check"`
 	IsKilled        bool  `json:"is_killed"`
 	IsShutDown      bool  `json:"is_shut_down"`
@@ -31,7 +33,7 @@ type Provider struct {
 }
 
 func (edb *EventDb) healthCheck(check dbs.HealthCheck) error {
-	updates := dbs.NewDbUpdates(check.ProviderId)
+	updates := dbs.NewDbUpdateProvider(check.ProviderId, check.ProviderType)
 	updates.Updates["last_health_check"] = check.Now
 	timeSinceLastHeathCheck := check.Now - check.LastHealthCheck
 	if timeSinceLastHeathCheck.Duration() > check.HealthCheckPeriod {
@@ -43,7 +45,8 @@ func (edb *EventDb) healthCheck(check dbs.HealthCheck) error {
 		downTime += int64(timeInactive.Seconds())
 		updates.Updates["down_time"] = downTime
 	}
-	return edb.updateProvider(check.ProviderType, check.ProviderId, *updates)
+
+	return edb.updateProvider(*updates)
 }
 
 func (edb *EventDb) ProviderDownTime(
@@ -97,17 +100,15 @@ func (edb *EventDb) providerDownTime(
 }
 
 func (edb *EventDb) updateProvider(
-	providerType spenum.Provider,
-	providerId string,
-	updates dbs.DbUpdates,
+	updates dbs.DbUpdateProvider,
 ) error {
-	model, err := providerModel(providerType)
+	model, err := providerModel(updates.Type)
 	if err != nil {
 		return err
 	}
 	return edb.Store.Get().
 		Model(&model).
-		Where(providerType.String()+"_id = ?", providerId).
+		Where(updates.Type.String()+"_id = ?", updates.Id).
 		Updates(updates.Updates).Error
 }
 

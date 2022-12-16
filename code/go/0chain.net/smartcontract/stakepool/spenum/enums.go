@@ -5,7 +5,8 @@ package spenum
 type Provider int
 
 const (
-	Miner Provider = iota + 1
+	Invalid Provider = iota
+	Miner
 	Sharder
 	Blobber
 	Validator
@@ -14,6 +15,7 @@ const (
 
 var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
 var Providers = map[string]Provider{
+	"invalid":    Invalid,
 	"miner":      Miner,
 	"sharder":    Sharder,
 	"blobber":    Blobber,
