@@ -40,7 +40,7 @@ type StatusInfo struct {
 	Reason string `json:"reason"`
 }
 
-type ProviderI interface {
+type Abstract interface {
 	Status(common.Timestamp, common.Timestamp) (Status, string)
 	Kill()
 	IsKilled() bool
@@ -58,6 +58,7 @@ type Provider struct {
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	HasBeenShutDown bool             `json:"is_shut_down"`
 	HasBeenKilled   bool             `json:"is_killed"`
+	ProviderType    spenum.Provider  `json:"provider_type"`
 }
 
 func GetKey(id string) datastore.Key {
@@ -102,7 +103,7 @@ func (p *Provider) Save(i state.StateContextI) error {
 }
 
 func (p *Provider) Type() spenum.Provider {
-	return spenum.Invalid
+	return p.ProviderType
 }
 
 func (p *Provider) EmitUpdate(sp stakepool.AbstractStakePool, balances cstate.StateContextI) {

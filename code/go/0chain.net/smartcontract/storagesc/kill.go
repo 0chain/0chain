@@ -2,27 +2,37 @@ package storagesc
 
 import (
 	"0chain.net/smartcontract/provider"
-
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
 
+func kill() {
+
+}
+
 func (ssc *StorageSmartContract) killBlobber(
 	t *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	err := provider.Kill(
+	conf, err := getConfig(balances)
+	if err != nil {
+		return "", common.NewError("can't get config", err.Error())
+	}
+
+	err = provider.Kill(
 		input,
-		t.ClientID, "",
-		func(req provider.ProviderRequest, conf *Config) (provider.ProviderI, error) {
+		t.ClientID,
+		conf.OwnerId,
+		conf.StakePool.KillSlash,
+		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
 			var blobber *StorageNode
 			if blobber, err = ssc.getBlobber(req.ID, balances); err != nil {
-				return nil, common.NewError("kill_blobber_failed",
+				return nil, nil, common.NewError("kill_blobber_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())
 			}
 
@@ -30,12 +40,12 @@ func (ssc *StorageSmartContract) killBlobber(
 			if blobber.LastRewardPartition.valid() {
 				activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 				if err != nil {
-					return nil, common.NewError("kill_blobber_failed",
+					return nil, nil, common.NewError("kill_blobber_failed",
 						"cannot get all blobbers list: "+err.Error())
 				}
 				err = activePassedBlobberRewardPart.RemoveItem(balances, blobber.LastRewardPartition.Index, blobber.ID)
 				if err != nil {
-					return nil, common.NewError("kill_blobber_failed",
+					return nil, nil, common.NewError("kill_blobber_failed",
 						"cannot remove blobber from active passed rewards partition: "+err.Error())
 				}
 			}
@@ -43,16 +53,22 @@ func (ssc *StorageSmartContract) killBlobber(
 			if blobber.RewardPartition.valid() {
 				parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 				if err != nil {
-					return nil, common.NewErrorf("kill_blobber_failed",
+					return nil, nil, common.NewErrorf("kill_blobber_failed",
 						"cannot fetch ongoing partition: %v", err)
 				}
 				err = parts.RemoveItem(balances, blobber.RewardPartition.Index, blobber.ID)
 				if err != nil {
-					return nil, common.NewError("kill_blobber_failed",
+					return nil, nil, common.NewError("kill_blobber_failed",
 						"cannot remove blobber from ongoing passed rewards partition: "+err.Error())
 				}
 			}
-			return blobber, nil
+
+			sp, err := getStakePool(blobber.Type(), blobber.Id(), balances)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			return blobber, sp, nil
 		},
 		balances,
 	)
@@ -67,29 +83,39 @@ func (ssc *StorageSmartContract) killValidator(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	return "", kill(
-		input, "",
-		t.ClientID,
-		func(req providerRequest, _ *Config) (provider.ProviderI, error) {
+	conf, err := getConfig(balances)
+	if err != nil {
+		return "", common.NewError("can't get config", err.Error())
+	}
+
+	err = kill(
+		input,
+		conf.OwnerId,
+		conf.StakePool.KillSlash,
+		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
 			var validator = newValidatorNode(req.ID)
 			if err = balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
-				return nil, common.NewError("kill_validator_failed",
+				return nil, nil, common.NewError("kill_validator_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())
 			}
 
 			validatorPartitions, err := getValidatorsList(balances)
 			if err != nil {
-				return nil, common.NewError("kill_validator_failed",
+				return nil, nil, common.NewError("kill_validator_failed",
 					"failed to get validator list."+err.Error())
 			}
 			if err := validatorPartitions.RemoveItem(balances, validator.PartitionPosition, validator.ID); err != nil {
-				return nil, common.NewError("kill_validator_failed",
+				return nil, nil, common.NewError("kill_validator_failed",
 					"failed to remove validator."+err.Error())
 			}
 			return validator, nil
 		},
-		spenum.Validator,
 		balances,
 	)
+
+	if err != nil {
+		return "", common.NewError("kill_validator_failed", err.Error())
+	}
+	return "", nil
 }

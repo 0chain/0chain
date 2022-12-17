@@ -30,7 +30,7 @@ func getBlobber(
 	if err != nil {
 		return nil, err
 	}
-	if blobber.Type != spenum.Blobber {
+	if blobber.ProviderType != spenum.Blobber {
 		return nil, fmt.Errorf("provider is %s should be %s", blobber.Type, spenum.Blobber)
 	}
 	return blobber, nil
@@ -222,7 +222,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
-	blobber.Type = spenum.Blobber
+	blobber.ProviderType = spenum.Blobber
 
 	// insert, update or remove blobber
 	if err = sc.insertBlobber(t, conf, blobber, balances); err != nil {
@@ -529,7 +529,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 // if data written (size > 0) -- from write pool to challenge pool, otherwise
 // (delete write marker) from challenge back to write pool
 func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
-	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
+	size int64, details *BlobberAllocation, wmTime, _ common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
@@ -927,7 +927,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	return
 }
 
-func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
+func emitUpdateBlobberWriteStatEvent(w *WriteMarker, _ currency.Coin, balances cstate.StateContextI) {
 	bb := event.Blobber{
 		Provider:  event.Provider{ID: w.BlobberID},
 		Used:      w.Size,

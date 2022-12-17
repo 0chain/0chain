@@ -59,9 +59,9 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			Provider: &provider.Provider{
 				ID:              b.ID,
 				LastHealthCheck: common.Timestamp(b.LastHealthCheck),
+				ProviderType:    spenum.Blobber,
 			},
-			BaseURL:      b.BaseURL,
-			ProviderType: spenum.Blobber,
+			BaseURL: b.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  b.Latitude,
 				Longitude: b.Longitude,

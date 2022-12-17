@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/core/datastore"
@@ -358,9 +360,12 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
 		blobber := &StorageNode{
-			ID:           id,
-			ProviderType: spenum.Blobber,
-			BaseURL:      getMockBlobberUrl(i),
+			Provider: &provider.Provider{
+				ID:              id,
+				LastHealthCheck: balances.GetTransaction().CreationDate,
+				ProviderType:    spenum.Blobber,
+			},
+			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
 				Longitude: longitudeStep*float64(i) - maxLongitude,
@@ -368,7 +373,6 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
-			LastHealthCheck:   balances.GetTransaction().CreationDate, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
 			//TotalStake: viper.GetInt64(sc.StorageMaxStake), todo missing field
@@ -395,14 +399,14 @@ func AddMockBlobbers(
 				Capacity:         blobber.Capacity,
 				Allocated:        blobber.Allocated,
 				ReadData:         blobber.Allocated * 2,
-				LastHealthCheck:  int64(blobber.LastHealthCheck),
 				Provider: event.Provider{
-					ID:             blobber.ID,
-					DelegateWallet: blobber.StakePoolSettings.DelegateWallet,
-					MinStake:       blobber.StakePoolSettings.MinStake,
-					MaxStake:       blobber.StakePoolSettings.MaxStake,
-					NumDelegates:   blobber.StakePoolSettings.MaxNumDelegates,
-					ServiceCharge:  blobber.StakePoolSettings.ServiceChargeRatio,
+					ID:              blobber.ID,
+					LastHealthCheck: int64(blobber.LastHealthCheck),
+					DelegateWallet:  blobber.StakePoolSettings.DelegateWallet,
+					MinStake:        blobber.StakePoolSettings.MinStake,
+					MaxStake:        blobber.StakePoolSettings.MaxStake,
+					NumDelegates:    blobber.StakePoolSettings.MaxNumDelegates,
+					ServiceCharge:   blobber.StakePoolSettings.ServiceChargeRatio,
 				},
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
@@ -518,8 +522,11 @@ func AddMockValidators(
 		id := getMockValidatorId(i)
 		url := getMockValidatorUrl(i)
 		validator := &ValidationNode{
-			ID:                id,
-			ProviderType:      spenum.Validator,
+			Provider: &provider.Provider{
+				ID:              id,
+				LastHealthCheck: balances.GetTransaction().CreationDate,
+				ProviderType:    spenum.Validator,
+			},
 			BaseURL:           url,
 			PublicKey:         publicKeys[i%len(publicKeys)],
 			StakePoolSettings: getMockStakePoolSettings(id),
@@ -589,7 +596,7 @@ func GetMockBlobberStakePools(
 			if viper.GetBool(sc.EventDbEnabled) {
 				dp := event.DelegatePool{
 					PoolID:       id,
-					ProviderType: int(spenum.Blobber),
+					ProviderType: spenum.Blobber,
 					ProviderID:   bId,
 					DelegateID:   sp.Pools[id].DelegateID,
 					Balance:      sp.Pools[id].Balance,

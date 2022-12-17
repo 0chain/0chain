@@ -21,13 +21,9 @@ func (ssc *StorageSmartContract) blobberHealthCheck(
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
 
-	conf, err := getConfig(balances)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't get configs"+err.Error())
+	if err := healthCheck(blobber, t.CreationDate, balances); err != nil {
+		return "", common.NewError("blobber_health_check_failed", err.Error())
 	}
-
-	blobber.HealthCheck(t.CreationDate, conf.HealthCheckPeriod, balances)
 
 	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -60,11 +56,12 @@ func (ssc *StorageSmartContract) validatorHealthCheck(
 	return "", nil
 }
 
-func healthCheck(provider provider.Provider, now common.Timestamp, balances cstate.StateContextI) error {
+func healthCheck(provider provider.Abstract, now common.Timestamp, balances cstate.StateContextI) error {
 	conf, err := getConfig(balances)
 	if err != nil {
 		return fmt.Errorf("can't get configs: %v", err)
 	}
 
 	provider.HealthCheck(now, conf.HealthCheckPeriod, balances)
+	return nil
 }

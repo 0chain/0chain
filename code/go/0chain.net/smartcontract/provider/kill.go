@@ -8,7 +8,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 type ProviderRequest struct {
@@ -23,7 +22,7 @@ func Kill(
 	input []byte,
 	clientID, ownerId string,
 	killSlash float64,
-	providerSpecific func(ProviderRequest) (ProviderI, stakepool.AbstractStakePool, error),
+	providerSpecific func(ProviderRequest) (Abstract, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
 	var req ProviderRequest
@@ -61,7 +60,7 @@ func Kill(
 		return err
 	}
 
-	if err = sp.Save(spenum.Validator, req.ID, balances); err != nil {
+	if err = sp.Save(p.Type(), req.ID, balances); err != nil {
 		return err
 	}
 

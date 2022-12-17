@@ -295,7 +295,8 @@ func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 //
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
+
+func (_ *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
 	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
 	return getStakePool(providerType, providerID, balances)
 }

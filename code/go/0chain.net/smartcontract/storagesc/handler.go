@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -1122,7 +1124,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	pools, err := edb.GetUserDelegatePools(clientID, int(spenum.Blobber))
+	pools, err := edb.GetUserDelegatePools(clientID, spenum.Blobber)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
 		return
@@ -1211,10 +1213,10 @@ func (srh *StorageRestHandler) getUserLockedTotal(w http.ResponseWriter, r *http
 //	500:
 func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
 	providerID := r.URL.Query().Get("provider_id")
-	providerTypeString := r.URL.Query().Get("provider_type")
-	providerType, err := strconv.Atoi(providerTypeString)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
+	providerType := spenum.ToProviderType(r.URL.Query().Get("provider_type"))
+	if providerType == spenum.Invalid {
+		common.Respond(w, r, nil, common.NewErrBadRequest(
+			"invalid provider_type: "+r.URL.Query().Get("provider_type")))
 		return
 	}
 
@@ -1233,7 +1235,7 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, res, nil)
 }
 
-func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
+func getProviderStakePoolStats(providerType spenum.Provider, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
 	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
@@ -1242,7 +1244,7 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 	spStat := &stakepool.StakePoolStat{}
 	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
 
-	switch spenum.Provider(providerType) {
+	switch providerType {
 	case spenum.Blobber:
 		blobber, err := edb.GetBlobber(providerID)
 		if err != nil {
@@ -2464,7 +2466,11 @@ type storageNodeResponse struct {
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: &StorageNode{
-			ID:      blobber.ID,
+			Provider: &provider.Provider{
+				ID:              blobber.ID,
+				LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+				ProviderType:    spenum.Blobber,
+			},
 			BaseURL: blobber.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  blobber.Latitude,
@@ -2476,9 +2482,9 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 				MinLockDemand:    blobber.MinLockDemand,
 				MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
 			},
-			Capacity:        blobber.Capacity,
-			Allocated:       blobber.Allocated,
-			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			Capacity:  blobber.Capacity,
+			Allocated: blobber.Allocated,
+
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     blobber.DelegateWallet,
 				MinStake:           blobber.MinStake,
@@ -2539,7 +2545,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	if active == "true" {
 		blobbers, err = edb.GetActiveBlobbers(limit)
 	} else {
-		blobbers, err = edb.GetBlobbers(limit)
+		blobbers, err = edb.GetBlobbers(limit, false, false)
 	}
 
 	if err != nil {
