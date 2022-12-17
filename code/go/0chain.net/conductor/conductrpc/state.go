@@ -41,7 +41,7 @@ type State struct {
 	WrongNotarizedBlockKey                  *config.Bad
 	NotarizeOnlyCompetingBlock              *config.Bad
 	NotarizedBlock                          *config.Bad
-	CollectVerificationTicketsWhenMissedVRF *config.CollectVerificationTicketsWhenMissedVRF
+	CollectVerificationTicketsWhenMissedVRF *cases.CollectVerificationTicketsWhenMissedVRF
 	// Byzantine blockchain sharders
 	FinalizedBlock    *config.Bad
 	MagicBlock        *config.Bad

@@ -885,7 +885,7 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 
 	switch cfg := configurator.(type) {
 	case *cases.RoundHasFinalized:
-		r.server.CurrentTest.Configure([]byte(strconv.Itoa(cfg.Round)))
+		_ = r.server.CurrentTest.Configure([]byte(strconv.Itoa(cfg.Round)))
 	}
 
 	return nil
