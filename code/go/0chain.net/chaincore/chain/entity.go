@@ -1881,3 +1881,56 @@ func (c *Chain) BlockTicketsVerifyWithLock(ctx context.Context, blockHash string
 		return ctx.Err()
 	}
 }
+
+func SyncAndRetry(ctx context.Context, b *block.Block, desc string, f func(ctx context.Context, ch chan struct{}) error) error {
+	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for {
+		retry, err := func() (retry bool, err error) {
+			wc := make(chan struct{}, 1)
+			err = f(cctx, wc)
+			if err == nil {
+				return false, nil
+			}
+
+			if !cstate.ErrInvalidState(err) {
+				logging.Logger.Warn("sync and retry - none invalid state error",
+					zap.String("desc", desc),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.Error(err))
+				return false, err
+			}
+
+			select {
+			case <-cctx.Done():
+				return false, cctx.Err()
+			case _, ok := <-wc:
+				if !ok {
+					logging.Logger.Error("sync and retry - sync failed",
+						zap.String("desc", desc),
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					return false, err
+				}
+
+				logging.Logger.Debug("sync and retry - retry",
+					zap.String("desc", desc),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("prev_block", b.PrevHash),
+					zap.String("state_hash", util.ToHex(b.ClientStateHash)))
+				return true, nil
+			}
+		}()
+
+		if err != nil {
+			return err
+		}
+
+		if !retry {
+			return nil
+		}
+	}
+}
