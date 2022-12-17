@@ -118,6 +118,7 @@ func (c *Client) stakeLockRequest(t testing.TB) []byte {
 func (c *Client) addValidatorRequest(t testing.TB) []byte {
 	var vn ValidationNode
 	vn.ID = c.id
+	vn.Type = spenum.Validator
 	vn.BaseURL = getValidatorURL(c.id)
 	vn.StakePoolSettings.MaxNumDelegates = 100
 	vn.StakePoolSettings.MinStake = 0
@@ -153,8 +154,9 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	balances.(*testBalances).setTransaction(t, tx)
 	blobber := new(StorageNode)
 	blobber.ID = c.id
-	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
-	require.NoError(t, err)
+	blobber.Type = spenum.Blobber
+	//_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	//require.NoError(t, err)
 	var input = c.addValidatorRequest(t)
 	return ssc.addValidator(tx, input, balances)
 }

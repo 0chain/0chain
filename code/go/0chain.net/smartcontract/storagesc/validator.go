@@ -58,7 +58,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		sc.statIncr(statNumberOfValidators)
 	default:
 		return "", common.NewError("add_validator_failed",
-			"Failed to get validator."+err.Error())
+			"Failed to get validator. "+err.Error())
 	}
 
 	var conf *Config
