@@ -224,8 +224,10 @@ func main() {
 	go sc.StartLFMBWorker(ctx)
 
 	setupBlockStorageProvider(mConf, workdir)
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock, initStates)
+	if sc.GetCurrentRound() == 0 {
+		sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
+			magicBlock, initStates)
+	}
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()
