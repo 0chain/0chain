@@ -683,12 +683,18 @@ func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	return tmpt
 }
 
-func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
+func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, round int64, clientID string, waitC ...chan struct{}) (*state.State, error) {
 	if clientState == nil {
 		return nil, common.NewError("GetStateById", "client state does not exist")
 	}
 	s := &state.State{}
 	s.Balance = currency.Coin(0)
+	defer func() {
+		if mKeys := clientState.GetMissingNodeKeys(); len(mKeys) > 0 {
+			c.SyncMissingNodes(round, mKeys, waitC...)
+		}
+	}()
+
 	err := clientState.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {

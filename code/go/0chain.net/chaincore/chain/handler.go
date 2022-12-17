@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/block"
@@ -1369,10 +1370,23 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, err
 	}
 
-	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, txn.ClientID)
-	if !isValid(err) {
-		return nil, common.NewErrInternal("miner state not synced yet")
+	lfb := sc.GetLatestFinalizedBlock()
+
+	var s *state.State
+	if err := SyncAndRetry(ctx, lfb, "put transaction", func(ctx context.Context, waitC chan struct{}) error {
+		var err error
+		lfb := sc.GetLatestFinalizedBlock()
+		s, err = sc.GetStateById(lfb.ClientState, lfb.Round, txn.ClientID, waitC)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil && cstate.ErrInvalidState(err) {
+		logging.Logger.Error("put transaction failed", zap.Error(err))
+		return nil, errors.New("miner state not synced yet")
 	}
+
 	nonce := int64(0)
 	if s != nil {
 		nonce = s.Nonce
@@ -1677,7 +1691,8 @@ func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
 
-	s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
+	lfb := c.GetLatestFinalizedBlock()
+	s, err := c.GetStateById(lfb.ClientState, lfb.Round, txn.ClientID)
 	if !isValid(err) {
 		logging.Logger.Error(err.Error(), zap.Any("clientState", s))
 	}
