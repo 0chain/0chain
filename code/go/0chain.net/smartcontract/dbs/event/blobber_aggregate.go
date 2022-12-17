@@ -152,12 +152,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 
 		gs.totalWritePricePeriod += aggregate.WritePrice
 
-		// update global snapshot object
-		ts, err := aggregate.TotalStake.Int64()
-		if err != nil {
-			logging.Logger.Error("converting coin to int64", zap.Error(err))
-		}
-		gs.TotalStaked = ts
 		gs.SuccessfulChallenges += int64(aggregate.ChallengesPassed - old.ChallengesPassed)
 		gs.TotalChallenges += int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
 		gs.AllocatedStorage += aggregate.Allocated - old.Allocated
