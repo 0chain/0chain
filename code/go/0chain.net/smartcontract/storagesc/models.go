@@ -199,6 +199,7 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 type ValidationNode struct {
 	*provider.Provider
 	BaseURL           string             `json:"url"`
+	Type              spenum.Provider    `json:"type"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	PartitionPosition int                `json:"partition_position"`
@@ -224,17 +225,17 @@ func (vn *ValidationNode) ValidatorStatus(now common.Timestamp, conf *Config) (p
 }
 
 // validate the validator configurations
-func (vn *ValidationNode) validate(conf *Config) (err error) {
+func (vn *ValidationNode) validate(_ *Config) (err error) {
 	if strings.Contains(vn.BaseURL, "localhost") &&
 		node.Self.Host != "localhost" {
-		return errors.New("invalid validator base url")
+		return errors.New("invalid vali1dator base url")
 	}
 
 	return
 }
 
-func (vn *ValidationNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + vn.ID)
+func (vn *ValidationNode) GetKey(_ string) datastore.Key {
+	return provider.GetKey(vn.ID)
 }
 
 func (vn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
@@ -361,6 +362,7 @@ type Info struct {
 type StorageNode struct {
 	*provider.Provider
 	BaseURL                 string                 `json:"url"`
+	Type                    spenum.Provider        `json:"type"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
@@ -437,8 +439,8 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 	return
 }
 
-func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ID)
+func (sn *StorageNode) GetKey(_ string) datastore.Key {
+	return provider.GetKey(sn.ID)
 }
 
 func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {

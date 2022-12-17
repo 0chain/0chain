@@ -8,7 +8,7 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-
+ "0chain.net/core/datastore"
 	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
@@ -58,6 +58,12 @@ type Provider struct {
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	HasBeenShutDown bool             `json:"is_shut_down"`
 	HasBeenKilled   bool             `json:"is_killed"`
+}
+
+
+
+func GetKey(id string) datastore.Key {
+	return "provider:" + id
 }
 
 func (p *Provider) Id() string {

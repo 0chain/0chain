@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -248,6 +250,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
 			ID:        blob[i],
+			Type:      spenum.Blobber,
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
@@ -331,8 +334,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 				"InsertTrieNode", stakePoolKey(spenum.Blobber, blobber.ID), mock.Anything,
 			).Return("", nil).Once()
 			balances.On(
-				"GetTrieNode", "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"+blobber.ID,
+				"GetTrieNode", provider.GetKey(blobber.ID),
 				mock.MatchedBy(func(a *StorageNode) bool {
+					a.Type = spenum.Blobber
 					a.Terms.MaxOfferDuration = 24 * 365 * time.Hour * 2
 					a.Capacity = 100000000000
 					a.LastHealthCheck = common.Timestamp(time.Now().UnixNano())
@@ -566,7 +570,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 			_, err := args.ssc.freeAllocationRequest(args.txn, args.input, args.balances)
 
-			require.EqualValues(t, test.want.err, err != nil, err)
+			if (test.want.err) != (err != nil) {
+				require.EqualValues(t, test.want.err, err != nil, err)
+			}
+
 			if err != nil {
 				require.EqualValues(t, test.want.errMsg, err.Error())
 				return
@@ -614,6 +621,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
 			ID:        strconv.Itoa(i),
+			Type:      spenum.Blobber,
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{

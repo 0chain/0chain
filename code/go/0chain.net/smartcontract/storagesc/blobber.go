@@ -30,6 +30,9 @@ func getBlobber(
 	if err != nil {
 		return nil, err
 	}
+	if blobber.Type != spenum.Blobber {
+		return nil, fmt.Errorf("provider is %s should be %s", blobber.Type, spenum.Blobber)
+	}
 	return blobber, nil
 }
 
@@ -219,6 +222,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
+	blobber.Type = spenum.Blobber
 
 	// insert, update or remove blobber
 	if err = sc.insertBlobber(t, conf, blobber, balances); err != nil {

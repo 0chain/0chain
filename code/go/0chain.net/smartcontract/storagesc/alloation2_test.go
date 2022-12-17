@@ -71,6 +71,7 @@ func TestNewAllocation(t *testing.T) {
 	var goodBlobber = StorageNode{
 		Capacity:  536870912,
 		Allocated: 73,
+		Type:      spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -134,6 +135,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
+		Type:     spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -160,6 +162,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = blobberTemplate
 		nextBlobber.ID = strconv.Itoa(i)
+		nextBlobber.Type = spenum.Blobber
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
 		writePrice *= 0.9
 		var minLockDemand = float64(allocation.Size) * writePrice * blobberYaml.minLockDemand
@@ -251,6 +254,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	}
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
+		Type:     spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -278,6 +282,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = blobberTemplate
 		nextBlobber.ID = strconv.Itoa(i)
+		nextBlobber.Type = spenum.Blobber
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
 		writePrice *= 0.9
 		var minLockDemand = float64(allocation.Size) * writePrice * blobberYaml.minLockDemand

@@ -1796,13 +1796,20 @@ func (z *StorageChallenge) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 13
+	// map header, size 14
 	// string "ID"
-	o = append(o, 0x8d, 0xa2, 0x49, 0x44)
+	o = append(o, 0x8e, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
 	o = msgp.AppendString(o, z.BaseURL)
+	// string "Type"
+	o = append(o, 0xa4, 0x54, 0x79, 0x70, 0x65)
+	o, err = z.Type.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Type")
+		return
+	}
 	// string "Geolocation"
 	o = append(o, 0xab, 0x47, 0x65, 0x6f, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e)
 	// map header, size 2
@@ -1898,6 +1905,12 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			z.BaseURL, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "BaseURL")
+				return
+			}
+		case "Type":
+			bts, err = z.Type.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Type")
 				return
 			}
 		case "Geolocation":
@@ -2044,7 +2057,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize()
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 5 + z.Type.Msgsize() + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize()
 	return
 }
 
@@ -2255,13 +2268,20 @@ func (z *Terms) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *ValidationNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 4
 	// string "ID"
-	o = append(o, 0x83, 0xa2, 0x49, 0x44)
+	o = append(o, 0x84, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
 	o = msgp.AppendString(o, z.BaseURL)
+	// string "Type"
+	o = append(o, 0xa4, 0x54, 0x79, 0x70, 0x65)
+	o, err = z.Type.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Type")
+		return
+	}
 	// string "StakePoolSettings"
 	o = append(o, 0xb1, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73)
 	o, err = z.StakePoolSettings.MarshalMsg(o)
@@ -2302,6 +2322,12 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BaseURL")
 				return
 			}
+		case "Type":
+			bts, err = z.Type.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Type")
+				return
+			}
 		case "StakePoolSettings":
 			bts, err = z.StakePoolSettings.UnmarshalMsg(bts)
 			if err != nil {
@@ -2322,7 +2348,7 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *ValidationNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 18 + z.StakePoolSettings.Msgsize()
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 5 + z.Type.Msgsize() + 18 + z.StakePoolSettings.Msgsize()
 	return
 }
 
@@ -2465,18 +2491,9 @@ func (z *ValidatorNodes) MarshalMsg(b []byte) (o []byte, err error) {
 		if z.Nodes[za0001] == nil {
 			o = msgp.AppendNil(o)
 		} else {
-			// map header, size 3
-			// string "ID"
-			o = append(o, 0x83, 0xa2, 0x49, 0x44)
-			o = msgp.AppendString(o, z.Nodes[za0001].ID)
-			// string "BaseURL"
-			o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
-			o = msgp.AppendString(o, z.Nodes[za0001].BaseURL)
-			// string "StakePoolSettings"
-			o = append(o, 0xb1, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73)
-			o, err = z.Nodes[za0001].StakePoolSettings.MarshalMsg(o)
+			o, err = z.Nodes[za0001].MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "Nodes", za0001, "StakePoolSettings")
+				err = msgp.WrapError(err, "Nodes", za0001)
 				return
 			}
 		}
@@ -2525,45 +2542,10 @@ func (z *ValidatorNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					if z.Nodes[za0001] == nil {
 						z.Nodes[za0001] = new(ValidationNode)
 					}
-					var zb0003 uint32
-					zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
+					bts, err = z.Nodes[za0001].UnmarshalMsg(bts)
 					if err != nil {
 						err = msgp.WrapError(err, "Nodes", za0001)
 						return
-					}
-					for zb0003 > 0 {
-						zb0003--
-						field, bts, err = msgp.ReadMapKeyZC(bts)
-						if err != nil {
-							err = msgp.WrapError(err, "Nodes", za0001)
-							return
-						}
-						switch msgp.UnsafeString(field) {
-						case "ID":
-							z.Nodes[za0001].ID, bts, err = msgp.ReadStringBytes(bts)
-							if err != nil {
-								err = msgp.WrapError(err, "Nodes", za0001, "ID")
-								return
-							}
-						case "BaseURL":
-							z.Nodes[za0001].BaseURL, bts, err = msgp.ReadStringBytes(bts)
-							if err != nil {
-								err = msgp.WrapError(err, "Nodes", za0001, "BaseURL")
-								return
-							}
-						case "StakePoolSettings":
-							bts, err = z.Nodes[za0001].StakePoolSettings.UnmarshalMsg(bts)
-							if err != nil {
-								err = msgp.WrapError(err, "Nodes", za0001, "StakePoolSettings")
-								return
-							}
-						default:
-							bts, err = msgp.Skip(bts)
-							if err != nil {
-								err = msgp.WrapError(err, "Nodes", za0001)
-								return
-							}
-						}
 					}
 				}
 			}
@@ -2586,7 +2568,7 @@ func (z *ValidatorNodes) Msgsize() (s int) {
 		if z.Nodes[za0001] == nil {
 			s += msgp.NilSize
 		} else {
-			s += 1 + 3 + msgp.StringPrefixSize + len(z.Nodes[za0001].ID) + 8 + msgp.StringPrefixSize + len(z.Nodes[za0001].BaseURL) + 18 + z.Nodes[za0001].StakePoolSettings.Msgsize()
+			s += z.Nodes[za0001].Msgsize()
 		}
 	}
 	return
