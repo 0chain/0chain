@@ -155,7 +155,7 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: "Set PR status as pending"
-        uses: 0chain/actions/set-pr-status@master
+        uses: 0chain/actions/set-pr-status@fix/nft-changes-failing-system-tests
         if: steps.findPr.outputs.number
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
@@ -201,7 +201,7 @@ jobs:
           custom_go_sdk_version: staging
 
       - name: "Run System tests"
-        uses: 0chain/actions/run-system-tests@master
+        uses: 0chain/actions/run-system-tests@fix/nft-changes-failing-system-tests
         with:
           system_tests_branch: master
           network: ${{ env.NETWORK_URL }}
@@ -216,7 +216,7 @@ jobs:
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
-        uses: 0chain/actions/set-pr-status@master
+        uses: 0chain/actions/set-pr-status@fix/nft-changes-failing-system-tests
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
           description: "System tests with default config"
