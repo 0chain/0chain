@@ -21,14 +21,6 @@ import (
 
 //go:generate msgp -v -io=false -tests=false -unexported
 
-// unlock response
-type unlockResponse struct {
-	// one of the fields is set in a response, the Unstake if can't unstake
-	// for now and the TokenPoolTransferResponse if it has a pool had unlocked
-	Unstake bool          `json:"unstake"` // max time to wait to unstake
-	Balance currency.Coin `json:"balance"`
-}
-
 type stakePoolRequest struct {
 	AuthorizerID string `json:"authorizer_id,omitempty"`
 }
@@ -47,7 +39,7 @@ func (spr *stakePoolRequest) encode() []byte {
 
 // ----------- LockingPool pool --------------------------
 
-//type stakePool stakepool.StakePool
+//type stakePool stakepool.Provider
 
 type StakePool struct {
 	stakepool.StakePool
@@ -208,7 +200,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 	}
 
 	if t.Value < gn.MinLockAmount {
-		return "", common.NewError(code, "too small stake to lock")
+		return "", common.NewError(code, fmt.Sprintf("too small stake to lock: %v < %v", t.Value, gn.MinLockAmount))
 	}
 
 	var spr stakePoolRequest
@@ -225,7 +217,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 		return "", common.NewErrorf(code, "max_delegates reached: %v, no more stake pools allowed", gn.MaxDelegates)
 	}
 
-	err = sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)
+	out, err := sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "stake pool digging error: %v", err)
 	}
@@ -236,7 +228,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(
 
 	// TO-DO: Update stake in eventDB
 
-	return
+	return out, err
 }
 
 func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
@@ -260,7 +252,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
 	}
 
-	amount, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
+	output, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
 	if err != nil {
 		return "", common.NewErrorf(code, "%v", err)
 	}
@@ -270,7 +262,7 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 		return "", common.NewErrorf(code, "saving stake pool: %v", err)
 	}
 
-	return toJson(&unlockResponse{Unstake: true, Balance: amount}), nil
+	return output, nil
 }
 
 func toJson(val interface{}) string {

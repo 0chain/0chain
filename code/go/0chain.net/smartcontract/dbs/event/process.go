@@ -107,6 +107,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeStakePoolRewardsEvents(),
 			mergeAddDelegatePoolsEvents(),
 
+			mergeUpdateMinerTotalStakesEvents(),
+			mergeUpdateSharderTotalStakesEvents(),
+			mergeUpdateAuthorizerTotalStakesEvents(),
+
 			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
 			mergeAddReadMarkerEvents(),
@@ -120,7 +124,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	)
 
 	for _, e := range events {
-		if e.Type == TypeChain {
+		if e.Type == TypeChain || e.Tag == TagUniqueAddress {
 			others = append(others, e)
 			continue
 		}
@@ -224,7 +228,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 }
 
 func isNotAddBlockEvent(es blockEvents) bool {
-	return !(len(es.events) == 1 && es.events[0].Type == TypeChain)
+	return !(len(es.events) == 1 && es.events[0].Type == TypeChain && es.events[0].Tag == TagAddBlock)
 }
 
 func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, error) {
@@ -318,7 +322,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	round := e.round
 	var events []Event
 	for _, ev := range e.events { //filter out round events
-		if ev.Type == TypeStats {
+		if ev.Type == TypeStats || (ev.Type == TypeChain && ev.Tag == TagFinalizeBlock) {
 			events = append(events, ev)
 		}
 	}
@@ -396,6 +400,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.DeleteAuthorizer(id)
+	case TagUpdateAuthorizerTotalStake:
+		as, ok := fromEvent[[]Authorizer](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateAuthorizersTotalStakes(*as)
 	case TagAddWriteMarker:
 		wms, ok := fromEvent[[]WriteMarker](event.Data)
 		if !ok {
@@ -438,6 +449,14 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
+
+		return edb.addOrUpdateBlock(*block)
+	case TagFinalizeBlock:
+		block, ok := fromEvent[Block](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		logging.Logger.Debug("updating block event - finalized", zap.String("id", block.Hash))
 
 		return edb.addOrUpdateBlock(*block)
 	case TagAddOrOverwiteValidator:
@@ -483,6 +502,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.addOrOverwriteSharders(*sharders)
+	case TagUpdateMinerTotalStake:
+		m, ok := fromEvent[[]Miner](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateMinersTotalStakes(*m)
 	case TagUpdateSharder:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -501,6 +527,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addOrOverwriteCurator(*c)
+	case TagUpdateSharderTotalStake:
+		s, ok := fromEvent[[]Sharder](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.updateShardersTotalStakes(*s)
 	case TagRemoveCurator:
 		c, ok := fromEvent[Curator](event.Data)
 		if !ok {

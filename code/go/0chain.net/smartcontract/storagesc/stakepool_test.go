@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -46,7 +47,7 @@ func Test_stakePool_save(t *testing.T) {
 		sp       = newStakePool()
 		balances = newTestBalances(t, false)
 	)
-	require.NoError(t, sp.save(spenum.Blobber, blobID, balances))
+	require.NoError(t, sp.Save(spenum.Blobber, blobID, balances))
 	assert.NotZero(t, balances.tree[stakePoolKey(spenum.Blobber, blobID)])
 }
 
@@ -77,7 +78,8 @@ func TestStakePoolLock(t *testing.T) {
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
-
+		MinStake:     0.1e10,
+		MaxStake:     10.1e10,
 		StakePool: &stakePoolConfig{
 			MinLock: 0.1e10,
 		},
@@ -90,7 +92,8 @@ func TestStakePoolLock(t *testing.T) {
 		var delegates = []mockStakePool{{5, 0}}
 		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall)
+		cond := fmt.Sprintf(": %v < %v", value, scYaml.StakePool.MinLock)
+		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall+cond)
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
@@ -153,6 +156,12 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	input, err := json.Marshal(spr)
 	require.NoError(t, err)
 	var stakePool = newStakePool()
+	stakePool.Settings = stakepool.Settings{
+		DelegateWallet:  blobberId,
+		MinStake:        value + 1,
+		MaxStake:        value + 100.0,
+		MaxNumDelegates: 20,
+	}
 	for i, stake := range delegates {
 		var id = strconv.Itoa(i)
 		stakePool.Pools["pool"+id] = &stakepool.DelegatePool{
@@ -160,7 +169,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 			RoundCreated: stake.MintAt,
 		}
 	}
-	require.NoError(t, stakePool.save(spenum.Blobber, blobberId, ctx))
+	require.NoError(t, stakePool.Save(spenum.Blobber, blobberId, ctx))
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
 	if err != nil {

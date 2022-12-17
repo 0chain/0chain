@@ -312,7 +312,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
-		return "", common.NewErrorf("free_allocation_failed", "assigner save failed: %v", err)
+		return "", common.NewErrorf("free_allocation_failed", "assigner Save failed: %v", err)
 	}
 
 	txn.Value = readPoolTokens
@@ -384,7 +384,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	assigner.CurrentRedeemed = newRedeemed
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
-		return "", common.NewErrorf("update_free_storage_request", "assigner save failed: %v", err)
+		return "", common.NewErrorf("update_free_storage_request", "assigner Save failed: %v", err)
 	}
 
 	return resp, nil

@@ -148,7 +148,7 @@ type authorizerNode struct {
 
 func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 	resp := &authorizerResponse{
-		AuthorizerID:    auth.AuthorizerID,
+		AuthorizerID:    auth.ID,
 		URL:             auth.URL,
 		Fee:             auth.Fee,
 		Latitude:        auth.Latitude,
@@ -179,7 +179,7 @@ func toNodeResponse(events []event.Authorizer) *authorizerNodesResponse {
 
 func ToNode(ev event.Authorizer) *authorizerNode {
 	return &authorizerNode{
-		ID:  ev.AuthorizerID,
+		ID:  ev.ID,
 		URL: ev.URL,
 	}
 }

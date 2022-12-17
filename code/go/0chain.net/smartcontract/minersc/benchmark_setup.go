@@ -101,28 +101,38 @@ func AddMockNodes(
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
-					MinerID:           newNode.ID,
-					LastHealthCheck:   newNode.LastHealthCheck,
-					PublicKey:         newNode.PublicKey,
-					ServiceCharge:     newNode.Settings.ServiceChargeRatio,
-					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
-					MinStake:          newNode.Settings.MinStake,
-					MaxStake:          newNode.Settings.MaxStake,
-					Rewards:           event.ProviderRewards{ProviderID: newNode.ID},
+
+					LastHealthCheck: newNode.LastHealthCheck,
+					PublicKey:       newNode.PublicKey,
+					Provider: event.Provider{
+						ID:            newNode.ID,
+						ServiceCharge: newNode.Settings.ServiceChargeRatio,
+						NumDelegates:  newNode.Settings.MaxNumDelegates,
+						MinStake:      newNode.Settings.MinStake,
+						MaxStake:      newNode.Settings.MaxStake,
+						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+					},
 				}
-				_ = eventDb.Store.Get().Create(&minerDb)
+				if err = eventDb.Store.Get().Create(&minerDb).Error; err != nil {
+					log.Fatal(err)
+				}
 			} else {
 				sharderDb := event.Sharder{
-					SharderID:         newNode.ID,
-					LastHealthCheck:   newNode.LastHealthCheck,
-					PublicKey:         newNode.PublicKey,
-					ServiceCharge:     newNode.Settings.ServiceChargeRatio,
-					NumberOfDelegates: newNode.Settings.MaxNumDelegates,
-					MinStake:          newNode.Settings.MinStake,
-					MaxStake:          newNode.Settings.MaxStake,
-					Rewards:           event.ProviderRewards{ProviderID: newNode.ID},
+
+					LastHealthCheck: newNode.LastHealthCheck,
+					PublicKey:       newNode.PublicKey,
+					Provider: event.Provider{
+						ID:            newNode.ID,
+						ServiceCharge: newNode.Settings.ServiceChargeRatio,
+						NumDelegates:  newNode.Settings.MaxNumDelegates,
+						MinStake:      newNode.Settings.MinStake,
+						MaxStake:      newNode.Settings.MaxStake,
+						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+					},
 				}
-				_ = eventDb.Store.Get().Create(&sharderDb)
+				if err := eventDb.Store.Get().Create(&sharderDb).Error; err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 	}

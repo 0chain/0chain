@@ -11,7 +11,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		return err
 	}
 	data := &event.Blobber{
-		BlobberID:        sn.ID,
+
 		BaseURL:          sn.BaseURL,
 		Latitude:         sn.Geolocation.Latitude,
 		Longitude:        sn.Geolocation.Longitude,
@@ -25,15 +25,18 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
-		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
-		MinStake:       sn.StakePoolSettings.MinStake,
-		MaxStake:       sn.StakePoolSettings.MaxStake,
-		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+		Provider: event.Provider{
+			ID:             sn.ID,
+			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+			MinStake:       sn.StakePoolSettings.MinStake,
+			MaxStake:       sn.StakePoolSettings.MaxStake,
+			NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
 
-		OffersTotal:  sp.TotalOffers,
-		UnstakeTotal: sp.TotalUnStake,
-		TotalStake:   staked,
+			UnstakeTotal: sp.TotalUnStake,
+			TotalStake:   staked,
+		},
+		OffersTotal: sp.TotalOffers,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
@@ -47,7 +50,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	data := &event.Blobber{
-		BlobberID:        sn.ID,
 		BaseURL:          sn.BaseURL,
 		Latitude:         sn.Geolocation.Latitude,
 		Longitude:        sn.Geolocation.Longitude,
@@ -61,20 +63,24 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		SavedData:       sn.SavedData,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 
-		DelegateWallet: sn.StakePoolSettings.DelegateWallet,
-		MinStake:       sn.StakePoolSettings.MinStake,
-		MaxStake:       sn.StakePoolSettings.MaxStake,
-		NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
-		ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
-
-		OffersTotal:  sp.TotalOffers,
-		UnstakeTotal: sp.TotalUnStake,
-		Rewards: event.ProviderRewards{
-			ProviderID:   sn.ID,
-			Rewards:      sp.Reward,
-			TotalRewards: sp.Reward,
+		Provider: event.Provider{
+			ID:             sn.ID,
+			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
+			MinStake:       sn.StakePoolSettings.MinStake,
+			MaxStake:       sn.StakePoolSettings.MaxStake,
+			NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+			TotalStake:     staked,
+			UnstakeTotal:   sp.TotalUnStake,
+			Rewards: event.ProviderRewards{
+				ProviderID:   sn.ID,
+				Rewards:      sp.Reward,
+				TotalRewards: sp.Reward,
+			},
 		},
-		TotalStake:    staked,
+
+		OffersTotal: sp.TotalOffers,
+
 		CreationRound: balances.GetBlock().Round,
 	}
 
@@ -84,7 +90,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedHealth, sn.ID, event.Blobber{
-		BlobberID:       sn.ID,
+		Provider:        event.Provider{ID: sn.ID},
 		Allocated:       sn.Allocated,
 		LastHealthCheck: int64(sn.LastHealthCheck),
 	})
