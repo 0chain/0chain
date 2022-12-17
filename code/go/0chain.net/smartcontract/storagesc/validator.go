@@ -3,7 +3,8 @@ package storagesc
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/provider"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -21,7 +22,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	newValidator.Type = spenum.Validator
+	newValidator.ProviderType = spenum.Validator
 
 	_, err = getValidator(t.ClientID, balances)
 	switch err {
@@ -89,15 +90,17 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 }
 
 func getValidator(id string, balances state.StateContextI) (*ValidationNode, error) {
-	newNode := &ValidationNode{}
-	err := balances.GetTrieNode(provider.GetKey(id), newNode)
+	validator := &ValidationNode{}
+	//err := balances.GetTrieNode(provider.GetKey(id), validator)
+	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
 	if err != nil {
 		return nil, err
 	}
-	if newNode.Type != spenum.Validator {
-		return nil, fmt.Errorf("provider is %s should be %s", newNode.Type, spenum.Validator)
+	if validator.ProviderType != spenum.Validator {
+		logging.Logger.Info("piers getValidator", zap.Any("validator", validator))
+		return nil, fmt.Errorf("provider is %s should be %s", validator.ProviderType, spenum.Validator)
 	}
-	return newNode, nil
+	return validator, nil
 }
 
 func (_ *StorageSmartContract) getValidator(

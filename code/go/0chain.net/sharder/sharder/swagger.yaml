@@ -525,6 +525,13 @@ definitions:
             id:
                 type: string
                 x-go-name: ID
+            provider_id:
+                type: string
+                x-go-name: ProviderId
+            provider_type:
+                format: int64
+                type: integer
+                x-go-name: ProviderType
             rewards:
                 $ref: '#/definitions/Coin'
             round_created:
@@ -1478,6 +1485,8 @@ definitions:
                 format: int64
                 type: integer
                 x-go-name: LastRewardDataReadRound
+            provider_type:
+                $ref: '#/definitions/Provider'
             reward_partition:
                 $ref: '#/definitions/RewardPartitionLocation'
             saved_data:
@@ -1554,18 +1563,9 @@ definitions:
             ID:
                 format: uint64
                 type: integer
-            ReadMarkers:
-                description: ref
-                items:
-                    $ref: '#/definitions/ReadMarker'
-                type: array
             UpdatedAt:
                 format: date-time
                 type: string
-            WriteMarker:
-                items:
-                    $ref: '#/definitions/WriteMarker'
-                type: array
             block_hash:
                 type: string
                 x-go-name: BlockHash
@@ -1657,6 +1657,8 @@ definitions:
             id:
                 type: string
                 x-go-name: ID
+            provider_type:
+                $ref: '#/definitions/Provider'
             stake_pool_settings:
                 $ref: '#/definitions/Settings'
             url:
@@ -2087,6 +2089,8 @@ definitions:
                 format: int64
                 type: integer
                 x-go-name: LastRewardDataReadRound
+            provider_type:
+                $ref: '#/definitions/Provider'
             read_data:
                 format: int64
                 type: integer
@@ -2140,6 +2144,14 @@ definitions:
                     type: integer
                 type: array
                 x-go-name: Rounds
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    userLockedTotalResponse:
+        properties:
+            total:
+                format: int64
+                type: integer
+                x-go-name: Total
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     userPoolStat:
@@ -2905,6 +2917,23 @@ paths:
                 "400":
                     description: ""
                 "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal:
+        get:
+            description: Gets statistic for a user's stake pools
+            operationId: getUserLockedTotal
+            parameters:
+                - description: client for which to get stake pool information
+                  in: query
+                  name: client_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: userLockedTotalResponse
+                    schema:
+                        $ref: '#/definitions/userLockedTotalResponse'
+                "400":
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat:
         get:
@@ -3699,9 +3728,7 @@ paths:
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings:
         get:
-            description: |-
-                global object for miner smart contracts
-                B
+            description: global object for miner smart contracts
             operationId: globalSettings
             responses:
                 "200":

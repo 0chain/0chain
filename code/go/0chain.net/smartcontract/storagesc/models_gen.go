@@ -1803,11 +1803,11 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
 	o = msgp.AppendString(o, z.BaseURL)
-	// string "Type"
-	o = append(o, 0xa4, 0x54, 0x79, 0x70, 0x65)
-	o, err = z.Type.MarshalMsg(o)
+	// string "ProviderType"
+	o = append(o, 0xac, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x54, 0x79, 0x70, 0x65)
+	o, err = z.ProviderType.MarshalMsg(o)
 	if err != nil {
-		err = msgp.WrapError(err, "Type")
+		err = msgp.WrapError(err, "ProviderType")
 		return
 	}
 	// string "Geolocation"
@@ -1907,10 +1907,10 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BaseURL")
 				return
 			}
-		case "Type":
-			bts, err = z.Type.UnmarshalMsg(bts)
+		case "ProviderType":
+			bts, err = z.ProviderType.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Type")
+				err = msgp.WrapError(err, "ProviderType")
 				return
 			}
 		case "Geolocation":
@@ -2057,7 +2057,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 5 + z.Type.Msgsize() + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize()
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 13 + z.ProviderType.Msgsize() + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + z.Terms.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 16 + z.LastHealthCheck.Msgsize() + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 16 + 1 + 6 + msgp.IntSize + 11 + msgp.Int64Size + 10 + z.RewardPartition.Timestamp.Msgsize()
 	return
 }
 
@@ -2275,11 +2275,11 @@ func (z *ValidationNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
 	o = msgp.AppendString(o, z.BaseURL)
-	// string "Type"
-	o = append(o, 0xa4, 0x54, 0x79, 0x70, 0x65)
-	o, err = z.Type.MarshalMsg(o)
+	// string "ProviderType"
+	o = append(o, 0xac, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x54, 0x79, 0x70, 0x65)
+	o, err = z.ProviderType.MarshalMsg(o)
 	if err != nil {
-		err = msgp.WrapError(err, "Type")
+		err = msgp.WrapError(err, "ProviderType")
 		return
 	}
 	// string "StakePoolSettings"
@@ -2322,10 +2322,10 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BaseURL")
 				return
 			}
-		case "Type":
-			bts, err = z.Type.UnmarshalMsg(bts)
+		case "ProviderType":
+			bts, err = z.ProviderType.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Type")
+				err = msgp.WrapError(err, "ProviderType")
 				return
 			}
 		case "StakePoolSettings":
@@ -2348,7 +2348,7 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *ValidationNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 5 + z.Type.Msgsize() + 18 + z.StakePoolSettings.Msgsize()
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 13 + z.ProviderType.Msgsize() + 18 + z.StakePoolSettings.Msgsize()
 	return
 }
 
