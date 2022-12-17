@@ -8,15 +8,14 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
-type providerRequest struct {
+type ProviderRequest struct {
 	ID string `json:"id"`
 }
 
-func (pr *providerRequest) decode(p []byte) error {
+func (pr *ProviderRequest) decode(p []byte) error {
 	return json.Unmarshal(p, pr)
 }
 
@@ -24,20 +23,12 @@ func Kill(
 	input []byte,
 	clientID, ownerId string,
 	killSlash float64,
-	providerSpecific func(providerRequest) (ProviderI, stakepool.AbstractStakePool, error),
-	pType spenum.Provider,
+	providerSpecific func(ProviderRequest) (ProviderI, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
-	var errCode = "kill_" + pType.String() + "_failed"
-	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
-		return ownerId == clientID
-	}); err != nil {
-		return err
-	}
-
-	var req providerRequest
+	var req ProviderRequest
 	if err := req.decode(input); err != nil {
-		return common.NewError(errCode, err.Error())
+		return err
 	}
 
 	p, sp, err := providerSpecific(req)
@@ -45,31 +36,39 @@ func Kill(
 		return err
 	}
 
+	var errCode = "kill_" + p.Type().String() + "_failed"
+	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
+		return ownerId == clientID
+	}); err != nil {
+		return err
+	}
+
 	if p.IsKilled() {
-		return common.NewError(errCode, "already killed")
+		return fmt.Errorf("already killed")
 	}
 	p.Kill()
 	if err := p.Save(balances); err != nil {
-		return common.NewError(errCode, "cannot save: "+err.Error())
+		return err
 	}
 
 	sp.Kill()
 	if err := sp.SlashFraction(
 		killSlash,
 		req.ID,
-		pType,
+		p.Type(),
 		balances,
 	); err != nil {
-		return common.NewError(errCode, "can't slash validator: "+err.Error())
+		return err
 	}
 
 	if err = sp.Save(spenum.Validator, req.ID, balances); err != nil {
-		return common.NewError(errCode, fmt.Sprintf("saving stake pool: %v", err))
+		return err
 	}
 
-	if err := emitUpdateProvider(p, sp, balances); err != nil {
-		return common.NewError(errCode, fmt.Sprintf("emitting event: %v", err))
-	}
+	// todo piers
+	//if err := emitUpdateProvider(p, sp, balances); err != nil {
+	//	return common.NewError(errCode, fmt.Sprintf("emitting event: %v", err))
+	//}
 
 	return nil
 }

@@ -90,7 +90,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	return nil
 }
 
-func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
+func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedHealth, sn.ID, event.Blobber{
 		Provider: event.Provider{
 			ID:              sn.ID,
@@ -98,5 +98,4 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 		},
 		Allocated: sn.Allocated,
 	})
-	return nil
 }

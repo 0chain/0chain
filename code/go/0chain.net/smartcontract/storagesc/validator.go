@@ -21,7 +21,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	newValidator.Type = spenum.Validator
+	newValidator.ProviderType = spenum.Validator
 
 	_, err = getValidator(t.ClientID, balances)
 	switch err {
@@ -93,11 +93,11 @@ func getValidator(
 	balances state.CommonStateContextI,
 ) (*ValidationNode, error) {
 	validator := newValidatorNode(validatorID)
-	err := balances.GetTrieNode(provider.GetKey(id), validator)
+	err := balances.GetTrieNode(provider.GetKey(validatorID), validator)
 	if err != nil {
 		return nil, err
 	}
-	if validator.Type != spenum.Validator {
+	if validator.ProviderType != spenum.Validator {
 		return nil, fmt.Errorf("provider is %s should be %s", validator.Type, spenum.Validator)
 	}
 	return validator, nil

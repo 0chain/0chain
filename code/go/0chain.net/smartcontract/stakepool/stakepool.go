@@ -44,7 +44,7 @@ type AbstractStakePool interface {
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
 	Kill()
-	IsDead()
+	IsDead() bool
 	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
 }
 
@@ -87,13 +87,13 @@ type StakePoolStat struct {
 }
 
 type DelegatePoolStat struct {
-	ID           string        `json:"id"`            // blobber ID
-	Balance      currency.Coin `json:"balance"`       // current balance
-	DelegateID   string        `json:"delegate_id"`   // wallet
-	Rewards      currency.Coin `json:"rewards"`       // total for all time
-	UnStake      bool          `json:"unstake"`       // want to unstake
-	ProviderId   string        `json:"provider_id"`   // id
-	ProviderType int           `json:"provider_type"` // ype
+	ID           string          `json:"id"`            // blobber ID
+	Balance      currency.Coin   `json:"balance"`       // current balance
+	DelegateID   string          `json:"delegate_id"`   // wallet
+	Rewards      currency.Coin   `json:"rewards"`       // total for all time
+	UnStake      bool            `json:"unstake"`       // want to unstake
+	ProviderId   string          `json:"provider_id"`   // id
+	ProviderType spenum.Provider `json:"provider_type"` // ype
 
 	TotalReward  currency.Coin `json:"total_reward"`
 	TotalPenalty currency.Coin `json:"total_penalty"`

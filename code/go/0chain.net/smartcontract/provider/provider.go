@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool"
- "0chain.net/core/datastore"
 	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
@@ -59,8 +59,6 @@ type Provider struct {
 	HasBeenShutDown bool             `json:"is_shut_down"`
 	HasBeenKilled   bool             `json:"is_killed"`
 }
-
-
 
 func GetKey(id string) datastore.Key {
 	return "provider:" + id

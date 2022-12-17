@@ -69,9 +69,9 @@ func TestNewAllocation(t *testing.T) {
 			"4", "5", "6", "7"},
 	}
 	var goodBlobber = StorageNode{
-		Capacity:  536870912,
-		Allocated: 73,
-		Type:      spenum.Blobber,
+		Capacity:     536870912,
+		Allocated:    73,
+		ProviderType: spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -134,8 +134,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 	}
 
 	var blobberTemplate = StorageNode{
-		Capacity: 536870912,
-		Type:     spenum.Blobber,
+		Capacity:     536870912,
+		ProviderType: spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -253,8 +253,8 @@ func TestFinalizeAllocation(t *testing.T) {
 		minLockDemand: 0.1,
 	}
 	var blobberTemplate = StorageNode{
-		Capacity: 536870912,
-		Type:     spenum.Blobber,
+		Capacity:     536870912,
+		ProviderType: spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),

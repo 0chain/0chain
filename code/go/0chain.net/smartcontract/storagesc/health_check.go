@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -25,9 +27,7 @@ func (ssc *StorageSmartContract) blobberHealthCheck(
 			"can't get configs"+err.Error())
 	}
 
-	if err = provider.HealthCheck(t.CreationDate, blobber, conf.HealthCheckPeriod, balances); err != nil {
-		return "", common.NewError("blobber_health_check_failed", err.Error())
-	}
+	blobber.HealthCheck(t.CreationDate, conf.HealthCheckPeriod, balances)
 
 	if _, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -48,14 +48,8 @@ func (ssc *StorageSmartContract) validatorHealthCheck(
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
 
-	conf, err := getConfig(balances)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't get configs"+err.Error())
-	}
-
-	if err := provider.HealthCheck(t.CreationDate, validator, conf.HealthCheckPeriod, balances); err != nil {
-		return "", common.NewError("blobber_health_check_failed", err.Error())
+	if err := healthCheck(validator, t.CreationDate, balances); err != nil {
+		return "", common.NewError("validator_health_check_failed", err.Error())
 	}
 
 	if _, err := balances.InsertTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
@@ -64,4 +58,13 @@ func (ssc *StorageSmartContract) validatorHealthCheck(
 	}
 
 	return "", nil
+}
+
+func healthCheck(provider provider.Provider, now common.Timestamp, balances cstate.StateContextI) error {
+	conf, err := getConfig(balances)
+	if err != nil {
+		return fmt.Errorf("can't get configs: %v", err)
+	}
+
+	provider.HealthCheck(now, conf.HealthCheckPeriod, balances)
 }

@@ -778,13 +778,13 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Miner))
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, spenum.Miner)
 	if err != nil {
 		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
 		return
 	}
 
-	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Sharder))
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, spenum.Sharder)
 	if err != nil {
 		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
 		return
@@ -846,10 +846,9 @@ func toUPS(pool event.DelegatePool) stakepool.DelegatePoolStat {
 //	500:
 func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
 	providerID := r.URL.Query().Get("provider_id")
-	providerTypeString := r.URL.Query().Get("provider_type")
-	providerType, err := strconv.Atoi(providerTypeString)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
+	providerType := spenum.ToProviderType(r.URL.Query().Get("provider_type"))
+	if providerType == spenum.Invalid {
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type", r.URL.Query().Get("provider_type")))
 		return
 	}
 
@@ -868,7 +867,7 @@ func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, res, nil)
 }
 
-func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
+func getProviderStakePoolStats(providerType spenum.Provider, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
 	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())

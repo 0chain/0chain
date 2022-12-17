@@ -1,90 +1,24 @@
 package storagesc
 
 import (
-	"fmt"
-
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
-
-func kill(
-	input []byte,
-	clientID, ownerId string,
-	providerSpecific func(providerRequest, *Config) (provider.ProviderI, error),
-	pType spenum.Provider,
-	balances cstate.StateContextI,
-) error {
-	var errCode = "kill_" + pType.String() + "_failed"
-	var err error
-	var conf *Config
-	if conf, err = getConfig(balances); err != nil {
-		return common.NewError(errCode, "can't get config: "+err.Error())
-	}
-	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
-		return ownerId == clientID
-	}); err != nil {
-		return err
-	}
-
-	var req providerRequest
-	if err := req.decode(input); err != nil {
-		return common.NewError(errCode, err.Error())
-	}
-
-	var sp *stakePool
-	if sp, err = getStakePool(pType, req.ID, balances); err != nil {
-		return common.NewError(errCode, "can't get related stake pool: "+err.Error())
-	}
-
-	p, err := providerSpecific(req, conf)
-	if err != nil {
-		return err
-	}
-
-	if p.IsKilled() {
-		return common.NewError(errCode, "already killed")
-	}
-	p.Kill()
-	if err := p.Save(balances); err != nil {
-		return common.NewError(errCode, "cannot save: "+err.Error())
-	}
-
-	sp.HasBeenKilled = true
-	if err := sp.SlashFraction(
-		conf.StakePool.KillSlash,
-		req.ID,
-		pType,
-		balances,
-	); err != nil {
-		return common.NewError(errCode, "can't slash validator: "+err.Error())
-	}
-
-	if err = sp.Save(spenum.Validator, req.ID, balances); err != nil {
-		return common.NewError(errCode, fmt.Sprintf("saving stake pool: %v", err))
-	}
-
-	if err := emitUpdateProvider(p, sp, balances); err != nil {
-		return common.NewError(errCode, fmt.Sprintf("emitting event: %v", err))
-	}
-
-	return nil
-}
 
 func (ssc *StorageSmartContract) killBlobber(
 	t *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	return "", kill(
+	err := provider.Kill(
 		input,
 		t.ClientID, "",
-		func(req providerRequest, conf *Config) (provider.ProviderI, error) {
+		func(req provider.ProviderRequest, conf *Config) (provider.ProviderI, error) {
 			var err error
 			var blobber *StorageNode
 			if blobber, err = ssc.getBlobber(req.ID, balances); err != nil {
@@ -120,9 +54,12 @@ func (ssc *StorageSmartContract) killBlobber(
 			}
 			return blobber, nil
 		},
-		spenum.Blobber,
 		balances,
 	)
+	if err != nil {
+		return "", common.NewError("kill_blobber_failed", err.Error())
+	}
+	return "", nil
 }
 
 func (ssc *StorageSmartContract) killValidator(

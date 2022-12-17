@@ -199,7 +199,7 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 type ValidationNode struct {
 	*provider.Provider
 	BaseURL           string             `json:"url"`
-	Type              spenum.Provider    `json:"type"`
+	ProviderType      spenum.Provider    `json:"provider_type"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	PartitionPosition int                `json:"partition_position"`
@@ -362,7 +362,7 @@ type Info struct {
 type StorageNode struct {
 	*provider.Provider
 	BaseURL                 string                 `json:"url"`
-	Type                    spenum.Provider        `json:"type"`
+	ProviderType            spenum.Provider        `json:"provider_type"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity

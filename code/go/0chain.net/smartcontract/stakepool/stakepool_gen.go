@@ -151,7 +151,11 @@ func (z *DelegatePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.ProviderId)
 	// string "ProviderType"
 	o = append(o, 0xac, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x54, 0x79, 0x70, 0x65)
-	o = msgp.AppendInt(o, z.ProviderType)
+	o, err = z.ProviderType.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "ProviderType")
+		return
+	}
 	// string "TotalReward"
 	o = append(o, 0xab, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
 	o, err = z.TotalReward.MarshalMsg(o)
@@ -230,7 +234,7 @@ func (z *DelegatePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "ProviderType":
-			z.ProviderType, bts, err = msgp.ReadIntBytes(bts)
+			bts, err = z.ProviderType.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ProviderType")
 				return
@@ -273,7 +277,7 @@ func (z *DelegatePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *DelegatePoolStat) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 8 + z.Rewards.Msgsize() + 8 + msgp.BoolSize + 11 + msgp.StringPrefixSize + len(z.ProviderId) + 13 + msgp.IntSize + 12 + z.TotalReward.Msgsize() + 13 + z.TotalPenalty.Msgsize() + 7 + msgp.StringPrefixSize + len(z.Status) + 13 + msgp.Int64Size
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 8 + z.Rewards.Msgsize() + 8 + msgp.BoolSize + 11 + msgp.StringPrefixSize + len(z.ProviderId) + 13 + z.ProviderType.Msgsize() + 12 + z.TotalReward.Msgsize() + 13 + z.TotalPenalty.Msgsize() + 7 + msgp.StringPrefixSize + len(z.Status) + 13 + msgp.Int64Size
 	return
 }
 
@@ -376,9 +380,9 @@ func (z *Settings) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 5
 	// string "Pools"
-	o = append(o, 0x84, 0xa5, 0x50, 0x6f, 0x6f, 0x6c, 0x73)
+	o = append(o, 0x85, 0xa5, 0x50, 0x6f, 0x6f, 0x6c, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Pools)))
 	keys_za0001 := make([]string, 0, len(z.Pools))
 	for k := range z.Pools {
@@ -419,6 +423,9 @@ func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "Minter")
 		return
 	}
+	// string "HasBeenKilled"
+	o = append(o, 0xad, 0x48, 0x61, 0x73, 0x42, 0x65, 0x65, 0x6e, 0x4b, 0x69, 0x6c, 0x6c, 0x65, 0x64)
+	o = msgp.AppendBool(o, z.HasBeenKilled)
 	return
 }
 
@@ -499,6 +506,12 @@ func (z *StakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Minter")
 				return
 			}
+		case "HasBeenKilled":
+			z.HasBeenKilled, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "HasBeenKilled")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -525,7 +538,7 @@ func (z *StakePool) Msgsize() (s int) {
 			}
 		}
 	}
-	s += 7 + z.Reward.Msgsize() + 9 + z.Settings.Msgsize() + 7 + z.Minter.Msgsize()
+	s += 7 + z.Reward.Msgsize() + 9 + z.Settings.Msgsize() + 7 + z.Minter.Msgsize() + 14 + msgp.BoolSize
 	return
 }
 

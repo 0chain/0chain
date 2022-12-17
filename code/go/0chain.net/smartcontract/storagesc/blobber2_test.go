@@ -304,8 +304,8 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 
 	blobber := &StorageNode{
-		ID:   blobberId,
-		Type: spenum.Blobber,
+		ID:           blobberId,
+		ProviderType: spenum.Blobber,
 		Terms: Terms{
 			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
