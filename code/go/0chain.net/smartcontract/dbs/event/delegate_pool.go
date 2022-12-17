@@ -19,13 +19,13 @@ type DelegatePool struct {
 	PoolID       string `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
 	ProviderType int    `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
 	ProviderID   string `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
-	DelegateID   string `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id"` //todo think of changing priority for idx_ddel_active
+	DelegateID   string `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id;index:idx_dp_total_staked,priority:1"` //todo think of changing priority for idx_ddel_active
 
 	Balance      currency.Coin `json:"balance"`
 	Reward       currency.Coin `json:"reward"`       // unclaimed reward
 	TotalReward  currency.Coin `json:"total_reward"` // total reward paid to pool
 	TotalPenalty currency.Coin `json:"total_penalty"`
-	Status       int           `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3"`
+	Status       int           `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3;index:idx_dp_total_staked,priority:2"`
 	RoundCreated int64         `json:"round_created"`
 }
 
@@ -65,7 +65,7 @@ func (edb *EventDb) GetDelegatePools(id string, pType int) ([]DelegatePool, erro
 func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
 	res := int64(0)
 	err := edb.Store.Get().Table("delegate_pools").Select("coalesce(sum(balance),0)").
-		Where("delegate_id = ?", id).Row().Scan(&res)
+		Where("delegate_id = ? AND status in (?, ?)", id, spenum.Active, spenum.Pending).Row().Scan(&res)
 	return res, err
 }
 
