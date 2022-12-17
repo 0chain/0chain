@@ -168,6 +168,13 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 	return miners, result.Error
 }
 
+func (edb *EventDb) GetMinerCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Miner{}).Count(&count)
+
+	return count, res.Error
+}
+
 func (edb *EventDb) addOrOverwriteMiner(miners []Miner) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
