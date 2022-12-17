@@ -336,6 +336,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			balances.On(
 				"GetTrieNode", provider.GetKey(blobber.ID),
 				mock.MatchedBy(func(a *StorageNode) bool {
+					a.Type = spenum.Blobber
 					a.Terms.MaxOfferDuration = 24 * 365 * time.Hour * 2
 					a.Capacity = 100000000000
 					a.LastHealthCheck = common.Timestamp(time.Now().UnixNano())
