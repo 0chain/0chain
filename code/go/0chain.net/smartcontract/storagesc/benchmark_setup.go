@@ -140,7 +140,9 @@ func addMockAllocation(
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 			Terms:                    allocationTerms,
 		}
-		_ = eventDb.Store.Get().Create(&allocationDb)
+		if err := eventDb.Store.Get().Create(&allocationDb).Error; err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -319,7 +321,9 @@ func setupMockChallenge(
 			BlobberID:      challenge.BlobberID,
 			RoundResponded: int64(index),
 		}
-		_ = eventDb.Store.Get().Create(&challengeRow)
+		if err = eventDb.Store.Get().Create(&challengeRow).Error; err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	return challenges
@@ -399,7 +403,6 @@ func AddMockBlobbers(
 					MaxStake:       blobber.StakePoolSettings.MaxStake,
 					NumDelegates:   blobber.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:  blobber.StakePoolSettings.ServiceChargeRatio,
-					Rewards:        event.ProviderRewards{ProviderID: blobber.ID},
 				},
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
@@ -409,7 +412,9 @@ func AddMockBlobbers(
 			if err != nil {
 				log.Fatal("convert currency", err)
 			}
-			_ = eventDb.Store.Get().Create(&blobberDb)
+			if err := eventDb.Store.Get().Create(&blobberDb).Error; err != nil {
+				log.Fatal(err)
+			}
 			addMockBlobberSnapshots(blobberDb, eventDb)
 		}
 
@@ -539,10 +544,11 @@ func AddMockValidators(
 					MaxStake:       validator.StakePoolSettings.MaxStake,
 					NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
-					Rewards:        event.ProviderRewards{ProviderID: validator.ID},
 				},
 			}
-			_ = eventDb.Store.Get().Create(&validators)
+			if err := eventDb.Store.Get().Create(&validators).Error; err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		if _, err := valParts.AddItem(balances, &vpn); err != nil {
@@ -593,7 +599,9 @@ func GetMockBlobberStakePools(
 					Status:       int(spenum.Active),
 					RoundCreated: 1,
 				}
-				_ = eventDb.Store.Get().Create(&dp)
+				if err := eventDb.Store.Get().Create(&dp).Error; err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 		sps = append(sps, sp)
@@ -704,8 +712,8 @@ func AddMockWriteRedeems(
 					ReadSize:      100,
 					BlockNumber:   mockBlockNumber,
 				}
-				if out := eventDb.Store.Get().Create(&readMarker); out.Error != nil {
-					log.Fatal(out.Error)
+				if err := eventDb.Store.Get().Create(&readMarker).Error; err != nil {
+					log.Fatal(err)
 				}
 				txnNum += numAllocations * numWriteRedeemAllocation
 				writeMarker := event.WriteMarker{
@@ -720,8 +728,8 @@ func AddMockWriteRedeems(
 					Name:           benchmark.GetMockWriteMarkerFileName(i),
 					ContentHash:    benchmark.GetMockWriteMarkerContentHash(i, j),
 				}
-				if out := eventDb.Store.Get().Create(&writeMarker); out.Error != nil {
-					log.Fatal(out.Error)
+				if err := eventDb.Store.Get().Create(&writeMarker).Error; err != nil {
+					log.Fatal(err)
 				}
 			}
 		}
