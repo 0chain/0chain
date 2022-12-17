@@ -113,7 +113,9 @@ func AddMockNodes(
 						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
 					},
 				}
-				_ = eventDb.Store.Get().Create(&minerDb)
+				if err = eventDb.Store.Get().Create(&minerDb).Error; err != nil {
+					log.Fatal(err)
+				}
 			} else {
 				sharderDb := event.Sharder{
 
@@ -128,7 +130,9 @@ func AddMockNodes(
 						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
 					},
 				}
-				_ = eventDb.Store.Get().Create(&sharderDb)
+				if err := eventDb.Store.Get().Create(&sharderDb).Error; err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 	}
