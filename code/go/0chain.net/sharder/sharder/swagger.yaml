@@ -994,6 +994,7 @@ definitions:
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     Provider:
+        format: int64
         properties:
             CreatedAt:
                 format: date-time
@@ -1024,8 +1025,8 @@ definitions:
                 $ref: '#/definitions/Coin'
             unstake_total:
                 $ref: '#/definitions/Coin'
-        type: object
-        x-go-package: 0chain.net/smartcontract/dbs/event
+        type: integer
+        x-go-package: 0chain.net/smartcontract/stakepool/spenum
     ProviderRewards:
         description: ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
         properties:

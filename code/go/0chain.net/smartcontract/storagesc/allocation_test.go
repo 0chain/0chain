@@ -73,7 +73,7 @@ func TestSelectBlobbers(t *testing.T) {
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
 			ID:              mockBlobberId + strconv.Itoa(index),
-			Type:            spenum.Blobber,
+			ProviderType:    spenum.Blobber,
 			BaseURL:         mockURL + strconv.Itoa(index),
 			Capacity:        mockBlobberCapacity,
 			LastHealthCheck: common.Timestamp(now.Unix()),
@@ -340,9 +340,9 @@ func TestChangeBlobbers(t *testing.T) {
 			}
 
 			blobber := &StorageNode{
-				ID:       ba.BlobberID,
-				Type:     spenum.Blobber,
-				Capacity: mockBlobberCapacity,
+				ID:           ba.BlobberID,
+				ProviderType: spenum.Blobber,
+				Capacity:     mockBlobberCapacity,
 				Terms: Terms{
 					MaxOfferDuration: mockMaxOffDuration,
 					ReadPrice:        mockReadPrice,
@@ -537,26 +537,25 @@ func TestChangeBlobbers(t *testing.T) {
 
 func TestExtendAllocation(t *testing.T) {
 	const (
-		mockURL              = "mock_url"
-		mockOwner            = "mock owner"
-		mockPublicKey        = "mock public key"
-		mockBlobberId        = "mock_blobber_id"
-		mockPoolId           = "mock pool id"
-		mockAllocationId     = "mock allocation id"
-		mockMinPrice         = 0
-		confTimeUnit         = 720 * time.Hour
-		confMinAllocSize     = 1024
-		confMinAllocDuration = 5 * time.Minute
-		mockMaxOffDuration   = 744 * time.Hour
-		mocksSize            = 10000000000
-		mockDataShards       = 2
-		mockParityShards     = 2
-		mockNumAllBlobbers   = 2 + mockDataShards + mockParityShards
-		mockExpiration       = common.Timestamp(17000)
-		mockStake            = 3
-		mockMinLockDemand    = 0.1
-		mockTimeUnit         = 1 * time.Hour
-		mockHash             = "mock hash"
+		mockURL            = "mock_url"
+		mockOwner          = "mock owner"
+		mockPublicKey      = "mock public key"
+		mockBlobberId      = "mock_blobber_id"
+		mockPoolId         = "mock pool id"
+		mockAllocationId   = "mock allocation id"
+		mockMinPrice       = 0
+		confTimeUnit       = 720 * time.Hour
+		confMinAllocSize   = 1024
+		mockMaxOffDuration = 744 * time.Hour
+		mocksSize          = 10000000000
+		mockDataShards     = 2
+		mockParityShards   = 2
+		mockNumAllBlobbers = 2 + mockDataShards + mockParityShards
+		mockExpiration     = common.Timestamp(17000)
+		mockStake          = 3
+		mockMinLockDemand  = 0.1
+		mockTimeUnit       = 1 * time.Hour
+		mockHash           = "mock hash"
 	)
 	var mockBlobberCapacity int64 = 3700000000 * confMinAllocSize
 	var mockMaxPrice = zcnToBalance(100.0)
@@ -579,7 +578,7 @@ func TestExtendAllocation(t *testing.T) {
 		return &StorageNode{
 			ID:              mockBlobberId + strconv.Itoa(index),
 			BaseURL:         mockURL + strconv.Itoa(index),
-			Type:            spenum.Blobber,
+			ProviderType:    spenum.Blobber,
 			Capacity:        mockBlobberCapacity,
 			LastHealthCheck: now - blobberHealthTime + 1,
 			Terms: Terms{
@@ -694,7 +693,7 @@ func TestExtendAllocation(t *testing.T) {
 				}
 				newFunds := sizeInGB(size) *
 					float64(mockWritePrice) *
-					float64(sa.durationInTimeUnits(args.request.Expiration, confTimeUnit))
+					sa.durationInTimeUnits(args.request.Expiration, confTimeUnit)
 				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
@@ -818,7 +817,6 @@ func TestTransferAllocation(t *testing.T) {
 		mockOldOwner          = "mock old owner"
 		mockCuratorId         = "mock curator id"
 		mockAllocationId      = "mock allocation id"
-		mockNotOwner          = "mock not owner id"
 	)
 	type args struct {
 		ssc      *StorageSmartContract
@@ -1039,9 +1037,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 	all = new(StorageNodes)
 	all.Nodes = []*StorageNode{
 		{
-			ID:      "b1",
-			BaseURL: "http://blobber1.test.ru:9100/api",
-			Type:    spenum.Blobber,
+			ID:           "b1",
+			BaseURL:      "http://blobber1.test.ru:9100/api",
+			ProviderType: spenum.Blobber,
 			Terms: Terms{
 				ReadPrice:        20,
 				WritePrice:       200,
@@ -1053,9 +1051,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			LastHealthCheck: 0,
 		},
 		{
-			ID:      "b2",
-			BaseURL: "http://blobber2.test.ru:9100/api",
-			Type:    spenum.Blobber,
+			ID:           "b2",
+			BaseURL:      "http://blobber2.test.ru:9100/api",
+			ProviderType: spenum.Blobber,
 			Terms: Terms{
 				ReadPrice:        25,
 				WritePrice:       250,
@@ -1636,8 +1634,6 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 			"client_hex", "pub_key_hex", "close_tx_hash"
 
 		errMsg1 = "allocation_closing_failed: " +
-			"doesn't need to close allocation is about to expire"
-		errMsg2 = "allocation_closing_failed: " +
 			"doesn't need to close allocation is about to expire"
 	)
 
