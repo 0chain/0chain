@@ -89,9 +89,12 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	return string(buff), nil
 }
 
-func getValidator(id string, balances state.StateContextI) (*ValidationNode, error) {
-	validator := &ValidationNode{}
-	//err := balances.GetTrieNode(provider.GetKey(id), validator)
+func getValidator(
+	validatorID string,
+	balances state.CommonStateContextI,
+) (*ValidationNode, error) {
+	validator := new(ValidationNode)
+	validator.ID = validatorID
 	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
 	if err != nil {
 		return nil, err
