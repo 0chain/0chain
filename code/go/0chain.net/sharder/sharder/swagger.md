@@ -4949,18 +4949,3 @@ and the other for the allocations that the client (client_id) doesn't own
 | Rounds | []int64 (formatted integer)| `[]int64` |  | |  |  |
 
 
-
-### <span id="timestamp-to-round-resp"></span> timestampToRoundResp
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| Rounds | []int64 (formatted integer)| `[]int64` |  | |  |  |
-
-

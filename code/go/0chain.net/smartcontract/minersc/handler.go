@@ -72,12 +72,10 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //	 description: offset
 //	 in: query
 //	 type: string
-//	 required: true
 //	+name: limit
 //	 description: limit
 //	 in: query
 //	 type: string
-//	 required: true
 //	+name: sort
 //	 description: desc or asc
 //	 in: query
@@ -86,7 +84,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //	 description: active
 //	 in: query
 //	 type: string
-//	 required: true
 //
 // responses:
 //
@@ -137,12 +134,10 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 //	 description: offset
 //	 in: query
 //	 type: string
-//	 required: true
 //	+name: limit
 //	 description: limit
 //	 in: query
 //	 type: string
-//	 required: true
 //	+name: sort
 //	 description: desc or asc
 //	 in: query
@@ -151,7 +146,6 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 //	 description: active
 //	 in: query
 //	 type: string
-//	 required: true
 //
 // responses:
 //
@@ -216,14 +210,22 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 // parameters:
 //
 //	+name: id
-//	 description: id
+//	 description: miner node ID
 //	 in: query
 //	 type: string
 //	 required: true
+//	+name: pool_id
+//	 description: pool_id
+//	 in: query
+//	 type: string
+//	+name: status
+//	 description: status
+//	 in: query
+//	 type: string
 //
 // responses:
 //
-//	200:
+//	200: []NodePool
 //	400:
 //	484:
 func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Request) {
@@ -265,7 +267,7 @@ type nodeStat struct {
 // parameters:
 //
 //	+name: id
-//	 description: id
+//	 description: miner ID
 //	 in: query
 //	 type: string
 //	 required: true

@@ -3,6 +3,7 @@ package diagnostics
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
@@ -25,32 +26,56 @@ func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/block_chain", common.UserRateLimit(sc.WIPBlockChainHandler))
 }
 
+// swagger:model ChainStats
+type ChainStats struct {
+	Delta              time.Duration `json:"delta"`
+	CurrentRound       int64         `json:"current_round"`
+	LastFinalizedRound int64         `json:"latest_finalized_round"`
+	Count              int64         `json:"count"`
+	Min                float64       `json:"min"`
+	Max                float64       `json:"max"`
+	Mean               float64       `json:"mean"`
+	StdDev             float64       `json:"std_dev"`
+	RunningTxnCount    int64         `json:"total_txns"`
+	Rate1              float64       `json:"rate_1_min"`
+	Rate5              float64       `json:"rate_5_min"`
+	Rate15             float64       `json:"rate_15_min"`
+	RateMean           float64       `json:"rate_mean"`
+	Percentile50       float64       `json:"percentile_50"`
+	Percentile90       float64       `json:"percentile_90"`
+	Percentile95       float64       `json:"percentile_95"`
+	Percentile99       float64       `json:"percentile_99"`
+}
+
 /*GetStatistics - write the statistics of the given timer */
-func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interface{} {
+func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) ChainStats {
 	scale := func(n float64) float64 {
 		return (n / scaleBy)
 	}
+
 	percentiles := []float64{0.5, 0.9, 0.95, 0.99}
 	pvals := timer.Percentiles(percentiles)
-	stats := make(map[string]interface{})
-	stats["delta"] = chain.DELTA
-	stats["current_round"] = c.GetCurrentRound()
 	lfb := c.GetLatestFinalizedBlock()
-	stats["latest_finalized_round"] = lfb.Round
-	stats["count"] = timer.Count()
-	stats["min"] = scale(float64(timer.Min()))
-	stats["mean"] = scale(timer.Mean())
-	stats["std_dev"] = scale(timer.StdDev())
-	stats["max"] = scale(float64(timer.Max()))
-	stats["total_txns"] = lfb.RunningTxnCount
 
-	for idx, p := range percentiles {
-		stats[fmt.Sprintf("percentile_%v", 100*p)] = scale(pvals[idx])
+	stats := ChainStats{
+		Delta:              chain.DELTA,
+		CurrentRound:       c.GetCurrentRound(),
+		LastFinalizedRound: lfb.Round,
+		Count:              timer.Count(),
+		Min:                scale(float64(timer.Min())),
+		Mean:               scale(timer.Mean()),
+		StdDev:             scale(timer.StdDev()),
+		Max:                scale(float64(timer.Max())),
+		RunningTxnCount:    lfb.RunningTxnCount,
+		Rate1:              timer.Rate1(),
+		Rate5:              timer.Rate5(),
+		Rate15:             timer.Rate15(),
+		RateMean:           timer.RateMean(),
+		Percentile50:       scale(pvals[0]),
+		Percentile90:       scale(pvals[1]),
+		Percentile95:       scale(pvals[2]),
+		Percentile99:       scale(pvals[3]),
 	}
-	stats["rate_1_min"] = timer.Rate1()
-	stats["rate_5_min"] = timer.Rate5()
-	stats["rate_15_min"] = timer.Rate15()
-	stats["rate_mean"] = timer.RateMean()
 	return stats
 }
 
