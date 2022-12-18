@@ -193,28 +193,20 @@ func (msc *MinerSmartContract) deleteNode(
 ) (*MinerNode, error) {
 	var err error
 	deleteNode.Delete = true
-	var nodeType spenum.Provider
 	switch deleteNode.NodeType {
 	case NodeTypeMiner:
-		nodeType = spenum.Miner
 	case NodeTypeSharder:
-		nodeType = spenum.Sharder
 	default:
 		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
 	}
 
-	for key, pool := range deleteNode.Pools {
+	for _, pool := range deleteNode.Pools {
 		switch pool.Status {
-		case spenum.Pending:
-			_, err := deleteNode.UnlockPool(
-				pool.DelegateID, nodeType, key, balances)
-			if err != nil {
-				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
-			}
 		case spenum.Active:
 			pool.Status = spenum.Deleting
-		case spenum.Deleting:
-		case spenum.Deleted:
+		case spenum.Pending,
+			spenum.Deleting,
+			spenum.Deleted:
 		default:
 			return nil, fmt.Errorf(
 				"unrecognised stakepool status: %v", pool.Status.String())

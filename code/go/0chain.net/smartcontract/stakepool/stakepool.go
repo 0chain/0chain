@@ -296,7 +296,7 @@ func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.State
 	}
 
 	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = spenum.Deleting
+	sp.Pools[poolID].Status = spenum.Deleted
 
 	return nil
 }
@@ -672,7 +672,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	return out, err
 }
 
-// stake pool can return excess tokens from stake pool
+// StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
 func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
 ) (resp string, err error) {

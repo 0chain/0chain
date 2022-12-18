@@ -22,7 +22,7 @@ func (sp *StakePool) UnlockPool(
 		return "", fmt.Errorf("can't find pool of %v", clientID)
 	}
 
-	dp.Status = spenum.Deleting
+	dp.Status = spenum.Deleted
 	amount, err := sp.MintRewards(
 		clientID, providerId, providerType, balances,
 	)
@@ -35,7 +35,7 @@ func (sp *StakePool) UnlockPool(
 		Amount:       i,
 	}
 	dpUpdate := newDelegatePoolUpdate(clientID, providerId, providerType)
-	dpUpdate.Updates["status"] = spenum.Deleting
+	dpUpdate.Updates["status"] = spenum.Deleted
 	dpUpdate.emitUpdate(balances)
 
 	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, lock)
