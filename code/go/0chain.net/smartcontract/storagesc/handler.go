@@ -954,10 +954,11 @@ type fullBlock struct {
 //	400:
 //	500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
-	var (
-		startBlockNum = r.URL.Query().Get("start")
-		endBlockNum   = r.URL.Query().Get("end")
-	)
+	start, end, err := common2.GetStartEndBlock(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
@@ -971,23 +972,7 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var blocks []event.Block
-	if startBlockNum != "" && endBlockNum != "" {
-		start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("start block number is not valid"))
-			return
-		}
-		end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("end block number is not valid"))
-			return
-		}
-
-		if start > end {
-			common.Respond(w, r, nil, common.NewErrBadRequest("start block number is greater than end block number"))
-			return
-		}
-
+	if end > 0 {
 		blocks, err = edb.GetBlocksByBlockNumbers(start, end, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
@@ -1234,7 +1219,7 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 }
 
 func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
-	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
+	delegatePools, err := edb.GetDelegatePools(providerID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
 	}
@@ -1696,19 +1681,19 @@ type readMarkersCount struct {
 }
 
 type ReadMarkerResponse struct {
-	ID			  uint
-	CreatedAt	  time.Time
-	UpdatedAt	  time.Time
+	ID            uint
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	Timestamp     int64   `json:"timestamp"`
 	ReadCounter   int64   `json:"read_counter"`
 	ReadSize      float64 `json:"read_size"`
 	Signature     string  `json:"signature"`
 	PayerID       string  `json:"payer_id"`
-	AuthTicket    string  `json:"auth_ticket"`   //used in readmarkers
+	AuthTicket    string  `json:"auth_ticket"`  //used in readmarkers
 	BlockNumber   int64   `json:"block_number"` //used in alloc_read_size
-	ClientID	  string  `json:"client_id"`
+	ClientID      string  `json:"client_id"`
 	BlobberID     string  `json:"blobber_id"`
-	OwnerID	      string  `json:"owner_id"`
+	OwnerID       string  `json:"owner_id"`
 	TransactionID string  `json:"transaction_id"`
 	AllocationID  string  `json:"allocation_id"`
 
@@ -1720,21 +1705,21 @@ type ReadMarkerResponse struct {
 
 func toReadMarkerResponse(rm event.ReadMarker) ReadMarkerResponse {
 	return ReadMarkerResponse{
-		ID: rm.ID,
-		CreatedAt: rm.CreatedAt,
-		UpdatedAt: rm.UpdatedAt,
-		Timestamp: rm.Timestamp,
-		ReadCounter: rm.ReadCounter,
-		ReadSize: rm.ReadSize,
-		Signature: rm.Signature,
-		PayerID: rm.PayerID,
-		AuthTicket: rm.AuthTicket,
-		BlockNumber: rm.BlockNumber,
-		ClientID: rm.ClientID,
-		BlobberID: rm.BlobberID,
-		OwnerID: rm.OwnerID,
+		ID:            rm.ID,
+		CreatedAt:     rm.CreatedAt,
+		UpdatedAt:     rm.UpdatedAt,
+		Timestamp:     rm.Timestamp,
+		ReadCounter:   rm.ReadCounter,
+		ReadSize:      rm.ReadSize,
+		Signature:     rm.Signature,
+		PayerID:       rm.PayerID,
+		AuthTicket:    rm.AuthTicket,
+		BlockNumber:   rm.BlockNumber,
+		ClientID:      rm.ClientID,
+		BlobberID:     rm.BlobberID,
+		OwnerID:       rm.OwnerID,
 		TransactionID: rm.TransactionID,
-		AllocationID: rm.AllocationID,
+		AllocationID:  rm.AllocationID,
 
 		// TODO: Add fields from relationships as needed
 	}
@@ -2101,9 +2086,9 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 }
 
 type WriteMarkerResponse struct {
-	ID			  uint
-	CreatedAt	  time.Time
-	UpdatedAt	  time.Time
+	ID            uint
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
 	AllocationID  string `json:"allocation_id"` //used in alloc_write_marker_count, alloc_written_size
@@ -2129,23 +2114,23 @@ type WriteMarkerResponse struct {
 
 func toWriteMarkerResponse(wm event.WriteMarker) WriteMarkerResponse {
 	return WriteMarkerResponse{
-		ID: wm.ID,
-		CreatedAt: wm.CreatedAt,
-		UpdatedAt: wm.UpdatedAt,
-		Timestamp: wm.Timestamp,
-		ClientID:  wm.ClientID,
-		BlobberID: wm.BlobberID,
-		AllocationID: wm.AllocationID,
-		TransactionID: wm.TransactionID,
-		AllocationRoot: wm.AllocationRoot,
+		ID:                     wm.ID,
+		CreatedAt:              wm.CreatedAt,
+		UpdatedAt:              wm.UpdatedAt,
+		Timestamp:              wm.Timestamp,
+		ClientID:               wm.ClientID,
+		BlobberID:              wm.BlobberID,
+		AllocationID:           wm.AllocationID,
+		TransactionID:          wm.TransactionID,
+		AllocationRoot:         wm.AllocationRoot,
 		PreviousAllocationRoot: wm.PreviousAllocationRoot,
-		Size: wm.Size,
-		Signature: wm.Signature,
-		BlockNumber: wm.BlockNumber,
-		LookupHash: wm.LookupHash,
-		Name: wm.Name,
-		ContentHash: wm.ContentHash,
-		Operation: wm.Operation,
+		Size:                   wm.Size,
+		Signature:              wm.Signature,
+		BlockNumber:            wm.BlockNumber,
+		LookupHash:             wm.LookupHash,
+		Name:                   wm.Name,
+		ContentHash:            wm.ContentHash,
+		Operation:              wm.Operation,
 
 		// TODO: Add sub-fields or relationships as needed
 	}

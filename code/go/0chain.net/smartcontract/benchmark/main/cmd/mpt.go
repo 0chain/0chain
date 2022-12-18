@@ -359,6 +359,16 @@ func setUpMpt(
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
 	}()
+	if viper.GetBool(benchmark.EventDbEnabled) &&
+		viper.GetBool(benchmark.EventDbDebug) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			timer := time.Now()
+			minersc.AddMockProviderRewards(miners, sharders, eventDb)
+			log.Println("adding mock rewards for miners and sharders\t", time.Since(timer))
+		}()
+	}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

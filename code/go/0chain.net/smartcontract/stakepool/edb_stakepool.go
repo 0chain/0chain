@@ -2,6 +2,7 @@ package stakepool
 
 import (
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs"
 
@@ -11,12 +12,13 @@ import (
 
 type StakePoolReward dbs.StakePoolReward
 
-func NewStakePoolReward(pId string, pType spenum.Provider) *StakePoolReward {
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ProviderId = pId
 	spu.ProviderType = int(pType)
-	spu.DelegateRewards = make(map[string]int64)
-	spu.DelegatePenalties = make(map[string]int64)
+	spu.DelegateRewards = make(map[string]currency.Coin)
+	spu.DelegatePenalties = make(map[string]currency.Coin)
+	spu.RewardType = rewardType
 	return &spu
 }
 
@@ -28,7 +30,7 @@ func (spu StakePoolReward) Emit(
 	balances.EmitEvent(
 		event.TypeStats,
 		tag,
-		spu.ProviderId,
+		spu.RewardType.String()+spu.ProviderId,
 		stakePoolRewardToStakePoolRewardEvent(spu),
 	)
 	return nil
@@ -39,5 +41,6 @@ func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolRe
 		StakePoolId:     spu.StakePoolId,
 		Reward:          spu.Reward,
 		DelegateRewards: spu.DelegateRewards,
+		RewardType:      spu.RewardType,
 	}
 }
