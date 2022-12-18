@@ -285,7 +285,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 
 	cfg := crpc.Client().State().CollectVerificationTicketsWhenMissedVRF
 
-	if cfg != nil && cfg.Miner == node.Self.ID && int64(cfg.Round) == nb.Round {
+	if cfg != nil && cfg.Miner == node.Self.ID && int64(cfg.Round) <= nb.Round {
 		logging.Logger.Debug("Skipping processing of notarized block")
 		return nil, nil
 	}
