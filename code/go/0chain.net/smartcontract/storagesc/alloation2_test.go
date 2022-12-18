@@ -30,15 +30,13 @@ import (
 type blobberStakes []int64
 
 const (
-	errValueNotPresent   = "value not present"
-	ownerId              = "owin"
-	ErrCancelFailed      = "alloc_cancel_failed"
-	ErrExpired           = "trying to cancel expired allocation"
-	ErrNotOwner          = "only owner can cancel an allocation"
-	ErrNotEnoughFailiars = "not enough failed challenges of allocation to cancel"
-	ErrNotEnoughLock     = "paying min_lock for"
-	ErrFinalizedFailed   = "fini_alloc_failed"
-	ErrFinalizedTooSoon  = "allocation is not expired yet, or waiting a challenge completion"
+	errValueNotPresent  = "value not present"
+	ownerId             = "owin"
+	ErrCancelFailed     = "alloc_cancel_failed"
+	ErrExpired          = "trying to cancel expired allocation"
+	ErrNotOwner         = "only owner can cancel an allocation"
+	ErrFinalizedFailed  = "fini_alloc_failed"
+	ErrFinalizedTooSoon = "allocation is not expired yet, or waiting a challenge completion"
 )
 
 func TestNewAllocation(t *testing.T) {
@@ -69,9 +67,9 @@ func TestNewAllocation(t *testing.T) {
 			"4", "5", "6", "7"},
 	}
 	var goodBlobber = StorageNode{
-		Capacity:  536870912,
-		Allocated: 73,
-		Type:      spenum.Blobber,
+		Capacity:     536870912,
+		Allocated:    73,
+		ProviderType: spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -134,8 +132,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 	}
 
 	var blobberTemplate = StorageNode{
-		Capacity: 536870912,
-		Type:     spenum.Blobber,
+		Capacity:     536870912,
+		ProviderType: spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -162,7 +160,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = blobberTemplate
 		nextBlobber.ID = strconv.Itoa(i)
-		nextBlobber.Type = spenum.Blobber
+		nextBlobber.ProviderType = spenum.Blobber
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
 		writePrice *= 0.9
 		var minLockDemand = float64(allocation.Size) * writePrice * blobberYaml.minLockDemand
@@ -253,8 +251,8 @@ func TestFinalizeAllocation(t *testing.T) {
 		minLockDemand: 0.1,
 	}
 	var blobberTemplate = StorageNode{
-		Capacity: 536870912,
-		Type:     spenum.Blobber,
+		Capacity:     536870912,
+		ProviderType: spenum.Blobber,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -282,7 +280,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = blobberTemplate
 		nextBlobber.ID = strconv.Itoa(i)
-		nextBlobber.Type = spenum.Blobber
+		nextBlobber.ProviderType = spenum.Blobber
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
 		writePrice *= 0.9
 		var minLockDemand = float64(allocation.Size) * writePrice * blobberYaml.minLockDemand
@@ -340,8 +338,8 @@ func testCancelAllocation(
 	scYaml Config,
 	challengePoolBalance int64,
 	challenges [][]common.Timestamp,
-	blobberOffer int64,
-	thisExpires, now common.Timestamp,
+	_ int64,
+	_, now common.Timestamp,
 ) error {
 	var f = formulaeFinalizeAllocation{
 		t:                    t,
