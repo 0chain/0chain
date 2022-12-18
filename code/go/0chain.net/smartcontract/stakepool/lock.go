@@ -106,7 +106,7 @@ func (sp *StakePool) LockPool(
 		return "", err
 	}
 
-	dp.emitNew(newPoolId, providerId, providerType, balances)
+	dp.EmitNew(newPoolId, providerId, providerType, balances)
 
 	return toJson(lock), nil
 }
