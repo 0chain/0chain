@@ -214,7 +214,7 @@ func (gs *globalSnapshot) update(e []Event) {
 					dr, err := r.Int64()
 					if err != nil {
 						logging.Logger.Error("snapshot",
-							zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+							zap.Any("event", event.Data), zap.Error(err))
 						continue
 					}
 					gs.MinedTotal += dr
