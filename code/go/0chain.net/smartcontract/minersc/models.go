@@ -82,8 +82,6 @@ const (
 var (
 	AllMinersKey         = globalKeyHash("all_miners")
 	AllShardersKey       = globalKeyHash("all_sharders")
-	SharderListLengthKey = globalKeyHash("sharder_list_length")
-	MinerListLengthKey   = globalKeyHash("miner_list_length")
 	DKGMinersKey         = globalKeyHash("dkg_miners")
 	MinersMPKKey         = globalKeyHash("miners_mpk")
 	MagicBlockKey        = globalKeyHash("magic_block")
@@ -906,7 +904,6 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(dmn.Encode())
 }
 
-
 // getMinersList returns miners list
 func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(state, AllMinersKey)
@@ -1051,7 +1048,6 @@ func getNodesList(balances cstate.CommonStateContextI, key datastore.Key) (*Mine
 
 	return &MinerNodes{ss}, nil
 }
-
 
 // quick fix: localhost check + duplicate check
 // TODO: remove this after more robust challenge based node addtion/health_check is added

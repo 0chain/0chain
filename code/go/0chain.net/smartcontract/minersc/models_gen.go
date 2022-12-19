@@ -686,34 +686,6 @@ func (z *GlobalNode) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z NodeListLength) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	o = msgp.AppendInt(o, int(z))
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *NodeListLength) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	{
-		var zb0001 int
-		zb0001, bts, err = msgp.ReadIntBytes(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		(*z) = NodeListLength(zb0001)
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z NodeListLength) Msgsize() (s int) {
-	s = msgp.IntSize
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
 func (z NodeType) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	o = msgp.AppendInt(o, int(z))
