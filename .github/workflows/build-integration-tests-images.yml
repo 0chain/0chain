@@ -38,3 +38,7 @@ jobs:
     - name: Build Sharder Docker Image For Integration Test.
       run: |
         bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: Run Basic conductor tests
+      run: |
+        ./docker.local/bin/start.conductor.sh basic

@@ -86,7 +86,7 @@ func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Reques
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizer getAuthorizer
-// get authorizer
+// get details of a given authorizer ID
 //
 // responses:
 //
