@@ -82,8 +82,6 @@ const (
 var (
 	AllMinersKey         = globalKeyHash("all_miners")
 	AllShardersKey       = globalKeyHash("all_sharders")
-	SharderListLengthKey = globalKeyHash("sharder_list_length")
-	MinerListLengthKey   = globalKeyHash("miner_list_length")
 	DKGMinersKey         = globalKeyHash("dkg_miners")
 	MinersMPKKey         = globalKeyHash("miners_mpk")
 	MagicBlockKey        = globalKeyHash("magic_block")
