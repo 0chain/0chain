@@ -954,10 +954,11 @@ type fullBlock struct {
 //	400:
 //	500:
 func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request) {
-	var (
-		startBlockNum = r.URL.Query().Get("start")
-		endBlockNum   = r.URL.Query().Get("end")
-	)
+	start, end, err := common2.GetStartEndBlock(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
@@ -971,23 +972,7 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var blocks []event.Block
-	if startBlockNum != "" && endBlockNum != "" {
-		start, err := strconv.ParseInt(r.URL.Query().Get("start"), 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("start block number is not valid"))
-			return
-		}
-		end, err := strconv.ParseInt(r.URL.Query().Get("end"), 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("end block number is not valid"))
-			return
-		}
-
-		if start > end {
-			common.Respond(w, r, nil, common.NewErrBadRequest("start block number is greater than end block number"))
-			return
-		}
-
+	if end > 0 {
 		blocks, err = edb.GetBlocksByBlockNumbers(start, end, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
@@ -1234,7 +1219,7 @@ func (srh *StorageRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.R
 }
 
 func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
-	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
+	delegatePools, err := edb.GetDelegatePools(providerID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
 	}

@@ -566,7 +566,7 @@ func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 }
 
 /*setupInitialState - setup the initial state based on configuration */
-func (c *Chain) setupInitialState(initStates *state.InitStates, creationDate common.Timestamp) util.MerklePatriciaTrieI {
+func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
 		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
@@ -575,10 +575,10 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, creationDate com
 		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
 	}
 
-	stateCtx := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
+	stateCtx := cstate.NewStateContext(gb, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(stateCtx)
 
-	if err := c.addInitialStakes(initStates.Stakes, creationDate, stateCtx); err != nil {
+	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
 		logging.Logger.Error("init stake failed", zap.Error(err))
 		panic(err)
 	}
@@ -620,7 +620,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, creationDate com
 	return pmt
 }
 
-func (c *Chain) addInitialStakes(stakes []state.InitStake, creationDate common.Timestamp, balances cstate.StateContextI) error {
+func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {
 	edbDelegatePools := make([]*event.DelegatePool, 0, len(stakes))
 	for _, v := range stakes {
 		providerType := spenum.ToProviderType(v.ProviderType)
@@ -646,8 +646,7 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, creationDate common.T
 		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
 			Balance:      v.Tokens,
 			DelegateID:   v.ClientID,
-			RoundCreated: 1,
-			StakedAt:     creationDate,
+			RoundCreated: 0, // genesis round
 		}
 
 		edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
@@ -656,7 +655,7 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, creationDate common.T
 			ProviderID:   v.ProviderID,
 			DelegateID:   v.ClientID,
 			Balance:      v.Tokens,
-			RoundCreated: 1,
+			RoundCreated: 0, // genesis round
 		})
 
 		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
@@ -697,7 +696,7 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.ClientState = c.setupInitialState(initStates, gb.CreationDate)
+	gb.ClientState = c.setupInitialState(initStates, gb)
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
