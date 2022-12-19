@@ -61,3 +61,31 @@ func (z Provider) Msgsize() (s int) {
 	s = msgp.IntSize
 	return
 }
+
+// MarshalMsg implements msgp.Marshaler
+func (z Reward) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	o = msgp.AppendInt(o, int(z))
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *Reward) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	{
+		var zb0001 int
+		zb0001, bts, err = msgp.ReadIntBytes(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		(*z) = Reward(zb0001)
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z Reward) Msgsize() (s int) {
+	s = msgp.IntSize
+	return
+}

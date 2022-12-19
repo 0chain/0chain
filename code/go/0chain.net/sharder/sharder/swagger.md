@@ -49,6 +49,7 @@
 > Note: start-date and end-date resolves to the closest block number for those timestamps on the network. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs | [configs](#configs) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers | [count readmarkers](#count-readmarkers) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/delegate-rewards | [delegate rewards](#delegate-rewards) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors | [errors](#errors) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/faucet_config | [faucet config](#faucet-config) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers | [free alloc blobbers](#free-alloc-blobbers) | returns list of all blobbers alive that match the free allocation request. |
@@ -95,6 +96,7 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges | [openchallenges](#openchallenges) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/personalPeriodicLimit | [personal periodic limit](#personal-periodic-limit) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pourAmount | [pour amount](#pour-amount) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/provider-rewards | [provider rewards](#provider-rewards) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers | [readmarkers](#readmarkers) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate | [replicate blobber aggregates](#replicate-blobber-aggregates) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots | [replicate snapshots](#replicate-snapshots) |  |
@@ -902,6 +904,53 @@ Status: OK
 Status: Internal Server Error
 
 ###### <span id="count-readmarkers-500-schema"></span> Schema
+
+### <span id="delegate-rewards"></span> delegate rewards (*delegate-rewards*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/delegate-rewards
+```
+
+Gets list of delegate rewards satisfying filter
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| end | `query` | string | `string` |  | ✓ |  | end time of interval |
+| is_descending | `query` | string | `string` |  |  |  | is descending |
+| limit | `query` | string | `string` |  |  |  | limit |
+| offset | `query` | string | `string` |  |  |  | offset |
+| start | `query` | string | `string` |  | ✓ |  | start time of interval |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#delegate-rewards-200) | OK | WriteMarker |  | [schema](#delegate-rewards-200-schema) |
+| [400](#delegate-rewards-400) | Bad Request |  |  | [schema](#delegate-rewards-400-schema) |
+| [500](#delegate-rewards-500) | Internal Server Error |  |  | [schema](#delegate-rewards-500-schema) |
+
+#### Responses
+
+
+##### <span id="delegate-rewards-200"></span> 200 - WriteMarker
+Status: OK
+
+###### <span id="delegate-rewards-200-schema"></span> Schema
+   
+  
+
+[][WriteMarker](#write-marker)
+
+##### <span id="delegate-rewards-400"></span> 400
+Status: Bad Request
+
+###### <span id="delegate-rewards-400-schema"></span> Schema
+
+##### <span id="delegate-rewards-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="delegate-rewards-500-schema"></span> Schema
 
 ### <span id="errors"></span> errors (*errors*)
 
@@ -2621,6 +2670,53 @@ Status: OK
 Status: Not Found
 
 ###### <span id="pour-amount-404-schema"></span> Schema
+
+### <span id="provider-rewards"></span> provider rewards (*provider-rewards*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/provider-rewards
+```
+
+Gets list of provider rewards satisfying filter
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| end | `query` | string | `string` |  | ✓ |  | end time of interval |
+| is_descending | `query` | string | `string` |  |  |  | is descending |
+| limit | `query` | string | `string` |  |  |  | limit |
+| offset | `query` | string | `string` |  |  |  | offset |
+| start | `query` | string | `string` |  | ✓ |  | start time of interval |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#provider-rewards-200) | OK | WriteMarker |  | [schema](#provider-rewards-200-schema) |
+| [400](#provider-rewards-400) | Bad Request |  |  | [schema](#provider-rewards-400-schema) |
+| [500](#provider-rewards-500) | Internal Server Error |  |  | [schema](#provider-rewards-500-schema) |
+
+#### Responses
+
+
+##### <span id="provider-rewards-200"></span> 200 - WriteMarker
+Status: OK
+
+###### <span id="provider-rewards-200-schema"></span> Schema
+   
+  
+
+[][WriteMarker](#write-marker)
+
+##### <span id="provider-rewards-400"></span> 400
+Status: Bad Request
+
+###### <span id="provider-rewards-400-schema"></span> Schema
+
+##### <span id="provider-rewards-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="provider-rewards-500-schema"></span> Schema
 
 ### <span id="readmarkers"></span> readmarkers (*readmarkers*)
 

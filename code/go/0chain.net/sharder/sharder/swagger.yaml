@@ -2719,6 +2719,44 @@ paths:
                         $ref: '#/definitions/readMarkersCount'
                 "500":
                     description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/delegate-rewards:
+        get:
+            description: Gets list of delegate rewards satisfying filter
+            operationId: delegate-rewards
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: is descending
+                  in: query
+                  name: is_descending
+                  type: string
+                - description: start time of interval
+                  in: query
+                  name: start
+                  required: true
+                  type: string
+                - description: end time of interval
+                  in: query
+                  name: end
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: WriteMarker
+                    schema:
+                        items:
+                            $ref: '#/definitions/WriteMarker'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors:
         get:
             description: Gets errors returned by indicated transaction
@@ -3091,6 +3129,44 @@ paths:
                 "400":
                     description: ""
                 "404":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/provider-rewards:
+        get:
+            description: Gets list of provider rewards satisfying filter
+            operationId: provider-rewards
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: is descending
+                  in: query
+                  name: is_descending
+                  type: string
+                - description: start time of interval
+                  in: query
+                  name: start
+                  required: true
+                  type: string
+                - description: end time of interval
+                  in: query
+                  name: end
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: WriteMarker
+                    schema:
+                        items:
+                            $ref: '#/definitions/WriteMarker'
+                        type: array
+                "400":
                     description: ""
                 "500":
                     description: ""
