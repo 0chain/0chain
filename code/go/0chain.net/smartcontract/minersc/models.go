@@ -1052,26 +1052,6 @@ func getNodesList(balances cstate.CommonStateContextI, key datastore.Key) (*Mine
 	return &MinerNodes{ss}, nil
 }
 
-func getOrInitializeLengthNode(balances cstate.CommonStateContextI, key datastore.Key) (*NodeListLength, error) {
-	var length NodeListLength
-	err := balances.GetTrieNode(key, &length)
-	if err != nil {
-		if err == util.ErrMissingNodes {
-			var ndl NodeListLength = 0
-			balances.InsertTrieNode(key, &ndl)
-			return &ndl, nil
-		} else {
-			return nil, err
-		}
-	}
-
-	return &length, nil
-}
-
-func updateLengthNode(state cstate.CommonStateContextI, key datastore.Key, ndl *NodeListLength) (error) {
-	_, err := state.InsertTrieNode(key, ndl)
-	return err
-}
 
 // quick fix: localhost check + duplicate check
 // TODO: remove this after more robust challenge based node addtion/health_check is added
