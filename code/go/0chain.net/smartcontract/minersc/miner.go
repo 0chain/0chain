@@ -179,9 +179,6 @@ func (msc *MinerSmartContract) DeleteMiner(
 		return "", common.NewError("delete_miner", err.Error())
 	}
 
-	lockAllMiners.Lock()
-	defer lockAllMiners.Unlock()
-
 	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
 		return "", common.NewError("delete_miner", err.Error())
 	}
