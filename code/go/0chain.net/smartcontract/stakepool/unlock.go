@@ -17,12 +17,12 @@ func (sp *StakePool) UnlockPool(
 	providerId datastore.Key,
 	balances cstate.StateContextI,
 ) (string, error) {
-	dp, ok := sp.Pools[clientID]
+	_, ok := sp.Pools[clientID]
 	if !ok {
 		return "", fmt.Errorf("can't find pool of %v", clientID)
 	}
 
-	dp.Status = spenum.Deleted
+	defer delete(sp.Pools, clientID)
 	amount, err := sp.MintRewards(
 		clientID, providerId, providerType, balances,
 	)
