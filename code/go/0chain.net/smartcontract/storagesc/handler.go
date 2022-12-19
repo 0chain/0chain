@@ -275,7 +275,7 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 //
 // responses:
 //
-//	200:
+//	200: stringArray
 //	400:
 func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -371,7 +371,7 @@ func (nar *allocationBlobbersRequest) decode(b []byte) error {
 //
 // responses:
 //
-//	200:
+//	200: stringArray
 //	400:
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -898,7 +898,7 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
 // Gets the total data currently storage used across all blobbers.
 //
-// # This endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
+// This endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
 //
 // responses:
 //
@@ -1251,17 +1251,17 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 // Gets challenges for a blobber by challenge id
 //
 // parameters:
-//   + name: id
+//   - name: id
 //     description: id of blobber
 //     required: true
 //     in: query
 //     type: string
-//   + name: start
+//   - name: start
 //     description: start time of interval
 //     required: true
 //     in: query
 //     type: string
-//   + name: end
+//   - name: end
 //     description: end time of interval
 //     required: true
 //     in: query
@@ -2593,34 +2593,34 @@ func (srh *StorageRestHandler) getBlobbersByRank(w http.ResponseWriter, r *http.
 //
 //	Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values.
 //
-//	  + name: max_latitude
-//	    description: maximum latitude value, defaults to 90
-//	    in: query
-//	    type: string
-//	  + name: min_latitude
-//	    description:  minimum latitude value, defaults to -90
-//	    in: query
-//	    type: string
-//	  + name: max_longitude
-//	    description: maximum max_longitude value, defaults to 180
-//	    in: query
-//	    type: string
-//	  + name: min_longitude
-//	    description: minimum max_longitude value, defaults to -180
-//	    in: query
-//	    type: string
-//	  + name: offset
-//	    description: offset
-//	    in: query
-//	    type: string
-//	  + name: limit
-//	    description: limit
-//	    in: query
-//	    type: string
-//	  + name: sort
-//	    description: desc or asc
-//	    in: query
-//	    type: string
+//	  +name: max_latitude
+//	   description: maximum latitude value, defaults to 90
+//	   in: query
+//	   type: string
+//	  +name: min_latitude
+//	   description:  minimum latitude value, defaults to -90
+//	   in: query
+//	   type: string
+//	  +name: max_longitude
+//	   description: maximum max_longitude value, defaults to 180
+//	   in: query
+//	   type: string
+//	  +name: min_longitude
+//	   description: minimum max_longitude value, defaults to -180
+//	   in: query
+//	   type: string
+//	  +name: offset
+//	   description: offset
+//	   in: query
+//	   type: string
+//	  +name: limit
+//	   description: limit
+//	   in: query
+//	   type: string
+//	  +name: sort
+//	   description: desc or asc
+//	   in: query
+//	   type: string
 //
 // responses:
 //
@@ -2833,11 +2833,11 @@ type timestampToRoundResp struct {
 //
 // parameters:
 //
-//  +name: timestamps
-//	 description: timestamps you want to convert to rounds
-//	 required: true
-//	 in: query
-//	 type: string
+//	 +name: timestamps
+//		 description: timestamps you want to convert to rounds
+//		 required: true
+//		 in: query
+//		 type: string
 //
 // responses:
 //
@@ -2958,7 +2958,7 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 //      type: string
 //
 // responses:
-//  200:
+//  200: StringMap
 //  400:
 //  500:
 func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Request) {

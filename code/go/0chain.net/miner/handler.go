@@ -25,13 +25,19 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/miner/get/stats", common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
 }
 
-/*ChainStatsHandler - a handler to provide block statistics */
+// swagger:route GET /v1/chain/get/stats chainstatus
+// a handler to provide block statistics
+//
+// responses:
+//  200: ChainStats
+//  500: Internal Server Error
+
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetMinerChain().Chain
 	return diagnostics.GetStatistics(c, chain.SteadyStateFinalizationTimer, 1000000.0), nil
 }
 
-//ChainStatsWriter - display the current chain stats
+// ChainStatsWriter - display the current chain stats
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	c := GetMinerChain().Chain

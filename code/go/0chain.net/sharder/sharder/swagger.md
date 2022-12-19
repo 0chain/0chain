@@ -5081,8 +5081,6 @@ and the other for the allocations that the client (client_id) doesn't own
 |------|------|---------|:--------:| ------- |-------------|---------|
 | Rounds | []int64 (formatted integer)| `[]int64` |  | |  |  |
 
-
-
 ### <span id="user-locked-total-response"></span> userLockedTotalResponse
 
 
@@ -5095,5 +5093,3 @@ and the other for the allocations that the client (client_id) doesn't own
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
 | Total | int64 (formatted integer)| `int64` |  | |  |  |
-
-
