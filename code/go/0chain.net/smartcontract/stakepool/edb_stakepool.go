@@ -27,7 +27,7 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ProviderId = pId
-	spu.ProviderType = int(pType)
+	spu.ProviderType = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType

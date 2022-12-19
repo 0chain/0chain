@@ -3,9 +3,8 @@ package dbs
 import (
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/0chain/common/core/currency"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 )
 

@@ -410,6 +410,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("cannot get latest finalised block"))
 		return
 	}
+
 	var err error
 	var delegates []event.DelegatePool
 	if includeDelegates {
@@ -993,7 +994,7 @@ func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Req
 }
 
 func getProviderStakePoolStats(providerType spenum.Provider, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
-	delegatePools, err := edb.GetDelegatePools(providerID, providerType)
+	delegatePools, err := edb.GetDelegatePools(providerID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
 	}
