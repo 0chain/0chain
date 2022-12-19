@@ -236,7 +236,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "blobber_health_check":
 		resp, err = sc.blobberHealthCheck(t, input, balances)
 	case "shut-down-blobber":
-		_, err = sc.shutDownBlobber(t, input, balances)
+		// todo piers _, err = sc.shutDownBlobber(t, input, balances)
 	case "kill-blobber":
 		_, err = sc.killBlobber(t, input, balances)
 
@@ -245,7 +245,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "validator-health-check":
 		resp, err = sc.validatorHealthCheck(t, input, balances)
 	case "shut-down-validator":
-		_, err = sc.shutDownValidator(t, input, balances)
+		// todo piers _, err = sc.shutDownValidator(t, input, balances)
 	case "kill-validator":
 		_, err = sc.killValidator(t, input, balances)
 

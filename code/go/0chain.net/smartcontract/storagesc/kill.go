@@ -13,7 +13,7 @@ func kill() {
 
 }
 
-func (ssc *StorageSmartContract) killBlobber(
+func (_ *StorageSmartContract) killBlobber(
 	t *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
@@ -31,7 +31,7 @@ func (ssc *StorageSmartContract) killBlobber(
 		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
 			var blobber *StorageNode
-			if blobber, err = ssc.getBlobber(req.ID, balances); err != nil {
+			if blobber, err = getBlobber(req.ID, balances); err != nil {
 				return nil, nil, common.NewError("kill_blobber_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())
 			}
@@ -63,7 +63,7 @@ func (ssc *StorageSmartContract) killBlobber(
 				}
 			}
 
-			sp, err := getStakePool(blobber.Type(), blobber.Id(), balances)
+			sp, err := getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -78,7 +78,7 @@ func (ssc *StorageSmartContract) killBlobber(
 	return "", nil
 }
 
-func (ssc *StorageSmartContract) killValidator(
+func (_ *StorageSmartContract) killValidator(
 	t *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
@@ -88,14 +88,15 @@ func (ssc *StorageSmartContract) killValidator(
 		return "", common.NewError("can't get config", err.Error())
 	}
 
-	err = kill(
+	err = provider.Kill(
 		input,
+		t.ClientID,
 		conf.OwnerId,
 		conf.StakePool.KillSlash,
 		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
 			var validator = newValidatorNode(req.ID)
-			if err = balances.GetTrieNode(validator.GetKey(ssc.ID), validator); err != nil {
+			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
 				return nil, nil, common.NewError("kill_validator_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())
 			}
@@ -109,7 +110,12 @@ func (ssc *StorageSmartContract) killValidator(
 				return nil, nil, common.NewError("kill_validator_failed",
 					"failed to remove validator."+err.Error())
 			}
-			return validator, nil
+
+			sp, err := getStakePoolAdapter(validator.Type(), validator.Id(), balances)
+			if err != nil {
+				return nil, nil, err
+			}
+			return validator, sp, nil
 		},
 		balances,
 	)

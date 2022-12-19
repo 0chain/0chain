@@ -308,13 +308,20 @@ func (_ *StorageSmartContract) getStakePool(providerType spenum.Provider, provid
 }
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
+func (_ *StorageSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
 	balances chainstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+	return getStakePoolAdapter(providerType, providerID, balances)
+}
+
+func getStakePoolAdapter(
+	providerType spenum.Provider,
+	providerID string,
+	balances chainstate.CommonStateContextI,
+) (sp stakepool.AbstractStakePool, err error) {
 	pool, err := getStakePool(providerType, providerID, balances)
 	if err != nil {
 		return nil, err
 	}
-
 	return pool, nil
 }
 
