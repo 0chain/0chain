@@ -685,6 +685,10 @@ func (z *GlobalNode) Msgsize() (s int) {
 	return
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4057a7215... Complete removing code related to unused code
 // MarshalMsg implements msgp.Marshaler
 func (z NodeType) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
