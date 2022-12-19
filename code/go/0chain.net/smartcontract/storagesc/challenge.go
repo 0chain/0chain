@@ -178,7 +178,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return err
 	}
 
-	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, balances)
+	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}

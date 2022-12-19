@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
-
+	"github.com/0chain/common/core/currency"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
 )
@@ -44,11 +44,12 @@ type Provider struct {
 
 type StakePoolReward struct {
 	Provider
-	Reward currency.Coin `json:"reward"`
+	Reward     currency.Coin `json:"reward"`
+	RewardType spenum.Reward `json:"reward_type"`
 	// rewards delegate pools
-	DelegateRewards map[string]int64 `json:"delegate_rewards"`
+	DelegateRewards map[string]currency.Coin `json:"delegate_rewards"`
 	// penalties delegate pools
-	DelegatePenalties map[string]int64 `json:"delegate_penalties"`
+	DelegatePenalties map[string]currency.Coin `json:"delegate_penalties"`
 }
 
 type DelegatePoolId struct {

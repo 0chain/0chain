@@ -6,10 +6,11 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 )
 
-func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
+func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool) MinerNode {
 	var status = node.NodeStatusInactive
 	if edbMiner.Active {
 		status = node.NodeStatusActive
@@ -34,7 +35,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		Status:          status,
 	}
 
-	return MinerNode{
+	mn := MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbMiner.Rewards.Rewards,
@@ -47,7 +48,20 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 			},
 		},
 	}
-
+	if len(delegates) == 0 {
+		return mn
+	}
+	mn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	for _, delegate := range delegates {
+		mn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
+			Balance:      delegate.Balance,
+			Reward:       delegate.Reward,
+			Status:       spenum.PoolStatus(delegate.Status),
+			RoundCreated: delegate.RoundCreated,
+			DelegateID:   delegate.DelegateID,
+		}
+	}
+	return mn
 }
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {

@@ -2,6 +2,7 @@ package event
 
 import (
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
 	"gorm.io/gorm/clause"
 
@@ -28,20 +29,20 @@ type Snapshot struct {
 	ZCNSupply            int64 `json:"zcn_supply"`             //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
 	TotalValueLocked     int64 `json:"total_value_locked"`     //487 SUM Total value locked = Total staked ZCN * Price per ZCN (across all pools)
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
-
+	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
 	// updated from blobber snapshot aggregate table
-	AverageWritePrice    int64 `json:"average_write_price"`   //*494 AVG it's the price from the terms and triggered with their updates //???
-	TotalStaked          int64 `json:"total_staked"`          //*485 SUM All providers all pools
-	SuccessfulChallenges int64 `json:"successful_challenges"` //*493 SUM percentage of challenges failed by a particular blobber
-	TotalChallenges      int64 `json:"total_challenges"`      //*493 SUM percentage of challenges failed by a particular blobber
-	AllocatedStorage     int64 `json:"allocated_storage"`     //*490 SUM clients have locked up storage by purchasing allocations (new + previous + update -sub fin+cancel or reduceed)
-	MaxCapacityStorage   int64 `json:"max_capacity_storage"`  //*491 SUM all storage from blobber settings
-	StakedStorage        int64 `json:"staked_storage"`        //*491 SUM staked capacity by delegates
-	UsedStorage          int64 `json:"used_storage"`          //*491 SUM this is the actual usage or data that is in the server - write markers (triggers challenge pool / the price).(bytes written used capacity)
-	TransactionsCount    int64 `json:"transactions_count"`    // Total number of transactions in a block
-	UniqueAddresses      int64 `json:"unique_addresses"`      // Total unique address
-	BlockCount           int64 `json:"block_count"`           // Total number of blocks currently
-	AverageTxnFee        int64 `json:"avg_txn_fee"`           // Average transaction fee per block
+	AverageWritePrice    int64 `json:"average_write_price"`              //*494 AVG it's the price from the terms and triggered with their updates //???
+	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
+	SuccessfulChallenges int64 `json:"successful_challenges"`            //*493 SUM percentage of challenges failed by a particular blobber
+	TotalChallenges      int64 `json:"total_challenges"`                 //*493 SUM percentage of challenges failed by a particular blobber
+	AllocatedStorage     int64 `json:"allocated_storage"`                //*490 SUM clients have locked up storage by purchasing allocations (new + previous + update -sub fin+cancel or reduceed)
+	MaxCapacityStorage   int64 `json:"max_capacity_storage"`             //*491 SUM all storage from blobber settings
+	StakedStorage        int64 `json:"staked_storage"`                   //*491 SUM staked capacity by delegates
+	UsedStorage          int64 `json:"used_storage"`                     //*491 SUM this is the actual usage or data that is in the server - write markers (triggers challenge pool / the price).(bytes written used capacity)
+	TransactionsCount    int64 `json:"transactions_count"`               // Total number of transactions in a block
+	UniqueAddresses      int64 `json:"unique_addresses"`                 // Total unique address
+	BlockCount           int64 `json:"block_count"`                      // Total number of blocks currently
+	AverageTxnFee        int64 `json:"avg_txn_fee"`                      // Average transaction fee per block
 	CreatedAt            int64 `gorm:"autoCreateTime" json:"created_at"` // Snapshot creation date
 }
 
@@ -92,6 +93,7 @@ type globalSnapshot struct {
 }
 
 func (edb *EventDb) addSnapshot(s Snapshot) error {
+	logging.Logger.Info("add_snapshot", zap.Any("snapshot", s))
 	return edb.Store.Get().Create(&s).Error
 }
 
@@ -152,6 +154,7 @@ func (gs *globalSnapshot) update(e []Event) {
 				continue
 			}
 			gs.TotalValueLocked += d.Amount
+			gs.TotalStaked += d.Amount
 			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", d.Amount),
 				zap.Int64("total_amount", gs.TotalValueLocked))
 		case TagUnlockStakePool:
@@ -162,6 +165,7 @@ func (gs *globalSnapshot) update(e []Event) {
 				continue
 			}
 			gs.TotalValueLocked -= d.Amount
+			gs.TotalStaked -= d.Amount
 		case TagLockWritePool:
 			d, ok := fromEvent[WritePoolLock](event.Data)
 			if !ok {
@@ -198,6 +202,24 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ClientLocks -= d.Amount
 			gs.TotalValueLocked -= d.Amount
+		case TagStakePoolReward:
+			spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			for _, spu := range *spus {
+				for _, r := range spu.DelegateRewards {
+					dr, err := r.Int64()
+					if err != nil {
+						logging.Logger.Error("snapshot",
+							zap.Any("event", event.Data), zap.Error(err))
+						continue
+					}
+					gs.MinedTotal += dr
+				}
+			}
 		case TagFinalizeBlock:
 			block, ok := fromEvent[Block](event.Data)
 			if !ok {

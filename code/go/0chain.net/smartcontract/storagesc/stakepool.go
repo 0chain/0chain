@@ -144,7 +144,7 @@ func (sp *stakePool) Empty(
 	// we can't do an immediate unlock.
 	// Instead we mark as unstake to prevent being used for further allocations.
 
-	totalBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
+	requiredBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
 	if err != nil {
 		return err
 	}
@@ -153,12 +153,13 @@ func (sp *stakePool) Empty(
 	if err != nil {
 		return err
 	}
-	if staked < totalBalance {
+	if staked < requiredBalance {
 		if dp.Status != spenum.Unstaking {
 			totalUnStake, err := currency.AddCoin(sp.TotalUnStake, dp.Balance)
 			if err != nil {
 				return err
 			}
+			//we are locking current pool and hold the tokens, they won't be counted in clean stake after that
 			sp.TotalUnStake = totalUnStake
 
 			dp.Status = spenum.Unstaking
@@ -166,11 +167,16 @@ func (sp *stakePool) Empty(
 		return nil
 	}
 
+	//clean up unstaking lock
 	if dp.Status == spenum.Unstaking {
-		totalUnstake, err := currency.MinusCoin(sp.TotalUnStake, dp.Balance)
-		if err != nil {
-			return err
+		totalUnstake := currency.Coin(0)
+		if sp.TotalUnStake > dp.Balance {
+			totalUnstake, err = currency.MinusCoin(sp.TotalUnStake, dp.Balance)
+			if err != nil {
+				return err
+			}
 		}
+		//we can release these tokens now so UnStake hold can now be released
 		sp.TotalUnStake = totalUnstake
 	}
 
@@ -231,7 +237,7 @@ func (sp *stakePool) slash(
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
 	var ratio = float64(slash) / float64(staked)
-	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber)
+	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty)
 	for id, dp := range sp.Pools {
 		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
 		if err != nil {
@@ -251,7 +257,7 @@ func (sp *stakePool) slash(
 		if err != nil {
 			return 0, err
 		}
-		edbSlash.DelegatePenalties[id] = int64(dpSlash)
+		edbSlash.DelegatePenalties[id] = dpSlash
 	}
 	// todo we should slash from stake pools not rewards. 0chain issue 1495
 	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {

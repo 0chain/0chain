@@ -443,11 +443,11 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 				makeStakePoolRewardEvent(
 					"b_1",
 					100,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 			},
@@ -455,12 +455,12 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 				poolRewards: map[string]dbs.StakePoolReward{
 					"b_1": {
 						Provider: dbs.Provider{ProviderId: "b_1"},
-						Reward:   100,
-						DelegateRewards: map[string]int64{
+						Reward:      100,
+						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
 							"bp_2": 20,
 						},
-						DelegatePenalties: map[string]int64{
+						DelegatePenalties: map[string]currency.Coin{
 							"bp_1": 10,
 						},
 					},
@@ -473,21 +473,21 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 				makeStakePoolRewardEvent(
 					"b_1",
 					100,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 				makeStakePoolRewardEvent(
 					"b_2",
 					200,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 			},
@@ -495,23 +495,23 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 				poolRewards: map[string]dbs.StakePoolReward{
 					"b_1": {
 						Provider: dbs.Provider{ProviderId: "b_1"},
-						Reward:   100,
-						DelegateRewards: map[string]int64{
+						Reward:      100,
+						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
 							"bp_2": 20,
 						},
-						DelegatePenalties: map[string]int64{
+						DelegatePenalties: map[string]currency.Coin{
 							"bp_1": 10,
 						},
 					},
 					"b_2": {
 						Provider: dbs.Provider{ProviderId: "b_2"},
-						Reward:   200,
-						DelegateRewards: map[string]int64{
+						Reward:      200,
+						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
 							"bp_2": 20,
 						},
-						DelegatePenalties: map[string]int64{
+						DelegatePenalties: map[string]currency.Coin{
 							"bp_1": 10,
 						},
 					},
@@ -524,21 +524,21 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 				makeStakePoolRewardEvent(
 					"b_1",
 					100,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 				makeStakePoolRewardEvent(
 					"b_1",
 					200,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 			},
@@ -546,12 +546,12 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 				poolRewards: map[string]dbs.StakePoolReward{
 					"b_1": {
 						Provider: dbs.Provider{ProviderId: "b_1"},
-						Reward:   300,
-						DelegateRewards: map[string]int64{
+						Reward:      300,
+						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 20,
 							"bp_2": 40,
 						},
-						DelegatePenalties: map[string]int64{
+						DelegatePenalties: map[string]currency.Coin{
 							"bp_1": 20,
 						},
 					},
@@ -564,41 +564,41 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 				makeStakePoolRewardEvent(
 					"b_1",
 					100,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 				makeStakePoolRewardEvent(
 					"b_2",
 					100,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 				makeStakePoolRewardEvent(
 					"b_3",
 					100,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 				makeStakePoolRewardEvent(
 					"b_1",
 					100,
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 						"bp_2": 20,
 					},
-					map[string]int64{
+					map[string]currency.Coin{
 						"bp_1": 10,
 					}),
 			},
@@ -606,34 +606,34 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 				poolRewards: map[string]dbs.StakePoolReward{
 					"b_1": {
 						Provider: dbs.Provider{ProviderId: "b_1"},
-						Reward:   200,
-						DelegateRewards: map[string]int64{
+						Reward:      200,
+						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 20,
 							"bp_2": 40,
 						},
-						DelegatePenalties: map[string]int64{
+						DelegatePenalties: map[string]currency.Coin{
 							"bp_1": 20,
 						},
 					},
 					"b_2": {
 						Provider: dbs.Provider{ProviderId: "b_2"},
-						Reward:   100,
-						DelegateRewards: map[string]int64{
+						Reward:      100,
+						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
 							"bp_2": 20,
 						},
-						DelegatePenalties: map[string]int64{
+						DelegatePenalties: map[string]currency.Coin{
 							"bp_1": 10,
 						},
 					},
 					"b_3": {
 						Provider: dbs.Provider{ProviderId: "b_3"},
-						Reward:   100,
-						DelegateRewards: map[string]int64{
+						Reward:      100,
+						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
 							"bp_2": 20,
 						},
-						DelegatePenalties: map[string]int64{
+						DelegatePenalties: map[string]currency.Coin{
 							"bp_1": 10,
 						},
 					},
@@ -676,7 +676,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 }
 
 func makeStakePoolRewardEvent(id string, reward currency.Coin,
-	delegateRewards map[string]int64, delegatePenalties map[string]int64) Event {
+	delegateRewards map[string]currency.Coin, delegatePenalties map[string]currency.Coin) Event {
 	return Event{
 		Type:  TypeStats,
 		Tag:   TagStakePoolReward,
