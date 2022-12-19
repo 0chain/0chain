@@ -6,9 +6,9 @@ require (
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
 	github.com/alicebob/miniredis/v2 v2.23.1
 	github.com/didip/tollbooth v4.0.2+incompatible
-	github.com/go-openapi/runtime v0.24.2
+	github.com/go-openapi/runtime v0.25.0
 	github.com/go-playground/validator/v10 v10.11.1
-	github.com/gocql/gocql v1.2.1
+	github.com/gocql/gocql v1.3.1
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
@@ -33,7 +33,7 @@ require (
 	github.com/valyala/gozstd v1.16.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.10.0
-	go.uber.org/zap v1.23.0
+	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
@@ -42,7 +42,10 @@ require (
 	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
 )
 
-require github.com/0chain/common v0.0.6-0.20221113152339-7174fb91b504
+require (
+	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+	moul.io/zapgorm2 v1.1.3
+)
 
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
@@ -95,7 +98,7 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20220504180219-658193537a64 // indirect
 	go.mongodb.org/mongo-driver v1.9.1 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/sys v0.0.0-20220908164124-27713097b956 // indirect
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -104,5 +107,3 @@ require (
 )
 
 replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
-
-//replace github.com/0chain/common => ../../../../0chain_other/common

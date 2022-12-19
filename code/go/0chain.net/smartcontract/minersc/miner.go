@@ -3,7 +3,6 @@ package minersc
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -83,7 +82,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.Any("mscID", msc.ID),
 		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet),
 		zap.Float64("service_charge", newMiner.Settings.ServiceChargeRatio),
-		zap.Int("number_of_delegates", newMiner.Settings.MaxNumDelegates),
+		zap.Int("num_delegates", newMiner.Settings.MaxNumDelegates),
 		zap.Int64("min_stake", int64(newMiner.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newMiner.Settings.MaxStake)),
 	)
@@ -207,16 +206,11 @@ func (msc *MinerSmartContract) deleteNode(
 		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
 	}
 
-	usp, err := stakepool.GetUserStakePools(nodeType, deleteNode.Settings.DelegateWallet, balances)
-	if err != nil {
-		return nil, fmt.Errorf("can't get user pools list: %v", err)
-	}
-
 	for key, pool := range deleteNode.Pools {
 		switch pool.Status {
 		case spenum.Pending:
 			_, err := deleteNode.UnlockPool(
-				pool.DelegateID, nodeType, key, usp, balances)
+				pool.DelegateID, nodeType, key, balances)
 			if err != nil {
 				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
 			}

@@ -25,6 +25,13 @@ func BenchmarkRestTests(
 				Endpoint: mrh.getUserPools,
 			},
 			{
+				FuncName: "getStakePoolStat",
+				Params: map[string]string{
+					"miner_id": data.Miners[0],
+				},
+				Endpoint: mrh.getStakePoolStat,
+			},
+			{
 				FuncName: "globalSettings",
 				Endpoint: mrh.getGlobalSettings,
 			},
@@ -88,7 +95,8 @@ func BenchmarkRestTests(
 			{
 				FuncName: "nodeStat",
 				Params: map[string]string{
-					"id": data.Miners[0],
+					"id":                data.Miners[0],
+					"include_delegates": "true",
 				},
 				Endpoint: mrh.getNodeStat,
 			},
@@ -122,6 +130,26 @@ func BenchmarkRestTests(
 			{
 				FuncName: "configs",
 				Endpoint: mrh.getConfigs,
+			},
+			{
+				FuncName: "provider-rewards",
+				Params: map[string]string{
+					"id":    data.Miners[0],
+					"limit": "20",
+					"start": "25",
+					"end":   "25",
+				},
+				Endpoint: mrh.getProviderRewards,
+			},
+			{
+				FuncName: "delegate-rewards",
+				Params: map[string]string{
+					"limit":  "20",
+					"offset": "1",
+					"start":  "25",
+					"end":    "75",
+				},
+				Endpoint: mrh.getDelegateRewards,
 			},
 		},
 		ADDRESS,

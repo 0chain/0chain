@@ -10,10 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
-
-	"0chain.net/smartcontract/stakepool"
-
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
@@ -560,22 +556,8 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		{
 			name: "Minersc_/getUserPools_Fail_Retrieving_Miners_Node_400",
 			chain: func() *chain.Chain {
-				un := stakepool.UserStakePools{
-					Providers: []string{"key"},
-				}
-				blob, err := un.MarshalMsg(nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-				gv := util.SecureSerializableValue{Buffer: blob}
-
 				lfb := block.NewBlock("", 1)
 				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-				k := encryption.Hash(minersc.ADDRESS + clientID)
-				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
-					t.Fatal(err)
-				}
-
 				ch := chain.NewChainFromConfig()
 				ch.LatestFinalizedBlock = lfb
 
@@ -604,25 +586,11 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			name: "Minersc_/getUserPools_Decoding_Miners_Node_Err_400",
 			chain: func() *chain.Chain {
 				minerID := "miner id"
-
-				un := stakepool.UserStakePools{
-					Providers: []string{minerID},
-				}
-				blob, err := un.MarshalMsg(nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-				gv := util.SecureSerializableValue{Buffer: blob}
-				gk := encryption.Hash(minersc.ADDRESS + clientID)
-
 				mv := util.SecureSerializableValue{Buffer: []byte("}{")}
 				mk := encryption.Hash(minersc.ADDRESS + minerID)
 
 				lfb := block.NewBlock("", 1)
 				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-				if _, err := lfb.ClientState.Insert(util.Path(gk), &gv); err != nil {
-					t.Fatal(err)
-				}
 				if _, err := lfb.ClientState.Insert(util.Path(mk), &mv); err != nil {
 					t.Fatal(err)
 				}
@@ -1348,20 +1316,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
 				}
-
-				sp := &stakepool.UserStakePools{
-					Providers: []string{"key"},
-				}
-				blob, err = sp.MarshalMsg(nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-				v2 := util.SecureSerializableValue{Buffer: blob}
-				k2 := stakepool.UserStakePoolsKey(spenum.Blobber, storagesc.ADDRESS)
-				if _, err := lfb.ClientState.Insert(util.Path(k2), &v2); err != nil {
-					t.Fatal(err)
-				}
-
 				ch := chain.NewChainFromConfig()
 				ch.LatestFinalizedBlock = lfb
 

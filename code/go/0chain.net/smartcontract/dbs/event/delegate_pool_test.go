@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -24,7 +26,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
@@ -42,7 +44,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
-	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
+	dps, err := eventDb.GetDelegatePools("provider_id")
 	require.NoError(t, err)
 	require.Len(t, dps, 1)
 
@@ -63,7 +65,7 @@ func TestTagStakePoolReward(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -72,12 +74,12 @@ func TestTagStakePoolReward(t *testing.T) {
 	require.NoError(t, err)
 
 	bl := Blobber{
-		BlobberID: "provider_id",
-		Rewards: ProviderRewards{
-			ProviderID:   "provider_id",
-			Rewards:      11,
-			TotalRewards: 23,
-		},
+		Provider: Provider{ID: "provider_id",
+			Rewards: ProviderRewards{
+				ProviderID:   "provider_id",
+				Rewards:      11,
+				TotalRewards: 23,
+			}},
 	}
 	res := eventDb.Store.Get().Create(&bl)
 	if res.Error != nil {
@@ -115,14 +117,14 @@ func TestTagStakePoolReward(t *testing.T) {
 	spr.ProviderId = "provider_id"
 	spr.ProviderType = int(spenum.Blobber)
 	spr.Reward = 17
-	spr.DelegateRewards = map[string]int64{
+	spr.DelegateRewards = map[string]currency.Coin{
 		"pool_id_1": 15,
 		"pool_id_2": 2,
 	}
 	data, err := json.Marshal(&spr)
 	eventDb.addStat(Event{
-		Type:  int(TypeStats),
-		Tag:   int(TagStakePoolReward),
+		Type:  TypeStats,
+		Tag:   TagStakePoolReward,
 		Index: spr.ProviderId,
 		Data:  string(data),
 	})
@@ -130,7 +132,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	var after int64
 	eventDb.Get().Table("delegate_pools").Count(&after)
 
-	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
+	dps, err := eventDb.GetDelegatePools("provider_id")
 	require.NoError(t, err)
 	require.Len(t, dps, 2)
 }

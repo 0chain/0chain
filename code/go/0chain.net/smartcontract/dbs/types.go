@@ -1,6 +1,9 @@
 package dbs
 
-import "github.com/0chain/common/core/currency"
+import (
+	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
+)
 
 type DbUpdates struct {
 	Id      string                 `json:"id"`
@@ -21,17 +24,12 @@ type StakePoolId struct {
 
 type StakePoolReward struct {
 	StakePoolId
-	Reward currency.Coin `json:"reward"`
+	Reward     currency.Coin `json:"reward"`
+	RewardType spenum.Reward `json:"reward_type"`
 	// rewards delegate pools
-	DelegateRewards map[string]int64 `json:"delegate_rewards"`
+	DelegateRewards map[string]currency.Coin `json:"delegate_rewards"`
 	// penalties delegate pools
-	DelegatePenalties map[string]int64 `json:"delegate_penalties"`
-}
-
-type StakePoolUpdate struct {
-	StakePoolId
-	Updates         map[string]interface{} `json:"updates"`
-	DelegateUpdates map[string]map[string]interface{}
+	DelegatePenalties map[string]currency.Coin `json:"delegate_penalties"`
 }
 
 type DelegatePoolId struct {

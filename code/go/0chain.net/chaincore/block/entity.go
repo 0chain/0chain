@@ -799,9 +799,9 @@ func (b *Block) Clone() *Block {
 type Chainer interface {
 	GetPreviousBlock(ctx context.Context, b *Block) *Block
 	GetBlockStateChange(b *Block) error
-	ComputeState(ctx context.Context, pb *Block) error
+	ComputeState(ctx context.Context, pb *Block, waitC ...chan struct{}) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error)
+	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC ...chan struct{}) ([]event.Event, error)
 	GetEventDb() *event.EventDb
 }
 
@@ -831,7 +831,7 @@ func CreateState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePat
 }
 
 // ComputeState computes block client state
-func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
+func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struct{}) error {
 	select {
 	case <-ctx.Done():
 		logging.Logger.Warn("computeState context done", zap.Error(ctx.Err()))
@@ -919,13 +919,13 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.Events = append(b.Events, event.Event{
 			BlockNumber: b.Round,
 			TxHash:      txn.Hash,
-			Type:        int(event.TypeStats),
-			Tag:         int(event.TagAddTransactions),
+			Type:        event.TypeStats,
+			Tag:         event.TagAddTransactions,
 			Index:       txn.Hash,
 			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),
 		})
 
-		events, err := c.UpdateState(ctx, b, bState, txn)
+		events, err := c.UpdateState(ctx, b, bState, txn, waitC...)
 		switch err {
 		case context.Canceled:
 			b.SetStateStatus(StateCancelled)

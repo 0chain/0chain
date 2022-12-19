@@ -27,9 +27,17 @@ simulation:
 options:
   verbose: true
   test_suites:
+    - "storage"
+    - "storage_rest"
     - "miner"
     - "miner_rest"
-    - "storage_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
   save_path: # do not add a load_path key, this is read from command line options
   load_concurrency: 4
@@ -46,6 +54,10 @@ dbs:
     max_open_conns: 200
     conn_max_lifetime: 20s
     aggregate_period: 5
+  settings:
+    debug: true
+    aggregate_period: 10
+    page_limit: 50
 
 smart_contracts:
   minersc:
@@ -201,4 +213,5 @@ internal:
   control_m: 25000
   control_n: 90
   show_output: true
+  bench_data_list_length: 12
 

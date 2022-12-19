@@ -359,13 +359,16 @@ func setUpMpt(
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
 	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		minersc.AddNodeDelegates(clients, miners, sharders, balances)
-		log.Println("adding miners and sharders delegates\t", time.Since(timer))
-	}()
+	if viper.GetBool(benchmark.EventDbEnabled) &&
+		viper.GetBool(benchmark.EventDbDebug) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			timer := time.Now()
+			minersc.AddMockProviderRewards(miners, sharders, eventDb)
+			log.Println("adding mock rewards for miners and sharders\t", time.Since(timer))
+		}()
+	}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -477,14 +480,39 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		listLength := viper.GetInt(benchmark.BenchDataListLength)
+
 		benchData.EventDb = eventDb
-		benchData.Clients = clients
-		benchData.PublicKeys = publicKeys
-		benchData.PrivateKeys = privateKeys
-		benchData.Miners = miners
-		benchData.Sharders = sharders
-		benchData.SharderKeys = sharderKeys
-		benchData.Now = common.Now()
+		if len(clients) < listLength {
+			benchData.Clients = clients
+		} else {
+			benchData.Clients = clients[:listLength]
+		}
+		if len(publicKeys) < listLength {
+			benchData.PublicKeys = publicKeys
+		} else {
+			benchData.PublicKeys = publicKeys[:listLength]
+		}
+		if len(privateKeys) < listLength {
+			benchData.PrivateKeys = privateKeys
+		} else {
+			benchData.PrivateKeys = privateKeys[:listLength]
+		}
+		if len(miners) < listLength {
+			benchData.Miners = miners
+		} else {
+			benchData.Miners = miners[:listLength]
+		}
+		if len(sharders) < listLength {
+			benchData.Sharders = sharders
+		} else {
+			benchData.Sharders = sharders[:listLength]
+		}
+		if len(sharderKeys) < listLength {
+			benchData.SharderKeys = sharderKeys
+		} else {
+			benchData.SharderKeys = sharderKeys[:listLength]
+		}
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
@@ -543,18 +571,24 @@ func newEventsDb() *event.EventDb {
 	timer := time.Now()
 	var eventDb *event.EventDb
 	tick := func() (*event.EventDb, error) {
-		return event.NewEventDb(config.DbAccess{
-			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
-			Name:            viper.GetString(benchmark.EventDbName),
-			User:            viper.GetString(benchmark.EventDbUser),
-			Password:        viper.GetString(benchmark.EventDbPassword),
-			Host:            viper.GetString(benchmark.EventDbHost),
-			Port:            viper.GetString(benchmark.EventDbPort),
-			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
-			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
-			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
-			AggregatePeriod: viper.GetInt64(benchmark.EventDbAggregatePeriod),
-		})
+		return event.NewEventDb(
+			config.DbAccess{
+				Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+				Name:            viper.GetString(benchmark.EventDbName),
+				User:            viper.GetString(benchmark.EventDbUser),
+				Password:        viper.GetString(benchmark.EventDbPassword),
+				Host:            viper.GetString(benchmark.EventDbHost),
+				Port:            viper.GetString(benchmark.EventDbPort),
+				MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+				MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+				ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+			},
+			config.DbSettings{
+				Debug:           viper.GetBool(benchmark.EventDbDebug),
+				AggregatePeriod: viper.GetInt64(benchmark.EventDbAggregatePeriod),
+				PageLimit:       viper.GetInt64(benchmark.EventDbPageLimit),
+			},
+		)
 
 	}
 

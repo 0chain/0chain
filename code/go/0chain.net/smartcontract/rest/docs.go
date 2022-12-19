@@ -1,8 +1,7 @@
-//  0chain Api:
+//  0chain API:
 //   version: 0.0.1
-//   title: 0chain Api
+//   title: 0chain API
 //  Schemes: http, https
-//  Host: localhost:7171
 //  BasePath: /
 //  Produces:
 //    - application/json

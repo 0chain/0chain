@@ -1,13 +1,11 @@
 package minersc
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
@@ -40,28 +38,8 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 	return nil
 }
 
-// LRU cache in action.
-func (msc *MinerSmartContract) deletePoolFromUserNode(
-	delegateID, nodeID string,
-	providerType spenum.Provider,
-	balances cstate.StateContextI,
-) error {
-
-	usp, err := stakepool.GetUserStakePools(providerType, delegateID, balances)
-	if err != nil {
-		return fmt.Errorf("getting user node: %v", err)
-	}
-	usp.Del(nodeID)
-	if err := usp.Save(providerType, delegateID, balances); err != nil {
-		return fmt.Errorf("saving user node: %v", err)
-	}
-
-	return nil
-}
-
 // unlock deleted pools
-func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
-	balances cstate.StateContextI) (err error) {
+func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode) (err error) {
 	for _, pool := range mn.Pools {
 		if pool.Status == spenum.Deleting {
 			pool.Status = spenum.Deleted
@@ -81,19 +59,6 @@ func (msc *MinerSmartContract) unlockOffline(
 		if err := balances.AddTransfer(transfer); err != nil {
 			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)
 		}
-		var err error
-		switch mn.NodeType {
-		case NodeTypeMiner:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, spenum.Miner, balances)
-		case NodeTypeSharder:
-			err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, spenum.Sharder, balances)
-		default:
-			err = fmt.Errorf("unrecognised node type: %s", mn.NodeType.String())
-		}
-		if err != nil {
-			return common.NewError("pay_fees/unlock_offline", err.Error())
-		}
-
 		pool.Status = spenum.Deleted
 	}
 
@@ -132,7 +97,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	minerDelete := false
 	for i := len(miners.Nodes) - 1; i >= 0; i-- {
 		mn := miners.Nodes[i]
-		if err = msc.unlockDeleted(mn, round, balances); err != nil {
+		if err = msc.unlockDeleted(mn); err != nil {
 			return err
 		}
 		if mn.Delete {
@@ -160,7 +125,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	sharderDelete := false
 	for i := len(sharders.Nodes) - 1; i >= 0; i-- {
 		sn := sharders.Nodes[i]
-		if err = msc.unlockDeleted(sn, round, balances); err != nil {
+		if err = msc.unlockDeleted(sn); err != nil {
 			return err
 		}
 		if sn.Delete {
@@ -339,19 +304,26 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", fmt.Errorf("error splitting fees by ratio: %v", err)
 	}
 
-	moveValue, err := currency.AddCoin(minerRewards, minerFees)
-	if err != nil {
-		return "", err
-	}
-
 	// pay random N miners
 	if err := mn.StakePool.DistributeRewardsRandN(
-		moveValue,
+		minerRewards,
 		mn.ID,
 		spenum.Miner,
 		b.GetRoundRandomSeed(),
 		gn.NumMinerDelegatesRewarded,
-		"fee",
+		spenum.BlockRewardMiner,
+		balances,
+	); err != nil {
+		return "", err
+	}
+
+	if err := mn.StakePool.DistributeRewardsRandN(
+		minerFees,
+		mn.ID,
+		spenum.Miner,
+		b.GetRoundRandomSeed(),
+		gn.NumMinerDelegatesRewarded,
+		spenum.FeeRewardMiner,
 		balances,
 	); err != nil {
 		return "", err
@@ -368,8 +340,18 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if len(sharders.Nodes) > 0 {
 		mbSharders := getRegisterShardersInMagicBlock(balances, sharders)
 		if err := msc.payShardersAndDelegates(
-			gn, mbSharders, sharderFees, sharderRewards,
-			gn.NumShardersRewarded, b.GetRoundRandomSeed(), balances,
+			gn, mbSharders, sharderFees,
+			gn.NumShardersRewarded, b.GetRoundRandomSeed(),
+			spenum.FeeRewardSharder,
+			balances,
+		); err != nil {
+			return "", err
+		}
+		if err := msc.payShardersAndDelegates(
+			gn, mbSharders, sharderRewards,
+			gn.NumShardersRewarded, b.GetRoundRandomSeed(),
+			spenum.BlockRewardSharder,
+			balances,
 		); err != nil {
 			return "", err
 		}
@@ -469,38 +451,22 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 func (msc *MinerSmartContract) payShardersAndDelegates(
 	gn *GlobalNode,
 	sharders []*MinerNode,
-	fee, mint currency.Coin,
+	reward currency.Coin,
 	randN int,
 	seed int64,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) error {
-	sn := len(sharders)
-	if sn <= 0 {
-		return errors.New("no sharders to pay")
+	shardersPaid := randN
+	if randN > len(sharders) {
+		shardersPaid = len(sharders)
 	}
-
-	// fess and mint
-	feeShare, feeLeft, err := currency.DistributeCoin(fee, int64(sn))
+	sharderShare, totalCoinLeft, err := currency.DistributeCoin(reward, int64(shardersPaid))
 	if err != nil {
 		return err
 	}
-	mintShare, mintLeft, err := currency.DistributeCoin(mint, int64(sn))
-	if err != nil {
-		return err
-	}
-
-	sharderShare, err := currency.AddCoin(feeShare, mintShare)
-	if err != nil {
-		return err
-	}
-
-	totalCoinLeft, err := currency.AddCoin(feeLeft, mintLeft)
-	if err != nil {
-		return err
-	}
-
-	if totalCoinLeft > currency.Coin(sn) {
-		clShare, cl, err := currency.DistributeCoin(totalCoinLeft, int64(sn))
+	if totalCoinLeft > currency.Coin(shardersPaid) {
+		clShare, cl, err := currency.DistributeCoin(totalCoinLeft, int64(shardersPaid))
 		if err != nil {
 			return err
 		}
@@ -528,7 +494,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 			return err
 		}
 		if err = sh.StakePool.DistributeRewardsRandN(
-			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, "pay sharders", balances,
+			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, rewardType, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)
@@ -543,15 +509,9 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	}
 
 	var perm []int
-	if sn > randN {
-		// select randN sharders to distribute rewards
-		perm = randS.Perm(randN)
-	} else {
-		// randN >= sharders number
-		perm = make([]int, 0, randN)
-		for i := 0; i < randN; i++ {
-			perm = append(perm, randS.Intn(sn))
-		}
+	perm = randS.Perm(len(sharders))
+	if shardersPaid < len(perm) {
+		perm = perm[:shardersPaid]
 	}
 
 	for _, i := range perm {

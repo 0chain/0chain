@@ -157,7 +157,14 @@ func main() {
 			rootContext := common.GetRootContext()
 			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
-			if err := serverChain.GetEventDb().ProcessEvents(ctx, []event.Event{ev}, b.Round, b.Hash, len(b.Txns)); err != nil {
+
+			if err := serverChain.GetEventDb().ProcessEvents(
+				ctx,
+				[]event.Event{ev},
+				b.Round,
+				b.Hash,
+				len(b.Txns),
+			); err != nil {
 				logging.Logger.Error("process block saving event failed",
 					zap.Error(err),
 					zap.Int64("round", b.Round),
@@ -217,8 +224,10 @@ func main() {
 	go sc.StartLFMBWorker(ctx)
 
 	setupBlockStorageProvider(mConf, workdir)
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock, initStates)
+	if sc.GetCurrentRound() == 0 {
+		sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
+			magicBlock, initStates)
+	}
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()

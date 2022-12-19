@@ -9,14 +9,12 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/smartcontract/dbs/event"
-	"gorm.io/gorm"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 )
 
@@ -328,16 +326,16 @@ func (an *AuthorizerNode) ToEvent() *event.Authorizer {
 		an.Config = new(AuthorizerConfig)
 	}
 	return &event.Authorizer{
-		Model:        gorm.Model{},
-		Fee:          an.Config.Fee,
-		AuthorizerID: an.ID,
-		URL:          an.URL,
+		Provider: event.Provider{ID: an.ID},
+		Fee:      an.Config.Fee,
+
+		URL: an.URL,
 	}
 }
 
 func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 
-	return NewAuthorizer(ev.AuthorizerID, "", ev.URL), nil
+	return NewAuthorizer(ev.ID, "", ev.URL), nil
 }
 
 // ----- UserNode ------------------

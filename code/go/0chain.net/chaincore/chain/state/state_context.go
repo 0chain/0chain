@@ -39,7 +39,8 @@ var (
 	approvedMinters = []string{
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7", // storage SC
-		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"} //zcn SC
+		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0", //zcn SC
+		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"} //faucet SC
 )
 
 func GetMinter(minter ApprovedMinter) (string, error) {
@@ -117,8 +118,7 @@ type StateContextI interface {
 	EmitEvent(eventType event.EventType, eventTag event.EventTag, index string, data interface{}, appender ...Appender)
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
-	GetInvalidStateErrors() []error
-	GetMissingNodesPath() util.Path
+	GetMissingNodeKeys() []util.Key
 }
 
 // StateContext - a context object used to manipulate global state
@@ -137,8 +137,6 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
-	invalidStateErrors            []error
-	missingNodesPath              util.Path
 }
 
 type GetNow func() common.Timestamp
@@ -219,8 +217,8 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 			sc.events = append(sc.events, event.Event{
 				BlockNumber: sc.block.Round,
 				TxHash:      sc.txn.Hash,
-				Type:        int(event.TypeStats),
-				Tag:         int(event.TagBurn),
+				Type:        event.TypeStats,
+				Tag:         event.TagBurn,
 				Index:       sc.txn.ClientID,
 				Data: state.Burn{
 					Burner: t.ClientID,
@@ -235,8 +233,8 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 			sc.events = append(sc.events, event.Event{
 				BlockNumber: sc.block.Round,
 				TxHash:      sc.txn.Hash,
-				Type:        int(event.TypeStats),
-				Tag:         int(event.TagAddMint),
+				Type:        event.TypeStats,
+				Tag:         event.TagAddMint,
 				Index:       sc.txn.ClientID,
 				Data: state.Mint{
 					Minter:     t.ClientID,
@@ -268,8 +266,8 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
-		Type:        int(event.TypeStats),
-		Tag:         int(event.TagAddMint),
+		Type:        event.TypeStats,
+		Tag:         event.TagAddMint,
 		Index:       sc.txn.ClientID,
 		Data:        m,
 	})
@@ -313,8 +311,8 @@ func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag,
 	e := event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
-		Type:        int(eventType),
-		Tag:         int(tag),
+		Type:        eventType,
+		Tag:         tag,
 		Index:       index,
 		Data:        data,
 	}
@@ -330,7 +328,7 @@ func (sc *StateContext) EmitError(err error) {
 		{
 			BlockNumber: sc.block.Round,
 			TxHash:      sc.txn.Hash,
-			Type:        int(event.TypeError),
+			Type:        event.TypeError,
 			Data:        err.Error(),
 		},
 	}
@@ -393,7 +391,6 @@ func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 	err := sc.state.GetNodeValue(path, s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(path, err)
 			return nil, err
 		}
 		return s, err
@@ -403,16 +400,7 @@ func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 }
 
 func (sc *StateContext) SetClientState(clientID string, s *state.State) (util.Key, error) {
-	path := util.Path(clientID)
-	key, err := sc.state.Insert(path, s)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(path, err)
-		}
-		return nil, err
-	}
-
-	return key, nil
+	return sc.state.Insert(util.Path(clientID), s)
 }
 
 // GetClientBalance - get the balance of the client
@@ -472,23 +460,12 @@ func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 }
 
 func (sc *StateContext) getNodeValue(key datastore.Key, v util.MPTSerializable) error {
-	path := util.Path(encryption.Hash(key))
-	if err := sc.state.GetNodeValue(path, v); err != nil {
-		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(path, err)
-		}
-		return err
-	}
-	return nil
+	return sc.state.GetNodeValue(util.Path(encryption.Hash(key)), v)
 }
 
 func (sc *StateContext) setNodeValue(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
-	path := util.Path(encryption.Hash(key))
-	newKey, err := sc.state.Insert(path, node)
+	newKey, err := sc.state.Insert(util.Path(encryption.Hash(key)), node)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(path, err)
-		}
 		return "", err
 	}
 
@@ -496,40 +473,17 @@ func (sc *StateContext) setNodeValue(key datastore.Key, node util.MPTSerializabl
 }
 
 func (sc *StateContext) deleteNode(key datastore.Key) (datastore.Key, error) {
-	path := util.Path(encryption.Hash(key))
-	newKey, err := sc.state.Delete(path)
+	newKey, err := sc.state.Delete(util.Path(encryption.Hash(key)))
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			sc.addInvalidStateError(path, err)
-		}
 		return "", err
 	}
 
 	return datastore.Key(newKey), nil
 }
 
-func (sc *StateContext) addInvalidStateError(path util.Path, err error) {
-	sc.mutex.Lock()
-	sc.invalidStateErrors = append(sc.invalidStateErrors, err)
-	sc.missingNodesPath = path
-	sc.mutex.Unlock()
-}
-
-// GetInvalidStateErrors returns invalid state errors if any
-func (sc *StateContext) GetInvalidStateErrors() []error {
-	sc.mutex.Lock()
-	errs := make([]error, len(sc.invalidStateErrors))
-	copy(errs, sc.invalidStateErrors)
-	sc.mutex.Unlock()
-	return errs
-}
-
-// GetMissingNodesPath returns node path that has missing nodes
-func (sc *StateContext) GetMissingNodesPath() util.Path {
-	sc.mutex.Lock()
-	path := sc.missingNodesPath
-	sc.mutex.Unlock()
-	return path
+// GetMissingNodeKeys returns missing node keys
+func (sc *StateContext) GetMissingNodeKeys() []util.Key {
+	return sc.state.GetMissingNodeKeys()
 }
 
 // ErrInvalidState checks if the error is an invalid state error

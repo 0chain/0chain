@@ -58,10 +58,10 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSn
 		logging.Logger.Error("update_blobber_aggregates", zap.Error(err))
 		return
 	}
-	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count)
+	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count, edb.PageLimit())
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
-		"ON COMMIT DROP AS SELECT blobber_id as id FROM blobbers ORDER BY (blobber_id, creation_round) LIMIT ? OFFSET ?",
+		"ON COMMIT DROP AS SELECT id as id FROM blobbers ORDER BY (id, creation_round) LIMIT ? OFFSET ?",
 		size, size*currentPageNumber)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
@@ -69,7 +69,7 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSn
 	}
 
 	for i := 0; i < subpageCount; i++ {
-		edb.calculateBlobberAggregate(gs, round, pageLimit, int64(i)*pageLimit)
+		edb.calculateBlobberAggregate(gs, round, edb.PageLimit(), int64(i)*edb.PageLimit())
 	}
 
 }
@@ -78,7 +78,7 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSn
 // the size of the page, current page number and amount of subpages if needed
 // for example, we have round=101, pageAmount=2, count=11, then
 // size will be 6, current page 1, and subpage count 1
-func paginate(round int64, pageAmount int64, count int64) (int64, int64, int) {
+func paginate(round, pageAmount, count, pageLimit int64) (int64, int64, int) {
 	size := int64(math.Ceil(float64(count) / float64(pageAmount)))
 	currentPageNumber := round % pageAmount
 
@@ -102,7 +102,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 
 	var currentBlobbers []Blobber
 	result := edb.Store.Get().
-		Raw("SELECT * FROM blobbers WHERE blobber_id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM blobbers WHERE id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&currentBlobbers)
 	if result.Error != nil {
 		logging.Logger.Error("getting current blobbers", zap.Error(result.Error))
@@ -110,7 +110,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 	}
 	logging.Logger.Debug("blobber_snapshot", zap.Int("total_current_blobbers", len(currentBlobbers)))
 
-	if round <= period && len(currentBlobbers) > 0 {
+	if round <= edb.AggregatePeriod() && len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
 			logging.Logger.Error("saving blobbers snapshots", zap.Error(err))
 		}
@@ -125,13 +125,13 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 
 	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
-		old, found := oldBlobbers[current.BlobberID]
+		old, found := oldBlobbers[current.ID]
 		if !found {
 			continue
 		}
 		aggregate := BlobberAggregate{
 			Round:     round,
-			BlobberID: current.BlobberID,
+			BlobberID: current.ID,
 		}
 		aggregate.WritePrice = (old.WritePrice + current.WritePrice) / 2
 		aggregate.Capacity = (old.Capacity + current.Capacity) / 2
@@ -152,12 +152,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 
 		gs.totalWritePricePeriod += aggregate.WritePrice
 
-		// update global snapshot object
-		ts, err := aggregate.TotalStake.Int64()
-		if err != nil {
-			logging.Logger.Error("converting coin to int64", zap.Error(err))
-		}
-		gs.TotalStaked = ts
 		gs.SuccessfulChallenges += int64(aggregate.ChallengesPassed - old.ChallengesPassed)
 		gs.TotalChallenges += int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
 		gs.AllocatedStorage += aggregate.Allocated - old.Allocated

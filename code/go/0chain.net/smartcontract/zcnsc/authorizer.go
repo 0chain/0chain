@@ -11,7 +11,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/storagesc"
 	. "github.com/0chain/common/core/logging"
@@ -111,7 +110,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	// Creating StakePool
+	// Creating Provider
 
 	var sp *StakePool
 	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, params.StakePoolSettings, ctx)
@@ -212,7 +211,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 		return "", err
 	}
 
-	// StakePool may be updated only if authorizer exists/not deleted
+	// Provider may be updated only if authorizer exists/not deleted
 
 	_, err = GetAuthorizerNode(authorizerID, ctx)
 	switch err {
@@ -235,51 +234,6 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	default:
 		return "", common.NewErrorf(code, "error checking authorizer existence: %v", err)
 	}
-}
-
-func (zcn *ZCNSmartContract) CollectRewards(
-	tran *transaction.Transaction,
-	input []byte,
-	ctx cstate.StateContextI,
-) (response string, err error) {
-	const code = "pay_reward_failed"
-
-	var prr stakepool.CollectRewardRequest
-	if err := prr.Decode(input); err != nil {
-		return "", common.NewErrorf(code, "can't decode request: %v", err)
-	}
-
-	usp, err := stakepool.GetUserStakePools(prr.ProviderType, tran.ClientID, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "can't get related user stake pools: %v", err)
-	}
-
-	providers := usp.Providers
-	if len(providers) == 0 {
-		return "", common.NewErrorf(code, "user %v does not own stake pool", tran.ClientID)
-	}
-
-	for _, providerId := range providers {
-		sp, err := zcn.getStakePool(providerId, ctx)
-		if err != nil {
-			return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
-		}
-
-		_, err = sp.MintRewards(tran.ClientID, providerId, prr.ProviderType, usp, ctx)
-		if err != nil {
-			return "", common.NewErrorf(code, "error emptying account, %v", err)
-		}
-
-		if err := sp.save(zcn.ID, providerId, ctx); err != nil {
-			return "", common.NewErrorf(code, "error saving stake pool, %v", err)
-		}
-	}
-
-	if err := usp.Save(spenum.Authorizer, tran.ClientID, ctx); err != nil {
-		return "", common.NewErrorf(code, "error saving user stake pool, %v", err)
-	}
-
-	return "", nil
 }
 
 func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, input []byte, ctx cstate.StateContextI) (string, error) {
@@ -314,7 +268,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 		return "", err
 	}
 
-	// Mark StakePool as Deleted but not delete it
+	// Mark Provider as Deleted but not delete it
 	var sp *StakePool
 	if sp, err = zcn.getStakePool(authorizerID, ctx); err != nil {
 		return "", common.NewErrorf(errorCode, "error occurred while getting stake pool: %v", err)

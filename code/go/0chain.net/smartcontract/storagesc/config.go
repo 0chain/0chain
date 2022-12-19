@@ -379,6 +379,20 @@ func (conf *Config) Decode(b []byte) error {
 // rest handler and update function
 //
 
+func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateContextI) error {
+	minted, err := currency.AddCoin(conf.Minted, toMint)
+	if err != nil {
+		return err
+	}
+
+	if minted > conf.MaxMint {
+		return fmt.Errorf("max min %v exceeded by: %v", conf.MaxMint, minted)
+	}
+	conf.Minted = minted
+	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	return err
+}
+
 // configs from sc.yaml
 func getConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
@@ -439,6 +453,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.StakePool.MinLockPeriod = scc.GetDuration(pfx + "stakepool.min_lock_period")
 
 	conf.MaxTotalFreeAllocation, err = currency.MultFloat64(1e10, scc.GetFloat64(pfx+"max_total_free_allocation"))
 	if err != nil {

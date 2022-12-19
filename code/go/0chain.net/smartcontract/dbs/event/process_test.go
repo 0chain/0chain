@@ -22,7 +22,7 @@ func TestAddEvents(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -32,7 +32,7 @@ func TestAddEvents(t *testing.T) {
 	eventDb.ProcessEvents(context.Background(), []Event{
 		{
 			TxHash: "somehash",
-			Type:   int(TypeError),
+			Type:   TypeError,
 			Data:   "someData",
 		},
 	}, 100, "hash", 10)

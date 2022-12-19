@@ -32,7 +32,7 @@ func TestValidatorNode(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -41,15 +41,17 @@ func TestValidatorNode(t *testing.T) {
 	require.NoError(t, err)
 
 	vn := Validator{
-		ValidatorID: encryption.Hash("mockValidator_" + strconv.Itoa(0)),
-		BaseUrl:     "http://localhost:8080",
-		StakeTotal:  100,
+		BaseUrl: "http://localhost:8080",
+		Provider: Provider{
+			ID:         encryption.Hash("mockValidator_" + strconv.Itoa(0)),
+			TotalStake: 100,
 
-		DelegateWallet: "delegate wallet",
-		MinStake:       currency.Coin(53),
-		MaxStake:       currency.Coin(57),
-		NumDelegates:   59,
-		ServiceCharge:  61.0,
+			DelegateWallet: "delegate wallet",
+			MinStake:       currency.Coin(53),
+			MaxStake:       currency.Coin(57),
+			NumDelegates:   59,
+			ServiceCharge:  61.0,
+		},
 	}
 
 	err = eventDb.addOrOverwriteValidators([]Validator{vn})
@@ -59,7 +61,7 @@ func TestValidatorNode(t *testing.T) {
 	eventDb.Get().Table("transactions").Count(&count)
 	require.Equal(t, int64(1), count, "Validator not getting inserted")
 
-	vn, err = eventDb.GetValidatorByValidatorID(vn.ValidatorID)
+	vn, err = eventDb.GetValidatorByValidatorID(vn.ID)
 	require.NoError(t, err, "Error while getting Validation Node from event Database")
 
 	err = eventDb.Drop()

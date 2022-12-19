@@ -44,6 +44,10 @@ dbs:
     max_open_conns: 200
     conn_max_lifetime: 20s
     aggregate_period: 5
+  settings:
+    debug: false
+    aggregate_period: 10
+    page_limit: 50
 
 smart_contracts:
   minersc:
@@ -201,4 +205,4 @@ internal:
   control_m: 25000
   control_n: 90
   show_output: true
-
+  bench_data_list_length: 12
