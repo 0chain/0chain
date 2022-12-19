@@ -11,13 +11,10 @@ type MinerSnapshot struct {
 	MinerID string `json:"id" gorm:"index"`
 	Round   int64  `json:"round"`
 
-	Fees         currency.Coin `json:"currency_coin"`
-	UnstakeTotal currency.Coin `json:"unstake_total"`
-	TotalStake   currency.Coin `json:"total_stake"`
-
-	Host      string `json:"host"`
-	Port      int    `json:"port"`
-	ShortName string `json:"short_name"`
+	Fees          currency.Coin `json:"fees"`
+	UnstakeTotal  currency.Coin `json:"unstake_total"`
+	TotalStake    currency.Coin `json:"total_stake"`
+	ServiceCharge float64       `json:"service_charge"`
 }
 
 func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnapshot, error) {
@@ -46,13 +43,11 @@ func (edb *EventDb) addMinerSnapshot(miners []Miner) error {
 	var snapshots []MinerSnapshot
 	for _, miner := range miners {
 		snapshots = append(snapshots, MinerSnapshot{
-			MinerID:      miner.ID,
-			UnstakeTotal: miner.UnstakeTotal,
-			Fees:         miner.Fees,
-			TotalStake:   miner.TotalStake,
-			Host:         miner.Host,
-			Port:         miner.Port,
-			ShortName:    miner.ShortName,
+			MinerID:       miner.ID,
+			UnstakeTotal:  miner.UnstakeTotal,
+			Fees:          miner.Fees,
+			TotalStake:    miner.TotalStake,
+			ServiceCharge: miner.ServiceCharge,
 		})
 	}
 

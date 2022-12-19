@@ -15,14 +15,11 @@ type MinerAggregate struct {
 	MinerID string `json:"miner_id" gorm:"index:idx_miner_aggregate,unique"`
 	Round   int64  `json:"round" gorm:"index:idx_miner_aggregate,unique"`
 
-	Fees         currency.Coin `json:"currency_coin"`
-	UnstakeTotal currency.Coin `json:"unstake_total"`
-	TotalStake   currency.Coin `json:"total_stake"`
-
-	// TODO: should these fields be created in aggregate?
-	Host      string `json:"host"`
-	Port      int    `json:"port"`
-	ShortName string `json:"short_name"`
+	Fees              currency.Coin `json:"fees"`
+	UnstakeTotal      currency.Coin `json:"unstake_total"`
+	TotalStake        currency.Coin `json:"total_stake"`
+	ServiceCharge     float64       `json:"service_charge"`
+	TransactionNumber int           `json:"transaction_number"`
 }
 
 func (edb *EventDb) ReplicateMinerAggregate(p common.Pagination) ([]MinerAggregate, error) {
@@ -114,10 +111,10 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.Fees = (old.Fees + current.Fees) / 2
+		aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
 		aggregates = append(aggregates, aggregate)
 
-		//TODO:how use miner.FEE and gs.AverageTxnFee
-		//TODO: miner count vs blobber count in globalSnapshot
+		gs.totalTxnFees += aggregate.Fees
 
 		//gs.totalWritePricePeriod += aggregate.WritePrice
 
@@ -136,6 +133,8 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 		//gs.StakedStorage += ss
 
 		//gs.blobberCount++ //todo figure out why we increment blobberCount on every update
+
+		gs.TransactionsCount++
 	}
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
@@ -154,14 +153,10 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 
 	// update global snapshot object
 
-	//TODO: how to handle the case here?
-	if gs.blobberCount == 0 {
-		return
-	}
-	twp, err := gs.totalWritePricePeriod.Int64()
+	ttf, err := gs.totalTxnFees.Int64()
 	if err != nil {
 		logging.Logger.Error("converting write price to coin", zap.Error(err))
 		return
 	}
-	gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
+	gs.AverageTxnFee = ttf / gs.TransactionsCount
 }
