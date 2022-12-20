@@ -38,9 +38,9 @@ func GetProvider(id string, pType spenum.Provider, sCtx cstate.CommonStateContex
 	if obj == nil {
 		return nil, errors.New("nil provider")
 	}
-	sp, ok := obj.(AbstractProvider)
+	provider, ok := obj.(AbstractProvider)
 	if !ok {
 		return nil, fmt.Errorf("not provider, %v", obj)
 	}
-	return sp, nil
+	return provider, nil
 }
