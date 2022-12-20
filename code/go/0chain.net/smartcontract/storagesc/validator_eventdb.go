@@ -1,7 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/provider"
 	"github.com/0chain/common/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -13,7 +13,7 @@ func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 		ID:        v.ID,
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
-		StakePoolSettings: stakepool.Settings{
+		StakePoolSettings: provider.Settings{
 			DelegateWallet:     v.DelegateWallet,
 			MinStake:           v.MinStake,
 			MaxStake:           v.MaxStake,

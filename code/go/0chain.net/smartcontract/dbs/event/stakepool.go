@@ -7,7 +7,7 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

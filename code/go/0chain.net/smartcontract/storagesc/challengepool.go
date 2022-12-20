@@ -12,7 +12,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"

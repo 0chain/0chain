@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"

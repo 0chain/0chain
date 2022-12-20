@@ -6,7 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"

@@ -1,6 +1,6 @@
 package event
 
-import "0chain.net/smartcontract/stakepool/spenum"
+import "0chain.net/smartcontract/provider/spenum"
 
 type DelegatePoolLock struct {
 	Client       string          `json:"client"`

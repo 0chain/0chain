@@ -3,7 +3,7 @@ package minersc
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -48,13 +48,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	defer lockAllMiners.Unlock()
 
 	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
-	
+
 	if magicBlockMiners.HasNode(newMiner.ID) == false {
 		logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
 		return "", common.NewErrorf("add_miner",
 			"failed to add new miner: Not in magic block")
 	}
-	
 
 	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 

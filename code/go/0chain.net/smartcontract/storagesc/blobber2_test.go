@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -15,8 +17,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
@@ -320,8 +322,8 @@ func testCommitBlobberRead(
 
 	var sPool = stakePool{
 		StakePool: &stakepool.StakePool{
-			Pools: make(map[string]*stakepool.DelegatePool),
-			Settings: stakepool.Settings{
+			Pools: make(map[string]*provider.DelegatePool),
+			Settings: provider.Settings{
 				ServiceChargeRatio: blobberYaml.serviceCharge,
 				DelegateWallet:     delegateWallet,
 			},
@@ -329,7 +331,7 @@ func testCommitBlobberRead(
 	}
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
-		sPool.Pools["pool"+id] = &stakepool.DelegatePool{
+		sPool.Pools["pool"+id] = &provider.DelegatePool{
 			Balance:      zcnToBalance(stake.zcnAmount),
 			RoundCreated: stake.MintAt,
 		}

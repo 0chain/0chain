@@ -4,8 +4,9 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
 )
 
@@ -18,7 +19,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 
 // getStakePool of given blobber
 func (msc *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, providerID string,
-	balances cstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+	balances cstate.CommonStateContextI) (sp provider.AbstractStakePool, err error) {
 	var mn *MinerNode
 	switch pType {
 	case spenum.Miner:

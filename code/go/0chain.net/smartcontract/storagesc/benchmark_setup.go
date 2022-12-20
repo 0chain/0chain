@@ -6,11 +6,13 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/core/datastore"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -573,7 +575,7 @@ func GetMockBlobberStakePools(
 		bId := getMockBlobberId(i)
 		sp := &stakePool{
 			StakePool: &stakepool.StakePool{
-				Pools:    make(map[string]*stakepool.DelegatePool),
+				Pools:    make(map[string]*provider.DelegatePool),
 				Reward:   0,
 				Settings: getMockStakePoolSettings(bId),
 			},
@@ -582,7 +584,7 @@ func GetMockBlobberStakePools(
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
 			id := getMockBlobberStakePoolId(i, j)
 			clientIndex := (i&len(clients) + j) % len(clients)
-			sp.Pools[id] = &stakepool.DelegatePool{}
+			sp.Pools[id] = &provider.DelegatePool{}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
 			sp.Pools[id].DelegateID = clients[clientIndex]
 
@@ -617,14 +619,14 @@ func GetMockValidatorStakePools(
 		bId := getMockValidatorId(i)
 		sp := &stakePool{
 			StakePool: &stakepool.StakePool{
-				Pools:    make(map[string]*stakepool.DelegatePool),
+				Pools:    make(map[string]*provider.DelegatePool),
 				Reward:   0,
 				Settings: getMockStakePoolSettings(bId),
 			},
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
 			id := getMockValidatorStakePoolId(i, j)
-			sp.Pools[id] = &stakepool.DelegatePool{}
+			sp.Pools[id] = &provider.DelegatePool{}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
 			err := sp.Save(spenum.Validator, getMockValidatorId(i), balances)
 			if err != nil {
@@ -745,8 +747,8 @@ func getMockBlobberTerms() Terms {
 	}
 }
 
-func getMockStakePoolSettings(blobber string) stakepool.Settings {
-	return stakepool.Settings{
+func getMockStakePoolSettings(blobber string) provider.Settings {
+	return provider.Settings{
 		DelegateWallet:     blobber,
 		MinStake:           currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10),
 		MaxStake:           currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10),

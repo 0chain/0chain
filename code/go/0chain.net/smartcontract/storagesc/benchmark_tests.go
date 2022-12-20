@@ -10,8 +10,8 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	sc "0chain.net/smartcontract"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/smartcontract"
 

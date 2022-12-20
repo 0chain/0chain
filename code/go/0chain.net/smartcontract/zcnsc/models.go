@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/0chain/common/core/currency"
+	"0chain.net/smartcontract/provider"
 
-	"0chain.net/smartcontract/stakepool"
+	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -232,7 +232,7 @@ func (bp *BurnPayload) Decode(input []byte) error {
 // ------- UpdateAuthorizerStakePoolPayload ------------
 
 type UpdateAuthorizerStakePoolPayload struct {
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	StakePoolSettings provider.Settings `json:"stake_pool_settings"`
 }
 
 func (pk *UpdateAuthorizerStakePoolPayload) Encode() (data []byte) {
@@ -257,9 +257,9 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 //		ServiceCharge float64
 //	}
 type AddAuthorizerPayload struct {
-	PublicKey         string             `json:"public_key"`
-	URL               string             `json:"url"`
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"` // Used to initially create stake pool
+	PublicKey         string            `json:"public_key"`
+	URL               string            `json:"url"`
+	StakePoolSettings provider.Settings `json:"stake_pool_settings"` // Used to initially create stake pool
 }
 
 func (pk *AddAuthorizerPayload) Encode() (data []byte, err error) {

@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 //go:generate msgp -io=false -tests=false -unexported -v
@@ -30,7 +32,7 @@ func NewMinerNode() *MinerNode {
 // swagger:model NodePool
 type NodePool struct {
 	PoolID string `json:"pool_id"`
-	*stakepool.DelegatePool
+	*provider.DelegatePool
 }
 
 func GetSharderKey(sid string) datastore.Key {

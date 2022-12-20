@@ -5,8 +5,9 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -40,7 +41,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbSharder.Rewards.Rewards,
-			Settings: stakepool.Settings{
+			Settings: provider.Settings{
 				DelegateWallet:     edbSharder.DelegateWallet,
 				ServiceChargeRatio: edbSharder.ServiceCharge,
 				MaxNumDelegates:    edbSharder.NumDelegates,
@@ -52,9 +53,9 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 	if len(delegates) == 0 {
 		return sn
 	}
-	sn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	sn.StakePool.Pools = make(map[string]*provider.DelegatePool)
 	for _, delegate := range delegates {
-		sn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
+		sn.StakePool.Pools[delegate.PoolID] = &provider.DelegatePool{
 			Balance:      delegate.Balance,
 			Reward:       delegate.Reward,
 			Status:       spenum.PoolStatus(delegate.Status),

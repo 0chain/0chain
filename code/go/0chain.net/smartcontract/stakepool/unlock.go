@@ -3,9 +3,11 @@ package stakepool
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
@@ -34,9 +36,9 @@ func (sp *StakePool) UnlockPool(
 		ProviderType: providerType,
 		Amount:       i,
 	}
-	dpUpdate := newDelegatePoolUpdate(clientID, providerId, providerType)
+	dpUpdate := provider.NewDelegatePoolUpdate(clientID, providerId, providerType)
 	dpUpdate.Updates["status"] = spenum.Deleting
-	dpUpdate.emitUpdate(balances)
+	dpUpdate.EmitUpdate(balances)
 
 	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, lock)
 	if err != nil {

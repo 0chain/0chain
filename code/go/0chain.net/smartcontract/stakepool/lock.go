@@ -4,13 +4,15 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 
 	"github.com/0chain/common/core/util"
 
@@ -58,7 +60,7 @@ func (sp *StakePool) LockPool(
 	dp, ok := sp.Pools[newPoolId]
 	if !ok {
 		// new stake
-		dp = &DelegatePool{
+		dp = &provider.DelegatePool{
 			Balance:      txn.Value,
 			Reward:       0,
 			Status:       status,
@@ -106,7 +108,7 @@ func (sp *StakePool) LockPool(
 		return "", err
 	}
 
-	dp.emitNew(newPoolId, providerId, providerType, balances)
+	dp.EmitNew(newPoolId, providerId, providerType, balances)
 
 	return toJson(lock), nil
 }

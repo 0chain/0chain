@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/provider/spenum"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -22,7 +24,7 @@ import (
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 func validateStakePoolSettings(
-	sps stakepool.Settings,
+	sps provider.Settings,
 	conf *Config,
 ) error {
 	err := conf.validateStakeRange(sps.MinStake, sps.MaxStake)
@@ -306,9 +308,16 @@ func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, prov
 	return getStakePool(providerType, providerID, balances)
 }
 
-// getStakePool of given blobber
 func (ssc *StorageSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
-	balances chainstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+	balances chainstate.CommonStateContextI) (sp provider.AbstractStakePool, err error) {
+	return GetStakePoolAdapter(providerType, providerID, balances)
+}
+
+func GetStakePoolAdapter(
+	providerType spenum.Provider,
+	providerID string,
+	balances chainstate.CommonStateContextI,
+) (sp provider.AbstractStakePool, err error) {
 	pool, err := getStakePool(providerType, providerID, balances)
 	if err != nil {
 		return nil, err
@@ -336,7 +345,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	conf *Config,
 	providerType spenum.Provider,
 	providerId datastore.Key,
-	settings stakepool.Settings,
+	settings provider.Settings,
 	balances chainstate.StateContextI,
 ) (*stakePool, error) {
 	if err := validateStakePoolSettings(settings, conf); err != nil {

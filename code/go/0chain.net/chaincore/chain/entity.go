@@ -1,6 +1,8 @@
 package chain
 
 import (
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/provider/spenum"
 	"container/ring"
 	"context"
 	"errors"
@@ -13,7 +15,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
+
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -625,7 +627,7 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 	for _, v := range stakes {
 		providerType := spenum.ToProviderType(v.ProviderType)
 		sp := stakepool.StakePool{}
-		sp.Pools = map[string]*stakepool.DelegatePool{}
+		sp.Pools = map[string]*provider.DelegatePool{}
 		if err := sp.Get(providerType, v.ProviderID, balances); err != nil {
 			if err != util.ErrValueNotPresent {
 				logging.Logger.Debug("init stake - invalid state", zap.Error(err))
@@ -643,7 +645,7 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 				v.ProviderType, v.ProviderID, v.ClientID)
 		}
 
-		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
+		sp.Pools[v.ClientID] = &provider.DelegatePool{
 			Balance:      v.Tokens,
 			DelegateID:   v.ClientID,
 			RoundCreated: 0, // genesis round

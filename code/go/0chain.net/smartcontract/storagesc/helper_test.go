@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/threshold/bls"

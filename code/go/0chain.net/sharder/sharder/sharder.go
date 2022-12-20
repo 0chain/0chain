@@ -16,6 +16,9 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/provider/factory/factory_implementation"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"go.uber.org/zap"
@@ -122,7 +125,7 @@ func main() {
 
 	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-
+	provider.SetProviderFactoryFactory(factory_implementation.NewProviderFactoryFactory())
 	reader, err = os.Open(*keysFile)
 	if err != nil {
 		panic(err)

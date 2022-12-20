@@ -9,6 +9,10 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
+	"0chain.net/smartcontract/provider/spenum"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -19,8 +23,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -2464,7 +2466,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			Capacity:        blobber.Capacity,
 			Allocated:       blobber.Allocated,
 			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
-			StakePoolSettings: stakepool.Settings{
+			StakePoolSettings: provider.Settings{
 				DelegateWallet:     blobber.DelegateWallet,
 				MinStake:           blobber.MinStake,
 				MaxStake:           blobber.MaxStake,

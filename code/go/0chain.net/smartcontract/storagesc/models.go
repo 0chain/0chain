@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/provider/spenum"
+
 	"0chain.net/smartcontract/provider"
 
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 
@@ -197,11 +198,11 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 }
 
 type ValidationNode struct {
-	ID                string             `json:"id"`
-	BaseURL           string             `json:"url"`
-	ProviderType      spenum.Provider    `json:"provider_type"`
-	PublicKey         string             `json:"-" msg:"-"`
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	ID                string            `json:"id"`
+	BaseURL           string            `json:"url"`
+	ProviderType      spenum.Provider   `json:"provider_type"`
+	PublicKey         string            `json:"-" msg:"-"`
+	StakePoolSettings provider.Settings `json:"stake_pool_settings"`
 }
 
 // validate the validator configurations
@@ -349,7 +350,7 @@ type StorageNode struct {
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
+	StakePoolSettings provider.Settings       `json:"stake_pool_settings"`
 	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
 }
 
@@ -577,7 +578,7 @@ func newBlobberAllocation(
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
-func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
+func (d *BlobberAllocation) upload(size int64, _ common.Timestamp,
 	rdtu float64) (move currency.Coin, err error) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)

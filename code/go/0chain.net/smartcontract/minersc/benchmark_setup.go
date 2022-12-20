@@ -3,14 +3,13 @@ package minersc
 import (
 	"strconv"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"
-
-	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -18,6 +17,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/provider/spenum"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
 )
@@ -82,7 +82,7 @@ func AddMockNodes(
 		publickKeys = append(publickKeys, newNode.PublicKey)
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
-			pool := stakepool.DelegatePool{
+			pool := provider.DelegatePool{
 				Balance:      100 * 1e10,
 				Reward:       0.3 * 1e10,
 				DelegateID:   clients[dId],

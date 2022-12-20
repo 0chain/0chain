@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/0chain/common/core/currency"
+	"0chain.net/smartcontract/provider"
 
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
-	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/core/common"
+	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/provider/spenum"
 	"github.com/spf13/viper"
 )
 
@@ -133,8 +133,8 @@ func newGlobalNode() *GlobalNode {
 	}
 }
 
-func getMockDelegatePool(id string) *stakepool.DelegatePool {
-	return &stakepool.DelegatePool{
+func getMockDelegatePool(id string) *provider.DelegatePool {
+	return &provider.DelegatePool{
 		Balance:      51,
 		Reward:       7,
 		Status:       spenum.Active,
@@ -148,8 +148,8 @@ func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 }
 
 // todo get from sc.yaml
-func getMockStakePoolSettings(wallet string) stakepool.Settings {
-	return stakepool.Settings{
+func getMockStakePoolSettings(wallet string) provider.Settings {
+	return provider.Settings{
 		DelegateWallet:     wallet,
 		MinStake:           currency.Coin(1 * 1e10),
 		MaxStake:           currency.Coin(100 * 1e10),

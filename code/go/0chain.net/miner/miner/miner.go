@@ -14,6 +14,9 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/provider/factory/factory_implementation"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -71,6 +74,8 @@ func main() {
 	} else {
 		logging.InitLogging("production", workdir)
 	}
+
+	provider.SetProviderFactoryFactory(factory_implementation.NewProviderFactoryFactory())
 
 	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))

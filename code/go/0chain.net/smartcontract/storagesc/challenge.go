@@ -11,7 +11,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 
 	"0chain.net/smartcontract/partitions"
 

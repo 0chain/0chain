@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"math/big"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/provider/spenum"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -20,6 +22,13 @@ import (
 const (
 	blobberHealthTime = 60 * 60 // 1 Hour
 )
+
+func GetBlobber(
+	blobberID string,
+	balances cstate.CommonStateContextI,
+) (provider.AbstractProvider, error) {
+	return getBlobber(blobberID, balances)
+}
 
 func getBlobber(
 	blobberID string,

@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"testing"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/core/common"
 
 	"github.com/0chain/common/core/currency"
 
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	sc "0chain.net/smartcontract"
 
@@ -109,8 +111,8 @@ func BenchmarkTests(
 					Port:      1234,
 				},
 				StakePool: &stakepool.StakePool{
-					Pools: make(map[string]*stakepool.DelegatePool),
-					Settings: stakepool.Settings{
+					Pools: make(map[string]*provider.DelegatePool),
+					Settings: provider.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
 						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
@@ -132,8 +134,8 @@ func BenchmarkTests(
 					Port:      1234,
 				},
 				StakePool: &stakepool.StakePool{
-					Pools: make(map[string]*stakepool.DelegatePool),
-					Settings: stakepool.Settings{
+					Pools: make(map[string]*provider.DelegatePool),
+					Settings: provider.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
 						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
@@ -307,8 +309,8 @@ func BenchmarkTests(
 					ID: data.Miners[0],
 				},
 				StakePool: &stakepool.StakePool{
-					Pools: make(map[string]*stakepool.DelegatePool),
-					Settings: stakepool.Settings{
+					Pools: make(map[string]*provider.DelegatePool),
+					Settings: provider.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
 						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
@@ -329,8 +331,8 @@ func BenchmarkTests(
 					ID: data.Miners[0],
 				},
 				StakePool: &stakepool.StakePool{
-					Pools: make(map[string]*stakepool.DelegatePool),
-					Settings: stakepool.Settings{
+					Pools: make(map[string]*provider.DelegatePool),
+					Settings: provider.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
 						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),

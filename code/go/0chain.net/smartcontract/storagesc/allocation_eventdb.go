@@ -4,16 +4,17 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/transaction"
 
 	common2 "0chain.net/smartcontract/common"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool"
 )
 
 type StorageAllocationBlobbers struct {
@@ -66,7 +67,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			Allocated:       b.Allocated,
 			SavedData:       b.SavedData,
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
-			StakePoolSettings: stakepool.Settings{
+			StakePoolSettings: provider.Settings{
 				DelegateWallet:     b.DelegateWallet,
 				MinStake:           currency.Coin(b.MinStake),
 				MaxStake:           currency.Coin(b.MaxStake),

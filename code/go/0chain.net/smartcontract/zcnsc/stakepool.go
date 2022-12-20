@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -12,8 +14,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
 )
 
@@ -112,7 +114,7 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	gn *GlobalNode,
 	authorizerID datastore.Key,
-	settings stakepool.Settings,
+	settings provider.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
 	if err := validateStakePoolSettings(settings, gn); err != nil {
@@ -160,7 +162,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
 
-func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode) error {
+func validateStakePoolSettings(poolSettings provider.Settings, conf *GlobalNode) error {
 	err := conf.validateStakeRange(poolSettings.MinStake, poolSettings.MaxStake)
 	if err != nil {
 		return err

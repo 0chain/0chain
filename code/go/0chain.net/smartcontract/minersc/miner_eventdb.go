@@ -5,8 +5,9 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -39,7 +40,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbMiner.Rewards.Rewards,
-			Settings: stakepool.Settings{
+			Settings: provider.Settings{
 				DelegateWallet:     edbMiner.DelegateWallet,
 				ServiceChargeRatio: edbMiner.ServiceCharge,
 				MaxNumDelegates:    edbMiner.Provider.NumDelegates,
@@ -51,9 +52,9 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 	if len(delegates) == 0 {
 		return mn
 	}
-	mn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	mn.StakePool.Pools = make(map[string]*provider.DelegatePool)
 	for _, delegate := range delegates {
-		mn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
+		mn.StakePool.Pools[delegate.PoolID] = &provider.DelegatePool{
 			Balance:      delegate.Balance,
 			Reward:       delegate.Reward,
 			Status:       spenum.PoolStatus(delegate.Status),

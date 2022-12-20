@@ -7,7 +7,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 )
 
 // CollectRewardRequest uniquely defines a stake pool.

@@ -9,9 +9,9 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/core/datastore"
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/core/common"
 	sc "0chain.net/smartcontract"

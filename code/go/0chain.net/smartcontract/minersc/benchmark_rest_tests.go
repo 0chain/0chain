@@ -2,8 +2,8 @@ package minersc
 
 import (
 	benchmark "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/rest"
-	"0chain.net/smartcontract/stakepool/spenum"
 )
 
 func BenchmarkRestTests(

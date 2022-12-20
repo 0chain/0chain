@@ -6,11 +6,13 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/provider/spenum"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/spf13/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -125,7 +127,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				endpoint: sc.UpdateAuthorizerStakePool,
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input: (&UpdateAuthorizerStakePoolPayload{
-					StakePoolSettings: stakepool.Settings{
+					StakePoolSettings: provider.Settings{
 						DelegateWallet:     data.Clients[0],
 						MinStake:           currency.Coin(1.1 * 1e10),
 						MaxStake:           currency.Coin(103 * 1e10),

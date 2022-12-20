@@ -8,13 +8,15 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/smartcontract/provider/spenum"
+
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -26,47 +28,14 @@ import (
 	"0chain.net/chaincore/state"
 )
 
-//go:generate msgp -v -io=false -tests=false
-
-func stakePoolKey(p spenum.Provider, id string) datastore.Key {
-	return p.String() + ":stakepool:" + id
-}
-
-type AbstractStakePool interface {
-	GetPools() map[string]*DelegatePool
-	HasStakePool(user string) bool
-	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) (string, error)
-	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
-	Save(providerType spenum.Provider, providerID string,
-		balances cstate.StateContextI) error
-	GetSettings() Settings
-	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
-	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
-}
+//go:generate msgp -io=false -tests=false -unexported -v
 
 // StakePool holds delegate information for an 0chain providers
 type StakePool struct {
-	Pools    map[string]*DelegatePool `json:"pools"`
-	Reward   currency.Coin            `json:"rewards"`
-	Settings Settings                 `json:"settings"`
-	Minter   cstate.ApprovedMinter    `json:"minter"`
-}
-
-type Settings struct {
-	DelegateWallet     string        `json:"delegate_wallet"`
-	MinStake           currency.Coin `json:"min_stake"`
-	MaxStake           currency.Coin `json:"max_stake"`
-	MaxNumDelegates    int           `json:"num_delegates"`
-	ServiceChargeRatio float64       `json:"service_charge"`
-}
-
-type DelegatePool struct {
-	Balance      currency.Coin     `json:"balance"`
-	Reward       currency.Coin     `json:"reward"`
-	Status       spenum.PoolStatus `json:"status"`
-	RoundCreated int64             `json:"round_created"` // used for cool down
-	DelegateID   string            `json:"delegate_id"`
-	StakedAt     common.Timestamp  `json:"staked_at"`
+	Pools    map[string]*provider.DelegatePool `json:"pools"`
+	Reward   currency.Coin                     `json:"rewards"`
+	Settings provider.Settings                 `json:"settings"`
+	Minter   cstate.ApprovedMinter             `json:"minter"`
 }
 
 // swagger:model stakePoolStat
@@ -78,7 +47,7 @@ type StakePoolStat struct {
 	Delegate     []DelegatePoolStat `json:"delegate"` // delegate pools
 	Penalty      currency.Coin      `json:"penalty"`  // total for all
 	Rewards      currency.Coin      `json:"rewards"`  // rewards
-	Settings     Settings           `json:"settings"` // Settings of the stake pool
+	Settings     provider.Settings  `json:"settings"` // Settings of the stake pool
 }
 
 type DelegatePoolStat struct {
@@ -101,20 +70,20 @@ type UserPoolStat struct {
 	Pools map[datastore.Key][]*DelegatePoolStat `json:"pools"`
 }
 
-func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.DelegatePool) (*StakePoolStat, error) {
+func ToProviderStakePoolStats(providerTable *event.Provider, delegatePools []event.DelegatePool) (*StakePoolStat, error) {
 	spStat := new(StakePoolStat)
-	spStat.ID = provider.ID
-	spStat.StakeTotal = provider.TotalStake
-	spStat.UnstakeTotal = provider.UnstakeTotal
+	spStat.ID = providerTable.ID
+	spStat.StakeTotal = providerTable.TotalStake
+	spStat.UnstakeTotal = providerTable.UnstakeTotal
 	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
-	spStat.Settings = Settings{
-		DelegateWallet:     provider.DelegateWallet,
-		MinStake:           provider.MinStake,
-		MaxStake:           provider.MaxStake,
-		MaxNumDelegates:    provider.NumDelegates,
-		ServiceChargeRatio: provider.ServiceCharge,
+	spStat.Settings = provider.Settings{
+		DelegateWallet:     providerTable.DelegateWallet,
+		MinStake:           providerTable.MinStake,
+		MaxStake:           providerTable.MaxStake,
+		MaxNumDelegates:    providerTable.NumDelegates,
+		ServiceChargeRatio: providerTable.ServiceCharge,
 	}
-	spStat.Rewards = provider.Rewards.TotalRewards
+	spStat.Rewards = providerTable.Rewards.TotalRewards
 	for _, dp := range delegatePools {
 		if spenum.PoolStatus(dp.Status) == spenum.Deleting || spenum.PoolStatus(dp.Status) == spenum.Deleted {
 			continue
@@ -146,7 +115,7 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 
 func NewStakePool() *StakePool {
 	return &StakePool{
-		Pools: make(map[string]*DelegatePool),
+		Pools: make(map[string]*provider.DelegatePool),
 	}
 }
 
@@ -162,10 +131,10 @@ func (sp *StakePool) Decode(input []byte) error {
 	return json.Unmarshal(input, sp)
 }
 
-func (sp *StakePool) GetSettings() Settings {
+func (sp *StakePool) GetSettings() provider.Settings {
 	return sp.Settings
 }
-func (sp *StakePool) GetPools() map[string]*DelegatePool {
+func (sp *StakePool) GetPools() map[string]*provider.DelegatePool {
 	return sp.Pools
 }
 
@@ -190,7 +159,7 @@ func (sp *StakePool) Save(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	_, err := balances.InsertTrieNode(stakePoolKey(p, id), sp)
+	_, err := balances.InsertTrieNode(provider.StakePoolKey(p, id), sp)
 	return err
 }
 
@@ -199,7 +168,7 @@ func (sp *StakePool) Get(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	return balances.GetTrieNode(stakePoolKey(p, id), sp)
+	return balances.GetTrieNode(provider.StakePoolKey(p, id), sp)
 }
 
 func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.Coin, error) {
@@ -266,16 +235,16 @@ func (sp *StakePool) MintRewards(
 		dPool.Reward = 0
 	}
 
-	var dpUpdate = newDelegatePoolUpdate(clientId, providerId, providerType)
+	var dpUpdate = provider.NewDelegatePoolUpdate(clientId, providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
 
 	if dPool.Status == spenum.Deleting {
 		delete(sp.Pools, clientId)
 		dpUpdate.Updates["status"] = spenum.Deleted
-		dpUpdate.emitUpdate(balances)
+		dpUpdate.EmitUpdate(balances)
 		return delegateReward + serviceCharge, nil
 	} else {
-		dpUpdate.emitUpdate(balances)
+		dpUpdate.EmitUpdate(balances)
 		return delegateReward + serviceCharge, nil
 	}
 }
@@ -400,12 +369,12 @@ func (sp *StakePool) DistributeRewardsRandN(
 	return nil
 }
 
-func (sp *StakePool) getRandPools(seed int64, n int) []*DelegatePool {
+func (sp *StakePool) getRandPools(seed int64, n int) []*provider.DelegatePool {
 	if len(sp.Pools) == 0 {
 		return nil
 	}
 
-	pls := make([]*DelegatePool, 0, len(sp.Pools))
+	pls := make([]*provider.DelegatePool, 0, len(sp.Pools))
 	for _, pool := range sp.Pools {
 		pls = append(pls, pool)
 	}
@@ -421,7 +390,7 @@ func (sp *StakePool) getRandPools(seed int64, n int) []*DelegatePool {
 
 	// get random N from pools N
 	plsIdxs := rand.New(rand.NewSource(seed)).Perm(n)
-	selected := make([]*DelegatePool, 0, n)
+	selected := make([]*provider.DelegatePool, 0, n)
 
 	for _, idx := range plsIdxs {
 		selected = append(selected, pls[idx])
@@ -430,7 +399,7 @@ func (sp *StakePool) getRandPools(seed int64, n int) []*DelegatePool {
 	return selected
 }
 
-func (sp *StakePool) getRandStakePools(seed int64, n int) (currency.Coin, []*DelegatePool, error) {
+func (sp *StakePool) getRandStakePools(seed int64, n int) (currency.Coin, []*provider.DelegatePool, error) {
 	pools := sp.getRandPools(seed, n)
 	if len(pools) == 0 {
 		return 0, nil, nil
@@ -556,7 +525,7 @@ func (sp *StakePool) stake() (stake currency.Coin, err error) {
 }
 
 func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *StakePoolReward) error {
-	var pools []*DelegatePool
+	var pools []*provider.DelegatePool
 	for _, v := range sp.Pools {
 		pools = append(pools, v)
 	}
@@ -567,7 +536,7 @@ func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *Sta
 	return equallyDistributeRewards(coins, pools, spUpdate)
 }
 
-func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpdate *StakePoolReward) error {
+func equallyDistributeRewards(coins currency.Coin, pools []*provider.DelegatePool, spUpdate *StakePoolReward) error {
 	share, r, err := currency.DistributeCoin(coins, int64(len(pools)))
 	if err != nil {
 		return err
@@ -622,7 +591,7 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 }
 
 func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
+	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (provider.AbstractStakePool, error)) (resp string, err error) {
 
 	var spr stakePoolRequest
 	if err = spr.decode(input); err != nil {
@@ -630,7 +599,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"invalid request: %v", err)
 	}
 
-	var sp AbstractStakePool
+	var sp provider.AbstractStakePool
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
@@ -674,14 +643,14 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 
 // stake pool can return excess tokens from stake pool
 func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
+	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (provider.AbstractStakePool, error),
 ) (resp string, err error) {
 	var spr stakePoolRequest
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)
 	}
-	var sp AbstractStakePool
+	var sp provider.AbstractStakePool
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)

@@ -3,7 +3,7 @@ package event
 import (
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

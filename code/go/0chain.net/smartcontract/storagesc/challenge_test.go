@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider"
+
+	"0chain.net/smartcontract/provider/spenum"
 
 	"github.com/0chain/common/core/currency"
 
@@ -20,7 +22,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/partitions"
-	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
@@ -596,7 +597,7 @@ func setupChallengeMocks(
 	sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
-		sp.Pools["paula"+id] = &stakepool.DelegatePool{}
+		sp.Pools["paula"+id] = &provider.DelegatePool{}
 		sp.Pools["paula"+id].Balance = currency.Coin(stake)
 		sp.Pools["paula"+id].DelegateID = "delegate " + id
 	}
@@ -609,7 +610,7 @@ func setupChallengeMocks(
 		var sPool = newStakePool()
 		sPool.Settings.ServiceChargeRatio = validatorYamls[i].serviceCharge
 		for j, stake := range validatorStakes[i] {
-			var pool = &stakepool.DelegatePool{}
+			var pool = &provider.DelegatePool{}
 			pool.Balance = currency.Coin(stake)
 			var id = validator + " delegate " + strconv.Itoa(j)
 			sPool.Pools[id] = pool
@@ -739,7 +740,7 @@ func confirmBlobberPenalty(
 	challengePool challengePool,
 	validatorsSPs []*stakePool,
 	blobber stakePool,
-	ctx cstate.StateContextI,
+	_ cstate.StateContextI,
 ) {
 	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
 

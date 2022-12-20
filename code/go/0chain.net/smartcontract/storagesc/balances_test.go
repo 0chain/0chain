@@ -3,6 +3,8 @@ package storagesc
 import (
 	"testing"
 
+	"0chain.net/smartcontract/provider/factory"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/currency"
 
@@ -23,6 +25,7 @@ import (
 //
 
 type testBalances struct {
+	factory.ProviderFactory
 	balances  map[datastore.Key]currency.Coin
 	txn       *transaction.Transaction
 	transfers []*state.Transfer

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
