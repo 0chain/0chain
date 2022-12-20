@@ -2,7 +2,6 @@ package common
 
 import (
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
 )
@@ -13,7 +12,7 @@ func ValidateWallet(publicKey, delegateWalletID string) *common.Error {
 		return nil
 	}
 
-	operationalWalletID, err := wallet.GetWalletIdFromPublicKey(publicKey)
+	operationalWalletID, err := common.GetWalletIdFromPublicKey(publicKey)
 	if err != nil {
 		return common.NewError("add_sharder",
 			"couldn't decode publick key to compare to delegate wallet")
