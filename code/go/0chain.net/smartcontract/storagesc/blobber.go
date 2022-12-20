@@ -203,7 +203,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // transfered; if it provides more tokens then required, then all
 // tokens left will be moved to unlocked part of related stake pool;
 // the part can be moved back to the blobber anytime or used to
-// increase blobber's- capacity or write_price next time
+// increase blobber's capacity or write_price next time
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
