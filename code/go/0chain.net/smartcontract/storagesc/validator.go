@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -23,10 +22,8 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	newValidator.PublicKey = t.PublicKey
 
 	// Check delegate wallet and operational wallet are not the same
-	if ! config.Development() {
-		if err := commonsc.ValidateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
-			return "", err
-		}
+	if err := commonsc.ValidateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
+		return "", err
 	}
 
 	tmp := &ValidationNode{}

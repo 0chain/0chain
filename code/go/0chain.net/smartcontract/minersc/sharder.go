@@ -116,10 +116,8 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	// Check delegate wallet differs from operationl wallet
-	if ! config.Development() {
-		if err := commonsc.ValidateWallet(newSharder.PublicKey, newSharder.Settings.DelegateWallet); err != nil {
-			return "", err
-		}
+	if err := commonsc.ValidateWallet(newSharder.PublicKey, newSharder.Settings.DelegateWallet); err != nil {
+		return "", err
 	}
 	
 	err = validateNodeSettings(newSharder, gn, "add_sharder")

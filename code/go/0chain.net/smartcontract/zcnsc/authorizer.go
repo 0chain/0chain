@@ -7,7 +7,6 @@ import (
 	"0chain.net/core/encryption"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -72,10 +71,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	}
 
 	// Check delegate wallet and operational wallet are not the same
-	if ! config.Development() {
-		if err := commonsc.ValidateWallet(params.PublicKey, params.StakePoolSettings.DelegateWallet); err != nil {
-			return "", err
-		}
+	if err := commonsc.ValidateWallet(params.PublicKey, params.StakePoolSettings.DelegateWallet); err != nil {
+		return "", err
 	}
 	
 	globalNode, err := GetGlobalNode(ctx)
