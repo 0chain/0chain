@@ -60,7 +60,7 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	return string(sn.Encode()), nil
 }
 
-// AddSharder function to handle miner register
+// AddSharder function to handle sharder register
 func (msc *MinerSmartContract) AddSharder(
 	t *transaction.Transaction,
 	input []byte,
@@ -86,6 +86,13 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder", "getting all sharders list: %v", err)
 	}
 
+	magicBlockSharders := balances.GetChainCurrentMagicBlock().Sharders
+	if magicBlockSharders.HasNode(newSharder.ID) == false {
+		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Not in magic block", zap.String("SharderID", newSharder.ID))
+		return "", common.NewErrorf("add_sharder",
+			"failed to add new sharder: Not in magic block")
+	}
+	
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
 
 	if newSharder.Settings.DelegateWallet == "" {
