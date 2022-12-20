@@ -687,15 +687,19 @@ func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, round int64, 
 	if clientState == nil {
 		return nil, common.NewError("GetStateById", "client state does not exist")
 	}
-	s := &state.State{}
-	s.Balance = currency.Coin(0)
+
+	var (
+		cs = CreateTxnMPT(clientState) // begin transaction
+		s  = &state.State{}
+	)
+
 	defer func() {
-		if mKeys := clientState.GetMissingNodeKeys(); len(mKeys) > 0 {
+		if mKeys := cs.GetMissingNodeKeys(); len(mKeys) > 0 {
 			c.SyncMissingNodes(round, mKeys, waitC...)
 		}
 	}()
 
-	err := clientState.GetNodeValue(util.Path(clientID), s)
+	err := cs.GetNodeValue(util.Path(clientID), s)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
