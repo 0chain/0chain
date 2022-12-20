@@ -19,6 +19,16 @@ import (
 	"0chain.net/core/datastore"
 )
 
+var (
+	stakeHandlers = map[spenum.Provider]func(ID string, totalStake currency.Coin) (tag event.EventTag, data interface{}){
+		spenum.Blobber:    event.NewUpdateBlobberTotalStakeEvent,
+		spenum.Validator:  event.NewUpdateValidatorTotalStakeEvent,
+		spenum.Miner:      event.NewUpdateMinerTotalStakeEvent,
+		spenum.Sharder:    event.NewUpdateSharderTotalStakeEvent,
+		spenum.Authorizer: event.NewUpdateAuthorizerTotalStakeEvent,
+	}
+)
+
 func CheckClientBalance(
 	clientId string,
 	toLock currency.Coin,
@@ -118,25 +128,14 @@ func (sp *StakePool) EmitStakeEvent(providerType spenum.Provider, providerID str
 	}
 
 	logging.Logger.Info("emitting stake event")
-	switch providerType {
-	case spenum.Blobber:
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Validator:
-		tag, data := event.NewUpdateValidatorTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Miner:
-		tag, data := event.NewUpdateMinerTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Sharder:
-		tag, data := event.NewUpdateSharderTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Authorizer:
-		tag, data := event.NewUpdateAuthorizerTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	default:
+
+	h, ok := stakeHandlers[providerType]
+	if !ok {
 		logging.Logger.Error("unsupported providerType in stakepool StakeEvent")
+		return nil
 	}
 
+	tag, data := h(providerID, staked)
+	balances.EmitEvent(event.TypeStats, tag, providerID, data)
 	return nil
 }
