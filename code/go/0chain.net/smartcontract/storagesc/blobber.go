@@ -952,6 +952,8 @@ func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, 
 
 func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI) {
 	i, _ := big.NewFloat(r.ReadSize).Int64()
+	logging.Logger.Debug("saved_data", zap.Int64("update", i), zap.Float64("update", r.ReadSize))
+
 	bb := event.Blobber{
 		Provider: event.Provider{ID: r.BlobberID},
 		ReadData: i,

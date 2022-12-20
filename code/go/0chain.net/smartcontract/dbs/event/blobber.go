@@ -321,6 +321,7 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
 		a.Used += b.Used
 		a.SavedData += b.SavedData
+		logging.Logger.Debug("saved_data", zap.Int64("update", a.SavedData))
 		a.ReadData += b.ReadData
 		return a, nil
 	})

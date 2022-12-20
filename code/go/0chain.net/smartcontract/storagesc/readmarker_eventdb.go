@@ -27,7 +27,7 @@ func readMarkerToReadMarkerTable(rm *ReadMarker, txnHash string) *event.ReadMark
 
 func emitAddOrOverwriteReadMarker(rm *ReadMarker, balances cstate.StateContextI, t *transaction.Transaction) error {
 
-	balances.EmitEvent(event.TypeStats, event.TagAddReadMarker, t.Hash, readMarkerToReadMarkerTable(rm, t.Hash))
 	emitUpdateBlobberReadStatEvent(rm, balances)
+	balances.EmitEvent(event.TypeStats, event.TagAddReadMarker, t.Hash, readMarkerToReadMarkerTable(rm, t.Hash))
 	return nil
 }
