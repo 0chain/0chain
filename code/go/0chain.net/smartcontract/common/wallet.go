@@ -1,21 +1,19 @@
 package common
 
 import (
-	"encoding/hex"
-
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
 )
 
-
-func ValidateWallet(publicKey, delegateWalletID string) *common.Error {
+//ValidateDelegateWallet - Protects against using the provider's clientID (operational wallet ID) as DelegateWalletID. Checks that clientID and delegateWalletID are not the same
+func ValidateDelegateWallet(publicKey, delegateWalletID string) *common.Error {
 	if config.Development() {
 		return nil
 	}
 
-	operationalWalletID, err := GetWalletIdFromPublicKey(publicKey)
+	operationalWalletID, err := encryption.GetClientIDFromPublickKey(publicKey)
 	if err != nil {
 		return common.NewError("add_sharder",
 			"couldn't decode publick key to compare to delegate wallet")
@@ -28,14 +26,4 @@ func ValidateWallet(publicKey, delegateWalletID string) *common.Error {
 	}
 
 	return nil
-}
-
-/*GetWalletIdFromPublicKey - given the PK of the provider, return the its operational walletID i.e. the key used to sign the txns */
-func GetWalletIdFromPublicKey(pk string) (string, error) {
-	publicKeyBytes, err := hex.DecodeString(pk)
-	if err != nil {
-		return "", err
-	}
-	operationalClientID := encryption.Hash(publicKeyBytes)
-	return operationalClientID, nil
 }
