@@ -89,7 +89,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	magicBlockSharders := balances.GetChainCurrentMagicBlock().Sharders
-	if magicBlockSharders.HasNode(newSharder.ID) == false {
+	if !magicBlockSharders.HasNode(newSharder.ID) {
 		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Not in magic block", zap.String("SharderID", newSharder.ID))
 		return "", common.NewErrorf("add_sharder",
 			"failed to add new sharder: Not in magic block")
