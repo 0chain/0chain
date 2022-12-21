@@ -159,11 +159,15 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		gs.UsedStorage += aggregate.SavedData - old.SavedData
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
-		ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
-		if err != nil {
-			logging.Logger.Error("converting coin to int64", zap.Error(err))
+		if aggregate.WritePrice == 0 {
+			gs.StakedStorage = gs.MaxCapacityStorage
+		} else {
+			ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
+			if err != nil {
+				logging.Logger.Error("converting coin to int64", zap.Error(err))
+			}
+			gs.StakedStorage += ss
 		}
-		gs.StakedStorage += ss
 
 		gs.blobberCount++ //todo figure out why we increment blobberCount on every update
 	}
@@ -183,13 +187,13 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 	logging.Logger.Debug("blobber_snapshot", zap.Int("current_blobebrs", len(currentBlobbers)))
 
 	// update global snapshot object
-	if gs.blobberCount == 0 {
-		return
+	if gs.blobberCount != 0 {
+
+		twp, err := gs.totalWritePricePeriod.Int64()
+		if err != nil {
+			logging.Logger.Error("converting write price to coin", zap.Error(err))
+			return
+		}
+		gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
 	}
-	twp, err := gs.totalWritePricePeriod.Int64()
-	if err != nil {
-		logging.Logger.Error("converting write price to coin", zap.Error(err))
-		return
-	}
-	gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
 }
