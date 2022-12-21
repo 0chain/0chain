@@ -27,6 +27,7 @@ func NewMinerNode() *MinerNode {
 	return mn
 }
 
+// swagger:model NodePool
 type NodePool struct {
 	PoolID string `json:"pool_id"`
 	*stakepool.DelegatePool

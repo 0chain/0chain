@@ -146,14 +146,6 @@ func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 	return diagnostics.GetStatistics(c, chain.SteadyStateFinalizationTimer, 1000000.0), nil
 }
 
-/*ChainStatsWriter - a handler to provide block statistics */
-// swagger:route GET /v1/chain/get/stats chainstatus
-// a handler to provide block statistics
-//
-// responses:
-//  200:
-//  404:
-
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	sc := GetSharderChain()
 	c := sc.Chain
@@ -246,7 +238,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 // a handler to get sharder stats
 //
 // responses:
-//  200:
+//  200: ExplorerStats
 //  404:
 
 func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
