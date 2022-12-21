@@ -71,7 +71,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	}
 
 	// Check delegate wallet and operational wallet are not the same
-	if err := commonsc.ValidateWallet(params.PublicKey, params.StakePoolSettings.DelegateWallet); err != nil {
+	if err := commonsc.ValidateDelegateWallet(params.PublicKey, params.StakePoolSettings.DelegateWallet); err != nil {
 		return "", err
 	}
 	

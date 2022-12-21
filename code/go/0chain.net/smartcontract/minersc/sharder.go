@@ -123,7 +123,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	// Check delegate wallet differs from operationl wallet
-	if err := commonsc.ValidateWallet(newSharder.PublicKey, newSharder.Settings.DelegateWallet); err != nil {
+	if err := commonsc.ValidateDelegateWallet(newSharder.PublicKey, newSharder.Settings.DelegateWallet); err != nil {
 		return "", err
 	}
 	

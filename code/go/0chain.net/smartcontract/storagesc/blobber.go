@@ -224,7 +224,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	blobber.PublicKey = t.PublicKey
 
 	// Check delegate wallet and operational wallet are not the same
-	if err := commonsc.ValidateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
+	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
 		return "", err
 	}
 

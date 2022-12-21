@@ -97,7 +97,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 	
 	// Check delegate wallet is not the same as operational wallet (PUK)
-	if err := commonsc.ValidateWallet(newMiner.PublicKey, newMiner.Settings.DelegateWallet); err != nil {
+	if err := commonsc.ValidateDelegateWallet(newMiner.PublicKey, newMiner.Settings.DelegateWallet); err != nil {
 		return "", err
 	}
 

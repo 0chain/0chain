@@ -22,7 +22,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	newValidator.PublicKey = t.PublicKey
 
 	// Check delegate wallet and operational wallet are not the same
-	if err := commonsc.ValidateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
+	if err := commonsc.ValidateDelegateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
 		return "", err
 	}
 
