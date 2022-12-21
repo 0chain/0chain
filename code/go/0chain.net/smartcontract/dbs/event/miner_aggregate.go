@@ -15,11 +15,11 @@ type MinerAggregate struct {
 	MinerID string `json:"miner_id" gorm:"index:idx_miner_aggregate,unique"`
 	Round   int64  `json:"round" gorm:"index:idx_miner_aggregate,unique"`
 
-	Fees              currency.Coin `json:"fees"`
-	UnstakeTotal      currency.Coin `json:"unstake_total"`
-	TotalStake        currency.Coin `json:"total_stake"`
-	ServiceCharge     float64       `json:"service_charge"`
-	TransactionNumber int           `json:"transaction_number"`
+	Fees          currency.Coin `json:"fees"`
+	UnstakeTotal  currency.Coin `json:"unstake_total"`
+	TotalStake    currency.Coin `json:"total_stake"`
+	ServiceCharge float64       `json:"service_charge"`
+	Count         int           `json:"count"`
 }
 
 func (edb *EventDb) ReplicateMinerAggregate(p common.Pagination) ([]MinerAggregate, error) {
