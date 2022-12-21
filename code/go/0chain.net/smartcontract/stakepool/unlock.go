@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	"errors"
 	"fmt"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -38,6 +39,10 @@ func (sp *StakePool) UnlockPool(
 	amount, err := sp.MintRewards(
 		clientID, providerId, providerType, balances,
 	)
+	if err != nil {
+		return "", fmt.Errorf(
+			"stake pool staking error: %v", err)
+	}
 
 	i, _ := amount.Int64()
 	lock := event.DelegatePoolLock{
@@ -68,8 +73,7 @@ func (sp *StakePool) EmitUnStakeEvent(providerType spenum.Provider, providerID s
 
 	h, ok := unstakeHandlers[providerType]
 	if !ok {
-		logging.Logger.Error("unsupported providerType in stakepool StakeEvent")
-		return nil
+		return errors.New("unsupported providerType in stakepool StakeEvent")
 	}
 
 	tag, data := h(providerID, amount)

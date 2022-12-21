@@ -131,8 +131,7 @@ func (sp *StakePool) EmitStakeEvent(providerType spenum.Provider, providerID str
 
 	h, ok := stakeHandlers[providerType]
 	if !ok {
-		logging.Logger.Error("unsupported providerType in stakepool StakeEvent")
-		return nil
+		return errors.New("unsupported providerType in stakepool StakeEvent")
 	}
 
 	tag, data := h(providerID, staked)
