@@ -17,6 +17,13 @@ type Validator struct {
 	PublicKey string `json:"public_key"`
 }
 
+func (edb *EventDb) GetValidatorCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Validator{}).Count(&count)
+
+	return count, res.Error
+}
+
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
 	var vn Validator
 
