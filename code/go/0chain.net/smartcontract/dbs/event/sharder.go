@@ -30,6 +30,9 @@ type Sharder struct {
 	Active          bool
 	Longitude       float64
 	Latitude        float64
+
+	//	number of transactions involved
+	Count int
 }
 
 // swagger:model SharderGeolocation
@@ -37,6 +40,13 @@ type SharderGeolocation struct {
 	SharderID string  `json:"sharder_id"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+}
+
+func (edb *EventDb) GetSharderCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Miner{}).Count(&count)
+
+	return count, res.Error
 }
 
 func (edb *EventDb) GetSharder(id string) (Sharder, error) {
