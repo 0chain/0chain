@@ -103,6 +103,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		Owner:          alloc.Owner,
 		OwnerPublicKey: alloc.OwnerPublicKey,
 		WritePool:      alloc.WritePool,
+		ThirdPartyExtendable: alloc.ThirdPartyExtendable,
+		FileOptions: alloc.FileOptions,
 		Stats: &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
