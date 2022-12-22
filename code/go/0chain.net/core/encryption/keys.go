@@ -51,3 +51,13 @@ func Sign(privateKey interface{}, hash interface{}) (string, error) {
 func Verify(publicKey interface{}, signature string, hash string) (bool, error) {
 	return verifyED25519(publicKey, signature, hash)
 }
+
+// GetClientIDFromPublicKey - given the PK of the provider, return the its operational walletID i.e. the key used to sign the txns
+func GetClientIDFromPublicKey(pk string) (string, error) {
+	publicKeyBytes, err := hex.DecodeString(pk)
+	if err != nil {
+		return "", err
+	}
+	operationalClientID := Hash(publicKeyBytes)
+	return operationalClientID, nil
+}

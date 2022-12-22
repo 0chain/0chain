@@ -13,7 +13,7 @@ func ValidateDelegateWallet(publicKey, delegateWalletID string) *common.Error {
 		return nil
 	}
 
-	operationalWalletID, err := encryption.GetClientIDFromPublickKey(publicKey)
+	operationalWalletID, err := encryption.GetClientIDFromPublicKey(publicKey)
 	if err != nil {
 		return common.NewError("add_sharder",
 			"couldn't decode publick key to compare to delegate wallet")
