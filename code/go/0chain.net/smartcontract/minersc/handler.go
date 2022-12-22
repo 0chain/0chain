@@ -401,17 +401,12 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
 		return
 	}
-	sCtx := mrh.GetQueryStateContext()
-	edb := sCtx.GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	if sCtx.GetBlock() == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("cannot get latest finalised block"))
-		return
-	}
 	var err error
 	var delegates []event.DelegatePool
 	if includeDelegates {
@@ -424,7 +419,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 
 	if miner, err := edb.GetMiner(id); err == nil {
 		common.Respond(w, r, nodeStat{
-			MinerNode: minerTableToMinerNode(miner, delegates), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
+			MinerNode: minerTableToMinerNode(miner, delegates), Round: edb.GetRound(), TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
 		return
 	}
 	sharder, err := edb.GetSharder(id)
@@ -434,7 +429,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 	}
 	common.Respond(w, r, nodeStat{
 		MinerNode:   sharderTableToSharderNode(sharder, delegates),
-		Round:       sCtx.GetBlock().Round,
+		Round:       edb.GetRound(),
 		TotalReward: int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
@@ -726,8 +721,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		}
 		filter.Active = null.BoolFrom(active)
 	}
-	sCtx := mrh.GetQueryStateContext()
-	edb := sCtx.GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -741,7 +735,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	for i, sharder := range sharders {
 		shardersArr[i] = nodeStat{
 			MinerNode:   sharderTableToSharderNode(sharder, nil),
-			Round:       sCtx.GetBlock().Round,
+			Round:       edb.GetRound(),
 			TotalReward: int64(sharder.Rewards.TotalRewards),
 		}
 	}

@@ -198,12 +198,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			}
 		}
 
-		if err := tx.Commit(); err != nil {
-			logging.Logger.Error("error committing block events",
-				zap.Int64("block", es.round),
-				zap.Error(err),
-			)
-		}
+		edb.CommitTx(tx, es.round)
 
 		due := time.Since(tse)
 		logging.Logger.Debug("event db process",

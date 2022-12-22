@@ -3,6 +3,10 @@ package event
 import (
 	"errors"
 	"fmt"
+	"sync"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
@@ -20,6 +24,7 @@ func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, e
 		dbConfig:      config,
 		eventsChannel: make(chan blockEvents, 1),
 		settings:      settings,
+		mutex:         new(sync.RWMutex),
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 	if err := eventDb.AutoMigrate(); err != nil {
@@ -33,6 +38,8 @@ type EventDb struct {
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan blockEvents
+	mutex         *sync.RWMutex
+	lastRound     int64
 }
 
 func (edb *EventDb) Begin() (*EventDb, error) {
@@ -50,6 +57,24 @@ func (edb *EventDb) Begin() (*EventDb, error) {
 		settings: edb.settings,
 	}
 	return &edbTx, nil
+}
+
+func (edb *EventDb) GetRound() int64 {
+	edb.mutex.RLock()
+	defer edb.mutex.RUnlock()
+	return edb.lastRound
+}
+
+func (edb *EventDb) CommitTx(tx *EventDb, round int64) {
+	edb.mutex.Lock()
+	defer edb.mutex.Unlock()
+	if err := tx.Commit(); err != nil {
+		logging.Logger.Error("error committing block events",
+			zap.Int64("block", round),
+			zap.Error(err),
+		)
+	}
+	edb.lastRound = round
 }
 
 func (edb *EventDb) Commit() error {
