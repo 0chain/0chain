@@ -48,13 +48,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	defer lockAllMiners.Unlock()
 
 	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
-	
+
 	if magicBlockMiners.HasNode(newMiner.ID) == false {
 		logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
 		return "", common.NewErrorf("add_miner",
 			"failed to add new miner: Not in magic block")
 	}
-	
 
 	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
@@ -193,20 +192,26 @@ func (msc *MinerSmartContract) deleteNode(
 ) (*MinerNode, error) {
 	var err error
 	deleteNode.Delete = true
+	var nodeType spenum.Provider
 	switch deleteNode.NodeType {
 	case NodeTypeMiner:
+		nodeType = spenum.Miner
 	case NodeTypeSharder:
+		nodeType = spenum.Sharder
 	default:
 		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
 	}
 
-	for _, pool := range deleteNode.Pools {
+	for key, pool := range deleteNode.Pools {
 		switch pool.Status {
 		case spenum.Active:
-			pool.Status = spenum.Deleting
-		case spenum.Pending,
-			spenum.Deleting,
-			spenum.Deleted:
+			pool.Status = spenum.Deleted
+			_, err := deleteNode.UnlockPool(
+				pool.DelegateID, nodeType, key, balances)
+			if err != nil {
+				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
+			}
+		case spenum.Deleted:
 		default:
 			return nil, fmt.Errorf(
 				"unrecognised stakepool status: %v", pool.Status.String())
