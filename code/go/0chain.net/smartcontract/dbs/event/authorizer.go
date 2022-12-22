@@ -39,6 +39,13 @@ func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
 	return result.Error
 }
 
+func (edb *EventDb) GetAuthorizerCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Authorizer{}).Count(&count)
+
+	return count, res.Error
+}
+
 func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 	var auth Authorizer
 
