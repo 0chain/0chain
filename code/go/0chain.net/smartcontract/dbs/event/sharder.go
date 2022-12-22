@@ -44,7 +44,7 @@ type SharderGeolocation struct {
 
 func (edb *EventDb) GetSharderCount() (int64, error) {
 	var count int64
-	res := edb.Store.Get().Model(Miner{}).Count(&count)
+	res := edb.Store.Get().Model(Sharder{}).Count(&count)
 
 	return count, res.Error
 }
