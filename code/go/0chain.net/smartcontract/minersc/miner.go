@@ -48,13 +48,15 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	defer lockAllMiners.Unlock()
 
 	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
-	
+	if magicBlockMiners == nil {
+		return "", common.NewError("add_miner", "magic block miners nil")
+	}
+
 	if !magicBlockMiners.HasNode(newMiner.ID) {
 		logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
 		return "", common.NewErrorf("add_miner",
 			"failed to add new miner: Not in magic block")
 	}
-	
 
 	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
