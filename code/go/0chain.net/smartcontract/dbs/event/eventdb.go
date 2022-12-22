@@ -65,6 +65,11 @@ func (edb *EventDb) GetRound() int64 {
 	return edb.lastRound
 }
 
+// SetRound To use in tests and benchmarks
+func (edb *EventDb) SetRound(round int64) {
+	edb.lastRound = round
+}
+
 func (edb *EventDb) CommitTx(tx *EventDb, round int64) {
 	edb.mutex.Lock()
 	defer edb.mutex.Unlock()
