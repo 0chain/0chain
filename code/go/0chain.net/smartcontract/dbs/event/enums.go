@@ -44,7 +44,7 @@ const (
 	TagAddOrOverwiteValidator
 	TagUpdateValidator
 	TagAddReadMarker
-	TagAddOrOverwriteMiner
+	TagAddMiner
 	TagUpdateMiner
 	TagDeleteMiner
 	TagAddOrOverwriteSharder
@@ -133,7 +133,7 @@ func initTagString() {
 	TagString[TagAddOrOverwiteValidator] = "TagAddOrOverwiteValidator"
 	TagString[TagUpdateValidator] = "TagUpdateValidator"
 	TagString[TagAddReadMarker] = "TagAddReadMarker"
-	TagString[TagAddOrOverwriteMiner] = "TagAddOrOverwriteMiner"
+	TagString[TagAddMiner] = "TagAddMiner"
 	TagString[TagUpdateMiner] = "TagUpdateMiner"
 	TagString[TagDeleteMiner] = "TagDeleteMiner"
 	TagString[TagAddOrOverwriteSharder] = "TagAddOrOverwriteSharder"

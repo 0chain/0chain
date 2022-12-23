@@ -66,7 +66,6 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	return event.Miner{
-
 		N2NHost:   mn.N2NHost,
 		Host:      mn.Host,
 		Port:      mn.Port,
@@ -97,22 +96,9 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	}
 }
 
-//func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
-//
-//	logging.Logger.Info("emitting add miner event")
-//
-//	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
-//
-//	return nil
-//}
-
-func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
-
+func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 	logging.Logger.Info("emitting add or overwrite miner event")
-
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, mn.ID, minerNodeToMinerTable(mn))
-
-	return nil
+	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
 }
 
 func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {

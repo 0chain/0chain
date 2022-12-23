@@ -79,7 +79,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	var (
 		mergers = []eventsMerger{
 			mergeAddUsersEvents(),
-			mergeAddProviderEvents[Miner](TagAddOrOverwriteMiner, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Miner](TagAddMiner, withUniqueEventOverwrite(), addMinerLastUpdateRound()),
 			mergeAddProviderEvents[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
@@ -118,6 +118,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberStatsEvents(),
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
+
+			updateMinerMiddleware(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -477,17 +479,18 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateValidatorStakes(*updates)
-	case TagAddOrOverwriteMiner:
+	case TagAddMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteMiner(*miners)
+		return edb.addMiner(*miners)
 	case TagUpdateMiner:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
+		//updates.Updates["round_last_updated"] = event.BlockNumber
 		return edb.updateMiner(*updates)
 	case TagDeleteMiner:
 		minerID, ok := fromEvent[string](event.Data)

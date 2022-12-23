@@ -833,9 +833,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 		mn := NewMinerNode()
 		mn.SimpleNode = v
 		mn.Status = n.Status
-		if err := emitAddOrOverwriteMiner(mn, balances); err != nil {
-			return nil, err
-		}
+		emitAddMiner(mn, balances)
 	}
 
 	for _, v := range sharders.Nodes {

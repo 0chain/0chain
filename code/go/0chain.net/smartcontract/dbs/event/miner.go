@@ -1,10 +1,8 @@
 package event
 
 import (
-	"errors"
-	"fmt"
-
 	common2 "0chain.net/smartcontract/common"
+	"fmt"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -40,7 +38,6 @@ type MinerGeolocation struct {
 }
 
 func (edb *EventDb) GetMiner(id string) (Miner, error) {
-
 	var miner Miner
 	return miner, edb.Store.Get().
 		Preload("Rewards").
@@ -113,7 +110,6 @@ func (edb *EventDb) GetMinerGeolocations(filter MinerQuery, p common2.Pagination
 }
 
 func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
-
 	var miners []Miner
 
 	result := edb.Store.Get().
@@ -126,7 +122,6 @@ func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
 }
 
 func (edb *EventDb) CountActiveMiners() (int64, error) {
-
 	var count int64
 
 	result := edb.Store.Get().
@@ -138,7 +133,6 @@ func (edb *EventDb) CountActiveMiners() (int64, error) {
 }
 
 func (edb *EventDb) CountInactiveMiners() (int64, error) {
-
 	var count int64
 
 	result := edb.Store.Get().
@@ -157,7 +151,6 @@ func (edb *EventDb) GetMinersTotalStake() (int64, error) {
 }
 
 func (edb *EventDb) GetMiners() ([]Miner, error) {
-
 	var miners []Miner
 
 	result := edb.Store.Get().
@@ -168,55 +161,58 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 	return miners, result.Error
 }
 
-func (edb *EventDb) addOrOverwriteMiner(miners []Miner) error {
+func (edb *EventDb) addMiner(miners []Miner) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&miners).Error
 }
 
-func (mn *Miner) exists(edb *EventDb) (bool, error) {
-
-	var miner Miner
-
-	result := edb.Get().
-		Model(&Miner{}).
-		Where(&Miner{Provider: Provider{ID: mn.ID}}).
-		Take(&miner)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
-	} else if result.Error != nil {
-		return false, fmt.Errorf("error searching for miner %v, error %v",
-			mn.ID, result.Error)
+func addMinerLastUpdateRound() eventMergeMiddleware {
+	return func(events []Event) ([]Event, error) {
+		for i := range events {
+			m, ok := events[i].Data.(Miner)
+			if !ok {
+				return nil, fmt.Errorf(
+					"merging, %v shold be a miner", events[i].Data)
+			}
+			m.RoundLastUpdated = events[i].BlockNumber
+			events[i].Data = m
+		}
+		return events, nil
 	}
-
-	return true, nil
 }
 
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
-
-	var miner = Miner{Provider: Provider{ID: updates.Id}}
-	exists, err := miner.exists(edb)
-
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("miner %v not in database cannot update",
-			miner.ID)
-	}
-
-	result := edb.Store.Get().
+	return edb.Store.Get().
 		Model(&Miner{}).
-		Where(&Miner{Provider: Provider{ID: miner.ID}}).
-		Updates(updates.Updates)
+		Where(&Miner{Provider: Provider{ID: updates.Id}}).
+		Updates(updates.Updates).Error
+}
 
-	return result.Error
+func updateMinerMiddleware() *eventsMergerImpl[dbs.DbUpdates] {
+	return &eventsMergerImpl[dbs.DbUpdates]{
+		tag:         TagUpdateMiner,
+		middlewares: []eventMergeMiddleware{updateMinerLastUpdateRound()},
+	}
+}
+
+func updateMinerLastUpdateRound() eventMergeMiddleware {
+	return func(events []Event) ([]Event, error) {
+		for i := range events {
+			updates, ok := events[i].Data.(dbs.DbUpdates)
+			if !ok {
+				return nil, fmt.Errorf(
+					"merging, %v shold be a dbs update", events[i].Data)
+			}
+			updates.Updates["round_last_updated"] = events[i].BlockNumber
+			events[i].Data = updates
+		}
+		return events, nil
+	}
 }
 
 func (edb *EventDb) deleteMiner(id string) error {
-
 	result := edb.Store.Get().
 		Where(&Miner{Provider: Provider{ID: id}}).
 		Delete(&Miner{})

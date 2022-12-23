@@ -29,7 +29,7 @@ func init() {
 }
 
 func TestBlobbers(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 
 	type StorageNodeGeolocation struct {
 		Latitude  float64 `json:"latitude"`
@@ -131,6 +131,13 @@ func TestBlobbers(t *testing.T) {
 		},
 		SavedData: 10,
 	}
+	blobber1 := Blobber{
+		Provider:        Provider{ID: "piers"},
+		Capacity:        43,
+		Allocated:       47,
+		LastHealthCheck: 51,
+	}
+
 	SnBlobber := convertSn(sn)
 	data, err := json.Marshal(&SnBlobber)
 	require.NoError(t, err)
@@ -140,9 +147,24 @@ func TestBlobbers(t *testing.T) {
 		TxHash:      "tx hash",
 		Type:        TypeStats,
 		Tag:         TagAddBlobber,
-		Data:        string(data),
+		Data:        blobber1,
 	}
-	events := []Event{eventAddSn}
+
+	blobber2 := Blobber{
+		Provider:        Provider{ID: "piers"},
+		Capacity:        3,
+		Allocated:       7,
+		LastHealthCheck: 1,
+	}
+	eventAddSn2 := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash",
+		Type:        TypeStats,
+		Tag:         TagAddBlobber,
+		Data:        blobber2,
+	}
+
+	events := []Event{eventAddSn, eventAddSn2}
 	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 
 	blobber, err := eventDb.GetBlobber(sn.ID)
