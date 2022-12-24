@@ -1,10 +1,8 @@
 package event
 
 import (
-	"errors"
-	"fmt"
-
 	common2 "0chain.net/smartcontract/common"
+	"fmt"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -49,7 +47,6 @@ func (edb *EventDb) GetSharder(id string) (Sharder, error) {
 }
 
 func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
-
 	var sharders []Sharder
 
 	result := edb.Store.Get().
@@ -62,7 +59,6 @@ func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
 }
 
 func (edb *EventDb) GetSharders() ([]Sharder, error) {
-
 	var sharders []Sharder
 
 	result := edb.Store.Get().
@@ -74,7 +70,6 @@ func (edb *EventDb) GetSharders() ([]Sharder, error) {
 }
 
 func (edb *EventDb) CountActiveSharders() (int64, error) {
-
 	var count int64
 
 	result := edb.Store.Get().
@@ -86,7 +81,6 @@ func (edb *EventDb) CountActiveSharders() (int64, error) {
 }
 
 func (edb *EventDb) CountInactiveSharders() (int64, error) {
-
 	var count int64
 
 	result := edb.Store.Get().
@@ -104,30 +98,11 @@ func (edb *EventDb) GetShardersTotalStake() (int64, error) {
 	return count, err
 }
 
-func (edb *EventDb) addOrOverwriteSharders(sharders []Sharder) error {
+func (edb *EventDb) addSharders(sharders []Sharder) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&sharders).Error
-}
-
-func (sh *Sharder) exists(edb *EventDb) (bool, error) {
-
-	var sharder Sharder
-
-	result := edb.Get().
-		Model(&Sharder{}).
-		Where(&Sharder{Provider: Provider{ID: sh.ID}}).
-		Take(&sharder)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
-	} else if result.Error != nil {
-		return false, fmt.Errorf("error searching for sharder %v, error %v",
-			sh.ID, result.Error)
-	}
-
-	return true, nil
 }
 
 type SharderQuery struct {
@@ -185,17 +160,7 @@ func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagina
 }
 
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
-
 	var sharder = Sharder{Provider: Provider{ID: updates.Id}}
-	exists, err := sharder.exists(edb)
-
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("sharder %v not in database cannot update",
-			sharder.ID)
-	}
 
 	result := edb.Store.Get().
 		Model(&Sharder{}).
@@ -232,4 +197,41 @@ func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
 
 func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
 	return newEventsMerger[Sharder](TagUpdateSharderTotalStake, withUniqueEventOverwrite())
+}
+
+func addSharderLastUpdateRound() eventMergeMiddleware {
+	return func(events []Event) ([]Event, error) {
+		for i := range events {
+			m, ok := events[i].Data.(Sharder)
+			if !ok {
+				return nil, fmt.Errorf(
+					"merging, %v shold be a Sharder", events[i].Data)
+			}
+			m.RoundLastUpdated = events[i].BlockNumber
+			events[i].Data = m
+		}
+		return events, nil
+	}
+}
+
+func updateSharderMiddleware() *eventsMergerImpl[dbs.DbUpdates] {
+	return &eventsMergerImpl[dbs.DbUpdates]{
+		tag:         TagUpdateSharder,
+		middlewares: []eventMergeMiddleware{updateSharderLastUpdateRound()},
+	}
+}
+
+func updateSharderLastUpdateRound() eventMergeMiddleware {
+	return func(events []Event) ([]Event, error) {
+		for i := range events {
+			updates, ok := events[i].Data.(dbs.DbUpdates)
+			if !ok {
+				return nil, fmt.Errorf(
+					"merging, %v shold be a dbs update", events[i].Data)
+			}
+			updates.Updates["round_last_updated"] = events[i].BlockNumber
+			events[i].Data = updates
+		}
+		return events, nil
+	}
 }

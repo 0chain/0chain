@@ -168,48 +168,11 @@ func (edb *EventDb) addMiner(miners []Miner) error {
 	}).Create(&miners).Error
 }
 
-func addMinerLastUpdateRound() eventMergeMiddleware {
-	return func(events []Event) ([]Event, error) {
-		for i := range events {
-			m, ok := events[i].Data.(Miner)
-			if !ok {
-				return nil, fmt.Errorf(
-					"merging, %v shold be a miner", events[i].Data)
-			}
-			m.RoundLastUpdated = events[i].BlockNumber
-			events[i].Data = m
-		}
-		return events, nil
-	}
-}
-
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 	return edb.Store.Get().
 		Model(&Miner{}).
 		Where(&Miner{Provider: Provider{ID: updates.Id}}).
 		Updates(updates.Updates).Error
-}
-
-func updateMinerMiddleware() *eventsMergerImpl[dbs.DbUpdates] {
-	return &eventsMergerImpl[dbs.DbUpdates]{
-		tag:         TagUpdateMiner,
-		middlewares: []eventMergeMiddleware{updateMinerLastUpdateRound()},
-	}
-}
-
-func updateMinerLastUpdateRound() eventMergeMiddleware {
-	return func(events []Event) ([]Event, error) {
-		for i := range events {
-			updates, ok := events[i].Data.(dbs.DbUpdates)
-			if !ok {
-				return nil, fmt.Errorf(
-					"merging, %v shold be a dbs update", events[i].Data)
-			}
-			updates.Updates["round_last_updated"] = events[i].BlockNumber
-			events[i].Data = updates
-		}
-		return events, nil
-	}
 }
 
 func (edb *EventDb) deleteMiner(id string) error {
@@ -238,4 +201,41 @@ func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
 
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
 	return newEventsMerger[Miner](TagUpdateMinerTotalStake, withUniqueEventOverwrite())
+}
+
+func addMinerLastUpdateRound() eventMergeMiddleware {
+	return func(events []Event) ([]Event, error) {
+		for i := range events {
+			m, ok := events[i].Data.(Miner)
+			if !ok {
+				return nil, fmt.Errorf(
+					"merging, %v shold be a miner", events[i].Data)
+			}
+			m.RoundLastUpdated = events[i].BlockNumber
+			events[i].Data = m
+		}
+		return events, nil
+	}
+}
+
+func updateMinerMiddleware() *eventsMergerImpl[dbs.DbUpdates] {
+	return &eventsMergerImpl[dbs.DbUpdates]{
+		tag:         TagUpdateMiner,
+		middlewares: []eventMergeMiddleware{updateMinerLastUpdateRound()},
+	}
+}
+
+func updateMinerLastUpdateRound() eventMergeMiddleware {
+	return func(events []Event) ([]Event, error) {
+		for i := range events {
+			updates, ok := events[i].Data.(dbs.DbUpdates)
+			if !ok {
+				return nil, fmt.Errorf(
+					"merging, %v shold be a dbs update", events[i].Data)
+			}
+			updates.Updates["round_last_updated"] = events[i].BlockNumber
+			events[i].Data = updates
+		}
+		return events, nil
+	}
 }

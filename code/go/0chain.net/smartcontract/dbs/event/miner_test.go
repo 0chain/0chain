@@ -174,7 +174,7 @@ func TestMiners(t *testing.T) {
 	}
 	events := []Event{eventAddMn}
 	events = events
-	//eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 	time.Sleep(100 * time.Millisecond)
 	miner, err := eventDb.GetMiner(mn.ID)
 	//require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestMiners(t *testing.T) {
 		Data:        string(data),
 	}
 	eventAddOrOverwriteMn = eventAddOrOverwriteMn
-	//eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn}, 100, "hash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	//require.NoError(t, err)

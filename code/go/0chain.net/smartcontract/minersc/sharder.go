@@ -92,7 +92,7 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder",
 			"failed to add new sharder: Not in magic block")
 	}
-	
+
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
 
 	if newSharder.Settings.DelegateWallet == "" {
@@ -156,7 +156,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	//err = emitAddSharder(newSharder, balances)
-	emitAddOrOverwriteSharder(newSharder, balances)
+	emitAddSharder(newSharder, balances)
 
 	// save all sharders list
 	if err = updateAllShardersList(balances, allSharders); err != nil {

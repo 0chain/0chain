@@ -80,7 +80,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 		mergers = []eventsMerger{
 			mergeAddUsersEvents(),
 			mergeAddProviderEvents[Miner](TagAddMiner, withUniqueEventOverwrite(), addMinerLastUpdateRound()),
-			mergeAddProviderEvents[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Sharder](TagAddSharder, withUniqueEventOverwrite(), addSharderLastUpdateRound()),
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
@@ -120,6 +120,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateValidatorStakesEvents(),
 
 			updateMinerMiddleware(),
+			updateSharderMiddleware(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -486,25 +487,26 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.addMiner(*miners)
 	case TagUpdateMiner:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		updates, ok := fromEvent[[]dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
+		updates = updates
 		//updates.Updates["round_last_updated"] = event.BlockNumber
-		return edb.updateMiner(*updates)
+		return edb.updateMiner(dbs.DbUpdates{})
 	case TagDeleteMiner:
 		minerID, ok := fromEvent[string](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 		return edb.deleteMiner(*minerID)
-	case TagAddOrOverwriteSharder:
+	case TagAddSharder:
 		sharders, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		return edb.addOrOverwriteSharders(*sharders)
+		return edb.addSharders(*sharders)
 	case TagUpdateMinerTotalStake:
 		m, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
@@ -545,12 +547,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.removeCurator(*c)
 
 	//stake pool
-	case TagAddOrOverwriteDelegatePool:
+	case TagAddDelegatePool:
 		dps, ok := fromEvent[[]DelegatePool](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteDelegatePools(*dps)
+		return edb.addDelegatePools(*dps)
 	case TagUpdateDelegatePool:
 		spUpdate, ok := fromEvent[dbs.DelegatePoolUpdate](event.Data)
 		if !ok {

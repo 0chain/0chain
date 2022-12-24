@@ -855,9 +855,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 
 		sn := v
 		sn.Status = n.Status
-		if err := emitAddOrOverwriteSharder(sn, balances); err != nil {
-			return nil, err
-		}
+		emitAddSharder(sn, balances)
 	}
 
 	magicBlock.Hash = magicBlock.GetHash()
