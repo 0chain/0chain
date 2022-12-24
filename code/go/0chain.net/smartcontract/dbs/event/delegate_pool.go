@@ -85,10 +85,10 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 }
 
 func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
-	return newEventsMerger[DelegatePool](TagAddOrOverwriteDelegatePool, withUniqueEventOverwrite())
+	return newEventsMerger[DelegatePool](TagAddDelegatePool, withUniqueEventOverwrite())
 }
 
-func (edb *EventDb) addOrOverwriteDelegatePools(dps []DelegatePool) error {
+func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
 		UpdateAll: true,

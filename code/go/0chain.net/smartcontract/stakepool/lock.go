@@ -66,9 +66,8 @@ func (sp *StakePool) LockPool(
 			RoundCreated: balances.GetBlock().Round,
 			StakedAt:     txn.CreationDate,
 		}
-
 		sp.Pools[newPoolId] = dp
-
+		dp.emitNew(newPoolId, providerId, providerType, balances)
 	} else {
 		// stake from the same clients
 		if dp.DelegateID != txn.ClientID {
@@ -87,6 +86,10 @@ func (sp *StakePool) LockPool(
 
 		dp.Balance = b
 		dp.StakedAt = txn.CreationDate
+
+		update := newDelegatePoolUpdate(newPoolId, providerId, providerType)
+		update.Updates["balance"] = dp.Balance
+		update.emitUpdate(balances)
 	}
 
 	i, _ := txn.Value.Int64()
@@ -105,8 +108,6 @@ func (sp *StakePool) LockPool(
 	)); err != nil {
 		return "", err
 	}
-
-	dp.emitNew(newPoolId, providerId, providerType, balances)
 
 	return toJson(lock), nil
 }

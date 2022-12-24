@@ -577,7 +577,7 @@ func GetMockBlobberStakePools(
 			},
 			TotalOffers: currency.Coin(100000),
 		}
-		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
+		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates)-1; j++ {
 			id := getMockBlobberStakePoolId(i, j)
 			clientIndex := (i&len(clients) + j) % len(clients)
 			sp.Pools[id] = &stakepool.DelegatePool{}

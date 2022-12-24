@@ -39,7 +39,7 @@ func (dp DelegatePool) emitNew(
 
 	balances.EmitEvent(
 		event.TypeStats,
-		event.TagAddOrOverwriteDelegatePool,
+		event.TagAddDelegatePool,
 		fmt.Sprintf("%d:%s:%s", providerType, providerId, poolId),
 		data,
 	)
