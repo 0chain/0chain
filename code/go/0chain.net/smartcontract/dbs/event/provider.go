@@ -20,4 +20,5 @@ type Provider struct {
 	TotalStake     currency.Coin   `json:"total_stake"`
 	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	Uptime			uint64			 `json:"uptime"`
 }

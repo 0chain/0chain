@@ -15,6 +15,7 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
+const HealthCheckPeriod = int64(5 * 60) // TODO: Move to config files
 var ErrInvalidEventData = errors.New("invalid event data")
 
 func (edb *EventDb) ProcessEvents(
@@ -363,6 +364,15 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		blobbers, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
+		}
+		for _, b := range *blobbers {
+			prev, err := edb.GetBlobber(b.ID)
+			if err == nil {
+				diff := b.LastHealthCheck - prev.LastHealthCheck
+				if  int64(diff) < HealthCheckPeriod + (60) {
+					b.Uptime += int64(diff) 
+				}
+			}
 		}
 		return edb.updateBlobbersAllocatedAndHealth(*blobbers)
 	case TagUpdateBlobberTotalStake:
