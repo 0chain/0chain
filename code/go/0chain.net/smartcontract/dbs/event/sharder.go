@@ -11,7 +11,6 @@ import (
 	"github.com/guregu/null"
 	"gorm.io/gorm"
 
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 )
 
@@ -25,7 +24,6 @@ type Sharder struct {
 	ShortName       string
 	BuildTag        string
 	Delete          bool
-	LastHealthCheck common.Timestamp
 	Fees            currency.Coin
 	Active          bool
 	Longitude       float64

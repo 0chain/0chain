@@ -3,6 +3,7 @@ package event
 import (
 	"time"
 
+	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
 )
 
@@ -18,4 +19,5 @@ type Provider struct {
 	UnstakeTotal   currency.Coin   `json:"unstake_total"`
 	TotalStake     currency.Coin   `json:"total_stake"`
 	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID"`
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
 }

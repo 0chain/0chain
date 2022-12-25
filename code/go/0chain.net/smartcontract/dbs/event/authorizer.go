@@ -19,9 +19,6 @@ type Authorizer struct {
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
-
-	// Stats
-	LastHealthCheck int64 `json:"last_health_check"`
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {

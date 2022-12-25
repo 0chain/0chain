@@ -88,8 +88,8 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 				Rewards:      mn.Reward,
 				TotalRewards: mn.Reward,
 			},
+			LastHealthCheck: mn.LastHealthCheck,
 		},
-		LastHealthCheck: mn.LastHealthCheck,
 
 		Active:    mn.Status == node.NodeStatusActive,
 		Longitude: mn.Geolocation.Longitude,

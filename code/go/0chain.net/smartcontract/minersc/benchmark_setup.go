@@ -119,7 +119,6 @@ func AddMockNodes(
 			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
 
-					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
 					Provider: event.Provider{
 						ID:            newNode.ID,
@@ -128,6 +127,7 @@ func AddMockNodes(
 						MinStake:      newNode.Settings.MinStake,
 						MaxStake:      newNode.Settings.MaxStake,
 						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+						LastHealthCheck: newNode.LastHealthCheck,
 					},
 				}
 				if err = eventDb.Store.Get().Create(&minerDb).Error; err != nil {
@@ -136,7 +136,6 @@ func AddMockNodes(
 			} else {
 				sharderDb := event.Sharder{
 
-					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
 					Provider: event.Provider{
 						ID:            newNode.ID,
@@ -145,6 +144,7 @@ func AddMockNodes(
 						MinStake:      newNode.Settings.MinStake,
 						MaxStake:      newNode.Settings.MaxStake,
 						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+						LastHealthCheck: newNode.LastHealthCheck,
 					},
 				}
 				if err := eventDb.Store.Get().Create(&sharderDb).Error; err != nil {

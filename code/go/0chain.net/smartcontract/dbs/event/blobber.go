@@ -35,7 +35,6 @@ type Blobber struct {
 	Capacity        int64 `json:"capacity"`  // total blobber capacity
 	Allocated       int64 `json:"allocated"` // allocated capacity
 	Used            int64 `json:"used"`      // total of files saved on blobber
-	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
 	ReadData        int64 `json:"read_data"`
 
