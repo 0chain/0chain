@@ -27,12 +27,13 @@ func (sp *StakePool) UnlockPool(
 		clientID, providerId, providerType, balances,
 	)
 
+	b, _ := dp.Balance.Int64()
 	i, _ := amount.Int64()
 	lock := event.DelegatePoolLock{
 		Client:       clientID,
 		ProviderId:   providerId,
 		ProviderType: providerType,
-		Amount:       i,
+		Amount:       i + b,
 	}
 	dpUpdate := newDelegatePoolUpdate(clientID, providerId, providerType)
 	dpUpdate.Updates["status"] = spenum.Deleting
