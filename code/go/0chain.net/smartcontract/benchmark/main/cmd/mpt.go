@@ -75,8 +75,11 @@ func getBalances(
 	bk.MinerID = data.Miners[0]
 	node.Self.Underlying().SetKey(data.Miners[0])
 	magicBlock := &block.MagicBlock{
+		Miners:   node.NewPool(node.NodeTypeMiner),
 		Sharders: node.NewPool(node.NodeTypeSharder),
 	}
+	magicBlock.Miners.NodesMap = make(map[string]*node.Node)
+	magicBlock.Miners.NodesMap[encryption.Hash("magic_block_miner_1")] = &node.Node{}
 	for i := range data.Sharders {
 		var n = node.Provider()
 		if err := n.SetID(data.Sharders[i]); err != nil {

@@ -186,7 +186,7 @@ func (sp *stakePool) Empty(
 	}
 
 	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = spenum.Deleting
+	sp.Pools[poolID].Status = spenum.Deleted
 
 	return nil
 }

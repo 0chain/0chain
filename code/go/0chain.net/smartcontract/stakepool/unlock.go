@@ -24,24 +24,16 @@ var (
 	}
 )
 
-func (sp *StakePool) UnlockPool(
-	clientID string,
-	providerType spenum.Provider,
-	providerId datastore.Key,
-	balances cstate.StateContextI,
-) (string, error) {
+func (sp *StakePool) UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key,
+	balances cstate.StateContextI) (string, error) {
 	dp, ok := sp.Pools[clientID]
 	if !ok {
 		return "", fmt.Errorf("can't find pool of %v", clientID)
 	}
 
-	dp.Status = spenum.Deleting
-	amount, err := sp.MintRewards(
-		clientID, providerId, providerType, balances,
-	)
+	amount, err := sp.MintRewards(clientID, providerId, providerType, balances)
 	if err != nil {
-		return "", fmt.Errorf(
-			"stake pool staking error: %v", err)
+		return "", fmt.Errorf("error emptying account, %v", err)
 	}
 
 	i, _ := amount.Int64()
@@ -51,8 +43,13 @@ func (sp *StakePool) UnlockPool(
 		ProviderType: providerType,
 		Amount:       i,
 	}
+
+	if dp.Status == spenum.Deleted {
+		delete(sp.Pools, clientID)
+	}
+
 	dpUpdate := newDelegatePoolUpdate(clientID, providerId, providerType)
-	dpUpdate.Updates["status"] = spenum.Deleting
+	dpUpdate.Updates["status"] = dp.Status
 	dpUpdate.emitUpdate(balances)
 
 	err = sp.EmitUnStakeEvent(providerType, providerId, amount, balances)
@@ -61,10 +58,6 @@ func (sp *StakePool) UnlockPool(
 			"stake pool staking error: %v", err)
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, lock)
-	if err != nil {
-		return "", fmt.Errorf("error emptying account, %v", err)
-	}
-
 	return toJson(lock), nil
 }
 
