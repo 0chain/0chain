@@ -172,7 +172,6 @@ func (edb *EventDb) updateSharder(updates []dbs.DbUpdates) error {
 }
 
 func (edb *EventDb) deleteSharder(id string) error {
-
 	result := edb.Store.Get().
 		Where(&Sharder{Provider: Provider{ID: id}}).
 		Delete(&Sharder{})
@@ -203,35 +202,13 @@ func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
 func addSharderLastUpdateRound() eventMergeMiddleware {
 	return func(events []Event) ([]Event, error) {
 		for i := range events {
-			m, ok := events[i].Data.(Sharder)
+			s, ok := events[i].Data.(Sharder)
 			if !ok {
 				return nil, fmt.Errorf(
 					"merging, %v shold be a Sharder", events[i].Data)
 			}
-			m.RoundLastUpdated = events[i].BlockNumber
-			events[i].Data = m
-		}
-		return events, nil
-	}
-}
-
-func updateSharderMiddleware() *eventsMergerImpl[dbs.DbUpdates] {
-	return &eventsMergerImpl[dbs.DbUpdates]{
-		tag:         TagUpdateSharder,
-		middlewares: []eventMergeMiddleware{updateSharderLastUpdateRound()},
-	}
-}
-
-func updateSharderLastUpdateRound() eventMergeMiddleware {
-	return func(events []Event) ([]Event, error) {
-		for i := range events {
-			updates, ok := events[i].Data.(dbs.DbUpdates)
-			if !ok {
-				return nil, fmt.Errorf(
-					"merging, %v shold be a dbs update", events[i].Data)
-			}
-			updates.Updates["round_last_updated"] = events[i].BlockNumber
-			events[i].Data = updates
+			s.RoundLastUpdated = events[i].BlockNumber
+			events[i].Data = s
 		}
 		return events, nil
 	}

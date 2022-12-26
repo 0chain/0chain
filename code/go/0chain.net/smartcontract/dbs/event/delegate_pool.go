@@ -26,7 +26,7 @@ type DelegatePool struct {
 	TotalPenalty     currency.Coin `json:"total_penalty"`
 	Status           int           `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3;index:idx_dp_total_staked,priority:2"`
 	RoundCreated     int64         `json:"round_created"`
-	LastRoundUpdated int64
+	RoundLastUpdated int64
 }
 
 func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
@@ -94,4 +94,26 @@ func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
 		UpdateAll: true,
 	}).Create(&dps).Error
+}
+
+func addDelegatePoolLastUpdateRoundMiddleware() *eventsMergerImpl[DelegatePool] {
+	return &eventsMergerImpl[DelegatePool]{
+		tag:         TagAddDelegatePool,
+		middlewares: []eventMergeMiddleware{addDelegatePoolLastUpdateRound()},
+	}
+}
+
+func addDelegatePoolLastUpdateRound() eventMergeMiddleware {
+	return func(events []Event) ([]Event, error) {
+		for i := range events {
+			dp, ok := events[i].Data.(DelegatePool)
+			if !ok {
+				return nil, fmt.Errorf(
+					"merging, %v shold be a miner", events[i].Data)
+			}
+			dp.RoundLastUpdated = events[i].BlockNumber
+			events[i].Data = dp
+		}
+		return events, nil
+	}
 }

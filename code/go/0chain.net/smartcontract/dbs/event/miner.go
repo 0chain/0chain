@@ -224,14 +224,14 @@ func addMinerLastUpdateRound() eventMergeMiddleware {
 	}
 }
 
-func updateMinerMiddleware() *eventsMergerImpl[dbs.DbUpdates] {
+func updateLastRoundUpdatedMiddleware(tag EventTag) *eventsMergerImpl[dbs.DbUpdates] {
 	return &eventsMergerImpl[dbs.DbUpdates]{
-		tag:         TagUpdateMiner,
-		middlewares: []eventMergeMiddleware{updateMinerLastUpdateRound()},
+		tag:         tag,
+		middlewares: []eventMergeMiddleware{updateLastUpdateRound()},
 	}
 }
 
-func updateMinerLastUpdateRound() eventMergeMiddleware {
+func updateLastUpdateRound() eventMergeMiddleware {
 	return func(events []Event) ([]Event, error) {
 		for i := range events {
 			updates, ok := events[i].Data.(dbs.DbUpdates)

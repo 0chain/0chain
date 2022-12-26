@@ -119,8 +119,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
 
-			updateMinerMiddleware(),
-			updateSharderMiddleware(),
+			addDelegatePoolLastUpdateRoundMiddleware(),
+			updateLastRoundUpdatedMiddleware(TagUpdateMiner),
+			updateLastRoundUpdatedMiddleware(TagUpdateSharder),
+			updateLastRoundUpdatedMiddleware(TagUpdateDelegatePool),
 		}
 
 		others = make([]Event, 0, len(events))
