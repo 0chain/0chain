@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
