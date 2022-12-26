@@ -27,8 +27,14 @@ func (sp *StakePool) UnlockPool(
 		clientID, providerId, providerType, balances,
 	)
 
-	b, _ := dp.Balance.Int64()
-	i, _ := amount.Int64()
+	b, err := dp.Balance.Int64()
+	if err != nil {
+		return "", fmt.Errorf("can't cast Balance of value (%v) to Int64", b)
+	}
+	i, err := amount.Int64()
+	if err != nil {
+		return "", fmt.Errorf("can't cast amount of value (%v) to Int64", amount)
+	}
 	lock := event.DelegatePoolLock{
 		Client:       clientID,
 		ProviderId:   providerId,
