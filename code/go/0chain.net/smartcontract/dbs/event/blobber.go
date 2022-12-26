@@ -275,6 +275,15 @@ func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 	}
 }
 
+func NewUpdateBlobberTotalUnStakeEvent(ID string, totalUnStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateBlobberTotalUnStake, Blobber{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalUnStake,
+		},
+	}
+}
+
 func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateBlobberTotalOffers, Blobber{
 		Provider:    Provider{ID: ID},
@@ -289,8 +298,18 @@ func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
 	}).Create(&blobbers).Error
 }
 
+func (edb *EventDb) updateBlobbersTotalUnStakes(blobbers []Blobber) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
+	}).Create(&blobbers).Error
+}
+
 func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withUniqueEventOverwrite())
+}
+func mergeUpdateBlobberTotalUnStakesEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobberTotalUnStake, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {

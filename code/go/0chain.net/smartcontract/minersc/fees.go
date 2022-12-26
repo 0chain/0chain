@@ -38,17 +38,6 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 	return nil
 }
 
-// unlock deleted pools
-func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode) (err error) {
-	for _, pool := range mn.Pools {
-		if pool.Status == spenum.Deleting {
-			pool.Status = spenum.Deleted
-		}
-	}
-
-	return
-}
-
 // unlock all delegate pools of offline node
 func (msc *MinerSmartContract) unlockOffline(
 	mn *MinerNode,
@@ -97,9 +86,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	minerDelete := false
 	for i := len(miners.Nodes) - 1; i >= 0; i-- {
 		mn := miners.Nodes[i]
-		if err = msc.unlockDeleted(mn); err != nil {
-			return err
-		}
+		//if err = msc.unlockDeleted(mn); err != nil {
+		//	return err
+		//}
 		if mn.Delete {
 			miners.Nodes = append(miners.Nodes[:i], miners.Nodes[i+1:]...)
 			if _, err := balances.DeleteTrieNode(mn.GetKey()); err != nil {
@@ -125,9 +114,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	sharderDelete := false
 	for i := len(sharders.Nodes) - 1; i >= 0; i-- {
 		sn := sharders.Nodes[i]
-		if err = msc.unlockDeleted(sn); err != nil {
-			return err
-		}
+		//if err = msc.unlockDeleted(sn); err != nil {
+		//	return err
+		//}
 		if sn.Delete {
 			sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
 			if err = sn.save(balances); err != nil {
