@@ -17,6 +17,7 @@ type AuthorizerSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 }
 
+// nolint
 func (edb *EventDb) getAuthorizerSnapshots(limit, offset int64) (map[string]AuthorizerSnapshot, error) {
 	var snapshots []AuthorizerSnapshot
 	result := edb.Store.Get().
@@ -39,6 +40,7 @@ func (edb *EventDb) getAuthorizerSnapshots(limit, offset int64) (map[string]Auth
 	return mapSnapshots, result.Error
 }
 
+// nolint
 func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer) error {
 	var snapshots []AuthorizerSnapshot
 	for _, authorizer := range authorizers {

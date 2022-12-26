@@ -15,6 +15,7 @@ type ValidatorSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 }
 
+// nolint
 func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]ValidatorSnapshot, error) {
 	var snapshots []ValidatorSnapshot
 	result := edb.Store.Get().
@@ -37,6 +38,7 @@ func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]Valid
 	return mapSnapshots, result.Error
 }
 
+// nolint
 func (edb *EventDb) addValidatorSnapshot(validators []Validator) error {
 	var snapshots []ValidatorSnapshot
 	for _, validator := range validators {

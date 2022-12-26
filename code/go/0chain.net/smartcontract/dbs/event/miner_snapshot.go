@@ -18,6 +18,7 @@ type MinerSnapshot struct {
 	Count         int           `json:"count"`
 }
 
+// nolint
 func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnapshot, error) {
 	var snapshots []MinerSnapshot
 	result := edb.Store.Get().
@@ -40,6 +41,7 @@ func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnap
 	return mapSnapshots, result.Error
 }
 
+// nolint
 func (edb *EventDb) addMinerSnapshot(miners []Miner) error {
 	var snapshots []MinerSnapshot
 	for _, miner := range miners {

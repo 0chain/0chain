@@ -18,6 +18,7 @@ type SharderSnapshot struct {
 	Count         int           `json:"count"`
 }
 
+// nolint
 func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]SharderSnapshot, error) {
 	var snapshots []SharderSnapshot
 	result := edb.Store.Get().
@@ -40,6 +41,7 @@ func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]Sharder
 	return mapSnapshots, result.Error
 }
 
+// nolint
 func (edb *EventDb) addSharderSnapshot(sharders []Sharder) error {
 	var snapshots []SharderSnapshot
 	for _, sharder := range sharders {
