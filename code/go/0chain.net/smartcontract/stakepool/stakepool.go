@@ -116,7 +116,7 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 	}
 	spStat.Rewards = provider.Rewards.TotalRewards
 	for _, dp := range delegatePools {
-		if spenum.PoolStatus(dp.Status) == spenum.Deleting || spenum.PoolStatus(dp.Status) == spenum.Deleted {
+		if spenum.PoolStatus(dp.Status) == spenum.Deleted {
 			continue
 		}
 		dpStats := DelegatePoolStat{
@@ -268,16 +268,8 @@ func (sp *StakePool) MintRewards(
 
 	var dpUpdate = newDelegatePoolUpdate(clientId, providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
-
-	if dPool.Status == spenum.Deleting {
-		delete(sp.Pools, clientId)
-		dpUpdate.Updates["status"] = spenum.Deleted
-		dpUpdate.emitUpdate(balances)
-		return delegateReward + serviceCharge, nil
-	} else {
-		dpUpdate.emitUpdate(balances)
-		return delegateReward + serviceCharge, nil
-	}
+	dpUpdate.emitUpdate(balances)
+	return delegateReward + serviceCharge, nil
 }
 
 func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error {
@@ -296,7 +288,7 @@ func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.State
 	}
 
 	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = spenum.Deleting
+	sp.Pools[poolID].Status = spenum.Deleted
 
 	return nil
 }
@@ -672,7 +664,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	return out, err
 }
 
-// stake pool can return excess tokens from stake pool
+// StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
 func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
 ) (resp string, err error) {
