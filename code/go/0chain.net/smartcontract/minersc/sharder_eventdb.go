@@ -10,43 +10,49 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.DelegatePool) MinerNode {
+func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.DelegatePool) MinerNodeResponse {
 	var status = node.NodeStatusInactive
 	if edbSharder.Active {
 		status = node.NodeStatusActive
 	}
-	msn := SimpleNode{
-		ID:          edbSharder.ID,
-		N2NHost:     edbSharder.N2NHost,
-		Host:        edbSharder.Host,
-		Port:        edbSharder.Port,
-		Path:        edbSharder.Path,
-		PublicKey:   edbSharder.PublicKey,
-		ShortName:   edbSharder.ShortName,
-		BuildTag:    edbSharder.BuildTag,
-		TotalStaked: edbSharder.TotalStake,
-		Delete:      edbSharder.Delete,
+	msn := SimpleNodeResponse{
+		SimpleNode: SimpleNode{
+			ID:          edbSharder.ID,
+			N2NHost:     edbSharder.N2NHost,
+			Host:        edbSharder.Host,
+			Port:        edbSharder.Port,
+			Path:        edbSharder.Path,
+			PublicKey:   edbSharder.PublicKey,
+			ShortName:   edbSharder.ShortName,
+			BuildTag:    edbSharder.BuildTag,
+			TotalStaked: edbSharder.TotalStake,
+			Delete:      edbSharder.Delete,
 
-		LastHealthCheck: edbSharder.LastHealthCheck,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbSharder.Latitude,
-			Longitude: edbSharder.Longitude,
+			LastHealthCheck: edbSharder.LastHealthCheck,
+			Geolocation: SimpleNodeGeolocation{
+				Latitude:  edbSharder.Latitude,
+				Longitude: edbSharder.Longitude,
+			},
+			NodeType: NodeTypeSharder,
+			Status:   status,
 		},
-		NodeType: NodeTypeSharder,
-		Status:   status,
+		RoundLastUpdated: edbSharder.RoundLastUpdated,
 	}
 
-	sn := MinerNode{
-		SimpleNode: &msn,
-		StakePool: &stakepool.StakePool{
-			Reward: edbSharder.Rewards.Rewards,
-			Settings: stakepool.Settings{
-				DelegateWallet:     edbSharder.DelegateWallet,
-				ServiceChargeRatio: edbSharder.ServiceCharge,
-				MaxNumDelegates:    edbSharder.NumDelegates,
-				MinStake:           edbSharder.MinStake,
-				MaxStake:           edbSharder.MaxStake,
+	sn := MinerNodeResponse{
+		SimpleNodeResponse: &msn,
+		StakePoolResponse: &StakePoolResponse{
+			StakePool: stakepool.StakePool{
+				Reward: edbSharder.Rewards.Rewards,
+				Settings: stakepool.Settings{
+					DelegateWallet:     edbSharder.DelegateWallet,
+					ServiceChargeRatio: edbSharder.ServiceCharge,
+					MaxNumDelegates:    edbSharder.Provider.NumDelegates,
+					MinStake:           edbSharder.MinStake,
+					MaxStake:           edbSharder.MaxStake,
+				},
 			},
+			RoundLastUpdated: edbSharder.RoundLastUpdated,
 		},
 	}
 	if len(delegates) == 0 {
