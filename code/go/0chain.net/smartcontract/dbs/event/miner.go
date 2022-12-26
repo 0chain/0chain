@@ -162,17 +162,23 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 }
 
 func (edb *EventDb) addMiner(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
+	err := edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&miners).Error
+	return err
 }
 
-func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
-	return edb.Store.Get().
-		Model(&Miner{}).
-		Where(&Miner{Provider: Provider{ID: updates.Id}}).
-		Updates(updates.Updates).Error
+func (edb *EventDb) updateMiner(updates []dbs.DbUpdates) error {
+	for i := range updates {
+		if err := edb.Store.Get().
+			Model(&Miner{}).
+			Where(&Miner{Provider: Provider{ID: updates[i].Id}}).
+			Updates(updates[i].Updates).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (edb *EventDb) deleteMiner(id string) error {

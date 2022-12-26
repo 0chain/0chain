@@ -166,11 +166,13 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
-	var gs *Snapshot
+	// var gs *Snapshot todo piers
 	for {
 		es := <-edb.eventsChannel
 
-		tx, err := edb.Begin()
+		//tx, err := edb.Begin()
+		var err error
+		tx := edb // piers remove todo
 		if err != nil {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
@@ -190,7 +192,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		// process snapshot for none adding block events only
 		if isNotAddBlockEvent(es) {
-			gs, err = updateSnapshots(gs, es, tx)
+			//gs, err = updateSnapshots(gs, es, tx)
 			if err != nil {
 				logging.Logger.Error("snapshot could not be processed",
 					zap.Int64("round", es.round),
@@ -201,12 +203,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			}
 		}
 
-		if err := tx.Commit(); err != nil {
-			logging.Logger.Error("error committing block events",
-				zap.Int64("block", es.round),
-				zap.Error(err),
-			)
-		}
+		//if err := tx.Commit(); err != nil { todo piers
+		logging.Logger.Error("error committing block events",
+			zap.Int64("block", es.round),
+			zap.Error(err),
+		)
+		//}
 
 		due := time.Since(tse)
 		logging.Logger.Debug("event db process",
@@ -491,9 +493,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		updates = updates
-		//updates.Updates["round_last_updated"] = event.BlockNumber
-		return edb.updateMiner(dbs.DbUpdates{})
+		return edb.updateMiner(*updates)
 	case TagDeleteMiner:
 		minerID, ok := fromEvent[string](event.Data)
 		if !ok {
@@ -512,10 +512,9 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-
 		return edb.updateMinersTotalStakes(*m)
 	case TagUpdateSharder:
-		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+		updates, ok := fromEvent[[]dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}

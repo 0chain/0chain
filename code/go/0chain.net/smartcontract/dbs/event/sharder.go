@@ -159,15 +159,16 @@ func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagina
 	return sharderLocations, result.Error
 }
 
-func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
-	var sharder = Sharder{Provider: Provider{ID: updates.Id}}
-
-	result := edb.Store.Get().
-		Model(&Sharder{}).
-		Where(&Sharder{Provider: Provider{ID: sharder.ID}}).
-		Updates(updates.Updates)
-
-	return result.Error
+func (edb *EventDb) updateSharder(updates []dbs.DbUpdates) error {
+	for i := range updates {
+		if err := edb.Store.Get().
+			Model(&Sharder{}).
+			Where(&Sharder{Provider: Provider{ID: updates[i].Id}}).
+			Updates(updates[i].Updates).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (edb *EventDb) deleteSharder(id string) error {
