@@ -174,7 +174,6 @@ func main() {
 	}
 	blockstore.Init(ctx, sViper, workdir)
 
-	setupBlockStorageProvider(mConf, workdir)
 	if sc.GetCurrentRound() == 0 {
 		sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 			magicBlock, initStates)
