@@ -84,7 +84,7 @@ func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI
 	}
 
 	sp.Pools[clientID].Balance = 0
-	sp.Pools[clientID].Status = spenum.Deleting
+	sp.Pools[clientID].Status = spenum.Deleted
 
 	return true, nil
 }

@@ -40,9 +40,7 @@ type PoolStatus int
 const (
 	Active PoolStatus = iota
 	Pending
-	Inactive
 	Unstaking
-	Deleting
 	Deleted
 )
 
