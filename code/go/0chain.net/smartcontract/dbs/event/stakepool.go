@@ -149,6 +149,15 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}
 
+	if edb.Debug() {
+		if err := edb.insertProviderReward(spus, round); err != nil {
+			return err
+		}
+		if err := edb.insertDelegateReward(spus, round); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -204,13 +213,13 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: un
 	var provider interface{}
 	switch spenum.Provider(spu.ProviderType) {
 	case spenum.Blobber:
-		provider = &Blobber{BlobberID: spu.ProviderId}
+		provider = &Blobber{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Validator:
-		provider = &Validator{ValidatorID: spu.ProviderId}
+		provider = &Validator{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Miner:
-		provider = &Miner{MinerID: spu.ProviderId}
+		provider = &Miner{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Sharder:
-		provider = &Sharder{SharderID: spu.ProviderId}
+		provider = &Sharder{Provider: Provider{ID: spu.ProviderId}}
 	default:
 		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
 	}

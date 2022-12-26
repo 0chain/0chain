@@ -175,8 +175,8 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 	go mc.FinalizeRound(r.Round)
 }
 
-//Creates the next round, if next round exists and has RRS returns existent.
-//If RRS is not present, starts VRF phase for this round
+// Creates the next round, if next round exists and has RRS returns existent.
+// If RRS is not present, starts VRF phase for this round
 func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 
 	var (
@@ -193,6 +193,8 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 		mr = mc.CreateRound(nr)
 		er = mc.AddRound(mr).(*Round)
 	)
+
+	mc.SetCurrentRound(er.GetRoundNumber())
 
 	if er != mr && mc.isStarted() && er.HasRandomSeed() {
 		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
@@ -256,7 +258,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-//TryProposeBlock generates block and sends it to the network if generator
+// TryProposeBlock generates block and sends it to the network if generator
 func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 	var rn = mr.GetRoundNumber()
 
@@ -308,7 +310,7 @@ func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 	// though rest of the network is. That's why this is a goroutine.
 	go func() {
 		if _, err := mc.GenerateRoundBlock(ctx, mr); err != nil {
-			logging.Logger.Warn("generate round block failed", zap.Error(err))
+			logging.Logger.Error("generate round block failed", zap.Error(err))
 		}
 	}()
 }
@@ -472,8 +474,9 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 		//b.SetStateDB(pb, mc.GetStateDB())
 
-		err := mc.GenerateBlock(cctx, b, mc, makeBlock)
-		if err != nil {
+		if err := mc.syncAndRetry(cctx, b, "generate block", func(ctx context.Context, waitC chan struct{}) error {
+			return mc.GenerateBlock(ctx, b, makeBlock, waitC)
+		}); err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
 				switch cerr.Code {
@@ -1123,8 +1126,7 @@ func (mc *Chain) moveToNextRoundNotAheadImpl(ctx context.Context, r *Round, befo
 	beforeStartNextRound()
 
 	//TODO start if not started, atm we  resend vrf share here
-	nr := mc.StartNextRound(ctx, r)
-	mc.SetCurrentRound(nr.Number)
+	mc.StartNextRound(ctx, r)
 }
 
 // MergeNotarization - merge a notarization.
@@ -1531,7 +1533,6 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	var (
 		sr = round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
-		nr *Round
 	)
 
 	if !mc.ensureState(ctx, lfb) { //nolint: staticcheck
@@ -1542,10 +1543,7 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 	mc.AddBlock(lfb)
 	//it is not necessary to check next round is ahead, since we are processing lfb and we are not ahead
-	if nr = mc.StartNextRound(ctx, mr); nr == nil {
-		return
-	}
-	mc.SetCurrentRound(nr.Number)
+	mc.StartNextRound(ctx, mr)
 }
 
 func (mc *Chain) getRoundRandomSeed(rn int64) (seed int64) {
@@ -1919,7 +1917,6 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		}
 		nr = mc.StartNextRound(ctx, mr)
 	}
-	mc.SetCurrentRound(nr.Number)
 	logging.Logger.Info("starting the blockchain ...", zap.Int64("round", nr.Number))
 }
 

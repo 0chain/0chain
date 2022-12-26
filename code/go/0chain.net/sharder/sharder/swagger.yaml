@@ -515,6 +515,41 @@ definitions:
                 $ref: '#/definitions/PoolStatus'
         type: object
         x-go-package: 0chain.net/smartcontract/stakepool
+    DelegatePoolStat:
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+            delegate_id:
+                type: string
+                x-go-name: DelegateID
+            id:
+                type: string
+                x-go-name: ID
+            provider_id:
+                type: string
+                x-go-name: ProviderId
+            provider_type:
+                format: int64
+                type: integer
+                x-go-name: ProviderType
+            rewards:
+                $ref: '#/definitions/Coin'
+            round_created:
+                format: int64
+                type: integer
+                x-go-name: RoundCreated
+            status:
+                type: string
+                x-go-name: Status
+            total_penalty:
+                $ref: '#/definitions/Coin'
+            total_reward:
+                $ref: '#/definitions/Coin'
+            unstake:
+                type: boolean
+                x-go-name: UnStake
+        type: object
+        x-go-package: 0chain.net/smartcontract/stakepool
     DeletedAt:
         $ref: '#/definitions/NullTime'
     Duration:
@@ -958,6 +993,39 @@ definitions:
         title: PriceRange represents a price range allowed by user to filter blobbers.
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
+    Provider:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            ID:
+                type: string
+            UpdatedAt:
+                format: date-time
+                type: string
+            delegate_wallet:
+                type: string
+                x-go-name: DelegateWallet
+            max_stake:
+                $ref: '#/definitions/Coin'
+            min_stake:
+                $ref: '#/definitions/Coin'
+            num_delegates:
+                format: int64
+                type: integer
+                x-go-name: NumDelegates
+            rewards:
+                $ref: '#/definitions/ProviderRewards'
+            service_charge:
+                format: double
+                type: number
+                x-go-name: ServiceCharge
+            total_stake:
+                $ref: '#/definitions/Coin'
+            unstake_total:
+                $ref: '#/definitions/Coin'
+        type: object
+        x-go-package: 0chain.net/smartcontract/dbs/event
     ProviderRewards:
         description: ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
         properties:
@@ -1493,18 +1561,9 @@ definitions:
             ID:
                 format: uint64
                 type: integer
-            ReadMarkers:
-                description: ref
-                items:
-                    $ref: '#/definitions/ReadMarker'
-                type: array
             UpdatedAt:
                 format: date-time
                 type: string
-            WriteMarker:
-                items:
-                    $ref: '#/definitions/WriteMarker'
-                type: array
             block_hash:
                 type: string
                 x-go-name: BlockHash
@@ -1608,11 +1667,8 @@ definitions:
             CreatedAt:
                 format: date-time
                 type: string
-            DeletedAt:
-                $ref: '#/definitions/DeletedAt'
             ID:
-                format: uint64
-                type: integer
+                type: string
             UpdatedAt:
                 format: date-time
                 type: string
@@ -1636,16 +1692,13 @@ definitions:
                 format: double
                 type: number
                 x-go-name: ServiceCharge
-            stake_total:
+            total_stake:
                 $ref: '#/definitions/Coin'
             unstake_total:
                 $ref: '#/definitions/Coin'
             url:
                 type: string
                 x-go-name: BaseUrl
-            validator_id:
-                type: string
-                x-go-name: ValidatorID
         type: object
         x-go-package: 0chain.net/smartcontract/dbs/event
     VersionField:
@@ -1775,34 +1828,6 @@ definitions:
                 x-go-name: ID
             start_time:
                 $ref: '#/definitions/Timestamp'
-        type: object
-        x-go-package: 0chain.net/smartcontract/storagesc
-    delegatePoolStat:
-        properties:
-            balance:
-                $ref: '#/definitions/Coin'
-            delegate_id:
-                type: string
-                x-go-name: DelegateID
-            id:
-                type: string
-                x-go-name: ID
-            rewards:
-                $ref: '#/definitions/Coin'
-            round_created:
-                format: int64
-                type: integer
-                x-go-name: RoundCreated
-            status:
-                type: string
-                x-go-name: Status
-            total_penalty:
-                $ref: '#/definitions/Coin'
-            total_reward:
-                $ref: '#/definitions/Coin'
-            unstake:
-                type: boolean
-                x-go-name: UnStake
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     destInfo:
@@ -2012,7 +2037,7 @@ definitions:
                 $ref: '#/definitions/Coin'
             delegate:
                 items:
-                    $ref: '#/definitions/delegatePoolStat'
+                    $ref: '#/definitions/DelegatePoolStat'
                 type: array
                 x-go-name: Delegate
             penalty:
@@ -2029,7 +2054,8 @@ definitions:
             unstake_total:
                 $ref: '#/definitions/Coin'
         type: object
-        x-go-package: 0chain.net/smartcontract/storagesc
+        x-go-name: StakePoolStat
+        x-go-package: 0chain.net/smartcontract/stakepool
     storageNodeResponse:
         properties:
             allocated:
@@ -2114,28 +2140,26 @@ definitions:
                 x-go-name: Rounds
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
+    userLockedTotalResponse:
+        properties:
+            total:
+                format: int64
+                type: integer
+                x-go-name: Total
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
     userPoolStat:
         properties:
             pools:
                 additionalProperties:
                     items:
-                        $ref: '#/definitions/delegatePoolStat'
+                        $ref: '#/definitions/DelegatePoolStat'
                     type: array
                 type: object
                 x-go-name: Pools
         type: object
-        x-go-package: 0chain.net/smartcontract/storagesc
-    userPools:
-        properties:
-            pools:
-                additionalProperties:
-                    items:
-                        $ref: '#/definitions/delegatePoolStat'
-                    type: array
-                type: object
-                x-go-name: Pools
-        type: object
-        x-go-package: 0chain.net/smartcontract/minersc
+        x-go-name: UserPoolStat
+        x-go-package: 0chain.net/smartcontract/stakepool
     vestingClientPools:
         properties:
             pools:
@@ -2688,6 +2712,44 @@ paths:
                         $ref: '#/definitions/readMarkersCount'
                 "500":
                     description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/delegate-rewards:
+        get:
+            description: Gets list of delegate rewards satisfying filter
+            operationId: delegate-rewards
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: is descending
+                  in: query
+                  name: is_descending
+                  type: string
+                - description: start time of interval
+                  in: query
+                  name: start
+                  required: true
+                  type: string
+                - description: end time of interval
+                  in: query
+                  name: end
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: WriteMarker
+                    schema:
+                        items:
+                            $ref: '#/definitions/WriteMarker'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors:
         get:
             description: Gets errors returned by indicated transaction
@@ -2888,6 +2950,23 @@ paths:
                     description: ""
                 "500":
                     description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal:
+        get:
+            description: Gets statistic for a user's stake pools
+            operationId: getUserLockedTotal
+            parameters:
+                - description: client for which to get stake pool information
+                  in: query
+                  name: client_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: userLockedTotalResponse
+                    schema:
+                        $ref: '#/definitions/userLockedTotalResponse'
+                "400":
+                    description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat:
         get:
             description: Gets statistic for a user's stake pools
@@ -3043,6 +3122,44 @@ paths:
                 "400":
                     description: ""
                 "404":
+                    description: ""
+                "500":
+                    description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/provider-rewards:
+        get:
+            description: Gets list of provider rewards satisfying filter
+            operationId: provider-rewards
+            parameters:
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: is descending
+                  in: query
+                  name: is_descending
+                  type: string
+                - description: start time of interval
+                  in: query
+                  name: start
+                  required: true
+                  type: string
+                - description: end time of interval
+                  in: query
+                  name: end
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: WriteMarker
+                    schema:
+                        items:
+                            $ref: '#/definitions/WriteMarker'
+                        type: array
+                "400":
                     description: ""
                 "500":
                     description: ""
@@ -3636,6 +3753,30 @@ paths:
                     description: ""
                 "484":
                     description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat:
+        get:
+            description: Gets statistic for all locked tokens of a stake pool
+            operationId: getMSStakePoolStat
+            parameters:
+                - description: id of a provider
+                  in: query
+                  name: provider_id
+                  required: true
+                  type: string
+                - description: 'type of the provider, ie: miner. sharder'
+                  in: query
+                  name: provider_type
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: stakePoolStat
+                    schema:
+                        $ref: '#/definitions/stakePoolStat'
+                "400":
+                    description: ""
+                "500":
+                    description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools:
         get:
             description: user oriented pools requests handler
@@ -3648,18 +3789,16 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: userPools
+                    description: userPoolStat
                     schema:
-                        $ref: '#/definitions/userPools'
+                        $ref: '#/definitions/userPoolStat'
                 "400":
                     description: ""
                 "484":
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings:
         get:
-            description: |-
-                global object for miner smart contracts
-                B
+            description: global object for miner smart contracts
             operationId: globalSettings
             responses:
                 "200":

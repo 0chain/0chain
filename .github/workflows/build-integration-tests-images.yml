@@ -1,0 +1,44 @@
+name: Build integration images
+
+on:
+  push:
+    branches: [ master,staging ]
+    tags: [ "v*.*.*" ]
+  pull_request:
+
+jobs:
+  BUILD_INTEGRATION_IMAGES:
+    name: BUILD-INTEGRATION-IMAGES
+    runs-on: [self-hosted, arc-runner]
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.18'
+
+    - name: Docker Init Setup.
+      run: |
+        make install-mockery
+        make build-mocks
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: Run Basic conductor tests
+      run: |
+        ./docker.local/bin/start.conductor.sh basic

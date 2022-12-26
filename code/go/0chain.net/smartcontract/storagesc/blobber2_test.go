@@ -318,7 +318,7 @@ func testCommitBlobberRead(
 	require.NoError(t, rPool.save(ssc.ID, client.id, ctx))
 
 	var sPool = stakePool{
-		StakePool: stakepool.StakePool{
+		StakePool: &stakepool.StakePool{
 			Pools: make(map[string]*stakepool.DelegatePool),
 			Settings: stakepool.Settings{
 				ServiceChargeRatio: blobberYaml.serviceCharge,
@@ -333,7 +333,7 @@ func testCommitBlobberRead(
 			RoundCreated: stake.MintAt,
 		}
 	}
-	require.NoError(t, sPool.save(spenum.Blobber, blobberId, ctx))
+	require.NoError(t, sPool.Save(spenum.Blobber, blobberId, ctx))
 
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {

@@ -410,7 +410,7 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 			return key, nil
 		}
 
-		return key, fmt.Errorf("failed to convert key: %s to StakePool: %v", key, node)
+		return key, fmt.Errorf("failed to convert key: %s to Provider: %v", key, node)
 	}
 
 	if strings.Contains(key, storagesc.AUTHORIZERS_COUNT_KEY) {

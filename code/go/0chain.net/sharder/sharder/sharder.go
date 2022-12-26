@@ -174,8 +174,12 @@ func main() {
 	}
 	blockstore.Init(ctx, sViper, workdir)
 
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock, initStates)
+	setupBlockStorageProvider(mConf, workdir)
+	if sc.GetCurrentRound() == 0 {
+		sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
+			magicBlock, initStates)
+	}
+
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()

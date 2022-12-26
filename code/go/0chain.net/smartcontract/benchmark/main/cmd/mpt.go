@@ -75,8 +75,11 @@ func getBalances(
 	bk.MinerID = data.Miners[0]
 	node.Self.Underlying().SetKey(data.Miners[0])
 	magicBlock := &block.MagicBlock{
+		Miners:   node.NewPool(node.NodeTypeMiner),
 		Sharders: node.NewPool(node.NodeTypeSharder),
 	}
+	magicBlock.Miners.NodesMap = make(map[string]*node.Node)
+	magicBlock.Miners.NodesMap[encryption.Hash("magic_block_miner_1")] = &node.Node{}
 	for i := range data.Sharders {
 		var n = node.Provider()
 		if err := n.SetID(data.Sharders[i]); err != nil {
@@ -359,6 +362,16 @@ func setUpMpt(
 		storagesc.SaveMockStakePools(stakePools, balances)
 		log.Println("saved blobber stake pools\t", time.Since(timer))
 	}()
+	if viper.GetBool(benchmark.EventDbEnabled) &&
+		viper.GetBool(benchmark.EventDbDebug) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			timer := time.Now()
+			minersc.AddMockProviderRewards(miners, sharders, eventDb)
+			log.Println("adding mock rewards for miners and sharders\t", time.Since(timer))
+		}()
+	}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -470,14 +483,39 @@ func setUpMpt(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		listLength := viper.GetInt(benchmark.BenchDataListLength)
+
 		benchData.EventDb = eventDb
-		benchData.Clients = clients
-		benchData.PublicKeys = publicKeys
-		benchData.PrivateKeys = privateKeys
-		benchData.Miners = miners
-		benchData.Sharders = sharders
-		benchData.SharderKeys = sharderKeys
-		benchData.Now = common.Now()
+		if len(clients) < listLength {
+			benchData.Clients = clients
+		} else {
+			benchData.Clients = clients[:listLength]
+		}
+		if len(publicKeys) < listLength {
+			benchData.PublicKeys = publicKeys
+		} else {
+			benchData.PublicKeys = publicKeys[:listLength]
+		}
+		if len(privateKeys) < listLength {
+			benchData.PrivateKeys = privateKeys
+		} else {
+			benchData.PrivateKeys = privateKeys[:listLength]
+		}
+		if len(miners) < listLength {
+			benchData.Miners = miners
+		} else {
+			benchData.Miners = miners[:listLength]
+		}
+		if len(sharders) < listLength {
+			benchData.Sharders = sharders
+		} else {
+			benchData.Sharders = sharders[:listLength]
+		}
+		if len(sharderKeys) < listLength {
+			benchData.SharderKeys = sharderKeys
+		} else {
+			benchData.SharderKeys = sharderKeys[:listLength]
+		}
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)

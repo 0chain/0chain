@@ -217,6 +217,7 @@ func (sc *Chain) WriteBlockSyncStatistics(w http.ResponseWriter, scan HealthChec
 	diagnostics.WriteTimerStatistics(w, sc.Chain, cc.BlockSyncTimer, 1000000.0)
 }
 
+// swagger:model ExplorerStats
 type ExplorerStats struct {
 	LastFinalizedRound     int64   `json:"last_finalized_round"`
 	StateHealth            int64   `json:"state_health"`
