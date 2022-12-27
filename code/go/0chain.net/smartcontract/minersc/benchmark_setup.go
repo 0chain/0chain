@@ -122,12 +122,13 @@ func AddMockNodes(
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
 					Provider: event.Provider{
-						ID:            newNode.ID,
-						ServiceCharge: newNode.Settings.ServiceChargeRatio,
-						NumDelegates:  newNode.Settings.MaxNumDelegates,
-						MinStake:      newNode.Settings.MinStake,
-						MaxStake:      newNode.Settings.MaxStake,
-						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+						ID:               newNode.ID,
+						ServiceCharge:    newNode.Settings.ServiceChargeRatio,
+						NumDelegates:     newNode.Settings.MaxNumDelegates,
+						MinStake:         newNode.Settings.MinStake,
+						MaxStake:         newNode.Settings.MaxStake,
+						Rewards:          event.ProviderRewards{ProviderID: newNode.ID},
+						RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 					},
 				}
 				if err = eventDb.Store.Get().Create(&minerDb).Error; err != nil {
@@ -135,16 +136,16 @@ func AddMockNodes(
 				}
 			} else {
 				sharderDb := event.Sharder{
-
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
 					Provider: event.Provider{
-						ID:            newNode.ID,
-						ServiceCharge: newNode.Settings.ServiceChargeRatio,
-						NumDelegates:  newNode.Settings.MaxNumDelegates,
-						MinStake:      newNode.Settings.MinStake,
-						MaxStake:      newNode.Settings.MaxStake,
-						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+						ID:               newNode.ID,
+						ServiceCharge:    newNode.Settings.ServiceChargeRatio,
+						NumDelegates:     newNode.Settings.MaxNumDelegates,
+						MinStake:         newNode.Settings.MinStake,
+						MaxStake:         newNode.Settings.MaxStake,
+						Rewards:          event.ProviderRewards{ProviderID: newNode.ID},
+						RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 					},
 				}
 				if err := eventDb.Store.Get().Create(&sharderDb).Error; err != nil {
@@ -153,15 +154,16 @@ func AddMockNodes(
 			}
 			for id, pool := range newNode.Pools {
 				dps = append(dps, event.DelegatePool{
-					PoolID:       id,
-					ProviderType: int(nodeType),
-					ProviderID:   newNode.ID,
-					DelegateID:   pool.DelegateID,
-					Balance:      pool.Balance,
-					Reward:       pool.Reward,
-					TotalReward:  pool.Reward,
-					Status:       int(pool.Status),
-					RoundCreated: pool.RoundCreated,
+					PoolID:           id,
+					ProviderType:     int(nodeType),
+					ProviderID:       newNode.ID,
+					DelegateID:       pool.DelegateID,
+					Balance:          pool.Balance,
+					Reward:           pool.Reward,
+					TotalReward:      pool.Reward,
+					Status:           int(pool.Status),
+					RoundCreated:     pool.RoundCreated,
+					RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 				})
 			}
 		}
