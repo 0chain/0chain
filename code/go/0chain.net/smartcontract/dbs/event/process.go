@@ -174,13 +174,11 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
-	// var gs *Snapshot todo piers
+	var gs *Snapshot
 	for {
 		es := <-edb.eventsChannel
 
-		//tx, err := edb.Begin()
-		var err error
-		tx := edb // piers remove todo
+		tx, err := edb.Begin()
 		if err != nil {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
@@ -200,7 +198,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		// process snapshot for none adding block events only
 		if isNotAddBlockEvent(es) {
-			//gs, err = updateSnapshots(gs, es, tx)
+			gs, err = updateSnapshots(gs, es, tx)
 			if err != nil {
 				logging.Logger.Error("snapshot could not be processed",
 					zap.Int64("round", es.round),
@@ -211,12 +209,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			}
 		}
 
-		//if err := tx.Commit(); err != nil { todo piers
-		logging.Logger.Error("error committing block events",
-			zap.Int64("block", es.round),
-			zap.Error(err),
-		)
-		//}
+		if err := tx.Commit(); err != nil {
+			logging.Logger.Error("error committing block events",
+				zap.Int64("block", es.round),
+				zap.Error(err),
+			)
+		}
 
 		due := time.Since(tse)
 		logging.Logger.Debug("event db process",
