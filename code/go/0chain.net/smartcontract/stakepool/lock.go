@@ -89,6 +89,7 @@ func (sp *StakePool) LockPool(
 
 		update := newDelegatePoolUpdate(newPoolId, providerId, providerType)
 		update.Updates["balance"] = dp.Balance
+		update.Updates["staked_at"] = txn.ClientID
 		update.emitUpdate(balances)
 	}
 
