@@ -724,8 +724,6 @@ func AddMockWriteRedeems(
 					AllocationRoot: "mock allocation root",
 					BlockNumber:    mockBlockNumber,
 					Size:           100,
-					FileID:         2,
-					Operation:      common.Upload,
 				}
 				if out := eventDb.Store.Get().Create(&writeMarker); out.Error != nil {
 					log.Fatal(out.Error)

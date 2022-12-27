@@ -58,7 +58,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", common.UserRateLimit(srh.getBlobbersByGeoLocation)),
 		rest.MakeEndpoint(storage+"/transaction", common.UserRateLimit(srh.getTransactionByHash)),
 		rest.MakeEndpoint(storage+"/transactions", common.UserRateLimit(srh.getTransactionByFilter)),
-		rest.MakeEndpoint(storage+"/transaction-hashes", common.UserRateLimit(srh.getTransactionHashesByFilter)),
 
 		rest.MakeEndpoint(storage+"/writemarkers", common.UserRateLimit(srh.getWriteMarker)),
 		rest.MakeEndpoint(storage+"/errors", common.UserRateLimit(srh.getErrors)),
@@ -1623,7 +1622,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers getWriteMarkers
-// Gets read markers according to a filter
+// Gets writemarkers according to a filter
 //
 // parameters:
 //
@@ -1632,11 +1631,6 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 //	 required: true
 //	 in: query
 //	 type: string
-//	+name: file_id
-//	 description: file id
-//	 required: true
-//	 in: query
-//	 type: integer
 //	+name: offset
 //	 description: offset
 //	 in: query
@@ -1656,10 +1650,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 //	400:
 //	500:
 func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Request) {
-	var (
-		allocationID = r.URL.Query().Get("allocation_id")
-		fileIDStr    = r.URL.Query().Get("file_id")
-	)
+	allocationID := r.URL.Query().Get("allocation_id")
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
@@ -1672,33 +1663,19 @@ func (srh *StorageRestHandler) getWriteMarkers(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	fileID, err := strconv.ParseInt(fileIDStr, 10, 64)
-	if err != nil || fileID < 0 {
-		common.Respond(w, r, nil, common.NewErrBadRequest("Invalid file ID"))
-		return
-	}
-
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	if fileID == 0 {
-		writeMarkers, err := edb.GetWriteMarkersForAllocationID(allocationID, limit)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("can't get write markers", err.Error()))
-			return
-		}
-		common.Respond(w, r, writeMarkers, nil)
-	} else {
-		writeMarkers, err := edb.GetWriteMarkersForAllocationFile(allocationID, fileID, limit)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("can't get write markers for file", err.Error()))
-			return
-		}
-		common.Respond(w, r, writeMarkers, nil)
+	writeMarkers, err := edb.GetWriteMarkersForAllocationID(allocationID, limit)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("can't get write markers", err.Error()))
+		return
 	}
+	common.Respond(w, r, writeMarkers, nil)
+
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers count_readmarkers
@@ -2275,60 +2252,6 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	common.Respond(w, r, rtv, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes transactionHashes
-// Gets filtered list of transaction hashes from file information
-//
-// parameters:
-//
-//	+name: file_id
-//	 description: restrict to transactions by the specific file id on the writemarker
-//	 in: query
-//	 type: integer
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: sort
-//	 description: desc or asc
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: stringArray
-//	400:
-//	500:
-func (srh *StorageRestHandler) getTransactionHashesByFilter(w http.ResponseWriter, r *http.Request) {
-	fileIDStr := r.URL.Query().Get("file_id")
-	fileID, err := strconv.ParseInt(fileIDStr, 10, 64)
-	if err != nil || fileID <= 0 {
-		common.Respond(w, r, nil, common.NewErrBadRequest("invalid file id."))
-		return
-	}
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	rtv, err := edb.GetWriteMarkersByFilters(event.WriteMarker{FileID: fileID}, "transaction_id", limit)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	common.Respond(w, r, rtv, nil)
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction
 // Gets transaction information from transaction hash
 //
@@ -2882,7 +2805,7 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 //
 // parameters:
 //    + name: searchString
-//      description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address
+//      description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, Wallet address
 //      required: true
 //      in: query
 //      type: string
@@ -2910,12 +2833,6 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 	queryType, err := edb.GetGenericSearchType(query)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
 		return
 	}
 
@@ -2955,20 +2872,6 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		}
 
 		common.Respond(w, r, blk, nil)
-		return
-	case "FileID":
-		fileID, err := strconv.ParseInt(query, 10, 64)
-		if err != nil || fileID <= 0 {
-			common.Respond(w, r, nil, common.NewErrBadRequest("Invalid file id"))
-			return
-		}
-		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{FileID: fileID}, "", limit)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-			return
-		}
-
-		common.Respond(w, r, wm, nil)
 		return
 	}
 

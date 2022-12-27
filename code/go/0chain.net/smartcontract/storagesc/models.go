@@ -1424,9 +1424,6 @@ type WriteMarker struct {
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
-
-	FileID    int64         `json:"file_id"`
-	Operation common.FileOp `json:"operation"`
 }
 
 func (wm *WriteMarker) VerifySignature(
@@ -1451,11 +1448,10 @@ func (wm *WriteMarker) VerifySignature(
 
 func (wm *WriteMarker) GetHashData() string {
 	hashData := fmt.Sprintf(
-		"%s:%s:%s:%s:%s:%s:%d:%d:%d:%d",
+		"%s:%s:%s:%s:%s:%s:%d:%d",
 		wm.AllocationRoot, wm.PreviousAllocationRoot,
 		wm.FileMetaRoot, wm.AllocationID,
-		wm.BlobberID, wm.ClientID, wm.Size,
-		wm.Timestamp, wm.FileID, wm.Operation)
+		wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
 	return hashData
 }
 

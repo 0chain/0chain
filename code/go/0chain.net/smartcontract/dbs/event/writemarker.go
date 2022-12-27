@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	coreCommon "0chain.net/core/common"
 	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -29,9 +28,7 @@ type WriteMarker struct {
 	Signature              string `json:"signature"`
 	BlockNumber            int64  `json:"block_number" gorm:"index:idx_wblocknum,priority:1;index:idx_walloc_block,priority:2"` //used in alloc_written_size
 
-	FileID      int64             `json:"file_id"`
-	Operation   coreCommon.FileOp `json:"operation"`
-	MovedTokens currency.Coin     `json:"-" gorm:"-"`
+	MovedTokens currency.Coin `json:"-" gorm:"-"`
 
 	//ref
 	User       User       `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
@@ -129,19 +126,6 @@ func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit co
 		Joins("Allocation").
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{AllocationID: allocationID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   limit.IsDescending,
-	}).Scan(&wms)
-	return wms, result.Error
-}
-
-func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, fileID int64, limit common.Pagination) ([]WriteMarker, error) {
-	var wms []WriteMarker
-	result := edb.Store.Get().
-		Joins("User").
-		Joins("Allocation").
-		Model(&WriteMarker{}).
-		Where(&WriteMarker{AllocationID: allocationID, FileID: fileID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
 		Desc:   limit.IsDescending,
 	}).Scan(&wms)
