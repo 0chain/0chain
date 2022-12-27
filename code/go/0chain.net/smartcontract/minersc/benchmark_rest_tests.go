@@ -95,7 +95,29 @@ func BenchmarkRestTests(
 			{
 				FuncName: "nodeStat",
 				Params: map[string]string{
+					"id": data.Miners[0],
+				},
+				Endpoint: mrh.getNodeStat,
+			},
+			{
+				FuncName: "nodeStat",
+				Params: map[string]string{
 					"id":                data.Miners[0],
+					"include_delegates": "true",
+				},
+				Endpoint: mrh.getNodeStat,
+			},
+			{
+				FuncName: "nodeStat",
+				Params: map[string]string{
+					"id": data.Sharders[0],
+				},
+				Endpoint: mrh.getNodeStat,
+			},
+			{
+				FuncName: "nodeStat",
+				Params: map[string]string{
+					"id":                data.Sharders[0],
 					"include_delegates": "true",
 				},
 				Endpoint: mrh.getNodeStat,

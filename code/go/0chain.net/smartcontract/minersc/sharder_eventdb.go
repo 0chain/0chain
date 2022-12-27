@@ -42,30 +42,30 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 	sn := MinerNodeResponse{
 		SimpleNodeResponse: &msn,
 		StakePoolResponse: &StakePoolResponse{
-			StakePool: stakepool.StakePool{
-				Reward: edbSharder.Rewards.Rewards,
-				Settings: stakepool.Settings{
-					DelegateWallet:     edbSharder.DelegateWallet,
-					ServiceChargeRatio: edbSharder.ServiceCharge,
-					MaxNumDelegates:    edbSharder.Provider.NumDelegates,
-					MinStake:           edbSharder.MinStake,
-					MaxStake:           edbSharder.MaxStake,
-				},
+			Reward: edbSharder.Rewards.Rewards,
+			Settings: stakepool.Settings{
+				DelegateWallet:     edbSharder.DelegateWallet,
+				ServiceChargeRatio: edbSharder.ServiceCharge,
+				MaxNumDelegates:    edbSharder.Provider.NumDelegates,
+				MinStake:           edbSharder.MinStake,
+				MaxStake:           edbSharder.MaxStake,
 			},
-			RoundLastUpdated: edbSharder.RoundLastUpdated,
 		},
 	}
 	if len(delegates) == 0 {
 		return sn
 	}
-	sn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	sn.StakePoolResponse.Pools = make(map[string]*DelegatePoolResponse)
 	for _, delegate := range delegates {
-		sn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
-			Balance:      delegate.Balance,
-			Reward:       delegate.Reward,
-			Status:       spenum.PoolStatus(delegate.Status),
-			RoundCreated: delegate.RoundCreated,
-			DelegateID:   delegate.DelegateID,
+		sn.StakePoolResponse.Pools[delegate.PoolID] = &DelegatePoolResponse{
+			DelegatePool: stakepool.DelegatePool{
+				Balance:      delegate.Balance,
+				Reward:       delegate.Reward,
+				Status:       spenum.PoolStatus(delegate.Status),
+				RoundCreated: delegate.RoundCreated,
+				DelegateID:   delegate.DelegateID,
+			},
+			RoundLastUpdated: delegate.RoundLastUpdated,
 		}
 	}
 	return sn

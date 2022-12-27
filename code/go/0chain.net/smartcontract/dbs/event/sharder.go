@@ -46,6 +46,33 @@ func (edb *EventDb) GetSharder(id string) (Sharder, error) {
 		First(&sharder).Error
 }
 
+func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegatePool, error) {
+	var sharderDps []struct {
+		Sharder
+		DelegatePool
+	}
+	var s Sharder
+	var dps []DelegatePool
+
+	result := edb.Get().Preload("Rewards").
+		Table("sharder").
+		Joins("left join delegate_pools on sharder.id = delegate_pools.provider_id").
+		Where("sharder.id = ?", id).
+		Scan(&sharderDps)
+	if result.Error != nil {
+		return s, nil, result.Error
+	}
+	if len(sharderDps) == 0 {
+		return s, nil, fmt.Errorf("get miner %s found no records", id)
+	}
+	s = sharderDps[0].Sharder
+	for i := range sharderDps {
+		dps = append(dps, sharderDps[i].DelegatePool)
+	}
+
+	return s, dps, nil
+}
+
 func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
 	var sharders []Sharder
 

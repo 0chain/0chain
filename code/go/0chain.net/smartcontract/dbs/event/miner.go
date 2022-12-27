@@ -46,6 +46,33 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
+func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool, error) {
+	var minerDps []struct {
+		Miner
+		DelegatePool
+	}
+	var m Miner
+	var dps []DelegatePool
+
+	result := edb.Get().Preload("Rewards").
+		Table("miners").
+		Joins("left join delegate_pools on miners.id = delegate_pools.provider_id").
+		Where("miners.id = ?", id).
+		Scan(&minerDps)
+	if result.Error != nil {
+		return m, nil, result.Error
+	}
+	if len(minerDps) == 0 {
+		return m, nil, fmt.Errorf("get miner %s found no records", id)
+	}
+	m = minerDps[0].Miner
+	for i := range minerDps {
+		dps = append(dps, minerDps[i].DelegatePool)
+	}
+
+	return m, dps, nil
+}
+
 type MinerQuery struct {
 	gorm.Model
 	MinerID           null.String

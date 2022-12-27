@@ -7,6 +7,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -15,9 +16,16 @@ type SimpleNodeResponse struct {
 	RoundLastUpdated int64 `json:"round_last_updated"`
 }
 
-type StakePoolResponse struct {
-	stakepool.StakePool
+type DelegatePoolResponse struct {
+	stakepool.DelegatePool
 	RoundLastUpdated int64 `json:"round_last_updated"`
+}
+
+type StakePoolResponse struct {
+	Pools    map[string]*DelegatePoolResponse `json:"pools"`
+	Reward   currency.Coin                    `json:"rewards"`
+	Settings stakepool.Settings               `json:"settings"`
+	Minter   cstate.ApprovedMinter            `json:"minter"`
 }
 
 type MinerNodeResponse struct {
@@ -56,30 +64,30 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 	mn := MinerNodeResponse{
 		SimpleNodeResponse: &msn,
 		StakePoolResponse: &StakePoolResponse{
-			StakePool: stakepool.StakePool{
-				Reward: edbMiner.Rewards.Rewards,
-				Settings: stakepool.Settings{
-					DelegateWallet:     edbMiner.DelegateWallet,
-					ServiceChargeRatio: edbMiner.ServiceCharge,
-					MaxNumDelegates:    edbMiner.Provider.NumDelegates,
-					MinStake:           edbMiner.MinStake,
-					MaxStake:           edbMiner.MaxStake,
-				},
+			Reward: edbMiner.Rewards.Rewards,
+			Settings: stakepool.Settings{
+				DelegateWallet:     edbMiner.DelegateWallet,
+				ServiceChargeRatio: edbMiner.ServiceCharge,
+				MaxNumDelegates:    edbMiner.Provider.NumDelegates,
+				MinStake:           edbMiner.MinStake,
+				MaxStake:           edbMiner.MaxStake,
 			},
-			RoundLastUpdated: edbMiner.RoundLastUpdated,
 		},
 	}
 	if len(delegates) == 0 {
 		return mn
 	}
-	mn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	mn.StakePoolResponse.Pools = make(map[string]*DelegatePoolResponse)
 	for _, delegate := range delegates {
-		mn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
-			Balance:      delegate.Balance,
-			Reward:       delegate.Reward,
-			Status:       spenum.PoolStatus(delegate.Status),
-			RoundCreated: delegate.RoundCreated,
-			DelegateID:   delegate.DelegateID,
+		mn.StakePoolResponse.Pools[delegate.PoolID] = &DelegatePoolResponse{
+			DelegatePool: stakepool.DelegatePool{
+				Balance:      delegate.Balance,
+				Reward:       delegate.Reward,
+				Status:       spenum.PoolStatus(delegate.Status),
+				RoundCreated: delegate.RoundCreated,
+				DelegateID:   delegate.DelegateID,
+			},
+			RoundLastUpdated: delegate.RoundLastUpdated,
 		}
 	}
 	return mn

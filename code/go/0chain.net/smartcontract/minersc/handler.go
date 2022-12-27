@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/core/datastore"
@@ -376,7 +377,6 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 // swagger:model nodeStat
 type nodeStat struct {
 	MinerNodeResponse
-	Round       int64 `json:"round"`
 	TotalReward int64 `json:"total_reward"`
 }
 
@@ -399,46 +399,43 @@ type nodeStat struct {
 func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		id               = r.URL.Query().Get("id")
-		includeDelegates = r.URL.Query().Get("include_delegates") == "true"
+		includeDelegates = strings.ToLower(r.URL.Query().Get("include_delegates")) == "true"
 	)
 	if id == "" {
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
 		return
 	}
-	sCtx := mrh.GetQueryStateContext()
-	edb := sCtx.GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-
-	if sCtx.GetBlock() == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("cannot get latest finalised block"))
-		return
-	}
 	var err error
-	var delegates []event.DelegatePool
+	var miner event.Miner
+	var dps []event.DelegatePool
 	if includeDelegates {
-		delegates, err = edb.GetDelegatePools(id)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("getting delegates"+err.Error()))
-			return
-		}
+		miner, dps, err = edb.GetMinerWithDelegatePools(id)
+	} else {
+		miner, err = edb.GetMiner(id)
 	}
-
-	if miner, err := edb.GetMiner(id); err == nil {
+	if err == nil {
 		common.Respond(w, r, nodeStat{
-			MinerNodeResponse: minerTableToMinerNode(miner, delegates), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
+			MinerNodeResponse: minerTableToMinerNode(miner, dps),
+			TotalReward:       int64(miner.Rewards.TotalRewards)}, nil)
 		return
 	}
-	sharder, err := edb.GetSharder(id)
+	var sharder event.Sharder
+	if includeDelegates {
+		//sharder, dps, err = edb.GetSharderWithDelegatePools(id)
+	} else {
+		sharder, err = edb.GetSharder(id)
+	}
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("miner/sharder not found"))
 		return
 	}
 	common.Respond(w, r, nodeStat{
-		MinerNodeResponse: sharderTableToSharderNode(sharder, delegates),
-		Round:             sCtx.GetBlock().Round,
+		MinerNodeResponse: sharderTableToSharderNode(sharder, dps),
 		TotalReward:       int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
@@ -745,7 +742,6 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	for i, sharder := range sharders {
 		shardersArr[i] = nodeStat{
 			MinerNodeResponse: sharderTableToSharderNode(sharder, nil),
-			Round:             sCtx.GetBlock().Round,
 			TotalReward:       int64(sharder.Rewards.TotalRewards),
 		}
 	}
@@ -872,7 +868,6 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	for i, miner := range miners {
 		minersArr[i] = nodeStat{
 			MinerNodeResponse: minerTableToMinerNode(miner, nil),
-			Round:             sCtx.GetBlock().Round,
 			TotalReward:       int64(miner.Rewards.TotalRewards),
 		}
 	}
