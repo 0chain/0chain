@@ -3,8 +3,6 @@ package event
 import (
 	"fmt"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -86,7 +84,7 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 }
 
 func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
-	return newEventsMerger[DelegatePool](TagAddDelegatePool, withUniqueEventDelegatePool())
+	return newEventsMerger[DelegatePool](TagAddDelegatePool, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
@@ -94,43 +92,4 @@ func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
 		UpdateAll: true,
 	}).Create(&dps).Error
-}
-
-// withUniqueEventOverwrite is an event merge middleware that will overwrite the exist
-// event with later event that has the same index while adding together their balances
-func withUniqueEventDelegatePool() eventMergeMiddleware {
-	return func(events []Event) ([]Event, error) {
-		eMap := make(map[string]Event, len(events))
-		for _, e := range events {
-			previous, found := eMap[e.Index]
-			if !found {
-				eMap[e.Index] = e
-				continue
-			}
-			dp1, ok := fromEvent[DelegatePool](previous.Data)
-			if !ok {
-				logging.Logger.Error("fromEvent invalid data type",
-					zap.Any("event", previous),
-				)
-				continue
-			}
-			dp2, ok := fromEvent[DelegatePool](e.Data)
-			if !ok {
-				logging.Logger.Error("fromEvent invalid data type",
-					zap.Any("event", e),
-				)
-				continue
-			}
-			dp1.Balance += dp2.Balance
-			previous.Data = dp1
-			eMap[e.Index] = previous
-		}
-
-		ret := make([]Event, 0, len(eMap))
-		for _, e := range eMap {
-			ret = append(ret, e)
-		}
-
-		return ret, nil
-	}
 }
