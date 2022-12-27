@@ -19,6 +19,9 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
+        export GOPATH="/root/actions-runner/_work/_tool/go"
+        export GOMODCACHE="/root/actions-runner/_work/_tool/go/pkg/mod"
+        export GOCACHE="/root/actions-runner/_work/_tool/.cache/go-build"
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
