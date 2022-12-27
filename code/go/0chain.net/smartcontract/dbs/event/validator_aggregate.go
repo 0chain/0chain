@@ -48,7 +48,7 @@ func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *global
 	}
 	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count, edb.PageLimit())
 
-	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
+	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS validator_temp_ids "+
 		"ON COMMIT DROP AS SELECT id as id FROM validators ORDER BY (id, creation_round) LIMIT ? OFFSET ?",
 		size, size*currentPageNumber)
 	if exec.Error != nil {
@@ -66,7 +66,7 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 
 	var ids []string
 	r := edb.Store.Get().
-		Raw("select id from temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
+		Raw("select id from validator_temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
 	if r.Error != nil {
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
@@ -75,7 +75,7 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 
 	var currentValidators []Validator
 	result := edb.Store.Get().
-		Raw("SELECT * FROM Validators WHERE id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM Validators WHERE id in (select id from validator_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&currentValidators)
 	if result.Error != nil {
 		logging.Logger.Error("getting current Validators", zap.Error(result.Error))

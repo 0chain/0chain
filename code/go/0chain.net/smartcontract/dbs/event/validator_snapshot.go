@@ -19,7 +19,7 @@ type ValidatorSnapshot struct {
 func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]ValidatorSnapshot, error) {
 	var snapshots []ValidatorSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM validator_snapshots WHERE validator_id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM validator_snapshots WHERE validator_id in (select id from validator_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -33,7 +33,7 @@ func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]Valid
 		mapSnapshots[snapshot.ValidatorID] = snapshot
 	}
 
-	result = edb.Store.Get().Where("validator_id IN (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&ValidatorSnapshot{})
+	result = edb.Store.Get().Where("validator_id IN (select id from validator_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&ValidatorSnapshot{})
 	logging.Logger.Debug("get_validator_snapshot", zap.Int64("deleted rows", result.RowsAffected))
 	return mapSnapshots, result.Error
 }

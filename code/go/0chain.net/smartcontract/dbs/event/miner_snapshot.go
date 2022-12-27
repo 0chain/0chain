@@ -21,7 +21,7 @@ type MinerSnapshot struct {
 func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnapshot, error) {
 	var snapshots []MinerSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM miner_snapshots WHERE miner_id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM miner_snapshots WHERE miner_id in (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -35,7 +35,7 @@ func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnap
 		mapSnapshots[snapshot.MinerID] = snapshot
 	}
 
-	result = edb.Store.Get().Where("miner_id IN (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&MinerSnapshot{})
+	result = edb.Store.Get().Where("miner_id IN (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&MinerSnapshot{})
 	logging.Logger.Debug("get_miner_snapshot", zap.Int64("deleted rows", result.RowsAffected))
 	return mapSnapshots, result.Error
 }

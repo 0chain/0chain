@@ -50,7 +50,7 @@ func (edb *EventDb) updateSharderAggregate(round, pageAmount int64, gs *globalSn
 	}
 	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count, edb.PageLimit())
 
-	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
+	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS sharder_temp_ids "+
 		"ON COMMIT DROP AS SELECT id as id FROM sharders ORDER BY (id, creation_round) LIMIT ? OFFSET ?",
 		size, size*currentPageNumber)
 	if exec.Error != nil {
@@ -69,7 +69,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 
 	var ids []string
 	r := edb.Store.Get().
-		Raw("select id from temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
+		Raw("select id from sharder_temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
 	if r.Error != nil {
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
@@ -78,7 +78,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 
 	var currentSharders []Sharder
 	result := edb.Store.Get().
-		Raw("SELECT * FROM sharders WHERE id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM sharders WHERE id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&currentSharders)
 	if result.Error != nil {
 		logging.Logger.Error("getting current sharders", zap.Error(result.Error))

@@ -21,7 +21,7 @@ type SharderSnapshot struct {
 func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]SharderSnapshot, error) {
 	var snapshots []SharderSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM sharder_snapshots WHERE sharder_id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM sharder_snapshots WHERE sharder_id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -35,7 +35,7 @@ func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]Sharder
 		mapSnapshots[snapshot.SharderID] = snapshot
 	}
 
-	result = edb.Store.Get().Where("sharder_id IN (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&SharderSnapshot{})
+	result = edb.Store.Get().Where("sharder_id IN (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&SharderSnapshot{})
 	logging.Logger.Debug("get_sharder_snapshot", zap.Int64("deleted rows", result.RowsAffected))
 	return mapSnapshots, result.Error
 }
