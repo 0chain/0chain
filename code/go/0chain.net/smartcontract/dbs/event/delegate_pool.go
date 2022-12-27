@@ -44,6 +44,18 @@ func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
 	return dps, nil
 }
 
+func (edb *EventDb) GetDelegatePool(poolID, pID string) (*DelegatePool, error) {
+	var dp DelegatePool
+	err := edb.Store.Get().Debug().Model(&DelegatePool{}).
+		Where(&DelegatePool{PoolID: poolID, ProviderID: pID}).
+		Not(&DelegatePool{Status: int(spenum.Deleted)}).First(&dp).Error
+	if err != nil {
+		return nil, fmt.Errorf("error getting delegate pool, %v", err)
+	}
+
+	return &dp, nil
+}
+
 func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
 	res := int64(0)
 	err := edb.Store.Get().Table("delegate_pools").Select("coalesce(sum(balance),0)").

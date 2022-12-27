@@ -103,6 +103,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 			mergeUpdateBlobbersEvents(),
 			mergeUpdateBlobberTotalStakesEvents(),
+			mergeUpdateBlobberTotalUnStakesEvents(),
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
 
@@ -110,8 +111,11 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			addDelegatePoolLastUpdateRoundMiddleware(),
 
 			mergeUpdateMinerTotalStakesEvents(),
+			mergeUpdateMinerTotalUnStakesEvents(),
 			mergeUpdateSharderTotalStakesEvents(),
+			mergeUpdateSharderTotalUnStakesEvents(),
 			mergeUpdateAuthorizerTotalStakesEvents(),
+			mergeUpdateAuthorizerTotalUnStakesEvents(),
 
 			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
@@ -120,6 +124,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberStatsEvents(),
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
+			mergeUpdateValidatorUnStakesEvents(),
 
 			updateLastRoundUpdatedMiddleware(TagUpdateMiner),
 			updateLastRoundUpdatedMiddleware(TagUpdateSharder),
@@ -380,6 +385,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateBlobbersTotalStakes(*bs)
+	case TagUpdateBlobberTotalUnStake:
+		bs, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateBlobbersTotalUnStakes(*bs)
 	case TagUpdateBlobberTotalOffers:
 		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
@@ -415,6 +426,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateAuthorizersTotalStakes(*as)
+	case TagUpdateAuthorizerTotalUnStake:
+		as, ok := fromEvent[[]Authorizer](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateAuthorizersTotalUnStakes(*as)
 	case TagAddWriteMarker:
 		wms, ok := fromEvent[[]WriteMarker](event.Data)
 		if !ok {
@@ -485,6 +502,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateValidatorStakes(*updates)
+	case TagUpdateValidatorUnStakeTotal:
+		updates, ok := fromEvent[[]Validator](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateValidatorUnStakes(*updates)
 	case TagAddMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
@@ -516,6 +539,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateMinersTotalStakes(*m)
+	case TagUpdateMinerTotalUnStake:
+		m, ok := fromEvent[[]Miner](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateMinersTotalUnStakes(*m)
 	case TagUpdateSharder:
 		updates, ok := fromEvent[[]dbs.DbUpdates](event.Data)
 		if !ok {
@@ -541,6 +570,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateShardersTotalStakes(*s)
+	case TagUpdateSharderTotalUnStake:
+		s, ok := fromEvent[[]Sharder](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateShardersTotalUnStakes(*s)
 	case TagRemoveCurator:
 		c, ok := fromEvent[Curator](event.Data)
 		if !ok {

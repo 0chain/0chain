@@ -197,6 +197,14 @@ func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag Eve
 		},
 	}
 }
+func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateMinerTotalUnStake, Miner{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: unstakeTotal,
+		},
+	}
+}
 
 func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
@@ -205,8 +213,18 @@ func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
 	}).Create(&miners).Error
 }
 
+func (edb *EventDb) updateMinersTotalUnStakes(miners []Miner) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
+	}).Create(&miners).Error
+}
+
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
 	return newEventsMerger[Miner](TagUpdateMinerTotalStake, withUniqueEventOverwrite())
+}
+func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
+	return newEventsMerger[Miner](TagUpdateMinerTotalUnStake, withUniqueEventOverwrite())
 }
 
 func addMinerLastUpdateRound() eventMergeMiddleware {
