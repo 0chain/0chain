@@ -29,7 +29,7 @@ func init() {
 }
 
 func TestBlobbers(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 
 	type StorageNodeGeolocation struct {
 		Latitude  float64 `json:"latitude"`
@@ -142,7 +142,60 @@ func TestBlobbers(t *testing.T) {
 		Tag:         TagAddBlobber,
 		Data:        string(data),
 	}
-	events := []Event{eventAddSn}
+	eventAddSn = eventAddSn
+	dp := DelegatePool{
+		PoolID:       "pool_id_1",
+		ProviderType: 2,
+		ProviderID:   "provider_id",
+		DelegateID:   "delegate_id",
+		TotalReward:  29,
+		Balance:      3,
+	}
+
+	dp1 := DelegatePool{
+		PoolID:       "pool_id_1",
+		ProviderType: 2,
+		ProviderID:   "provider_id",
+		DelegateID:   "delegate_id",
+
+		Balance: 5,
+	}
+
+	dp2 := DelegatePool{
+		PoolID:       "pool_id_2",
+		ProviderType: 2,
+		ProviderID:   "provider_id2",
+		DelegateID:   "delegate_id2",
+
+		Balance: 7,
+	}
+	events := []Event{
+		Event{
+			BlockNumber: 2,
+			TxHash:      "tx hash",
+			Type:        TypeStats,
+			Tag:         TagAddDelegatePool,
+			Index:       fmt.Sprintf("%s:%s:%s", dp.ProviderID, dp.ProviderType, dp.PoolID),
+			Data:        dp,
+		},
+		Event{
+			BlockNumber: 2,
+			TxHash:      "tx hash",
+			Type:        TypeStats,
+			Tag:         TagAddDelegatePool,
+			Index:       fmt.Sprintf("%s:%s:%s", dp1.ProviderID, dp1.ProviderType, dp1.PoolID),
+			Data:        dp1,
+		},
+		Event{
+			BlockNumber: 2,
+			TxHash:      "tx hash",
+			Type:        TypeStats,
+			Tag:         TagAddDelegatePool,
+			Index:       fmt.Sprintf("%s:%s:%s", dp2.ProviderID, dp2.ProviderType, dp2.PoolID),
+			Data:        dp2,
+		}}
+
+	//events := []Event{eventAddSn}
 	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 
 	blobber, err := eventDb.GetBlobber(sn.ID)

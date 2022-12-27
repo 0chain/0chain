@@ -2,8 +2,9 @@ package event
 
 import (
 	"fmt"
-
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -15,10 +16,10 @@ import (
 type DelegatePool struct {
 	gorm.Model
 
-	PoolID       string `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
-	ProviderType int    `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
-	ProviderID   string `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
-	DelegateID   string `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id;index:idx_dp_total_staked,priority:1"` //todo think of changing priority for idx_ddel_active
+	PoolID       string          `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
+	ProviderType spenum.Provider `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
+	ProviderID   string          `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
+	DelegateID   string          `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id;index:idx_dp_total_staked,priority:1"` //todo think of changing priority for idx_ddel_active
 
 	Balance      currency.Coin `json:"balance"`
 	Reward       currency.Coin `json:"reward"`       // unclaimed reward
@@ -50,7 +51,7 @@ func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
 	return res, err
 }
 
-func (edb *EventDb) GetUserDelegatePools(userId string, pType int) ([]DelegatePool, error) {
+func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider) ([]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
@@ -85,7 +86,7 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 }
 
 func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
-	return newEventsMerger[DelegatePool](TagAddDelegatePool, withUniqueEventOverwrite())
+	return newEventsMerger[DelegatePool](TagAddDelegatePool, withUniqueEventDelegatePool())
 }
 
 func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
@@ -93,4 +94,43 @@ func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
 		UpdateAll: true,
 	}).Create(&dps).Error
+}
+
+// withUniqueEventOverwrite is an event merge middleware that will overwrite the exist
+// event with later event that has the same index while adding together their balances
+func withUniqueEventDelegatePool() eventMergeMiddleware {
+	return func(events []Event) ([]Event, error) {
+		eMap := make(map[string]Event, len(events))
+		for _, e := range events {
+			previous, found := eMap[e.Index]
+			if !found {
+				eMap[e.Index] = e
+				continue
+			}
+			dp1, ok := fromEvent[DelegatePool](previous.Data)
+			if !ok {
+				logging.Logger.Error("fromEvent invalid data type",
+					zap.Any("event", previous),
+				)
+				continue
+			}
+			dp2, ok := fromEvent[DelegatePool](e.Data)
+			if !ok {
+				logging.Logger.Error("fromEvent invalid data type",
+					zap.Any("event", e),
+				)
+				continue
+			}
+			dp1.Balance += dp2.Balance
+			previous.Data = dp1
+			eMap[e.Index] = previous
+		}
+
+		ret := make([]Event, 0, len(eMap))
+		for _, e := range eMap {
+			ret = append(ret, e)
+		}
+
+		return ret, nil
+	}
 }
