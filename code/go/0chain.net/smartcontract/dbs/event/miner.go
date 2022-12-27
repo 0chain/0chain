@@ -46,20 +46,6 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
-//func (edb *EventDb) minerAggregateStats(id string) (*providerAggregateStats, error) {
-//	var miner providerAggregateStats
-//	result := edb.Store.Get().
-//		Model(&Miner{}).
-//		Where(&Miner{ID: id}).
-//		First(&miner)
-//	if result.Error != nil {
-//		return nil, fmt.Errorf("error retrieving miner %v, error %v",
-//			id, result.Error)
-//	}
-//
-//	return &miner, nil
-//}
-
 type MinerQuery struct {
 	gorm.Model
 	MinerID           null.String
