@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"strconv"
+
 	benchmark "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -27,7 +29,8 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getStakePoolStat",
 				Params: map[string]string{
-					"miner_id": data.Miners[0],
+					"miner_id":      data.Miners[0],
+					"provider_type": strconv.Itoa(int(spenum.Miner)),
 				},
 				Endpoint: mrh.getStakePoolStat,
 			},
@@ -130,27 +133,27 @@ func BenchmarkRestTests(
 			{
 				FuncName: "configs",
 				Endpoint: mrh.getConfigs,
-			},
-			{
-				FuncName: "provider-rewards",
-				Params: map[string]string{
-					"id":    data.Miners[0],
-					"limit": "20",
-					"start": "25",
-					"end":   "25",
+			}, /*
+				{
+					FuncName: "provider-rewards",
+					Params: map[string]string{
+						"id":    data.Miners[0],
+						"limit": "20",
+						"start": "25",
+						"end":   "25",
+					},
+					Endpoint: mrh.getProviderRewards,
 				},
-				Endpoint: mrh.getProviderRewards,
-			},
-			{
-				FuncName: "delegate-rewards",
-				Params: map[string]string{
-					"limit":  "20",
-					"offset": "1",
-					"start":  "25",
-					"end":    "75",
-				},
-				Endpoint: mrh.getDelegateRewards,
-			},
+				{
+					FuncName: "delegate-rewards",
+					Params: map[string]string{
+						"limit":  "20",
+						"offset": "1",
+						"start":  "25",
+						"end":    "75",
+					},
+					Endpoint: mrh.getDelegateRewards,
+				},*/
 		},
 		ADDRESS,
 		mrh,
