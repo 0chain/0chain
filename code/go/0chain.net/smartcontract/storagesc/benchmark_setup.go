@@ -587,7 +587,7 @@ func GetMockBlobberStakePools(
 			if viper.GetBool(sc.EventDbEnabled) {
 				dp := event.DelegatePool{
 					PoolID:       id,
-					ProviderType: int(spenum.Blobber),
+					ProviderType: spenum.Blobber,
 					ProviderID:   bId,
 					DelegateID:   sp.Pools[id].DelegateID,
 					Balance:      sp.Pools[id].Balance,
@@ -608,7 +608,7 @@ func GetMockBlobberStakePools(
 }
 
 func GetMockValidatorStakePools(
-	clients []string,
+	_ []string,
 	balances cstate.StateContextI,
 ) {
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
@@ -786,7 +786,6 @@ func getMockValidatorUrl(index int) string {
 }
 
 func getMockAllocationId(allocation int) string {
-	//return "mock allocation id " + strconv.Itoa(allocation)
 	return encryption.Hash("mock allocation id" + strconv.Itoa(allocation))
 }
 
@@ -799,7 +798,7 @@ func getMockBlobberBlockFromAllocationIndex(i int) int {
 	return i % (viper.GetInt(sc.NumBlobbers) - viper.GetInt(sc.NumBlobbersPerAllocation))
 }
 
-func getMockChallengeId(blobberId, allocationId string) string {
+func getMockChallengeId(_, allocationId string) string {
 	return encryption.Hash("challenge" + allocationId)
 }
 

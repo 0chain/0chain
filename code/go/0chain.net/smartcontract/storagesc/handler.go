@@ -1107,7 +1107,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	pools, err := edb.GetUserDelegatePools(clientID, int(spenum.Blobber))
+	pools, err := edb.GetUserDelegatePools(clientID, spenum.Blobber)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
 		return
