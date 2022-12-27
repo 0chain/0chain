@@ -33,31 +33,3 @@ func (z ContextKey) Msgsize() (s int) {
 	s = msgp.StringPrefixSize + len(string(z))
 	return
 }
-
-// MarshalMsg implements msgp.Marshaler
-func (z FileOp) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	o = msgp.AppendInt(o, int(z))
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *FileOp) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	{
-		var zb0001 int
-		zb0001, bts, err = msgp.ReadIntBytes(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		(*z) = FileOp(zb0001)
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z FileOp) Msgsize() (s int) {
-	s = msgp.IntSize
-	return
-}
