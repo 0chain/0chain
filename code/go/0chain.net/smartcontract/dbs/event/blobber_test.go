@@ -29,7 +29,7 @@ func init() {
 }
 
 func TestBlobbers(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 
 	type StorageNodeGeolocation struct {
 		Latitude  float64 `json:"latitude"`
