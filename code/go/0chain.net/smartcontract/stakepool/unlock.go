@@ -36,12 +36,19 @@ func (sp *StakePool) UnlockPool(clientID string, providerType spenum.Provider, p
 		return "", fmt.Errorf("error emptying account, %v", err)
 	}
 
-	i, _ := amount.Int64()
+	b, err := dp.Balance.Int64()
+	if err != nil {
+		return "", fmt.Errorf("can't cast Balance of value (%v) to Int64", b)
+	}
+	i, err := amount.Int64()
+	if err != nil {
+		return "", fmt.Errorf("can't cast amount of value (%v) to Int64", amount)
+	}
 	lock := event.DelegatePoolLock{
 		Client:       clientID,
 		ProviderId:   providerId,
 		ProviderType: providerType,
-		Amount:       i,
+		Amount:       i + b,
 	}
 
 	if dp.Status == spenum.Deleted {
