@@ -1549,19 +1549,6 @@ definitions:
             client_id:
                 type: string
                 x-go-name: ClientID
-            content_hash:
-                type: string
-                x-go-name: ContentHash
-            lookup_hash:
-                description: file info
-                type: string
-                x-go-name: LookupHash
-            name:
-                type: string
-                x-go-name: Name
-            operation:
-                type: string
-                x-go-name: Operation
             prev_allocation_root:
                 type: string
                 x-go-name: PreviousAllocationRoot

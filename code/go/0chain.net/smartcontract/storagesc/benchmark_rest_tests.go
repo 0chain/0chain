@@ -85,15 +85,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getTransactionByFilter,
 			},
 			{
-				FuncName: "transactions",
-				Params: map[string]string{
-					"look_up_hash": benchmark.GetMockWriteMarkerLookUpHash(1, 1),
-					"name":         benchmark.GetMockWriteMarkerContentHash(1, 1),
-					"content_hash": benchmark.GetMockWriteMarkerFileName(1),
-				},
-				Endpoint: srh.getTransactionHashesByFilter,
-			},
-			{
 				FuncName: "errors",
 				Params: map[string]string{
 					"transaction_hash": benchmark.GetMockTransactionHash(3, 3),
@@ -237,7 +228,6 @@ func BenchmarkRestTests(
 				FuncName: "getWriteMarkers",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
-					"filename":      "",
 				},
 				Endpoint: srh.getWriteMarkers,
 			},
