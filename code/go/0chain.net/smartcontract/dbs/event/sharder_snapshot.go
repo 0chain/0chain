@@ -15,7 +15,6 @@ type SharderSnapshot struct {
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	ServiceCharge float64       `json:"service_charge"`
-	Count         int           `json:"count"`
 }
 
 // nolint
@@ -51,7 +50,6 @@ func (edb *EventDb) addSharderSnapshot(sharders []Sharder) error {
 			Fees:          sharder.Fees,
 			TotalStake:    sharder.TotalStake,
 			ServiceCharge: sharder.ServiceCharge,
-			Count:         sharder.Count,
 		})
 	}
 

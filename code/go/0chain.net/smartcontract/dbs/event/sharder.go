@@ -30,9 +30,6 @@ type Sharder struct {
 	Active          bool
 	Longitude       float64
 	Latitude        float64
-
-	//	number of transactions involved
-	Count int
 }
 
 // swagger:model SharderGeolocation

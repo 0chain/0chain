@@ -115,26 +115,6 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fee
-
-		//gs.totalWritePricePeriod += aggregate.WritePrice
-
-		//gs.AverageTxnFee = .
-		//gs.SuccessfulChallenges += int64(aggregate.ChallengesPassed - old.ChallengesPassed)
-		//gs.TotalChallenges += int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
-		//gs.AllocatedStorage += aggregate.Allocated - old.Allocated
-		//gs.MaxCapacityStorage += aggregate.Capacity - old.Capacity
-		//gs.UsedStorage += aggregate.SavedData - old.SavedData
-		//
-		//const GB = currency.Coin(1024 * 1024 * 1024)
-		//ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
-		//if err != nil {
-		//	logging.Logger.Error("converting coin to int64", zap.Error(err))
-		//}
-		//gs.StakedStorage += ss
-
-		//gs.blobberCount++ //todo figure out why we increment blobberCount on every update
-
-		gs.TransactionsCount++
 	}
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
