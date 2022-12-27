@@ -15,6 +15,8 @@ import (
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
+
 )
 
 const (
@@ -220,6 +222,11 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
+
+	// Check delegate wallet and operational wallet are not the same
+	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
+		return "", err
+	}
 
 	// insert, update or remove blobber
 	if err = sc.insertBlobber(t, conf, blobber, balances); err != nil {
