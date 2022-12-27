@@ -105,7 +105,9 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberTotalStakesEvents(),
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
+
 			mergeAddDelegatePoolsEvents(),
+			addDelegatePoolLastUpdateRoundMiddleware(),
 
 			mergeUpdateMinerTotalStakesEvents(),
 			mergeUpdateSharderTotalStakesEvents(),
@@ -119,7 +121,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
 
-			addDelegatePoolLastUpdateRoundMiddleware(),
 			updateLastRoundUpdatedMiddleware(TagUpdateMiner),
 			updateLastRoundUpdatedMiddleware(TagUpdateSharder),
 			updateLastRoundUpdatedMiddleware(TagUpdateDelegatePool),
