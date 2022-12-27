@@ -202,6 +202,11 @@ func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *ht
 //	 description: desc or asc
 //	 in: query
 //	 type: string
+//	+name: blobber_urls
+//	 description: list of blobber URLs
+//	 in: query
+//	 type: []string
+//	 required: true
 //
 // responses:
 //
@@ -219,7 +224,7 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 	}
 
 	if len(urlsStr) == 0 {
-		common.Respond(w, r, nil, errors.New("blobber urls list is empty"))
+		common.Respond(w, r, nil, errors.New("blobber_urls list is empty"))
 		return
 	}
 
@@ -898,7 +903,7 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
 // Gets the total data currently storage used across all blobbers.
 //
-// This endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
+// this endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
 //
 // responses:
 //
