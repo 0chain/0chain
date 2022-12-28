@@ -32,6 +32,30 @@ type Sharder struct {
 	Latitude        float64
 }
 
+func (s *Sharder) GetTotalStake() currency.Coin {
+	return s.TotalStake
+}
+
+func (s *Sharder) GetUnstakeTotal() currency.Coin {
+	return s.UnstakeTotal
+}
+
+func (s *Sharder) GetServiceCharge() float64 {
+	return s.ServiceCharge
+}
+
+func (s *Sharder) SetTotalStake(value currency.Coin) {
+	s.TotalStake = value
+}
+
+func (s *Sharder) SetUnstakeTotal(value currency.Coin) {
+	s.UnstakeTotal = value
+}
+
+func (s *Sharder) SetServiceCharge(value float64) {
+	s.ServiceCharge = value
+}
+
 // swagger:model SharderGeolocation
 type SharderGeolocation struct {
 	SharderID string  `json:"sharder_id"`

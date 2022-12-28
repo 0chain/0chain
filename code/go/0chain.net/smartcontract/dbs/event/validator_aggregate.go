@@ -20,6 +20,30 @@ type ValidatorAggregate struct {
 	ServiceCharge float64       `json:"service_charge"`
 }
 
+func (v *ValidatorAggregate) GetTotalStake() currency.Coin {
+	return v.TotalStake
+}
+
+func (v *ValidatorAggregate) GetUnstakeTotal() currency.Coin {
+	return v.UnstakeTotal
+}
+
+func (v *ValidatorAggregate) GetServiceCharge() float64 {
+	return v.ServiceCharge
+}
+
+func (v *ValidatorAggregate) SetTotalStake(value currency.Coin) {
+	v.TotalStake = value
+}
+
+func (v *ValidatorAggregate) SetUnstakeTotal(value currency.Coin) {
+	v.UnstakeTotal = value
+}
+
+func (v *ValidatorAggregate) SetServiceCharge(value float64) {
+	v.ServiceCharge = value
+}
+
 func (edb *EventDb) ReplicateValidatorAggregate(p common.Pagination) ([]ValidatorAggregate, error) {
 	var snapshots []ValidatorAggregate
 
@@ -107,9 +131,8 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 			ValidatorID: current.ID,
 		}
 
-		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
-		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
-		aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
+		recalculateProviderFields(&old, &current, &aggregate)
+
 		aggregates = append(aggregates, aggregate)
 	}
 

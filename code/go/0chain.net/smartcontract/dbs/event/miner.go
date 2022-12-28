@@ -49,7 +49,7 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
-//func (edb *EventDb) minerAggregateStats(id string) (*providerAggregateStats, error) {
+//func (edb *EventDb) MinerStats(id string) (*providerAggregateStats, error) {
 //	var miner providerAggregateStats
 //	result := edb.Store.Get().
 //		Model(&Miner{}).
@@ -86,6 +86,30 @@ type MinerQuery struct {
 	Active            null.Bool
 	Longitude         null.Float
 	Latitude          null.Float
+}
+
+func (m *Miner) GetTotalStake() currency.Coin {
+	return m.TotalStake
+}
+
+func (m *Miner) GetUnstakeTotal() currency.Coin {
+	return m.UnstakeTotal
+}
+
+func (m *Miner) GetServiceCharge() float64 {
+	return m.ServiceCharge
+}
+
+func (m *Miner) SetTotalStake(value currency.Coin) {
+	m.TotalStake = value
+}
+
+func (m *Miner) SetUnstakeTotal(value currency.Coin) {
+	m.UnstakeTotal = value
+}
+
+func (m Miner) SetServiceCharge(value float64) {
+	m.ServiceCharge = value
 }
 
 func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p common2.Pagination) ([]Miner, error) {

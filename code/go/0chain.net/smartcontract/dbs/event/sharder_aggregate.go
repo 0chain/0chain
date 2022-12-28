@@ -19,7 +19,30 @@ type SharderAggregate struct {
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	ServiceCharge float64       `json:"service_charge"`
-	Count         int           `json:"count"`
+}
+
+func (s *SharderAggregate) GetTotalStake() currency.Coin {
+	return s.TotalStake
+}
+
+func (s *SharderAggregate) GetUnstakeTotal() currency.Coin {
+	return s.UnstakeTotal
+}
+
+func (s *SharderAggregate) GetServiceCharge() float64 {
+	return s.ServiceCharge
+}
+
+func (s *SharderAggregate) SetTotalStake(value currency.Coin) {
+	s.TotalStake = value
+}
+
+func (s *SharderAggregate) SetUnstakeTotal(value currency.Coin) {
+	s.UnstakeTotal = value
+}
+
+func (s *SharderAggregate) SetServiceCharge(value float64) {
+	s.ServiceCharge = value
 }
 
 func (edb *EventDb) ReplicateSharderAggregate(p common.Pagination) ([]SharderAggregate, error) {
@@ -110,10 +133,9 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 			SharderID: current.ID,
 		}
 
-		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
-		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
+		recalculateProviderFields(&old, &current, &aggregate)
+
 		aggregate.Fees = (old.Fees + current.Fees) / 2
-		aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fees

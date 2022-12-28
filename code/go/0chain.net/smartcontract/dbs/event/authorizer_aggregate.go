@@ -21,6 +21,30 @@ type AuthorizerAggregate struct {
 	ServiceCharge float64       `json:"service_charge"`
 }
 
+func (a *AuthorizerAggregate) GetTotalStake() currency.Coin {
+	return a.TotalStake
+}
+
+func (a *AuthorizerAggregate) GetUnstakeTotal() currency.Coin {
+	return a.UnstakeTotal
+}
+
+func (a *AuthorizerAggregate) GetServiceCharge() float64 {
+	return a.ServiceCharge
+}
+
+func (a *AuthorizerAggregate) SetTotalStake(value currency.Coin) {
+	a.TotalStake = value
+}
+
+func (a *AuthorizerAggregate) SetUnstakeTotal(value currency.Coin) {
+	a.UnstakeTotal = value
+}
+
+func (a *AuthorizerAggregate) SetServiceCharge(value float64) {
+	a.ServiceCharge = value
+}
+
 func (edb *EventDb) ReplicateAuthorizerAggregate(p common.Pagination) ([]AuthorizerAggregate, error) {
 	var snapshots []AuthorizerAggregate
 
@@ -103,15 +127,16 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 		if !found {
 			continue
 		}
+
+		//agg := recalculateProviderFields(old, &current, aggregate)
 		aggregate := AuthorizerAggregate{
 			Round:        round,
 			AuthorizerID: current.ID,
 		}
 
-		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
-		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
+		recalculateProviderFields(&old, &current, &aggregate)
+
 		aggregate.Fee = (old.Fee + current.Fee) / 2
-		aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fee

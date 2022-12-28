@@ -24,6 +24,30 @@ type Authorizer struct {
 	LastHealthCheck int64 `json:"last_health_check"`
 }
 
+func (a *Authorizer) GetTotalStake() currency.Coin {
+	return a.TotalStake
+}
+
+func (a *Authorizer) GetUnstakeTotal() currency.Coin {
+	return a.UnstakeTotal
+}
+
+func (a *Authorizer) GetServiceCharge() float64 {
+	return a.ServiceCharge
+}
+
+func (a *Authorizer) SetTotalStake(value currency.Coin) {
+	a.TotalStake = value
+}
+
+func (a *Authorizer) SetUnstakeTotal(value currency.Coin) {
+	a.UnstakeTotal = value
+}
+
+func (a *Authorizer) SetServiceCharge(value float64) {
+	a.ServiceCharge = value
+}
+
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
 	exists, err := a.exists(edb)
 	if err != nil {

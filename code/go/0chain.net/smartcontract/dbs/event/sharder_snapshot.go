@@ -17,6 +17,30 @@ type SharderSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 }
 
+func (s *SharderSnapshot) GetTotalStake() currency.Coin {
+	return s.TotalStake
+}
+
+func (s *SharderSnapshot) GetUnstakeTotal() currency.Coin {
+	return s.UnstakeTotal
+}
+
+func (s *SharderSnapshot) GetServiceCharge() float64 {
+	return s.ServiceCharge
+}
+
+func (s *SharderSnapshot) SetTotalStake(value currency.Coin) {
+	s.TotalStake = value
+}
+
+func (s *SharderSnapshot) SetUnstakeTotal(value currency.Coin) {
+	s.UnstakeTotal = value
+}
+
+func (s *SharderSnapshot) SetServiceCharge(value float64) {
+	s.ServiceCharge = value
+}
+
 // nolint
 func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]SharderSnapshot, error) {
 	var snapshots []SharderSnapshot

@@ -15,6 +15,30 @@ type ValidatorSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 }
 
+func (v *ValidatorSnapshot) GetTotalStake() currency.Coin {
+	return v.TotalStake
+}
+
+func (v *ValidatorSnapshot) GetUnstakeTotal() currency.Coin {
+	return v.UnstakeTotal
+}
+
+func (v *ValidatorSnapshot) GetServiceCharge() float64 {
+	return v.ServiceCharge
+}
+
+func (v *ValidatorSnapshot) SetTotalStake(value currency.Coin) {
+	v.TotalStake = value
+}
+
+func (v *ValidatorSnapshot) SetUnstakeTotal(value currency.Coin) {
+	v.UnstakeTotal = value
+}
+
+func (v *ValidatorSnapshot) SetServiceCharge(value float64) {
+	v.ServiceCharge = value
+}
+
 // nolint
 func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]ValidatorSnapshot, error) {
 	var snapshots []ValidatorSnapshot

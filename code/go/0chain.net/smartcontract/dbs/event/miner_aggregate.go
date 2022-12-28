@@ -19,7 +19,30 @@ type MinerAggregate struct {
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	ServiceCharge float64       `json:"service_charge"`
-	Count         int           `json:"count"`
+}
+
+func (m *MinerAggregate) GetTotalStake() currency.Coin {
+	return m.TotalStake
+}
+
+func (m *MinerAggregate) GetUnstakeTotal() currency.Coin {
+	return m.UnstakeTotal
+}
+
+func (m *MinerAggregate) GetServiceCharge() float64 {
+	return m.ServiceCharge
+}
+
+func (m *MinerAggregate) SetTotalStake(value currency.Coin) {
+	m.TotalStake = value
+}
+
+func (m *MinerAggregate) SetUnstakeTotal(value currency.Coin) {
+	m.UnstakeTotal = value
+}
+
+func (m MinerAggregate) SetServiceCharge(value float64) {
+	m.ServiceCharge = value
 }
 
 func (edb *EventDb) ReplicateMinerAggregate(p common.Pagination) ([]MinerAggregate, error) {
@@ -110,10 +133,10 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 			MinerID: current.ID,
 		}
 
-		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
-		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
+		recalculateProviderFields(&old, &current, &aggregate)
+
 		aggregate.Fees = (old.Fees + current.Fees) / 2
-		aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
+
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fees
