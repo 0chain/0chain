@@ -96,7 +96,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/alloc-blobber-term", common.UserRateLimit(srh.getAllocBlobberTerms)),
 		rest.MakeEndpoint(storage+"/replicate-snapshots", common.UserRateLimit(srh.replicateSnapshots)),
 		rest.MakeEndpoint(storage+"/replicate-blobber-aggregates", srh.replicateBlobberAggregates),
-		rest.MakeEndpoint(storage+"/timestamp-to-round", common.UserRateLimit(srh.timestampsToRounds)),
 	}
 }
 
@@ -2826,64 +2825,6 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 
 	sn := blobberTableToStorageNode(*blobber)
 	common.Respond(w, r, sn, nil)
-}
-
-// swagger:model timestampToRoundResp
-type timestampToRoundResp struct {
-	Rounds []int64 `json:"rounds"`
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round timestampsToRounds
-// Get round(s) number for timestamp(s)
-//
-// parameters:
-//
-//	 +name: timestamps
-//		 description: timestamps you want to convert to rounds
-//		 required: true
-//		 in: query
-//		 type: string
-//
-// responses:
-//
-//	200: timestampToRoundResp
-//	400:
-//	500:
-func (srh *StorageRestHandler) timestampsToRounds(w http.ResponseWriter, r *http.Request) {
-	var timestamps = r.URL.Query().Get("timestamps")
-
-	if timestamps == "" {
-		err := common.NewErrBadRequest("missing query parameter: timestamps")
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	var timeStamps []int64
-	if err := json.Unmarshal([]byte(timestamps), &timeStamps); err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("timestamps are not valid"))
-		return
-	}
-	var rounds []int64
-	for _, timestamp := range timeStamps {
-		round, err := edb.GetRoundFromTime(time.Unix(timestamp, 0), true)
-		if err != nil {
-			err := common.NewErrNoResource(err.Error())
-			common.Respond(w, r, nil, err)
-			return
-		}
-		rounds = append(rounds, round)
-	}
-
-	common.Respond(w, r, timestampToRoundResp{
-		Rounds: rounds,
-	}, nil)
-	return
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms
