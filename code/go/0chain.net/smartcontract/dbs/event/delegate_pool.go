@@ -2,7 +2,6 @@ package event
 
 import (
 	"fmt"
-
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -15,10 +14,10 @@ import (
 type DelegatePool struct {
 	gorm.Model
 
-	PoolID       string `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
-	ProviderType int    `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
-	ProviderID   string `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
-	DelegateID   string `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id;index:idx_dp_total_staked,priority:1"` //todo think of changing priority for idx_ddel_active
+	PoolID       string          `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
+	ProviderType spenum.Provider `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
+	ProviderID   string          `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
+	DelegateID   string          `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id;index:idx_dp_total_staked,priority:1"` //todo think of changing priority for idx_ddel_active
 
 	Balance      currency.Coin `json:"balance"`
 	Reward       currency.Coin `json:"reward"`       // unclaimed reward
@@ -62,7 +61,7 @@ func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
 	return res, err
 }
 
-func (edb *EventDb) GetUserDelegatePools(userId string, pType int) ([]DelegatePool, error) {
+func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider) ([]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
@@ -97,10 +96,10 @@ func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 }
 
 func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
-	return newEventsMerger[DelegatePool](TagAddOrOverwriteDelegatePool, withUniqueEventOverwrite())
+	return newEventsMerger[DelegatePool](TagAddDelegatePool, withUniqueEventOverwrite())
 }
 
-func (edb *EventDb) addOrOverwriteDelegatePools(dps []DelegatePool) error {
+func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
 		UpdateAll: true,

@@ -16,7 +16,7 @@ func newDelegatePoolUpdate(poolID, pId string, pType spenum.Provider) *DelegateP
 	var spu DelegatePoolUpdate
 	spu.PoolId = poolID
 	spu.ProviderId = pId
-	spu.ProviderType = int(pType)
+	spu.ProviderType = pType
 	spu.Updates = make(map[string]interface{})
 	return &spu
 }
@@ -29,7 +29,7 @@ func (dp DelegatePool) emitNew(
 	data := &event.DelegatePool{
 		Balance:      dp.Balance,
 		PoolID:       poolId,
-		ProviderType: int(providerType),
+		ProviderType: providerType,
 		ProviderID:   providerId,
 		DelegateID:   dp.DelegateID,
 
@@ -39,8 +39,8 @@ func (dp DelegatePool) emitNew(
 
 	balances.EmitEvent(
 		event.TypeStats,
-		event.TagAddOrOverwriteDelegatePool,
-		fmt.Sprintf("%d:%s:%s", providerType, providerId, poolId),
+		event.TagAddDelegatePool,
+		fmt.Sprintf("%s:%s:%s", providerType, providerId, poolId),
 		data,
 	)
 }

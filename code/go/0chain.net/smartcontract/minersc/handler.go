@@ -909,13 +909,13 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Miner))
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, spenum.Miner)
 	if err != nil {
 		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
 		return
 	}
 
-	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Sharder))
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, spenum.Sharder)
 	if err != nil {
 		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
 		return
