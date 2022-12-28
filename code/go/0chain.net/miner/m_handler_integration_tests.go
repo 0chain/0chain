@@ -92,7 +92,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 
 	cfg := crpc.Client().State().CollectVerificationTicketsWhenMissedVRF
 
-	if cfg != nil && cfg.Miner == node.Self.ID && int64(cfg.Round) == not.Round {
+	if cfg != nil && cfg.Miner == node.Self.ID && int64(cfg.Round) >= not.Round {
 		logging.Logger.Debug("Ignoring notarization receipt")
 		return nil, nil
 	}
