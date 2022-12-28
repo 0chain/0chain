@@ -12,7 +12,7 @@ sets:
   - name: "Sharder"
     tests:
       - "Send bad FB to miners when all miners are down and then they are brought up"
-      - "Send bad MB to miners when all miners are down and then they are brought up"
+      # - "Send bad MB to miners when all miners are down and then they are brought up"
 
 #
 # test cases
