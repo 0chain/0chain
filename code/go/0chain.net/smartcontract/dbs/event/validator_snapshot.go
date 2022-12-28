@@ -39,7 +39,6 @@ func (v *ValidatorSnapshot) SetServiceCharge(value float64) {
 	v.ServiceCharge = value
 }
 
-// nolint
 func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]ValidatorSnapshot, error) {
 	var snapshots []ValidatorSnapshot
 	result := edb.Store.Get().
@@ -62,7 +61,6 @@ func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]Valid
 	return mapSnapshots, result.Error
 }
 
-// nolint
 func (edb *EventDb) addValidatorSnapshot(validators []Validator) error {
 	var snapshots []ValidatorSnapshot
 	for _, validator := range validators {

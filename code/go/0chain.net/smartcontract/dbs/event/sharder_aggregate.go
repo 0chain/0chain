@@ -64,7 +64,6 @@ func (edb *EventDb) ReplicateSharderAggregate(p common.Pagination) ([]SharderAgg
 	return snapshots, nil
 }
 
-// nolint
 func (edb *EventDb) updateSharderAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	count, err := edb.GetSharderCount()
 	if err != nil {
@@ -87,7 +86,6 @@ func (edb *EventDb) updateSharderAggregate(round, pageAmount int64, gs *globalSn
 
 }
 
-// nolint
 func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, offset int64) {
 
 	var ids []string

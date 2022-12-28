@@ -63,7 +63,6 @@ func (edb *EventDb) ReplicateValidatorAggregate(p common.Pagination) ([]Validato
 	return snapshots, nil
 }
 
-// nolint
 func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	count, err := edb.GetValidatorCount()
 	if err != nil {
@@ -85,7 +84,6 @@ func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *global
 	}
 }
 
-// nolint
 func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit, offset int64) {
 
 	var ids []string

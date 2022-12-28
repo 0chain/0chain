@@ -90,7 +90,7 @@ type globalSnapshot struct {
 	Snapshot
 	totalWritePricePeriod currency.Coin
 	blobberCount          int
-	// nolint
+
 	totalTxnFees currency.Coin
 }
 

@@ -64,7 +64,6 @@ func (edb *EventDb) ReplicateMinerAggregate(p common.Pagination) ([]MinerAggrega
 	return snapshots, nil
 }
 
-// nolint
 func (edb *EventDb) updateMinerAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	count, err := edb.GetMinerCount()
 	if err != nil {
@@ -87,7 +86,6 @@ func (edb *EventDb) updateMinerAggregate(round, pageAmount int64, gs *globalSnap
 
 }
 
-// nolint
 func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, offset int64) {
 
 	var ids []string

@@ -64,7 +64,6 @@ func (edb *EventDb) ReplicateAuthorizerAggregate(p common.Pagination) ([]Authori
 	return snapshots, nil
 }
 
-// nolint
 func (edb *EventDb) updateAuthorizerAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	count, err := edb.GetAuthorizerCount()
 	if err != nil {
@@ -86,7 +85,6 @@ func (edb *EventDb) updateAuthorizerAggregate(round, pageAmount int64, gs *globa
 	}
 }
 
-// nolint
 func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limit, offset int64) {
 
 	var ids []string
