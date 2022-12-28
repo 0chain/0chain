@@ -177,7 +177,7 @@ number_of_delegates: 10 # max number of delegate pools
 min_stake: 0.0 # tokens
 # max stake pool amount allowed by node; should not conflict with
 # SC max_stake
-max_stake: 20000.0 # tokens
+max_stake: 100.0 # tokens
 # latitude is miner/sharder latitude geolocation
 latitude: 28.644800
 # longitude is miner/sharder longitude geolocation
