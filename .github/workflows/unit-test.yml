@@ -2,7 +2,7 @@ name: Unit test & Lint
 
 on:
   push:
-    branches: [ master, staging ]
+    branches: [ master, staging, hotfix/* ]
   pull_request:
     branches: [ master, staging ]
 
