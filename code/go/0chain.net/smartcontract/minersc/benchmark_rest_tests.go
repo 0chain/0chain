@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"strconv"
+
 	benchmark "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -27,7 +29,8 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getStakePoolStat",
 				Params: map[string]string{
-					"miner_id": data.Miners[0],
+					"miner_id":      data.Miners[0],
+					"provider_type": strconv.Itoa(int(spenum.Miner)),
 				},
 				Endpoint: mrh.getStakePoolStat,
 			},

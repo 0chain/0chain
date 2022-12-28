@@ -115,7 +115,7 @@ func TestTagStakePoolReward(t *testing.T) {
 
 	var spr dbs.StakePoolReward
 	spr.ProviderId = "provider_id"
-	spr.ProviderType = int(spenum.Blobber)
+	spr.ProviderType = spenum.Blobber
 	spr.Reward = 17
 	spr.DelegateRewards = map[string]currency.Coin{
 		"pool_id_1": 15,

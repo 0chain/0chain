@@ -351,7 +351,8 @@ func BenchmarkTests(
 				CreationDate: creationTime,
 			},
 			input: (&deletePool{
-				ProviderID: data.Miners[0],
+				ProviderType: spenum.Miner,
+				ProviderID:   data.Miners[0],
 			}).Encode(),
 		},
 		{
