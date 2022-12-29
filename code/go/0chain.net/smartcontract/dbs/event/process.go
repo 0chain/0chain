@@ -9,13 +9,13 @@ import (
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"go.uber.org/zap"
 
 	"github.com/0chain/common/core/logging"
 )
 
-const HealthCheckPeriod = uint64(5 * 60) // TODO: Move to config files
 var ErrInvalidEventData = errors.New("invalid event data")
 
 func (edb *EventDb) ProcessEvents(
@@ -365,15 +365,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		for _, b := range *blobbers {
-			prev, err := edb.GetBlobber(b.ID)
-			if err == nil {
-				diff := b.LastHealthCheck - prev.LastHealthCheck
-				if  uint64(diff) < HealthCheckPeriod + (60) {
-					b.Uptime += uint64(diff) 
-				}
-			}
-		}
 		return edb.updateBlobbersAllocatedAndHealth(*blobbers)
 	case TagUpdateBlobberTotalStake:
 		bs, ok := fromEvent[[]Blobber](event.Data)
@@ -673,6 +664,21 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.addOrUpdateChallengePools(*cps)
 	case TagCollectProviderReward:
 		return edb.collectRewards(event.Index)
+	case TagUpdateProvider:
+		updates, ok := fromEvent[dbs.DbUpdateProvider](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvider(*updates)
+	case TagProviderHealthCheck:
+		provider, ok := fromEvent[dbs.HealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		if provider.ProviderType == spenum.Validator {
+			return errors.New("validator health checks not implemented yet")
+		}
+		return edb.healthCheck(*provider)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
