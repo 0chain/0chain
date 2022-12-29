@@ -454,7 +454,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 			expect: expect{
 				poolRewards: map[string]dbs.StakePoolReward{
 					"b_1": {
-						StakePoolId: dbs.StakePoolId{ProviderId: "b_1"},
+						Provider: dbs.Provider{ProviderId: "b_1"},
 						Reward:      100,
 						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
@@ -494,7 +494,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 			expect: expect{
 				poolRewards: map[string]dbs.StakePoolReward{
 					"b_1": {
-						StakePoolId: dbs.StakePoolId{ProviderId: "b_1"},
+						Provider: dbs.Provider{ProviderId: "b_1"},
 						Reward:      100,
 						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
@@ -505,7 +505,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 						},
 					},
 					"b_2": {
-						StakePoolId: dbs.StakePoolId{ProviderId: "b_2"},
+						Provider: dbs.Provider{ProviderId: "b_2"},
 						Reward:      200,
 						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
@@ -545,7 +545,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 			expect: expect{
 				poolRewards: map[string]dbs.StakePoolReward{
 					"b_1": {
-						StakePoolId: dbs.StakePoolId{ProviderId: "b_1"},
+						Provider: dbs.Provider{ProviderId: "b_1"},
 						Reward:      300,
 						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 20,
@@ -605,7 +605,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 			expect: expect{
 				poolRewards: map[string]dbs.StakePoolReward{
 					"b_1": {
-						StakePoolId: dbs.StakePoolId{ProviderId: "b_1"},
+						Provider: dbs.Provider{ProviderId: "b_1"},
 						Reward:      200,
 						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 20,
@@ -616,7 +616,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 						},
 					},
 					"b_2": {
-						StakePoolId: dbs.StakePoolId{ProviderId: "b_2"},
+						Provider: dbs.Provider{ProviderId: "b_2"},
 						Reward:      100,
 						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
@@ -627,7 +627,7 @@ func TestMergeStakePoolRewardsEvents(t *testing.T) {
 						},
 					},
 					"b_3": {
-						StakePoolId: dbs.StakePoolId{ProviderId: "b_3"},
+						Provider: dbs.Provider{ProviderId: "b_3"},
 						Reward:      100,
 						DelegateRewards: map[string]currency.Coin{
 							"bp_1": 10,
@@ -682,7 +682,7 @@ func makeStakePoolRewardEvent(id string, reward currency.Coin,
 		Tag:   TagStakePoolReward,
 		Index: id,
 		Data: dbs.StakePoolReward{
-			StakePoolId: dbs.StakePoolId{
+			Provider: dbs.Provider{
 				ProviderId: id,
 			},
 			Reward:            reward,
