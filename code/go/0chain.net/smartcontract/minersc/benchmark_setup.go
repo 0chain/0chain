@@ -154,7 +154,7 @@ func AddMockNodes(
 			for id, pool := range newNode.Pools {
 				dps = append(dps, event.DelegatePool{
 					PoolID:       id,
-					ProviderType: int(nodeType),
+					ProviderType: nodeType,
 					ProviderID:   newNode.ID,
 					DelegateID:   pool.DelegateID,
 					Balance:      pool.Balance,

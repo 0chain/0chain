@@ -61,7 +61,7 @@ type DelegatePoolUpdate struct {
 	Updates map[string]interface{} `json:"updates"`
 }
 
-func NewDelegatePoolUpdate(pool, provider string, pType int) *DelegatePoolUpdate {
+func NewDelegatePoolUpdate(pool, provider string, pType spenum.Provider) *DelegatePoolUpdate {
 	var dpu DelegatePoolUpdate
 	dpu.PoolId = pool
 	dpu.ProviderId = provider
