@@ -29,7 +29,7 @@ smart_contracts:
     k_percent: .75 # of registered
     # etc
     min_stake: 0.0 # 0.01 # min stake can be set by a node (boundary for all nodes)
-    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
+    max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
     start_rounds: 50
     contribute_rounds: 50
     share_rounds: 50
