@@ -189,6 +189,9 @@ func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
 		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"allocated", "last_health_check"}),
 	}).Create(&blobbers).Error
+
+	//return edb.Store.Get().Model(&Blobber{}).Where("id = ?", blobber.BlobberID).Updates(updates.Updates).Error
+
 }
 
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
