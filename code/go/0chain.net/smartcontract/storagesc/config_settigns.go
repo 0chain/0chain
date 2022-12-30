@@ -72,6 +72,7 @@ const (
 	MaxChallengesPerGeneration
 	ValidatorsPerChallenge
 	MaxDelegates
+	HealthCheckPeriod
 
 	BlockRewardBlockReward
 	BlockRewardQualifyingStake
@@ -166,6 +167,7 @@ func initSettingName() {
 	SettingName[FreeAllocationWritePriceRangeMin] = "free_allocation_settings.write_price_range.min"
 	SettingName[FreeAllocationWritePriceRangeMax] = "free_allocation_settings.write_price_range.max"
 	SettingName[FreeAllocationReadPoolFraction] = "free_allocation_settings.read_pool_fraction"
+	SettingName[HealthCheckPeriod] = "health_check_period"
 	SettingName[ValidatorReward] = "validator_reward"
 	SettingName[BlobberSlash] = "blobber_slash"
 	SettingName[MaxBlobbersPerAllocation] = "max_blobbers_per_allocation"
@@ -253,6 +255,7 @@ func initSettings() {
 		FreeAllocationWritePriceRangeMin.String(): {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
 		FreeAllocationWritePriceRangeMax.String(): {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
 		FreeAllocationReadPoolFraction.String():   {FreeAllocationReadPoolFraction, smartcontract.Float64},
+		HealthCheckPeriod.String():                {HealthCheckPeriod, smartcontract.Duration},
 		ValidatorReward.String():                  {ValidatorReward, smartcontract.Float64},
 		BlobberSlash.String():                     {BlobberSlash, smartcontract.Float64},
 		MaxBlobbersPerAllocation.String():         {MaxBlobbersPerAllocation, smartcontract.Int},

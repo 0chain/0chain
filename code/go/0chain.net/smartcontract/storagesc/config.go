@@ -138,6 +138,10 @@ type Config struct {
 	// tokens penalized on challenge not passed.
 	BlobberSlash float64 `json:"blobber_slash"`
 
+	// HealthCheckPeriod Period between two successive Health Checks performed by providers
+	HealthCheckPeriod time.Duration `json:"health_check_period"`
+
+
 	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
 	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation"`
 
@@ -244,7 +248,9 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
 			conf.StakePool.MinLock)
 	}
-
+	if conf.HealthCheckPeriod <= 0 {
+		return fmt.Errorf("non-positive health check period: %v", conf.HealthCheckPeriod)
+	}
 	if conf.FreeAllocationSettings.DataShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
 			conf.FreeAllocationSettings.DataShards)
@@ -420,6 +426,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
+	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")	
 	conf.CancellationCharge = scc.GetFloat64(pfx + "cancellation_charge")
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
