@@ -9,14 +9,23 @@ func init() {
 type Provider int
 
 const (
-	Miner Provider = iota + 1
+	Invalid Provider = iota
+	Miner
 	Sharder
 	Blobber
 	Validator
 	Authorizer
 )
 
-var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
+var providerString = []string{"invalid", "miner", "sharder", "blobber", "validator", "authorizer"}
+var Providers = map[string]Provider{
+	"invalid":    Invalid,
+	"miner":      Miner,
+	"sharder":    Sharder,
+	"blobber":    Blobber,
+	"validator":  Validator,
+	"authorizer": Authorizer,
+}
 
 func (p Provider) String() string {
 	if p < 0 || int(p) >= len(providerString) {
@@ -24,15 +33,6 @@ func (p Provider) String() string {
 	}
 
 	return providerString[p]
-}
-
-func ToProviderType(ps string) Provider {
-	for i, s := range providerString {
-		if s == ps {
-			return Provider(i)
-		}
-	}
-	return 0
 }
 
 type PoolStatus int

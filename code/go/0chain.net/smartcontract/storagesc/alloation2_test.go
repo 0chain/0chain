@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -71,11 +72,14 @@ func TestNewAllocation(t *testing.T) {
 	var goodBlobber = StorageNode{
 		Capacity:  536870912,
 		Allocated: 73,
+		Provider: &provider.Provider{
+			ProviderType: spenum.Blobber,
+			LastHealthCheck: now - blobberHealthTime,
+		},
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
-		LastHealthCheck: now - blobberHealthTime,
 	}
 	var blobbers = new(SortedBlobbers)
 	var stake = int64(scYaml.MaxStake)
@@ -134,11 +138,14 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
+		Provider: &provider.Provider{
+			ProviderType: spenum.Blobber,
+			LastHealthCheck: now - blobberHealthTime,
+		},
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
-		LastHealthCheck: now - blobberHealthTime,
 	}
 	var allocation = StorageAllocation{
 		DataShards:    1,
@@ -251,11 +258,14 @@ func TestFinalizeAllocation(t *testing.T) {
 	}
 	var blobberTemplate = StorageNode{
 		Capacity: 536870912,
+		Provider: &provider.Provider{
+			ProviderType: spenum.Blobber,
+			LastHealthCheck: now - blobberHealthTime,
+		},
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 		},
-		LastHealthCheck: now - blobberHealthTime,
 	}
 	var allocation = StorageAllocation{
 		DataShards:    5,

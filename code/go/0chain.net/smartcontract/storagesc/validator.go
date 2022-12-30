@@ -7,9 +7,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
-	commonsc "0chain.net/smartcontract/common"
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
@@ -20,6 +20,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
+	newValidator.ProviderType = spenum.Validator
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
@@ -95,8 +96,7 @@ func getValidator(
 	validatorID string,
 	balances state.CommonStateContextI,
 ) (*ValidationNode, error) {
-	validator := new(ValidationNode)
-	validator.ID = validatorID
+	validator := newValidatorNode(validatorID)
 	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
 	if err != nil {
 		return nil, err

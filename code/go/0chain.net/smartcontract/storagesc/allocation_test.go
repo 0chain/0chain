@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -72,10 +73,13 @@ func TestSelectBlobbers(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			ID:              mockBlobberId + strconv.Itoa(index),
+			Provider: 		&provider.Provider{
+				ID:              mockBlobberId + strconv.Itoa(index),
+				ProviderType: spenum.Blobber,
+				LastHealthCheck: common.Timestamp(now.Unix()),
+			},
 			BaseURL:         mockURL + strconv.Itoa(index),
 			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: common.Timestamp(now.Unix()),
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -339,14 +343,17 @@ func TestChangeBlobbers(t *testing.T) {
 			}
 
 			blobber := &StorageNode{
-				ID:       ba.BlobberID,
+				Provider: &provider.Provider{
+					ID:       ba.BlobberID,
+					ProviderType: spenum.Blobber,
+					LastHealthCheck: now,
+				},
 				Capacity: mockBlobberCapacity,
 				Terms: Terms{
 					MaxOfferDuration: mockMaxOffDuration,
 					ReadPrice:        mockReadPrice,
 					WritePrice:       mockWritePrice,
 				},
-				LastHealthCheck: now,
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 			require.NoError(t, err)
@@ -575,10 +582,13 @@ func TestExtendAllocation(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			ID:              mockBlobberId + strconv.Itoa(index),
+			Provider: &provider.Provider{
+				ID:              mockBlobberId + strconv.Itoa(index),
+				LastHealthCheck: now - blobberHealthTime + 1,
+				ProviderType: spenum.Blobber,
+			},
 			BaseURL:         mockURL + strconv.Itoa(index),
 			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: now - blobberHealthTime + 1,
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -1036,7 +1046,11 @@ func newTestAllBlobbers() (all *StorageNodes) {
 	all = new(StorageNodes)
 	all.Nodes = []*StorageNode{
 		{
-			ID:      "b1",
+			Provider: &provider.Provider{
+				ID:      "b1",
+				LastHealthCheck: 0,
+				ProviderType: spenum.Blobber,
+			},
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
 				ReadPrice:        20,
@@ -1046,10 +1060,13 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			Capacity:        25 * GB, // 20 GB
 			Allocated:       5 * GB,  //  5 GB
-			LastHealthCheck: 0,
 		},
 		{
-			ID:      "b2",
+			Provider: &provider.Provider{
+				ID:      "b2",
+				LastHealthCheck: 0,
+				ProviderType: spenum.Blobber,
+			},
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
 				ReadPrice:        25,
@@ -1059,7 +1076,6 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			Capacity:        20 * GB, // 20 GB
 			Allocated:       10 * GB, // 10 GB
-			LastHealthCheck: 0,
 		},
 	}
 	return

@@ -27,8 +27,7 @@ func getBlobber(
 	blobberID string,
 	balances cstate.CommonStateContextI,
 ) (*StorageNode, error) {
-	blobber := new(StorageNode)
-	blobber.ID = blobberID
+	blobber := newStorageNode(blobberID)
 	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
 	if err != nil {
 		return nil, err
@@ -36,7 +35,7 @@ func getBlobber(
 	return blobber, nil
 }
 
-func (_ *StorageSmartContract) getBlobber(
+func (*StorageSmartContract) getBlobber(
 	blobberID string,
 	balances cstate.CommonStateContextI,
 ) (blobber *StorageNode, err error) {
@@ -45,8 +44,7 @@ func (_ *StorageSmartContract) getBlobber(
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	balances cstate.StateContextI) (bool, error) {
-	blobber := new(StorageNode)
-	blobber.BaseURL = blobberURL
+	blobber := newStorageNode(blobberURL)
 	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 	switch err {
 	case nil:
@@ -318,32 +316,6 @@ func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
 		return b.LastHealthCheck <= (now - blobberHealthTime), nil
 	})
-}
-
-func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
-	_ []byte, balances cstate.StateContextI,
-) (string, error) {
-	var (
-		blobber *StorageNode
-		err     error
-	)
-	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't get the blobber "+t.ClientID+": "+err.Error())
-	}
-
-	blobber.LastHealthCheck = t.CreationDate
-
-	emitUpdateBlobber(blobber, balances)
-
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
-		blobber)
-	if err != nil {
-		return "", common.NewError("blobber_health_check_failed",
-			"can't Save blobber: "+err.Error())
-	}
-
-	return string(blobber.Encode()), nil
 }
 
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,

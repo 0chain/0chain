@@ -978,9 +978,10 @@ func toUPS(pool event.DelegatePool) stakepool.DelegatePoolStat {
 func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Request) {
 	providerID := r.URL.Query().Get("provider_id")
 	providerTypeString := r.URL.Query().Get("provider_type")
-	providerType, err := strconv.Atoi(providerTypeString)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
+	// providerType, err := strconv.Atoi(providerTypeString)
+	providerType, ok := spenum.Providers[providerTypeString]
+	if !ok || providerType == spenum.Invalid {
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+providerTypeString))
 		return
 	}
 
@@ -999,7 +1000,7 @@ func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, res, nil)
 }
 
-func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
+func getProviderStakePoolStats(providerType spenum.Provider, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
 	delegatePools, err := edb.GetDelegatePools(providerID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
@@ -1008,7 +1009,7 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 	spStat := &stakepool.StakePoolStat{}
 	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
 
-	switch spenum.Provider(providerType) {
+	switch providerType {
 	case spenum.Miner:
 		miner, err := edb.GetMiner(providerID)
 		if err != nil {

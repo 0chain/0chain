@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -247,7 +248,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
-			ID:        blob[i],
+			Provider: &provider.Provider{
+				ID:        blob[i],
+				LastHealthCheck: now - blobberHealthTime + 1,
+				ProviderType: spenum.Blobber,
+			},
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
@@ -255,7 +260,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 				MinLockDemand:    mockMinLock,
 			},
-			LastHealthCheck: now - blobberHealthTime + 1,
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}
@@ -331,7 +335,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				"InsertTrieNode", stakePoolKey(spenum.Blobber, blobber.ID), mock.Anything,
 			).Return("", nil).Once()
 			balances.On(
-				"GetTrieNode", "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"+blobber.ID,
+				"GetTrieNode", provider.GetKey(blobber.ID),
 				mock.MatchedBy(func(a *StorageNode) bool {
 					a.Terms.MaxOfferDuration = 24 * 365 * time.Hour * 2
 					a.Capacity = 100000000000
@@ -613,14 +617,17 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
-			ID:        strconv.Itoa(i),
+			Provider: &provider.Provider{
+				ID:        strconv.Itoa(i),
+				ProviderType: spenum.Blobber,
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
 				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
-			LastHealthCheck: now - blobberHealthTime + 1,
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}

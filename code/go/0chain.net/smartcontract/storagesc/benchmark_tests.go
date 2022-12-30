@@ -10,6 +10,7 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	sc "0chain.net/smartcontract"
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -398,7 +399,10 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
-					ID:                encryption.Hash("my_new_blobber"),
+					Provider: &provider.Provider{
+						ID:                encryption.Hash("my_new_blobber"),
+						ProviderType: 	   spenum.Blobber,
+					},
 					BaseURL:           "my_new_blobber.com",
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
@@ -420,7 +424,10 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					ID:                encryption.Hash("my_new_validator"),
+					Provider: &provider.Provider{
+						ID:                encryption.Hash("my_new_validator"),
+						ProviderType: spenum.Validator,
+					},		
 					BaseURL:           "my_new_validator.com",
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_validator")),
 				})
@@ -453,7 +460,10 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
-					ID:                getMockBlobberId(0),
+					Provider: &provider.Provider{
+						ID:                getMockBlobberId(0),
+						ProviderType: 	   spenum.Blobber,
+					},
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
 					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
@@ -474,7 +484,10 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					ID:                getMockValidatorId(0),
+					Provider: &provider.Provider{
+						ID:                getMockValidatorId(0),
+						ProviderType: spenum.Validator,
+					},		
 					BaseURL:           getMockValidatorUrl(0),
 					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
 				})
