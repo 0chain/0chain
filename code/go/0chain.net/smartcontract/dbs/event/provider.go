@@ -5,9 +5,13 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm"
 )
+
+// TODO: Move to a config file
+const HealthCheckPeriod = common.Timestamp(1 * time.Minute)
 
 type Provider struct {
 	ID             string `gorm:"primaryKey"`
@@ -22,6 +26,8 @@ type Provider struct {
 	UnstakeTotal   currency.Coin   `json:"unstake_total"`
 	TotalStake     currency.Coin   `json:"total_stake"`
 	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID"`
+	Downtime	   uint64		   `json:"downtime"`
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
 }
 
 func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
@@ -34,4 +40,14 @@ func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
 		p.BucketId = big.NewInt(0).Mod(intID, big.NewInt(period)).Int64()
 	}
 	return
+}
+
+func (p *Provider) HealthCheck(tx Transaction) {
+	prevHealthCheck := p.LastHealthCheck
+	curHealthCheck 	:= common.Timestamp(tx.CreationDate)
+	diff 			:= curHealthCheck - prevHealthCheck
+	if  diff > HealthCheckPeriod {
+		p.Downtime += uint64(diff)
+	}
+	p.LastHealthCheck = curHealthCheck
 }
