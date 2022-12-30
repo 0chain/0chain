@@ -705,6 +705,10 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.ProviderHealthCheck(spenum.Sharder, event.Index, event.Data)
 	case TagBlobberHealthCheck:
 		return edb.ProviderHealthCheck(spenum.Blobber, event.Index, event.Data)
+	case TagAuthorizerHealthCheck:
+		return edb.ProviderHealthCheck(spenum.Authorizer, event.Index, event.Data)
+	case TagValidatorHealthCheck:
+		return edb.ProviderHealthCheck(spenum.Validator, event.Index, event.Data)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

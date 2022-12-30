@@ -99,6 +99,8 @@ const (
 	TagMinerHealthCheck
 	TagSharderHealthCheck
 	TagBlobberHealthCheck
+	TagAuthorizerHealthCheck
+	TagValidatorHealthCheck
 	NumberOfTags
 )
 
@@ -193,6 +195,8 @@ func initTagString() {
 	TagString[TagMinerHealthCheck] = "TagMinerHealthCheck"
 	TagString[TagSharderHealthCheck] =  "TagSharderHealthCheck"
 	TagString[TagBlobberHealthCheck] =  "TagBlobberHealthCheck"
+	TagString[TagAuthorizerHealthCheck] = "TagAuthorizerHealthCheck"
+	TagString[TagValidatorHealthCheck] = "TagValidatorHealthCheck"
 	TagString[NumberOfTags] = "invalid"
 }
 
