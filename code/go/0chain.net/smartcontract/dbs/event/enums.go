@@ -98,6 +98,7 @@ const (
 	TagUniqueAddress
 	TagMinerHealthCheck
 	TagSharderHealthCheck
+	TagBlobberHealthCheck
 	NumberOfTags
 )
 
@@ -191,6 +192,7 @@ func initTagString() {
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
 	TagString[TagMinerHealthCheck] = "TagMinerHealthCheck"
 	TagString[TagSharderHealthCheck] =  "TagSharderHealthCheck"
+	TagString[TagBlobberHealthCheck] =  "TagBlobberHealthCheck"
 	TagString[NumberOfTags] = "invalid"
 }
 

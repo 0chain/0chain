@@ -334,7 +334,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 	blobber.LastHealthCheck = t.CreationDate
 
-	emitUpdateBlobber(blobber, balances)
+	emitBlobberHealthCheck(blobber, balances)
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)

@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
 
@@ -96,5 +97,14 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 		},
 		Allocated:       sn.Allocated,
 	})
+	return nil
+}
+
+func emitBlobberHealthCheck(sn *StorageNode, balances cstate.StateContextI) error {
+	data := dbs.DbHealthCheck{
+		LastHealthCheck: sn.LastHealthCheck,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)
 	return nil
 }
