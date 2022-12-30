@@ -394,7 +394,6 @@ func AddMockBlobbers(
 				Capacity:         blobber.Capacity,
 				Allocated:        blobber.Allocated,
 				ReadData:         blobber.Allocated * 2,
-				LastHealthCheck:  int64(blobber.LastHealthCheck),
 				Provider: event.Provider{
 					ID:             blobber.ID,
 					DelegateWallet: blobber.StakePoolSettings.DelegateWallet,
@@ -402,6 +401,7 @@ func AddMockBlobbers(
 					MaxStake:       blobber.StakePoolSettings.MaxStake,
 					NumDelegates:   blobber.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:  blobber.StakePoolSettings.ServiceChargeRatio,
+					LastHealthCheck:  blobber.LastHealthCheck,
 				},
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),

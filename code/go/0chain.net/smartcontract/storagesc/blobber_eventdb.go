@@ -23,8 +23,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		Capacity:        sn.Capacity,
 		Allocated:       sn.Allocated,
 		SavedData:       sn.SavedData,
-		LastHealthCheck: int64(sn.LastHealthCheck),
-
+		
 		Provider: event.Provider{
 			ID:             sn.ID,
 			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
@@ -32,6 +31,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 			MaxStake:       sn.StakePoolSettings.MaxStake,
 			NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+			LastHealthCheck: sn.LastHealthCheck,
 
 			UnstakeTotal: sp.TotalUnStake,
 			TotalStake:   staked,
@@ -61,8 +61,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		Capacity:        sn.Capacity,
 		Allocated:       sn.Allocated,
 		SavedData:       sn.SavedData,
-		LastHealthCheck: int64(sn.LastHealthCheck),
-
+		
 		Provider: event.Provider{
 			ID:             sn.ID,
 			DelegateWallet: sn.StakePoolSettings.DelegateWallet,
@@ -70,6 +69,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			MaxStake:       sn.StakePoolSettings.MaxStake,
 			NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
+			LastHealthCheck: sn.LastHealthCheck,
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,
 			Rewards: event.ProviderRewards{
@@ -90,9 +90,11 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 
 func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedHealth, sn.ID, event.Blobber{
-		Provider:        event.Provider{ID: sn.ID},
+		Provider:        event.Provider{
+			ID: sn.ID,
+			LastHealthCheck: sn.LastHealthCheck,
+		},
 		Allocated:       sn.Allocated,
-		LastHealthCheck: int64(sn.LastHealthCheck),
 	})
 	return nil
 }
