@@ -29,8 +29,8 @@ type StakePoolResponse struct {
 }
 
 type MinerNodeResponse struct {
-	*SimpleNodeResponse
-	*StakePoolResponse
+	*SimpleNodeResponse `json:"simple_miner"`
+	*StakePoolResponse  `json:"stake_pool"`
 }
 
 func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool) MinerNodeResponse {
