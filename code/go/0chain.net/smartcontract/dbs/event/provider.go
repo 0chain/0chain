@@ -16,6 +16,7 @@ import (
 
 // TODO: Move to a config file
 const HealthCheckPeriod = common.Timestamp(1 * time.Minute)
+const HealthCheckDelayLimit = common.Timestamp(10 * time.Second)
 
 var ProviderModel = map[spenum.Provider]interface{}{
 	spenum.Miner		: &Miner{},
@@ -74,7 +75,7 @@ func (edb *EventDb) ProviderHealthCheck(providerType spenum.Provider, providerId
 	diff 			:= curHealthCheck - prevHealthCheck
 	updates 		:= &Provider{}
 	
-	if  diff > HealthCheckPeriod {
+	if  diff > (HealthCheckPeriod + HealthCheckDelayLimit) {
 		updates.Downtime = providerInstance.Downtime + uint64(diff)
 	}
 	updates.LastHealthCheck = curHealthCheck
