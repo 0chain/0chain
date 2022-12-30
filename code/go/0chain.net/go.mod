@@ -44,7 +44,7 @@ require (
 
 require (
 	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
-	moul.io/zapgorm2 v1.1.3
+	moul.io/zapgorm2 v1.2.0
 )
 
 require (
