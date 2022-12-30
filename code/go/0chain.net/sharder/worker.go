@@ -436,7 +436,8 @@ func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, hash string,
 }
 
 func (sc *Chain) SharderHealthCheck(ctx context.Context) {
-	const HEALTH_CHECK_TIMER = 60 * 5 // 5 Minute
+	// TODO: Move to a config file
+	const HEALTH_CHECK_TIMER = 1 * time.Minute
 	for {
 		select {
 		case <-ctx.Done():
@@ -457,6 +458,6 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 			}
 
 		}
-		time.Sleep(HEALTH_CHECK_TIMER * time.Second)
+		time.Sleep(HEALTH_CHECK_TIMER)
 	}
 }

@@ -90,8 +90,8 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 				Rewards:      sn.Reward,
 				TotalRewards: sn.Reward,
 			},
+			LastHealthCheck: sn.LastHealthCheck,
 		},
-		LastHealthCheck: sn.LastHealthCheck,
 
 		Active:    sn.Status == node.NodeStatusActive,
 		Longitude: sn.Geolocation.Longitude,
@@ -109,6 +109,15 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 
 func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) error {
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sn.ID, sharderNodeToSharderTable(sn))
+	return nil
+}
+
+func emitSharderHealthCheck(sn *MinerNode, balances cstate.StateContextI) error {
+	data := dbs.DbHealthCheck{
+		LastHealthCheck: sn.LastHealthCheck,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)
 	return nil
 }
 

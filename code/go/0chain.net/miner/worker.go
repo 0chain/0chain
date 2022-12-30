@@ -218,7 +218,8 @@ func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 }
 
 func (mc *Chain) MinerHealthCheck(ctx context.Context) {
-	const HEALTH_CHECK_TIMER = 60 * 5 // 5 Minute
+	// TODO: Move that to a unified config file.
+	const HEALTH_CHECK_TIMER = 1 * time.Minute // 5 Minute
 	for {
 		select {
 		case <-ctx.Done():
@@ -242,6 +243,6 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 				}
 			}()
 		}
-		time.Sleep(HEALTH_CHECK_TIMER * time.Second)
+		time.Sleep(HEALTH_CHECK_TIMER)
 	}
 }

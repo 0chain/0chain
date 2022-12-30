@@ -53,6 +53,8 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 			"can't save miner: "+err.Error())
 	}
 
+	emitMinerHealthCheck(existingMiner, balances)
+
 	return string(existingMiner.Encode()), nil
 }
 
@@ -99,6 +101,8 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 		return "", common.NewError("sharder_health_check_failed",
 			"can't save sharder: "+err.Error())
 	}
+
+	emitMinerHealthCheck(existingSharder, balances)
 
 	return string(existingSharder.Encode()), nil
 }
