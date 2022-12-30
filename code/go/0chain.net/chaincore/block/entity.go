@@ -1128,7 +1128,7 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 	switch b.GetStateStatus() {
 	case StateSynched, StateSuccessful:
 		if err := b.ClientState.SaveChanges(ctx, c.GetStateDB(), false); err != nil {
-			logging.Logger.Info("save state",
+			logging.Logger.Error("save state",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.Int("block_size", len(b.Txns)),
@@ -1142,18 +1142,18 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 		return common.NewError("save_state_changes", "invalid state status")
 	}
 
+	StateSaveTimer.UpdateSince(ts)
 	var (
 		p95      = StateSaveTimer.Percentile(.95)
 		duration = time.Since(ts)
 	)
 
-	StateSaveTimer.UpdateSince(ts)
 	if changeCount > 0 {
 		StateChangeSizeMetric.Update(int64(changeCount))
 	}
 
 	if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-		logging.Logger.Info("save state - slow",
+		logging.Logger.Debug("save state - slow",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
@@ -1162,7 +1162,7 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 			zap.Duration("duration", duration),
 			zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	} else {
-		logging.Logger.Debug("save state",
+		logging.Logger.Info("save state",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
