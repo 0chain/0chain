@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -289,7 +290,7 @@ func (c *Chain) MergeVerificationTickets(b *block.Block, vts []*block.Verificati
 	}
 }
 
-func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
+func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) error {
 	logging.Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
@@ -299,6 +300,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		logging.Logger.Warn("finalize block - round rank is invalid or greater than num_generators",
 			zap.Int("round_rank", fb.RoundRank),
 			zap.Int("num_generators", numGenerators))
+		return errors.New("round rank is invalid or greater than num_generators")
 	} else {
 		bNode := c.GetMiners(fb.Round).GetNode(fb.MinerID)
 		if bNode != nil {
@@ -316,24 +318,26 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			logging.Logger.Error("generator is not registered",
 				zap.Int64("round", fb.Round),
 				zap.String("miner", fb.MinerID))
+			return fmt.Errorf("generator: %s is not registered", fb.MinerID)
 		}
 	}
 	fr := c.GetRound(fb.Round)
+	if fr == nil {
+		return fmt.Errorf("finalize round: %d does not exist", fb.Round)
+	}
 
 	logging.Logger.Info("finalize block -- round", zap.Any("round", fr), zap.String("block", fb.Hash))
-
-	if fr != nil {
-		generators := c.GetGenerators(fr)
-		for idx, g := range generators {
-			ms := g.ProtocolStats.(*MinerStats)
-			if len(generators) > len(ms.GenerationCountByRank) {
-				newRankStat := make([]int64, len(generators))
-				copy(newRankStat, ms.GenerationCountByRank)
-				ms.GenerationCountByRank = newRankStat
-			}
-			ms.GenerationCountByRank[idx]++
+	generators := c.GetGenerators(fr)
+	for idx, g := range generators {
+		ms := g.ProtocolStats.(*MinerStats)
+		if len(generators) > len(ms.GenerationCountByRank) {
+			newRankStat := make([]int64, len(generators))
+			copy(newRankStat, ms.GenerationCountByRank)
+			ms.GenerationCountByRank = newRankStat
 		}
+		ms.GenerationCountByRank[idx]++
 	}
+
 	if time.Since(ssFTs) < 20*time.Second {
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}
@@ -341,25 +345,27 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 	}
 
-	ssFTs = time.Now()
-	c.UpdateChainInfo(fb)
-	wg := newWaitGroupSync()
-
-	deletedNode := fb.ClientState.GetDeletes()
-
 	if err := c.SaveChanges(ctx, fb); err != nil {
-		logging.Logger.Panic("finalize block save changes failed",
+		logging.Logger.Error("finalize block save changes failed",
 			zap.Error(err),
 			zap.Int64("round", fb.Round),
 			zap.String("hash", fb.Hash))
-		return
+		return err
 	}
+
+	ssFTs = time.Now()
+	c.UpdateChainInfo(fb)
+
+	var (
+		wg          = newWaitGroupSync()
+		deletedNode = fb.ClientState.GetDeletes()
+	)
 
 	c.rebaseState(fb)
 	wg.Run("finalize block - record dead nodes", fb.Round, func() {
 		err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 		if err != nil {
-			logging.Logger.Panic("finalize block - record dead nodes failed",
+			logging.Logger.Warn("finalize block - record dead nodes failed",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),
 				zap.Error(err))
@@ -401,9 +407,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.Int64("round", fb.Round),
 				zap.Int64("mb_starting_round", fb.StartingRound),
 				zap.Error(err))
-		} else {
-			c.SetLatestFinalizedMagicBlock(fb)
+			return err
 		}
+		c.SetLatestFinalizedMagicBlock(fb)
 	}
 
 	if config.Development() {
@@ -450,9 +456,11 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	})
 
 	wg.Wait()
+
 	logging.Logger.Debug("finalized block - done",
 		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 		zap.Any("duration", time.Since(ts)))
+	return nil
 }
 
 type waitGroupSync struct {

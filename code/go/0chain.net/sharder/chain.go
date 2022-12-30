@@ -206,8 +206,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	}
 
 	sc.SetRandomSeed(bl.r, bl.r.GetRandomSeed())
-	bl.r.Block = bl.lfb
-	bl.r.BlockHash = bl.lfb.Hash
+	bl.r.Finalize(bl.lfb)
 
 	// set LFB and LFMB of the Chain, add the block to internal Chain's map
 	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb, bl.r)
