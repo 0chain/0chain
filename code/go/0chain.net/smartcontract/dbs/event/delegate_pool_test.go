@@ -41,7 +41,7 @@ func TestDelegatePoolsEvent(t *testing.T) {
 		Balance: 29,
 	}
 
-	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp})
+	err = eventDb.addDelegatePools([]DelegatePool{dp})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
 	dps, err := eventDb.GetDelegatePools("provider_id")
@@ -105,9 +105,9 @@ func TestTagStakePoolReward(t *testing.T) {
 		Balance: 5,
 	}
 
-	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp})
+	err = eventDb.addDelegatePools([]DelegatePool{dp})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
-	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp2})
+	err = eventDb.addDelegatePools([]DelegatePool{dp2})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
 	var before int64
@@ -115,7 +115,7 @@ func TestTagStakePoolReward(t *testing.T) {
 
 	var spr dbs.StakePoolReward
 	spr.ProviderId = "provider_id"
-	spr.ProviderType = int(spenum.Blobber)
+	spr.ProviderType = spenum.Blobber
 	spr.Reward = 17
 	spr.DelegateRewards = map[string]currency.Coin{
 		"pool_id_1": 15,

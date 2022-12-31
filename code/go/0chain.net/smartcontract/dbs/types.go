@@ -18,8 +18,8 @@ func NewDbUpdates(id string) *DbUpdates {
 }
 
 type StakePoolId struct {
-	ProviderId   string `json:"provider_id"`
-	ProviderType int    `json:"provider_type"`
+	ProviderId   string          `json:"provider_id"`
+	ProviderType spenum.Provider `json:"provider_type"`
 }
 
 type StakePoolReward struct {
@@ -42,7 +42,7 @@ type DelegatePoolUpdate struct {
 	Updates map[string]interface{} `json:"updates"`
 }
 
-func NewDelegatePoolUpdate(pool, provider string, pType int) *DelegatePoolUpdate {
+func NewDelegatePoolUpdate(pool, provider string, pType spenum.Provider) *DelegatePoolUpdate {
 	var dpu DelegatePoolUpdate
 	dpu.PoolId = pool
 	dpu.ProviderId = provider

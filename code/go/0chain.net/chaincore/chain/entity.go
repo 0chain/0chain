@@ -651,7 +651,7 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 
 		edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
 			PoolID:       v.ClientID,
-			ProviderType: int(providerType),
+			ProviderType: providerType,
 			ProviderID:   v.ProviderID,
 			DelegateID:   v.ClientID,
 			Balance:      v.Tokens,
@@ -848,7 +848,7 @@ func (c *Chain) GetBlockClone(ctx context.Context, hash string) (*block.Block, e
 	return b.Clone(), nil
 }
 
-func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error) {
+func (c *Chain) getBlock(_ context.Context, hash string) (*block.Block, error) {
 	if b, ok := c.blocks[datastore.ToKey(hash)]; ok {
 		return b, nil
 	}
@@ -856,7 +856,7 @@ func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error)
 }
 
 /*DeleteBlock - delete a block from the cache */
-func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
+func (c *Chain) DeleteBlock(_ context.Context, b *block.Block) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	// if _, ok := c.blocks[b.Hash]; !ok {
@@ -921,7 +921,7 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 }
 
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
-func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *block.Block) bool {
+func (c *Chain) ValidateMagicBlock(_ context.Context, mr *round.Round, b *block.Block) bool {
 	mb := c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
 	if mb == nil {
 		logging.Logger.Error("can't get lfmb`")
@@ -1108,7 +1108,7 @@ func (c *Chain) GetRoundClone(roundNumber int64) round.RoundI {
 }
 
 /*DeleteRound - delete a round and associated block data */
-func (c *Chain) deleteRound(ctx context.Context, r round.RoundI) {
+func (c *Chain) deleteRound(_ context.Context, r round.RoundI) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	delete(c.rounds, r.GetRoundNumber())

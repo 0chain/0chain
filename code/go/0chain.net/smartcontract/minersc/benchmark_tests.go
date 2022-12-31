@@ -102,7 +102,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        encryption.Hash("my new miner"),
+					ID:        encryption.Hash("magic_block_miner_1"),
 					PublicKey: "miner's public key",
 					N2NHost:   "new n2n_host",
 					Host:      "new host",
@@ -351,7 +351,8 @@ func BenchmarkTests(
 				CreationDate: creationTime,
 			},
 			input: (&deletePool{
-				ProviderID: data.Miners[0],
+				ProviderType: spenum.Miner,
+				ProviderID:   data.Miners[0],
 			}).Encode(),
 		},
 		{
