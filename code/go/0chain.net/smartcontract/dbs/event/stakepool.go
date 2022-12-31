@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -21,7 +20,9 @@ type providerRewardsDelegates struct {
 	desc          [][]string
 }
 
-func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
+func aggregateProviderRewards(
+	spus []dbs.StakePoolReward, round int64,
+) (*providerRewardsDelegates, error) {
 	var (
 		rewards       = make([]ProviderRewards, 0, len(spus))
 		delegatePools = make([]DelegatePool, 0, len(spus))
@@ -31,21 +32,23 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	for i, sp := range spus {
 		if sp.Reward != 0 {
 			rewards = append(rewards, ProviderRewards{
-				ProviderID:   sp.ProviderId,
-				Rewards:      sp.Reward,
-				TotalRewards: sp.Reward,
+				ProviderID:       sp.ProviderId,
+				Rewards:          sp.Reward,
+				TotalRewards:     sp.Reward,
+				RoundLastUpdated: round,
 			})
 		}
 
 		// merge delegate rewards and penalties
 		for k, v := range spus[i].DelegateRewards {
 			delegatePools = append(delegatePools, DelegatePool{
-				ProviderID:   sp.ProviderId,
-				ProviderType: sp.ProviderType,
-				PoolID:       k,
-				Reward:       currency.Coin(v),
-				TotalReward:  currency.Coin(v),
-				TotalPenalty: currency.Coin(spus[i].DelegatePenalties[k]),
+				ProviderID:       sp.ProviderId,
+				ProviderType:     sp.ProviderType,
+				PoolID:           k,
+				Reward:           v,
+				TotalReward:      v,
+				TotalPenalty:     spus[i].DelegatePenalties[k],
+				RoundLastUpdated: round,
 			})
 		}
 
@@ -53,10 +56,11 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 		for k, v := range spus[i].DelegatePenalties {
 			if _, ok := sp.DelegateRewards[k]; !ok {
 				delegatePools = append(delegatePools, DelegatePool{
-					ProviderID:   sp.ProviderId,
-					ProviderType: sp.ProviderType,
-					PoolID:       k,
-					TotalPenalty: currency.Coin(v),
+					ProviderID:       sp.ProviderId,
+					ProviderType:     sp.ProviderType,
+					PoolID:           k,
+					TotalPenalty:     v,
+					RoundLastUpdated: round,
 				})
 			}
 		}
@@ -111,7 +115,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	ts := time.Now()
-	rewards, err := aggregateProviderRewards(spus)
+	rewards, err := aggregateProviderRewards(spus, round)
 	if err != nil {
 		return err
 	}
@@ -161,6 +165,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
+/*
 func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T) error { //nolint:unused
 	vs := map[string]interface{}{
 		"rewards":      gorm.Expr(fmt.Sprintf("%s.rewards + excluded.rewards", tableName)),
@@ -172,7 +177,7 @@ func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T)
 		DoUpdates: clause.Assignments(vs),
 	}).Create(&providers).Error
 }
-
+*/
 func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
 	vs := map[string]interface{}{
 		"rewards":       gorm.Expr("provider_rewards.rewards + excluded.rewards"),

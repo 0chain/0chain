@@ -4,6 +4,8 @@ import (
 	common2 "0chain.net/smartcontract/common"
 	"fmt"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -272,6 +274,7 @@ func updateLastUpdateRound() eventMergeMiddleware {
 			}
 			updates.Updates["round_last_updated"] = events[i].BlockNumber
 			events[i].Data = updates
+			logging.Logger.Info("piers updateLastUpdateRound", zap.Any("updates", updates))
 		}
 		return events, nil
 	}
