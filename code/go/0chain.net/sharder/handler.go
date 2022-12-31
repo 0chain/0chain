@@ -21,6 +21,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
 		"/v1/block/get":                    common.ToJSONResponse(BlockHandler),
 		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
+		"/v1/bs":                           common.ToJSONResponse(GetBlockSummaryHandler),
 		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
 		"/v1/healthcheck":                  common.ToJSONResponse(HealthcheckHandler),
 		"/v1/chain/get/stats":              common.ToJSONResponse(ChainStatsHandler),

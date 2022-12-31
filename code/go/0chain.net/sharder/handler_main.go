@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
 	"0chain.net/core/persistencestore"
 )
 
@@ -46,4 +47,12 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (inter
 		data["latest_finalized_block"] = lfbSummary
 	}
 	return data, nil
+}
+
+func GetBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	hash := r.FormValue("hash")
+	bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
+	defer ememorystore.Close(bctx)
+	return GetSharderChain().GetBlockSummary(bctx, hash)
 }
