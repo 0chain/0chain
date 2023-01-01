@@ -5,7 +5,9 @@ import (
 	"encoding/binary"
 	"strconv"
 
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/gorocksdb"
+	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -46,6 +48,7 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 		}
 	}
 	defer data.Free()
+	logging.Logger.Debug("eStore Read", zap.Any("data", data.Data()))
 	return datastore.FromJSON(data.Data(), entity)
 }
 
