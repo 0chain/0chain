@@ -83,11 +83,13 @@ func (sc *Chain) GetBlockSummary(ctx context.Context, hash string) (*block.Block
 	blockSummary := blockSummaryEntityMetadata.Instance().(*block.BlockSummary)
 	err := blockSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), blockSummary)
 	if err != nil {
+		Logger.Error("get block summary", zap.Error(err))
 		return nil, err
 	}
 	if len(blockSummary.Hash) < 64 {
-		Logger.Error("Reading block summary - hash of block in summary is less than 64", zap.Any("block_summary", blockSummary))
+		Logger.Error("get block summary - hash of block in summary is less than 64", zap.Any("block_summary", blockSummary))
 	}
+	Logger.Debug("get block summary", zap.Any("block_summary", blockSummary))
 	return blockSummary, nil
 }
 
