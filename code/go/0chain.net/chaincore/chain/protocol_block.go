@@ -354,14 +354,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	ssFTs = time.Now()
-	c.UpdateChainInfo(fb)
 
 	var (
 		wg          = newWaitGroupSync()
 		deletedNode = fb.ClientState.GetDeletes()
 	)
 
-	c.rebaseState(fb)
 	wg.Run("finalize block - record dead nodes", fb.Round, func() {
 		err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 		if err != nil {
@@ -372,16 +370,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			return
 		}
 	})
-
-	if err := c.updateFeeStats(fb); err != nil {
-		logging.Logger.Error("finalize block - update fee stats failed",
-			zap.Int64("round", fb.Round),
-			zap.Int64("mb_starting_round", fb.StartingRound),
-			zap.Error(err))
-	}
-
-	c.SetLatestOwnFinalizedBlockRound(fb.Round)
-	c.SetLatestFinalizedBlock(fb)
 
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() {
@@ -412,28 +400,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 
-	if config.Development() {
-		ts := time.Now()
-		for _, txn := range fb.Txns {
-			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
-		}
-	}
-
 	wg.Run("finalize block - update finalized block", fb.Round, func() {
 		bsh.UpdateFinalizedBlock(ctx, fb)
 	})
-
-	fr.Finalize(fb)
-
-	c.BlockChain.Value = fb.GetSummary()
-	c.BlockChain = c.BlockChain.Next()
-
-	for pfb := fb; pfb != nil && pfb != c.LatestDeterministicBlock; pfb = pfb.PrevBlock {
-		if c.IsFinalizedDeterministically(pfb) {
-			c.SetLatestDeterministicBlock(pfb)
-			break
-		}
-	}
 
 	wg.Run("finalize block - delete dead blocks", fb.Round, func() {
 		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
@@ -456,6 +425,36 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	})
 
 	wg.Wait()
+
+	c.rebaseState(fb)
+	fr.Finalize(fb)
+	for pfb := fb; pfb != nil && pfb != c.LatestDeterministicBlock; pfb = pfb.PrevBlock {
+		if c.IsFinalizedDeterministically(pfb) {
+			c.SetLatestDeterministicBlock(pfb)
+			break
+		}
+	}
+
+	if err := c.updateFeeStats(fb); err != nil {
+		logging.Logger.Error("finalize block - update fee stats failed",
+			zap.Int64("round", fb.Round),
+			zap.Int64("mb_starting_round", fb.StartingRound),
+			zap.Error(err))
+	}
+
+	c.UpdateChainInfo(fb)
+	c.BlockChain.Value = fb.GetSummary()
+	c.BlockChain = c.BlockChain.Next()
+
+	c.SetLatestOwnFinalizedBlockRound(fb.Round)
+	c.SetLatestFinalizedBlock(fb)
+
+	if config.Development() {
+		ts := time.Now()
+		for _, txn := range fb.Txns {
+			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
+		}
+	}
 
 	logging.Logger.Debug("finalized block - done",
 		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
