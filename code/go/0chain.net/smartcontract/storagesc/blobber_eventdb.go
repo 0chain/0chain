@@ -105,6 +105,6 @@ func emitBlobberHealthCheck(sn *StorageNode, balances cstate.StateContextI) erro
 		LastHealthCheck: sn.LastHealthCheck,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagBlobberHealthCheck, sn.ID, data)
 	return nil
 }
