@@ -89,6 +89,11 @@ func validateConfig() {
 			viper.GetInt(bk.NumClients), multisigsc.MaxSigners))
 	}
 
+	if viper.GetInt(bk.NumBlobberDelegates) > viper.GetInt(bk.NumActiveClients) {
+		log.Fatal(fmt.Errorf("blolbber delegates %d cannot exceed clients %d",
+			viper.GetInt(bk.NumBlobberDelegates), viper.GetInt(bk.NumActiveClients)))
+	}
+
 	if viper.GetInt(bk.NumClients) > viper.GetInt(bk.NumAllocations) {
 		log.Fatal(fmt.Errorf("number of clients %d must not exceed the number of allocations %d",
 			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumAllocations)))
