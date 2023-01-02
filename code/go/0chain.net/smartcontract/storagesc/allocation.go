@@ -1621,29 +1621,33 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get related challenge pool: "+err.Error())
 	}
 
+	block := balances.GetBlock()
 	debugAllocID := "2548c04e19d9003ad96e269e3952b103476575302b486d979c3afd5ed26d5ec3"
 	debugAlloc, err := sc.getAllocation(debugAllocID, balances)
 	if err != nil {
-		logging.Logger.Error("debug_get_alloc", zap.Error(err))
+		logging.Logger.Error("debug_get_alloc", zap.Error(err), zap.Int64("round", block.Round), zap.String("block", block.Hash))
 	} else {
-		b := balances.GetBlock()
 		dba, ok := debugAlloc.BlobberAllocsMap["b790b0410d10585d7bf55903a2ed3cc7a06d00871f053554db909b42e6c5c005"]
 		if !ok {
-			logging.Logger.Error("debug_get_alloc - could not find b790b0410d10585d7bf55903a2ed3cc7a")
+			logging.Logger.Error("debug_get_alloc - could not find b790b0410d10585d7bf55903a2ed3cc7a",
+				zap.Int64("round", block.Round),
+				zap.String("block", block.Hash))
 		} else {
 			logging.Logger.Debug("debug_get_alloc",
 				zap.Any("txn", t),
-				zap.Int64("round", b.Round),
-				zap.String("block", b.Hash),
+				zap.Int64("round", block.Round),
+				zap.String("block", block.Hash),
 				zap.Any("details", dba))
 		}
 	}
 
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
-		logging.Logger.Debug("debug_get_alloc - blobber id", zap.String("ID", d.BlobberID))
 		if d.BlobberID == "b790b0410d10585d7bf55903a2ed3cc7a06d00871f053554db909b42e6c5c005" {
-			logging.Logger.Debug("debug_get_alloc - see blobber details", zap.Any("blob alloc", d))
+			logging.Logger.Debug("debug_get_alloc - see blobber details",
+				zap.Any("part loc", d.BlobberAllocationsPartitionLoc),
+				zap.Int64("round", block.Round),
+				zap.String("block", block.Hash))
 		}
 		var b = blobbers[i]
 		if b.ID != d.BlobberID {
@@ -1682,6 +1686,13 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
 
+		if d.BlobberID == "b790b0410d10585d7bf55903a2ed3cc7a06d00871f053554db909b42e6c5c005" {
+			logging.Logger.Debug("debug_get_alloc - after stake pool saving - see blobber details",
+				zap.Any("part loc", d.BlobberAllocationsPartitionLoc),
+				zap.Int64("round", block.Round),
+				zap.String("block", block.Hash))
+		}
+
 		staked, err := sps[i].stake()
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
@@ -1710,6 +1721,12 @@ func (sc *StorageSmartContract) finishAllocation(
 		// update the blobber in all (replace with existing one)
 		emitUpdateBlobber(b, balances)
 
+		if d.BlobberID == "b790b0410d10585d7bf55903a2ed3cc7a06d00871f053554db909b42e6c5c005" {
+			logging.Logger.Debug("debug_get_alloc - before remove see blobber details",
+				zap.Any("part loc", d.BlobberAllocationsPartitionLoc),
+				zap.Int64("round", block.Round),
+				zap.String("block", block.Hash))
+		}
 		err = removeAllocationFromBlobber(sc, d, alloc.ID, balances)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
