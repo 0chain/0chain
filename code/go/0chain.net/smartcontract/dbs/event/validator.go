@@ -111,9 +111,23 @@ func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag
 			TotalStake: totalStake},
 	}
 }
+func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateValidatorUnStakeTotal, Validator{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalUntake},
+	}
+}
 
 func (edb *EventDb) updateValidatorStakes(validators []Validator) error {
 	updateFields := []string{"stake_total"}
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns(updateFields),
+	}).Create(&validators).Error
+}
+func (edb *EventDb) updateValidatorUnStakes(validators []Validator) error {
+	updateFields := []string{"unstake_total"}
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns(updateFields),
@@ -126,4 +140,8 @@ func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
 
 func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidatorStakeTotal, withUniqueEventOverwrite())
+}
+
+func mergeUpdateValidatorUnStakesEvents() *eventsMergerImpl[Validator] {
+	return newEventsMerger[Validator](TagUpdateValidatorUnStakeTotal, withUniqueEventOverwrite())
 }

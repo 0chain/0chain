@@ -1,0 +1,26 @@
+---
+enable:
+  - "Basic"
+
+# sets of test cases
+sets:
+  - name: "Basic"
+    tests:
+      - "Wait network to produce 100 rounds"
+
+#
+# test cases
+#
+tests:
+  - name: "Wait network to produce 100 rounds"
+    flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - wait_add:
+          sharders: ['sharder-1','sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3','miner-4']
+          start: true
+      - wait_round:
+          shift: 100
+          timeout: "5m"

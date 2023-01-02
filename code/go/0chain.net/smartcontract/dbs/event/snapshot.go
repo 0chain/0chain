@@ -213,7 +213,13 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			for _, spu := range *spus {
 				for _, r := range spu.DelegateRewards {
-					gs.MinedTotal += r
+					dr, err := r.Int64()
+					if err != nil {
+						logging.Logger.Error("snapshot",
+							zap.Any("event", event.Data), zap.Error(err))
+						continue
+					}
+					gs.MinedTotal += dr
 				}
 			}
 		case TagFinalizeBlock:

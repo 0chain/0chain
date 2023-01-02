@@ -130,6 +130,15 @@ func NewUpdateAuthorizerTotalStakeEvent(ID string, totalStake currency.Coin) (ta
 	}
 }
 
+func NewUpdateAuthorizerTotalUnStakeEvent(ID string, totalUnstake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateAuthorizerTotalStake, Authorizer{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalUnstake,
+		},
+	}
+}
+
 func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
@@ -139,4 +148,14 @@ func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error 
 
 func mergeUpdateAuthorizerTotalStakesEvents() *eventsMergerImpl[Authorizer] {
 	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalStake, withUniqueEventOverwrite())
+}
+func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
+	}).Create(&authorizer).Error
+}
+
+func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
+	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalUnStake, withUniqueEventOverwrite())
 }

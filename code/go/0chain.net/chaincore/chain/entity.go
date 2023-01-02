@@ -566,7 +566,7 @@ func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 }
 
 /*setupInitialState - setup the initial state based on configuration */
-func (c *Chain) setupInitialState(initStates *state.InitStates, creationDate common.Timestamp) util.MerklePatriciaTrieI {
+func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
 		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
@@ -575,10 +575,10 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, creationDate com
 		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
 	}
 
-	stateCtx := cstate.NewStateContext(nil, pmt, nil, nil, nil, nil, nil, nil, nil)
+	stateCtx := cstate.NewStateContext(gb, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(stateCtx)
 
-	if err := c.addInitialStakes(initStates.Stakes, creationDate, stateCtx); err != nil {
+	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
 		logging.Logger.Error("init stake failed", zap.Error(err))
 		panic(err)
 	}
@@ -620,7 +620,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, creationDate com
 	return pmt
 }
 
-func (c *Chain) addInitialStakes(stakes []state.InitStake, creationDate common.Timestamp, balances cstate.StateContextI) error {
+func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {
 	edbDelegatePools := make([]*event.DelegatePool, 0, len(stakes))
 	for _, v := range stakes {
 		providerType := spenum.ToProviderType(v.ProviderType)
@@ -646,17 +646,16 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, creationDate common.T
 		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
 			Balance:      v.Tokens,
 			DelegateID:   v.ClientID,
-			RoundCreated: 1,
-			StakedAt:     creationDate,
+			RoundCreated: 0, // genesis round
 		}
 
 		edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
 			PoolID:       v.ClientID,
-			ProviderType: int(providerType),
+			ProviderType: providerType,
 			ProviderID:   v.ProviderID,
 			DelegateID:   v.ClientID,
 			Balance:      v.Tokens,
-			RoundCreated: 1,
+			RoundCreated: 0, // genesis round
 		})
 
 		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
@@ -697,7 +696,7 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.ClientState = c.setupInitialState(initStates, gb.CreationDate)
+	gb.ClientState = c.setupInitialState(initStates, gb)
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
@@ -849,7 +848,7 @@ func (c *Chain) GetBlockClone(ctx context.Context, hash string) (*block.Block, e
 	return b.Clone(), nil
 }
 
-func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error) {
+func (c *Chain) getBlock(_ context.Context, hash string) (*block.Block, error) {
 	if b, ok := c.blocks[datastore.ToKey(hash)]; ok {
 		return b, nil
 	}
@@ -857,7 +856,7 @@ func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error)
 }
 
 /*DeleteBlock - delete a block from the cache */
-func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
+func (c *Chain) DeleteBlock(_ context.Context, b *block.Block) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	// if _, ok := c.blocks[b.Hash]; !ok {
@@ -922,7 +921,7 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 }
 
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
-func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *block.Block) bool {
+func (c *Chain) ValidateMagicBlock(_ context.Context, mr *round.Round, b *block.Block) bool {
 	mb := c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
 	if mb == nil {
 		logging.Logger.Error("can't get lfmb`")
@@ -1109,7 +1108,7 @@ func (c *Chain) GetRoundClone(roundNumber int64) round.RoundI {
 }
 
 /*DeleteRound - delete a round and associated block data */
-func (c *Chain) deleteRound(ctx context.Context, r round.RoundI) {
+func (c *Chain) deleteRound(_ context.Context, r round.RoundI) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	delete(c.rounds, r.GetRoundNumber())

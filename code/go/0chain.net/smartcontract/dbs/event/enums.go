@@ -31,6 +31,7 @@ const (
 	TagUpdateBlobber
 	TagUpdateBlobberAllocatedHealth
 	TagUpdateBlobberTotalStake
+	TagUpdateBlobberTotalUnStake
 	TagUpdateBlobberTotalOffers
 	TagDeleteBlobber
 	TagAddAuthorizer
@@ -53,7 +54,7 @@ const (
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagStakePoolReward
-	TagAddOrOverwriteDelegatePool
+	TagAddDelegatePool
 	TagUpdateDelegatePool
 	TagAddAllocation
 	TagUpdateAllocationStakes
@@ -87,9 +88,13 @@ const (
 	TagAllocBlobberValueChange
 	TagUpdateBlobberOpenChallenges
 	TagUpdateValidatorStakeTotal
+	TagUpdateValidatorUnStakeTotal
 	TagUpdateMinerTotalStake
+	TagUpdateMinerTotalUnStake
 	TagUpdateSharderTotalStake
+	TagUpdateSharderTotalUnStake
 	TagUpdateAuthorizerTotalStake
+	TagUpdateAuthorizerTotalUnStake
 	TagUniqueAddress
 	NumberOfTags
 )
@@ -120,6 +125,7 @@ func initTagString() {
 	TagString[TagUpdateBlobber] = "TagUpdateBlobber"
 	TagString[TagUpdateBlobberAllocatedHealth] = "TagUpdateBlobberAllocatedHealth"
 	TagString[TagUpdateBlobberTotalStake] = "TagUpdateBlobberTotalStake"
+	TagString[TagUpdateBlobberTotalUnStake] = "TagUpdateBlobberTotalUnStake"
 	TagString[TagUpdateBlobberTotalOffers] = "TagUpdateBlobberTotalOffers"
 	TagString[TagDeleteBlobber] = "TagDeleteBlobber"
 	TagString[TagAddAuthorizer] = "TagAddAuthorizer"
@@ -142,7 +148,7 @@ func initTagString() {
 	TagString[TagAddOrOverwriteCurator] = "TagAddOrOverwriteCurator"
 	TagString[TagRemoveCurator] = "TagRemoveCurator"
 	TagString[TagStakePoolReward] = "TagStakePoolReward"
-	TagString[TagAddOrOverwriteDelegatePool] = "TagAddOrOverwriteDelegatePool"
+	TagString[TagAddDelegatePool] = "TagAddDelegatePool"
 	TagString[TagUpdateDelegatePool] = "TagUpdateDelegatePool"
 	TagString[TagAddAllocation] = "TagAddAllocation"
 	TagString[TagUpdateAllocationStakes] = "TagUpdateAllocationStakes"
@@ -176,9 +182,10 @@ func initTagString() {
 	TagString[TagAllocBlobberValueChange] = "TagAllocBlobberValueChange"
 	TagString[TagUpdateBlobberOpenChallenges] = "TagUpdateBlobberOpenChallenges"
 	TagString[TagUpdateValidatorStakeTotal] = "TagUpdateValidatorStakeTotal"
-	TagString[TagUpdateMinerTotalStake] = "TagUpdateMinerTotalStake"
-	TagString[TagUpdateSharderTotalStake] = "TagUpdateSharderTotalStake"
-	TagString[TagUpdateAuthorizerTotalStake] = "TagUpdateAuthorizerTotalStake"
+	TagString[TagUpdateValidatorUnStakeTotal] = "TagUpdateValidatorUnStakeTotal"
+	TagString[TagUpdateMinerTotalUnStake] = "TagUpdateMinerTotalUnStake"
+	TagString[TagUpdateSharderTotalUnStake] = "TagUpdateSharderTotalUnStake"
+	TagString[TagUpdateAuthorizerTotalUnStake] = "TagUpdateAuthorizerTotalUnStake"
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
 	TagString[NumberOfTags] = "invalid"
 }

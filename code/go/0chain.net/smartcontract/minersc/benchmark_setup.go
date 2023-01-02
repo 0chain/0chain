@@ -22,6 +22,9 @@ import (
 	"github.com/spf13/viper"
 )
 
+var mockRewardAmount currency.Coin = 1680000000
+var mockRewardType = spenum.BlockRewardMiner
+
 func AddMockGlobalNode(balances cstate.StateContextI) {
 	var gn GlobalNode
 	gn.readConfig()
@@ -47,6 +50,8 @@ func AddMockNodes(
 		numActive          int
 		numDelegates       int
 		key                string
+		dRewards           []event.RewardDelegate
+		dps                []event.DelegatePool
 	)
 
 	if nodeType == spenum.Miner {
@@ -78,16 +83,28 @@ func AddMockNodes(
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
 			pool := stakepool.DelegatePool{
-				Balance:    100 * 1e10,
-				Reward:     0.3 * 1e10,
-				DelegateID: clients[dId],
+				Balance:      100 * 1e10,
+				Reward:       0.3 * 1e10,
+				DelegateID:   clients[dId],
+				RoundCreated: 1,
+				Status:       spenum.Active,
 			}
+			poolId := getMinerDelegatePoolId(i, dId, nodeType)
 			if i < numActive {
 				pool.Status = spenum.Active
-				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 			} else {
 				pool.Status = spenum.Pending
-				newNode.Pools[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+			}
+			newNode.Pools[poolId] = &pool
+			if eventDb.Debug() {
+				for bk := int64(1); bk <= viper.GetInt64(benchmark.NumBlocks); bk++ {
+					dRewards = append(dRewards, event.RewardDelegate{
+						Amount:      mockRewardAmount,
+						BlockNumber: bk,
+						PoolID:      poolId,
+						RewardType:  mockRewardType,
+					})
+				}
 			}
 		}
 		_, err = balances.InsertTrieNode(newNode.GetKey(), newNode)
@@ -134,6 +151,24 @@ func AddMockNodes(
 					log.Fatal(err)
 				}
 			}
+			for id, pool := range newNode.Pools {
+				dps = append(dps, event.DelegatePool{
+					PoolID:       id,
+					ProviderType: nodeType,
+					ProviderID:   newNode.ID,
+					DelegateID:   pool.DelegateID,
+					Balance:      pool.Balance,
+					Reward:       pool.Reward,
+					TotalReward:  pool.Reward,
+					Status:       int(pool.Status),
+					RoundCreated: pool.RoundCreated,
+				})
+			}
+		}
+	}
+	if eventDb.Debug() {
+		if err := eventDb.Store.Get().Create(&dRewards).Error; err != nil {
+			log.Fatal(err)
 		}
 	}
 	if nodeType == spenum.Miner {
@@ -168,6 +203,12 @@ func AddMockNodes(
 	_, err = balances.InsertTrieNode(key, &allNodes)
 	if err != nil {
 		panic(err)
+	}
+
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		if err := eventDb.Store.Get().Create(&dps).Error; err != nil {
+			log.Fatal(err)
+		}
 	}
 	return nodes, publickKeys
 }
@@ -219,6 +260,39 @@ func AddMagicBlock(
 
 	var gsos = block.NewGroupSharesOrSigns()
 	_, _ = balances.InsertTrieNode(GroupShareOrSignsKey, gsos)
+}
+
+func AddMockProviderRewards(
+	miners, sharders []string,
+	eventDb *event.EventDb,
+) {
+	if eventDb.Debug() {
+		return
+	}
+	var pRewards []event.RewardProvider
+	for _, miner := range miners {
+		for bk := int64(1); bk <= viper.GetInt64(benchmark.NumBlocks); bk++ {
+			pRewards = append(pRewards, event.RewardProvider{
+				Amount:      mockRewardAmount,
+				BlockNumber: bk,
+				ProviderId:  miner,
+				RewardType:  mockRewardType,
+			})
+		}
+	}
+	for _, sharder := range sharders {
+		for bk := int64(1); bk <= viper.GetInt64(benchmark.NumBlocks); bk++ {
+			pRewards = append(pRewards, event.RewardProvider{
+				Amount:      mockRewardAmount,
+				BlockNumber: bk,
+				ProviderId:  sharder,
+				RewardType:  mockRewardType,
+			})
+		}
+	}
+	if err := eventDb.Store.Get().Create(&pRewards).Error; err != nil {
+		log.Fatal(err)
+	}
 }
 
 func AddPhaseNode(balances cstate.StateContextI) {

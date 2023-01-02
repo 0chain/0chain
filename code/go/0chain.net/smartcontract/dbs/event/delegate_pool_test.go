@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0chain/common/core/currency"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -39,10 +41,10 @@ func TestDelegatePoolsEvent(t *testing.T) {
 		Balance: 29,
 	}
 
-	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp})
+	err = eventDb.addDelegatePools([]DelegatePool{dp})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
-	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
+	dps, err := eventDb.GetDelegatePools("provider_id")
 	require.NoError(t, err)
 	require.Len(t, dps, 1)
 
@@ -103,9 +105,9 @@ func TestTagStakePoolReward(t *testing.T) {
 		Balance: 5,
 	}
 
-	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp})
+	err = eventDb.addDelegatePools([]DelegatePool{dp})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
-	err = eventDb.addOrOverwriteDelegatePools([]DelegatePool{dp2})
+	err = eventDb.addDelegatePools([]DelegatePool{dp2})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
 	var before int64
@@ -113,9 +115,9 @@ func TestTagStakePoolReward(t *testing.T) {
 
 	var spr dbs.StakePoolReward
 	spr.ProviderId = "provider_id"
-	spr.ProviderType = int(spenum.Blobber)
+	spr.ProviderType = spenum.Blobber
 	spr.Reward = 17
-	spr.DelegateRewards = map[string]int64{
+	spr.DelegateRewards = map[string]currency.Coin{
 		"pool_id_1": 15,
 		"pool_id_2": 2,
 	}
@@ -130,7 +132,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	var after int64
 	eventDb.Get().Table("delegate_pools").Count(&after)
 
-	dps, err := eventDb.GetDelegatePools("provider_id", int(spenum.Blobber))
+	dps, err := eventDb.GetDelegatePools("provider_id")
 	require.NoError(t, err)
 	require.Len(t, dps, 2)
 }

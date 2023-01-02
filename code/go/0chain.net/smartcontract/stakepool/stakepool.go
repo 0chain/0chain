@@ -14,7 +14,6 @@ import (
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
-	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -38,6 +37,7 @@ type AbstractStakePool interface {
 	HasStakePool(user string) bool
 	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) (string, error)
 	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
+	EmitUnStakeEvent(providerType spenum.Provider, providerID string, amount currency.Coin, balances cstate.StateContextI) error
 	Save(providerType spenum.Provider, providerID string,
 		balances cstate.StateContextI) error
 	GetSettings() Settings
@@ -83,13 +83,13 @@ type StakePoolStat struct {
 }
 
 type DelegatePoolStat struct {
-	ID           string        `json:"id"`            // blobber ID
-	Balance      currency.Coin `json:"balance"`       // current balance
-	DelegateID   string        `json:"delegate_id"`   // wallet
-	Rewards      currency.Coin `json:"rewards"`       // total for all time
-	UnStake      bool          `json:"unstake"`       // want to unstake
-	ProviderId   string        `json:"provider_id"`   // id
-	ProviderType int           `json:"provider_type"` // ype
+	ID           string          `json:"id"`            // blobber ID
+	Balance      currency.Coin   `json:"balance"`       // current balance
+	DelegateID   string          `json:"delegate_id"`   // wallet
+	Rewards      currency.Coin   `json:"rewards"`       // total for all time
+	UnStake      bool            `json:"unstake"`       // want to unstake
+	ProviderId   string          `json:"provider_id"`   // id
+	ProviderType spenum.Provider `json:"provider_type"` // ype
 
 	TotalReward  currency.Coin `json:"total_reward"`
 	TotalPenalty currency.Coin `json:"total_penalty"`
@@ -117,7 +117,7 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 	}
 	spStat.Rewards = provider.Rewards.TotalRewards
 	for _, dp := range delegatePools {
-		if spenum.PoolStatus(dp.Status) == spenum.Deleting || spenum.PoolStatus(dp.Status) == spenum.Deleted {
+		if spenum.PoolStatus(dp.Status) == spenum.Deleted {
 			continue
 		}
 		dpStats := DelegatePoolStat{
@@ -269,16 +269,8 @@ func (sp *StakePool) MintRewards(
 
 	var dpUpdate = newDelegatePoolUpdate(clientId, providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
-
-	if dPool.Status == spenum.Deleting {
-		delete(sp.Pools, clientId)
-		dpUpdate.Updates["status"] = spenum.Deleted
-		dpUpdate.emitUpdate(balances)
-		return delegateReward + serviceCharge, nil
-	} else {
-		dpUpdate.emitUpdate(balances)
-		return delegateReward + serviceCharge, nil
-	}
+	dpUpdate.emitUpdate(balances)
+	return delegateReward + serviceCharge, nil
 }
 
 func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error {
@@ -297,7 +289,7 @@ func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.State
 	}
 
 	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = spenum.Deleting
+	sp.Pools[poolID].Status = spenum.Deleted
 
 	return nil
 }
@@ -309,13 +301,13 @@ func (sp *StakePool) DistributeRewardsRandN(
 	providerType spenum.Provider,
 	seed int64,
 	randN int,
-	desc string,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -383,7 +375,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[pool.DelegateID], err = reward.Int64()
+		spUpdate.DelegateRewards[pool.DelegateID] = reward
 		if err != nil {
 			return err
 		}
@@ -453,12 +445,13 @@ func (sp *StakePool) DistributeRewards(
 	value currency.Coin,
 	providerId string,
 	providerType spenum.Provider,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -525,7 +518,7 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[id], err = reward.Int64()
+		spUpdate.DelegateRewards[id] = reward
 		if err != nil {
 			return err
 		}
@@ -595,7 +588,7 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 		}
 
 		spUpdate.DelegateRewards[pools[i].DelegateID], err =
-			maths.SafeAddInt64(spUpdate.DelegateRewards[pools[i].DelegateID], iShare)
+			currency.AddInt64(spUpdate.DelegateRewards[pools[i].DelegateID], iShare)
 		if err != nil {
 			return err
 		}
@@ -672,7 +665,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	return out, err
 }
 
-// stake pool can return excess tokens from stake pool
+// StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
 func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
 ) (resp string, err error) {

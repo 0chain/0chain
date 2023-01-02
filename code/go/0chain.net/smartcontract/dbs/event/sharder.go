@@ -253,6 +253,14 @@ func NewUpdateSharderTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 		},
 	}
 }
+func NewUpdateSharderTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateSharderTotalUnStake, Sharder{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: unstakeTotal,
+		},
+	}
+}
 
 func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
@@ -261,6 +269,16 @@ func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
 	}).Create(&sharders).Error
 }
 
+func (edb *EventDb) updateShardersTotalUnStakes(sharders []Sharder) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
+	}).Create(&sharders).Error
+}
+
 func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
 	return newEventsMerger[Sharder](TagUpdateSharderTotalStake, withUniqueEventOverwrite())
+}
+func mergeUpdateSharderTotalUnStakesEvents() *eventsMergerImpl[Sharder] {
+	return newEventsMerger[Sharder](TagUpdateSharderTotalUnStake, withUniqueEventOverwrite())
 }
