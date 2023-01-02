@@ -64,6 +64,7 @@ func SetupStateHandlers() {
 	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
 	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
+	http.HandleFunc("/v1/scstate/block/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCStateBlock))))
 	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
 	http.HandleFunc("/v1/screst/", common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
 	http.HandleFunc("/_smart_contract_stats", common.WithCORS(common.UserRateLimit(c.SCStats)))
@@ -119,6 +120,45 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
 	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
+	if err != nil {
+		return nil, err
+	}
+	if len(d) == 0 {
+		return nil, common.NewError("key_not_found", "key was not found")
+	}
+
+	buf := &bytes.Buffer{}
+	_, err = msgp.UnmarshalAsJSON(buf, d)
+	if err != nil {
+		return nil, common.NewErrorf("decode error", "unmarshal as json failed: %v", err)
+	}
+
+	var retObj interface{}
+	err = json.NewDecoder(buf).Decode(&retObj)
+	if err != nil {
+		return nil, err
+	}
+	return retObj, nil
+}
+
+func (c *Chain) GetNodeFromSCStateBlock(ctx context.Context, r *http.Request) (interface{}, error) {
+	scAddress := r.FormValue("sc_address")
+	key := r.FormValue("key")
+	blockHash := r.FormValue("block")
+	if len(blockHash) == 0 {
+		return nil, common.NewError("failed to get sc state", "missing block hash")
+	}
+
+	b, err := c.GetBlock(ctx, blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.ClientState == nil {
+		return nil, common.NewError("failed to get sc state", "block state nil")
+	}
+
+	d, err := b.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
 	if err != nil {
 		return nil, err
 	}
