@@ -51,32 +51,90 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block, waitC ...chan 
 
 // ComputeOrSyncState - try to compute state and if there is an error, just sync it
 func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
-	err := c.ComputeState(ctx, b)
-	if err != nil {
-		bsc, err := c.getBlockStateChange(b)
-		if err != nil {
-			return err
-		}
-		if bsc != nil {
-			if err = c.ApplyBlockStateChange(b, bsc); err != nil {
-				logging.Logger.Error("compute state - applying state change",
-					zap.Any("round", b.Round), zap.Any("block", b.Hash),
-					zap.Error(err))
-				return err
-			}
-		}
-		if !b.IsStateComputed() {
-			logging.Logger.Error("compute state - state change error",
-				zap.Any("round", b.Round), zap.Any("block", b.Hash),
-				zap.Error(err))
-			return err
-		}
-	}
-	return nil
+	return SyncAndRetry(ctx, b, "compute or sync state", func(ctx context.Context, waitC chan struct{}) error {
+		return c.ComputeState(ctx, b, waitC)
+	})
+
+	// TODO: debug and add back later perhaps
+	//err := c.ComputeState(ctx, b)
+	//if err != nil {
+	//	bsc, err := c.getBlockStateChange(b)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if bsc != nil {
+	//		if err = c.ApplyBlockStateChange(b, bsc); err != nil {
+	//			logging.Logger.Error("compute state - applying state change",
+	//				zap.Any("round", b.Round), zap.Any("block", b.Hash),
+	//				zap.Error(err))
+	//			return err
+	//		}
+	//	}
+	//	if !b.IsStateComputed() {
+	//		logging.Logger.Error("compute state - state change error",
+	//			zap.Any("round", b.Round), zap.Any("block", b.Hash),
+	//			zap.Error(err))
+	//		return err
+	//	}
+	//}
+	//return nil
 }
 
 func (c *Chain) computeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) error {
 	return b.ComputeState(ctx, c, waitC...)
+}
+
+func SyncAndRetry(ctx context.Context, b *block.Block, desc string, f func(ctx context.Context, ch chan struct{}) error) error {
+	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for {
+		retry, err := func() (retry bool, err error) {
+			wc := make(chan struct{}, 1)
+			err = f(cctx, wc)
+			if err == nil {
+				return false, nil
+			}
+
+			if !bcstate.ErrInvalidState(err) {
+				logging.Logger.Warn("sync and retry - none invalid state error",
+					zap.String("desc", desc),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.Error(err))
+				return false, err
+			}
+
+			select {
+			case <-cctx.Done():
+				return false, cctx.Err()
+			case _, ok := <-wc:
+				if !ok {
+					logging.Logger.Error("sync and retry - sync failed",
+						zap.String("desc", desc),
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					return false, err
+				}
+
+				logging.Logger.Debug("sync and retry - retry",
+					zap.String("desc", desc),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("prev_block", b.PrevHash),
+					zap.String("state_hash", util.ToHex(b.ClientStateHash)))
+				return true, nil
+			}
+		}()
+
+		if err != nil {
+			return err
+		}
+
+		if !retry {
+			return nil
+		}
+	}
 }
 
 // SaveChanges - persist the state changes
