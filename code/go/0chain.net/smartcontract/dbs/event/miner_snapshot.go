@@ -37,7 +37,7 @@ func (m *MinerSnapshot) SetUnstakeTotal(value currency.Coin) {
 	m.UnstakeTotal = value
 }
 
-func (m MinerSnapshot) SetServiceCharge(value float64) {
+func (m *MinerSnapshot) SetServiceCharge(value float64) {
 	m.ServiceCharge = value
 }
 
