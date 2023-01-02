@@ -1621,6 +1621,19 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get related challenge pool: "+err.Error())
 	}
 
+	debugAllocID := "2548c04e19d9003ad96e269e3952b103476575302b486d979c3afd5ed26d5ec3"
+	debugAlloc, err := sc.getAllocation(debugAllocID, balances)
+	if err != nil {
+		logging.Logger.Error("debug_get_alloc", zap.Error(err))
+	} else {
+		b := balances.GetBlock()
+		logging.Logger.Debug("debug_get_alloc",
+			zap.Any("txn", t),
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Any("alloc", debugAlloc))
+	}
+
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
 		var b = blobbers[i]
@@ -1687,6 +1700,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 		// update the blobber in all (replace with existing one)
 		emitUpdateBlobber(b, balances)
+
 		err = removeAllocationFromBlobber(sc, d, alloc.ID, balances)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
