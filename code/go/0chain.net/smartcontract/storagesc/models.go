@@ -1036,8 +1036,14 @@ func removeAllocationFromBlobber(
 
 	blobberID := blobAlloc.BlobberID
 	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
-		logging.Logger.Warn("skipping removing allocation from blobber partition, " +
-			"empty blobber allocation partition location")
+		block := balances.GetBlock()
+		logging.Logger.Warn("skipping removing allocation from blobber partition, "+
+			"empty blobber allocation partition location",
+			zap.String("blobberID", blobberID),
+			zap.Any("part loc", blobAlloc.BlobberAllocationsPartitionLoc),
+			zap.String("ba ptr", fmt.Sprintf("%p", blobAlloc)),
+			zap.Int64("round", block.Round),
+			zap.String("block", block.Hash))
 		return nil
 	}
 

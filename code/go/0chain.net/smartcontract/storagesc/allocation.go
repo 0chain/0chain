@@ -1725,7 +1725,8 @@ func (sc *StorageSmartContract) finishAllocation(
 			logging.Logger.Debug("debug_get_alloc - before remove see blobber details",
 				zap.Any("part loc", d.BlobberAllocationsPartitionLoc),
 				zap.Int64("round", block.Round),
-				zap.String("block", block.Hash))
+				zap.String("block", block.Hash),
+				zap.String("ba ptr", fmt.Sprintf("%p", d)))
 		}
 		err = removeAllocationFromBlobber(sc, d, alloc.ID, balances)
 		if err != nil {
