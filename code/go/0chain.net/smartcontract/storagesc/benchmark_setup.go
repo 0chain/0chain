@@ -60,6 +60,7 @@ func addMockAllocation(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
+	const mockWriePoolSize = 12345678
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
 		ID:              id,
@@ -85,6 +86,7 @@ func addMockAllocation(
 		TimeUnit: 1 * time.Hour,
 		// make last allocation finalised
 		Finalized: i == viper.GetInt(sc.NumAllocations)-1,
+		WritePool: mockWriePoolSize,
 	}
 	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
 		sa.Curators = append(sa.Curators, clients[j])
@@ -751,14 +753,6 @@ func getMockStakePoolSettings(blobber string) stakepool.Settings {
 		MaxNumDelegates:    viper.GetInt(sc.NumBlobberDelegates),
 		ServiceChargeRatio: viper.GetFloat64(sc.StorageMaxCharge),
 	}
-}
-
-func getMockReadPoolId(allocation, client, index int) string {
-	return encryption.Hash("read pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index))
-}
-
-func getMockWritePoolId(allocation, client, index int) string {
-	return encryption.Hash("write pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index))
 }
 
 func getMockBlobberStakePoolId(blobber, stake int) string {
