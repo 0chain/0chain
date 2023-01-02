@@ -1033,10 +1033,16 @@ func removeAllocationFromBlobber(
 	blobAlloc *BlobberAllocation,
 	allocID string,
 	balances cstate.StateContextI) error {
+	block := balances.GetBlock()
+	logging.Logger.Warn("removing allocation from blobber partition",
+		zap.String("blobberID", blobAlloc.BlobberID),
+		zap.Any("part loc", blobAlloc.BlobberAllocationsPartitionLoc),
+		zap.String("ba ptr", fmt.Sprintf("%p", blobAlloc)),
+		zap.Int64("round", block.Round),
+		zap.String("block", block.Hash))
 
 	blobberID := blobAlloc.BlobberID
 	if blobAlloc.BlobberAllocationsPartitionLoc == nil {
-		block := balances.GetBlock()
 		logging.Logger.Warn("skipping removing allocation from blobber partition, "+
 			"empty blobber allocation partition location",
 			zap.String("blobberID", blobberID),
@@ -1091,6 +1097,12 @@ func removeAllocationFromBlobber(
 		return fmt.Errorf("could not update blobber partitions locations node: %v", err)
 	}
 
+	logging.Logger.Debug("removing allocation from blobber partition success",
+		zap.String("blobberID", blobberID),
+		zap.Any("part loc", blobAlloc.BlobberAllocationsPartitionLoc),
+		zap.String("ba ptr", fmt.Sprintf("%p", blobAlloc)),
+		zap.Int64("round", block.Round),
+		zap.String("block", block.Hash))
 	return nil
 }
 
