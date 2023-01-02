@@ -1636,6 +1636,9 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
+		if d.BlobberID == "b790b0410d10585d7bf55903a2ed3cc7a06d00871f053554db909b42e6c5c005" {
+			logging.Logger.Debug("debug_get_alloc - see blobber details", zap.Any("blob alloc", d))
+		}
 		var b = blobbers[i]
 		if b.ID != d.BlobberID {
 			return common.NewErrorf("fini_alloc_failed",
