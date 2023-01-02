@@ -1627,15 +1627,21 @@ func (sc *StorageSmartContract) finishAllocation(
 		logging.Logger.Error("debug_get_alloc", zap.Error(err))
 	} else {
 		b := balances.GetBlock()
-		logging.Logger.Debug("debug_get_alloc",
-			zap.Any("txn", t),
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Any("alloc", debugAlloc))
+		dba, ok := debugAlloc.BlobberAllocsMap["b790b0410d10585d7bf55903a2ed3cc7a06d00871f053554db909b42e6c5c005"]
+		if !ok {
+			logging.Logger.Error("debug_get_alloc - could not find b790b0410d10585d7bf55903a2ed3cc7a")
+		} else {
+			logging.Logger.Debug("debug_get_alloc",
+				zap.Any("txn", t),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Any("details", dba))
+		}
 	}
 
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
+		logging.Logger.Debug("debug_get_alloc - blobber id", zap.String("ID", d.BlobberID))
 		if d.BlobberID == "b790b0410d10585d7bf55903a2ed3cc7a06d00871f053554db909b42e6c5c005" {
 			logging.Logger.Debug("debug_get_alloc - see blobber details", zap.Any("blob alloc", d))
 		}
