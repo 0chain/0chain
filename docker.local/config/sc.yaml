@@ -41,7 +41,7 @@ smart_contracts:
     x_percent: 0.70 # percentage of prev mb miners required to be part of next mb
     # etc
     min_stake: 0.0 # min stake can be set by a node (boundary for all nodes)
-    max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
+    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     start_rounds: 50
     contribute_rounds: 50
     share_rounds: 50
