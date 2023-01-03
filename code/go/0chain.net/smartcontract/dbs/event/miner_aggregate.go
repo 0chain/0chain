@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -12,8 +13,9 @@ import (
 type MinerAggregate struct {
 	gorm.Model
 
-	MinerID string `json:"miner_id" gorm:"index:idx_miner_aggregate,unique"`
-	Round   int64  `json:"round" gorm:"index:idx_miner_aggregate,unique"`
+	MinerID  string `json:"miner_id" gorm:"index:idx_miner_aggregate,unique"`
+	Round    int64  `json:"round" gorm:"index:idx_miner_aggregate,unique"`
+	BucketID int64  `json:"bucket_id"`
 
 	Fees          currency.Coin `json:"fees"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
@@ -65,23 +67,29 @@ func (edb *EventDb) ReplicateMinerAggregate(p common.Pagination) ([]MinerAggrega
 }
 
 func (edb *EventDb) updateMinerAggregate(round, pageAmount int64, gs *globalSnapshot) {
-	count, err := edb.GetMinerCount()
-	if err != nil {
-		logging.Logger.Error("update_miner_aggregates", zap.Error(err))
-		return
-	}
-	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count, edb.PageLimit())
+	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS miner_temp_ids "+
-		"ON COMMIT DROP AS SELECT id as id FROM miners ORDER BY (id, creation_round) LIMIT ? OFFSET ?",
-		size, size*currentPageNumber)
+		"ON COMMIT DROP AS SELECT id as id FROM miners where bucket_id = ?",
+		currentBucket)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
 		return
 	}
 
-	for i := 0; i < subpageCount; i++ {
-		edb.calculateMinerAggregate(gs, round, edb.PageLimit(), int64(i)*edb.PageLimit())
+	var count int64
+	r := edb.Store.Get().Raw("SELECT count(*) FROM miner_temp_ids").Scan(&count)
+	if r.Error != nil {
+		logging.Logger.Error("getting ids count", zap.Error(r.Error))
+		return
+	}
+	if count == 0 {
+		return
+	}
+	pageCount := count / edb.PageLimit()
+
+	for i := int64(0); i <= pageCount; i++ {
+		edb.calculateMinerAggregate(gs, round, edb.PageLimit(), i*edb.PageLimit())
 	}
 
 }
@@ -90,7 +98,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 
 	var ids []string
 	r := edb.Store.Get().
-		Raw("select id from miner_temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
+		Raw("select id from miner_miner_temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
 	if r.Error != nil {
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
@@ -99,7 +107,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 
 	var currentMiners []Miner
 	result := edb.Store.Get().
-		Raw("SELECT * FROM miners WHERE id in (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM miners WHERE id in (select id from miner_miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&currentMiners)
 	if result.Error != nil {
 		logging.Logger.Error("getting current miners", zap.Error(result.Error))
@@ -127,8 +135,9 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 			continue
 		}
 		aggregate := MinerAggregate{
-			Round:   round,
-			MinerID: current.ID,
+			Round:    round,
+			MinerID:  current.ID,
+			BucketID: current.BucketId,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)

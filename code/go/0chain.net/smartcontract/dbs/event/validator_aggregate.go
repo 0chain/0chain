@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -14,6 +15,7 @@ type ValidatorAggregate struct {
 
 	ValidatorID string `json:"validator_id" gorm:"index:idx_validator_aggregate,unique"`
 	Round       int64  `json:"round" gorm:"index:idx_validator_aggregate,unique"`
+	BucketID    int64  `json:"bucket_id"`
 
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
@@ -64,24 +66,31 @@ func (edb *EventDb) ReplicateValidatorAggregate(p common.Pagination) ([]Validato
 }
 
 func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *globalSnapshot) {
-	count, err := edb.GetValidatorCount()
-	if err != nil {
-		logging.Logger.Error("update_validator_aggregates", zap.Error(err))
-		return
-	}
-	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count, edb.PageLimit())
+	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS validator_temp_ids "+
-		"ON COMMIT DROP AS SELECT id as id FROM validators ORDER BY (id, creation_round) LIMIT ? OFFSET ?",
-		size, size*currentPageNumber)
+		"ON COMMIT DROP AS SELECT id as id FROM validators where bucket_id = ?",
+		currentBucket)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
 		return
 	}
 
-	for i := 0; i < subpageCount; i++ {
-		edb.calculateValidatorAggregate(gs, round, edb.PageLimit(), int64(i)*edb.PageLimit())
+	var count int64
+	r := edb.Store.Get().Raw("SELECT count(*) FROM validator_temp_ids").Scan(&count)
+	if r.Error != nil {
+		logging.Logger.Error("getting ids count", zap.Error(r.Error))
+		return
 	}
+	if count == 0 {
+		return
+	}
+	pageCount := count / edb.PageLimit()
+
+	for i := int64(0); i <= pageCount; i++ {
+		edb.calculateValidatorAggregate(gs, round, edb.PageLimit(), i*edb.PageLimit())
+	}
+
 }
 
 func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit, offset int64) {
@@ -127,6 +136,7 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 		aggregate := ValidatorAggregate{
 			Round:       round,
 			ValidatorID: current.ID,
+			BucketID:    current.BucketId,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
