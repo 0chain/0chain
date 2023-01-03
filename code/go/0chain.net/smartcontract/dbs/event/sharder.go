@@ -249,3 +249,7 @@ func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
 func mergeUpdateSharderTotalUnStakesEvents() *eventsMergerImpl[Sharder] {
 	return newEventsMerger[Sharder](TagUpdateSharderTotalUnStake, withUniqueEventOverwrite())
 }
+
+func mergeSharderHealthCheckEvents() *eventsMergerImpl[Sharder] {
+	return (*eventsMergerImpl[Sharder])(newEventsMerger[Sharder](TagSharderHealthCheck))
+}

@@ -126,3 +126,7 @@ func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) erro
 func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
 	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalUnStake, withUniqueEventOverwrite())
 }
+
+func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[Authorizer] {
+	return (*eventsMergerImpl[Authorizer])(newEventsMerger[Authorizer](TagAuthorizerHealthCheck))
+}

@@ -114,3 +114,7 @@ func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
 func mergeUpdateValidatorUnStakesEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidatorUnStakeTotal, withUniqueEventOverwrite())
 }
+
+func mergeValidatorHealthCheckEvents() *eventsMergerImpl[Validator] {
+	return (*eventsMergerImpl[Validator])(newEventsMerger[Validator](TagValidatorHealthCheck))
+}
