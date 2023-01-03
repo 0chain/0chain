@@ -15,6 +15,7 @@ type AuthorizerSnapshot struct {
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	ServiceCharge float64       `json:"service_charge"`
+	CreationRound int64         `json:"creation_round" gorm:"index"`
 }
 
 func (a *AuthorizerSnapshot) GetTotalStake() currency.Coin {
@@ -72,6 +73,7 @@ func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer) error {
 			Fee:           authorizer.Fee,
 			TotalStake:    authorizer.TotalStake,
 			ServiceCharge: authorizer.ServiceCharge,
+			CreationRound: authorizer.CreationRound,
 		})
 	}
 

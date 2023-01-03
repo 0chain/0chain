@@ -22,6 +22,8 @@ type Authorizer struct {
 
 	// Stats
 	LastHealthCheck int64 `json:"last_health_check"`
+
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_authorizer_creation_round"`
 }
 
 func (a *Authorizer) GetTotalStake() currency.Coin {

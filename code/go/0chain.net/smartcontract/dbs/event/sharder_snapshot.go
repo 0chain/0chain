@@ -15,6 +15,7 @@ type SharderSnapshot struct {
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	ServiceCharge float64       `json:"service_charge"`
+	CreationRound int64         `json:"creation_round" gorm:"index"`
 }
 
 func (s *SharderSnapshot) GetTotalStake() currency.Coin {
@@ -72,6 +73,7 @@ func (edb *EventDb) addSharderSnapshot(sharders []Sharder) error {
 			Fees:          sharder.Fees,
 			TotalStake:    sharder.TotalStake,
 			ServiceCharge: sharder.ServiceCharge,
+			CreationRound: sharder.CreationRound,
 		})
 	}
 

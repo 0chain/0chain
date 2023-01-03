@@ -15,6 +15,7 @@ type MinerSnapshot struct {
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	ServiceCharge float64       `json:"service_charge"`
+	CreationRound int64         `json:"creation_round" gorm:"index"`
 }
 
 func (m *MinerSnapshot) GetTotalStake() currency.Coin {
@@ -72,6 +73,7 @@ func (edb *EventDb) addMinerSnapshot(miners []Miner) error {
 			Fees:          miner.Fees,
 			TotalStake:    miner.TotalStake,
 			ServiceCharge: miner.ServiceCharge,
+			CreationRound: miner.CreationRound,
 		})
 	}
 
