@@ -597,8 +597,9 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				Value:      rpMinLock,
-				ClientID:   data.Clients[getMockOwnerFromAllocationIndex(viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
+				Value: rpMinLock,
+				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
+					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
