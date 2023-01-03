@@ -55,8 +55,4 @@ func TestChallengeEvent(t *testing.T) {
 	challenge, err := eventDb.GetChallenge(c.ChallengeID)
 	require.NoError(t, err, "Error while listing challenge")
 	require.EqualValues(t, challenge.Responded, true, "Challenge fetch failed")
-
-	cs, err := eventDb.GetChallengeForBlobber(c.BlobberID, c.ChallengeID)
-	require.NoError(t, err)
-	require.Equal(t, c.BlobberID, cs.BlobberID)
 }

@@ -1364,10 +1364,8 @@ func roundIntervalFromTime(fromTime, toTime string, edb *event.EventDb) (int64, 
 //	404:
 //	500:
 func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Request) {
-	blobberID := r.URL.Query().Get("blobber")
-
 	challengeID := r.URL.Query().Get("challenge")
-	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh.GetQueryStateContext().GetEventDB())
+	challenge, err := getChallenge(challengeID, srh.GetQueryStateContext().GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge"))
 		return
