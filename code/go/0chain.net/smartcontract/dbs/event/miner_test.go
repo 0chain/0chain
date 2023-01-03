@@ -2,7 +2,6 @@ package event
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/core/viper"
 	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 
@@ -19,15 +19,16 @@ import (
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 func init() {
-	logging.Logger = zap.NewNop()
+	viper.Set("logging.console", true)
+	viper.Set("logging.level", "debug")
 }
 
 func TestMiners(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
+	logging.InitLogging("development", "")
 
 	type Stat struct {
 		// for miner (totals)
@@ -38,6 +39,7 @@ func TestMiners(t *testing.T) {
 		SharderFees    currency.Coin `json:"sharder_fees,omitempty"`
 	}
 
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
 	type NodeType int
 
 	type SimpleNode struct {
@@ -113,19 +115,9 @@ func TestMiners(t *testing.T) {
 		}
 	}
 
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
+	access := config.DbAccess{}
 
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -161,20 +153,56 @@ func TestMiners(t *testing.T) {
 			LastHealthCheck: common.Timestamp(51),
 		},
 	}
+	// Miner - Add Event
+	mn2 := MinerNode{
+		&SimpleNode{
+			ID:                "miner two",
+			N2NHost:           "n2n one host",
+			Host:              "miner one host",
+			Port:              1999,
+			Path:              "path miner one",
+			PublicKey:         "pub key",
+			ShortName:         "mo",
+			BuildTag:          "build tag",
+			TotalStaked:       51,
+			Delete:            false,
+			DelegateWallet:    "delegate wallet",
+			ServiceCharge:     10.6,
+			NumberOfDelegates: 6,
+			MinStake:          15,
+			MaxStake:          100,
+			Stat: Stat{
+				GeneratorRewards: 5,
+				GeneratorFees:    3,
+				SharderRewards:   10,
+				SharderFees:      5,
+			},
+			NodeType:        NodeType(1),
+			LastHealthCheck: common.Timestamp(51),
+		},
+	}
 
 	mnMiner := convertMn(mn)
-	data, err := json.Marshal(&mnMiner)
-	require.NoError(t, err)
+	mnMiner2 := convertMn(mn2)
 
 	eventAddMn := Event{
-		BlockNumber: 2,
+		BlockNumber: 1,
 		TxHash:      "tx hash",
 		Type:        TypeStats,
 		Tag:         TagAddOrOverwriteMiner,
-		Data:        string(data),
+		Data:        mnMiner,
+		Index:       mnMiner.ID,
 	}
-	events := []Event{eventAddMn}
-	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
+	eventAddMnTwo := Event{
+		BlockNumber: 1,
+		TxHash:      "tx hash",
+		Type:        TypeStats,
+		Tag:         TagAddOrOverwriteMiner,
+		Data:        mnMiner2,
+		Index:       mnMiner2.ID,
+	}
+	events := []Event{eventAddMn, eventAddMnTwo}
+	eventDb.ProcessEvents(context.TODO(), events, 1, "hash", 10)
 	time.Sleep(100 * time.Millisecond)
 	miner, err := eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -183,47 +211,67 @@ func TestMiners(t *testing.T) {
 	// Miner - Overwrite event
 	mn.SimpleNode.Path = "path miner one - overwrite"
 
-	mnMiner2 := convertMn(mn)
-	data, err = json.Marshal(&mnMiner2)
-	require.NoError(t, err)
+	mnMiner1 := convertMn(mn)
 
 	eventAddOrOverwriteMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
 		Type:        TypeStats,
 		Tag:         TagAddOrOverwriteMiner,
-		Data:        string(data),
+		Data:        mnMiner1,
+		Index:       mnMiner1.ID,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn}, 100, "hash", 10)
+	eventAddOrOverwriteMn2 := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash2",
+		Type:        TypeStats,
+		Tag:         TagAddOrOverwriteMiner,
+		Data:        mnMiner2,
+		Index:       mnMiner2.ID,
+	}
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn, eventAddOrOverwriteMn2}, 2, "hash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, miner.Path, mn.Path)
 
 	// Miner - Update event
-	update := dbs.DbUpdates{
+	update1 := dbs.DbUpdates{
 		Id: mn.ID,
 		Updates: map[string]interface{}{
 			"path":       "new path",
 			"short_name": "new short name",
 		},
 	}
-	data, err = json.Marshal(&update)
-	require.NoError(t, err)
+	// Miner - Update event
+	update2 := dbs.DbUpdates{
+		Id: mn2.ID,
+		Updates: map[string]interface{}{
+			"path":       "new path2",
+			"short_name": "new short name2",
+		},
+	}
 
 	eventUpdateMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
 		Type:        TypeStats,
 		Tag:         TagUpdateMiner,
-		Data:        string(data),
+		Data:        update1,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateMn}, 100, "bhash", 10)
+	eventUpdateMn2 := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash3",
+		Type:        TypeStats,
+		Tag:         TagUpdateMiner,
+		Data:        update2,
+	}
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateMn, eventUpdateMn2}, 100, "bhash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
-	require.EqualValues(t, miner.Path, update.Updates["path"])
-	require.EqualValues(t, miner.ShortName, update.Updates["short_name"])
+	require.EqualValues(t, miner.Path, update1.Updates["path"])
+	require.EqualValues(t, miner.ShortName, update1.Updates["short_name"])
 
 	// Miner - Delete Event
 	deleteEvent := Event{
@@ -252,14 +300,17 @@ func TestGetMiners(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access, config.DbSettings{})
-	if err != nil {
-		return
-	}
+	//t.Skip("only for local debugging, requires local postgresql")
+	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
+	require.NoError(t, err)
 	defer eventDb.Close()
+	err = eventDb.Drop()
+	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
-	defer eventDb.Drop()
+	require.NoError(t, err)
+
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+
 	assert.NoError(t, err, "error while migrating database")
 	createMiners(t, eventDb, 10)
 
@@ -294,20 +345,20 @@ func TestGetMinerLocations(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access, config.DbSettings{})
-	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
-	}
+	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
+	require.NoError(t, err)
 	defer eventDb.Close()
+	err = eventDb.Drop()
+	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
-	defer func() {
-		err = eventDb.Drop()
-		assert.NoError(t, err, "error while dropping database")
-	}()
+	require.NoError(t, err)
+
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+
 	assert.NoError(t, err, "error while migrating database")
 	createMinersWithLocation(t, eventDb, 12)
 	t.Run("miner locations without any filters", func(t *testing.T) {
-		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, common2.Pagination{})
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, common2.Pagination{Limit: 20})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 12, len(locations), "all miners should be returned")
 		for _, location := range locations {
