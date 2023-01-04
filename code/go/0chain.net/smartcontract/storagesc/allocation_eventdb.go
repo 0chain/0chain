@@ -64,6 +64,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			Allocated:       b.Allocated,
 			SavedData:       b.SavedData,
 			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
+			Downtime: 		 b.Downtime,
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     b.DelegateWallet,
 				MinStake:           currency.Coin(b.MinStake),

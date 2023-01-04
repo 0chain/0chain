@@ -73,6 +73,9 @@ func TestSharders(t *testing.T) {
 
 		// LastHealthCheck used to check for active node
 		LastHealthCheck common.Timestamp `json:"last_health_check"`
+
+		// Downtime aggregation of downtime of a node
+		Downtime uint64 `json:"downtime"`
 	}
 
 	type SharderNode struct {

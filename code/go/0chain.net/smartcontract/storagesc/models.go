@@ -347,6 +347,7 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings      `json:"stake_pool_settings"`
 	RewardPartition   RewardPartitionLocation `json:"reward_partition"`
+	Downtime		  uint64				  `json:"downtime"`
 }
 
 // validate the blobber configurations
