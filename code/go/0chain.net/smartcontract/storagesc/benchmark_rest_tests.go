@@ -161,7 +161,7 @@ func BenchmarkRestTests(
 			//	Endpoint: srh.getBlobberAggregate,
 			//},
 			{
-				FuncName: "allocation_min_lock",
+				FuncName: "allocation-min-lock",
 				Params: map[string]string{
 					"allocation_data": func() string {
 						var blobbers []string
