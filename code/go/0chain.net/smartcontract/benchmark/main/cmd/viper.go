@@ -90,7 +90,7 @@ func validateConfig() {
 	}
 
 	if viper.GetInt(bk.NumBlobberDelegates) > viper.GetInt(bk.NumActiveClients) {
-		log.Fatal(fmt.Errorf("blolbber delegates %d cannot exceed clients %d",
+		log.Fatal(fmt.Errorf("blolbber delegates %d cannot exceed active clients %d",
 			viper.GetInt(bk.NumBlobberDelegates), viper.GetInt(bk.NumActiveClients)))
 	}
 
