@@ -1,7 +1,6 @@
 package event
 
 import (
-	"sync"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -10,12 +9,10 @@ import (
 )
 
 type TestConfig struct {
-	conf  *TestConfigData
-	guard sync.RWMutex
+	conf *TestConfigData
 }
 
 type TestConfigData struct {
-	version               int64         `json:"-"` //version of config to track updates
 	IsStateEnabled        bool          `json:"state"`
 	IsDkgEnabled          bool          `json:"dkg"`
 	IsViewChangeEnabled   bool          `json:"view_change"`
