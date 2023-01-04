@@ -60,7 +60,6 @@ func TestBlobbers(t *testing.T) {
 		SavedData       int64                  `json:"saved_data"`
 		// StakePoolSettings used initially to create and setup stake pool.
 		StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
-		Downtime		uint64					`json:"downtime"`
 	}
 	convertSn := func(sn StorageNode) Blobber {
 		return Blobber{
@@ -81,7 +80,6 @@ func TestBlobbers(t *testing.T) {
 				NumDelegates:   sn.StakePoolSettings.NumDelegates,
 				ServiceCharge:  sn.StakePoolSettings.ServiceCharge,
 				LastHealthCheck:sn.LastHealthCheck,
-				Downtime:		sn.Downtime,
 			},
 			SavedData: sn.SavedData,
 		}

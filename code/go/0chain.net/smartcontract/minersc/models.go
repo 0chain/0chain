@@ -690,9 +690,6 @@ type SimpleNode struct {
 
 	//LastSettingUpdateRound will be set to round number when settings were updated
 	LastSettingUpdateRound int64 `json:"last_setting_update_round"`
-
-	// Downtime aggregation of downtime of the node
-	Downtime uint64 `json:"downtime"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

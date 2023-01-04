@@ -33,7 +33,6 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		NodeType:        NodeTypeMiner,
 		LastHealthCheck: edbMiner.LastHealthCheck,
 		Status:          status,
-		Downtime: 		 edbMiner.Downtime,
 	}
 
 	mn := MinerNode{
@@ -90,7 +89,6 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 				TotalRewards: mn.Reward,
 			},
 			LastHealthCheck: mn.LastHealthCheck,
-			Downtime: 		 mn.Downtime,
 		},
 
 		Active:    mn.Status == node.NodeStatusActive,

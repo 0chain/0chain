@@ -33,7 +33,7 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 			NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: sn.LastHealthCheck,
-			Downtime:		 sn.Downtime,
+
 			UnstakeTotal: sp.TotalUnStake,
 			TotalStake:   staked,
 		},
@@ -71,7 +71,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			NumDelegates:   sn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:  sn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: sn.LastHealthCheck,
-			Downtime:		sn.Downtime,
 			TotalStake:     staked,
 			UnstakeTotal:   sp.TotalUnStake,
 			Rewards: event.ProviderRewards{
@@ -104,7 +103,6 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 func emitBlobberHealthCheck(sn *StorageNode, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
 		LastHealthCheck: sn.LastHealthCheck,
-		Downtime:		 sn.Downtime,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagBlobberHealthCheck, sn.ID, data)
