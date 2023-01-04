@@ -221,10 +221,6 @@ definitions:
             id:
                 type: string
                 x-go-name: BlobberID
-            inactive_rounds:
-                format: int64
-                type: integer
-                x-go-name: InactiveRounds
             offers_total:
                 $ref: '#/definitions/Coin'
             open_challenges:

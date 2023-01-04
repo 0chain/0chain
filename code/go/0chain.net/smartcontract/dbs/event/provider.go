@@ -24,6 +24,21 @@ type Provider struct {
 	Rewards        ProviderRewards `json:"rewards" gorm:"foreignKey:ProviderID"`
 }
 
+type ProviderAggregate interface {
+	GetTotalStake() currency.Coin
+	GetUnstakeTotal() currency.Coin
+	GetServiceCharge() float64
+	SetTotalStake(value currency.Coin)
+	SetUnstakeTotal(value currency.Coin)
+	SetServiceCharge(value float64)
+}
+
+func recalculateProviderFields(prev, curr, result ProviderAggregate) {
+	result.SetTotalStake((curr.GetTotalStake() + prev.GetTotalStake()) / 2)
+	result.SetUnstakeTotal((curr.GetUnstakeTotal() + prev.GetUnstakeTotal()) / 2)
+	result.SetServiceCharge((curr.GetServiceCharge() + prev.GetServiceCharge()) / 2)
+}
+
 func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
 	intID := new(big.Int)
 	intID.SetString(p.ID, 16)
