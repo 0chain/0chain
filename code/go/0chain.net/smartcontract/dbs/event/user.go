@@ -50,9 +50,3 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 func mergeAddUsersEvents() *eventsMergerImpl[User] {
 	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
 }
-
-func (edb *EventDb) GetUserFromId(userId string) (User, error) {
-	user := User{}
-	return user, edb.Store.Get().Model(&User{}).Where(User{UserID: userId}).Scan(&user).Error
-
-}

@@ -85,15 +85,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getTransactionByFilter,
 			},
 			{
-				FuncName: "transaction-hashes",
-				Params: map[string]string{
-					"look-up-hash": benchmark.GetMockWriteMarkerLookUpHash(1, 1),
-					"name":         benchmark.GetMockWriteMarkerContentHash(1, 1),
-					"content-hash": benchmark.GetMockWriteMarkerFileName(1),
-				},
-				Endpoint: srh.getTransactionHashesByFilter,
-			},
-			{
 				FuncName: "errors",
 				Params: map[string]string{
 					"transaction_hash": benchmark.GetMockTransactionHash(3, 3),
@@ -408,11 +399,47 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlobberChallenges,
 			},
 			{
-				FuncName: "search",
+				FuncName: "search.block_number",
 				Params: map[string]string{
-					"query": benchmark.GetMockTransactionHash(3, 3),
+					"searchString": "1",
 				},
 				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "search.block_hash",
+				Params: map[string]string{
+					"searchString": benchmark.GetMockBlockHash(1),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "search.user",
+				Params: map[string]string{
+					"searchString": data.Clients[0],
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "search.wm_name",
+				Params: map[string]string{
+					"searchString": benchmark.GetMockWriteMarkerFileName(0),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "search.wm_content_hash",
+				Params: map[string]string{
+					"searchString": benchmark.GetMockWriteMarkerContentHash(0, 0),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "alloc-blobber-term",
+				Params: map[string]string{
+					"allocation_id": getMockAllocationId(0),
+					"blobber_id":    getMockBlobberId(0),
+				},
+				Endpoint: srh.getAllocBlobberTerms,
 			},
 			{
 				FuncName: "alloc-blobber-term",
