@@ -91,46 +91,11 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber_ids", common.UserRateLimit(srh.getBlobberIdsByUrls)),
 		rest.MakeEndpoint(storage+"/alloc_blobbers", common.UserRateLimit(srh.getAllocationBlobbers)),
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", common.UserRateLimit(srh.getFreeAllocationBlobbers)),
-		rest.MakeEndpoint(storage+"/blobber-rank", common.UserRateLimit(srh.getBlobberRank)),
 		rest.MakeEndpoint(storage+"/search", common.UserRateLimit(srh.getSearchHandler)),
 		rest.MakeEndpoint(storage+"/alloc-blobber-term", common.UserRateLimit(srh.getAllocBlobberTerms)),
 		rest.MakeEndpoint(storage+"/replicate-snapshots", common.UserRateLimit(srh.replicateSnapshots)),
 		rest.MakeEndpoint(storage+"/replicate-blobber-aggregates", srh.replicateBlobberAggregates),
 	}
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank blobber-rank
-// Gets the rank of a blobber.
-//
-//	challenges passed / total challenges
-//
-// parameters:
-//
-//	+name: id
-//	 description: id of blobber
-//	 required: true
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: Int64Map
-//	400:
-func (srh *StorageRestHandler) getBlobberRank(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	rank, err := edb.GetBlobberRank(id)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-	common.Respond(w, r, rest.Int64Map{
-		"blobber-rank": rank,
-	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
