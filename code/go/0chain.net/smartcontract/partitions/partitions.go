@@ -46,7 +46,7 @@ func CreateIfNotExists(state state.StateContextI, name string, partitionSize int
 	case nil:
 		return &Partitions{rs: &rs}, nil
 	case util.ErrValueNotPresent:
-		rs, err := newRandomSelector(name, partitionSize, nil)
+		rs, err := newRandomSelector(name, partitionSize)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +211,7 @@ func (p *Partitions) Size(state state.StateContextI) (int, error) {
 
 // Num returns the number of partitions
 func (p *Partitions) Num() int {
-	return p.rs.NumPartitions
+	return p.rs.partitionsNum()
 }
 
 // RemoveItem removes the partition item from given partIndex in Partitions
