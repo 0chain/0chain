@@ -13,6 +13,17 @@ const (
 	NumberOfTypes
 )
 
+
+// ProviderTable Table names of all providers in events_db, used in general provider handlers
+type ProviderTable string
+const (
+	MinerTable ProviderTable 	= "miners"
+	SharderTable 				= "sharders"
+	BlobberTable 				= "blobbers"
+	AuthorizerTable 			= "authorizers"
+	ValidatorTable 				= "validators"
+)
+
 func (t EventType) String() string {
 	if int(t) < len(TagString) && int(t) >= 0 {
 		return TagString[t]

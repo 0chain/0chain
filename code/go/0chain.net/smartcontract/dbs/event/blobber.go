@@ -433,5 +433,5 @@ func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
 }
 
 func mergeBlobberHealthCheckEvents() *eventsMergerImpl[Blobber] {
-	return (*eventsMergerImpl[Blobber])(newEventsMerger[Blobber](TagBlobberHealthCheck))
+	return newEventsMerger[Blobber](TagBlobberHealthCheck, withUniqueEventOverwrite())
 }

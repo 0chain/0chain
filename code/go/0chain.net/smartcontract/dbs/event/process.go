@@ -9,7 +9,6 @@ import (
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool/spenum"
 
 	"go.uber.org/zap"
 
@@ -706,15 +705,35 @@ func (edb *EventDb) addStat(event Event) (err error) {
 	case TagCollectProviderReward:
 		return edb.collectRewards(event.Index)
 	case TagMinerHealthCheck:
-		return edb.ProviderHealthCheck(spenum.Miner, event.Index, event.Data)
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(healthCheckUpdates, MinerTable)
 	case TagSharderHealthCheck:
-		return edb.ProviderHealthCheck(spenum.Sharder, event.Index, event.Data)
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(healthCheckUpdates, SharderTable)
 	case TagBlobberHealthCheck:
-		return edb.ProviderHealthCheck(spenum.Blobber, event.Index, event.Data)
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(healthCheckUpdates, BlobberTable)
 	case TagAuthorizerHealthCheck:
-		return edb.ProviderHealthCheck(spenum.Authorizer, event.Index, event.Data)
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(healthCheckUpdates, AuthorizerTable)
 	case TagValidatorHealthCheck:
-		return edb.ProviderHealthCheck(spenum.Validator, event.Index, event.Data)
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(healthCheckUpdates, ValidatorTable)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

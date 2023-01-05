@@ -114,6 +114,7 @@ func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) err
 
 func emitSharderHealthCheck(sn *MinerNode, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
+		ID: 			 sn.ID,
 		LastHealthCheck: sn.LastHealthCheck,
 	}
 

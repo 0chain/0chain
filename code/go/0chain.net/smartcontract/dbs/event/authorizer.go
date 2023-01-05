@@ -128,5 +128,5 @@ func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
 }
 
 func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[Authorizer] {
-	return (*eventsMergerImpl[Authorizer])(newEventsMerger[Authorizer](TagAuthorizerHealthCheck))
+	return newEventsMerger[Authorizer](TagAuthorizerHealthCheck, withUniqueEventOverwrite())
 }

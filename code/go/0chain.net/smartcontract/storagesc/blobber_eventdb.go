@@ -102,6 +102,7 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 
 func emitBlobberHealthCheck(sn *StorageNode, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
+		ID:				 sn.ID,
 		LastHealthCheck: sn.LastHealthCheck,
 	}
 

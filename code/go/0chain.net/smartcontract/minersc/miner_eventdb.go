@@ -117,6 +117,7 @@ func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error
 
 func emitMinerHealthCheck(mn *MinerNode, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
+		ID: 			 mn.ID,
 		LastHealthCheck: mn.LastHealthCheck,
 	}
 

@@ -261,5 +261,5 @@ func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
 }
 
 func mergeMinerHealthCheckEvents() *eventsMergerImpl[Miner] {
-	return (*eventsMergerImpl[Miner])(newEventsMerger[Miner](TagMinerHealthCheck))
+	return newEventsMerger[Miner](TagMinerHealthCheck, withUniqueEventOverwrite())
 }
