@@ -8,10 +8,11 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/0chain/common/core/util"
-
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/chain/state"
 )
@@ -22,23 +23,20 @@ const notFound = -1
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type randomSelector struct {
-	Name          string                  `json:"name"`
-	PartitionSize int                     `json:"partition_size"`
-	NumPartitions int                     `json:"num_partitions"`
-	Partitions    []*partition            `json:"-" msg:"-"`
-	Callback      ChangePartitionCallback `json:"-" msg:"-"`
+	Name          string       `json:"name"`
+	PartitionSize int          `json:"partition_size"`
+	NumPartitions int          `json:"num_partitions"`
+	Partitions    []*partition `json:"-" msg:"-"`
 }
 
 func newRandomSelector(
 	name string,
 	size int,
-	callback ChangePartitionCallback,
 ) (*randomSelector, error) {
 	// TODO: limit the name length
 	return &randomSelector{
 		Name:          name,
 		PartitionSize: size,
-		Callback:      callback,
 	}, nil
 }
 
@@ -48,10 +46,6 @@ func PartitionKey(name string, index int) datastore.Key {
 
 func (rs *randomSelector) partitionKey(index int) datastore.Key {
 	return PartitionKey(rs.Name, index)
-}
-
-func (rs *randomSelector) SetCallback(callback ChangePartitionCallback) {
-	rs.Callback = callback
 }
 
 func (rs *randomSelector) Add(state state.StateContextI, item PartitionItem) (int, error) {
@@ -68,24 +62,6 @@ func (rs *randomSelector) Add(state state.StateContextI, item PartitionItem) (in
 	}
 	if err := part.add(item); err != nil {
 		return rs.NumPartitions - 1, err
-	}
-	return len(rs.Partitions) - 1, nil
-}
-
-func (rs *randomSelector) addRawItem(state state.StateContextI, item item) (int, error) {
-	var part *partition
-	var err error
-	if len(rs.Partitions) > 0 {
-		part, err = rs.getPartition(state, len(rs.Partitions)-1)
-		if err != nil {
-			return 0, err
-		}
-	}
-	if len(rs.Partitions) == 0 || part.length() >= rs.PartitionSize {
-		part = rs.addPartition()
-	}
-	if err := part.addRaw(item); err != nil {
-		return 0, err
 	}
 	return len(rs.Partitions) - 1, nil
 }
@@ -126,12 +102,6 @@ func (rs *randomSelector) RemoveItem(
 	if err := part.addRaw(*replace); err != nil {
 		return err
 	}
-	if rs.Callback != nil {
-		err = rs.Callback(replace.ID, replace.Data, len(rs.Partitions)-1, index, state)
-		if err != nil {
-			return err
-		}
-	}
 
 	if lastPart.length() == 0 {
 		if err := rs.deleteTail(state); err != nil {
@@ -140,45 +110,6 @@ func (rs *randomSelector) RemoveItem(
 	}
 
 	return nil
-}
-
-func (rs *randomSelector) AddRand(
-	state state.StateContextI,
-	item PartitionItem,
-	r *rand.Rand,
-) (int, error) {
-	if rs.NumPartitions == 0 {
-		return rs.Add(state, item)
-	}
-	index := r.Intn(rs.NumPartitions)
-	if index == rs.NumPartitions-1 {
-		return rs.Add(state, item)
-	}
-
-	partition, err := rs.getPartition(state, index)
-	if err != nil {
-		return -1, err
-	}
-	moving := partition.cutTail()
-	if moving == nil {
-		return -1, fmt.Errorf("empty partitions, corrupt data")
-	}
-	if err := partition.add(item); err != nil {
-		return 0, err
-	}
-
-	movedTo, err := rs.addRawItem(state, *moving)
-	if err != nil {
-		return -1, err
-	}
-	if rs.Callback != nil {
-		err = rs.Callback(moving.ID, moving.Data, index, movedTo, state)
-		if err != nil {
-			return -1, err
-		}
-	}
-
-	return index, nil
 }
 
 func (rs *randomSelector) GetRandomItems(state state.StateContextI, r *rand.Rand, vs interface{}) error {
