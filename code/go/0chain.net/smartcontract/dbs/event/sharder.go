@@ -30,6 +30,32 @@ type Sharder struct {
 	Active          bool
 	Longitude       float64
 	Latitude        float64
+
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_sharder_creation_round"`
+}
+
+func (s *Sharder) GetTotalStake() currency.Coin {
+	return s.TotalStake
+}
+
+func (s *Sharder) GetUnstakeTotal() currency.Coin {
+	return s.UnstakeTotal
+}
+
+func (s *Sharder) GetServiceCharge() float64 {
+	return s.ServiceCharge
+}
+
+func (s *Sharder) SetTotalStake(value currency.Coin) {
+	s.TotalStake = value
+}
+
+func (s *Sharder) SetUnstakeTotal(value currency.Coin) {
+	s.UnstakeTotal = value
+}
+
+func (s *Sharder) SetServiceCharge(value float64) {
+	s.ServiceCharge = value
 }
 
 // swagger:model SharderGeolocation
@@ -37,6 +63,13 @@ type SharderGeolocation struct {
 	SharderID string  `json:"sharder_id"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+}
+
+func (edb *EventDb) GetSharderCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Sharder{}).Count(&count)
+
+	return count, res.Error
 }
 
 func (edb *EventDb) GetSharder(id string) (Sharder, error) {
