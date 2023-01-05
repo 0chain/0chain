@@ -83,6 +83,16 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = common.NewError(code, msg)
 		return
 	}
+	if payload.Amount < gn.MaxFee {
+		msg := fmt.Sprintf(
+			"amount requested (%v) is lower than service_fee for mint (%v), %s",
+			payload.Amount,
+			gn.MaxFee,
+			info,
+		)
+		err = common.NewError(code, msg)
+		return
+	}
 
 	_, exists := gn.WZCNNonceMinted[payload.Nonce]
 	if exists { // global nonce from ETH SC has already been minted
@@ -118,10 +128,20 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	err = ctx.AddMint(&state.Mint{
 		Minter:     gn.ID,
 		ToClientID: trans.ClientID,
-		Amount:     payload.Amount,
+		Amount:     payload.Amount - gn.ZCNSConfig.MaxFee,
 	})
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, add mint operation, %s", code, info))
+		return
+	}
+
+	err = ctx.AddTransfer(&state.Transfer{
+		ClientID:   gn.ID,
+		ToClientID: trans.ClientID,
+		Amount:     gn.ZCNSConfig.MaxFee,
+	})
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, add transfer operation, %s", code, info))
 		return
 	}
 
