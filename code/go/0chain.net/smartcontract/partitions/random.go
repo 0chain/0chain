@@ -17,7 +17,7 @@ import (
 	"0chain.net/chaincore/chain/state"
 )
 
-const notFound = -1
+const notFoundIndex = -1
 
 //msgp:ignore randomSelector
 //go:generate msgp -io=false -tests=false -unexported=true -v

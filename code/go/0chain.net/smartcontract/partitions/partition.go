@@ -93,7 +93,7 @@ func (p *partition) remove(id string) error {
 		return fmt.Errorf("searching empty partition")
 	}
 	index := p.findIndex(id)
-	if index == notFound {
+	if index == notFoundIndex {
 		return fmt.Errorf("cannot findIndex id %v in partition", id)
 	}
 	p.Items[index] = p.Items[len(p.Items)-1]
@@ -145,7 +145,7 @@ func (p *partition) findIndex(id string) int {
 			return i
 		}
 	}
-	return notFound
+	return notFoundIndex
 }
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
