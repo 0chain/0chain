@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/0chain/common/core/currency"
-	"gorm.io/gorm/clause"
 )
 
 type Authorizer struct {
@@ -109,20 +108,23 @@ func NewUpdateAuthorizerTotalUnStakeEvent(ID string, totalUnstake currency.Coin)
 }
 
 func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
-	}).Create(&authorizer).Error
+	var provs []Provider
+	for _, a := range authorizer {
+		provs = append(provs, a.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "authorizers")
+}
+
+func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) error {
+	var provs []Provider
+	for _, a := range authorizer {
+		provs = append(provs, a.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "authorizers")
 }
 
 func mergeUpdateAuthorizerTotalStakesEvents() *eventsMergerImpl[Authorizer] {
 	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalStake, withUniqueEventOverwrite())
-}
-func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
-	}).Create(&authorizer).Error
 }
 
 func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {

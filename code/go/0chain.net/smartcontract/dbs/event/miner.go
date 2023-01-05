@@ -242,35 +242,19 @@ func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag
 }
 
 func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
-	var ids []string
-	var stakes []int64
-	for _, m := range miners {
-		ids = append(ids, m.ID)
-		i, err := m.TotalStake.Int64()
-		if err != nil {
-			return err
-		}
-		stakes = append(stakes, i)
+	var provs []Provider
+	for _, s := range miners {
+		provs = append(provs, s.Provider)
 	}
-
-	return CreateBuilder("miners", "id", ids).
-		AddUpdate("total_stake", stakes).Exec(edb).Error
+	return edb.updateProviderTotalStakes(provs, "miners")
 }
 
 func (edb *EventDb) updateMinersTotalUnStakes(miners []Miner) error {
-	var ids []string
-	var unstakes []int64
-	for _, m := range miners {
-		ids = append(ids, m.ID)
-		i, err := m.TotalStake.Int64()
-		if err != nil {
-			return err
-		}
-		unstakes = append(unstakes, i)
+	var provs []Provider
+	for _, s := range miners {
+		provs = append(provs, s.Provider)
 	}
-
-	return CreateBuilder("miners", "id", ids).
-		AddUpdate("unstake_total", unstakes).Exec(edb).Error
+	return edb.updateProvidersTotalUnStakes(provs, "miners")
 }
 
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {

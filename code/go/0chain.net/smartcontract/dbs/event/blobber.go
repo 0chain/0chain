@@ -9,7 +9,6 @@ import (
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"github.com/0chain/common/core/currency"
@@ -186,12 +185,17 @@ func (edb *EventDb) deleteBlobber(id string) error {
 }
 
 func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"allocated", "last_health_check"}),
-	}).Create(&blobbers).Error
+	var ids []string
+	var allocated []int64
+	var lastHealthCheck []int64
+	for _, m := range blobbers {
+		ids = append(ids, m.ID)
+		allocated = append(allocated, m.Allocated)
+		lastHealthCheck = append(allocated, m.LastHealthCheck)
+	}
 
-	//return edb.Store.Get().Model(&Blobber{}).Where("id = ?", blobber.BlobberID).Updates(updates.Updates).Error
+	return CreateBuilder("blobbers", "id", ids).
+		AddUpdate("allocated", allocated).AddUpdate("last_health_check", lastHealthCheck).Exec(edb).Error
 
 }
 
@@ -292,17 +296,19 @@ func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag
 }
 
 func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
-	}).Create(&blobbers).Error
+	var provs []Provider
+	for _, b := range blobbers {
+		provs = append(provs, b.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "blobbers")
 }
 
 func (edb *EventDb) updateBlobbersTotalUnStakes(blobbers []Blobber) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
-	}).Create(&blobbers).Error
+	var provs []Provider
+	for _, b := range blobbers {
+		provs = append(provs, b.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "blobbers")
 }
 
 func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
@@ -313,10 +319,19 @@ func mergeUpdateBlobberTotalUnStakesEvents() *eventsMergerImpl[Blobber] {
 }
 
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"offers_total"}),
-	}).Create(&blobbers).Error
+	var ids []string
+	var offers []int64
+	for _, m := range blobbers {
+		ids = append(ids, m.ID)
+		i, err := m.OffersTotal.Int64()
+		if err != nil {
+			return err
+		}
+		offers = append(offers, i)
+	}
+
+	return CreateBuilder("blobbers", "id", ids).
+		AddUpdate("offers_total", offers).Exec(edb).Error
 }
 
 func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
@@ -324,15 +339,18 @@ func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
 }
 
 func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {
-	vs := map[string]interface{}{
-		"used":       gorm.Expr("blobbers.used + excluded.used"),
-		"saved_data": gorm.Expr("blobbers.saved_data + excluded.saved_data"),
+	var ids []string
+	var used []int64
+	var savedData []int64
+	for _, m := range blobbers {
+		ids = append(ids, m.ID)
+		used = append(used, m.Used)
+		savedData = append(savedData, m.SavedData)
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&blobbers).Error
+	return CreateBuilder("blobbers", "id", ids).
+		AddUpdate("used", used, "blobbers.used + t.used").
+		AddUpdate("saved_data", savedData, "blobbers.saved_data + t.saved_data").Exec(edb).Error
 }
 
 func mergeUpdateBlobberStatsEvents() *eventsMergerImpl[Blobber] {

@@ -88,19 +88,20 @@ func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (
 	}
 }
 
-func (edb *EventDb) updateValidatorStakes(validators []Validator) error {
-	updateFields := []string{"stake_total"}
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns(updateFields),
-	}).Create(&validators).Error
+func (edb *EventDb) updateValidatorTotalStakes(validators []Validator) error {
+	var provs []Provider
+	for _, v := range validators {
+		provs = append(provs, v.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "validators")
 }
-func (edb *EventDb) updateValidatorUnStakes(validators []Validator) error {
-	updateFields := []string{"unstake_total"}
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns(updateFields),
-	}).Create(&validators).Error
+
+func (edb *EventDb) updateValidatorTotalUnStakes(validators []Validator) error {
+	var provs []Provider
+	for _, v := range validators {
+		provs = append(provs, v.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "validators")
 }
 
 func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {

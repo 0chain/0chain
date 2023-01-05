@@ -11,6 +11,7 @@ import (
 )
 
 const SetTemplate = "%v = t.%v"
+const ExprTemplate = "%v = %v"
 const UnnestTemplate = "unnest(?::%v[]) AS %v"
 const UpdateTemplate = "UPDATE %v SET"
 const WhereTemplate = "WHERE %v.%v = t.%v"
@@ -47,7 +48,15 @@ func (b *UpdateBuilder) AddUpdate(column string, values interface{}, expr ...str
 	if b.sets != nil {
 		b.sets = append(b.sets, ", ")
 	}
-	b.sets = append(b.sets, fmt.Sprintf(SetTemplate, column, column))
+	switch len(expr) {
+	case 0:
+		b.sets = append(b.sets, fmt.Sprintf(SetTemplate, column, column))
+	case 1:
+		b.sets = append(b.sets, fmt.Sprintf(ExprTemplate, column, expr[0]))
+	default:
+		logging.Logger.Warn("only one expr is supported, ignoring")
+		b.sets = append(b.sets, fmt.Sprintf(ExprTemplate, column, expr[0]))
+	}
 
 	atype, ok := typeToSQL[reflect.TypeOf(values)]
 
@@ -81,8 +90,7 @@ func (b *UpdateBuilder) Build() *Query {
 		unnests = unnests + u
 	}
 
-	return &Query{Q: fmt.Sprintf(QueryTemplate, b.update, sets, unnests, b.where),
-		V: b.values}
+	return &Query{Q: fmt.Sprintf(QueryTemplate, b.update, sets, unnests, b.where), V: b.values}
 }
 
 func (b *UpdateBuilder) Exec(db *EventDb) *gorm.DB {

@@ -35,3 +35,35 @@ func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
 	}
 	return
 }
+
+func (edb *EventDb) updateProviderTotalStakes(providers []Provider, tablename string) error {
+	var ids []string
+	var stakes []int64
+	for _, m := range providers {
+		ids = append(ids, m.ID)
+		i, err := m.TotalStake.Int64()
+		if err != nil {
+			return err
+		}
+		stakes = append(stakes, i)
+	}
+
+	return CreateBuilder(tablename, "id", ids).
+		AddUpdate("total_stake", stakes).Exec(edb).Error
+}
+
+func (edb *EventDb) updateProvidersTotalUnStakes(providers []Provider, tablename string) error {
+	var ids []string
+	var unstakes []int64
+	for _, m := range providers {
+		ids = append(ids, m.ID)
+		i, err := m.TotalStake.Int64()
+		if err != nil {
+			return err
+		}
+		unstakes = append(unstakes, i)
+	}
+
+	return CreateBuilder(tablename, "id", ids).
+		AddUpdate("unstake_total", unstakes).Exec(edb).Error
+}
