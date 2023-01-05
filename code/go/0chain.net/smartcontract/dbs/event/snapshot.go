@@ -90,6 +90,8 @@ type globalSnapshot struct {
 	Snapshot
 	totalWritePricePeriod currency.Coin
 	blobberCount          int
+
+	totalTxnFees currency.Coin
 }
 
 func (edb *EventDb) addSnapshot(s Snapshot) error {

@@ -55,8 +55,7 @@ type Blobber struct {
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:ID"`
 
-	CreationRound  int64 `json:"creation_round" gorm:"index:idx_blobber_creation_round"`
-	InactiveRounds int64 `json:"inactive_rounds"`
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_blobber_creation_round"`
 }
 
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.
