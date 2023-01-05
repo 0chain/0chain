@@ -15,6 +15,39 @@ type Validator struct {
 	Provider
 	BaseUrl   string `json:"url"`
 	PublicKey string `json:"public_key"`
+
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_validator_creation_round"`
+}
+
+func (v *Validator) GetTotalStake() currency.Coin {
+	return v.TotalStake
+}
+
+func (v *Validator) GetUnstakeTotal() currency.Coin {
+	return v.UnstakeTotal
+}
+
+func (v *Validator) GetServiceCharge() float64 {
+	return v.ServiceCharge
+}
+
+func (v *Validator) SetTotalStake(value currency.Coin) {
+	v.TotalStake = value
+}
+
+func (v *Validator) SetUnstakeTotal(value currency.Coin) {
+	v.UnstakeTotal = value
+}
+
+func (v *Validator) SetServiceCharge(value float64) {
+	v.ServiceCharge = value
+}
+
+func (edb *EventDb) GetValidatorCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Validator{}).Count(&count)
+
+	return count, res.Error
 }
 
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {

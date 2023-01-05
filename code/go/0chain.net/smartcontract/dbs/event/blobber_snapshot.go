@@ -21,7 +21,6 @@ type BlobberSnapshot struct {
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
-	InactiveRounds      int64         `json:"inactive_rounds"`
 	CreationRound       int64         `json:"creation_round" gorm:"index"`
 	RankMetric          float64       `json:"rank_metric"`
 }
@@ -65,7 +64,6 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 			ChallengesPassed:    blobber.ChallengesPassed,
 			ChallengesCompleted: blobber.ChallengesCompleted,
 			OpenChallenges:      blobber.OpenChallenges,
-			InactiveRounds:      blobber.InactiveRounds,
 			CreationRound:       blobber.CreationRound,
 			RankMetric:          blobber.RankMetric,
 		})

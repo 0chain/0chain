@@ -516,6 +516,7 @@ func setUpMpt(
 		} else {
 			benchData.SharderKeys = sharderKeys[:listLength]
 		}
+		benchData.Now = common.Now()
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
