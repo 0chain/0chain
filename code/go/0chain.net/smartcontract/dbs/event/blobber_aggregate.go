@@ -40,9 +40,9 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 		Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit)
 	queryBuilder.Clauses(clause.OrderBy{
 		Columns: []clause.OrderByColumn{{
-			Column: clause.Column{Name: "blobber_id"},
-		}, {
 			Column: clause.Column{Name: "round"},
+		}, {
+			Column: clause.Column{Name: "blobber_id"},
 		}},
 	})
 
