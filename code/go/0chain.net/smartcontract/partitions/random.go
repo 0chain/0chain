@@ -97,6 +97,11 @@ func (rs *randomSelector) RemoveItem(
 
 	replace := lastPart.cutTail()
 	if replace == nil {
+		logging.Logger.Error("empty last partition - should not happen!!",
+			zap.Int("part index", len(rs.Partitions)-1),
+			zap.Int("part num", rs.NumPartitions),
+			zap.Int("parts len", len(rs.Partitions)))
+
 		return fmt.Errorf("empty last partitions, currpt data")
 	}
 	if err := part.addRaw(*replace); err != nil {
