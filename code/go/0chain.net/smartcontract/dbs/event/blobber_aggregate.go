@@ -38,10 +38,12 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 
 	queryBuilder := edb.Store.Get().
 		Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   false,
+	queryBuilder.Clauses(clause.OrderBy{
+		Columns: []clause.OrderByColumn{{
+			Column: clause.Column{Name: "blobber_id"},
+		}, {
+			Column: clause.Column{Name: "round"},
+		}},
 	})
 
 	result := queryBuilder.Scan(&snapshots)
