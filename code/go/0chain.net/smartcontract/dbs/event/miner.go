@@ -242,17 +242,35 @@ func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag
 }
 
 func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
-	}).Create(&miners).Error
+	var ids []string
+	var stakes []int64
+	for _, m := range miners {
+		ids = append(ids, m.ID)
+		i, err := m.TotalStake.Int64()
+		if err != nil {
+			return err
+		}
+		stakes = append(stakes, i)
+	}
+
+	return CreateBuilder("miners", "id", ids).
+		AddUpdate("total_stake", stakes).Exec(edb).Error
 }
 
 func (edb *EventDb) updateMinersTotalUnStakes(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
-	}).Create(&miners).Error
+	var ids []string
+	var unstakes []int64
+	for _, m := range miners {
+		ids = append(ids, m.ID)
+		i, err := m.TotalStake.Int64()
+		if err != nil {
+			return err
+		}
+		unstakes = append(unstakes, i)
+	}
+
+	return CreateBuilder("miners", "id", ids).
+		AddUpdate("unstake_total", unstakes).Exec(edb).Error
 }
 
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
