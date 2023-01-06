@@ -50,6 +50,7 @@ func Test_DifferentSenderAndReceiverMustFail(t *testing.T) {
 
 func Test_FuzzyMintTest(t *testing.T) {
 	ctx := MakeMockStateContext()
+	ctx.globalNode.ZCNSConfig.MaxFee = 9
 	contract := CreateZCNSmartContract()
 	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
