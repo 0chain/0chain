@@ -45,7 +45,7 @@ on:
         required: true
 jobs:
   system-tests:
-    uses: 0chain/actions/.github/workflows/manual_system_tests.yml@fix/refactoring
+    uses: 0chain/actions/.github/workflows/manual_system_tests.yml@master
     with:
       system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
       miner_branch: ${{ github.ref_name }}

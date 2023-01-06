@@ -60,6 +60,7 @@ func addMockAllocation(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
+	const mockWriePoolSize = 12345678
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
 		ID:              id,
@@ -85,6 +86,7 @@ func addMockAllocation(
 		TimeUnit: 1 * time.Hour,
 		// make last allocation finalised
 		Finalized: i == viper.GetInt(sc.NumAllocations)-1,
+		WritePool: mockWriePoolSize,
 	}
 	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
 		sa.Curators = append(sa.Curators, clients[j])
@@ -594,7 +596,7 @@ func GetMockBlobberStakePools(
 			TotalOffers: currency.Coin(100000),
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates)-1; j++ {
-			id := getMockBlobberStakePoolId(i, j)
+			id := getMockBlobberStakePoolId(i, j, clients)
 			clientIndex := (i&len(clients) + j) % len(clients)
 			sp.Pools[id] = &stakepool.DelegatePool{}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
@@ -769,16 +771,11 @@ func getMockStakePoolSettings(blobber string) stakepool.Settings {
 	}
 }
 
-func getMockReadPoolId(allocation, client, index int) string {
-	return encryption.Hash("read pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index))
-}
-
-func getMockWritePoolId(allocation, client, index int) string {
-	return encryption.Hash("write pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index))
-}
-
-func getMockBlobberStakePoolId(blobber, stake int) string {
-	return encryption.Hash(getMockBlobberId(blobber) + "pool" + strconv.Itoa(stake))
+func getMockBlobberStakePoolId(blobber, stake int, clients []string) string {
+	index := viper.GetInt(sc.NumBlobberDelegates)*blobber + stake
+	clinetIndex := index % len(clients)
+	clinetIndex = clinetIndex
+	return clients[index%len(clients)]
 }
 
 func getMockValidatorStakePoolId(blobber, stake int) string {
@@ -807,7 +804,6 @@ func getMockAllocationId(allocation int) string {
 
 func getMockOwnerFromAllocationIndex(allocation, numClinets int) int {
 	return allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPayerPools))
-
 }
 
 func getMockBlobberBlockFromAllocationIndex(i int) int {
