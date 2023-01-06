@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 )
@@ -159,6 +160,6 @@ func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
 	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalUnStake, withUniqueEventOverwrite())
 }
 
-func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[Authorizer] {
-	return newEventsMerger[Authorizer](TagAuthorizerHealthCheck, withUniqueEventOverwrite())
+func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagAuthorizerHealthCheck, withUniqueEventOverwrite())
 }

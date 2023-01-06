@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -431,6 +432,6 @@ func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
 	return sql
 }
 
-func mergeBlobberHealthCheckEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagBlobberHealthCheck, withUniqueEventOverwrite())
+func mergeBlobberHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagBlobberHealthCheck, withUniqueEventOverwrite())
 }
