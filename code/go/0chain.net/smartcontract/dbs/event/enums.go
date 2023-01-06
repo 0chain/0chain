@@ -17,11 +17,11 @@ const (
 // ProviderTable Table names of all providers in events_db, used in general provider handlers
 type ProviderTable string
 const (
-	MinerTable ProviderTable 	= "miners"
-	SharderTable 				= "sharders"
-	BlobberTable 				= "blobbers"
-	AuthorizerTable 			= "authorizers"
-	ValidatorTable 				= "validators"
+	MinerTable 		ProviderTable 	= "miners"
+	SharderTable 	ProviderTable	= "sharders"
+	BlobberTable 	ProviderTable	= "blobbers"
+	AuthorizerTable ProviderTable   = "authorizers"
+	ValidatorTable 	ProviderTable   = "validators"
 )
 
 func (t EventType) String() string {
