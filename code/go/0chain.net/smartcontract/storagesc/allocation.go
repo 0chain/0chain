@@ -577,7 +577,7 @@ func (uar *updateAllocationRequest) validate(
 		}
 	}
 
-	if uar.FileOptions > 255 {
+	if uar.FileOptions > 63 {
 		return fmt.Errorf("FileOptions %d incorrect", uar.FileOptions)
 	}
 
