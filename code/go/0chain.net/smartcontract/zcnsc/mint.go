@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -83,16 +84,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = common.NewError(code, msg)
 		return
 	}
-	if payload.Amount < gn.MaxFee {
-		msg := fmt.Sprintf(
-			"amount requested (%v) is lower than service_fee for mint (%v), %s",
-			payload.Amount,
-			gn.MaxFee,
-			info,
-		)
-		err = common.NewError(code, msg)
-		return
-	}
 
 	_, exists := gn.WZCNNonceMinted[payload.Nonce]
 	if exists { // global nonce from ETH SC has already been minted
@@ -124,24 +115,46 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	// record the global nonce from solidity smart contract
 	gn.WZCNNonceMinted[payload.Nonce] = true
 
+	var (
+		amount currency.Coin
+		n      currency.Coin
+		share  currency.Coin
+	)
+	share, _, err = currency.DistributeCoin(gn.ZCNSConfig.MaxFee, int64(len(payload.Signatures)))
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, DistributeCoin operation, %s", code, info))
+		return
+	}
+	n, err = currency.Int64ToCoin(int64(len(payload.Signatures)))
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, convert len signatures to coin, %s", code, info))
+		return
+	}
+	amount, err = currency.MinusCoin(payload.Amount, share*n)
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share * len(signatures), %s", code, info))
+		return
+	}
+	for _, sig := range payload.Signatures {
+		err = ctx.AddTransfer(&state.Transfer{
+			ClientID:   trans.ClientID,
+			ToClientID: sig.ID,
+			Amount:     share,
+		})
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("%s, AddTransfer operation, %s", code, info))
+		}
+		return
+	}
+
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
 		Minter:     gn.ID,
 		ToClientID: trans.ClientID,
-		Amount:     payload.Amount - gn.ZCNSConfig.MaxFee,
+		Amount:     amount,
 	})
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, add mint operation, %s", code, info))
-		return
-	}
-
-	err = ctx.AddTransfer(&state.Transfer{
-		ClientID:   gn.ID,
-		ToClientID: trans.ClientID,
-		Amount:     gn.ZCNSConfig.MaxFee,
-	})
-	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, add transfer operation, %s", code, info))
 		return
 	}
 
