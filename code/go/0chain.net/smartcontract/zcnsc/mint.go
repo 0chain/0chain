@@ -145,6 +145,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		}
 	}
 
+	// 123
+
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
 		Minter:     gn.ID,
