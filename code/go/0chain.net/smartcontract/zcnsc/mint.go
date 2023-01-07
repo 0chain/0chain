@@ -20,13 +20,11 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		code = "failed to mint"
 	)
 
-	var (
-		info = fmt.Sprintf(
-			"transaction hash %s, clientID: %s, payload: %s",
-			trans.Hash,
-			trans.ClientID,
-			string(inputData),
-		)
+	info := fmt.Sprintf(
+		"transaction hash %s, clientID: %s, payload: %s",
+		trans.Hash,
+		trans.ClientID,
+		string(inputData),
 	)
 
 	gn, err := GetGlobalNode(ctx)
@@ -143,8 +141,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		})
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("%s, AddTransfer operation, %s", code, info))
+			return
 		}
-		return
 	}
 
 	// mint the tokens
