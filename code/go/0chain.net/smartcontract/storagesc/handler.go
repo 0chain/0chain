@@ -1335,7 +1335,6 @@ func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge"))
 		return
 	}
-
 	common.Respond(w, r, challenge, nil)
 }
 
