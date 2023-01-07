@@ -3,9 +3,13 @@ package partitions
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
+	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
+	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
@@ -55,6 +59,11 @@ func (m *mockStateContextI) InsertTrieNode(key string, node util.MPTSerializable
 		return "", err
 	}
 	m.data[key] = d
+	return "", nil
+}
+
+func (m *mockStateContextI) DeleteTrieNode(key string) (string, error) {
+	delete(m.data, key)
 	return "", nil
 }
 
@@ -169,4 +178,286 @@ func TestPartitionsForeach(t *testing.T) {
 	err = p2.Get(balances, "k1", &vv)
 	require.NoError(t, err)
 	require.Equal(t, "new item", vv.V)
+}
+
+func TestPartitionsAdd(t *testing.T) {
+	tt := []struct {
+		name      string
+		size      int
+		num       int
+		it        testItem
+		expectErr error
+		expectLoc int
+	}{
+		{
+			name:      "add one item to empty partition",
+			size:      10,
+			num:       0,
+			it:        testItem{ID: "k1", V: "v1"},
+			expectLoc: 0,
+			expectErr: nil,
+		},
+		{
+			name:      "add one item to non-empty partition",
+			size:      10,
+			num:       1,
+			it:        testItem{ID: "k1", V: "v1"},
+			expectLoc: 0,
+			expectErr: nil,
+		},
+		{
+			name:      "add item - partition is full",
+			size:      10,
+			num:       10,
+			it:        testItem{ID: "k11", V: "v11"},
+			expectLoc: 1,
+			expectErr: nil,
+		},
+		{
+			name:      "add item - to second partition",
+			size:      10,
+			num:       11,
+			it:        testItem{ID: "k12", V: "v12"},
+			expectLoc: 1,
+			expectErr: nil,
+		},
+		{
+			name:      "item already exists",
+			size:      10,
+			num:       10,
+			it:        testItem{ID: "k1", V: "v1"},
+			expectErr: common.NewError(errItemExistCode, "k1"),
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			partsName := "test_pa"
+			s := prepareState(t, partsName, tc.size, tc.num)
+			p, err := GetPartitions(s, partsName)
+			require.NoError(t, err)
+
+			loc, err := p.Add(s, &tc.it)
+			require.Equal(t, tc.expectErr, err)
+			if err != nil {
+				return
+			}
+
+			require.Equal(t, tc.expectLoc, loc)
+			err = p.Save(s)
+			require.NoError(t, err)
+
+			p, err = GetPartitions(s, partsName)
+			require.NoError(t, err)
+
+			var it testItem
+			err = p.Get(s, tc.it.ID, &it)
+			require.NoError(t, err)
+			require.Equal(t, tc.it, it)
+		})
+	}
+}
+
+func TestPartitionsRemove(t *testing.T) {
+	tt := []struct {
+		name       string
+		size       int
+		num        int
+		removeIdx  int
+		replaceLoc int
+	}{
+		{
+			name:       "replace from another partition",
+			size:       10,
+			num:        11,
+			removeIdx:  1,
+			replaceLoc: 0,
+		},
+		{
+			name:       "replace from another partition 2",
+			size:       10,
+			num:        21,
+			removeIdx:  11,
+			replaceLoc: 1,
+		},
+		{
+			name:       "replace in the same partition",
+			size:       10,
+			num:        21,
+			removeIdx:  15,
+			replaceLoc: 1,
+		},
+		{
+			name:       "remove the last item - only one",
+			size:       10,
+			num:        21,
+			removeIdx:  20,
+			replaceLoc: -1, // -1 means not exist
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			balances := prepareState(t, "test_rs", tc.size, tc.num)
+
+			p, err := GetPartitions(balances, "test_rs")
+			require.NoError(t, err)
+			err = p.Remove(balances, fmt.Sprintf("k%d", tc.removeIdx))
+			require.NoError(t, err)
+
+			err = p.Save(balances)
+			require.NoError(t, err)
+
+			loc, ok, err := p.getItemPartIndex(balances, fmt.Sprintf("k%d", tc.num-1))
+			require.NoError(t, err)
+			if tc.replaceLoc != -1 {
+				require.True(t, ok)
+				require.Equal(t, tc.replaceLoc, loc)
+			} else {
+				require.False(t, ok, fmt.Sprintf("%d", loc))
+			}
+		})
+	}
+}
+
+func FuzzAdd(f *testing.F) {
+	rand.Seed(time.Now().UnixNano())
+	f.Add(10)
+	f.Fuzz(func(t *testing.T, n int) {
+		if n <= 0 {
+			return
+		}
+
+		n = n % 100
+
+		var s state.StateContextI
+		var num int
+		var ks int
+		partsName := "test_fr"
+		if n == 0 {
+			s = prepareState(t, partsName, 10, 0)
+		} else {
+			num = rand.Intn(n)
+			s = prepareState(t, partsName, 10, num)
+			ks = rand.Intn(n)
+		}
+		k := fmt.Sprintf("k%d", ks)
+
+		p, err := GetPartitions(s, partsName)
+		require.NoError(t, err)
+
+		_, err = p.Add(s, &testItem{ID: k, V: fmt.Sprintf("v%d", ks)})
+		if ks < num {
+			// must already exist
+			require.Equal(t, common.NewError(errItemExistCode, k), err)
+		}
+
+		err = p.Save(s)
+		require.NoError(t, err)
+
+		// reload partitions
+		p, err = GetPartitions(s, partsName)
+
+		var it testItem
+		err = p.Get(s, k, &it)
+		require.NoError(t, err)
+		require.Equal(t, fmt.Sprintf("v%d", ks), it.V)
+	})
+}
+
+func FuzzRemove(f *testing.F) {
+	rand.Seed(time.Now().UnixNano())
+	f.Add(10)
+	f.Fuzz(func(t *testing.T, n int) {
+		partsName := "test_fr"
+		if n <= 0 {
+			return
+		}
+
+		// limit the item number to 100
+		n = n % 100
+
+		var (
+			s   state.StateContextI
+			num int
+			ks  int
+		)
+
+		if n == 0 {
+			s = prepareState(t, partsName, 10, 0)
+		} else {
+			num = rand.Intn(n)
+			s = prepareState(t, partsName, 10, num)
+			ks = rand.Intn(n)
+		}
+
+		k := fmt.Sprintf("k%d", ks)
+
+		p, err := GetPartitions(s, partsName)
+		require.NoError(t, err)
+
+		// empty partitions
+		if n == 0 || num == 0 {
+			require.Equal(t, 0, p.partitionsNum())
+			err = p.Remove(s, k)
+			require.Equal(t, common.NewError(errItemNotFoundCode, k), err)
+			return
+		}
+
+		// remove item that does not exist in the partition
+		if ks >= num {
+			err = p.Remove(s, k)
+			require.Equal(t, common.NewError(errItemNotFoundCode, k), err)
+			return
+		}
+
+		// verify the last replaced item is moved or removed properly
+		lastLoc := p.partitionsNum() - 1
+		lastPart, err := p.getPartition(s, lastLoc)
+		require.NoError(t, err)
+		lastItem := lastPart.Items[len(lastPart.Items)-1]
+
+		loc, ok, err := p.getItemPartIndex(s, k)
+		require.NoError(t, err)
+		require.True(t, ok, fmt.Sprintf("num: %d, n: %d, k: %s", num, n, k))
+
+		err = p.Remove(s, k)
+		require.NoError(t, err)
+
+		err = p.Save(s)
+		require.NoError(t, err)
+
+		// reload partitions
+		p, err = GetPartitions(s, partsName)
+
+		_, ok, err = p.getItemPartIndex(s, k)
+		require.NoError(t, err)
+		require.False(t, ok)
+
+		// if the item is not the last item in last part, then the last item must has been moved
+		if lastLoc != loc {
+			movedLoc, ok, err := p.getItemPartIndex(s, lastItem.ID)
+			require.NoError(t, err)
+			require.True(t, ok)
+			require.Equal(t, movedLoc, loc)
+		}
+	})
+}
+
+func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
+	s := &mockStateContextI{data: make(map[string][]byte)}
+	parts, err := newPartitions(name, size)
+	require.NoError(t, err)
+
+	for i := 0; i < num; i++ {
+		k := fmt.Sprintf("k%d", i)
+		v := fmt.Sprintf("v%d", i)
+		it := testItem{ID: k, V: v}
+		_, err = parts.Add(s, &it)
+		require.NoError(t, err)
+	}
+
+	err = parts.Save(s)
+	require.NoError(t, err)
+	return s
 }

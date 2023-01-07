@@ -51,6 +51,11 @@ func (p *Partitions) loadLocations(idx int) {
 		return
 	}
 
+	// could happen removing last item and it's the last one in a partition
+	if idx >= len(p.Partitions) {
+		return
+	}
+
 	part := p.Partitions[idx]
 	for _, it := range part.Items {
 		kid := p.getLocKey(it.ID)

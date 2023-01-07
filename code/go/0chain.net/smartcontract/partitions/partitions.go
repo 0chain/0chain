@@ -122,13 +122,13 @@ func (p *Partitions) partitionKey(index int) datastore.Key {
 
 func (p *Partitions) Add(state state.StateContextI, item PartitionItem) (int, error) {
 	// duplicate item checking
-	_, ok, err := p.getItemPartIndex(state, item.GetID())
+	loc, ok, err := p.getItemPartIndex(state, item.GetID())
 	if err != nil {
 		return 0, err
 	}
 
 	if ok {
-		return 0, common.NewError(errItemExistCode, item.GetID())
+		return loc, common.NewError(errItemExistCode, item.GetID())
 	}
 
 	idx, err := p.add(state, item)
@@ -327,6 +327,11 @@ func (p *Partitions) removeItem(
 		return fmt.Errorf("empty last partitions, currpt data")
 	}
 	if err := part.addRaw(*replace); err != nil {
+		return err
+	}
+
+	// update the location of the replaced item, it moved from the last partition to the current one
+	if err := p.saveItemLoc(state, replace.ID, index); err != nil {
 		return err
 	}
 
