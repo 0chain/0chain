@@ -124,7 +124,10 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	if err != nil {
 		return err
 	}
-
+	logging.Logger.Info("rewardUpdate",
+		zap.Bool("debug", edb.Debug()),
+		zap.Int64("round", round),
+		zap.Any("rewards", rewards))
 	defer func() {
 		du := time.Since(ts)
 		n := len(rewards.rewards) + len(rewards.delegatePools)
@@ -157,9 +160,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
 	}
-	logging.Logger.Info("rewardUpdate",
-		zap.Bool("debug", edb.Debug()),
-		zap.Any("rewards", rewards))
+
 	if edb.Debug() {
 		if err := edb.insertProviderReward(spus, round); err != nil {
 			return err
@@ -172,23 +173,12 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
-/*
-func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T) error { //nolint:unused
-	vs := map[string]interface{}{
-		"rewards":      gorm.Expr(fmt.Sprintf("%s.rewards + excluded.rewards", tableName)),
-		"total_reward": gorm.Expr(fmt.Sprintf("%s.total_reward + excluded.total_reward", tableName)),
-	}
-
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: index}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&providers).Error
-}
-*/
 func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
+	logging.Logger.Info("piers rewardProviders", zap.Any("rewards", rewards))
 	vs := map[string]interface{}{
-		"rewards":       gorm.Expr("provider_rewards.rewards + excluded.rewards"),
-		"total_rewards": gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
+		"rewards":            gorm.Expr("provider_rewards.rewards + excluded.rewards"),
+		"total_rewards":      gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
+		"round_last_updated": gorm.Expr("excluded.round_last_updated"),
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
