@@ -34,7 +34,6 @@ type Partitions struct {
 	NumPartitions int          `json:"num_partitions"`
 	Partitions    []*partition `json:"-" msg:"-"`
 
-	toRemove  []string       `json:"-" msg:"-"`
 	toAdd     []idIndex      `json:"-" msg:"-"`
 	locations map[string]int `json:"-" msg:"-"`
 }
@@ -280,12 +279,10 @@ func (p *Partitions) Remove(state state.StateContextI, id string) error {
 		return err
 	}
 
-	p.toRemove = append(p.toRemove, id)
-
 	p.loadLocations(loc)
 	delete(p.locations, p.getLocKey(id))
-	return nil
 
+	return p.removeItemLoc(state, id)
 }
 
 func (p *Partitions) removeItem(
@@ -420,14 +417,6 @@ func (p *Partitions) Save(state state.StateContextI) error {
 	if err != nil {
 		return err
 	}
-
-	for _, k := range p.toRemove {
-		if err := p.removeItemLoc(state, k); err != nil {
-			return err
-		}
-	}
-
-	p.toRemove = p.toRemove[:0]
 
 	for _, k := range p.toAdd {
 		if err := p.saveItemLoc(state, k.ID, k.Idx); err != nil {

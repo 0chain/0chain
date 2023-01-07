@@ -260,62 +260,120 @@ func TestPartitionsAdd(t *testing.T) {
 
 func TestPartitionsRemove(t *testing.T) {
 	tt := []struct {
-		name       string
-		size       int
-		num        int
-		removeIdx  int
-		replaceLoc int
+		name      string
+		size      int
+		num       int
+		removeIdx int
+		expectErr error
 	}{
 		{
-			name:       "replace from another partition",
-			size:       10,
-			num:        11,
-			removeIdx:  1,
-			replaceLoc: 0,
+			name:      "1 partition, 1 item, remove head",
+			size:      10,
+			num:       1,
+			removeIdx: 0,
 		},
 		{
-			name:       "replace from another partition 2",
-			size:       10,
-			num:        21,
-			removeIdx:  11,
-			replaceLoc: 1,
+			name:      "1 partition, 10 item, remove head",
+			size:      10,
+			num:       10,
+			removeIdx: 0,
 		},
 		{
-			name:       "replace in the same partition",
-			size:       10,
-			num:        21,
-			removeIdx:  15,
-			replaceLoc: 1,
+			name:      "1 partition, 10 item, remove middle",
+			size:      10,
+			num:       10,
+			removeIdx: 5,
 		},
 		{
-			name:       "remove the last item - only one",
-			size:       10,
-			num:        21,
-			removeIdx:  20,
-			replaceLoc: -1, // -1 means not exist
+			name:      "1 partition, 10 item, remove end",
+			size:      10,
+			num:       10,
+			removeIdx: 9,
+		},
+		{
+			name:      "1 partition, 5 item, remove end",
+			size:      10,
+			num:       5,
+			removeIdx: 4,
+		},
+		{
+			name:      "1 partition, not found",
+			size:      10,
+			num:       5,
+			removeIdx: 5,
+			expectErr: common.NewError(errItemNotFoundCode, fmt.Sprintf("k%d", 5)),
+		},
+		{
+			name:      "1 partition, remove beyond partition size, not found",
+			size:      10,
+			num:       5,
+			removeIdx: 15,
+			expectErr: common.NewError(errItemNotFoundCode, fmt.Sprintf("k%d", 15)),
+		},
+		{
+			name:      "2 partition, remove from 2, head",
+			size:      10,
+			num:       11,
+			removeIdx: 10,
+		},
+		{
+			name:      "2 partition, remove middle",
+			size:      10,
+			num:       20,
+			removeIdx: 15,
+		},
+		{
+			name:      "2 partition, remove from 2, end",
+			size:      10,
+			num:       20,
+			removeIdx: 19,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			balances := prepareState(t, "test_rs", tc.size, tc.num)
+			pn := "test_pr"
+			balances := prepareState(t, pn, tc.size, tc.num)
 
-			p, err := GetPartitions(balances, "test_rs")
+			p, err := GetPartitions(balances, pn)
 			require.NoError(t, err)
-			err = p.Remove(balances, fmt.Sprintf("k%d", tc.removeIdx))
-			require.NoError(t, err)
+			k := fmt.Sprintf("k%d", tc.removeIdx)
+			err = p.Remove(balances, k)
+			require.Equal(t, tc.expectErr, err)
+			if err != nil {
+				return
+			}
 
+			// assert the item is removed before committing, i.e p.Save()
+			verify := func() {
+				var it testItem
+				err = p.Get(balances, k, &it)
+				require.Equal(t, common.NewError(errItemNotFoundCode, k), err)
+
+				// all remaining items should exist
+				for i := 0; i < tc.num; i++ {
+					if i == tc.removeIdx {
+						continue
+					}
+
+					it = testItem{}
+					k := fmt.Sprintf("k%d", i)
+					err = p.Get(balances, k, &it)
+					require.NoError(t, err)
+					require.Equal(t, &testItem{ID: k, V: fmt.Sprintf("v%d", i)}, &it)
+				}
+			}
+
+			verify()
+
+			// commit
 			err = p.Save(balances)
 			require.NoError(t, err)
 
-			loc, ok, err := p.getItemPartIndex(balances, fmt.Sprintf("k%d", tc.num-1))
+			// verify after commit and reload
+			p, err = GetPartitions(balances, pn)
 			require.NoError(t, err)
-			if tc.replaceLoc != -1 {
-				require.True(t, ok)
-				require.Equal(t, tc.replaceLoc, loc)
-			} else {
-				require.False(t, ok, fmt.Sprintf("%d", loc))
-			}
+			verify()
 		})
 	}
 }
@@ -457,8 +515,6 @@ func FuzzPartitionsAddRemove(f *testing.F) {
 			return
 		}
 
-		t.Logf("here1")
-
 		addN = addN % maxAdd
 
 		if removeN < 0 {
@@ -474,6 +530,7 @@ func FuzzPartitionsAddRemove(f *testing.F) {
 			s        state.StateContextI
 			itemsMap = make(map[string]struct{})
 		)
+
 		if initN == 0 {
 			s = prepareState(t, partsName, 10, 0)
 		} else {
@@ -484,31 +541,82 @@ func FuzzPartitionsAddRemove(f *testing.F) {
 			for i := 0; i < num; i++ {
 				itemsMap[fmt.Sprintf("k%d", i)] = struct{}{}
 			}
+			t.Logf("init size: %d", num)
 		}
-
-		t.Logf("initN:%d, addN: %d\n", initN, addN)
 
 		p, err := GetPartitions(s, partsName)
 		require.NoError(t, err)
 
-		for i := 0; i < addN; i++ {
+		addFunc := func() {
 			ks := rand.Intn(addN)
 			k := fmt.Sprintf("k%d", ks)
 			_, ok := itemsMap[k]
-
 			_, err = p.Add(s, &testItem{ID: k, V: fmt.Sprintf("v%d", ks)})
 			if !ok {
 				itemsMap[k] = struct{}{}
-				require.NoError(t, err, itemsMap)
+				require.NoError(t, err)
 			} else {
 				require.Equal(t, common.NewError(errItemExistCode, k), err)
 			}
 		}
 
+		for i := 0; i < addN; i++ {
+			addFunc()
+		}
+
 		err = p.Save(s)
 		require.NoError(t, err)
+
 		// remove items
+		var removed []string
+		removeFunc := func() {
+			ks := rand.Intn(removeN)
+			k := fmt.Sprintf("k%d", ks)
+
+			_, ok := itemsMap[k]
+			err = p.Remove(s, k)
+			if !ok {
+				require.Equal(t, common.NewError(errItemNotFoundCode, k), err, p.locations)
+			} else {
+				// remove item not exist
+				delete(itemsMap, k)
+				require.NoError(t, err)
+				removed = append(removed, k)
+			}
+		}
+		p, err = GetPartitions(s, partsName)
+		require.NoError(t, err)
+
+		for i := 0; i < removeN; i++ {
+			removeFunc()
+		}
+
+		err = p.Save(s)
+		require.NoError(t, err)
 	})
+}
+
+func (p *Partitions) RemoveT(t *testing.T, state state.StateContextI, id string) error {
+	t.Logf("try remove: %v", p.getLocKey(id))
+	loc, ok, err := p.getItemPartIndex(state, id)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return common.NewError(errItemNotFoundCode, id)
+	}
+
+	if err := p.removeItem(state, id, loc); err != nil {
+		t.Log("loc:", loc)
+		return err
+	}
+
+	p.loadLocations(loc)
+	delete(p.locations, p.getLocKey(id))
+	t.Logf("try after remove: %v", p.locations)
+
+	return p.removeItemLoc(state, id)
 }
 
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
