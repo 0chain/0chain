@@ -444,6 +444,73 @@ func FuzzRemove(f *testing.F) {
 	})
 }
 
+func FuzzPartitionsAddRemove(f *testing.F) {
+	rand.Seed(time.Now().UnixNano())
+	f.Add(20, 10, 5)
+	f.Fuzz(func(t *testing.T, initN, addN, removeN int) {
+		var (
+			partsName = "test_fr"
+			maxNum    = 100
+			maxAdd    = 200
+		)
+		if addN <= 0 {
+			return
+		}
+
+		t.Logf("here1")
+
+		addN = addN % maxAdd
+
+		if removeN < 0 {
+			return
+		}
+		removeN = removeN % maxNum
+
+		if initN < 0 {
+			return
+		}
+
+		var (
+			s        state.StateContextI
+			itemsMap = make(map[string]struct{})
+		)
+		if initN == 0 {
+			s = prepareState(t, partsName, 10, 0)
+		} else {
+			// init state with randN size, and randN number of items
+			size := rand.Intn(initN)
+			num := rand.Intn(initN)
+			s = prepareState(t, partsName, size, num)
+			for i := 0; i < num; i++ {
+				itemsMap[fmt.Sprintf("k%d", i)] = struct{}{}
+			}
+		}
+
+		t.Logf("initN:%d, addN: %d\n", initN, addN)
+
+		p, err := GetPartitions(s, partsName)
+		require.NoError(t, err)
+
+		for i := 0; i < addN; i++ {
+			ks := rand.Intn(addN)
+			k := fmt.Sprintf("k%d", ks)
+			_, ok := itemsMap[k]
+
+			_, err = p.Add(s, &testItem{ID: k, V: fmt.Sprintf("v%d", ks)})
+			if !ok {
+				itemsMap[k] = struct{}{}
+				require.NoError(t, err, itemsMap)
+			} else {
+				require.Equal(t, common.NewError(errItemExistCode, k), err)
+			}
+		}
+
+		err = p.Save(s)
+		require.NoError(t, err)
+		// remove items
+	})
+}
+
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
 	s := &mockStateContextI{data: make(map[string][]byte)}
 	parts, err := newPartitions(name, size)

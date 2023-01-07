@@ -60,7 +60,7 @@ func (p *Partitions) loadLocations(idx int) {
 	for _, it := range part.Items {
 		kid := p.getLocKey(it.ID)
 		if _, ok := p.locations[kid]; ok {
-			return
+			continue
 		}
 
 		p.locations[kid] = idx
