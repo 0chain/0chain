@@ -15,20 +15,25 @@ import (
 )
 
 type providerRewardsDelegates struct {
-	rewards       []ProviderRewards
-	delegatePools []DelegatePool
-	desc          [][]string
+	rewards        []ProviderRewards
+	delegatePools  []DelegatePool
+	desc           [][]string
+	rewardProvider []RewardProvider
+	rewardDelegate []RewardDelegate
 }
 
 func aggregateProviderRewards(
 	spus []dbs.StakePoolReward, round int64,
 ) (*providerRewardsDelegates, error) {
 	var (
-		rewards       = make([]ProviderRewards, 0, len(spus))
-		delegatePools = make([]DelegatePool, 0, len(spus))
-		descs         = make([][]string, 0, len(spus))
+		rewards        = make([]ProviderRewards, 0, len(spus))
+		delegatePools  = make([]DelegatePool, 0, len(spus))
+		descs          = make([][]string, 0, len(spus))
+		rewardProvider = make([]RewardProvider, 0, len(spus))
+		rewardDelegate = make([]RewardDelegate, 0, len(spus))
 	)
-
+	rewardProvider = rewardProvider
+	rewardDelegate = rewardDelegate
 	for i, sp := range spus {
 		if sp.Reward != 0 {
 			rewards = append(rewards, ProviderRewards{
@@ -152,7 +157,9 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
 	}
-
+	logging.Logger.Info("rewardUpdate",
+		zap.Bool("debug", edb.Debug()),
+		zap.Any("rewards", rewards))
 	if edb.Debug() {
 		if err := edb.insertProviderReward(spus, round); err != nil {
 			return err

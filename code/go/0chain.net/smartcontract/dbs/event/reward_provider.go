@@ -17,12 +17,13 @@ type RewardProvider struct {
 	RewardType  spenum.Reward `json:"reward_type" gorm:"index:idx_reward_type,priority:3"`
 }
 
-func (edb *EventDb) insertProviderReward(updates []dbs.StakePoolReward, round int64) error {
-	if len(updates) == 0 {
+func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round int64) error {
+	//logging.Logger.Info("piers insertProviderReward", zap.Any("inserts", inserts))
+	if len(inserts) == 0 {
 		return nil
 	}
 	var prs []RewardProvider
-	for _, sp := range updates {
+	for _, sp := range inserts {
 		pr := RewardProvider{
 			Amount:      sp.Reward,
 			BlockNumber: round,

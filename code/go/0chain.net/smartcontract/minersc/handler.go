@@ -421,11 +421,16 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 	} else {
 		miner, err = edb.GetMiner(id)
 	}
-	logging.Logger.Info("piers getNodeStat", zap.Any("miner", miner))
+	logging.Logger.Info("piers getNodeStat", zap.Any("miner", miner),
+		zap.Any("nodeStat", nodeStat{
+			MinerNodeResponse: minerTableToMinerNode(miner, dps),
+			TotalReward:       int64(miner.Rewards.TotalRewards),
+		}))
 	if err == nil {
 		common.Respond(w, r, nodeStat{
 			MinerNodeResponse: minerTableToMinerNode(miner, dps),
-			TotalReward:       int64(miner.Rewards.TotalRewards)}, nil)
+			TotalReward:       int64(miner.Rewards.TotalRewards),
+		}, nil)
 		return
 	}
 	var sharder event.Sharder

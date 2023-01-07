@@ -3,8 +3,6 @@ package event
 import (
 	"fmt"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -81,7 +79,7 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider) (
 }
 
 func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
-	logging.Logger.Info("piers updateDelegatePool", zap.Any("updates", updates))
+	//logging.Logger.Info("piers updateDelegatePool", zap.Any("updates", updates))
 	var dp = DelegatePool{
 		ProviderID:   updates.ProviderId,
 		ProviderType: updates.ProviderType,
@@ -104,7 +102,7 @@ func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
 }
 
 func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
-	logging.Logger.Info("piers addDelegatePools", zap.Any("dps", dps))
+	//logging.Logger.Info("piers addDelegatePools", zap.Any("dps", dps))
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
 		UpdateAll: true,
@@ -128,7 +126,7 @@ func addDelegatePoolLastUpdateRound() eventMergeMiddleware {
 			}
 			dp.RoundLastUpdated = events[i].BlockNumber
 			events[i].Data = dp
-			logging.Logger.Info("piers addDelegatePoolLastUpdateRound", zap.Any("dp", dp))
+			//logging.Logger.Info("piers addDelegatePoolLastUpdateRound", zap.Any("dp", dp))
 		}
 		return events, nil
 	}

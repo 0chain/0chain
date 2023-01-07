@@ -17,9 +17,10 @@ type RewardDelegate struct {
 	RewardType  spenum.Reward `json:"reward_type" gorm:"index:idx_reward_type,priority:3"`
 }
 
-func (edb *EventDb) insertDelegateReward(updates []dbs.StakePoolReward, round int64) error {
+func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round int64) error {
+	//logging.Logger.Info("piers insertDelegateReward", zap.Any("inserts", inserts))
 	var drs []RewardDelegate
-	for _, sp := range updates {
+	for _, sp := range inserts {
 		for poolId, amount := range sp.DelegateRewards {
 			dr := RewardDelegate{
 				Amount:      amount,

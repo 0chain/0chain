@@ -4,8 +4,6 @@ import (
 	common2 "0chain.net/smartcontract/common"
 	"fmt"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -54,12 +52,14 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	var minerDps []struct {
 		Miner
 		DelegatePool
+		ProviderRewards
 	}
 	var m Miner
 	var dps []DelegatePool
 
 	result := edb.Get().Preload("Rewards").
 		Table("miners").
+		Joins("left join provider_rewards on miners.id = provider_rewards.provider_id").
 		Joins("left join delegate_pools on miners.id = delegate_pools.provider_id").
 		Where("miners.id = ?", id).
 		Scan(&minerDps)
@@ -70,6 +70,7 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 		return m, nil, fmt.Errorf("get miner %s found no records", id)
 	}
 	m = minerDps[0].Miner
+	m.Rewards = minerDps[0].ProviderRewards
 	for i := range minerDps {
 		dps = append(dps, minerDps[i].DelegatePool)
 	}
@@ -307,7 +308,7 @@ func updateLastUpdateRound() eventMergeMiddleware {
 			}
 			updates.Updates["round_last_updated"] = events[i].BlockNumber
 			events[i].Data = updates
-			logging.Logger.Info("piers updateLastUpdateRound", zap.Any("updates", updates))
+			//logging.Logger.Info("piers updateLastUpdateRound", zap.Any("updates", updates))
 		}
 		return events, nil
 	}

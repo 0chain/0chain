@@ -122,12 +122,15 @@ func AddMockNodes(
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
 					Provider: event.Provider{
-						ID:               newNode.ID,
-						ServiceCharge:    newNode.Settings.ServiceChargeRatio,
-						NumDelegates:     newNode.Settings.MaxNumDelegates,
-						MinStake:         newNode.Settings.MinStake,
-						MaxStake:         newNode.Settings.MaxStake,
-						Rewards:          event.ProviderRewards{ProviderID: newNode.ID},
+						ID:            newNode.ID,
+						ServiceCharge: newNode.Settings.ServiceChargeRatio,
+						NumDelegates:  newNode.Settings.MaxNumDelegates,
+						MinStake:      newNode.Settings.MinStake,
+						MaxStake:      newNode.Settings.MaxStake,
+						Rewards: event.ProviderRewards{
+							ProviderID:       newNode.ID,
+							RoundLastUpdated: 7,
+						},
 						RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 					},
 				}
