@@ -502,6 +502,224 @@ func TestPartitionsUpdateItem(t *testing.T) {
 	}
 }
 
+func TestPartitionsUpdate(t *testing.T) {
+	tt := []struct {
+		name      string
+		size      int
+		num       int
+		update    testItem
+		expectErr error
+	}{
+		{
+			name:   "1 partition, update head",
+			size:   10,
+			num:    10,
+			update: testItem{ID: "k0", V: "v10"},
+		},
+		{
+			name:   "1 partition, update middle",
+			size:   10,
+			num:    10,
+			update: testItem{ID: "k5", V: "v15"},
+		},
+		{
+			name:   "1 partition, update end",
+			size:   10,
+			num:    10,
+			update: testItem{ID: "k9", V: "v90"},
+		},
+		{
+			name:   "2 partition, update 1 head",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k0", V: "v10"},
+		},
+		{
+			name:   "2 partition, update 1 middle",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k5", V: "v15"},
+		},
+		{
+			name:   "2 partition, update 1 end",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k9", V: "v90"},
+		},
+		{
+			name:   "2 partition, update 2 head",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k10", V: "v100"},
+		},
+		{
+			name:   "2 partition, update 2 middle",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k15", V: "v150"},
+		},
+		{
+			name:   "2 partition, update 2 end",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k19", V: "v190"},
+		},
+		{
+			name:   "2 partition, update 2 head, one item",
+			size:   10,
+			num:    11,
+			update: testItem{ID: "k10", V: "v100"},
+		},
+		{
+			name:      "item not found",
+			size:      10,
+			num:       10,
+			update:    testItem{ID: "k100", V: "v100"},
+			expectErr: common.NewError(errItemNotFoundCode, "k100"),
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			pn := "test_pu"
+			s := prepareState(t, pn, tc.size, tc.num)
+			p, err := GetPartitions(s, pn)
+			require.NoError(t, err)
+
+			err = p.Update(s, tc.update.ID, func(data []byte) ([]byte, error) {
+				var it testItem
+				_, err = it.UnmarshalMsg(data)
+				require.NoError(t, err)
+
+				it.V = tc.update.V
+				return it.MarshalMsg(nil)
+			})
+
+			require.Equal(t, tc.expectErr, err)
+			if err != nil {
+				return
+			}
+
+			verify := func() {
+				var it testItem
+				err = p.Get(s, tc.update.ID, &it)
+				require.NoError(t, err)
+				require.Equal(t, &tc.update, &it)
+			}
+
+			// verify before committing
+			verify()
+
+			// verify after committing
+			err = p.Save(s)
+			require.NoError(t, err)
+
+			// verify after commit and reload
+			p, err = GetPartitions(s, pn)
+			require.NoError(t, err)
+			verify()
+		})
+	}
+}
+
+func TestPartitionSize(t *testing.T) {
+	tt := []struct {
+		name   string
+		size   int
+		num    int
+		expect int
+	}{
+		{
+			name:   "0",
+			size:   10,
+			num:    0,
+			expect: 0,
+		},
+		{
+			name:   "1",
+			size:   10,
+			num:    1,
+			expect: 1,
+		},
+		{
+			name:   "10",
+			size:   10,
+			num:    10,
+			expect: 10,
+		},
+		{
+			name:   "11",
+			size:   10,
+			num:    11,
+			expect: 11,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			pn := "test_ps"
+			s := prepareState(t, pn, tc.size, tc.num)
+
+			p, err := GetPartitions(s, pn)
+			require.NoError(t, err)
+			l, err := p.Size(s)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, l)
+		})
+	}
+}
+
+func TestPartitionExist(t *testing.T) {
+	tt := []struct {
+		name   string
+		size   int
+		num    int
+		checkK int
+		expect bool
+	}{
+		{
+			name:   "1 partition, exist, head",
+			size:   10,
+			num:    10,
+			checkK: 0,
+			expect: true,
+		},
+		{
+			name:   "1 partition, exist, middle",
+			size:   10,
+			num:    10,
+			checkK: 5,
+			expect: true,
+		},
+		{
+			name:   "1 partition, exist, end",
+			size:   10,
+			num:    10,
+			checkK: 9,
+			expect: true,
+		},
+		{
+			name:   "1 partition, not exist",
+			size:   10,
+			num:    10,
+			checkK: 10,
+			expect: false,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			pn := "test_ps"
+			s := prepareState(t, pn, tc.size, tc.num)
+			p, err := GetPartitions(s, pn)
+			require.NoError(t, err)
+			find, err := p.Exist(s, fmt.Sprintf("k%d", tc.checkK))
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, find)
+		})
+	}
+}
+
 func FuzzAdd(f *testing.F) {
 	rand.Seed(time.Now().UnixNano())
 	f.Add(10)
@@ -720,7 +938,7 @@ func FuzzPartitionsAddRemove(f *testing.F) {
 	})
 }
 
-func FuzzPartitionsUpdate(f *testing.F) {
+func FuzzPartitionsUpdateItem(f *testing.F) {
 	rand.Seed(time.Now().UnixNano())
 	f.Add(10, 5)
 	f.Fuzz(func(t *testing.T, initN, updateK int) {
@@ -753,6 +971,67 @@ func FuzzPartitionsUpdate(f *testing.F) {
 
 		k := fmt.Sprintf("k%d", updateK)
 		err = p.UpdateItem(s, &testItem{ID: k, V: fmt.Sprintf("v%d", updateK+100)})
+		if updateK < num {
+			require.NoError(t, err)
+			// verify the item is updated
+			verify := func() {
+				var it testItem
+				err = p.Get(s, k, &it)
+				require.NoError(t, err)
+				require.Equal(t, fmt.Sprintf("v%d", updateK+100), it.V)
+			}
+
+			verify()
+			// verify after commit
+			err = p.Save(s)
+			require.NoError(t, err)
+			verify()
+		} else {
+			// item not exist
+			require.Equal(t, common.NewError(errItemNotFoundCode, k), err)
+		}
+	})
+}
+
+func FuzzPartitionsUpdate(f *testing.F) {
+	rand.Seed(time.Now().UnixNano())
+	f.Add(10, 5)
+	f.Fuzz(func(t *testing.T, initN, updateK int) {
+		if initN < 0 {
+			return
+		}
+		if updateK < 0 {
+			return
+		}
+
+		var (
+			pn     = "test_pu"
+			maxNum = 100
+			s      state.StateContextI
+			num    int
+		)
+
+		initN = initN % maxNum
+		if initN == 0 {
+			s = prepareState(t, pn, 10, 0)
+		} else {
+			// init state with randN size, and randN number of items
+			size := rand.Intn(initN)
+			num = rand.Intn(initN)
+			s = prepareState(t, pn, size, num)
+		}
+
+		p, err := GetPartitions(s, pn)
+		require.NoError(t, err)
+
+		k := fmt.Sprintf("k%d", updateK)
+		err = p.Update(s, k, func(data []byte) ([]byte, error) {
+			var it testItem
+			_, err = it.UnmarshalMsg(data)
+			require.NoError(t, err)
+			it.V = fmt.Sprintf("v%d", updateK+100)
+			return it.MarshalMsg(nil)
+		})
 		if updateK < num {
 			require.NoError(t, err)
 			// verify the item is updated
