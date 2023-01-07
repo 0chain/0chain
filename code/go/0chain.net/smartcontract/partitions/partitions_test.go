@@ -328,6 +328,18 @@ func TestPartitionsRemove(t *testing.T) {
 			num:       20,
 			removeIdx: 19,
 		},
+		{
+			name:      "2 partition, remove from 1",
+			size:      10,
+			num:       20,
+			removeIdx: 9,
+		},
+		{
+			name:      "2 partition, remove from 1, cut 2 tail",
+			size:      10,
+			num:       11,
+			removeIdx: 9,
+		},
 	}
 
 	for _, tc := range tt {
@@ -372,6 +384,118 @@ func TestPartitionsRemove(t *testing.T) {
 
 			// verify after commit and reload
 			p, err = GetPartitions(balances, pn)
+			require.NoError(t, err)
+			verify()
+		})
+	}
+}
+
+func TestPartitionsUpdateItem(t *testing.T) {
+	tt := []struct {
+		name      string
+		size      int
+		num       int
+		update    testItem
+		expectErr error
+	}{
+		{
+			name:   "1 partition, update head",
+			size:   10,
+			num:    10,
+			update: testItem{ID: "k0", V: "v10"},
+		},
+		{
+			name:   "1 partition, update middle",
+			size:   10,
+			num:    10,
+			update: testItem{ID: "k5", V: "v15"},
+		},
+		{
+			name:   "1 partition, update end",
+			size:   10,
+			num:    10,
+			update: testItem{ID: "k9", V: "v90"},
+		},
+		{
+			name:   "2 partition, update 1 head",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k0", V: "v10"},
+		},
+		{
+			name:   "2 partition, update 1 middle",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k5", V: "v15"},
+		},
+		{
+			name:   "2 partition, update 1 end",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k9", V: "v90"},
+		},
+		{
+			name:   "2 partition, update 2 head",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k10", V: "v100"},
+		},
+		{
+			name:   "2 partition, update 2 middle",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k15", V: "v150"},
+		},
+		{
+			name:   "2 partition, update 2 end",
+			size:   10,
+			num:    20,
+			update: testItem{ID: "k19", V: "v190"},
+		},
+		{
+			name:   "2 partition, update 2 head, one item",
+			size:   10,
+			num:    11,
+			update: testItem{ID: "k10", V: "v100"},
+		},
+		{
+			name:      "item not found",
+			size:      10,
+			num:       10,
+			update:    testItem{ID: "k100", V: "v100"},
+			expectErr: common.NewError(errItemNotFoundCode, "k100"),
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			pn := "test_pu"
+			s := prepareState(t, pn, tc.size, tc.num)
+			p, err := GetPartitions(s, pn)
+			require.NoError(t, err)
+
+			err = p.UpdateItem(s, &tc.update)
+			require.Equal(t, tc.expectErr, err)
+			if err != nil {
+				return
+			}
+
+			verify := func() {
+				var it testItem
+				err = p.Get(s, tc.update.ID, &it)
+				require.NoError(t, err)
+				require.Equal(t, &tc.update, &it)
+			}
+
+			// verify before committing
+			verify()
+
+			// verify after committing
+			err = p.Save(s)
+			require.NoError(t, err)
+
+			// verify after commit and reload
+			p, err = GetPartitions(s, pn)
 			require.NoError(t, err)
 			verify()
 		})
@@ -596,27 +720,59 @@ func FuzzPartitionsAddRemove(f *testing.F) {
 	})
 }
 
-func (p *Partitions) RemoveT(t *testing.T, state state.StateContextI, id string) error {
-	t.Logf("try remove: %v", p.getLocKey(id))
-	loc, ok, err := p.getItemPartIndex(state, id)
-	if err != nil {
-		return err
-	}
+func FuzzPartitionsUpdate(f *testing.F) {
+	rand.Seed(time.Now().UnixNano())
+	f.Add(10, 5)
+	f.Fuzz(func(t *testing.T, initN, updateK int) {
+		if initN < 0 {
+			return
+		}
+		if updateK < 0 {
+			return
+		}
 
-	if !ok {
-		return common.NewError(errItemNotFoundCode, id)
-	}
+		var (
+			pn     = "test_pu"
+			maxNum = 100
+			s      state.StateContextI
+			num    int
+		)
 
-	if err := p.removeItem(state, id, loc); err != nil {
-		t.Log("loc:", loc)
-		return err
-	}
+		initN = initN % maxNum
+		if initN == 0 {
+			s = prepareState(t, pn, 10, 0)
+		} else {
+			// init state with randN size, and randN number of items
+			size := rand.Intn(initN)
+			num = rand.Intn(initN)
+			s = prepareState(t, pn, size, num)
+		}
 
-	p.loadLocations(loc)
-	delete(p.locations, p.getLocKey(id))
-	t.Logf("try after remove: %v", p.locations)
+		p, err := GetPartitions(s, pn)
+		require.NoError(t, err)
 
-	return p.removeItemLoc(state, id)
+		k := fmt.Sprintf("k%d", updateK)
+		err = p.UpdateItem(s, &testItem{ID: k, V: fmt.Sprintf("v%d", updateK+100)})
+		if updateK < num {
+			require.NoError(t, err)
+			// verify the item is updated
+			verify := func() {
+				var it testItem
+				err = p.Get(s, k, &it)
+				require.NoError(t, err)
+				require.Equal(t, fmt.Sprintf("v%d", updateK+100), it.V)
+			}
+
+			verify()
+			// verify after commit
+			err = p.Save(s)
+			require.NoError(t, err)
+			verify()
+		} else {
+			// item not exist
+			require.Equal(t, common.NewError(errItemNotFoundCode, k), err)
+		}
+	})
 }
 
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
