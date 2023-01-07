@@ -221,6 +221,8 @@ func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 		MovedToValidators: sa.MovedToValidators,
 		TimeUnit:          int64(sa.TimeUnit),
 		WritePool:         sa.WritePool,
+		ThirdPartyExtendable: sa.ThirdPartyExtendable,
+		FileOptions:	   sa.FileOptions,
 	}
 
 	if sa.Stats != nil {
