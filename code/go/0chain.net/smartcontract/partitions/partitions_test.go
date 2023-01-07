@@ -2,6 +2,7 @@ package partitions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -720,6 +721,74 @@ func TestPartitionExist(t *testing.T) {
 	}
 }
 
+func TestGetRandomItems(t *testing.T) {
+	seed := int64(7777777)
+	tt := []struct {
+		name  string
+		size  int
+		num   int
+		randN int
+		err   error
+	}{
+		{
+			name: "1 partition, num > size",
+			size: 10,
+			num:  10,
+		},
+		{
+			name: "1 partition, num < size",
+			size: 10,
+			num:  5,
+		},
+		{
+			name: "2 partition",
+			size: 10,
+			num:  20,
+		},
+		{
+			name: "empty partitions",
+			size: 10,
+			num:  0,
+			err:  errors.New("empty list, no items to return"),
+		},
+		{
+			name: "2 partitions, fill from 1",
+			size: 10,
+			num:  15,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			pn := "test_ps"
+			r := rand.New(rand.NewSource(seed))
+			s := prepareState(t, pn, tc.size, tc.num)
+			p, err := GetPartitions(s, pn)
+			require.NoError(t, err)
+
+			var its []testItem
+			err = p.GetRandomItems(s, r, &its)
+			require.Equal(t, tc.err, err)
+			if err != nil {
+				return
+			}
+
+			if tc.num > tc.size {
+				require.Len(t, its, tc.size)
+			} else {
+				require.Len(t, its, tc.num)
+			}
+
+			for _, it := range its {
+				var sit testItem
+				err = p.Get(s, it.ID, &sit)
+				require.NoError(t, err)
+				require.Equal(t, sit, it)
+			}
+		})
+	}
+}
+
 func FuzzAdd(f *testing.F) {
 	rand.Seed(time.Now().UnixNano())
 	f.Add(10)
@@ -1050,6 +1119,49 @@ func FuzzPartitionsUpdate(f *testing.F) {
 		} else {
 			// item not exist
 			require.Equal(t, common.NewError(errItemNotFoundCode, k), err)
+		}
+	})
+}
+
+func FuzzPartitionsGetRandomItems(f *testing.F) {
+	rand.Seed(time.Now().UnixNano())
+	f.Add(10, 5)
+	f.Fuzz(func(t *testing.T, initN, size int) {
+		if initN < 0 {
+			return
+		}
+
+		if size <= 0 {
+			return
+		}
+
+		var (
+			pn     = "test_get_rand_items"
+			maxNum = 100
+			s      state.StateContextI
+		)
+
+		initN = initN % maxNum
+		s = prepareState(t, pn, size, initN)
+
+		p, err := GetPartitions(s, pn)
+		require.NoError(t, err)
+
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		var its []testItem
+		err = p.GetRandomItems(s, r, &its)
+
+		if initN == 0 {
+			require.Equal(t, errors.New("empty list, no items to return"), err)
+		} else {
+			require.NoError(t, err)
+
+			for _, it := range its {
+				var sit testItem
+				err = p.Get(s, it.ID, &sit)
+				require.NoError(t, err)
+				require.Equal(t, it, sit)
+			}
 		}
 	})
 }
