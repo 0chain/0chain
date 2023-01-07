@@ -14,8 +14,8 @@ import (
 
 type BlobberAggregate struct {
 	gorm.Model
-	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,unique"`
-	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,unique"`
+	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,priority:2,unique"`
+	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,priority:1,unique"`
 	BucketID            int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
