@@ -285,11 +285,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	for _, b := range blobberNodes {
 		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
-		balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, b.ID, event.AllocationValueChanged{
-			FieldType:    event.Allocated,
-			AllocationId: sa.ID,
-			Delta:        bSize(request.Size, request.DataShards),
-		})
 		if err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
 				zap.String("txn", txn.Hash),
@@ -313,6 +308,21 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 				zap.Error(err))
 			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
+
+		if _, err := partitionsBlobberAllocationsAdd(balances, b.ID, sa.ID); err != nil {
+			logging.Logger.Error("new_allocation_request_failed: error adding allocation to blobber",
+				zap.String("txn", txn.Hash),
+				zap.String("blobber", b.ID),
+				zap.String("allocation", sa.ID),
+				zap.Error(err))
+			return "", fmt.Errorf("could not bind allocation to blobber: %v", err)
+		}
+
+		balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, b.ID, event.AllocationValueChanged{
+			FieldType:    event.Allocated,
+			AllocationId: sa.ID,
+			Delta:        bSize(request.Size, request.DataShards),
+		})
 	}
 
 	var options []WithOption
@@ -1687,7 +1697,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 		// update the blobber in all (replace with existing one)
 		emitUpdateBlobber(b, balances)
-		err = removeAllocationFromBlobber(sc, d, alloc.ID, balances)
+		err = removeAllocationFromBlobber(balances, d)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"removing allocation from blobber challenge partition "+b.ID+": "+err.Error())

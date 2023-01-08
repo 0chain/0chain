@@ -1038,6 +1038,7 @@ func removeAllocationFromBlobber(
 		return nil
 	}
 
+	// remove blobber from challenge ready partition when there's no allocation bind to it
 	if err := partitionsChallengeReadyBlobbersRemove(balances, blobberID); err != nil {
 		return fmt.Errorf("could not remove blobber from challenge ready partitions: %v", err)
 	}

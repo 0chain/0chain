@@ -28,23 +28,26 @@ func (bc *ChallengeReadyBlobber) GetID() string {
 	return bc.BlobberID
 }
 
-func partitionsChallengeReadyBlobbersAdd(state state.StateContextI,
-	blobberID string, weight uint64) error {
-	challengeReadyParts, err := partitionsChallengeReadyBlobbers(state)
+func partitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobberID string, weight uint64) error {
+	parts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return fmt.Errorf("could not get challenge ready partitions, %v", err)
 	}
 
-	err = challengeReadyParts.AddItem(state, &ChallengeReadyBlobber{
-		BlobberID: blobberID,
-		Weight:    weight,
-	})
-	if err != nil {
-		return fmt.Errorf("could not add blobber to challenge ready partition, %v", err)
+	crb := &ChallengeReadyBlobber{BlobberID: blobberID, Weight: weight}
+	if err := parts.Add(state, crb); err != nil {
+		if !partitions.ErrItemExist(err) {
+			return err
+		}
+
+		// item exists, update
+		if err := parts.UpdateItem(state, crb); err != nil {
+			return err
+		}
 	}
 
-	if err := challengeReadyParts.Save(state); err != nil {
-		return fmt.Errorf("could not update challenge ready partitions: %v", err)
+	if err := parts.Save(state); err != nil {
+		return fmt.Errorf("could not add or update challenge ready partitions: %v", err)
 	}
 
 	return nil

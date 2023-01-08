@@ -740,18 +740,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"insufficient funds: %v", err)
 	}
 
-	// the first time the allocation is added  to the blobber, created related resources
-	if blobAlloc.Stats.UsedSize == 0 {
-		// remove allocation from blobber when there's no data stored
-		err = removeAllocationFromBlobber(sc, blobAlloc, alloc.ID, balances)
-		if err != nil {
-			return "", common.NewErrorf("commit_connection_failed",
-				"removing allocation from blobAlloc partition: %v", err)
-		}
-	} else {
-		if err := sc.blobberAddAllocation(t, blobAlloc, uint64(blobber.SavedData), balances); err != nil {
-			return "", common.NewErrorf("commit_connection_failed", err.Error())
-		}
+	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, uint64(blobber.SavedData)); err != nil {
+		return "", common.NewErrorf("commit_connection_failed", err.Error())
 	}
 
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
@@ -808,48 +798,20 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	return string(blobAllocBytes), nil
 }
 
-// blobberAddAllocation add allocation to blobber and create related partitions if needed
-//   - add allocation to blobber allocations partitions
-//   - add blobber to challenge ready partitions if the allocation is the first one and
-//     update blobber partitions locations
-func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transaction,
-	blobAlloc *BlobberAllocation, blobUsedCapacity uint64, balances cstate.StateContextI) error {
-	blobAllocsParts, err := partitionsBlobberAllocationsAdd(balances, txn.ClientID, blobAlloc.AllocationID)
-	if err != nil {
-		if partitions.ErrItemExist(err) {
-			// allocation already added to blobber
-			return nil
+// updateBlobberChallengeReady add or update blobber challenge weight or
+// remove itself from challenge ready partitions if there's no data stored
+func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.StateContextI,
+	blobAlloc *BlobberAllocation, blobUsedCapacity uint64) error {
+	logging.Logger.Info("commit_connection, add or update blobber challenge ready partitions",
+		zap.String("blobber", blobAlloc.BlobberID))
+	if blobUsedCapacity == 0 {
+		// remove from challenge ready partitions if this blobber has no data stored
+		if err := partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID); err != nil {
+			return fmt.Errorf("could not remove blobber from challenge ready partitions: %v", err)
 		}
 
-		return common.NewError("could not add allocation to blobber", err.Error())
-	}
-
-	logging.Logger.Info("commit_connection, add allocation to blobber",
-		zap.String("blobber", txn.ClientID),
-		zap.String("allocation", blobAlloc.AllocationID))
-
-	// there are more than one partition, so the blobber should have already been added to
-	// the challenge ready partition
-	if blobAllocsParts.Num() > 1 {
 		return nil
 	}
-
-	// check if blobber allocations partitions was empty before adding the new allocation
-	n, err := blobAllocsParts.Size(balances)
-	if err != nil {
-		return fmt.Errorf("could not get blobber allocations partition size: %v", err)
-	}
-
-	// there are more than one item in the partition, so
-	// the blobber should have been added to the challenge ready partition
-	if n > 1 {
-		return nil
-	}
-
-	// add blobber to challenge ready partitions as the allocation is the first
-	// one that added to the blobber
-	logging.Logger.Info("commit_connection, add blobber to challenge ready partitions",
-		zap.String("blobber", txn.ClientID))
 
 	sp, err := getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances)
 	if err != nil {
@@ -862,11 +824,9 @@ func (sc *StorageSmartContract) blobberAddAllocation(txn *transaction.Transactio
 			"unable to clean stake pool: %v", err)
 	}
 	weight := uint64(stakedAmount) * blobUsedCapacity
-
-	if err = partitionsChallengeReadyBlobbersAdd(balances, txn.ClientID, weight); err != nil {
+	if err := partitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, weight); err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions: %v", err)
 	}
-
 	return nil
 }
 
