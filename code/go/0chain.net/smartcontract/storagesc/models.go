@@ -22,7 +22,6 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -916,10 +915,7 @@ func (sa *StorageAllocation) removeBlobber(
 			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
 			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
 
-			if err := removeAllocationFromBlobber(ssc,
-				d,
-				d.AllocationID,
-				balances); err != nil {
+			if err := removeAllocationFromBlobber(balances, d); err != nil {
 				return nil, err
 			}
 
@@ -1004,17 +1000,15 @@ func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) 
 }
 
 // removeAllocationFromBlobber removes the allocation from blobber
-func removeAllocationFromBlobber(
-	ssc *StorageSmartContract,
-	blobAlloc *BlobberAllocation,
-	allocID string,
-	balances cstate.StateContextI) error {
-
-	blobberID := blobAlloc.BlobberID
+func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *BlobberAllocation) error {
+	var (
+		blobberID = blobAlloc.BlobberID
+		allocID   = blobAlloc.AllocationID
+	)
 
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
-		return fmt.Errorf("cannot fetch blobber allocation partition: %v", err)
+		return fmt.Errorf("could not get blobber allocations partition: %v", err)
 	}
 
 	if err := blobAllocsParts.RemoveItem(balances, allocID); err != nil {
