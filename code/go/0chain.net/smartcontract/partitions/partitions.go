@@ -119,20 +119,20 @@ func (p *Partitions) partitionKey(index int) datastore.Key {
 	return partitionKey(p.Name, index)
 }
 
-func (p *Partitions) Add(state state.StateContextI, item PartitionItem) (int, error) {
+func (p *Partitions) Add(state state.StateContextI, item PartitionItem) error {
 	// duplicate item checking
-	loc, ok, err := p.getItemPartIndex(state, item.GetID())
+	_, ok, err := p.getItemPartIndex(state, item.GetID())
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	if ok {
-		return loc, common.NewError(errItemExistCode, item.GetID())
+		return common.NewError(errItemExistCode, item.GetID())
 	}
 
 	idx, err := p.add(state, item)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	p.toAdd = append(p.toAdd, idIndex{
@@ -141,7 +141,7 @@ func (p *Partitions) Add(state state.StateContextI, item PartitionItem) (int, er
 	})
 
 	p.loadLocations(idx)
-	return idx, nil
+	return nil
 }
 
 func (p *Partitions) add(state state.StateContextI, item PartitionItem) (int, error) {

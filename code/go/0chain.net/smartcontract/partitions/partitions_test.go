@@ -99,7 +99,7 @@ func TestCreateIfNotExists(t *testing.T) {
 	require.Equal(t, 100, p.PartitionSize)
 
 	// add items to the partition
-	_, err = p.Add(s, &testItem{ID: "k1", V: "v1"})
+	err = p.Add(s, &testItem{ID: "k1", V: "v1"})
 	require.NoError(t, err)
 
 	err = p.Save(s)
@@ -125,7 +125,7 @@ func TestPartitionsSave(t *testing.T) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 		it := testItem{ID: k, V: v}
-		_, err = parts.Add(balances, &it)
+		err = parts.Add(balances, &it)
 		require.NoError(t, err)
 	}
 
@@ -168,7 +168,7 @@ func TestPartitionsForeach(t *testing.T) {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 		it := testItem{ID: k, V: v}
-		_, err = parts.Add(balances, &it)
+		err = parts.Add(balances, &it)
 		require.NoError(t, err)
 	}
 
@@ -264,11 +264,14 @@ func TestPartitionsAdd(t *testing.T) {
 			p, err := GetPartitions(s, partsName)
 			require.NoError(t, err)
 
-			loc, err := p.Add(s, &tc.it)
+			err = p.Add(s, &tc.it)
 			require.Equal(t, tc.expectErr, err)
 			if err != nil {
 				return
 			}
+			loc, ok, err := p.getItemPartIndex(s, tc.it.ID)
+			require.NoError(t, err)
+			require.True(t, ok)
 
 			require.Equal(t, tc.expectLoc, loc)
 			err = p.Save(s)
@@ -841,7 +844,7 @@ func FuzzAdd(f *testing.F) {
 		p, err := GetPartitions(s, partsName)
 		require.NoError(t, err)
 
-		_, err = p.Add(s, &testItem{ID: k, V: fmt.Sprintf("v%d", ks)})
+		err = p.Add(s, &testItem{ID: k, V: fmt.Sprintf("v%d", ks)})
 		if ks < num {
 			// must already exist
 			require.Equal(t, common.NewError(errItemExistCode, k), err)
@@ -988,7 +991,7 @@ func FuzzPartitionsAddRemove(f *testing.F) {
 			ks := rand.Intn(addN)
 			k := fmt.Sprintf("k%d", ks)
 			_, ok := itemsMap[k]
-			_, err = p.Add(s, &testItem{ID: k, V: fmt.Sprintf("v%d", ks)})
+			err = p.Add(s, &testItem{ID: k, V: fmt.Sprintf("v%d", ks)})
 			if !ok {
 				itemsMap[k] = struct{}{}
 				require.NoError(t, err)
@@ -1209,7 +1212,7 @@ func prepareState(t *testing.T, name string, size, num int) state.StateContextI 
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("v%d", i)
 		it := testItem{ID: k, V: v}
-		_, err = parts.Add(s, &it)
+		err = parts.Add(s, &it)
 		require.NoError(t, err)
 	}
 
