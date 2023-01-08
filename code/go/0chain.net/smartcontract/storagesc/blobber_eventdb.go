@@ -100,10 +100,11 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	return nil
 }
 
-func emitBlobberHealthCheck(sn *StorageNode, balances cstate.StateContextI) error {
+func emitBlobberHealthCheck(sn *StorageNode, downtime uint64, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
 		ID:				 sn.ID,
 		LastHealthCheck: sn.LastHealthCheck,
+		Downtime:		 downtime,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagBlobberHealthCheck, sn.ID, data)

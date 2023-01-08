@@ -112,10 +112,11 @@ func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) err
 	return nil
 }
 
-func emitSharderHealthCheck(sn *MinerNode, balances cstate.StateContextI) error {
+func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
 		ID: 			 sn.ID,
 		LastHealthCheck: sn.LastHealthCheck,
+		Downtime:		 downtime,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)

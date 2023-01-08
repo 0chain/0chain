@@ -9,6 +9,7 @@ import (
 type DbHealthCheck struct {
 	ID				string			 `json:"id"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	Downtime		uint64			 `json:"downtime"`
 }
 
 type DbUpdates struct {

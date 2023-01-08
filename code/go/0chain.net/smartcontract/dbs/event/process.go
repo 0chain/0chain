@@ -713,31 +713,31 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateProvidersHealthCheck(healthCheckUpdates, MinerTable)
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, MinerTable)
 	case TagSharderHealthCheck:
 		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateProvidersHealthCheck(healthCheckUpdates, SharderTable)
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, SharderTable)
 	case TagBlobberHealthCheck:
 		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateProvidersHealthCheck(healthCheckUpdates, BlobberTable)
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, BlobberTable)
 	case TagAuthorizerHealthCheck:
 		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateProvidersHealthCheck(healthCheckUpdates, AuthorizerTable)
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, AuthorizerTable)
 	case TagValidatorHealthCheck:
 		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateProvidersHealthCheck(healthCheckUpdates, ValidatorTable)
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

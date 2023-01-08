@@ -16,10 +16,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// TODO: Move to a config file
-const healthCheckPeriod = common.Timestamp(1 * time.Minute)
-const healthCheckDelayLimit = common.Timestamp(10 * time.Second)
-
 var ProviderModel = map[spenum.Provider]interface{}{
 	spenum.Miner		: &Miner{},
 	spenum.Sharder		: &Sharder{},
@@ -72,17 +68,15 @@ func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
-func (edb *EventDb) updateProvidersHealthCheck(updates *[]dbs.DbHealthCheck, tableName ProviderTable) error {
+func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tableName ProviderTable) error {
 	logging.Logger.Info("Running update provider health check with data: ", zap.Any("updates", updates), zap.String("tableName", string(tableName)))
 	updateExpr := map[string]interface{}{
 		"last_health_check": gorm.Expr("excluded.last_health_check"),
-		"downtime": gorm.Expr(
-			fmt.Sprintf("CASE WHEN excluded.last_health_check - %[1]s.last_health_check > ? THEN  %[1]v.downtime + excluded.last_health_check - %[1]v.last_health_check ELSE %[1]v.downtime END", tableName),
-		healthCheckPeriod + healthCheckDelayLimit),
+		"downtime": gorm.Expr(fmt.Sprintf("%v.downtime + excluded.downtime", tableName)),
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.Assignments(updateExpr), // column needed to be updated
-	}).Table(string(tableName)).Create(updates).Error
+	}).Table(string(tableName)).Create(&updates).Error
 }
