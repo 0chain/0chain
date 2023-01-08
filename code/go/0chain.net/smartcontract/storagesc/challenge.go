@@ -909,18 +909,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if alloc.Expiration >= txn.CreationDate {
 			foundAllocation = true
 			break
-		} else {
-			allocBlob, ok := alloc.BlobberAllocsMap[blobberID]
-			if !ok {
-				return nil, errors.New("invalid blobber for allocation")
-			}
-			if err := removeAllocationFromBlobber(sc,
-				allocBlob,
-				allocID,
-				balances); err != nil {
-				return nil, err
-			}
 		}
+
 		err = alloc.save(balances, sc.ID)
 		if err != nil {
 			return nil, common.NewErrorf("populate_challenge",
