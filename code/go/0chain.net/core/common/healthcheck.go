@@ -4,8 +4,8 @@ import "time"
 
 // TODO: Move to a config file
 const (
-	healthCheckPeriod = Timestamp(1 * time.Minute)
-	healthCheckDelayLimit = Timestamp(10 * time.Second)
+	healthCheckPeriod = Timestamp(5 * time.Minute)
+	healthCheckDelayLimit = Timestamp(30 * time.Second)
 )
 
 func Downtime(prevHealthCheck, curHealthCheck Timestamp) uint64 {
