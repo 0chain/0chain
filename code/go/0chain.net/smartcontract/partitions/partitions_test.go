@@ -90,6 +90,32 @@ func (ti *testItem) Msgsize() int {
 	return len(d)
 }
 
+func TestCreateIfNotExists(t *testing.T) {
+	s := &mockStateContextI{data: make(map[string][]byte)}
+	p, err := CreateIfNotExists(s, "foo", 100)
+	require.NoError(t, err)
+
+	require.Equal(t, "foo", p.Name)
+	require.Equal(t, 100, p.PartitionSize)
+
+	// add items to the partition
+	_, err = p.Add(s, &testItem{ID: "k1", V: "v1"})
+	require.NoError(t, err)
+
+	err = p.Save(s)
+	require.NoError(t, err)
+
+	// call CreateIfNotExists again and assert added items exist
+	p, err = CreateIfNotExists(s, "foo", 100)
+	require.NoError(t, err)
+
+	var it testItem
+	err = p.Get(s, "k1", &it)
+	require.NoError(t, err)
+
+	require.Equal(t, "v1", it.V)
+}
+
 func TestPartitionsSave(t *testing.T) {
 	balances := &mockStateContextI{data: make(map[string][]byte)}
 	parts, err := newPartitions("test_rs", 10)
@@ -1164,6 +1190,14 @@ func FuzzPartitionsGetRandomItems(f *testing.F) {
 			}
 		}
 	})
+}
+
+func TestErrItemNotFound(t *testing.T) {
+	require.True(t, ErrItemNotFound(common.NewError(errItemNotFoundCode, "any key")))
+}
+
+func TestErrItemExist(t *testing.T) {
+	require.True(t, ErrItemExist(common.NewError(errItemExistCode, "any key")))
 }
 
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
