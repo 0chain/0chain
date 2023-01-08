@@ -482,7 +482,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		}
 
 		var brn BlobberRewardNode
-		if err := parts.GetItem(balances, blobber.ID, &brn); err != nil {
+		if err := parts.Get(balances, blobber.ID, &brn); err != nil {
 			return "", common.NewErrorf("commit_blobber_read",
 				"cannot fetch blobber node item from partition: %v", err)
 		}
@@ -753,7 +753,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 
 		var brn BlobberRewardNode
-		if err := parts.GetItem(balances, blobber.ID, &brn); err != nil {
+		if err := parts.Get(balances, blobber.ID, &brn); err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"cannot fetch blobber node item from partition: %v", err)
 		}

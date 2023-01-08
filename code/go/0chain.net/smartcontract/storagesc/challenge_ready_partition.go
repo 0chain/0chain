@@ -59,7 +59,7 @@ func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID
 		return fmt.Errorf("could not get blobber challenge ready partitions: %v", err)
 	}
 
-	err = challengeReadyParts.RemoveItem(state, blobberID)
+	err = challengeReadyParts.Remove(state, blobberID)
 	if err != nil {
 		return fmt.Errorf("could not remove blobber from challenge partitions: %v", err)
 	}

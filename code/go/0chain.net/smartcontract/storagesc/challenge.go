@@ -613,7 +613,7 @@ func (sc *StorageSmartContract) challengePassed(
 			dataRead = blobber.DataReadLastRewardRound
 		}
 
-		err := ongoingParts.AddItem(
+		err := ongoingParts.Add(
 			balances,
 			&BlobberRewardNode{
 				ID:                blobber.ID,
@@ -641,7 +641,7 @@ func (sc *StorageSmartContract) challengePassed(
 	}
 
 	var brStats BlobberRewardNode
-	if err := ongoingParts.GetItem(balances, blobber.ID, &brStats); err != nil {
+	if err := ongoingParts.Get(balances, blobber.ID, &brStats); err != nil {
 		return "", common.NewError("verify_challenge",
 			"can't get blobber reward from partition list: "+err.Error())
 	}

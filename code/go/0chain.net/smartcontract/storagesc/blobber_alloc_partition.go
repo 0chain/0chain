@@ -31,7 +31,7 @@ func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, alloc
 		return nil, fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
 	}
 
-	err = blobAllocsParts.AddItem(state, &BlobberAllocationNode{ID: allocID})
+	err = blobAllocsParts.Add(state, &BlobberAllocationNode{ID: allocID})
 	if err != nil {
 		return nil, err
 	}

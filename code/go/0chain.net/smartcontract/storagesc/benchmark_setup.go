@@ -193,7 +193,7 @@ func AddMockChallenges(
 			continue
 		}
 
-		err := challengeReadyBlobbersPart.AddItem(balances, &ChallengeReadyBlobber{
+		err := challengeReadyBlobbersPart.Add(balances, &ChallengeReadyBlobber{
 			BlobberID: ch.BlobberID,
 		})
 		if err != nil {
@@ -231,7 +231,7 @@ func AddMockChallenges(
 		}
 		for allocID := range val {
 
-			err = aPart.AddItem(balances, &BlobberAllocationNode{
+			err = aPart.Add(balances, &BlobberAllocationNode{
 				ID: allocID,
 			})
 			if err != nil {
@@ -410,7 +410,7 @@ func AddMockBlobbers(
 		}
 
 		if i < numRewardPartitionBlobbers {
-			err = partition.AddItem(balances,
+			err = partition.Add(balances,
 				&BlobberRewardNode{
 					ID:                blobber.ID,
 					SuccessChallenges: 10,
@@ -541,7 +541,7 @@ func AddMockValidators(
 			}
 		}
 
-		if err := valParts.AddItem(balances, &vpn); err != nil {
+		if err := valParts.Add(balances, &vpn); err != nil {
 			panic(err)
 		}
 	}

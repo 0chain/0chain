@@ -32,7 +32,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 				"Failed to get validator list."+err.Error())
 		}
 
-		err = validatorPartitions.AddItem(
+		err = validatorPartitions.Add(
 			balances,
 			&ValidationPartitionNode{
 				Id:  t.ClientID,
