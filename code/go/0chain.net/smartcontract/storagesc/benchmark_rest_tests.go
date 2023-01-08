@@ -180,8 +180,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getchallenge",
 				Params: map[string]string{
-					"blobber":   getMockBlobberId(0),
-					"challenge": getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
+					"challenge":  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 				},
 				Endpoint: srh.getChallenge,
 			},

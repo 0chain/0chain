@@ -73,19 +73,6 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	return chs, nil
 }
 
-func (edb *EventDb) GetChallengeForBlobber(blobberID, challengeID string) (*Challenge, error) {
-	var ch *Challenge
-
-	result := edb.Store.Get().Model(&Challenge{}).
-		Where("challenge_id = ? AND blobber_id = ?", challengeID, blobberID).First(&ch)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retriving Challenge with blobberid %v challengeid: %v; error: %v",
-			blobberID, challengeID, result.Error)
-	}
-
-	return ch, nil
-}
-
 func (edb *EventDb) addChallenges(chlgs []Challenge) error {
 	return edb.Store.Get().Create(&chlgs).Error
 }
