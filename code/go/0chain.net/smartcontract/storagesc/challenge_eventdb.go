@@ -124,10 +124,10 @@ func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, l
 	return chs, nil
 }
 
-func getChallengeForBlobber(blobberID, challengeID string,
+func getChallenge(challengeID string,
 	edb *event.EventDb) (*StorageChallengeResponse, error) {
 
-	challenge, err := edb.GetChallengeForBlobber(blobberID, challengeID)
+	challenge, err := edb.GetChallenge(challengeID)
 	if err != nil {
 		return nil, err
 	}
