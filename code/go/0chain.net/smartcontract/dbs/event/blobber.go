@@ -32,11 +32,11 @@ type Blobber struct {
 	MinLockDemand    float64       `json:"min_lock_demand"`
 	MaxOfferDuration int64         `json:"max_offer_duration"`
 
-	Capacity        int64 `json:"capacity"`  // total blobber capacity
-	Allocated       int64 `json:"allocated"` // allocated capacity
-	Used            int64 `json:"used"`      // total of files saved on blobber
-	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
-	ReadData        int64 `json:"read_data"`
+	Capacity  int64 `json:"capacity"`   // total blobber capacity
+	Allocated int64 `json:"allocated"`  // allocated capacity
+	Used      int64 `json:"used"`       // total of files saved on blobber
+	SavedData int64 `json:"saved_data"` // total of files saved on blobber
+	ReadData  int64 `json:"read_data"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	//todo update
@@ -190,7 +190,7 @@ func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
 		allocated = append(allocated, m.Allocated)
-		lastHealthCheck = append(lastHealthCheck, m.LastHealthCheck)
+		lastHealthCheck = append(lastHealthCheck, int64(m.LastHealthCheck))
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
