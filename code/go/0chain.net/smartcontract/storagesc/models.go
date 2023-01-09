@@ -978,6 +978,10 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
+	_, err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
+	}
 
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
@@ -987,6 +991,15 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return nil, err
 	}
+
+	if err := sp.addOffer(ba.Offer()); err != nil {
+		return nil, fmt.Errorf("failed to add offter: %v", err)
+	}
+
+	if err := sp.Save(spenum.Blobber, addId, balances); err != nil {
+		return nil, err
+	}
+
 	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now); err != nil {
 		return nil, err
 	}
@@ -1025,7 +1038,7 @@ func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *Blobb
 
 	allocNum, err := blobAllocsParts.Size(balances)
 	if err != nil {
-		return fmt.Errorf("error getting size of challenge partition: %v", err)
+		return fmt.Errorf("could not get challenge partition size: %v", err)
 	}
 
 	if allocNum > 0 {
@@ -1033,8 +1046,10 @@ func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *Blobb
 	}
 
 	// remove blobber from challenge ready partition when there's no allocation bind to it
-	if err := partitionsChallengeReadyBlobbersRemove(balances, blobberID); err != nil {
-		return fmt.Errorf("could not remove blobber from challenge ready partitions: %v", err)
+	err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
+	if err != nil && !partitions.ErrItemNotFound(err) {
+		// it could be empty if we finalize the allocation before committing any read or write
+		return fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
 	}
 
 	return nil
