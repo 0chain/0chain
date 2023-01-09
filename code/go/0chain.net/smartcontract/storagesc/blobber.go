@@ -805,22 +805,16 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 		zap.String("blobber", blobAlloc.BlobberID))
 	if blobUsedCapacity == 0 {
 		// remove from challenge ready partitions if this blobber has no data stored
-		if err := partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID); err != nil {
-			return fmt.Errorf("could not remove blobber from challenge ready partitions: %v", err)
-		}
-
-		return nil
+		return partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
 	}
 
 	sp, err := getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances)
 	if err != nil {
-		return common.NewErrorf("blobber_add_allocation",
-			"unable to fetch blobbers stake pool: %v", err)
+		return fmt.Errorf("unable to fetch blobbers stake pool: %v", err)
 	}
 	stakedAmount, err := sp.cleanStake()
 	if err != nil {
-		return common.NewErrorf("blobber_add_allocation",
-			"unable to clean stake pool: %v", err)
+		return fmt.Errorf("unable to clean stake pool: %v", err)
 	}
 	weight := uint64(stakedAmount) * blobUsedCapacity
 	if err := partitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, weight); err != nil {

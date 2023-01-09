@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"

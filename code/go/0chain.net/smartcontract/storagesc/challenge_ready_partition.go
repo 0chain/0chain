@@ -14,7 +14,7 @@ const allChallengeReadyBlobbersPartitionSize = 50
 // This is a partition that will only record the blobbers ids that are ready to be challenged.
 // Only after blobbers have received writemarkers/readmarkers will it be added to the partitions.
 func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions.Partitions, error) {
-	return partitions.GetPartitions(balances, ALL_CHALLENGE_READY_BLOBBERS_KEY)
+	return partitions.CreateIfNotExists(balances, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 }
 
 // ChallengeReadyBlobber represents a node that is ready to be challenged,
@@ -56,12 +56,12 @@ func partitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID string) error {
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
-		return fmt.Errorf("could not get blobber challenge ready partitions: %v", err)
+		return err
 	}
 
 	err = challengeReadyParts.Remove(state, blobberID)
 	if err != nil {
-		return fmt.Errorf("could not remove blobber from challenge partitions: %v", err)
+		return err
 	}
 
 	return challengeReadyParts.Save(state)
