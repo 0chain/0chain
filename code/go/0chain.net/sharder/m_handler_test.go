@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"0chain.net/chaincore/transaction"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -77,8 +78,8 @@ func TestChain_AcceptMessage(t *testing.T) {
 		Chain          *chain.Chain
 		BlockChannel   chan *block.Block
 		RoundChannel   chan *round.Round
-		BlockCache     cache.Cache
-		BlockTxnCache  cache.Cache
+		BlockCache     *cache.LRU[string, *block.Block]
+		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
 		TieringStats   *MinioStats

@@ -2,12 +2,14 @@ package sharder
 
 import (
 	"context"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"0chain.net/chaincore/transaction"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -154,8 +156,8 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		Chain          *chain.Chain
 		BlockChannel   chan *block.Block
 		RoundChannel   chan *round.Round
-		BlockCache     cache.Cache
-		BlockTxnCache  cache.Cache
+		BlockCache     *cache.LRU[string, *block.Block]
+		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
 		TieringStats   *MinioStats
@@ -216,8 +218,8 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 		Chain          *chain.Chain
 		BlockChannel   chan *block.Block
 		RoundChannel   chan *round.Round
-		BlockCache     cache.Cache
-		BlockTxnCache  cache.Cache
+		BlockCache     *cache.LRU[string, *block.Block]
+		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
 		TieringStats   *MinioStats
@@ -280,8 +282,8 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 		Chain          *chain.Chain
 		BlockChannel   chan *block.Block
 		RoundChannel   chan *round.Round
-		BlockCache     cache.Cache
-		BlockTxnCache  cache.Cache
+		BlockCache     *cache.LRU[string, *block.Block]
+		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
 		TieringStats   *MinioStats
@@ -333,8 +335,8 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 		Chain          *chain.Chain
 		BlockChannel   chan *block.Block
 		RoundChannel   chan *round.Round
-		BlockCache     cache.Cache
-		BlockTxnCache  cache.Cache
+		BlockCache     *cache.LRU[string, *block.Block]
+		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
 		TieringStats   *MinioStats

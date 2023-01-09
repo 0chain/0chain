@@ -12,7 +12,7 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
-	github.com/hashicorp/golang-lru v0.5.4
+	github.com/hashicorp/golang-lru/v2 v2.0.1
 	github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
@@ -34,17 +34,17 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
-	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
+	golang.org/x/crypto v0.4.0
+	golang.org/x/net v0.3.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	gorm.io/driver/postgres v1.4.5
-	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
+	gorm.io/driver/postgres v1.4.6
+	gorm.io/gorm v1.24.2
 )
 
 require (
 	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
-	moul.io/zapgorm2 v1.1.3
+	moul.io/zapgorm2 v1.2.0
 )
 
 require (
@@ -70,14 +70,9 @@ require (
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
-	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
-	github.com/jackc/pgconn v1.13.0 // indirect
-	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgproto3/v2 v2.3.1 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
-	github.com/jackc/pgtype v1.12.0 // indirect
-	github.com/jackc/pgx/v4 v4.17.2 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	github.com/jackc/pgx/v5 v5.2.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -98,8 +93,8 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20220504180219-658193537a64 // indirect
 	go.mongodb.org/mongo-driver v1.9.1 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/text v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
