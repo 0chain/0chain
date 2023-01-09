@@ -46,7 +46,7 @@ if err != nil {
 
 // Add 100 items to the partitions
 for i := 0; i < 100; i++ {
-	_, err := parts.AddItem(state, &Foo{ID: fmt.Sprintf("f%v",i)})
+	err := parts.Add(state, &Foo{ID: fmt.Sprintf("f%v",i)})
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ if err != nil {
 }
 
 var foo Foo
-if err := parts.GetItem(state, "f1", &foo); err != nil {
+if err := parts.Get(state, "f1", &foo); err != nil {
 	return err
 }
 
