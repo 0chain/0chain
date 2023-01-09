@@ -44,7 +44,7 @@ func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
 
 func (edb *EventDb) GetDelegatePool(poolID, pID string) (*DelegatePool, error) {
 	var dp DelegatePool
-	err := edb.Store.Get().Debug().Model(&DelegatePool{}).
+	err := edb.Store.Get().Model(&DelegatePool{}).
 		Where(&DelegatePool{PoolID: poolID, ProviderID: pID}).
 		Not(&DelegatePool{Status: int(spenum.Deleted)}).First(&dp).Error
 	if err != nil {

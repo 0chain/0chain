@@ -123,6 +123,12 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
 			mergeUpdateValidatorUnStakesEvents(),
+
+			mergeMinerHealthCheckEvents(),
+			mergeSharderHealthCheckEvents(),
+			mergeBlobberHealthCheckEvents(),
+			mergeAuthorizerHealthCheckEvents(),
+			mergeValidatorHealthCheckEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -339,6 +345,10 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	}
 
 	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateMinerAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateSharderAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), gs)
 	gs.update(events)
 
 	gs.Round = round
@@ -698,6 +708,36 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.addOrUpdateChallengePools(*cps)
 	case TagCollectProviderReward:
 		return edb.collectRewards(event.Index)
+	case TagMinerHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, MinerTable)
+	case TagSharderHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, SharderTable)
+	case TagBlobberHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, BlobberTable)
+	case TagAuthorizerHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, AuthorizerTable)
+	case TagValidatorHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

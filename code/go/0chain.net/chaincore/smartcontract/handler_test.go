@@ -13,6 +13,7 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/vestingsc"
@@ -132,7 +133,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 45,
+			restpoints: 48,
 		},
 		{
 			name:       "multisig",
@@ -352,6 +353,18 @@ func TestExecuteSmartContract(t *testing.T) {
 			require.NoError(t, err)
 			return true
 		})).Return(nil)
+	stateContextIMock.On("EmitEvent",
+		mock.Anything,
+		mock.MatchedBy(func (v event.EventTag) bool {
+			return v == event.TagMinerHealthCheck ||
+				v == event.TagSharderHealthCheck  ||
+				v == event.TagBlobberHealthCheck  ||
+				v == event.TagValidatorHealthCheck||
+				v == event.TagAuthorizerHealthCheck
+		}),
+		mock.Anything,
+		mock.Anything,
+	).Return(nil)
 
 	type args struct {
 		ctx      context.Context

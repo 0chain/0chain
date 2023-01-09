@@ -16,7 +16,11 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 			"Failed to get miner list: "+err.Error())
 	}
 
-	var existingMiner *MinerNode
+	var (
+		existingMiner *MinerNode
+		downtime 	  uint64
+	)
+
 	existingMiner, err = getMinerNode(t.ClientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("miner_health_check_failed",
@@ -26,6 +30,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 	// update the last health check time
 	for _, nd := range all.Nodes {
 		if nd.ID == t.ClientID {
+			downtime = common.Downtime(nd.LastHealthCheck, t.CreationDate)
 			nd.LastHealthCheck = t.CreationDate
 			// miner does not exist, use the one in the list
 			if existingMiner == nil {
@@ -53,6 +58,8 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 			"can't save miner: "+err.Error())
 	}
 
+	emitMinerHealthCheck(existingMiner, downtime, balances)
+
 	return string(existingMiner.Encode()), nil
 }
 
@@ -65,7 +72,10 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 			"Failed to get sharder list: "+err.Error())
 	}
 
-	var existingSharder *MinerNode
+	var (
+		existingSharder *MinerNode
+		downtime		uint64
+	)
 	existingSharder, err = msc.getSharderNode(t.ClientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("sharder_health_check_failed",
@@ -74,6 +84,7 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 
 	for _, nd := range all.Nodes {
 		if nd.ID == t.ClientID {
+			downtime = common.Downtime(nd.LastHealthCheck, t.CreationDate)
 			nd.LastHealthCheck = t.CreationDate
 			if existingSharder == nil {
 				existingSharder = nd
@@ -99,6 +110,8 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 		return "", common.NewError("sharder_health_check_failed",
 			"can't save sharder: "+err.Error())
 	}
+
+	emitSharderHealthCheck(existingSharder, downtime, balances)
 
 	return string(existingSharder.Encode()), nil
 }

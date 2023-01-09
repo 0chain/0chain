@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 7
+	// map header, size 9
 	// string "Clients"
-	o = append(o, 0x87, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
+	o = append(o, 0x89, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Clients)))
 	for za0001 := range z.Clients {
 		o = msgp.AppendString(o, z.Clients[za0001])
@@ -46,6 +46,12 @@ func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	for za0006 := range z.SharderKeys {
 		o = msgp.AppendString(o, z.SharderKeys[za0006])
 	}
+	// string "InactiveSharder"
+	o = append(o, 0xaf, 0x49, 0x6e, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72)
+	o = msgp.AppendString(o, z.InactiveSharder)
+	// string "InactiveSharderPK"
+	o = append(o, 0xb1, 0x49, 0x6e, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72, 0x50, 0x4b)
+	o = msgp.AppendString(o, z.InactiveSharderPK)
 	// string "Now"
 	o = append(o, 0xa3, 0x4e, 0x6f, 0x77)
 	o, err = z.Now.MarshalMsg(o)
@@ -188,6 +194,18 @@ func (z *BenchDataMpt) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
+		case "InactiveSharder":
+			z.InactiveSharder, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "InactiveSharder")
+				return
+			}
+		case "InactiveSharderPK":
+			z.InactiveSharderPK, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "InactiveSharderPK")
+				return
+			}
 		case "Now":
 			bts, err = z.Now.UnmarshalMsg(bts)
 			if err != nil {
@@ -232,6 +250,6 @@ func (z *BenchDataMpt) Msgsize() (s int) {
 	for za0006 := range z.SharderKeys {
 		s += msgp.StringPrefixSize + len(z.SharderKeys[za0006])
 	}
-	s += 4 + z.Now.Msgsize()
+	s += 16 + msgp.StringPrefixSize + len(z.InactiveSharder) + 18 + msgp.StringPrefixSize + len(z.InactiveSharderPK) + 4 + z.Now.Msgsize()
 	return
 }

@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/benchmark"
 
@@ -85,11 +85,11 @@ func BenchmarkRestTests(
 				Endpoint: srh.getTransactionByFilter,
 			},
 			{
-				FuncName: "transactions",
+				FuncName: "transaction-hashes",
 				Params: map[string]string{
-					"look_up_hash": benchmark.GetMockWriteMarkerLookUpHash(1, 1),
+					"look-up-hash": benchmark.GetMockWriteMarkerLookUpHash(1, 1),
 					"name":         benchmark.GetMockWriteMarkerContentHash(1, 1),
-					"content_hash": benchmark.GetMockWriteMarkerFileName(1),
+					"content-hash": benchmark.GetMockWriteMarkerFileName(1),
 				},
 				Endpoint: srh.getTransactionHashesByFilter,
 			},
@@ -152,14 +152,6 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.getAllocations,
 			},
-			//{
-			//	FuncName: "blobber-aggregate",
-			//	Params: map[string]string{
-			//		"id":    getMockBlobberId(1),
-			//		"round": "2",
-			//	},
-			//	Endpoint: srh.getBlobberAggregate,
-			//},
 			{
 				FuncName: "allocation-min-lock",
 				Params: map[string]string{
@@ -177,7 +169,7 @@ func BenchmarkRestTests(
 							DataShards:      len(blobbers) / 2,
 							ParityShards:    len(blobbers) / 2,
 							Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:      5*common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
+							Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
 							Blobbers:        blobbers,
 							ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 							WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
@@ -197,8 +189,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getchallenge",
 				Params: map[string]string{
-					"blobber":   getMockBlobberId(0),
-					"challenge": getMockChallengeId(encryption.Hash("0"), encryption.Hash("0")),
+					"challenge":  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 				},
 				Endpoint: srh.getChallenge,
 			},
@@ -244,7 +235,8 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getStakePoolStat",
 				Params: map[string]string{
-					"blobber_id": getMockBlobberId(0),
+					"provider_id":   getMockBlobberId(0),
+					"provider_type": strconv.Itoa(int(spenum.Blobber)),
 				},
 				Endpoint: srh.getStakePoolStat,
 			},

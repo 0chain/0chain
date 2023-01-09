@@ -125,8 +125,8 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        encryption.Hash("my new sharder"),
-					PublicKey: "sharder's public key",
+					ID:        data.InactiveSharder,
+					PublicKey: data.InactiveSharderPK,
 					N2NHost:   "new n2n_host",
 					Host:      "new host",
 					Port:      1234,
@@ -359,11 +359,13 @@ func BenchmarkTests(
 			name:     "miner.deleteFromDelegatePool",
 			endpoint: msc.deleteFromDelegatePool,
 			txn: &transaction.Transaction{
-				ClientID:     data.Clients[0],
+				ClientID:     getMinerDelegatePoolId(0, 0, spenum.Miner),
+				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},
 			input: (&deletePool{
-				ProviderID: data.Miners[0],
+				ProviderType: spenum.Miner,
+				ProviderID:   data.Miners[0],
 			}).Encode(),
 		},
 		{
@@ -380,7 +382,9 @@ func BenchmarkTests(
 		{
 			name:     "miner.delete_miner",
 			endpoint: msc.DeleteMiner,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ToClientID: ADDRESS,
+			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
 					ID:        data.Miners[1],
@@ -391,7 +395,9 @@ func BenchmarkTests(
 		{
 			name:     "miner.delete_sharder",
 			endpoint: msc.DeleteSharder,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ToClientID: ADDRESS,
+			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
 					ID:        data.Sharders[0],

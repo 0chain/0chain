@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm/clause"
 
 	"github.com/0chain/common/core/currency"
@@ -34,7 +35,6 @@ type Blobber struct {
 	Capacity        int64 `json:"capacity"`  // total blobber capacity
 	Allocated       int64 `json:"allocated"` // allocated capacity
 	Used            int64 `json:"used"`      // total of files saved on blobber
-	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
 	ReadData        int64 `json:"read_data"`
 
@@ -55,8 +55,7 @@ type Blobber struct {
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:ID"`
 
-	CreationRound  int64 `json:"creation_round" gorm:"index:idx_blobber_creation_round"`
-	InactiveRounds int64 `json:"inactive_rounds"`
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_blobber_creation_round"`
 }
 
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.
@@ -449,4 +448,8 @@ func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
 	sql += "blobbers.id = v.id"
 
 	return sql
+}
+
+func mergeBlobberHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagBlobberHealthCheck, withUniqueEventOverwrite())
 }

@@ -31,6 +31,7 @@ type BlobberAggregate struct {
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
+	Downtime			uint64		  `json:"downtime"`
 }
 
 func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAggregate, error) {
@@ -148,11 +149,11 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
+		aggregate.Downtime	 = current.Downtime
 		aggregate.RankMetric = current.RankMetric
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
-		aggregate.InactiveRounds = current.InactiveRounds
 		//aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 
