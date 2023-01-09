@@ -19,7 +19,6 @@ import (
 )
 
 func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
-	balances := newTestBalances(t, true)
 	type params struct {
 		numBlobbers       int
 		wp                []currency.Coin
@@ -36,7 +35,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		blobberDelegatesRewards [][]currency.Coin
 	}
 
-	setupRewards := func(t *testing.T, p params, sc *StorageSmartContract) {
+	setupRewards := func(t *testing.T, p params, balances state.StateContextI, sc *StorageSmartContract) state.StateContextI {
 		conf := setConfig(t, balances)
 		allBR, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		require.NoError(t, err)
@@ -67,9 +66,10 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		}
 		err = allBR.Save(balances)
 		require.NoError(t, err)
+		return balances
 	}
 
-	compareResult := func(t *testing.T, p params, r result, ssc *StorageSmartContract) {
+	compareResult := func(t *testing.T, p params, r result, balances state.StateContextI, ssc *StorageSmartContract) {
 		conf, err := ssc.getConfig(balances, false)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
@@ -135,12 +135,12 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			balances := newTestBalances(t, true)
 			ssc := newTestStorageSC()
-			setupRewards(t, tt.params, ssc)
+			setupRewards(t, tt.params, balances, ssc)
 			err := ssc.blobberBlockRewards(balances)
 			require.EqualValues(t, tt.wantErr, err != nil)
-			compareResult(t, tt.params, tt.result, ssc)
-
+			compareResult(t, tt.params, tt.result, balances, ssc)
 		})
 	}
 }
