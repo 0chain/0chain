@@ -191,7 +191,7 @@ func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
 		allocated = append(allocated, m.Allocated)
-		lastHealthCheck = append(allocated, m.LastHealthCheck)
+		lastHealthCheck = append(lastHealthCheck, m.LastHealthCheck)
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
