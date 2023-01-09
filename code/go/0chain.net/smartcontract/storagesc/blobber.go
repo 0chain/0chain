@@ -325,6 +325,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 ) (string, error) {
 	var (
 		blobber *StorageNode
+		downtime uint64
 		err     error
 	)
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
@@ -332,9 +333,10 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
 
+	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate)
 	blobber.LastHealthCheck = t.CreationDate
 
-	emitUpdateBlobber(blobber, balances)
+	emitBlobberHealthCheck(blobber, downtime, balances)
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)

@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -35,7 +36,6 @@ type Blobber struct {
 	Capacity        int64 `json:"capacity"`  // total blobber capacity
 	Allocated       int64 `json:"allocated"` // allocated capacity
 	Used            int64 `json:"used"`      // total of files saved on blobber
-	LastHealthCheck int64 `json:"last_health_check"`
 	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
 	ReadData        int64 `json:"read_data"`
 
@@ -430,4 +430,8 @@ func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
 	sql += "blobbers.id = v.id"
 
 	return sql
+}
+
+func mergeBlobberHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagBlobberHealthCheck, withUniqueEventOverwrite())
 }

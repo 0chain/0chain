@@ -8,7 +8,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/guregu/null"
 	"gorm.io/gorm"
@@ -25,7 +24,6 @@ type Miner struct {
 	BuildTag  string
 
 	Delete          bool
-	LastHealthCheck common.Timestamp
 	Fees            currency.Coin
 	Active          bool
 	Longitude       float64
@@ -293,4 +291,8 @@ func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
 }
 func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
 	return newEventsMerger[Miner](TagUpdateMinerTotalUnStake, withUniqueEventOverwrite())
+}
+
+func mergeMinerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagMinerHealthCheck, withUniqueEventOverwrite())
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 )
@@ -19,9 +20,6 @@ type Authorizer struct {
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
-
-	// Stats
-	LastHealthCheck int64 `json:"last_health_check"`
 
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_authorizer_creation_round"`
 }
@@ -160,4 +158,8 @@ func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) erro
 
 func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
 	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalUnStake, withUniqueEventOverwrite())
+}
+
+func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagAuthorizerHealthCheck, withUniqueEventOverwrite())
 }
