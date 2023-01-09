@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -27,7 +28,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 
 			newTotalStaked, err := currency.AddCoin(mn.TotalStaked, pool.Balance)
 			if err != nil {
-				Logger.Error("Staked_Amount_Overflow", zap.Error(err))
+				logging.Logger.Error("Staked_Amount_Overflow", zap.Error(err))
 				return err
 			}
 			mn.TotalStaked = newTotalStaked
@@ -207,7 +208,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			waited, dmn.K)
 	}
 	if err != nil {
-		Logger.Info("adjust_view_change", zap.Error(err))
+		logging.Logger.Info("adjust_view_change", zap.Error(err))
 		// don't do this view change, save the gn later
 		// reset the ViewChange to previous one (for miners)
 		var prev = gn.prevMagicBlock(balances)
@@ -280,7 +281,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			b.MinerID, err)
 	}
 
-	Logger.Debug("Pay fees, get miner id successfully",
+	logging.Logger.Debug("Pay fees, get miner id successfully",
 		zap.String("miner id", b.MinerID),
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash))
