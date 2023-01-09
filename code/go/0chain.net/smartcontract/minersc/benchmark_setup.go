@@ -41,6 +41,11 @@ func AddMockNodes(
 	balances cstate.StateContextI,
 	getIdAndPublicKey func() (string, string, error),
 ) ([]string, []string) {
+	const (
+		delegateReward      = 0.3 * 1e10
+		providerReward      = 0.1 * 1e10
+		delegatePoolBalance = 100 * 1e10
+	)
 	var (
 		err                error
 		nodes, publickKeys []string
@@ -79,17 +84,18 @@ func AddMockNodes(
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
+		newNode.Reward = providerReward
 		publickKeys = append(publickKeys, newNode.PublicKey)
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
+			poolId := getMinerDelegatePoolId(i, dId, nodeType)
 			pool := stakepool.DelegatePool{
-				Balance:      100 * 1e10,
-				Reward:       0.3 * 1e10,
-				DelegateID:   clients[dId],
+				Balance:      delegatePoolBalance,
+				Reward:       delegateReward,
+				DelegateID:   poolId,
 				RoundCreated: 1,
 				Status:       spenum.Active,
 			}
-			poolId := getMinerDelegatePoolId(i, dId, nodeType)
 			if i < numActive {
 				pool.Status = spenum.Active
 			} else {
