@@ -140,7 +140,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 			Amount:     share,
 		})
 		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("%s, AddTransfer operation, %s", code, info))
+			err = errors.Wrap(err, fmt.Sprintf("%s, AddMint operation, %s", code, info))
 			return
 		}
 	}
