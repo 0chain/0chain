@@ -87,7 +87,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
 			},
-			RoundLastUpdated: delegate.RoundLastUpdated,
+			RoundLastUpdated: delegate.RoundPoolLastUpdated,
 		}
 	}
 	return mn

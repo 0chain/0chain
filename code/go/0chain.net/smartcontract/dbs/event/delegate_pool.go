@@ -19,13 +19,13 @@ type DelegatePool struct {
 	ProviderID   string          `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
 	DelegateID   string          `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_del_id;index:idx_dp_total_staked,priority:1"` //todo think of changing priority for idx_ddel_active
 
-	Balance          currency.Coin `json:"balance"`
-	Reward           currency.Coin `json:"reward"`       // unclaimed reward
-	TotalReward      currency.Coin `json:"total_reward"` // total reward paid to pool
-	TotalPenalty     currency.Coin `json:"total_penalty"`
-	Status           int           `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3;index:idx_dp_total_staked,priority:2"`
-	RoundCreated     int64         `json:"round_created"`
-	RoundLastUpdated int64         `json:"round_last_updated"`
+	Balance              currency.Coin `json:"balance"`
+	Reward               currency.Coin `json:"reward"`       // unclaimed reward
+	TotalReward          currency.Coin `json:"total_reward"` // total reward paid to pool
+	TotalPenalty         currency.Coin `json:"total_penalty"`
+	Status               int           `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3;index:idx_dp_total_staked,priority:2"`
+	RoundCreated         int64         `json:"round_created"`
+	RoundPoolLastUpdated int64         `json:"round_pool_last_updated"`
 }
 
 func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
@@ -79,7 +79,6 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider) (
 }
 
 func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
-	//logging.Logger.Info("piers updateDelegatePool", zap.Any("updates", updates))
 	var dp = DelegatePool{
 		ProviderID:   updates.ProviderId,
 		ProviderType: updates.ProviderType,
@@ -102,7 +101,6 @@ func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
 }
 
 func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
-	//logging.Logger.Info("piers addDelegatePools", zap.Any("dps", dps))
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
 		UpdateAll: true,
@@ -124,9 +122,8 @@ func addDelegatePoolLastUpdateRound() eventMergeMiddleware {
 				return nil, fmt.Errorf(
 					"merging, %v shold be a miner", events[i].Data)
 			}
-			dp.RoundLastUpdated = events[i].BlockNumber
+			dp.RoundPoolLastUpdated = events[i].BlockNumber
 			events[i].Data = dp
-			//logging.Logger.Info("piers addDelegatePoolLastUpdateRound", zap.Any("dp", dp))
 		}
 		return events, nil
 	}

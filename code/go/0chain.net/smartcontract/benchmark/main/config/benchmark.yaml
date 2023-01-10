@@ -6,8 +6,8 @@ simulation:
   nun_sharders: 2
   nun_active_sharders: 2
   num_allocations: 30
-  num_blobbers: 10
-  num_validators: 10
+  num_blobbers: 6
+  num_validators: 6
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
   num_blobbers_per_Allocation: 4 # ideally make this even

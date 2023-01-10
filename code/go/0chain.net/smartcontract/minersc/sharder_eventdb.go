@@ -65,7 +65,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
 			},
-			RoundLastUpdated: delegate.RoundLastUpdated,
+			RoundLastUpdated: delegate.RoundPoolLastUpdated,
 		}
 	}
 	return sn

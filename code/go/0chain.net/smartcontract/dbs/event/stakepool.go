@@ -37,23 +37,23 @@ func aggregateProviderRewards(
 	for i, sp := range spus {
 		if sp.Reward != 0 {
 			rewards = append(rewards, ProviderRewards{
-				ProviderID:       sp.ProviderId,
-				Rewards:          sp.Reward,
-				TotalRewards:     sp.Reward,
-				RoundLastUpdated: round,
+				ProviderID:                    sp.ProviderId,
+				Rewards:                       sp.Reward,
+				TotalRewards:                  sp.Reward,
+				RoundServiceChargeLastUpdated: round,
 			})
 		}
 
 		// merge delegate rewards and penalties
 		for k, v := range spus[i].DelegateRewards {
 			delegatePools = append(delegatePools, DelegatePool{
-				ProviderID:       sp.ProviderId,
-				ProviderType:     sp.ProviderType,
-				PoolID:           k,
-				Reward:           v,
-				TotalReward:      v,
-				TotalPenalty:     spus[i].DelegatePenalties[k],
-				RoundLastUpdated: round,
+				ProviderID:           sp.ProviderId,
+				ProviderType:         sp.ProviderType,
+				PoolID:               k,
+				Reward:               v,
+				TotalReward:          v,
+				TotalPenalty:         spus[i].DelegatePenalties[k],
+				RoundPoolLastUpdated: round,
 			})
 		}
 
@@ -61,11 +61,11 @@ func aggregateProviderRewards(
 		for k, v := range spus[i].DelegatePenalties {
 			if _, ok := sp.DelegateRewards[k]; !ok {
 				delegatePools = append(delegatePools, DelegatePool{
-					ProviderID:       sp.ProviderId,
-					ProviderType:     sp.ProviderType,
-					PoolID:           k,
-					TotalPenalty:     v,
-					RoundLastUpdated: round,
+					ProviderID:           sp.ProviderId,
+					ProviderType:         sp.ProviderType,
+					PoolID:               k,
+					TotalPenalty:         v,
+					RoundPoolLastUpdated: round,
 				})
 			}
 		}
@@ -143,7 +143,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}()
 
 	if len(rewards.rewards) > 0 {
-		if err := edb.rewardProviders(rewards.rewards); err != nil {
+		if err := edb.RewardProviders(rewards.rewards); err != nil {
 			return fmt.Errorf("could not rewards providers: %v", err)
 		}
 	}
@@ -173,25 +173,51 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
-func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
+/*
+func (edb *EventDb) rewardProviders(prs []ProviderRewards) error {
+	//collect updates
+	var ids []string
+	var rewards []int64
+	var totalRewards []int64
+
+	for _, pr := range prs {
+		ids = append(ids, pr.ProviderID)
+		rewards = append(rewards, int64(pr.Rewards))
+		totalRewards = append(totalRewards, int64(u.TotalRewards))
+	}
+
+	//execute
+	ret := edb.Store.Get().CreateBuilder("provider_rewards", "provider_id", ids).
+		AddUpdate("rewards", rewards, "rewards + t.rewards").
+		AddUpdate("totalRewards", totalRewards, "totalRewards + t.totalRewards").Exec(edb)
+
+	return ret.Error
+}
+*/
+func (edb *EventDb) RewardProviders(rewards []ProviderRewards) error {
 	logging.Logger.Info("piers rewardProviders", zap.Any("rewards", rewards))
+
 	vs := map[string]interface{}{
 		"rewards":            gorm.Expr("provider_rewards.rewards + excluded.rewards"),
 		"total_rewards":      gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
-		"round_last_updated": gorm.Expr("excluded.round_last_updated"),
+		"round_last_updated": gorm.Expr("provider_rewards.round_last_updated"),
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "provider_id"}},
+		Columns: []clause.Column{
+			{Name: "provider_id"},
+		},
 		DoUpdates: clause.Assignments(vs),
 	}).Create(rewards).Error
 }
 
 func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
+	logging.Logger.Info("piers rewardProviderDelegates", zap.Any("rewards", rewards))
 	vs := map[string]interface{}{
 		"reward":        gorm.Expr("delegate_pools.reward + excluded.reward"),
 		"total_reward":  gorm.Expr("delegate_pools.total_reward + excluded.total_reward"),
 		"total_penalty": gorm.Expr("delegate_pools.total_penalty + excluded.total_penalty"),
+		//"round_last_updated": gorm.Expr("excluded.round_last_updated"),
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{

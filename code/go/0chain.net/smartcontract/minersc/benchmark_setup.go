@@ -128,8 +128,8 @@ func AddMockNodes(
 						MinStake:      newNode.Settings.MinStake,
 						MaxStake:      newNode.Settings.MaxStake,
 						Rewards: event.ProviderRewards{
-							ProviderID:       newNode.ID,
-							RoundLastUpdated: 7,
+							ProviderID:                    newNode.ID,
+							RoundServiceChargeLastUpdated: 7,
 						},
 						RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 					},
@@ -142,12 +142,15 @@ func AddMockNodes(
 					LastHealthCheck: newNode.LastHealthCheck,
 					PublicKey:       newNode.PublicKey,
 					Provider: event.Provider{
-						ID:               newNode.ID,
-						ServiceCharge:    newNode.Settings.ServiceChargeRatio,
-						NumDelegates:     newNode.Settings.MaxNumDelegates,
-						MinStake:         newNode.Settings.MinStake,
-						MaxStake:         newNode.Settings.MaxStake,
-						Rewards:          event.ProviderRewards{ProviderID: newNode.ID},
+						ID:            newNode.ID,
+						ServiceCharge: newNode.Settings.ServiceChargeRatio,
+						NumDelegates:  newNode.Settings.MaxNumDelegates,
+						MinStake:      newNode.Settings.MinStake,
+						MaxStake:      newNode.Settings.MaxStake,
+						Rewards: event.ProviderRewards{
+							ProviderID:                    newNode.ID,
+							RoundServiceChargeLastUpdated: 11,
+						},
 						RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 					},
 				}
@@ -157,16 +160,16 @@ func AddMockNodes(
 			}
 			for id, pool := range newNode.Pools {
 				dps = append(dps, event.DelegatePool{
-					PoolID:           id,
-					ProviderType:     nodeType,
-					ProviderID:       newNode.ID,
-					DelegateID:       pool.DelegateID,
-					Balance:          pool.Balance,
-					Reward:           pool.Reward,
-					TotalReward:      pool.Reward,
-					Status:           int(pool.Status),
-					RoundCreated:     pool.RoundCreated,
-					RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
+					PoolID:               id,
+					ProviderType:         nodeType,
+					ProviderID:           newNode.ID,
+					DelegateID:           pool.DelegateID,
+					Balance:              pool.Balance,
+					Reward:               pool.Reward,
+					TotalReward:          pool.Reward,
+					Status:               int(pool.Status),
+					RoundCreated:         pool.RoundCreated,
+					RoundPoolLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 				})
 			}
 		}
@@ -215,6 +218,18 @@ func AddMockNodes(
 			log.Fatal(err)
 		}
 	}
+
+	// piers debug code
+	pr := []event.ProviderRewards{
+		{
+			ProviderID:                    nodes[0],
+			Rewards:                       23,
+			TotalRewards:                  93,
+			RoundServiceChargeLastUpdated: 293,
+		},
+	}
+	err = eventDb.RewardProviders(pr)
+
 	return nodes, publickKeys
 }
 
