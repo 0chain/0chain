@@ -45,9 +45,9 @@ func (edb *EventDb) GetProviderRewards(limit common.Pagination, id string, start
 		}
 	} else {
 		if start == end {
-			query = query.Where("provider = ? AND block_number = ?", id, start)
+			query = query.Where("provider_id = ? AND block_number = ?", id, start)
 		} else {
-			query = query.Where("provider = ? AND block_number >= ? AND block_number < ?", id, start, end)
+			query = query.Where("provider_id = ? AND block_number >= ? AND block_number < ?", id, start, end)
 		}
 	}
 

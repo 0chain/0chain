@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 )
@@ -20,8 +21,31 @@ type Authorizer struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 
-	// Stats
-	LastHealthCheck int64 `json:"last_health_check"`
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_authorizer_creation_round"`
+}
+
+func (a *Authorizer) GetTotalStake() currency.Coin {
+	return a.TotalStake
+}
+
+func (a *Authorizer) GetUnstakeTotal() currency.Coin {
+	return a.UnstakeTotal
+}
+
+func (a *Authorizer) GetServiceCharge() float64 {
+	return a.ServiceCharge
+}
+
+func (a *Authorizer) SetTotalStake(value currency.Coin) {
+	a.TotalStake = value
+}
+
+func (a *Authorizer) SetUnstakeTotal(value currency.Coin) {
+	a.UnstakeTotal = value
+}
+
+func (a *Authorizer) SetServiceCharge(value float64) {
+	a.ServiceCharge = value
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
@@ -37,6 +61,13 @@ func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
 	result := edb.Store.Get().Create(a)
 
 	return result.Error
+}
+
+func (edb *EventDb) GetAuthorizerCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Authorizer{}).Count(&count)
+
+	return count, res.Error
 }
 
 func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
@@ -127,4 +158,8 @@ func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) erro
 
 func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
 	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalUnStake, withUniqueEventOverwrite())
+}
+
+func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagAuthorizerHealthCheck, withUniqueEventOverwrite())
 }

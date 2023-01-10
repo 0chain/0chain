@@ -10,7 +10,7 @@ func AddMockWallets(
 	clients, publicKeys []string,
 	balances cstate.StateContextI,
 ) {
-	for i := 0; i < len(clients)-1; i++ {
+	for i := 1; i < len(clients)-1; i++ {
 		wallet := Wallet{
 			ClientID:           clients[i],
 			SignatureScheme:    viper.GetString(benchmark.InternalSignatureScheme),

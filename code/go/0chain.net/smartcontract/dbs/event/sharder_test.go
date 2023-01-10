@@ -102,8 +102,8 @@ func TestSharders(t *testing.T) {
 					ProviderID: sn.ID,
 					Rewards:    sn.Stat.GeneratorRewards,
 				},
+				LastHealthCheck: sn.LastHealthCheck,
 			},
-			LastHealthCheck: sn.LastHealthCheck,
 
 			Fees:      sn.Stat.GeneratorFees,
 			Longitude: 0,
