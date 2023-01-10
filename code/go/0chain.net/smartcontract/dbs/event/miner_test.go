@@ -26,7 +26,7 @@ func init() {
 }
 
 func TestMinersBatchUpdate(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 	logging.InitLogging("development", "")
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
@@ -139,7 +139,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 		t.Error(err)
 	}
 	eventDb.AutoMigrate()
-	//defer eventDb.Drop()
+	defer eventDb.Drop()
 
 	// Miner - Add Event
 	mn := MinerNode{
@@ -218,6 +218,13 @@ func TestMinersBatchUpdate(t *testing.T) {
 		t.Error(err)
 	}
 	i, _ := miner.TotalStake.Int64()
+	assert.Equal(t, int64(10), i)
+
+	miner2, err := eventDb.GetMiner(mnMiner2.ID)
+	if err != nil {
+		t.Error(err)
+	}
+	i, _ = miner2.TotalStake.Int64()
 	assert.Equal(t, int64(10), i)
 
 }
@@ -303,8 +310,6 @@ func TestMiners(t *testing.T) {
 					Rewards:    mn.Stat.GeneratorRewards,
 				},
 			},
-			LastHealthCheck: mn.LastHealthCheck,
-
 			Fees:      mn.Stat.GeneratorFees,
 			Longitude: 0,
 			Latitude:  0,

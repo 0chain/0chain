@@ -80,7 +80,7 @@ type Query struct {
 	V []interface{}
 }
 
-func (b *UpdateBuilder) Build() *Query {
+func (b *UpdateBuilder) build() *Query {
 	sets := ""
 	for _, s := range b.sets {
 		sets = sets + s
@@ -94,6 +94,6 @@ func (b *UpdateBuilder) Build() *Query {
 }
 
 func (b *UpdateBuilder) Exec(db *EventDb) *gorm.DB {
-	q := b.Build()
+	q := b.build()
 	return db.Store.Get().Exec(q.Q, q.V...)
 }
