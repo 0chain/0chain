@@ -6,12 +6,10 @@ import (
 
 	"github.com/0chain/common/core/logging"
 
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-
-	"0chain.net/smartcontract/dbs"
 )
 
 type providerRewardsDelegates struct {
@@ -156,7 +154,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	if len(rewards.delegatePools) > 0 {
-		if err := rewardProviderDelegates(edb, rewards.delegatePools); err != nil {
+		if err := RewardProviderDelegates(edb, rewards.delegatePools); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
 	}
@@ -173,64 +171,49 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
-/*
-func (edb *EventDb) rewardProviders(prs []ProviderRewards) error {
-	//collect updates
+func (edb *EventDb) RewardProviders(prs []ProviderRewards) error {
 	var ids []string
 	var rewards []int64
 	var totalRewards []int64
+	var lastUpdated []int64
 
 	for _, pr := range prs {
 		ids = append(ids, pr.ProviderID)
 		rewards = append(rewards, int64(pr.Rewards))
-		totalRewards = append(totalRewards, int64(u.TotalRewards))
+		totalRewards = append(totalRewards, int64(pr.TotalRewards))
+		lastUpdated = append(lastUpdated, pr.RoundServiceChargeLastUpdated)
 	}
 
-	//execute
-	ret := edb.Store.Get().CreateBuilder("provider_rewards", "provider_id", ids).
-		AddUpdate("rewards", rewards, "rewards + t.rewards").
-		AddUpdate("totalRewards", totalRewards, "totalRewards + t.totalRewards").Exec(edb)
+	ret := CreateBuilder("provider_rewards", "provider_id", ids).
+		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
+		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
+		AddUpdate("round_service_charge_last_updated", lastUpdated).
+		Exec(edb)
 
 	return ret.Error
 }
-*/
-func (edb *EventDb) RewardProviders(rewards []ProviderRewards) error {
-	logging.Logger.Info("piers rewardProviders", zap.Any("rewards", rewards))
 
-	vs := map[string]interface{}{
-		"rewards":            gorm.Expr("provider_rewards.rewards + excluded.rewards"),
-		"total_rewards":      gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
-		"round_last_updated": gorm.Expr("provider_rewards.round_last_updated"),
+func RewardProviderDelegates(edb *EventDb, dps []DelegatePool) error {
+	var poolIds []string
+	var reward []int64
+	var totalReward []int64
+	var totalPenalty []int64
+	var lastUpdated []int64
+	for _, r := range dps {
+		poolIds = append(poolIds, r.PoolID)
+		reward = append(reward, int64(r.Reward))
+		totalReward = append(totalReward, int64(r.TotalReward))
+		totalPenalty = append(totalPenalty, int64(r.TotalPenalty))
+		lastUpdated = append(lastUpdated, r.RoundPoolLastUpdated)
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{
-			{Name: "provider_id"},
-		},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(rewards).Error
-}
-
-func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
-	logging.Logger.Info("piers rewardProviderDelegates", zap.Any("rewards", rewards))
-	vs := map[string]interface{}{
-		"reward":        gorm.Expr("delegate_pools.reward + excluded.reward"),
-		"total_reward":  gorm.Expr("delegate_pools.total_reward + excluded.total_reward"),
-		"total_penalty": gorm.Expr("delegate_pools.total_penalty + excluded.total_penalty"),
-		//"round_last_updated": gorm.Expr("excluded.round_last_updated"),
-	}
-
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Where: clause.Where{
-			Exprs: []clause.Expression{gorm.Expr("delegate_pools.status != ?", spenum.Deleted)},
-		},
-		Columns: []clause.Column{
-			{Name: "provider_type"},
-			{Name: "provider_id"},
-			{Name: "pool_id"},
-		},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&rewards).Error
+	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
+		AddUpdate("reward", reward, "delegate_pools.reward + t.reward").
+		AddUpdate("total_reward", totalReward, "delegate_pools.total_reward + t.total_reward").
+		AddUpdate("total_penalty", totalPenalty, "delegate_pools.total_penalty + t.total_penalty").
+		AddUpdate("round_pool_last_updated", lastUpdated).
+		Exec(edb)
+	return ret.Error
 }
 
 func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: unused

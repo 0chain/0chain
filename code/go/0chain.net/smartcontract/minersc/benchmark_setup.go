@@ -228,7 +228,19 @@ func AddMockNodes(
 			RoundServiceChargeLastUpdated: 293,
 		},
 	}
-	err = eventDb.RewardProviders(pr)
+	pr = pr
+	//err = eventDb.RewardProviders(pr)
+	//getMinerDelegatePoolId(i, dId, nodeType)
+	dpSlice := []event.DelegatePool{
+		{
+			PoolID:               getMinerDelegatePoolId(0, 0, nodeType),
+			Reward:               131,
+			TotalReward:          1734,
+			TotalPenalty:         37,
+			RoundPoolLastUpdated: 897,
+		},
+	}
+	err = event.RewardProviderDelegates(eventDb, dpSlice)
 
 	return nodes, publickKeys
 }

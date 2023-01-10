@@ -286,28 +286,6 @@ func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
 	return newEventsMerger[Miner](TagUpdateMinerTotalUnStake, withUniqueEventOverwrite())
 }
 
-func addMinerLastUpdateRound() eventMergeMiddleware {
-	return func(events []Event) ([]Event, error) {
-		for i := range events {
-			m, ok := events[i].Data.(Miner)
-			if !ok {
-				return nil, fmt.Errorf(
-					"merging, %v shold be a miner", events[i].Data)
-			}
-			m.RoundLastUpdated = events[i].BlockNumber
-			events[i].Data = m
-		}
-		return events, nil
-	}
-}
-
-func updateLastRoundUpdatedMiddleware(tag EventTag) *eventsMergerImpl[dbs.DbUpdates] {
-	return &eventsMergerImpl[dbs.DbUpdates]{
-		tag:         tag,
-		middlewares: []eventMergeMiddleware{updateLastUpdateRound()},
-	}
-}
-
 func updateLastUpdateRound() eventMergeMiddleware {
 	return func(events []Event) ([]Event, error) {
 		for i := range events {

@@ -1,10 +1,10 @@
 simulation:
   num_clients: 21
   num_active_clients: 21
-  num_miners: 5
-  num_active_miners: 5
-  nun_sharders: 2
-  nun_active_sharders: 2
+  num_miners: 4
+  num_active_miners: 4
+  nun_sharders: 3
+  nun_active_sharders: 3
   num_allocations: 30
   num_blobbers: 6
   num_validators: 6

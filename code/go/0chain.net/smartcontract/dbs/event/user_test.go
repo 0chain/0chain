@@ -249,6 +249,6 @@ func TestUpdateStakePoolDelegateRewards(t *testing.T) {
 		})
 	}
 
-	err := rewardProviderDelegates(eventDb, miners)
+	err := RewardProviderDelegates(eventDb, miners)
 	require.NoError(t, err)
 }

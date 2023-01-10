@@ -276,18 +276,3 @@ func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
 func mergeUpdateSharderTotalUnStakesEvents() *eventsMergerImpl[Sharder] {
 	return newEventsMerger[Sharder](TagUpdateSharderTotalUnStake, withUniqueEventOverwrite())
 }
-
-func addSharderLastUpdateRound() eventMergeMiddleware {
-	return func(events []Event) ([]Event, error) {
-		for i := range events {
-			s, ok := events[i].Data.(Sharder)
-			if !ok {
-				return nil, fmt.Errorf(
-					"merging, %v shold be a Sharder", events[i].Data)
-			}
-			s.RoundLastUpdated = events[i].BlockNumber
-			events[i].Data = s
-		}
-		return events, nil
-	}
-}

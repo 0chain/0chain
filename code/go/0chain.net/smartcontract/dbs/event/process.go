@@ -79,8 +79,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	var (
 		mergers = []eventsMerger{
 			mergeAddUsersEvents(),
-			mergeAddProviderEvents[Miner](TagAddMiner, withUniqueEventOverwrite(), addMinerLastUpdateRound()),
-			mergeAddProviderEvents[Sharder](TagAddSharder, withUniqueEventOverwrite(), addSharderLastUpdateRound()),
+			mergeAddProviderEvents[Miner](TagAddMiner, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Sharder](TagAddSharder, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
@@ -125,10 +125,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
 			mergeUpdateValidatorUnStakesEvents(),
-
-			updateLastRoundUpdatedMiddleware(TagUpdateMiner),
-			updateLastRoundUpdatedMiddleware(TagUpdateSharder),
-			updateLastRoundUpdatedMiddleware(TagUpdateDelegatePool),
 		}
 
 		others = make([]Event, 0, len(events))
