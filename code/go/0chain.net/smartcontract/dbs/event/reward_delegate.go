@@ -18,7 +18,6 @@ type RewardDelegate struct {
 }
 
 func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round int64) error {
-	//logging.Logger.Info("piers insertDelegateReward", zap.Any("inserts", inserts))
 	var drs []RewardDelegate
 	for _, sp := range inserts {
 		for poolId, amount := range sp.DelegateRewards {

@@ -18,7 +18,6 @@ type RewardProvider struct {
 }
 
 func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round int64) error {
-	//logging.Logger.Info("piers insertProviderReward", zap.Any("inserts", inserts))
 	if len(inserts) == 0 {
 		return nil
 	}

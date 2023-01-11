@@ -223,29 +223,6 @@ func AddMockNodes(
 		}
 	}
 
-	// piers debug code
-	pr := []event.ProviderRewards{
-		{
-			ProviderID:                    nodes[0],
-			Rewards:                       23,
-			TotalRewards:                  93,
-			RoundServiceChargeLastUpdated: 293,
-		},
-	}
-	pr = pr
-	//err = eventDb.RewardProviders(pr)
-	//getMinerDelegatePoolId(i, dId, nodeType)
-	dpSlice := []event.DelegatePool{
-		{
-			PoolID:               getMinerDelegatePoolId(0, 0, nodeType),
-			Reward:               131,
-			TotalReward:          1734,
-			TotalPenalty:         37,
-			RoundPoolLastUpdated: 897,
-		},
-	}
-	err = event.RewardProviderDelegates(eventDb, dpSlice)
-
 	return nodes, publickKeys
 }
 
