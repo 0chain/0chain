@@ -20,6 +20,7 @@ type SharderAggregate struct {
 	Fees          currency.Coin `json:"fees"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
+	TotalRewards  currency.Coin	`json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -35,6 +36,10 @@ func (s *SharderAggregate) GetServiceCharge() float64 {
 	return s.ServiceCharge
 }
 
+func (s *SharderAggregate) GetTotalRewards() currency.Coin {
+	return s.TotalRewards
+}
+
 func (s *SharderAggregate) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
 }
@@ -45,6 +50,10 @@ func (s *SharderAggregate) SetUnstakeTotal(value currency.Coin) {
 
 func (s *SharderAggregate) SetServiceCharge(value float64) {
 	s.ServiceCharge = value
+}
+
+func (s *SharderAggregate) SetTotalRewards(value currency.Coin) {
+	s.TotalRewards = value
 }
 
 func (edb *EventDb) ReplicateSharderAggregate(p common.Pagination) ([]SharderAggregate, error) {
