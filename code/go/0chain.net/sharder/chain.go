@@ -43,7 +43,7 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	sharderChain.TieringStats = &MinioStats{}
-	sharderChain.processingBlocks = cache.NewLRUCache[string, *block.Block](1000)
+	sharderChain.processingBlocks = cache.NewLRUCache[string, struct{}](1000)
 	c.RoundF = SharderRoundFactory{}
 }
 
@@ -69,7 +69,7 @@ type Chain struct {
 	BlockSyncStats *SyncStats
 	TieringStats   *MinioStats
 
-	processingBlocks *cache.LRU[string, *block.Block]
+	processingBlocks *cache.LRU[string, struct{}]
 	pbMutex          sync.RWMutex
 }
 
