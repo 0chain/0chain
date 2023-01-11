@@ -100,6 +100,10 @@ func (m *Miner) GetServiceCharge() float64 {
 	return m.ServiceCharge
 }
 
+func (m *Miner) GetTotalRewards() currency.Coin {
+	return m.Rewards.TotalRewards
+}
+
 func (m *Miner) SetTotalStake(value currency.Coin) {
 	m.TotalStake = value
 }
@@ -110,6 +114,10 @@ func (m *Miner) SetUnstakeTotal(value currency.Coin) {
 
 func (m *Miner) SetServiceCharge(value float64) {
 	m.ServiceCharge = value
+}
+
+func (m *Miner) SetTotalRewards(value currency.Coin) {
+	m.Rewards.TotalRewards = value
 }
 
 func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p common2.Pagination) ([]Miner, error) {
