@@ -277,19 +277,3 @@ func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
 func mergeMinerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
 	return newEventsMerger[dbs.DbHealthCheck](TagMinerHealthCheck, withUniqueEventOverwrite())
 }
-
-func updateLastUpdateRound() eventMergeMiddleware {
-	return func(events []Event) ([]Event, error) {
-		for i := range events {
-			updates, ok := events[i].Data.(dbs.DbUpdates)
-			if !ok {
-				return nil, fmt.Errorf(
-					"merging, %v shold be a dbs update", events[i].Data)
-			}
-			updates.Updates["round_last_updated"] = events[i].BlockNumber
-			events[i].Data = updates
-			//logging.Logger.Info("piers updateLastUpdateRound", zap.Any("updates", updates))
-		}
-		return events, nil
-	}
-}
