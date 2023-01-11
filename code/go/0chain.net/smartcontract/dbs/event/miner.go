@@ -4,8 +4,6 @@ import (
 	common2 "0chain.net/smartcontract/common"
 	"fmt"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -68,8 +66,8 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	if result.Error != nil {
 		return m, nil, result.Error
 	}
-	logging.Logger.Info("piers GetMinerWithDelegatePools",
-		zap.Any("miner and dps", minerDps))
+	//logging.Logger.Info("piers GetMinerWithDelegatePools",
+	//	zap.Any("miner and dps", minerDps))
 	if len(minerDps) == 0 {
 		return m, nil, fmt.Errorf("get miner %s found no records", id)
 	}
@@ -77,12 +75,12 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	m.Rewards = minerDps[0].ProviderRewards
 	for i := range minerDps {
 		dps = append(dps, minerDps[i].DelegatePool)
-		logging.Logger.Info("piers GetMinerWithDelegatePools",
-			zap.Any("minerDps", minerDps[i]),
-			zap.Any("Miner", minerDps[i].Miner),
-			zap.Any("DelegatePool", minerDps[i].DelegatePool),
-			zap.Any("ProviderRewards", minerDps[i].ProviderRewards),
-		)
+		//	logging.Logger.Info("piers GetMinerWithDelegatePools",
+		//		zap.Any("minerDps", minerDps[i]),
+		//		zap.Any("Miner", minerDps[i].Miner),
+		//		zap.Any("DelegatePool", minerDps[i].DelegatePool),
+		//		zap.Any("ProviderRewards", minerDps[i].ProviderRewards),
+		//	)
 	}
 
 	return m, dps, nil

@@ -36,7 +36,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 			NodeType: NodeTypeSharder,
 			Status:   status,
 		},
-		RoundLastUpdated: edbSharder.RoundLastUpdated,
+		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
 	}
 
 	sn := MinerNodeResponse{
@@ -65,7 +65,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
 			},
-			RoundLastUpdated: delegate.RoundPoolLastUpdated,
+			RoundPoolLastUpdated: delegate.RoundPoolLastUpdated,
 		}
 	}
 	return sn

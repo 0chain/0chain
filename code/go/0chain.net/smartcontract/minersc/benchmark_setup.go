@@ -131,7 +131,6 @@ func AddMockNodes(
 							ProviderID:                    newNode.ID,
 							RoundServiceChargeLastUpdated: 7,
 						},
-						RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 					},
 				}
 				if err = eventDb.Store.Get().Create(&minerDb).Error; err != nil {
@@ -151,7 +150,6 @@ func AddMockNodes(
 							ProviderID:                    newNode.ID,
 							RoundServiceChargeLastUpdated: 11,
 						},
-						RoundLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 					},
 				}
 				if err := eventDb.Store.Get().Create(&sharderDb).Error; err != nil {

@@ -13,12 +13,12 @@ import (
 
 type SimpleNodeResponse struct {
 	SimpleNode
-	RoundLastUpdated int64 `json:"round_last_updated"`
+	RoundServiceChargeLastUpdated int64 `json:"round_service_charge_last_updated"`
 }
 
 type DelegatePoolResponse struct {
 	stakepool.DelegatePool
-	RoundLastUpdated int64 `json:"round_last_updated"`
+	RoundPoolLastUpdated int64 `json:"round_pool_last_updated"`
 }
 
 type StakePoolResponse struct {
@@ -58,7 +58,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 			LastHealthCheck: edbMiner.LastHealthCheck,
 			Status:          status,
 		},
-		RoundLastUpdated: edbMiner.RoundLastUpdated,
+		RoundServiceChargeLastUpdated: edbMiner.Rewards.RoundServiceChargeLastUpdated,
 	}
 
 	mn := MinerNodeResponse{
@@ -87,7 +87,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
 			},
-			RoundLastUpdated: delegate.RoundPoolLastUpdated,
+			RoundPoolLastUpdated: delegate.RoundPoolLastUpdated,
 		}
 	}
 	return mn
