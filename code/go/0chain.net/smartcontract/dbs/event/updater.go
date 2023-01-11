@@ -20,7 +20,7 @@ var typeToSQL = map[reflect.Type]string{
 	reflect.TypeOf([]string{}):  "text",
 	reflect.TypeOf([]int64{}):   "bigint",
 	reflect.TypeOf([]int{}):     "bigint",
-	reflect.TypeOf([]byte{}):    "bytea",
+	reflect.TypeOf([][]byte{}):  "bytea",
 	reflect.TypeOf([]float64{}): "decimal",
 	reflect.TypeOf([]float32{}): "decimal",
 }
