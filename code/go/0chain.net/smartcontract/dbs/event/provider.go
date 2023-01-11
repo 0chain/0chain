@@ -28,7 +28,7 @@ type Provider struct {
 	ID             string `gorm:"primaryKey"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
-	BucketId       int64           `gorm:"not null"`
+	BucketId       int64           `gorm:"not null,default:0"`
 	DelegateWallet string          `json:"delegate_wallet"`
 	MinStake       currency.Coin   `json:"min_stake"`
 	MaxStake       currency.Coin   `json:"max_stake"`
@@ -73,7 +73,6 @@ func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tabl
 	updateExpr := map[string]interface{}{
 		"last_health_check": gorm.Expr("excluded.last_health_check"),
 		"downtime": gorm.Expr(fmt.Sprintf("%v.downtime + excluded.downtime", tableName)),
-		"bucket_id": gorm.Expr(fmt.Sprintf("%v.bucket_id", tableName))
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
