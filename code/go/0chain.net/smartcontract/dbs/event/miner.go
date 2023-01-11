@@ -51,7 +51,7 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 		Miner
 		DelegatePool
 		ProviderRewards
-	}
+	} //nolint
 	var m Miner
 	var dps []DelegatePool
 
