@@ -2858,9 +2858,13 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 	common.Respond(w, r, resp, nil)
 }
 
-/*getSearchHandler - Get result based on query*/
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search search
-// Generic search endpoint
+// Generic search endpoint.
+//
+// Integer If the input can be converted to an integer, it is interpreted as a round number and information for the
+// matching block is returned. Otherwise, the input is treated as string and matched against block hash,
+// transaction hash, user id, write marker content hash or write marker filename.
+// If a match is found the matching object is returned.
 //
 // parameters:
 //    + name: searchString
@@ -2921,7 +2925,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, blk, nil)
 		return
 	case "UserId":
-		usr, err := edb.GetUserFromId(query)
+		usr, err := edb.GetUser(query)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -2939,7 +2943,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, blk, nil)
 		return
 	case "ContentHash":
-		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{ContentHash: query}, "", limit)
+		wm, err := edb.GetWriteMakerFromFilter("content_hash", query)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -2948,7 +2952,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, wm, nil)
 		return
 	case "FileName":
-		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{Name: query}, "", limit)
+		wm, err := edb.GetWriteMakersFromFilter("name", query, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
