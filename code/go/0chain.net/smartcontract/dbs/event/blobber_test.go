@@ -73,13 +73,13 @@ func TestBlobbers(t *testing.T) {
 			Capacity:         sn.Capacity,
 			Allocated:        sn.Allocated,
 			Provider: Provider{
-				ID:             sn.ID,
-				DelegateWallet: sn.StakePoolSettings.DelegateWallet,
-				MinStake:       sn.StakePoolSettings.MaxStake,
-				MaxStake:       sn.StakePoolSettings.MaxStake,
-				NumDelegates:   sn.StakePoolSettings.NumDelegates,
-				ServiceCharge:  sn.StakePoolSettings.ServiceCharge,
-				LastHealthCheck:sn.LastHealthCheck,
+				ID:              sn.ID,
+				DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
+				MinStake:        sn.StakePoolSettings.MaxStake,
+				MaxStake:        sn.StakePoolSettings.MaxStake,
+				NumDelegates:    sn.StakePoolSettings.NumDelegates,
+				ServiceCharge:   sn.StakePoolSettings.ServiceCharge,
+				LastHealthCheck: sn.LastHealthCheck,
 			},
 			SavedData: sn.SavedData,
 		}
@@ -132,10 +132,12 @@ func TestBlobbers(t *testing.T) {
 		SavedData: 10,
 	}
 	blobber1 := Blobber{
-		Provider:        Provider{ID: "piers"},
-		Capacity:        43,
-		Allocated:       47,
-		LastHealthCheck: 51,
+		Provider: Provider{
+			ID:              "id1",
+			LastHealthCheck: 51,
+		},
+		Capacity:  43,
+		Allocated: 47,
 	}
 
 	SnBlobber := convertSn(sn)
@@ -151,10 +153,12 @@ func TestBlobbers(t *testing.T) {
 	}
 
 	blobber2 := Blobber{
-		Provider:        Provider{ID: "piers"},
-		Capacity:        3,
-		Allocated:       7,
-		LastHealthCheck: 1,
+		Provider: Provider{
+			ID:              "id2",
+			LastHealthCheck: 1,
+		},
+		Capacity:  3,
+		Allocated: 7,
 	}
 	eventAddSn2 := Event{
 		BlockNumber: 2,

@@ -7,9 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/core/datastore"
 	common2 "0chain.net/smartcontract/common"
@@ -421,12 +418,6 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 	} else {
 		miner, err = edb.GetMiner(id)
 	}
-	logging.Logger.Info("piers getNodeStat", zap.Any("miner", miner),
-		zap.Any("nodeStat", nodeStat{
-			MinerNodeResponse: minerTableToMinerNode(miner, dps),
-			TotalReward:       int64(miner.Rewards.TotalRewards),
-		}),
-		zap.Any("miner", miner))
 	if err == nil {
 		common.Respond(w, r, nodeStat{
 			MinerNodeResponse: minerTableToMinerNode(miner, dps),

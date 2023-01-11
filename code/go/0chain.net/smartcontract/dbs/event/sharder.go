@@ -14,18 +14,18 @@ import (
 
 type Sharder struct {
 	Provider
-	N2NHost         string `gorm:"column:n2n_host"`
-	Host            string
-	Port            int
-	Path            string
-	PublicKey       string
-	ShortName       string
-	BuildTag        string
-	Delete          bool
-	Fees            currency.Coin
-	Active          bool
-	Longitude       float64
-	Latitude        float64
+	N2NHost   string `gorm:"column:n2n_host"`
+	Host      string
+	Port      int
+	Path      string
+	PublicKey string
+	ShortName string
+	BuildTag  string
+	Delete    bool
+	Fees      currency.Coin
+	Active    bool
+	Longitude float64
+	Latitude  float64
 
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_sharder_creation_round"`
 }
@@ -81,14 +81,16 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 	var sharderDps []struct {
 		Sharder
 		DelegatePool
+		ProviderRewards
 	}
 	var s Sharder
 	var dps []DelegatePool
 
 	result := edb.Get().Preload("Rewards").
-		Table("sharder").
-		Joins("left join delegate_pools on sharder.id = delegate_pools.provider_id").
-		Where("sharder.id = ?", id).
+		Table("sharders").
+		Joins("left join provider_rewards on sharders.id = provider_rewards.provider_id").
+		Joins("left join delegate_pools on sharders.id = delegate_pools.provider_id").
+		Where("sharders.id = ?", id).
 		Scan(&sharderDps)
 	if result.Error != nil {
 		return s, nil, result.Error
@@ -97,6 +99,7 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 		return s, nil, fmt.Errorf("get miner %s found no records", id)
 	}
 	s = sharderDps[0].Sharder
+	s.Rewards = sharderDps[0].ProviderRewards
 	for i := range sharderDps {
 		dps = append(dps, sharderDps[i].DelegatePool)
 	}

@@ -96,7 +96,7 @@ func BenchmarkRestTests(
 				Endpoint: mrh.getMagicBlock,
 			},
 			{
-				FuncName: "nodeStat,miner",
+				FuncName: "nodeStat.miner",
 				Params: map[string]string{
 					"id": data.Miners[0],
 				},
