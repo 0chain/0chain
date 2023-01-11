@@ -7,20 +7,11 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
-
-var ProviderModel = map[spenum.Provider]interface{}{
-	spenum.Miner:      &Miner{},
-	spenum.Sharder:    &Sharder{},
-	spenum.Authorizer: &Authorizer{},
-	spenum.Blobber:    &Blobber{},
-	spenum.Validator:  &Validator{},
-}
 
 type Provider struct {
 	ID              string `gorm:"primaryKey"`
