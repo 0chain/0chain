@@ -125,7 +125,7 @@ func AddMockNodes(
 			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
 
-					PublicKey:       newNode.PublicKey,
+					PublicKey: newNode.PublicKey,
 					Provider: event.Provider{
 						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
@@ -144,15 +144,14 @@ func AddMockNodes(
 				}
 			} else {
 				sharderDb := event.Sharder{
-					LastHealthCheck: newNode.LastHealthCheck,
-					PublicKey:       newNode.PublicKey,
+					PublicKey: newNode.PublicKey,
 					Provider: event.Provider{
 						LastHealthCheck: newNode.LastHealthCheck,
-						ID:            newNode.ID,
-						ServiceCharge: newNode.Settings.ServiceChargeRatio,
-						NumDelegates:  newNode.Settings.MaxNumDelegates,
-						MinStake:      newNode.Settings.MinStake,
-						MaxStake:      newNode.Settings.MaxStake,
+						ID:              newNode.ID,
+						ServiceCharge:   newNode.Settings.ServiceChargeRatio,
+						NumDelegates:    newNode.Settings.MaxNumDelegates,
+						MinStake:        newNode.Settings.MinStake,
+						MaxStake:        newNode.Settings.MaxStake,
 						Rewards: event.ProviderRewards{
 							ProviderID:                    newNode.ID,
 							RoundServiceChargeLastUpdated: 11,

@@ -21,11 +21,11 @@ type Miner struct {
 	ShortName string
 	BuildTag  string
 
-	Delete          bool
-	Fees            currency.Coin
-	Active          bool
-	Longitude       float64
-	Latitude        float64
+	Delete    bool
+	Fees      currency.Coin
+	Active    bool
+	Longitude float64
+	Latitude  float64
 
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_miner_creation_round"`
 }
