@@ -46,12 +46,13 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
+//nolint
 func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool, error) {
 	var minerDps []struct {
 		Miner
 		DelegatePool
 		ProviderRewards
-	} //nolint
+	}
 	var m Miner
 	var dps []DelegatePool
 

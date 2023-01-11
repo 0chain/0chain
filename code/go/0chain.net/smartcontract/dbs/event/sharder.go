@@ -81,8 +81,8 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 	var sharderDps []struct {
 		Sharder
 		DelegatePool
-		ProviderRewards
-	} //nolint
+		ProviderRewards //nolint
+	}
 	var s Sharder
 	var dps []DelegatePool
 
