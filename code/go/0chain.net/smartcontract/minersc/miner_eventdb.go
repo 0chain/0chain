@@ -116,8 +116,8 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 				Rewards:      mn.Reward,
 				TotalRewards: mn.Reward,
 			},
+			LastHealthCheck: mn.LastHealthCheck,
 		},
-		LastHealthCheck: mn.LastHealthCheck,
 
 		Active:    mn.Status == node.NodeStatusActive,
 		Longitude: mn.Geolocation.Longitude,
@@ -128,6 +128,17 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 	logging.Logger.Info("emitting add or overwrite miner event")
 	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
+}
+
+func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
+	data := dbs.DbHealthCheck{
+		ID: 			 mn.ID,
+		LastHealthCheck: mn.LastHealthCheck,
+		Downtime:		 downtime,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagMinerHealthCheck, mn.ID, data)
+	return nil
 }
 
 func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {

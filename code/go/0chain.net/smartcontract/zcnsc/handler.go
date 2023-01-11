@@ -153,7 +153,7 @@ func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 		Fee:             auth.Fee,
 		Latitude:        auth.Latitude,
 		Longitude:       auth.Longitude,
-		LastHealthCheck: auth.LastHealthCheck,
+		LastHealthCheck: int64(auth.LastHealthCheck),
 		DelegateWallet:  auth.DelegateWallet,
 		MinStake:        auth.MinStake,
 		MaxStake:        auth.MaxStake,

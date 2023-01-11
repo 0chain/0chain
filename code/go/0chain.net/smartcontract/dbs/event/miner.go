@@ -6,7 +6,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/guregu/null"
 	"gorm.io/gorm"
@@ -23,7 +22,6 @@ type Miner struct {
 	BuildTag  string
 
 	Delete          bool
-	LastHealthCheck common.Timestamp
 	Fees            currency.Coin
 	Active          bool
 	Longitude       float64
@@ -66,8 +64,6 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	if result.Error != nil {
 		return m, nil, result.Error
 	}
-	//logging.Logger.Info("piers GetMinerWithDelegatePools",
-	//	zap.Any("miner and dps", minerDps))
 	if len(minerDps) == 0 {
 		return m, nil, fmt.Errorf("get miner %s found no records", id)
 	}
@@ -75,12 +71,6 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	m.Rewards = minerDps[0].ProviderRewards
 	for i := range minerDps {
 		dps = append(dps, minerDps[i].DelegatePool)
-		//	logging.Logger.Info("piers GetMinerWithDelegatePools",
-		//		zap.Any("minerDps", minerDps[i]),
-		//		zap.Any("Miner", minerDps[i].Miner),
-		//		zap.Any("DelegatePool", minerDps[i].DelegatePool),
-		//		zap.Any("ProviderRewards", minerDps[i].ProviderRewards),
-		//	)
 	}
 
 	return m, dps, nil
@@ -282,6 +272,10 @@ func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
 }
 func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
 	return newEventsMerger[Miner](TagUpdateMinerTotalUnStake, withUniqueEventOverwrite())
+}
+
+func mergeMinerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagMinerHealthCheck, withUniqueEventOverwrite())
 }
 
 func updateLastUpdateRound() eventMergeMiddleware {

@@ -1,9 +1,16 @@
 package dbs
 
 import (
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 )
+
+type DbHealthCheck struct {
+	ID				string			 `json:"id"`
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	Downtime		uint64			 `json:"downtime"`
+}
 
 type DbUpdates struct {
 	Id      string                 `json:"id"`

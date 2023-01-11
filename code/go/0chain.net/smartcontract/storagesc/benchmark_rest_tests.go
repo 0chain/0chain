@@ -85,15 +85,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getTransactionByFilter,
 			},
 			{
-				FuncName: "transaction-hashes",
-				Params: map[string]string{
-					"look-up-hash": benchmark.GetMockWriteMarkerLookUpHash(1, 1),
-					"name":         benchmark.GetMockWriteMarkerContentHash(1, 1),
-					"content-hash": benchmark.GetMockWriteMarkerFileName(1),
-				},
-				Endpoint: srh.getTransactionHashesByFilter,
-			},
-			{
 				FuncName: "errors",
 				Params: map[string]string{
 					"transaction_hash": benchmark.GetMockTransactionHash(3, 3),
@@ -152,16 +143,8 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.getAllocations,
 			},
-			//{
-			//	FuncName: "blobber-aggregate",
-			//	Params: map[string]string{
-			//		"id":    getMockBlobberId(1),
-			//		"round": "2",
-			//	},
-			//	Endpoint: srh.getBlobberAggregate,
-			//},
 			{
-				FuncName: "allocation-min-lock",
+				FuncName: "allocation_min_lock",
 				Params: map[string]string{
 					"allocation_data": func() string {
 						var blobbers []string
@@ -177,7 +160,7 @@ func BenchmarkRestTests(
 							DataShards:      len(blobbers) / 2,
 							ParityShards:    len(blobbers) / 2,
 							Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
+							Expiration:      common.Timestamp(2*viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
 							Blobbers:        blobbers,
 							ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 							WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
@@ -197,8 +180,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getchallenge",
 				Params: map[string]string{
-					"blobber":   getMockBlobberId(0),
-					"challenge": getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
+					"challenge":  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 				},
 				Endpoint: srh.getChallenge,
 			},
@@ -408,11 +390,47 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlobberChallenges,
 			},
 			{
-				FuncName: "search",
+				FuncName: "search.block_number",
 				Params: map[string]string{
-					"query": benchmark.GetMockTransactionHash(3, 3),
+					"searchString": "1",
 				},
 				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "search.block_hash",
+				Params: map[string]string{
+					"searchString": benchmark.GetMockBlockHash(1),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "search.user",
+				Params: map[string]string{
+					"searchString": data.Clients[0],
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "search.wm_name",
+				Params: map[string]string{
+					"searchString": benchmark.GetMockWriteMarkerFileName(0),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "search.wm_content_hash",
+				Params: map[string]string{
+					"searchString": benchmark.GetMockWriteMarkerContentHash(0, 0),
+				},
+				Endpoint: srh.getSearchHandler,
+			},
+			{
+				FuncName: "alloc-blobber-term",
+				Params: map[string]string{
+					"allocation_id": getMockAllocationId(0),
+					"blobber_id":    getMockBlobberId(0),
+				},
+				Endpoint: srh.getAllocBlobberTerms,
 			},
 			{
 				FuncName: "alloc-blobber-term",

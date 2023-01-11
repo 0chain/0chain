@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm/clause"
 )
@@ -146,4 +147,8 @@ func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
 
 func mergeUpdateValidatorUnStakesEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidatorUnStakeTotal, withUniqueEventOverwrite())
+}
+
+func mergeValidatorHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagValidatorHealthCheck, withUniqueEventOverwrite())
 }

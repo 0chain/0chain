@@ -103,8 +103,8 @@ func TestMiners(t *testing.T) {
 					ProviderID: mn.ID,
 					Rewards:    mn.Stat.GeneratorRewards,
 				},
+				LastHealthCheck: mn.LastHealthCheck,
 			},
-			LastHealthCheck: mn.LastHealthCheck,
 
 			Fees:      mn.Stat.GeneratorFees,
 			Longitude: 0,
@@ -391,8 +391,8 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) {
 					ProviderID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
 					Rewards:    9725520000000,
 				},
+				LastHealthCheck: 1644881505,
 			},
-			LastHealthCheck: 1644881505,
 
 			Active: i%2 == 0,
 		}
@@ -431,8 +431,8 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 					ProviderID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
 					Rewards:    9725520000000,
 				},
+				LastHealthCheck: 1644881505,
 			},
-			LastHealthCheck: 1644881505,
 
 			Active: i%2 == 0,
 		}
@@ -488,8 +488,8 @@ func ReturnValue() Miner {
 				ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 				Rewards:    9725520000000,
 			},
+			LastHealthCheck: 1644881505,
 		},
-		LastHealthCheck: 1644881505,
 
 		Active: true}
 }
@@ -515,8 +515,8 @@ func ReturnPointer() *Miner {
 				ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 				Rewards:    9725520000000,
 			},
+			LastHealthCheck: 1644881505,
 		},
-		LastHealthCheck: 1644881505,
 
 		Active: true}
 }

@@ -14,8 +14,8 @@ import (
 
 type BlobberAggregate struct {
 	gorm.Model
-	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,unique"`
-	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,unique"`
+	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,priority:2,unique"`
+	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,priority:1,unique"`
 	BucketID            int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
@@ -31,6 +31,7 @@ type BlobberAggregate struct {
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
+	Downtime			uint64		  `json:"downtime"`
 }
 
 func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAggregate, error) {
@@ -38,10 +39,12 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 
 	queryBuilder := edb.Store.Get().
 		Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   false,
+	queryBuilder.Clauses(clause.OrderBy{
+		Columns: []clause.OrderByColumn{{
+			Column: clause.Column{Name: "round"},
+		}, {
+			Column: clause.Column{Name: "blobber_id"},
+		}},
 	})
 
 	result := queryBuilder.Scan(&snapshots)
@@ -148,6 +151,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
+		aggregate.Downtime	 = current.Downtime
 		aggregate.RankMetric = current.RankMetric
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
