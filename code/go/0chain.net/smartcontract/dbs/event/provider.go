@@ -73,6 +73,7 @@ func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tabl
 	updateExpr := map[string]interface{}{
 		"last_health_check": gorm.Expr("excluded.last_health_check"),
 		"downtime": gorm.Expr(fmt.Sprintf("%v.downtime + excluded.downtime", tableName)),
+		"bucket_id": gorm.Expr(fmt.Sprintf("%v.bucket_id", tableName))
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
