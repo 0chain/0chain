@@ -24,7 +24,7 @@ type SqliteStore struct {
 	db *gorm.DB
 }
 
-func (store *SqliteStore) Open(config config.DbAccess) error {
+func (store *SqliteStore) Open(_ config.DbAccess) error {
 	var err error
 
 	lgr := zapgorm2.New(logging.Logger)
