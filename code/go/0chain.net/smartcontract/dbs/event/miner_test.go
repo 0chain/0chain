@@ -26,7 +26,7 @@ func init() {
 }
 
 func TestMinersBatchUpdate(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	logging.InitLogging("development", "")
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
@@ -230,7 +230,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 }
 
 func TestMiners(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	logging.InitLogging("development", "")
 
 	type Stat struct {
@@ -501,7 +501,7 @@ func TestGetMiners(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
