@@ -99,7 +99,8 @@ func (edb *EventDb) updateProvidersTotalUnStakes(providers []Provider, tablename
 }
 
 func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tableName ProviderTable) error {
-	logging.Logger.Info("Running update provider health check with data: ", zap.Any("updates", updates), zap.String("tableName", string(tableName)))
+	table := string(tableName)
+	logging.Logger.Info("Running update provider health check with data: ", zap.Any("updates", updates), zap.String("tableName", table))
 
 	var ids []string
 	var lastHealthCheck []int64
@@ -110,7 +111,7 @@ func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tabl
 		downtime = append(downtime, int64(u.Downtime))
 	}
 
-	return CreateBuilder("blobbers", "id", ids).
-		AddUpdate("downtime", downtime, "downtime + t.downtime").
+	return CreateBuilder(table, "id", ids).
+		AddUpdate("downtime", downtime, table+".downtime + t.downtime").
 		AddUpdate("last_health_check", lastHealthCheck).Exec(edb).Error
 }
