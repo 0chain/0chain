@@ -6,7 +6,6 @@ import (
 
 	"github.com/0chain/common/core/logging"
 	"github.com/lib/pq"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -60,7 +59,6 @@ func (b *UpdateBuilder) AddUpdate(column string, values interface{}, expr ...str
 
 	atype, ok := typeToSQL[reflect.TypeOf(values)]
 
-	logging.Logger.Debug("type", zap.String("t", reflect.TypeOf(values).String()))
 	if !ok {
 		atype = typeToSQL[reflect.TypeOf([]string{})]
 	}
