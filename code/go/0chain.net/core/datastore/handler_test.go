@@ -52,19 +52,6 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 		want http.ResponseWriter
 	}{
 		{
-			name: "Test_ToJSONEntityReqResponse_CO_FALSE_OK",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "invalid origin")
-
-				return args{
-					handler: handler,
-					r:       r,
-				}
-			}(),
-			want: httptest.NewRecorder(),
-		},
-		{
 			name: "Test_ToJSONEntityReqResponse_Options_OK",
 			args: func() args {
 				r := httptest.NewRequest(http.MethodOptions, "/", nil)
@@ -96,7 +83,6 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 			}(),
 			want: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
-				w.Header().Set("Access-Control-Allow-Origin", "*")
 				http.Error(w, "Header Content-type=application/json not found", 400)
 				return w
 			}(),
@@ -116,7 +102,6 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 			}(),
 			want: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
-				w.Header().Set("Access-Control-Allow-Origin", "*")
 				http.Error(w, "Error decoding json", 500)
 				return w
 			}(),
@@ -144,7 +129,6 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 			}(),
 			want: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
-				w.Header().Set("Access-Control-Allow-Origin", "*")
 				w.WriteHeader(http.StatusNoContent)
 				return w
 			}(),

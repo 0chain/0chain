@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
@@ -96,42 +95,6 @@ func errorAny(w http.ResponseWriter, status int, msg string) {
 func getContext(r *http.Request) (context.Context, error) {
 	ctx := r.Context()
 	return ctx, nil
-}
-
-func getHost(origin string) (string, error) {
-	u, err := url.Parse(origin)
-	if err != nil {
-		return "", err
-	}
-	return u.Hostname(), nil
-}
-
-func validOrigin(origin string) bool {
-	host, err := getHost(origin)
-	if err != nil {
-		return false
-	}
-	if host == "localhost" || strings.HasPrefix(host, "file") {
-		return true
-	}
-	if host == "0chain.net" || host == "0box.io" ||
-		host == "vult.network" || host == "bolt.holdings" ||
-		host == "chalk.software" || host == "blimp.software" ||
-		host == "chimney.software" || host == "atlus.cloud" ||
-		strings.HasSuffix(host, ".vult.network") ||
-		strings.HasSuffix(host, ".bolt.holdings") ||
-		strings.HasSuffix(host, ".chalk.software") ||
-		strings.HasSuffix(host, ".blimp.software") ||
-		strings.HasSuffix(host, ".chimney.software") ||
-		strings.HasSuffix(host, ".atlus.cloud") ||
-		strings.HasSuffix(host, ".0chain.net") ||
-		strings.HasSuffix(host, ".alphanet-0chain.net") ||
-		strings.HasSuffix(host, ".testnet-0chain.net") ||
-		strings.HasSuffix(host, ".devnet-0chain.net") ||
-		strings.HasSuffix(host, ".mainnet-0chain.net") {
-		return true
-	}
-	return false
 }
 
 func SetupCORSResponse(w http.ResponseWriter) {
