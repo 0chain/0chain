@@ -319,14 +319,10 @@ func mergeUpdateBlobberTotalUnStakesEvents() *eventsMergerImpl[Blobber] {
 
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
 	var ids []string
-	var offers []int64
+	var offers []uint64
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
-		i, err := m.OffersTotal.Int64()
-		if err != nil {
-			return err
-		}
-		offers = append(offers, i)
+		offers = append(offers, uint64(m.OffersTotal))
 	}
 
 	return CreateBuilder("blobbers", "id", ids).

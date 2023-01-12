@@ -19,6 +19,7 @@ const QueryTemplate = "%v %v FROM (SELECT %v) AS t %v"
 var typeToSQL = map[reflect.Type]string{
 	reflect.TypeOf([]string{}):  "text",
 	reflect.TypeOf([]int64{}):   "bigint",
+	reflect.TypeOf([]uint64{}):  "bigint",
 	reflect.TypeOf([]int{}):     "bigint",
 	reflect.TypeOf([][]byte{}):  "bytea",
 	reflect.TypeOf([]float64{}): "decimal",
