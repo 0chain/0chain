@@ -106,25 +106,3 @@ func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
 		UpdateAll: true,
 	}).Create(&dps).Error
 }
-
-func addDelegatePoolLastUpdateRoundMiddleware() *eventsMergerImpl[DelegatePool] {
-	return &eventsMergerImpl[DelegatePool]{
-		tag:         TagAddDelegatePool,
-		middlewares: []eventMergeMiddleware{addDelegatePoolLastUpdateRound()},
-	}
-}
-
-func addDelegatePoolLastUpdateRound() eventMergeMiddleware {
-	return func(events []Event) ([]Event, error) {
-		for i := range events {
-			dp, ok := events[i].Data.(DelegatePool)
-			if !ok {
-				return nil, fmt.Errorf(
-					"merging, %v shold be a miner", events[i].Data)
-			}
-			dp.RoundPoolLastUpdated = events[i].BlockNumber
-			events[i].Data = dp
-		}
-		return events, nil
-	}
-}
