@@ -35,6 +35,11 @@ func (a *Authorizer) GetServiceCharge() float64 {
 	return a.ServiceCharge
 }
 
+func (a *Authorizer) GetTotalRewards() currency.Coin {
+	return a.Rewards.TotalRewards
+}
+
+
 func (a *Authorizer) SetTotalStake(value currency.Coin) {
 	a.TotalStake = value
 }
@@ -45,6 +50,10 @@ func (a *Authorizer) SetUnstakeTotal(value currency.Coin) {
 
 func (a *Authorizer) SetServiceCharge(value float64) {
 	a.ServiceCharge = value
+}
+
+func (a *Authorizer) SetTotalRewards(value currency.Coin) {
+	a.Rewards.TotalRewards = value
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {

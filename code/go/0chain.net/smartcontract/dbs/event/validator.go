@@ -32,6 +32,11 @@ func (v *Validator) GetServiceCharge() float64 {
 	return v.ServiceCharge
 }
 
+func (v *Validator) GetTotalRewards() currency.Coin {
+	return v.Rewards.TotalRewards
+}
+
+
 func (v *Validator) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
 }
@@ -43,6 +48,11 @@ func (v *Validator) SetUnstakeTotal(value currency.Coin) {
 func (v *Validator) SetServiceCharge(value float64) {
 	v.ServiceCharge = value
 }
+
+func (v *Validator) SetTotalRewards(value currency.Coin) {
+	v.Rewards.TotalRewards = value
+}
+
 
 func (edb *EventDb) GetValidatorCount() (int64, error) {
 	var count int64

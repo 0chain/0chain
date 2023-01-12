@@ -44,6 +44,11 @@ func (s *Sharder) GetServiceCharge() float64 {
 	return s.ServiceCharge
 }
 
+func (s *Sharder) GetTotalRewards() currency.Coin {
+	return s.Rewards.TotalRewards
+}
+
+
 func (s *Sharder) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
 }
@@ -55,6 +60,11 @@ func (s *Sharder) SetUnstakeTotal(value currency.Coin) {
 func (s *Sharder) SetServiceCharge(value float64) {
 	s.ServiceCharge = value
 }
+
+func (s *Sharder) SetTotalRewards(value currency.Coin) {
+	s.Rewards.TotalRewards = value
+}
+
 
 // swagger:model SharderGeolocation
 type SharderGeolocation struct {
