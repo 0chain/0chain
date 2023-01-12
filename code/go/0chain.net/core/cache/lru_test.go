@@ -4,14 +4,14 @@ import (
 	"reflect"
 	"testing"
 
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 func TestNewLRUCache(t *testing.T) {
 	t.Parallel()
 
 	size := 2000
-	c, _ := lru.New(2000)
+	c, _ := lru.New[string, string](2000)
 
 	type args struct {
 		size int
@@ -19,12 +19,12 @@ func TestNewLRUCache(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *LRU
+		want *LRU[string, string]
 	}{
 		{
 			name: "Test_NewLRUCache_OK",
 			args: args{size: size},
-			want: &LRU{
+			want: &LRU[string, string]{
 				Cache: c,
 			},
 		},
@@ -34,7 +34,7 @@ func TestNewLRUCache(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := NewLRUCache(tt.args.size); !reflect.DeepEqual(got, tt.want) {
+			if got := NewLRUCache[string, string](tt.args.size); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewLRUCache() = %v, want %v", got, tt.want)
 			}
 		})
@@ -44,10 +44,10 @@ func TestNewLRUCache(t *testing.T) {
 func TestLRU_Add(t *testing.T) {
 	t.Parallel()
 
-	c := NewLRUCache(2000)
+	c := NewLRUCache[string, interface{}](2000)
 
 	type fields struct {
-		Cache *lru.Cache
+		Cache *lru.Cache[string, interface{}]
 		Hit   int64
 		Miss  int64
 	}
@@ -80,7 +80,7 @@ func TestLRU_Add(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			c := &LRU{
+			c := &LRU[string, interface{}]{
 				Cache: tt.fields.Cache,
 				hit:   tt.fields.Hit,
 				miss:  tt.fields.Miss,
@@ -103,10 +103,10 @@ func TestLRU_Add(t *testing.T) {
 func TestLRU_Get(t *testing.T) {
 	t.Parallel()
 
-	c := NewLRUCache(2000)
+	c := NewLRUCache[string, interface{}](2000)
 
 	type fields struct {
-		Cache *lru.Cache
+		Cache *lru.Cache[string, interface{}]
 		Hit   int64
 		Miss  int64
 	}
@@ -155,7 +155,7 @@ func TestLRU_Get(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			c := &LRU{
+			c := &LRU[string, interface{}]{
 				Cache: tt.fields.Cache,
 				hit:   tt.fields.Hit,
 				miss:  tt.fields.Miss,
@@ -192,10 +192,10 @@ func TestLRU_Get(t *testing.T) {
 func TestLRU_GetHit(t *testing.T) {
 	t.Parallel()
 
-	c := NewLRUCache(2000)
+	c := NewLRUCache[string, interface{}](2000)
 
 	type fields struct {
-		Cache *lru.Cache
+		Cache *lru.Cache[string, interface{}]
 		Hit   int64
 		Miss  int64
 	}
@@ -219,7 +219,7 @@ func TestLRU_GetHit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			c := &LRU{
+			c := &LRU[string, interface{}]{
 				Cache: tt.fields.Cache,
 				hit:   tt.fields.Hit,
 				miss:  tt.fields.Miss,
@@ -234,10 +234,10 @@ func TestLRU_GetHit(t *testing.T) {
 func TestLRU_GetMiss(t *testing.T) {
 	t.Parallel()
 
-	c := NewLRUCache(2000)
+	c := NewLRUCache[string, interface{}](2000)
 
 	type fields struct {
-		Cache *lru.Cache
+		Cache *lru.Cache[string, interface{}]
 		Hit   int64
 		Miss  int64
 	}
@@ -261,7 +261,7 @@ func TestLRU_GetMiss(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			c := &LRU{
+			c := &LRU[string, interface{}]{
 				Cache: tt.fields.Cache,
 				hit:   tt.fields.Hit,
 				miss:  tt.fields.Miss,

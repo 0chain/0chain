@@ -14,6 +14,7 @@ type AuthorizerSnapshot struct {
 	Fee           currency.Coin `json:"fee"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
+	TotalRewards  currency.Coin	`json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
 }
@@ -30,6 +31,10 @@ func (a *AuthorizerSnapshot) GetServiceCharge() float64 {
 	return a.ServiceCharge
 }
 
+func (a *AuthorizerSnapshot) GetTotalRewards() currency.Coin {
+	return a.TotalRewards
+}
+
 func (a *AuthorizerSnapshot) SetTotalStake(value currency.Coin) {
 	a.TotalStake = value
 }
@@ -41,6 +46,11 @@ func (a *AuthorizerSnapshot) SetUnstakeTotal(value currency.Coin) {
 func (a *AuthorizerSnapshot) SetServiceCharge(value float64) {
 	a.ServiceCharge = value
 }
+
+func (a *AuthorizerSnapshot) SetTotalRewards(value currency.Coin) {
+	a.TotalRewards = value
+}
+
 
 func (edb *EventDb) getAuthorizerSnapshots(limit, offset int64) (map[string]AuthorizerSnapshot, error) {
 	var snapshots []AuthorizerSnapshot

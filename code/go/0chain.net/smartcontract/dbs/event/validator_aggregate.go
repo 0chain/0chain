@@ -19,6 +19,7 @@ type ValidatorAggregate struct {
 
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
+	TotalRewards  currency.Coin	`json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -34,6 +35,10 @@ func (v *ValidatorAggregate) GetServiceCharge() float64 {
 	return v.ServiceCharge
 }
 
+func (v *ValidatorAggregate) GetTotalRewards() currency.Coin {
+	return v.TotalRewards
+}
+
 func (v *ValidatorAggregate) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
 }
@@ -44,6 +49,10 @@ func (v *ValidatorAggregate) SetUnstakeTotal(value currency.Coin) {
 
 func (v *ValidatorAggregate) SetServiceCharge(value float64) {
 	v.ServiceCharge = value
+}
+
+func (v *ValidatorAggregate) SetTotalRewards(value currency.Coin) {
+	v.TotalRewards = value
 }
 
 func (edb *EventDb) ReplicateValidatorAggregate(p common.Pagination) ([]ValidatorAggregate, error) {

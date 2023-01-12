@@ -81,7 +81,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
 	minerChain.validateTxnsWithContext = common.NewWithContextFunc(1)
 	minerChain.notarizingBlocksTasks = make(map[string]chan struct{})
-	minerChain.notarizingBlocksResults = cache.NewLRUCache(1000)
+	minerChain.notarizingBlocksResults = cache.NewLRUCache[string, bool](1000)
 	minerChain.nbmMutex = &sync.Mutex{}
 	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
 	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
@@ -153,7 +153,7 @@ type Chain struct {
 	blockVerifyC                         chan *block.Block
 	validateTxnsWithContext              *common.WithContextFunc
 	notarizingBlocksTasks                map[string]chan struct{}
-	notarizingBlocksResults              *cache.LRU
+	notarizingBlocksResults              *cache.LRU[string, bool]
 	nbmMutex                             *sync.Mutex
 	verifyBlockNotarizationWorker        *common.WithContextFunc
 	mergeBlockVRFSharesWorker            *common.WithContextFunc
