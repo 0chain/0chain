@@ -100,7 +100,7 @@ func getContext(r *http.Request) (context.Context, error) {
 func SetupCORSResponse(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Accept-Encoding")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
 }
 
 /*ToJSONResponse - An adapter that takes a handler of the form
