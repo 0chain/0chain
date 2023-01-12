@@ -141,6 +141,7 @@ func TestSetupCORSResponse(t *testing.T) {
 				w := httptest.NewRecorder()
 				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 				w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Accept-Encoding")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
 				return w
 			}(),
 		},
@@ -254,19 +255,6 @@ func TestToJSONReqResponse(t *testing.T) {
 		},
 		{
 			name: "Test_ToJSONReqResponse_OK",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "invalid origin")
-				return args{handler: handler, r: r}
-			}(),
-			want: func() http.ResponseWriter {
-				w := httptest.NewRecorder()
-
-				return w
-			}(),
-		},
-		{
-			name: "Test_ToJSONReqResponse_OK2",
 			args: func() args {
 				buf := bytes.NewBuffer([]byte("{}"))
 				r := httptest.NewRequest(http.MethodGet, "/", buf)

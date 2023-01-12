@@ -96,7 +96,7 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 			}(),
 			want: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
-				w.Header().Set("Access-Control-Allow-Origin", "file://localhost:8080/")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
 				http.Error(w, "Header Content-type=application/json not found", 400)
 				return w
 			}(),
