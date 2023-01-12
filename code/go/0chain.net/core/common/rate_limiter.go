@@ -44,10 +44,10 @@ func ConfigRateLimits() {
 // UserRateLimit - rate limiting for end user handlers
 func UserRateLimit(handler ReqRespHandlerf) ReqRespHandlerf {
 	if !userRateLimit.RateLimit {
-		return handler
+		return Recover(handler)
 	}
 	return func(writer http.ResponseWriter, request *http.Request) {
-		tollbooth.LimitFuncHandler(userRateLimit.Limiter, handler).ServeHTTP(writer, request)
+		tollbooth.LimitFuncHandler(userRateLimit.Limiter, Recover(handler)).ServeHTTP(writer, request)
 	}
 }
 

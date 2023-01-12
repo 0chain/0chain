@@ -134,19 +134,8 @@ func validOrigin(origin string) bool {
 	return false
 }
 
-func CheckCrossOrigin(w http.ResponseWriter, r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return true
-	}
-	if validOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		return true
-	}
-	return false
-}
-
 func SetupCORSResponse(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Accept-Encoding")
 }
@@ -159,9 +148,6 @@ func SetupCORSResponse(w http.ResponseWriter) {
 
 func ToJSONResponse(handler JSONResponderF) ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !CheckCrossOrigin(w, r) {
-			return
-		}
 		ctx := r.Context()
 		data, err := handler(ctx, r)
 		Respond(w, r, data, err)
@@ -175,9 +161,6 @@ func ToJSONResponse(handler JSONResponderF) ReqRespHandlerf {
  */
 func ToJSONReqResponse(handler JSONReqResponderF) ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !CheckCrossOrigin(w, r) {
-			return
-		}
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
 			http.Error(w, "Header Content-type=application/json not found", 400)

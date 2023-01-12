@@ -28,9 +28,7 @@ type JSONEntityReqResponderF func(ctx context.Context, entity Entity) (interface
  */
 func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata EntityMetadata) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !common.CheckCrossOrigin(w, r) {
-			return
-		}
+
 		if r.Method == "OPTIONS" {
 			common.SetupCORSResponse(w)
 			return
