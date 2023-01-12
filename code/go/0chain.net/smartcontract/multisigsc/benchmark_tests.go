@@ -1,9 +1,10 @@
 package multisigsc
 
 import (
-	"0chain.net/core/common"
 	"encoding/json"
 	"testing"
+
+	"0chain.net/core/common"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
@@ -81,14 +82,14 @@ func BenchmarkTests(
 			name:     "multi_sig." + RegisterFuncName,
 			endpoint: RegisterFuncName,
 			txn: &transaction.Transaction{
-				ClientID:     data.Clients[len(data.Clients)-1],
+				ClientID:     data.Clients[0],
 				CreationDate: creationTime,
 			},
 			input: func() []byte {
 				wallet := &Wallet{
-					ClientID:           data.Clients[len(data.Clients)-1],
+					ClientID:           data.Clients[0],
 					SignatureScheme:    viper.GetString(bk.InternalSignatureScheme),
-					PublicKey:          data.PublicKeys[len(data.PublicKeys)-1],
+					PublicKey:          data.PublicKeys[0],
 					SignerThresholdIDs: data.Clients[:MaxSigners],
 					SignerPublicKeys:   data.PublicKeys[:MaxSigners],
 					NumRequired:        MaxSigners,
@@ -100,7 +101,7 @@ func BenchmarkTests(
 			name:     "multi_sig." + VoteFuncName,
 			endpoint: VoteFuncName,
 			txn: &transaction.Transaction{
-				ClientID: data.Clients[0],
+				ClientID: data.Clients[1],
 				HashIDField: datastore.HashIDField{
 					Hash: "my hash",
 				},
@@ -109,15 +110,15 @@ func BenchmarkTests(
 			input: func() []byte {
 				st := &state.SignedTransfer{
 					Transfer: state.Transfer{
-						ClientID:   data.Clients[0],
-						ToClientID: data.Clients[1],
+						ClientID:   data.Clients[1],
+						ToClientID: data.Clients[2],
 						Amount:     1,
 					},
 					SchemeName: viper.GetString(bk.InternalSignatureScheme),
-					PublicKey:  data.PublicKeys[0],
+					PublicKey:  data.PublicKeys[1],
 				}
-				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
-				sigScheme.SetPrivateKey(data.PrivateKeys[0])
+				_ = sigScheme.SetPublicKey(data.PublicKeys[1])
+				sigScheme.SetPrivateKey(data.PrivateKeys[1])
 				signature, _ := sigScheme.Sign(encryption.Hash(st.Transfer.Encode()))
 				bytes, _ := json.Marshal(&Vote{
 					Transfer:  st.Transfer,

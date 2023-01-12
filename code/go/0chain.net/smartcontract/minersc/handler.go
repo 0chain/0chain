@@ -320,7 +320,7 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat nodePoolStat
-// lists sharders
+// lists node pool stats for a given client
 //
 // parameters:
 //
@@ -333,10 +333,6 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 //	 description: pool_id
 //	 in: query
 //	 type: string
-//	+name: status
-//	 description: status
-//	 in: query
-//	 type: string
 //
 // responses:
 //
@@ -347,26 +343,34 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 	var (
 		id     = r.URL.Query().Get("id")
 		poolID = r.URL.Query().Get("pool_id")
-		status = r.URL.Query().Get("status")
-		sn     *MinerNode
 		err    error
 	)
 
-	if sn, err = getMinerNode(id, mrh.GetQueryStateContext()); err != nil {
-		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	if poolID == "" {
-		common.Respond(w, r, sn.GetNodePools(status), nil)
+	dp, err := edb.GetDelegatePool(poolID, id)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
 		return
 	}
 
-	if pool := sn.GetNodePool(poolID); pool != nil {
-		common.Respond(w, r, pool, nil)
-		return
+	res := NodePool{
+		PoolID: dp.PoolID,
+		DelegatePool: &stakepool.DelegatePool{
+			Balance:      dp.Balance,
+			Reward:       dp.Reward,
+			Status:       spenum.PoolStatus(dp.Status),
+			RoundCreated: dp.RoundCreated,
+			DelegateID:   dp.DelegateID,
+			StakedAt:     common.Timestamp(dp.CreatedAt.Unix()),
+		},
 	}
-	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
+
+	common.Respond(w, r, res, nil)
 }
 
 // swagger:model nodeStat
@@ -905,13 +909,13 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Miner))
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, spenum.Miner)
 	if err != nil {
 		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
 		return
 	}
 
-	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Sharder))
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, spenum.Sharder)
 	if err != nil {
 		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
 		return

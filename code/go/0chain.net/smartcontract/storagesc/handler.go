@@ -91,47 +91,15 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber_ids", common.UserRateLimit(srh.getBlobberIdsByUrls)),
 		rest.MakeEndpoint(storage+"/alloc_blobbers", common.UserRateLimit(srh.getAllocationBlobbers)),
 		rest.MakeEndpoint(storage+"/free_alloc_blobbers", common.UserRateLimit(srh.getFreeAllocationBlobbers)),
-		rest.MakeEndpoint(storage+"/blobber-rank", common.UserRateLimit(srh.getBlobberRank)),
 		rest.MakeEndpoint(storage+"/search", common.UserRateLimit(srh.getSearchHandler)),
 		rest.MakeEndpoint(storage+"/alloc-blobber-term", common.UserRateLimit(srh.getAllocBlobberTerms)),
 		rest.MakeEndpoint(storage+"/replicate-snapshots", common.UserRateLimit(srh.replicateSnapshots)),
 		rest.MakeEndpoint(storage+"/replicate-blobber-aggregates", srh.replicateBlobberAggregates),
-		rest.MakeEndpoint(storage+"/timestamp-to-round", common.UserRateLimit(srh.timestampsToRounds)),
+		rest.MakeEndpoint(storage+"/replicate-miner-aggregates", srh.replicateMinerAggregates),
+		rest.MakeEndpoint(storage+"/replicate-sharder-aggregates", srh.replicateSharderAggregates),
+		rest.MakeEndpoint(storage+"/replicate-authorizer-aggregates", srh.replicateAuthorizerAggregates),
+		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 	}
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank blobber-rank
-// Gets the rank of a blobber.
-//
-//	challenges passed / total challenges
-//
-// parameters:
-//
-//	+name: id
-//	 description: id of blobber
-//	 required: true
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: Int64Map
-//	400:
-func (srh *StorageRestHandler) getBlobberRank(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	rank, err := edb.GetBlobberRank(id)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-	common.Respond(w, r, rest.Int64Map{
-		"blobber-rank": rank,
-	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price average-write-price
@@ -202,6 +170,11 @@ func (srh *StorageRestHandler) getAverageWritePrice(w http.ResponseWriter, r *ht
 //	 description: desc or asc
 //	 in: query
 //	 type: string
+//	+name: blobber_urls
+//	 description: list of blobber URLs
+//	 in: query
+//	 type: []string
+//	 required: true
 //
 // responses:
 //
@@ -219,7 +192,7 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 	}
 
 	if len(urlsStr) == 0 {
-		common.Respond(w, r, nil, errors.New("blobber urls list is empty"))
+		common.Respond(w, r, nil, errors.New("blobber_urls list is empty"))
 		return
 	}
 
@@ -898,7 +871,7 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
 // Gets the total data currently storage used across all blobbers.
 //
-// This endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
+// this endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
 //
 // responses:
 //
@@ -1107,7 +1080,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	pools, err := edb.GetUserDelegatePools(clientID, int(spenum.Blobber))
+	pools, err := edb.GetUserDelegatePools(clientID, spenum.Blobber)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
 		return
@@ -1360,15 +1333,12 @@ func roundIntervalFromTime(fromTime, toTime string, edb *event.EventDb) (int64, 
 //	404:
 //	500:
 func (srh *StorageRestHandler) getChallenge(w http.ResponseWriter, r *http.Request) {
-	blobberID := r.URL.Query().Get("blobber")
-
 	challengeID := r.URL.Query().Get("challenge")
-	challenge, err := getChallengeForBlobber(blobberID, challengeID, srh.GetQueryStateContext().GetEventDB())
+	challenge, err := getChallenge(challengeID, srh.GetQueryStateContext().GetEventDB())
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge"))
 		return
 	}
-
 	common.Respond(w, r, challenge, nil)
 }
 
@@ -2823,64 +2793,6 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, sn, nil)
 }
 
-// swagger:model timestampToRoundResp
-type timestampToRoundResp struct {
-	Rounds []int64 `json:"rounds"`
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round timestampsToRounds
-// Get round(s) number for timestamp(s)
-//
-// parameters:
-//
-//	 +name: timestamps
-//		 description: timestamps you want to convert to rounds
-//		 required: true
-//		 in: query
-//		 type: string
-//
-// responses:
-//
-//	200: timestampToRoundResp
-//	400:
-//	500:
-func (srh *StorageRestHandler) timestampsToRounds(w http.ResponseWriter, r *http.Request) {
-	var timestamps = r.URL.Query().Get("timestamps")
-
-	if timestamps == "" {
-		err := common.NewErrBadRequest("missing query parameter: timestamps")
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	var timeStamps []int64
-	if err := json.Unmarshal([]byte(timestamps), &timeStamps); err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("timestamps are not valid"))
-		return
-	}
-	var rounds []int64
-	for _, timestamp := range timeStamps {
-		round, err := edb.GetRoundFromTime(time.Unix(timestamp, 0), true)
-		if err != nil {
-			err := common.NewErrNoResource(err.Error())
-			common.Respond(w, r, nil, err)
-			return
-		}
-		rounds = append(rounds, round)
-	}
-
-	common.Respond(w, r, timestampToRoundResp{
-		Rounds: rounds,
-	}, nil)
-	return
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms
 // Gets statistic for all locked tokens of a stake pool
 //
@@ -2946,9 +2858,13 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 	common.Respond(w, r, resp, nil)
 }
 
-/*getSearchHandler - Get result based on query*/
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search search
-// Generic search endpoint
+// Generic search endpoint.
+//
+// Integer If the input can be converted to an integer, it is interpreted as a round number and information for the
+// matching block is returned. Otherwise, the input is treated as string and matched against block hash,
+// transaction hash, user id, write marker content hash or write marker filename.
+// If a match is found the matching object is returned.
 //
 // parameters:
 //    + name: searchString
@@ -3009,7 +2925,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, blk, nil)
 		return
 	case "UserId":
-		usr, err := edb.GetUserFromId(query)
+		usr, err := edb.GetUser(query)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -3027,7 +2943,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, blk, nil)
 		return
 	case "ContentHash":
-		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{ContentHash: query}, "", limit)
+		wm, err := edb.GetWriteMakerFromFilter("content_hash", query)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -3036,7 +2952,7 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 		common.Respond(w, r, wm, nil)
 		return
 	case "FileName":
-		wm, err := edb.GetWriteMarkersByFilters(event.WriteMarker{Name: query}, "", limit)
+		wm, err := edb.GetWriteMakersFromFilter("name", query, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -3136,4 +3052,188 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		blobbers = []event.BlobberAggregate{}
 	}
 	common.Respond(w, r, blobbers, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate replicateMinerAggregates
+// Gets list of miner aggregate records
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: StringMap
+//	500:
+func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	miners, err := edb.ReplicateMinerAggregate(limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get miner by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(miners) == 0 {
+		miners = []event.MinerAggregate{}
+	}
+	common.Respond(w, r, miners, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate replicateSharderAggregates
+// Gets list of sharder aggregate records
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: StringMap
+//	500:
+func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	sharders, err := edb.ReplicateSharderAggregate(limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get sharder by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(sharders) == 0 {
+		sharders = []event.SharderAggregate{}
+	}
+	common.Respond(w, r, sharders, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate replicateAuthorizerAggregates
+// Gets list of authorizer aggregate records
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: StringMap
+//	500:
+func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	authorizers, err := edb.ReplicateAuthorizerAggregate(limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get authorizer by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(authorizers) == 0 {
+		authorizers = []event.AuthorizerAggregate{}
+	}
+	common.Respond(w, r, authorizers, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate replicateValidatorAggregates
+// Gets list of validator aggregate records
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: StringMap
+//	500:
+func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	validators, err := edb.ReplicateValidatorAggregate(limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get validator by rank" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(validators) == 0 {
+		validators = []event.ValidatorAggregate{}
+	}
+	common.Respond(w, r, validators, nil)
 }

@@ -40,46 +40,6 @@ type WriteMarker struct {
 	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
-//func (w *WriteMarker) AfterCreate(tx *gorm.DB) error {
-//	// update blobber alloc stat
-//	vs := map[string]interface{}{
-//		"used":       gorm.Expr("blobbers.used + excluded.used"),
-//		"saved_data": gorm.Expr("blobbers.saved_data + excluded.saved_data"),
-//	}
-//	if err := tx.Model(&Blobber{}).Clauses(clause.OnConflict{
-//		Columns:   []clause.Column{{Name: "blobber_id"}},
-//		DoUpdates: clause.Assignments(vs),
-//	}).Create(&Blobber{ID: w.ID, Used: w.Size, SavedData: w.Size}).Error; err != nil {
-//		return err
-//	}
-//
-//	// update allocation stat
-//	vs = map[string]interface{}{
-//		"used_size":  gorm.Expr("allocations.used_size + excluded.used_size"),
-//		"num_writes": gorm.Expr("allocations.num_writes + 1"),
-//	}
-//
-//	alloc := Allocation{
-//		AllocationID: w.AllocationID,
-//		UsedSize:     w.Size,
-//	}
-//
-//	if w.Size > 0 {
-//		alloc.MovedToChallenge = w.MovedTokens
-//		vs["moved_to_challenge"] = gorm.Expr("allocations.moved_to_challenge + excluded.moved_to_challenge")
-//		vs["write_pool"] = gorm.Expr("allocations.write_pool + excluded.moved_to_challenge")
-//	} else if w.Size < 0 {
-//		alloc.MovedBack = w.MovedTokens
-//		vs["moved_back"] = gorm.Expr("allocations.moved_back + excluded.moved_back")
-//		vs["write_pool"] = gorm.Expr("allocations.write_pool - excluded.moved_back")
-//	}
-//
-//	return tx.Model(&Allocation{}).Clauses(clause.OnConflict{
-//		Columns:   []clause.Column{{Name: "allocation_id"}},
-//		DoUpdates: clause.Assignments(vs),
-//	}).Create(&alloc).Error
-//}
-
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
 	var wm WriteMarker
 
@@ -120,8 +80,6 @@ func (edb *EventDb) GetWriteMarkers(limit common.Pagination) ([]WriteMarker, err
 	var wm []WriteMarker
 	return wm, edb.
 		Get().
-		Joins("User").
-		Joins("Allocation").
 		Model(&WriteMarker{}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
@@ -134,8 +92,6 @@ func (edb *EventDb) GetWriteMarkers(limit common.Pagination) ([]WriteMarker, err
 func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit common.Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
-		Joins("User").
-		Joins("Allocation").
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{AllocationID: allocationID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
@@ -147,8 +103,6 @@ func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit co
 func (edb *EventDb) GetWriteMarkersForAllocationFile(allocationID string, filename string, limit common.Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
-		Joins("User").
-		Joins("Allocation").
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{AllocationID: allocationID, Name: filename}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "id"},
@@ -172,6 +126,28 @@ func (edb *EventDb) addWriteMarkers(wms []WriteMarker) error {
 
 func mergeAddWriteMarkerEvents() *eventsMergerImpl[WriteMarker] {
 	return newEventsMerger[WriteMarker](TagAddWriteMarker)
+}
+
+func (edb *EventDb) GetWriteMakerFromFilter(filter, value string) (WriteMarker, error) {
+	var wm WriteMarker
+	result := edb.Store.Get().
+		Model(&WriteMarker{}).
+		Where(filter+" = ?", value).
+		First(&wm)
+	return wm, result.Error
+}
+
+func (edb *EventDb) GetWriteMakersFromFilter(filter, value string, limit common.Pagination) ([]WriteMarker, error) {
+	var wms []WriteMarker
+	result := edb.Store.Get().
+		Model(&WriteMarker{}).
+		Where(filter+" = ?", value).
+		Offset(limit.Offset).Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).Scan(&wms)
+	return wms, result.Error
 }
 
 func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString string, limit common.Pagination) ([]interface{}, error) {

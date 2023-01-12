@@ -241,7 +241,7 @@ func TestUpdateStakePoolDelegateRewards(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		miners = append(miners, DelegatePool{
 			ProviderID:   fmt.Sprintf("pd_%v", i),
-			ProviderType: int(spenum.Miner),
+			ProviderType: spenum.Miner,
 			DelegateID:   fmt.Sprintf("p_%v", i),
 			PoolID:       fmt.Sprintf("p_%v", i),
 			Reward:       currency.Coin((i + 1) * 10),

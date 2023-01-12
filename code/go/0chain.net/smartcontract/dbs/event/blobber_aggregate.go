@@ -3,6 +3,7 @@ package event
 import (
 	"math"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -13,25 +14,25 @@ import (
 
 type BlobberAggregate struct {
 	gorm.Model
-
-	BlobberID string `json:"blobber_id" gorm:"index:idx_blobber_aggregate,unique"`
-	Round     int64  `json:"round" gorm:"index:idx_blobber_aggregate,unique"`
-
-	WritePrice   currency.Coin `json:"write_price"`
-	Capacity     int64         `json:"capacity"`  // total blobber capacity
-	Allocated    int64         `json:"allocated"` // allocated capacity
-	SavedData    int64         `json:"saved_data"`
-	ReadData     int64         `json:"read_data"`
-	OffersTotal  currency.Coin `json:"offers_total"`
-	UnstakeTotal currency.Coin `json:"unstake_total"`
-	TotalStake   currency.Coin `json:"total_stake"`
-
+	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,priority:2,unique"`
+	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,priority:1,unique"`
+	BucketID            int64         `json:"bucket_id"`
+	WritePrice          currency.Coin `json:"write_price"`
+	Capacity            int64         `json:"capacity"`  // total blobber capacity
+	Allocated           int64         `json:"allocated"` // allocated capacity
+	SavedData           int64         `json:"saved_data"`
+	ReadData            int64         `json:"read_data"`
+	OffersTotal         currency.Coin `json:"offers_total"`
+	UnstakeTotal        currency.Coin `json:"unstake_total"`
+	TotalStake          currency.Coin `json:"total_stake"`
 	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
+	TotalRewards		currency.Coin `json:"total_rewards"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
+	Downtime			uint64		  `json:"downtime"`
 }
 
 func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAggregate, error) {
@@ -39,10 +40,12 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 
 	queryBuilder := edb.Store.Get().
 		Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   false,
+	queryBuilder.Clauses(clause.OrderBy{
+		Columns: []clause.OrderByColumn{{
+			Column: clause.Column{Name: "round"},
+		}, {
+			Column: clause.Column{Name: "blobber_id"},
+		}},
 	})
 
 	result := queryBuilder.Scan(&snapshots)
@@ -53,23 +56,29 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 	return snapshots, nil
 }
 func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSnapshot) {
-	count, err := edb.GetBlobberCount()
-	if err != nil {
-		logging.Logger.Error("update_blobber_aggregates", zap.Error(err))
-		return
-	}
-	size, currentPageNumber, subpageCount := paginate(round, pageAmount, count, edb.PageLimit())
+	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
-		"ON COMMIT DROP AS SELECT id as id FROM blobbers ORDER BY (id, creation_round) LIMIT ? OFFSET ?",
-		size, size*currentPageNumber)
+		"ON COMMIT DROP AS SELECT id as id FROM blobbers where bucket_id = ?",
+		currentBucket)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
 		return
 	}
 
-	for i := 0; i < subpageCount; i++ {
-		edb.calculateBlobberAggregate(gs, round, edb.PageLimit(), int64(i)*edb.PageLimit())
+	var count int64
+	r := edb.Store.Get().Raw("SELECT count(*) FROM temp_ids").Scan(&count)
+	if r.Error != nil {
+		logging.Logger.Error("getting ids count", zap.Error(r.Error))
+		return
+	}
+	if count == 0 {
+		return
+	}
+	pageCount := count / edb.PageLimit()
+
+	for i := int64(0); i <= pageCount; i++ {
+		edb.calculateBlobberAggregate(gs, round, edb.PageLimit(), i*edb.PageLimit())
 	}
 
 }
@@ -132,6 +141,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		aggregate := BlobberAggregate{
 			Round:     round,
 			BlobberID: current.ID,
+			BucketID:  current.BucketId,
 		}
 		aggregate.WritePrice = (old.WritePrice + current.WritePrice) / 2
 		aggregate.Capacity = (old.Capacity + current.Capacity) / 2
@@ -139,14 +149,15 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		aggregate.SavedData = (old.SavedData + current.SavedData) / 2
 		aggregate.ReadData = (old.ReadData + current.ReadData) / 2
 		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
+		aggregate.TotalRewards = (old.TotalRewards + current.Rewards.TotalRewards) / 2
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
+		aggregate.Downtime	 = current.Downtime
 		aggregate.RankMetric = current.RankMetric
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
-		aggregate.InactiveRounds = current.InactiveRounds
 		//aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 
@@ -159,11 +170,15 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		gs.UsedStorage += aggregate.SavedData - old.SavedData
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
-		ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
-		if err != nil {
-			logging.Logger.Error("converting coin to int64", zap.Error(err))
+		if aggregate.WritePrice == 0 {
+			gs.StakedStorage = gs.MaxCapacityStorage
+		} else {
+			ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
+			if err != nil {
+				logging.Logger.Error("converting coin to int64", zap.Error(err))
+			}
+			gs.StakedStorage += ss
 		}
-		gs.StakedStorage += ss
 
 		gs.blobberCount++ //todo figure out why we increment blobberCount on every update
 	}
@@ -183,13 +198,13 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 	logging.Logger.Debug("blobber_snapshot", zap.Int("current_blobebrs", len(currentBlobbers)))
 
 	// update global snapshot object
-	if gs.blobberCount == 0 {
-		return
+	if gs.blobberCount != 0 {
+
+		twp, err := gs.totalWritePricePeriod.Int64()
+		if err != nil {
+			logging.Logger.Error("converting write price to coin", zap.Error(err))
+			return
+		}
+		gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
 	}
-	twp, err := gs.totalWritePricePeriod.Int64()
-	if err != nil {
-		logging.Logger.Error("converting write price to coin", zap.Error(err))
-		return
-	}
-	gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
 }
