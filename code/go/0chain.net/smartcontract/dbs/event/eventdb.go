@@ -8,10 +8,29 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
+	"0chain.net/smartcontract/dbs/sqlite"
 )
 
 func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)
+	if err != nil {
+		return nil, err
+	}
+	eventDb := &EventDb{
+		Store:         db,
+		dbConfig:      config,
+		eventsChannel: make(chan blockEvents, 1),
+		settings:      settings,
+	}
+	go eventDb.addEventsWorker(common.GetRootContext())
+	if err := eventDb.AutoMigrate(); err != nil {
+		return nil, err
+	}
+	return eventDb, nil
+}
+
+func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+	db, err := sqlite.GetSqliteDb()
 	if err != nil {
 		return nil, err
 	}
