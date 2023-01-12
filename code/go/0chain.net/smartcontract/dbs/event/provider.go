@@ -28,7 +28,7 @@ type Provider struct {
 	ID             string `gorm:"primaryKey"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
-	BucketId       int64           `gorm:"not null"`
+	BucketId       int64           `gorm:"not null,default:0"`
 	DelegateWallet string          `json:"delegate_wallet"`
 	MinStake       currency.Coin   `json:"min_stake"`
 	MaxStake       currency.Coin   `json:"max_stake"`
