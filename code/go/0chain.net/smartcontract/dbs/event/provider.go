@@ -45,15 +45,18 @@ type ProviderAggregate interface {
 	GetTotalStake() currency.Coin
 	GetUnstakeTotal() currency.Coin
 	GetServiceCharge() float64
+	GetTotalRewards() currency.Coin
 	SetTotalStake(value currency.Coin)
 	SetUnstakeTotal(value currency.Coin)
 	SetServiceCharge(value float64)
+	SetTotalRewards(value currency.Coin)
 }
 
 func recalculateProviderFields(prev, curr, result ProviderAggregate) {
 	result.SetTotalStake((curr.GetTotalStake() + prev.GetTotalStake()) / 2)
 	result.SetUnstakeTotal((curr.GetUnstakeTotal() + prev.GetUnstakeTotal()) / 2)
 	result.SetServiceCharge((curr.GetServiceCharge() + prev.GetServiceCharge()) / 2)
+	result.SetTotalRewards((curr.GetTotalRewards() + prev.GetTotalRewards()) / 2)
 }
 
 func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
