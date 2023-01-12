@@ -106,9 +106,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberTotalUnStakesEvents(),
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
-
 			mergeAddDelegatePoolsEvents(),
-			addDelegatePoolLastUpdateRoundMiddleware(),
 
 			mergeUpdateMinerTotalStakesEvents(),
 			mergeUpdateMinerTotalUnStakesEvents(),
@@ -505,13 +503,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateValidatorStakes(*updates)
+		return edb.updateValidatorTotalStakes(*updates)
 	case TagUpdateValidatorUnStakeTotal:
 		updates, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateValidatorUnStakes(*updates)
+		return edb.updateValidatorTotalUnStakes(*updates)
 	case TagAddMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {

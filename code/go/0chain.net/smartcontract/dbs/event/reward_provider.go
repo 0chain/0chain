@@ -12,9 +12,9 @@ import (
 type RewardProvider struct {
 	gorm.Model
 	Amount      currency.Coin `json:"amount"`
-	BlockNumber int64         `json:"block_number" gorm:"index:idx_block,priority:1"`
-	ProviderId  string        `json:"provider_id" gorm:"index:idx_provider,priority:2"`
-	RewardType  spenum.Reward `json:"reward_type" gorm:"index:idx_reward_type,priority:3"`
+	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
+	ProviderId  string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
+	RewardType  spenum.Reward `json:"reward_type"`
 }
 
 func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round int64) error {
