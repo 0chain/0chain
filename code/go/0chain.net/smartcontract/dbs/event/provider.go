@@ -81,7 +81,7 @@ func (edb *EventDb) updateProvidersTotalUnStakes(providers []Provider, tablename
 	var unstakes []int64
 	for _, m := range providers {
 		ids = append(ids, m.ID)
-		i, err := m.TotalStake.Int64()
+		i, err := m.UnstakeTotal.Int64()
 		if err != nil {
 			return err
 		}
