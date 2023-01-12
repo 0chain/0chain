@@ -192,7 +192,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 	mnMiner1 := convertMn(mn)
 	mnMiner2 := convertMn(mn2)
 
-	if err := eventDb.addOrOverwriteMiner([]Miner{mnMiner1, mnMiner2}); err != nil {
+	if err := eventDb.addMiner([]Miner{mnMiner1, mnMiner2}); err != nil {
 		t.Error(err)
 	}
 
