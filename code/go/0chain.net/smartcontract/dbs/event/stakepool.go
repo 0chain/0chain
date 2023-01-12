@@ -135,7 +135,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}()
 
 	if len(rewards.rewards) > 0 {
-		if err := edb.RewardProviders(rewards.rewards); err != nil {
+		if err := edb.rewardProviders(rewards.rewards); err != nil {
 			return fmt.Errorf("could not rewards providers: %v", err)
 		}
 	}
@@ -148,7 +148,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	if len(rewards.delegatePools) > 0 {
-		if err := RewardProviderDelegates(edb, rewards.delegatePools); err != nil {
+		if err := rewardProviderDelegates(edb, rewards.delegatePools); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
 	}
@@ -165,7 +165,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
-func (edb *EventDb) RewardProviders(prs []ProviderRewards) error {
+func (edb *EventDb) rewardProviders(prs []ProviderRewards) error {
 	var ids []string
 	var rewards []int64
 	var totalRewards []int64
@@ -187,7 +187,7 @@ func (edb *EventDb) RewardProviders(prs []ProviderRewards) error {
 	return ret.Error
 }
 
-func RewardProviderDelegates(edb *EventDb, dps []DelegatePool) error {
+func rewardProviderDelegates(edb *EventDb, dps []DelegatePool) error {
 	var poolIds []string
 	var reward []int64
 	var totalReward []int64

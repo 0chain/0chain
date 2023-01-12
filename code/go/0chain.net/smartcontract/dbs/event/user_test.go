@@ -209,26 +209,21 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 
 func TestAddAndUpdateStakePoolRewards(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
-	//	eventDb, closeDB := prepareEventDB(t)
-	//	defer closeDB()
+	eventDb, closeDB := prepareEventDB(t)
+	defer closeDB()
 
 	// create new users
-	miners := make([]Miner, 10)
+	var prs []ProviderRewards
 	for i := 0; i < 10; i++ {
-		miners[i] = Miner{
-			Provider: Provider{
-				ID: fmt.Sprintf("m_%v", i),
-				Rewards: ProviderRewards{
-					ProviderID:   fmt.Sprintf("m_%v", i),
-					Rewards:      currency.Coin((i + 1) * 10),
-					TotalRewards: currency.Coin((i + 1) * 1000),
-				},
-			},
-		}
+		prs = append(prs, ProviderRewards{
+			ProviderID:   fmt.Sprintf("m_%v", i),
+			Rewards:      currency.Coin((i + 1) * 10),
+			TotalRewards: currency.Coin((i + 1) * 1000),
+		})
 	}
 
-	//err := rewardProvider(eventDb, "miner_id", "miners", miners)
-	//require.NoError(t, err)
+	err := eventDb.rewardProviders(prs)
+	require.NoError(t, err)
 }
 
 func TestUpdateStakePoolDelegateRewards(t *testing.T) {
@@ -249,6 +244,6 @@ func TestUpdateStakePoolDelegateRewards(t *testing.T) {
 		})
 	}
 
-	err := RewardProviderDelegates(eventDb, miners)
+	err := rewardProviderDelegates(eventDb, miners)
 	require.NoError(t, err)
 }
