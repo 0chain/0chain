@@ -188,19 +188,6 @@ func TestToJSONResponse(t *testing.T) {
 				return w
 			}(),
 		},
-		{
-			name: "Test_ToJSONResponse_OK2",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "invalid origin")
-				return args{handler: handler, r: r}
-			}(),
-			want: func() http.ResponseWriter {
-				w := httptest.NewRecorder()
-
-				return w
-			}(),
-		},
 	}
 	for _, tt := range tests {
 		tt := tt

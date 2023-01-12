@@ -79,7 +79,7 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 				w := httptest.NewRecorder()
 				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 				w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Accept-Encoding")
-				w.Header().Set("Access-Control-Allow-Origin", "file://localhost:8080/")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
 				return w
 			}(),
 		},
@@ -116,7 +116,7 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 			}(),
 			want: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
-				w.Header().Set("Access-Control-Allow-Origin", "file://localhost:8080/")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
 				http.Error(w, "Error decoding json", 500)
 				return w
 			}(),
@@ -144,7 +144,7 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 			}(),
 			want: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
-				w.Header().Set("Access-Control-Allow-Origin", "file://localhost:8080/")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
 				w.WriteHeader(http.StatusNoContent)
 				return w
 			}(),
