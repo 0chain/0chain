@@ -304,10 +304,6 @@ func (sp *StakePool) DistributeRewardsRandN(
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
-	logging.Logger.Info("DistributeRewardsRandN",
-		zap.Any("round", balances.GetBlock().Round),
-		zap.Any("value", value),
-		zap.Any("provider type", providerType.String()))
 	if value == 0 {
 		return nil // nothing to move
 	}
