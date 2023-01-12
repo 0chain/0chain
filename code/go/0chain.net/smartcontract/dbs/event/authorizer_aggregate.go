@@ -20,6 +20,7 @@ type AuthorizerAggregate struct {
 	Fee           currency.Coin `json:"fee"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -35,6 +36,10 @@ func (a *AuthorizerAggregate) GetServiceCharge() float64 {
 	return a.ServiceCharge
 }
 
+func (a *AuthorizerAggregate) GetTotalRewards() currency.Coin {
+	return a.TotalRewards
+}
+
 func (a *AuthorizerAggregate) SetTotalStake(value currency.Coin) {
 	a.TotalStake = value
 }
@@ -45,6 +50,10 @@ func (a *AuthorizerAggregate) SetUnstakeTotal(value currency.Coin) {
 
 func (a *AuthorizerAggregate) SetServiceCharge(value float64) {
 	a.ServiceCharge = value
+}
+
+func (a *AuthorizerAggregate) SetTotalRewards(value currency.Coin) {
+	a.TotalRewards = value
 }
 
 func (edb *EventDb) ReplicateAuthorizerAggregate(p common.Pagination) ([]AuthorizerAggregate, error) {

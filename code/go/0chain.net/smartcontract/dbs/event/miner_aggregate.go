@@ -20,6 +20,7 @@ type MinerAggregate struct {
 	Fees          currency.Coin `json:"fees"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
+	TotalRewards  currency.Coin	`json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -35,6 +36,10 @@ func (m *MinerAggregate) GetServiceCharge() float64 {
 	return m.ServiceCharge
 }
 
+func (m *MinerAggregate) GetTotalRewards() currency.Coin {
+	return m.TotalRewards
+}
+
 func (m *MinerAggregate) SetTotalStake(value currency.Coin) {
 	m.TotalStake = value
 }
@@ -45,6 +50,10 @@ func (m *MinerAggregate) SetUnstakeTotal(value currency.Coin) {
 
 func (m *MinerAggregate) SetServiceCharge(value float64) {
 	m.ServiceCharge = value
+}
+
+func (m *MinerAggregate) SetTotalRewards(value currency.Coin) {
+	m.TotalRewards = value
 }
 
 func (edb *EventDb) ReplicateMinerAggregate(p common.Pagination) ([]MinerAggregate, error) {

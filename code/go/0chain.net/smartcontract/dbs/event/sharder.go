@@ -44,6 +44,11 @@ func (s *Sharder) GetServiceCharge() float64 {
 	return s.ServiceCharge
 }
 
+func (s *Sharder) GetTotalRewards() currency.Coin {
+	return s.Rewards.TotalRewards
+}
+
+
 func (s *Sharder) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
 }
@@ -55,6 +60,11 @@ func (s *Sharder) SetUnstakeTotal(value currency.Coin) {
 func (s *Sharder) SetServiceCharge(value float64) {
 	s.ServiceCharge = value
 }
+
+func (s *Sharder) SetTotalRewards(value currency.Coin) {
+	s.Rewards.TotalRewards = value
+}
+
 
 // swagger:model SharderGeolocation
 type SharderGeolocation struct {
@@ -263,17 +273,19 @@ func NewUpdateSharderTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (t
 }
 
 func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
-	}).Create(&sharders).Error
+	var provs []Provider
+	for _, s := range sharders {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "sharders")
 }
 
 func (edb *EventDb) updateShardersTotalUnStakes(sharders []Sharder) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
-	}).Create(&sharders).Error
+	var provs []Provider
+	for _, s := range sharders {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "sharders")
 }
 
 func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {

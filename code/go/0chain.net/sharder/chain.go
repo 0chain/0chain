@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
 	"github.com/0chain/common/core/logging"
@@ -33,16 +34,16 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.blockChannel = make(chan *block.Block, 1)
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
-	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
+	sharderChain.BlockCache = cache.NewLRUCache[string, *block.Block](blockCacheSize)
 	transactionCacheSize := 5 * blockCacheSize
-	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
+	sharderChain.BlockTxnCache = cache.NewLRUCache[string, *transaction.TransactionSummary](transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	c.SetViewChanger(sharderChain)
 	c.SetAfterFetcher(sharderChain)
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	sharderChain.TieringStats = &MinioStats{}
-	sharderChain.processingBlocks = cache.NewLRUCache(1000)
+	sharderChain.processingBlocks = cache.NewLRUCache[string, struct{}](1000)
 	c.RoundF = SharderRoundFactory{}
 }
 
@@ -62,13 +63,13 @@ type Chain struct {
 	*chain.Chain
 	blockChannel   chan *block.Block
 	RoundChannel   chan *round.Round
-	BlockCache     cache.Cache
-	BlockTxnCache  cache.Cache
+	BlockCache     *cache.LRU[string, *block.Block]
+	BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
 	TieringStats   *MinioStats
 
-	processingBlocks *cache.LRU
+	processingBlocks *cache.LRU[string, struct{}]
 	pbMutex          sync.RWMutex
 }
 

@@ -100,6 +100,10 @@ func (m *Miner) GetServiceCharge() float64 {
 	return m.ServiceCharge
 }
 
+func (m *Miner) GetTotalRewards() currency.Coin {
+	return m.Rewards.TotalRewards
+}
+
 func (m *Miner) SetTotalStake(value currency.Coin) {
 	m.TotalStake = value
 }
@@ -110,6 +114,10 @@ func (m *Miner) SetUnstakeTotal(value currency.Coin) {
 
 func (m *Miner) SetServiceCharge(value float64) {
 	m.ServiceCharge = value
+}
+
+func (m *Miner) SetTotalRewards(value currency.Coin) {
+	m.Rewards.TotalRewards = value
 }
 
 func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p common2.Pagination) ([]Miner, error) {
@@ -273,17 +281,19 @@ func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag
 }
 
 func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
-	}).Create(&miners).Error
+	var provs []Provider
+	for _, s := range miners {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "miners")
 }
 
 func (edb *EventDb) updateMinersTotalUnStakes(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
-	}).Create(&miners).Error
+	var provs []Provider
+	for _, s := range miners {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "miners")
 }
 
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
