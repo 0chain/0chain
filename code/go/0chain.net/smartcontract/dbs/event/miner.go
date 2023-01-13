@@ -2,8 +2,11 @@ package event
 
 import (
 	common2 "0chain.net/smartcontract/common"
+	"errors"
 	"fmt"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/dbs"
@@ -225,16 +228,44 @@ func (edb *EventDb) addMiner(miners []Miner) error {
 	return err
 }
 
-func (edb *EventDb) updateMiner(updates []dbs.DbUpdates) error {
-	for i := range updates {
-		if err := edb.Store.Get().
-			Model(&Miner{}).
-			Where(&Miner{Provider: Provider{ID: updates[i].Id}}).
-			Updates(updates[i].Updates).Error; err != nil {
-			return err
-		}
+func (mn *Miner) exists(edb *EventDb) (bool, error) {
+
+	var miner Miner
+
+	result := edb.Get().
+		Model(&Miner{}).
+		Where(&Miner{Provider: Provider{ID: mn.ID}}).
+		Take(&miner)
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return false, nil
+	} else if result.Error != nil {
+		return false, fmt.Errorf("error searching for miner %v, error %v",
+			mn.ID, result.Error)
 	}
-	return nil
+
+	return true, nil
+}
+
+func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
+	logging.Logger.Info("piers updateMiner", zap.Any("upd1ates", updates))
+	var miner = Miner{Provider: Provider{ID: updates.Id}}
+	exists, err := miner.exists(edb)
+
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("miner %v not in database cannot update",
+			miner.ID)
+	}
+
+	result := edb.Store.Get().
+		Model(&Miner{}).
+		Where(&Miner{Provider: Provider{ID: miner.ID}}).
+		Updates(updates.Updates)
+
+	return result.Error
 }
 
 func (edb *EventDb) deleteMiner(id string) error {
