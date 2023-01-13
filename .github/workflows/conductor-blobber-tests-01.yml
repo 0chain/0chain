@@ -43,8 +43,8 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
-        sudo apt-get install make
-        sudo apt-get install wget
+        sudo apt install make
+        sudo apt install wget
         cd 0chain
         make install-mockery
         make build-mocks
