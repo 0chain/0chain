@@ -59,7 +59,7 @@ jobs:
 
     - name: Build & Push
       run: |
-        ssudo apt update && sudo apt upgrade -y && sudo apt install build-essential -y
+        sudo apt update && sudo apt upgrade -y && sudo apt install build-essential -y
         make install-mockery
         make build-mocks
 
@@ -124,7 +124,7 @@ jobs:
 
     - name: Build & Push
       run: |
-        ssudo apt update && sudo apt upgrade -y && sudo apt install build-essential -y
+        sudo apt update && sudo apt upgrade -y && sudo apt install build-essential -y
         make install-mockery
         make build-mocks
 
