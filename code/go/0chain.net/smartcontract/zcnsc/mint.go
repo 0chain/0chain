@@ -133,6 +133,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share * len(signatures), %s", code, info))
 		return
 	}
+	payload.Amount = amount
 	for _, sig := range payload.Signatures {
 		err = ctx.AddMint(&state.Mint{
 			Minter:     gn.ID,
@@ -140,7 +141,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 			Amount:     share,
 		})
 		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("%s, AddMint operation, %s", code, info))
+			err = errors.Wrap(err, fmt.Sprintf("%s, AddMint for authorizers, %s", code, info))
 			return
 		}
 	}
@@ -149,10 +150,10 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	err = ctx.AddMint(&state.Mint{
 		Minter:     gn.ID,
 		ToClientID: trans.ClientID,
-		Amount:     amount,
+		Amount:     payload.Amount,
 	})
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, add mint operation, %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("%s, Add mint operation, %s", code, info))
 		return
 	}
 
