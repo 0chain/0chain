@@ -68,6 +68,7 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	if result.Error != nil {
 		return m, nil, result.Error
 	}
+
 	if len(minerDps) == 0 {
 		return m, nil, fmt.Errorf("get miner %s found no records", id)
 	}
