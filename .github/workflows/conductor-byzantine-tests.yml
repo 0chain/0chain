@@ -37,7 +37,7 @@ jobs:
     
     - name: Docker Init Setup.
       run: |
-        sudo apt-get update && sudo apt-get install build-essential -y
+        sudo apt-get update && sudo apt-get upgrade -y sudo apt-get install build-essential -y
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
