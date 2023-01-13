@@ -44,8 +44,7 @@ jobs:
     - name: Docker Init Setup.
       run: |
         sudo apt update -y
-        sudo apt install make
-        sudo apt install wget
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev
         cd 0chain
         make install-mockery
         make build-mocks
