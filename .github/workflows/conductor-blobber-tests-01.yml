@@ -121,6 +121,7 @@ jobs:
 
     - name: Init setup for blobbers
       run: |
+        chmod +x ./docker.local/bin/blobber.init.setup.sh
         cd blobber && ./docker.local/bin/blobber.init.setup.sh
 
     - name: Build blobber base
