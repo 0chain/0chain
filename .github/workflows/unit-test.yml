@@ -16,7 +16,7 @@ jobs:
           go-version: '1.18'
 
       - name: Check msgp changes
-        run: sudo apt update && sudo apt upgrade -y sudo apt install build-essential -y && ./docker.local/bin/check.msgp.sh
+        run: sudo apt update && sudo apt upgrade && -y sudo apt install build-essential -y && ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
@@ -43,7 +43,7 @@ jobs:
           go-version: '1.18'
 
       - name: Check msgp changes
-        run: sudo apt update && sudo apt upgrade -y sudo apt install build-essential -y && ./docker.local/bin/check.msgp.sh
+        run: sudo apt update && sudo apt upgrade && -y sudo apt install build-essential -y && ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
