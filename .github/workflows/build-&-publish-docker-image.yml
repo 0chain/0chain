@@ -59,7 +59,7 @@ jobs:
 
     - name: Build & Push
       run: |
-        sudo apt update && sudo apt install make -y
+        sudo apt-get update && sudo apt-get install make -y
         make install-mockery
         make build-mocks
 
@@ -124,7 +124,7 @@ jobs:
 
     - name: Build & Push
       run: |
-        sudo apt update && sudo apt install make -y
+        sudo apt-get update && sudo apt-get install make -y
         make install-mockery
         make build-mocks
 
