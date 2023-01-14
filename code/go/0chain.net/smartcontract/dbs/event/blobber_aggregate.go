@@ -110,9 +110,11 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentBlobbers []Blobber
-	result := edb.Store.Get().
-		Raw("SELECT * FROM blobbers WHERE id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&currentBlobbers)
+	result := edb.Store.Get().Model(&Blobber{}).
+		Where("blobbers.id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Joins("Rewards").
+		Find(&currentBlobbers)
+	
 	if result.Error != nil {
 		logging.Logger.Error("getting current blobbers", zap.Error(result.Error))
 		return

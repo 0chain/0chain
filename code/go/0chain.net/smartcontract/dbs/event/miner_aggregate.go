@@ -115,9 +115,12 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentMiners []Miner
-	result := edb.Store.Get().
-		Raw("SELECT * FROM miners WHERE id in (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&currentMiners)
+
+	result := edb.Store.Get().Model(&Miner{}).
+		Where("miners.id in (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Joins("Rewards").
+		Find(&currentMiners)
+
 	if result.Error != nil {
 		logging.Logger.Error("getting current miners", zap.Error(result.Error))
 		return
@@ -135,7 +138,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 		logging.Logger.Error("getting miner snapshots", zap.Error(err))
 		return
 	}
-	logging.Logger.Debug("miner_snapshot", zap.Int("total_old_miners", len(oldMiners)))
+	logging.Logger.Debug("miner_snapshot", zap.Int("total_old_miners", len(oldMiners)), zap.Any("oldMiner", oldMiners))
 
 	var aggregates []MinerAggregate
 	for _, current := range currentMiners {

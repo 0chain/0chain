@@ -114,9 +114,10 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentValidators []Validator
-	result := edb.Store.Get().
-		Raw("SELECT * FROM Validators WHERE id in (select id from validator_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&currentValidators)
+	result := edb.Store.Get().Model(&Validator{}).
+		Where("validators.id in (select id from validator_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Joins("Rewards").
+		Find(&currentValidators)
 	if result.Error != nil {
 		logging.Logger.Error("getting current Validators", zap.Error(result.Error))
 		return

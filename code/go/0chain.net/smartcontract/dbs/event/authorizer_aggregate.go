@@ -115,9 +115,10 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentAuthorizers []Authorizer
-	result := edb.Store.Get().
-		Raw("SELECT * FROM Authorizers WHERE id in (select id from authorizer_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&currentAuthorizers)
+	result := edb.Store.Get().Model(&Miner{}).
+		Where("authorizers.id in (select id from authorizer_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Joins("Rewards").
+		Find(&currentAuthorizers)
 	if result.Error != nil {
 		logging.Logger.Error("getting current Authorizers", zap.Error(result.Error))
 		return

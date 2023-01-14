@@ -82,6 +82,7 @@ func (edb *EventDb) addValidatorSnapshot(validators []Validator) error {
 			TotalStake:    validator.TotalStake,
 			ServiceCharge: validator.ServiceCharge,
 			CreationRound: validator.CreationRound,
+			TotalRewards:  validator.Rewards.TotalRewards,
 		})
 	}
 

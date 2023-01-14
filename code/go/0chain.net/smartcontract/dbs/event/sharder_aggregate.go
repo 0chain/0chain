@@ -115,9 +115,12 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentSharders []Sharder
-	result := edb.Store.Get().
-		Raw("SELECT * FROM sharders WHERE id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&currentSharders)
+
+	result := edb.Store.Get().Model(&Sharder{}).
+		Where("sharders.id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Joins("Rewards").
+		Find(&currentSharders)
+
 	if result.Error != nil {
 		logging.Logger.Error("getting current sharders", zap.Error(result.Error))
 		return
