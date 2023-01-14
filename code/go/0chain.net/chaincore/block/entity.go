@@ -500,6 +500,7 @@ func (b *Block) getHashData() string {
 func (b *Block) ComputeHash() string {
 	hashData := b.getHashData()
 	hash := encryption.Hash(hashData)
+	logging.Logger.Debug("block_hash", zap.String("hash_data", hashData), zap.String("hash", hash))
 	return hash
 }
 
