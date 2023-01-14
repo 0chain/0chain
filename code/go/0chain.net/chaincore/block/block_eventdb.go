@@ -14,7 +14,7 @@ func blockToBlockEvent(block *Block) *event.Block {
 	return &event.Block{
 		Hash:                  block.Hash,
 		Version:               block.Version,
-		CreationDate:          int64(block.CreationDate.Duration()),
+		CreationDate:          int64(block.CreationDate.Duration().Seconds()),
 		Round:                 block.Round,
 		MinerID:               block.MinerID,
 		RoundRandomSeed:       block.RoundRandomSeed,
