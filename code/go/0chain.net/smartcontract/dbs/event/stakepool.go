@@ -171,7 +171,7 @@ func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
 		ids = append(ids, r.ProviderID)
 		rewards = append(rewards, uint64(r.Rewards))
 		totalRewards = append(totalRewards, uint64(r.TotalRewards))
-		lastUpdated = append(lastUpdated, pr.RoundServiceChargeLastUpdated)
+		lastUpdated = append(lastUpdated, r.RoundServiceChargeLastUpdated)
 	}
 
 	return CreateBuilder("provider_rewards", "provider_id", ids).
