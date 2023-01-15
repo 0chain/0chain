@@ -548,7 +548,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateMinersTotalUnStakes(*m)
 	case TagUpdateSharder:
-		updates, ok := fromEvent[[]dbs.DbUpdates](event.Data)
+		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}

@@ -46,7 +46,6 @@ func (s *Sharder) GetTotalRewards() currency.Coin {
 	return s.Rewards.TotalRewards
 }
 
-
 func (s *Sharder) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
 }
@@ -62,7 +61,6 @@ func (s *Sharder) SetServiceCharge(value float64) {
 func (s *Sharder) SetTotalRewards(value currency.Coin) {
 	s.Rewards.TotalRewards = value
 }
-
 
 // swagger:model SharderGeolocation
 type SharderGeolocation struct {
@@ -230,16 +228,14 @@ func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagina
 	return sharderLocations, result.Error
 }
 
-func (edb *EventDb) updateSharder(updates []dbs.DbUpdates) error {
-	for i := range updates {
-		if err := edb.Store.Get().
-			Model(&Sharder{}).
-			Where(&Sharder{Provider: Provider{ID: updates[i].Id}}).
-			Updates(updates[i].Updates).Error; err != nil {
-			return err
-		}
-	}
-	return nil
+func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
+	var sharder = Sharder{Provider: Provider{ID: updates.Id}}
+	result := edb.Store.Get().
+		Model(&Sharder{}).
+		Where(&Sharder{Provider: Provider{ID: sharder.ID}}).
+		Updates(updates.Updates)
+
+	return result.Error
 }
 
 func (edb *EventDb) deleteSharder(id string) error {
