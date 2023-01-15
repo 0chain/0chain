@@ -162,18 +162,6 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
-func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T) error { //nolint:unused
-	vs := map[string]interface{}{
-		"rewards":      gorm.Expr(fmt.Sprintf("%s.rewards + excluded.rewards", tableName)),
-		"total_reward": gorm.Expr(fmt.Sprintf("%s.total_reward + excluded.total_reward", tableName)),
-	}
-
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: index}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&providers).Error
-}
-
 func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
 	var ids []string
 	var rewards []uint64
@@ -191,7 +179,6 @@ func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
 		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
 		AddUpdate("round_service_charge_last_updated", lastUpdated).
 		Exec(edb).Error
-
 }
 
 func rewardProviderDelegates(edb *EventDb, dps []DelegatePool) error {
