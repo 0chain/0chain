@@ -173,16 +173,20 @@ func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T)
 	}).Create(&providers).Error
 }
 
-func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
-	vs := map[string]interface{}{
-		"rewards":       gorm.Expr("provider_rewards.rewards + excluded.rewards"),
-		"total_rewards": gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
+func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
+	var ids []string
+	var rewards []uint64
+	var totalRewards []uint64
+	for _, r := range prRewards {
+		ids = append(ids, r.ProviderID)
+		rewards = append(rewards, uint64(r.Rewards))
+		totalRewards = append(totalRewards, uint64(r.TotalRewards))
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "provider_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(rewards).Error
+	return CreateBuilder("provider_rewards", "provider_id", ids).
+		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
+		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").Exec(edb).Error
+
 }
 
 func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
@@ -211,7 +215,7 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: un
 	}
 
 	var provider interface{}
-	switch spenum.Provider(spu.ProviderType) {
+	switch spu.ProviderType {
 	case spenum.Blobber:
 		provider = &Blobber{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Validator:

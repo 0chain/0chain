@@ -114,6 +114,7 @@ func AddMockBlocks(
 				PrevHash:              GetMockBlockHash(block_number - 1),
 				Signature:             "mock signature",
 				ChainId:               "mock chain id",
+				StateChangesCount:     33,
 				RunningTxnCount:       "mock running txn count",
 				RoundTimeoutCount:     0,
 				CreatedAt:             time.Now(),
