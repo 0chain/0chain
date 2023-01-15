@@ -116,10 +116,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	if err != nil {
 		return err
 	}
-	logging.Logger.Info("rewardUpdate",
-		zap.Bool("debug", edb.Debug()),
-		zap.Int64("round", round),
-		zap.Any("rewards", rewards))
+
 	defer func() {
 		du := time.Since(ts)
 		n := len(rewards.rewards) + len(rewards.delegatePools)
@@ -165,26 +162,36 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
-func (edb *EventDb) rewardProviders(prs []ProviderRewards) error {
-	var ids []string
-	var rewards []int64
-	var totalRewards []int64
-	var lastUpdated []int64
+func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T) error { //nolint:unused
+	vs := map[string]interface{}{
+		"rewards":      gorm.Expr(fmt.Sprintf("%s.rewards + excluded.rewards", tableName)),
+		"total_reward": gorm.Expr(fmt.Sprintf("%s.total_reward + excluded.total_reward", tableName)),
+	}
 
-	for _, pr := range prs {
-		ids = append(ids, pr.ProviderID)
-		rewards = append(rewards, int64(pr.Rewards))
-		totalRewards = append(totalRewards, int64(pr.TotalRewards))
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: index}},
+		DoUpdates: clause.Assignments(vs),
+	}).Create(&providers).Error
+}
+
+func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
+	var ids []string
+	var rewards []uint64
+	var totalRewards []uint64
+	var lastUpdated []int64
+	for _, r := range prRewards {
+		ids = append(ids, r.ProviderID)
+		rewards = append(rewards, uint64(r.Rewards))
+		totalRewards = append(totalRewards, uint64(r.TotalRewards))
 		lastUpdated = append(lastUpdated, pr.RoundServiceChargeLastUpdated)
 	}
 
-	ret := CreateBuilder("provider_rewards", "provider_id", ids).
+	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
 		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
 		AddUpdate("round_service_charge_last_updated", lastUpdated).
-		Exec(edb)
+		Exec(edb).Error
 
-	return ret.Error
 }
 
 func rewardProviderDelegates(edb *EventDb, dps []DelegatePool) error {
@@ -216,7 +223,7 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: un
 	}
 
 	var provider interface{}
-	switch spenum.Provider(spu.ProviderType) {
+	switch spu.ProviderType {
 	case spenum.Blobber:
 		provider = &Blobber{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Validator:
