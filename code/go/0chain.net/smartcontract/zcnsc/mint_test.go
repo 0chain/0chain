@@ -68,7 +68,7 @@ func Test_FuzzyMintTest(t *testing.T) {
 }
 
 func Test_MaxFeeMint(t *testing.T) {
-	const maxFee = 9
+	const maxFee = 10
 	ctx := MakeMockStateContext()
 	ctx.globalNode.ZCNSConfig.MaxFee = maxFee
 	contract := CreateZCNSmartContract()
@@ -85,7 +85,7 @@ func Test_MaxFeeMint(t *testing.T) {
 
 	mm := ctx.GetMints()
 	require.Equal(t, len(mm), len(authorizersID)+1)
-	expectedShare, err := currency.Int64ToCoin(int64(maxFee / len(authorizersID)))
+	expectedShare, _, err := currency.DistributeCoin(maxFee, int64(len(authorizersID)))
 	require.NoError(t, err)
 	for i := 0; i < 3; i++ {
 		require.Equal(t, mm[i].ToClientID, authorizersID[i])
@@ -95,7 +95,11 @@ func Test_MaxFeeMint(t *testing.T) {
 	rp := &MintPayload{}
 	require.NoError(t, rp.Decode([]byte(response)))
 	require.Equal(t, payload.ReceivingClientID, rp.ReceivingClientID)
-	expectedAmount, err := currency.MinusCoin(payload.Amount, maxFee)
+	sz, err := currency.Int64ToCoin(int64(len(authorizersID)))
+	require.NoError(t, err)
+	totalShare, err := currency.MultCoin(expectedShare, sz)
+	require.NoError(t, err)
+	expectedAmount, err := currency.MinusCoin(payload.Amount, totalShare)
 	require.NoError(t, err)
 	require.Equal(t, rp.Amount, expectedAmount)
 }
