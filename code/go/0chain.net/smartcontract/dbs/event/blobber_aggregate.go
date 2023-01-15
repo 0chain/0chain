@@ -26,13 +26,13 @@ type BlobberAggregate struct {
 	UnstakeTotal        currency.Coin `json:"unstake_total"`
 	TotalStake          currency.Coin `json:"total_stake"`
 	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
-	TotalRewards		currency.Coin `json:"total_rewards"`
+	TotalRewards        currency.Coin `json:"total_rewards"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
-	Downtime			uint64		  `json:"downtime"`
+	Downtime            uint64        `json:"downtime"`
 }
 
 func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAggregate, error) {
@@ -107,7 +107,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
 	}
-	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
+	logging.Logger.Debug("getting blobber aggregate ids", zap.Int("num", len(ids)))
 
 	var currentBlobbers []Blobber
 	result := edb.Store.Get().Model(&Blobber{}).
@@ -155,7 +155,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
-		aggregate.Downtime	 = current.Downtime
+		aggregate.Downtime = current.Downtime
 		aggregate.RankMetric = current.RankMetric
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
