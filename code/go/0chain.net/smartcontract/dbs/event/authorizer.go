@@ -4,16 +4,14 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
-
-	"gorm.io/gorm"
 )
 
 type Authorizer struct {
-	gorm.Model
+	Provider
 
-	AuthorizerID string `json:"id" gorm:"uniqueIndex"`
-	URL          string `json:"url"`
+	URL string `json:"url"`
 
 	// Configuration
 	Fee currency.Coin `json:"fee"`
@@ -22,15 +20,40 @@ type Authorizer struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 
-	// Stats
-	LastHealthCheck int64 `json:"last_health_check"`
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_authorizer_creation_round"`
+}
 
-	// stake_pool_settings
-	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       currency.Coin `json:"min_stake"`
-	MaxStake       currency.Coin `json:"max_stake"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+func (a *Authorizer) GetTotalStake() currency.Coin {
+	return a.TotalStake
+}
+
+func (a *Authorizer) GetUnstakeTotal() currency.Coin {
+	return a.UnstakeTotal
+}
+
+func (a *Authorizer) GetServiceCharge() float64 {
+	return a.ServiceCharge
+}
+
+func (a *Authorizer) GetTotalRewards() currency.Coin {
+	return a.Rewards.TotalRewards
+}
+
+
+func (a *Authorizer) SetTotalStake(value currency.Coin) {
+	a.TotalStake = value
+}
+
+func (a *Authorizer) SetUnstakeTotal(value currency.Coin) {
+	a.UnstakeTotal = value
+}
+
+func (a *Authorizer) SetServiceCharge(value float64) {
+	a.ServiceCharge = value
+}
+
+func (a *Authorizer) SetTotalRewards(value currency.Coin) {
+	a.Rewards.TotalRewards = value
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
@@ -48,12 +71,19 @@ func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
 	return result.Error
 }
 
+func (edb *EventDb) GetAuthorizerCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Authorizer{}).Count(&count)
+
+	return count, res.Error
+}
+
 func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 	var auth Authorizer
 
 	result := edb.Store.Get().
 		Model(&Authorizer{}).
-		Where(&Authorizer{AuthorizerID: id}).
+		Where(&Authorizer{Provider: Provider{ID: id}}).
 		First(&auth)
 
 	if result.Error != nil {
@@ -86,15 +116,61 @@ func (a *Authorizer) exists(edb *EventDb) (bool, error) {
 
 	result := edb.Get().
 		Model(&Authorizer{}).
-		Where(&Authorizer{AuthorizerID: a.AuthorizerID}).
+		Where(&Authorizer{Provider: Provider{ID: a.ID}}).
 		Count(&count)
 
 	if result.Error != nil {
 		return false,
 			fmt.Errorf(
 				"error searching for authorizer %v, error %v",
-				a.AuthorizerID, result.Error,
+				a.ID, result.Error,
 			)
 	}
 	return count > 0, nil
+}
+
+func NewUpdateAuthorizerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateAuthorizerTotalStake, Authorizer{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalStake,
+		},
+	}
+}
+
+func NewUpdateAuthorizerTotalUnStakeEvent(ID string, totalUnstake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateAuthorizerTotalStake, Authorizer{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalUnstake,
+		},
+	}
+}
+
+func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error {
+	var provs []Provider
+	for _, a := range authorizer {
+		provs = append(provs, a.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "authorizers")
+}
+
+func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) error {
+	var provs []Provider
+	for _, a := range authorizer {
+		provs = append(provs, a.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "authorizers")
+}
+
+func mergeUpdateAuthorizerTotalStakesEvents() *eventsMergerImpl[Authorizer] {
+	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalStake, withUniqueEventOverwrite())
+}
+
+func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
+	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalUnStake, withUniqueEventOverwrite())
+}
+
+func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagAuthorizerHealthCheck, withUniqueEventOverwrite())
 }

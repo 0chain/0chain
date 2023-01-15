@@ -37,6 +37,8 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         cd 0chain
         make install-mockery
         make build-mocks
@@ -114,6 +116,7 @@ jobs:
 
     - name: Init setup for blobbers
       run: |
+        chmod +x blobber/docker.local/bin/blobber.init.setup.sh
         cd blobber && ./docker.local/bin/blobber.init.setup.sh
 
     - name: Build blobber base

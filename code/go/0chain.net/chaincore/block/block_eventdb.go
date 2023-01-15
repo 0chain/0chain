@@ -14,7 +14,7 @@ func blockToBlockEvent(block *Block) *event.Block {
 	return &event.Block{
 		Hash:                  block.Hash,
 		Version:               block.Version,
-		CreationDate:          int64(block.CreationDate.Duration()),
+		CreationDate:          int64(block.CreationDate.Duration().Seconds()),
 		Round:                 block.Round,
 		MinerID:               block.MinerID,
 		RoundRandomSeed:       block.RoundRandomSeed,
@@ -26,6 +26,7 @@ func blockToBlockEvent(block *Block) *event.Block {
 		PrevHash:              block.PrevHash,
 		Signature:             block.Signature,
 		ChainId:               block.ChainID,
+		StateChangesCount:     block.StateChangesCount,
 		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
 		RoundTimeoutCount:     block.RoundTimeoutCount,
 		CreatedAt:             block.CreationDateField.ToTime(),
@@ -41,6 +42,17 @@ func CreateBlockEvent(block *Block) (error, event.Event) {
 		TxHash:      "",
 		Type:        event.TypeChain,
 		Tag:         event.TagAddBlock,
+		Index:       block.Hash,
+		Data:        blockToBlockEvent(block),
+	}
+}
+
+func CreateFinalizeBlockEvent(block *Block) (error, event.Event) {
+	return nil, event.Event{
+		BlockNumber: block.Round,
+		TxHash:      "",
+		Type:        event.TypeChain,
+		Tag:         event.TagFinalizeBlock,
 		Index:       block.Hash,
 		Data:        blockToBlockEvent(block),
 	}

@@ -310,7 +310,7 @@ func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 	// though rest of the network is. That's why this is a goroutine.
 	go func() {
 		if _, err := mc.GenerateRoundBlock(ctx, mr); err != nil {
-			logging.Logger.Warn("generate round block failed", zap.Error(err))
+			logging.Logger.Error("generate round block failed", zap.Error(err))
 		}
 	}()
 }
@@ -474,8 +474,9 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 		//b.SetStateDB(pb, mc.GetStateDB())
 
-		err := mc.GenerateBlock(cctx, b, mc, makeBlock)
-		if err != nil {
+		if err := mc.syncAndRetry(cctx, b, "generate block", func(ctx context.Context, waitC chan struct{}) error {
+			return mc.GenerateBlock(ctx, b, makeBlock, waitC)
+		}); err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
 				switch cerr.Code {

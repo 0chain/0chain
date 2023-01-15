@@ -125,7 +125,7 @@ func BenchmarkTests(
 				}
 				bytes, _ := json.Marshal(&addRequest{
 					Description:  "my description",
-					StartTime:    common.Timestamp(100),
+					StartTime:    creationTime,
 					Duration:     time.Hour,
 					Destinations: dests,
 				})

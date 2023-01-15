@@ -11,35 +11,60 @@ import (
 	"github.com/guregu/null"
 	"gorm.io/gorm"
 
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 )
 
 type Sharder struct {
-	gorm.Model
-	SharderID         string `gorm:"uniqueIndex"`
-	N2NHost           string `gorm:"column:n2n_host"`
-	Host              string
-	Port              int
-	Path              string
-	PublicKey         string
-	ShortName         string
-	BuildTag          string
-	TotalStaked       currency.Coin
-	Delete            bool
-	DelegateWallet    string
-	ServiceCharge     float64
-	NumberOfDelegates int
-	MinStake          currency.Coin
-	MaxStake          currency.Coin
-	LastHealthCheck   common.Timestamp
-	Fees              currency.Coin
-	Active            bool
-	Longitude         float64
-	Latitude          float64
+	Provider
+	N2NHost         string `gorm:"column:n2n_host"`
+	Host            string
+	Port            int
+	Path            string
+	PublicKey       string
+	ShortName       string
+	BuildTag        string
+	Delete          bool
+	Fees            currency.Coin
+	Active          bool
+	Longitude       float64
+	Latitude        float64
 
-	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:SharderID;references:ProviderID"`
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_sharder_creation_round"`
 }
+
+func (s *Sharder) GetTotalStake() currency.Coin {
+	return s.TotalStake
+}
+
+func (s *Sharder) GetUnstakeTotal() currency.Coin {
+	return s.UnstakeTotal
+}
+
+func (s *Sharder) GetServiceCharge() float64 {
+	return s.ServiceCharge
+}
+
+func (s *Sharder) GetTotalRewards() currency.Coin {
+	return s.Rewards.TotalRewards
+}
+
+
+func (s *Sharder) SetTotalStake(value currency.Coin) {
+	s.TotalStake = value
+}
+
+func (s *Sharder) SetUnstakeTotal(value currency.Coin) {
+	s.UnstakeTotal = value
+}
+
+func (s *Sharder) SetServiceCharge(value float64) {
+	s.ServiceCharge = value
+}
+
+func (s *Sharder) SetTotalRewards(value currency.Coin) {
+	s.Rewards.TotalRewards = value
+}
+
 
 // swagger:model SharderGeolocation
 type SharderGeolocation struct {
@@ -48,12 +73,19 @@ type SharderGeolocation struct {
 	Longitude float64 `json:"longitude"`
 }
 
+func (edb *EventDb) GetSharderCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Sharder{}).Count(&count)
+
+	return count, res.Error
+}
+
 func (edb *EventDb) GetSharder(id string) (Sharder, error) {
 	var sharder Sharder
 	return sharder, edb.Store.Get().
 		Preload("Rewards").
 		Model(&Sharder{}).
-		Where(&Sharder{SharderID: id}).
+		Where(&Sharder{Provider: Provider{ID: id}}).
 		First(&sharder).Error
 }
 
@@ -109,13 +141,13 @@ func (edb *EventDb) CountInactiveSharders() (int64, error) {
 func (edb *EventDb) GetShardersTotalStake() (int64, error) {
 	var count int64
 
-	err := edb.Store.Get().Table("sharders").Select("sum(total_staked)").Row().Scan(&count)
+	err := edb.Store.Get().Table("sharders").Select("sum(total_stake)").Row().Scan(&count)
 	return count, err
 }
 
 func (edb *EventDb) addOrOverwriteSharders(sharders []Sharder) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "sharder_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&sharders).Error
 }
@@ -126,14 +158,14 @@ func (sh *Sharder) exists(edb *EventDb) (bool, error) {
 
 	result := edb.Get().
 		Model(&Sharder{}).
-		Where(&Sharder{SharderID: sh.SharderID}).
+		Where(&Sharder{Provider: Provider{ID: sh.ID}}).
 		Take(&sharder)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return false, nil
 	} else if result.Error != nil {
 		return false, fmt.Errorf("error searching for sharder %v, error %v",
-			sh.SharderID, result.Error)
+			sh.ID, result.Error)
 	}
 
 	return true, nil
@@ -195,7 +227,7 @@ func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagina
 
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
 
-	var sharder = Sharder{SharderID: updates.Id}
+	var sharder = Sharder{Provider: Provider{ID: updates.Id}}
 	exists, err := sharder.exists(edb)
 
 	if err != nil {
@@ -203,12 +235,12 @@ func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
 	}
 	if !exists {
 		return fmt.Errorf("sharder %v not in database cannot update",
-			sharder.SharderID)
+			sharder.ID)
 	}
 
 	result := edb.Store.Get().
 		Model(&Sharder{}).
-		Where(&Sharder{SharderID: sharder.SharderID}).
+		Where(&Sharder{Provider: Provider{ID: sharder.ID}}).
 		Updates(updates.Updates)
 
 	return result.Error
@@ -217,8 +249,52 @@ func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
 func (edb *EventDb) deleteSharder(id string) error {
 
 	result := edb.Store.Get().
-		Where(&Sharder{SharderID: id}).
+		Where(&Sharder{Provider: Provider{ID: id}}).
 		Delete(&Sharder{})
 
 	return result.Error
+}
+
+func NewUpdateSharderTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateSharderTotalStake, Sharder{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalStake,
+		},
+	}
+}
+func NewUpdateSharderTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateSharderTotalUnStake, Sharder{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: unstakeTotal,
+		},
+	}
+}
+
+func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
+	var provs []Provider
+	for _, s := range sharders {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "sharders")
+}
+
+func (edb *EventDb) updateShardersTotalUnStakes(sharders []Sharder) error {
+	var provs []Provider
+	for _, s := range sharders {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "sharders")
+}
+
+func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
+	return newEventsMerger[Sharder](TagUpdateSharderTotalStake, withUniqueEventOverwrite())
+}
+func mergeUpdateSharderTotalUnStakesEvents() *eventsMergerImpl[Sharder] {
+	return newEventsMerger[Sharder](TagUpdateSharderTotalUnStake, withUniqueEventOverwrite())
+}
+
+func mergeSharderHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagSharderHealthCheck, withUniqueEventOverwrite())
 }

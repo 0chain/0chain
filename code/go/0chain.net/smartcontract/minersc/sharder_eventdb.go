@@ -6,17 +6,17 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 )
 
-func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
-
+func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.DelegatePool) MinerNode {
 	var status = node.NodeStatusInactive
 	if edbSharder.Active {
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
-		ID:          edbSharder.SharderID,
+		ID:          edbSharder.ID,
 		N2NHost:     edbSharder.N2NHost,
 		Host:        edbSharder.Host,
 		Port:        edbSharder.Port,
@@ -24,7 +24,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		PublicKey:   edbSharder.PublicKey,
 		ShortName:   edbSharder.ShortName,
 		BuildTag:    edbSharder.BuildTag,
-		TotalStaked: edbSharder.TotalStaked,
+		TotalStaked: edbSharder.TotalStake,
 		Delete:      edbSharder.Delete,
 
 		LastHealthCheck: edbSharder.LastHealthCheck,
@@ -36,46 +36,63 @@ func sharderTableToSharderNode(edbSharder event.Sharder) MinerNode {
 		Status:   status,
 	}
 
-	return MinerNode{
+	sn := MinerNode{
 		SimpleNode: &msn,
 		StakePool: &stakepool.StakePool{
 			Reward: edbSharder.Rewards.Rewards,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbSharder.DelegateWallet,
 				ServiceChargeRatio: edbSharder.ServiceCharge,
-				MaxNumDelegates:    edbSharder.NumberOfDelegates,
+				MaxNumDelegates:    edbSharder.NumDelegates,
 				MinStake:           edbSharder.MinStake,
 				MaxStake:           edbSharder.MaxStake,
 			},
 		},
 	}
+	if len(delegates) == 0 {
+		return sn
+	}
+	sn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	for _, delegate := range delegates {
+		sn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
+			Balance:      delegate.Balance,
+			Reward:       delegate.Reward,
+			Status:       spenum.PoolStatus(delegate.Status),
+			RoundCreated: delegate.RoundCreated,
+			DelegateID:   delegate.DelegateID,
+		}
+	}
+	return sn
 
 }
 
 func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 
 	return event.Sharder{
-		SharderID:         sn.ID,
-		N2NHost:           sn.N2NHost,
-		Host:              sn.Host,
-		Port:              sn.Port,
-		Path:              sn.Path,
-		PublicKey:         sn.PublicKey,
-		ShortName:         sn.ShortName,
-		BuildTag:          sn.BuildTag,
-		TotalStaked:       sn.TotalStaked,
-		Delete:            sn.Delete,
-		DelegateWallet:    sn.Settings.DelegateWallet,
-		ServiceCharge:     sn.Settings.ServiceChargeRatio,
-		NumberOfDelegates: sn.Settings.MaxNumDelegates,
-		MinStake:          sn.Settings.MinStake,
-		MaxStake:          sn.Settings.MaxStake,
-		LastHealthCheck:   sn.LastHealthCheck,
-		Rewards: event.ProviderRewards{
-			ProviderID:   sn.ID,
-			Rewards:      sn.Reward,
-			TotalRewards: sn.Reward,
+		N2NHost:   sn.N2NHost,
+		Host:      sn.Host,
+		Port:      sn.Port,
+		Path:      sn.Path,
+		PublicKey: sn.PublicKey,
+		ShortName: sn.ShortName,
+		BuildTag:  sn.BuildTag,
+		Delete:    sn.Delete,
+		Provider: event.Provider{
+			ID:             sn.ID,
+			TotalStake:     sn.TotalStaked,
+			DelegateWallet: sn.Settings.DelegateWallet,
+			ServiceCharge:  sn.Settings.ServiceChargeRatio,
+			NumDelegates:   sn.Settings.MaxNumDelegates,
+			MinStake:       sn.Settings.MinStake,
+			MaxStake:       sn.Settings.MaxStake,
+			Rewards: event.ProviderRewards{
+				ProviderID:   sn.ID,
+				Rewards:      sn.Reward,
+				TotalRewards: sn.Reward,
+			},
+			LastHealthCheck: sn.LastHealthCheck,
 		},
+
 		Active:    sn.Status == node.NodeStatusActive,
 		Longitude: sn.Geolocation.Longitude,
 		Latitude:  sn.Geolocation.Latitude,
@@ -95,28 +112,39 @@ func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) err
 	return nil
 }
 
+func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
+	data := dbs.DbHealthCheck{
+		ID: 			 sn.ID,
+		LastHealthCheck: sn.LastHealthCheck,
+		Downtime:		 downtime,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)
+	return nil
+}
+
 func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
 
 	dbUpdates := dbs.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
-			"n2n_host":            sn.N2NHost,
-			"host":                sn.Host,
-			"port":                sn.Port,
-			"path":                sn.Path,
-			"public_key":          sn.PublicKey,
-			"short_name":          sn.ShortName,
-			"build_tag":           sn.BuildTag,
-			"total_staked":        sn.TotalStaked,
-			"delete":              sn.Delete,
-			"delegate_wallet":     sn.Settings.DelegateWallet,
-			"service_charge":      sn.Settings.ServiceChargeRatio,
-			"number_of_delegates": sn.Settings.MaxNumDelegates,
-			"min_stake":           sn.Settings.MinStake,
-			"max_stake":           sn.Settings.MaxStake,
-			"last_health_check":   sn.LastHealthCheck,
-			"longitude":           sn.SimpleNode.Geolocation.Longitude,
-			"latitude":            sn.SimpleNode.Geolocation.Latitude,
+			"n2n_host":          sn.N2NHost,
+			"host":              sn.Host,
+			"port":              sn.Port,
+			"path":              sn.Path,
+			"public_key":        sn.PublicKey,
+			"short_name":        sn.ShortName,
+			"build_tag":         sn.BuildTag,
+			"total_stake":       sn.TotalStaked,
+			"delete":            sn.Delete,
+			"delegate_wallet":   sn.Settings.DelegateWallet,
+			"service_charge":    sn.Settings.ServiceChargeRatio,
+			"num_delegates":     sn.Settings.MaxNumDelegates,
+			"min_stake":         sn.Settings.MinStake,
+			"max_stake":         sn.Settings.MaxStake,
+			"last_health_check": sn.LastHealthCheck,
+			"longitude":         sn.SimpleNode.Geolocation.Longitude,
+			"latitude":          sn.SimpleNode.Geolocation.Latitude,
 		},
 	}
 

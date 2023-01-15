@@ -16,6 +16,7 @@ import (
 	. "github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
 )
 
 // AddAuthorizer sc API function
@@ -69,6 +70,11 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", common.NewError(code, "authorizer's delegate_wallet not set")
 	}
 
+	// Check delegate wallet and operational wallet are not the same
+	if err := commonsc.ValidateDelegateWallet(params.PublicKey, params.StakePoolSettings.DelegateWallet); err != nil {
+		return "", err
+	}
+	
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
@@ -110,7 +116,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 		return "", err
 	}
 
-	// Creating StakePool
+	// Creating Provider
 
 	var sp *StakePool
 	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, params.StakePoolSettings, ctx)
@@ -211,7 +217,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 		return "", err
 	}
 
-	// StakePool may be updated only if authorizer exists/not deleted
+	// Provider may be updated only if authorizer exists/not deleted
 
 	_, err = GetAuthorizerNode(authorizerID, ctx)
 	switch err {
@@ -268,7 +274,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 		return "", err
 	}
 
-	// Mark StakePool as Deleted but not delete it
+	// Mark Provider as Deleted but not delete it
 	var sp *StakePool
 	if sp, err = zcn.getStakePool(authorizerID, ctx); err != nil {
 		return "", common.NewErrorf(errorCode, "error occurred while getting stake pool: %v", err)

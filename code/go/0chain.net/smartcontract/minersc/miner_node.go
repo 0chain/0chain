@@ -1,12 +1,13 @@
 package minersc
 
 import (
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"fmt"
 )
 
 //go:generate msgp -io=false -tests=false -unexported -v
@@ -26,6 +27,7 @@ func NewMinerNode() *MinerNode {
 	return mn
 }
 
+// swagger:model NodePool
 type NodePool struct {
 	PoolID string `json:"pool_id"`
 	*stakepool.DelegatePool
@@ -47,6 +49,10 @@ func (mn *MinerNode) numDelegates() int {
 		}
 	}
 	return count
+}
+
+func (mn *MinerNode) Save(p spenum.Provider, id string, balances cstate.StateContextI) error {
+	return mn.save(balances)
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) error {

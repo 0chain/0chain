@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 )
 
@@ -32,8 +31,11 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	go mc.updateFinalizedBlock(ctx, b)
 }
 
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
+func (mc *Chain) GenerateBlock(ctx context.Context,
+	b *block.Block,
+	waitOver bool,
+	waitC chan struct{}) error {
 	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
+		return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
 	})
 }

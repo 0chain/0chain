@@ -128,7 +128,7 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 
 	rp.Balance = currentBalance
 
-	err = sp.DistributeRewards(value, blobID, spenum.Blobber, balances)
+	err = sp.DistributeRewards(value, blobID, spenum.Blobber, spenum.FileDownloadReward, balances)
 	if err != nil {
 		return "", fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
@@ -223,7 +223,7 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	// save read pool
+	// Save read pool
 	if err = rp.save(ssc.ID, targetId, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
@@ -239,7 +239,7 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 }
 
 // unlock tokens if expired
-func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, _ []byte, balances cstate.StateContextI) (string, error) {
 	rp, err := ssc.getReadPool(txn.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("read_pool_unlock_failed", "no read pool found for clientID to unlock token: %v", err)
@@ -253,7 +253,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, in
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
-	// save read pool
+	// Save read pool
 	if err = rp.save(ssc.ID, txn.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}

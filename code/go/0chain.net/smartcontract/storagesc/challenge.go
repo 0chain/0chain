@@ -171,7 +171,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return err
 	}
 
-	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, balances)
+	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
@@ -199,7 +199,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 	alloc.MovedToValidators = moveToValidators
 
-	// save validators' stake pools
+	// Save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
 		return err
 	}
@@ -216,17 +216,17 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 			Delta:        int64((stake - before) / blobAlloc.Terms.WritePrice),
 		})
 	}
-	// save the pools
-	if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
-		return fmt.Errorf("can't save sake pool: %v", err)
+	// Save the pools
+	if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't Save sake pool: %v", err)
 	}
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
-		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
+		return fmt.Errorf("can't Save allocation's challenge pool: %v", err)
 	}
 
 	if err = alloc.saveUpdatedStakes(balances); err != nil {
-		return fmt.Errorf("can't save allocation: %v", err)
+		return fmt.Errorf("can't Save allocation: %v", err)
 	}
 
 	return
@@ -254,7 +254,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 	sps []*stakePool, balances cstate.StateContextI) (err error) {
 
 	for i, sp := range sps {
-		if err = sp.save(spenum.Validator, validators[i], balances); err != nil {
+		if err = sp.Save(spenum.Validator, validators[i], balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 
@@ -332,7 +332,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 	alloc.MovedToValidators = moveToValidators
 
-	// save validators' stake pools
+	// Save validators' stake pools
 	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
 		return err
 	}
@@ -399,9 +399,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 				Delta:        -int64(move / blobAlloc.Terms.WritePrice),
 			})
 		}
-		// save stake pool
-		if err = sp.save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
-			return fmt.Errorf("can't save blobber's stake pool: %v", err)
+		// Save stake pool
+		if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
+			return fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
 	}
 
@@ -411,7 +411,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
-		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
+		return fmt.Errorf("can't Save allocation's challenge pool: %v", err)
 	}
 
 	return
@@ -1125,13 +1125,13 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return common.NewError("add_challenge", "challenge already exist in allocation")
 	}
 
-	// save the allocation challenges to MPT
+	// Save the allocation challenges to MPT
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
 		return common.NewErrorf("add_challenge",
 			"error storing alloc challenge: %v", err)
 	}
 
-	// save challenge to MPT
+	// Save challenge to MPT
 	if err := challenge.Save(balances, sc.ID); err != nil {
 		return common.NewErrorf("add_challenge",
 			"error storing challenge: %v", err)

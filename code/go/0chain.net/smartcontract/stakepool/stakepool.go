@@ -2,13 +2,18 @@ package stakepool
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
+	"time"
 
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/transaction"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
-	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -25,6 +30,19 @@ import (
 
 func stakePoolKey(p spenum.Provider, id string) datastore.Key {
 	return p.String() + ":stakepool:" + id
+}
+
+type AbstractStakePool interface {
+	GetPools() map[string]*DelegatePool
+	HasStakePool(user string) bool
+	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) (string, error)
+	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
+	EmitUnStakeEvent(providerType spenum.Provider, providerID string, amount currency.Coin, balances cstate.StateContextI) error
+	Save(providerType spenum.Provider, providerID string,
+		balances cstate.StateContextI) error
+	GetSettings() Settings
+	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
+	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
 }
 
 // StakePool holds delegate information for an 0chain providers
@@ -52,6 +70,81 @@ type DelegatePool struct {
 	StakedAt     common.Timestamp  `json:"staked_at"`
 }
 
+// swagger:model stakePoolStat
+type StakePoolStat struct {
+	ID           string             `json:"pool_id"` // pool ID
+	Balance      currency.Coin      `json:"balance"` // total balance
+	StakeTotal   currency.Coin      `json:"stake_total"`
+	UnstakeTotal currency.Coin      `json:"unstake_total"`
+	Delegate     []DelegatePoolStat `json:"delegate"` // delegate pools
+	Penalty      currency.Coin      `json:"penalty"`  // total for all
+	Rewards      currency.Coin      `json:"rewards"`  // rewards
+	Settings     Settings           `json:"settings"` // Settings of the stake pool
+}
+
+type DelegatePoolStat struct {
+	ID           string          `json:"id"`            // blobber ID
+	Balance      currency.Coin   `json:"balance"`       // current balance
+	DelegateID   string          `json:"delegate_id"`   // wallet
+	Rewards      currency.Coin   `json:"rewards"`       // total for all time
+	UnStake      bool            `json:"unstake"`       // want to unstake
+	ProviderId   string          `json:"provider_id"`   // id
+	ProviderType spenum.Provider `json:"provider_type"` // ype
+
+	TotalReward  currency.Coin `json:"total_reward"`
+	TotalPenalty currency.Coin `json:"total_penalty"`
+	Status       string        `json:"status"`
+	RoundCreated int64         `json:"round_created"`
+}
+
+// swagger:model userPoolStat
+type UserPoolStat struct {
+	Pools map[datastore.Key][]*DelegatePoolStat `json:"pools"`
+}
+
+func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.DelegatePool) (*StakePoolStat, error) {
+	spStat := new(StakePoolStat)
+	spStat.ID = provider.ID
+	spStat.StakeTotal = provider.TotalStake
+	spStat.UnstakeTotal = provider.UnstakeTotal
+	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
+	spStat.Settings = Settings{
+		DelegateWallet:     provider.DelegateWallet,
+		MinStake:           provider.MinStake,
+		MaxStake:           provider.MaxStake,
+		MaxNumDelegates:    provider.NumDelegates,
+		ServiceChargeRatio: provider.ServiceCharge,
+	}
+	spStat.Rewards = provider.Rewards.TotalRewards
+	for _, dp := range delegatePools {
+		if spenum.PoolStatus(dp.Status) == spenum.Deleted {
+			continue
+		}
+		dpStats := DelegatePoolStat{
+			ID:           dp.PoolID,
+			DelegateID:   dp.DelegateID,
+			Status:       spenum.PoolStatus(dp.Status).String(),
+			RoundCreated: dp.RoundCreated,
+		}
+		dpStats.Balance = dp.Balance
+
+		dpStats.Rewards = dp.Reward
+
+		dpStats.TotalPenalty = dp.TotalPenalty
+
+		dpStats.TotalReward = dp.TotalReward
+
+		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
+		if err != nil {
+			return nil, err
+		}
+		spStat.Balance = newBal
+		spStat.Delegate = append(spStat.Delegate, dpStats)
+	}
+
+	return spStat, nil
+}
+
 func NewStakePool() *StakePool {
 	return &StakePool{
 		Pools: make(map[string]*DelegatePool),
@@ -68,6 +161,13 @@ func (sp *StakePool) Encode() (b []byte) {
 
 func (sp *StakePool) Decode(input []byte) error {
 	return json.Unmarshal(input, sp)
+}
+
+func (sp *StakePool) GetSettings() Settings {
+	return sp.Settings
+}
+func (sp *StakePool) GetPools() map[string]*DelegatePool {
+	return sp.Pools
 }
 
 func (sp *StakePool) OrderedPoolIds() []string {
@@ -169,16 +269,29 @@ func (sp *StakePool) MintRewards(
 
 	var dpUpdate = newDelegatePoolUpdate(clientId, providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
+	dpUpdate.emitUpdate(balances)
+	return delegateReward + serviceCharge, nil
+}
 
-	if dPool.Status == spenum.Deleting {
-		delete(sp.Pools, clientId)
-		dpUpdate.Updates["status"] = spenum.Deleted
-		dpUpdate.emitUpdate(balances)
-		return delegateReward + serviceCharge, nil
-	} else {
-		dpUpdate.emitUpdate(balances)
-		return delegateReward + serviceCharge, nil
+func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error {
+	var dp, ok = sp.Pools[poolID]
+	if !ok {
+		return fmt.Errorf("no such delegate pool: %q", poolID)
 	}
+
+	if dp.DelegateID != clientID {
+		return errors.New("trying to unlock not by delegate pool owner")
+	}
+
+	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
+	if err := balances.AddTransfer(transfer); err != nil {
+		return err
+	}
+
+	sp.Pools[poolID].Balance = 0
+	sp.Pools[poolID].Status = spenum.Deleted
+
+	return nil
 }
 
 // DistributeRewardsRandN distributes rewards to randomly selected N delegate pools
@@ -188,13 +301,13 @@ func (sp *StakePool) DistributeRewardsRandN(
 	providerType spenum.Provider,
 	seed int64,
 	randN int,
-	desc string,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -262,7 +375,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[pool.DelegateID], err = reward.Int64()
+		spUpdate.DelegateRewards[pool.DelegateID] = reward
 		if err != nil {
 			return err
 		}
@@ -332,12 +445,13 @@ func (sp *StakePool) DistributeRewards(
 	value currency.Coin,
 	providerId string,
 	providerType spenum.Provider,
+	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -404,7 +518,7 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[id], err = reward.Int64()
+		spUpdate.DelegateRewards[id] = reward
 		if err != nil {
 			return err
 		}
@@ -474,7 +588,7 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 		}
 
 		spUpdate.DelegateRewards[pools[i].DelegateID], err =
-			maths.SafeAddInt64(spUpdate.DelegateRewards[pools[i].DelegateID], iShare)
+			currency.AddInt64(spUpdate.DelegateRewards[pools[i].DelegateID], iShare)
 		if err != nil {
 			return err
 		}
@@ -489,4 +603,129 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 	}
 
 	return nil
+}
+
+type stakePoolRequest struct {
+	ProviderType spenum.Provider `json:"provider_type,omitempty"`
+	ProviderID   string          `json:"provider_id,omitempty"`
+}
+
+func (spr *stakePoolRequest) decode(p []byte) (err error) {
+	return json.Unmarshal(p, spr)
+}
+
+func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
+	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
+
+	var spr stakePoolRequest
+	if err = spr.decode(input); err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"invalid request: %v", err)
+	}
+
+	var sp AbstractStakePool
+	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"can't get stake pool: %v", err)
+	}
+
+	if t.Value < sp.GetSettings().MinStake {
+		return "", common.NewError("stake_pool_lock_failed",
+			fmt.Sprintf("too small stake to lock: %v < %v", t.Value, sp.GetSettings().MinStake))
+	}
+	if t.Value > sp.GetSettings().MaxStake {
+		return "", common.NewError("stake_pool_lock_failed",
+			fmt.Sprintf("too large stake to lock: %v > %v", t.Value, sp.GetSettings().MaxStake))
+	}
+
+	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
+	if len(sp.GetPools()) >= sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"max_delegates reached: %v, no more stake pools allowed",
+			sp.GetSettings().MaxNumDelegates)
+	}
+
+	out, err := sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"stake pool digging error: %v", err)
+	}
+
+	if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"saving stake pool: %v", err)
+	}
+
+	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"stake pool staking error: %v", err)
+	}
+
+	return out, err
+}
+
+// StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
+func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
+	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
+) (resp string, err error) {
+	var spr stakePoolRequest
+	if err = spr.decode(input); err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"can't decode request: %v", err)
+	}
+	var sp AbstractStakePool
+	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"can't get related stake pool: %v", err)
+	}
+	if err != nil {
+		return "", err
+	}
+	dp, ok := sp.GetPools()[t.ClientID]
+	if !ok {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
+	}
+
+	// if StakeAt has valid value and lock period is less than MinLockPeriod
+	if dp.StakedAt > 0 {
+		stakedAt := common.ToTime(dp.StakedAt)
+		minLockPeriod := config.SmartContractConfig.GetDuration("stakepool.min_lock_period")
+		if !stakedAt.Add(minLockPeriod).Before(time.Now()) {
+			return "", common.NewErrorf("stake_pool_unlock_failed", "token can only be unstaked till: %s", stakedAt.Add(minLockPeriod))
+		}
+	}
+
+	err = sp.Empty(t.ToClientID, t.ClientID, t.ClientID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"unlocking tokens: %v", err)
+	}
+
+	output, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
+	}
+
+	// Save the pool
+	if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"saving stake pool: %v", err)
+	}
+
+	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"stake pool staking error: %v", err)
+	}
+
+	return output, nil
+}
+
+func toJson(val interface{}) string {
+	var b, err = json.Marshal(val)
+	if err != nil {
+		panic(err) // must not happen
+	}
+	return string(b)
 }

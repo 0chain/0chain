@@ -6,28 +6,59 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 // swagger:model Validator
 type Validator struct {
-	gorm.Model
-	ValidatorID string `json:"validator_id" gorm:"uniqueIndex"`
-	BaseUrl     string `json:"url"`
-	PublicKey   string `json:"public_key"`
+	Provider
+	BaseUrl   string `json:"url"`
+	PublicKey string `json:"public_key"`
 
-	// StakePoolSettings
-	StakeTotal     currency.Coin `json:"stake_total"`
-	UnstakeTotal   currency.Coin `json:"unstake_total"`
-	MinStake       currency.Coin `json:"min_stake"`
-	MaxStake       currency.Coin `json:"max_stake"`
-	DelegateWallet string        `json:"delegate_wallet"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_validator_creation_round"`
+}
 
-	Rewards ProviderRewards `json:"rewards" gorm:"foreignKey:ValidatorID;references:ProviderID"`
+func (v *Validator) GetTotalStake() currency.Coin {
+	return v.TotalStake
+}
+
+func (v *Validator) GetUnstakeTotal() currency.Coin {
+	return v.UnstakeTotal
+}
+
+func (v *Validator) GetServiceCharge() float64 {
+	return v.ServiceCharge
+}
+
+func (v *Validator) GetTotalRewards() currency.Coin {
+	return v.Rewards.TotalRewards
+}
+
+
+func (v *Validator) SetTotalStake(value currency.Coin) {
+	v.TotalStake = value
+}
+
+func (v *Validator) SetUnstakeTotal(value currency.Coin) {
+	v.UnstakeTotal = value
+}
+
+func (v *Validator) SetServiceCharge(value float64) {
+	v.ServiceCharge = value
+}
+
+func (v *Validator) SetTotalRewards(value currency.Coin) {
+	v.Rewards.TotalRewards = value
+}
+
+
+func (edb *EventDb) GetValidatorCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Validator{}).Count(&count)
+
+	return count, res.Error
 }
 
 func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
@@ -35,7 +66,7 @@ func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, er
 
 	result := edb.Store.Get().
 		Preload("Rewards").
-		Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(&vn)
+		Model(&Validator{}).Where(&Validator{Provider: Provider{ID: validatorID}}).First(&vn)
 
 	if result.Error != nil {
 		return vn, fmt.Errorf("error retrieving Validation node with ID %v; error: %v", validatorID, result.Error)
@@ -47,14 +78,14 @@ func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, er
 func (edb *EventDb) GetValidatorsByIDs(ids []string) ([]Validator, error) {
 	var validators []Validator
 	result := edb.Store.Get().Preload("Rewards").
-		Model(&Validator{}).Where("validator_id IN ?", ids).Find(&validators)
+		Model(&Validator{}).Where("id IN ?", ids).Find(&validators)
 
 	return validators, result.Error
 }
 
 func (edb *EventDb) addOrOverwriteValidators(validators []Validator) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "validator_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&validators).Error
 }
@@ -75,30 +106,46 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 
 func (edb *EventDb) updateValidators(validators []Validator) error {
 	updateFields := []string{
-		"base_url", "public_key", "stake_total",
+		"base_url", "public_key", "total_stake",
 		"unstake_total", "min_stake", "max_stake",
 		"delegate_wallet", "num_delegates",
 		"service_charge",
 	}
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "validator_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns(updateFields),
 	}).Create(&validators).Error
 }
 
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateValidatorStakeTotal, Validator{
-		ValidatorID: ID,
-		StakeTotal:  totalStake,
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalStake},
+	}
+}
+func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (tag EventTag, data interface{}) {
+	return TagUpdateValidatorUnStakeTotal, Validator{
+		Provider: Provider{
+			ID:         ID,
+			TotalStake: totalUntake},
 	}
 }
 
-func (edb *EventDb) updateValidatorStakes(validators []Validator) error {
-	updateFields := []string{"stake_total"}
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "validator_id"}},
-		DoUpdates: clause.AssignmentColumns(updateFields),
-	}).Create(&validators).Error
+func (edb *EventDb) updateValidatorTotalStakes(validators []Validator) error {
+	var provs []Provider
+	for _, v := range validators {
+		provs = append(provs, v.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "validators")
+}
+
+func (edb *EventDb) updateValidatorTotalUnStakes(validators []Validator) error {
+	var provs []Provider
+	for _, v := range validators {
+		provs = append(provs, v.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "validators")
 }
 
 func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
@@ -107,4 +154,12 @@ func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
 
 func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidatorStakeTotal, withUniqueEventOverwrite())
+}
+
+func mergeUpdateValidatorUnStakesEvents() *eventsMergerImpl[Validator] {
+	return newEventsMerger[Validator](TagUpdateValidatorUnStakeTotal, withUniqueEventOverwrite())
+}
+
+func mergeValidatorHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagValidatorHealthCheck, withUniqueEventOverwrite())
 }

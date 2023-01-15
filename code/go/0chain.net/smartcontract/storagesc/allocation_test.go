@@ -107,7 +107,7 @@ func TestSelectBlobbers(t *testing.T) {
 		for i := 0; i < args.numBlobbers; i++ {
 			sNodes.Nodes.add(makeMockBlobber(i))
 			sp := stakePool{
-				StakePool: stakepool.StakePool{
+				StakePool: &stakepool.StakePool{
 					Pools: map[string]*stakepool.DelegatePool{
 						mockPoolId: {},
 					},
@@ -370,7 +370,7 @@ func TestChangeBlobbers(t *testing.T) {
 		if len(arg.addBlobberID) > 0 {
 
 			sp := stakePool{
-				StakePool: stakepool.StakePool{
+				StakePool: &stakepool.StakePool{
 					Pools: map[string]*stakepool.DelegatePool{
 						mockPoolId: {},
 					},
@@ -653,7 +653,7 @@ func TestExtendAllocation(t *testing.T) {
 					},
 				})
 				sp := stakePool{
-					StakePool: stakepool.StakePool{
+					StakePool: &stakepool.StakePool{
 						Pools: map[string]*stakepool.DelegatePool{
 							mockPoolId: {},
 						},
@@ -1252,8 +1252,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		)
 		dp1.Balance, dp2.Balance = 20e10, 20e10
 		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-		require.NoError(t, sp1.save(spenum.Blobber, "b1", balances))
-		require.NoError(t, sp2.save(spenum.Blobber, "b2", balances))
+		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
+		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
 
 		tx.Value = 0
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
@@ -1296,8 +1296,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		)
 		dp1.Balance, dp2.Balance = 20e10, 20e10
 		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-		require.NoError(t, sp1.save(spenum.Blobber, "b1", balances))
-		require.NoError(t, sp2.save(spenum.Blobber, "b2", balances))
+		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
+		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
 
 		tx.Value = 400
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
@@ -1341,8 +1341,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		)
 		dp1.Balance, dp2.Balance = 20e10, 20e10
 		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-		require.NoError(t, sp1.save(spenum.Blobber, "b1", balances))
-		require.NoError(t, sp2.save(spenum.Blobber, "b2", balances))
+		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
+		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
 
 		balances.balances[clientID] = 1100 + 4500
 
@@ -1557,8 +1557,8 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	)
 	dp1.Balance, dp2.Balance = 20e10, 20e10
 	sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-	require.NoError(t, sp1.save(spenum.Blobber, "b1", balances))
-	require.NoError(t, sp2.save(spenum.Blobber, "b2", balances))
+	require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
+	require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
 
 	balances.(*testBalances).balances[clientID] = 1100 + 4500
 
