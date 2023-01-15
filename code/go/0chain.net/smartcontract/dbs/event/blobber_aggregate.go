@@ -14,8 +14,8 @@ import (
 
 type BlobberAggregate struct {
 	gorm.Model
-	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,unique"`
-	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,unique"`
+	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,priority:2,unique"`
+	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,priority:1,unique"`
 	BucketID            int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
@@ -26,11 +26,13 @@ type BlobberAggregate struct {
 	UnstakeTotal        currency.Coin `json:"unstake_total"`
 	TotalStake          currency.Coin `json:"total_stake"`
 	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
+	TotalRewards        currency.Coin `json:"total_rewards"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
+	Downtime            uint64        `json:"downtime"`
 }
 
 func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAggregate, error) {
@@ -38,10 +40,12 @@ func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAgg
 
 	queryBuilder := edb.Store.Get().
 		Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   false,
+	queryBuilder.Clauses(clause.OrderBy{
+		Columns: []clause.OrderByColumn{{
+			Column: clause.Column{Name: "round"},
+		}, {
+			Column: clause.Column{Name: "blobber_id"},
+		}},
 	})
 
 	result := queryBuilder.Scan(&snapshots)
@@ -103,7 +107,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
 	}
-	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
+	logging.Logger.Debug("getting blobber aggregate ids", zap.Int("num", len(ids)))
 
 	var currentBlobbers []Blobber
 	result := edb.Store.Get().
@@ -145,14 +149,15 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		aggregate.SavedData = (old.SavedData + current.SavedData) / 2
 		aggregate.ReadData = (old.ReadData + current.ReadData) / 2
 		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
+		aggregate.TotalRewards = (old.TotalRewards + current.Rewards.TotalRewards) / 2
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
+		aggregate.Downtime = current.Downtime
 		aggregate.RankMetric = current.RankMetric
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
-		aggregate.InactiveRounds = current.InactiveRounds
 		//aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 

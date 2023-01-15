@@ -12,9 +12,9 @@ import (
 type RewardDelegate struct {
 	gorm.Model
 	Amount      currency.Coin `json:"amount"`
-	BlockNumber int64         `json:"block_number" gorm:"index:idx_block,priority:1"`
-	PoolID      string        `json:"pool_id" gorm:"index:idx_pool,priority:2"`
-	RewardType  spenum.Reward `json:"reward_type" gorm:"index:idx_reward_type,priority:3"`
+	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_del_prov,priority:1"`
+	PoolID      string        `json:"pool_id" gorm:"index:idx_rew_del_prov,priority:2"`
+	RewardType  spenum.Reward `json:"reward_type"`
 }
 
 func (edb *EventDb) insertDelegateReward(updates []dbs.StakePoolReward, round int64) error {

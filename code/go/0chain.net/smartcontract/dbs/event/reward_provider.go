@@ -12,9 +12,9 @@ import (
 type RewardProvider struct {
 	gorm.Model
 	Amount      currency.Coin `json:"amount"`
-	BlockNumber int64         `json:"block_number" gorm:"index:idx_block,priority:1"`
-	ProviderId  string        `json:"provider_id" gorm:"index:idx_provider,priority:2"`
-	RewardType  spenum.Reward `json:"reward_type" gorm:"index:idx_reward_type,priority:3"`
+	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
+	ProviderId  string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
+	RewardType  spenum.Reward `json:"reward_type"`
 }
 
 func (edb *EventDb) insertProviderReward(updates []dbs.StakePoolReward, round int64) error {
@@ -45,9 +45,9 @@ func (edb *EventDb) GetProviderRewards(limit common.Pagination, id string, start
 		}
 	} else {
 		if start == end {
-			query = query.Where("provider = ? AND block_number = ?", id, start)
+			query = query.Where("provider_id = ? AND block_number = ?", id, start)
 		} else {
-			query = query.Where("provider = ? AND block_number >= ? AND block_number < ?", id, start, end)
+			query = query.Where("provider_id = ? AND block_number >= ? AND block_number < ?", id, start, end)
 		}
 	}
 

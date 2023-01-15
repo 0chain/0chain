@@ -8,7 +8,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/guregu/null"
 	"gorm.io/gorm"
@@ -25,11 +24,12 @@ type Miner struct {
 	BuildTag  string
 
 	Delete          bool
-	LastHealthCheck common.Timestamp
 	Fees            currency.Coin
 	Active          bool
 	Longitude       float64
 	Latitude        float64
+
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_miner_creation_round"`
 }
 
 // swagger:model MinerGeolocation
@@ -49,7 +49,7 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
-//func (edb *EventDb) minerAggregateStats(id string) (*providerAggregateStats, error) {
+//func (edb *EventDb) MinerStats(id string) (*providerAggregateStats, error) {
 //	var miner providerAggregateStats
 //	result := edb.Store.Get().
 //		Model(&Miner{}).
@@ -86,6 +86,38 @@ type MinerQuery struct {
 	Active            null.Bool
 	Longitude         null.Float
 	Latitude          null.Float
+}
+
+func (m *Miner) GetTotalStake() currency.Coin {
+	return m.TotalStake
+}
+
+func (m *Miner) GetUnstakeTotal() currency.Coin {
+	return m.UnstakeTotal
+}
+
+func (m *Miner) GetServiceCharge() float64 {
+	return m.ServiceCharge
+}
+
+func (m *Miner) GetTotalRewards() currency.Coin {
+	return m.Rewards.TotalRewards
+}
+
+func (m *Miner) SetTotalStake(value currency.Coin) {
+	m.TotalStake = value
+}
+
+func (m *Miner) SetUnstakeTotal(value currency.Coin) {
+	m.UnstakeTotal = value
+}
+
+func (m *Miner) SetServiceCharge(value float64) {
+	m.ServiceCharge = value
+}
+
+func (m *Miner) SetTotalRewards(value currency.Coin) {
+	m.Rewards.TotalRewards = value
 }
 
 func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p common2.Pagination) ([]Miner, error) {
@@ -168,6 +200,13 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 	return miners, result.Error
 }
 
+func (edb *EventDb) GetMinerCount() (int64, error) {
+	var count int64
+	res := edb.Store.Get().Model(Miner{}).Count(&count)
+
+	return count, res.Error
+}
+
 func (edb *EventDb) addOrOverwriteMiner(miners []Miner) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
@@ -242,17 +281,19 @@ func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag
 }
 
 func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
-	}).Create(&miners).Error
+	var provs []Provider
+	for _, s := range miners {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "miners")
 }
 
 func (edb *EventDb) updateMinersTotalUnStakes(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
-	}).Create(&miners).Error
+	var provs []Provider
+	for _, s := range miners {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "miners")
 }
 
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
@@ -260,4 +301,8 @@ func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
 }
 func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
 	return newEventsMerger[Miner](TagUpdateMinerTotalUnStake, withUniqueEventOverwrite())
+}
+
+func mergeMinerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagMinerHealthCheck, withUniqueEventOverwrite())
 }
