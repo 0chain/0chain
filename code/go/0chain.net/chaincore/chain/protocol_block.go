@@ -374,6 +374,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.Error(err))
 	}
 
+	fb.SetBlockFinalised()
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
 
@@ -414,7 +415,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	wg.Run("finalize block - update finalized block", fb.Round, func() {
-		bsh.UpdateFinalizedBlock(ctx, fb)
+		bsh.UpdateFinalizedBlock(ctx, fb) //
 	})
 
 	fr.Finalize(fb)
