@@ -75,8 +75,10 @@ func getBalances(
 	bk.MinerID = data.Miners[0]
 	node.Self.Underlying().SetKey(data.Miners[0])
 	magicBlock := &block.MagicBlock{
+		Miners:   node.NewPool(node.NodeTypeMiner),
 		Sharders: node.NewPool(node.NodeTypeSharder),
 	}
+
 	for i := range data.Sharders {
 		var n = node.Provider()
 		if err := n.SetID(data.Sharders[i]); err != nil {
@@ -89,6 +91,18 @@ func getBalances(
 			log.Fatal(err)
 		}
 	}
+
+	// add miner and sharder that is in magic block but not active for add sharder and add miner
+	magicBlock.Miners.NodesMap = make(map[string]*node.Node)
+	magicBlock.Miners.NodesMap[encryption.Hash("magic_block_miner_1")] = &node.Node{}
+	magicBlockSharder := node.Node{}
+	magicBlockSharder.ID = data.InactiveSharder
+	magicBlockSharder.PublicKey = data.InactiveSharderPK
+	magicBlockSharder.Type = magicBlock.Sharders.Type
+	if err := magicBlock.Sharders.AddNode(&magicBlockSharder); err != nil {
+		log.Fatal(err)
+	}
+
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
 		bk,
@@ -341,7 +355,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockChallengePools(balances)
+		storagesc.AddMockChallengePools(eventDb, balances)
 		log.Println("added challenge pools\t", time.Since(timer))
 	}()
 
@@ -513,6 +527,12 @@ func setUpMpt(
 		} else {
 			benchData.SharderKeys = sharderKeys[:listLength]
 		}
+		benchData.InactiveSharder, benchData.InactiveSharderPK, err = getMockIdKeyPair()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		benchData.Now = common.Now()
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)

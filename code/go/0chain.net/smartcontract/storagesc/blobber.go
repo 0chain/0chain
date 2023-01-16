@@ -15,6 +15,8 @@ import (
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
+
 )
 
 const (
@@ -226,6 +228,11 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	blobber.PublicKey = t.PublicKey
 	blobber.ProviderType = spenum.Blobber
 
+	// Check delegate wallet and operational wallet are not the same
+	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
+		return "", err
+	}
+
 	// insert, update or remove blobber
 	if err = sc.insertBlobber(t, conf, blobber, balances); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed", err.Error())
@@ -323,6 +330,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 ) (string, error) {
 	var (
 		blobber *StorageNode
+		downtime uint64
 		err     error
 	)
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
@@ -330,9 +338,10 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
 
+	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate)
 	blobber.LastHealthCheck = t.CreationDate
 
-	emitUpdateBlobber(blobber, balances)
+	emitBlobberHealthCheck(blobber, downtime, balances)
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)

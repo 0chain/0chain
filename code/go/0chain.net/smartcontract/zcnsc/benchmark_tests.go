@@ -69,14 +69,19 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 			{
 				name:     benchmark.ZcnSc + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
-				txn:      createTransaction(data.Clients[indexOfNewAuth], data.PublicKeys[indexOfNewAuth]),
+				txn:      createTransaction(owner, ""),
 				input:    createAuthorizerPayload(data, indexOfNewAuth),
 			},
 			{
 				name:     benchmark.ZcnSc + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
-				input:    nil,
+				input: func() []byte {
+					input, _ := (&DeleteAuthorizerPayload{
+						ID: data.Clients[0],
+					}).Encode()
+					return input
+				}(),
 			},
 			{
 				name:     benchmark.ZcnSc + BurnFunc,
@@ -139,8 +144,8 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				endpoint: sc.CollectRewards,
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input: (&stakepool.CollectRewardRequest{
+					ProviderId:   data.Clients[0],
 					ProviderType: spenum.Authorizer,
-					//PoolId:       getMockAuthoriserStakePoolId(data.Clients[0], 0),
 				}).Encode(),
 			},
 			{
@@ -167,7 +172,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchmark.BenchData) []byte {
 	var sigs []*AuthorizerSignature
 
-	client := data.Clients[1]
+	client := data.Clients[0]
 
 	for i := 0; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		pb := &proofOfBurn{
