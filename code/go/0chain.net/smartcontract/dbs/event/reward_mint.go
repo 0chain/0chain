@@ -5,11 +5,11 @@ import (
 	"math"
 	"time"
 
-	"gorm.io/gorm"
+	"0chain.net/smartcontract/dbs/model"
 )
 
 type RewardMint struct {
-	gorm.Model
+	model.UpdatableModel
 	Amount       int64  `json:"amount"`
 	BlockNumber  int64  `json:"block_number"`
 	ClientID     string `json:"client_id"`     // wallet ID
