@@ -450,7 +450,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	for _, mint := range sctx.GetMints() {
-		u, err := c.mintAmount(sctx, mint)
+		u, err := c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash),
@@ -581,8 +581,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	return []*event.User{stateToUser(fromClient, fs, -amount), stateToUser(toClient, ts, amount)}, nil
 }
 
-func (c *Chain) mintAmount(sctx bcstate.StateContextI, mint *state.Mint) (eu *event.User, err error) {
-	if mint.Amount == 0 {
+func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
+	if amount == 0 {
 		return nil, nil
 	}
 
@@ -597,7 +597,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, mint *state.Mint) (eu *ev
 		}
 	}()
 
-	ts, err := sctx.GetClientState(mint.ToClientID)
+	ts, err := sctx.GetClientState(toClient)
 	if !isValid(err) {
 		return nil, common.NewError("mint_amount - get state", err.Error())
 	}
@@ -609,7 +609,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, mint *state.Mint) (eu *ev
 		return nil, err
 	}
 
-	ts.Balance, err = currency.AddCoin(ts.Balance, mint.Amount)
+	ts.Balance, err = currency.AddCoin(ts.Balance, amount)
 	if err != nil {
 		logging.Logger.Error("transfer amount - error",
 			zap.Int64("round", b.Round),
@@ -619,14 +619,14 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, mint *state.Mint) (eu *ev
 		return nil, err
 	}
 
-	_, err = sctx.SetClientState(mint.ToClientID, ts)
+	_, err = sctx.SetClientState(toClient, ts)
 	if err != nil {
 		return nil, common.NewError("mint_amount - insert", err.Error())
 	}
 
-	c.emitMintEvent(sctx, mint)
+	c.emitMintEvent(sctx, stateToUser(toClient, ts, amount))
 
-	return stateToUser(mint.ToClientID, ts, mint.Amount), nil
+	return stateToUser(toClient, ts, amount), nil
 }
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
@@ -762,12 +762,12 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
 		})
 	return
 }
-func (c *Chain) emitMintEvent(sc bcstate.StateContextI, mint *state.Mint) {
+func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) {
 	if c.GetEventDb() == nil {
 		return
 	}
 
-	sc.EmitEvent(event.TypeStats, event.TagAddMint, mint.ToClientID, mint)
+	sc.EmitEvent(event.TypeStats, event.TagAddMint, usr.UserID, usr)
 
 	return
 }
