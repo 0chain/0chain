@@ -10,7 +10,7 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.DelegatePool) MinerNodeResponse {
+func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.DelegatePool) NodeResponse {
 	var status = node.NodeStatusInactive
 	if edbSharder.Active {
 		status = node.NodeStatusActive
@@ -39,7 +39,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
 	}
 
-	sn := MinerNodeResponse{
+	sn := NodeResponse{
 		SimpleNodeResponse: &msn,
 		StakePoolResponse: &StakePoolResponse{
 			Reward: edbSharder.Rewards.Rewards,
@@ -110,9 +110,9 @@ func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) {
 
 func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
-		ID: 			 sn.ID,
+		ID:              sn.ID,
 		LastHealthCheck: sn.LastHealthCheck,
-		Downtime:		 downtime,
+		Downtime:        downtime,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)

@@ -376,7 +376,7 @@ func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Requ
 
 // swagger:model nodeStat
 type nodeStat struct {
-	MinerNodeResponse
+	NodeResponse
 	TotalReward int64 `json:"total_reward"`
 }
 
@@ -420,8 +420,8 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 	}
 	if err == nil {
 		common.Respond(w, r, nodeStat{
-			MinerNodeResponse: minerTableToMinerNode(miner, dps),
-			TotalReward:       int64(miner.Rewards.TotalRewards),
+			NodeResponse: minerTableToMinerNode(miner, dps),
+			TotalReward:  int64(miner.Rewards.TotalRewards),
 		}, nil)
 		return
 	}
@@ -436,8 +436,8 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	common.Respond(w, r, nodeStat{
-		MinerNodeResponse: sharderTableToSharderNode(sharder, dps),
-		TotalReward:       int64(sharder.Rewards.TotalRewards)}, nil)
+		NodeResponse: sharderTableToSharderNode(sharder, dps),
+		TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
@@ -742,8 +742,8 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	shardersArr := make([]nodeStat, len(sharders))
 	for i, sharder := range sharders {
 		shardersArr[i] = nodeStat{
-			MinerNodeResponse: sharderTableToSharderNode(sharder, nil),
-			TotalReward:       int64(sharder.Rewards.TotalRewards),
+			NodeResponse: sharderTableToSharderNode(sharder, nil),
+			TotalReward:  int64(sharder.Rewards.TotalRewards),
 		}
 	}
 	common.Respond(w, r, rest.InterfaceMap{
@@ -868,8 +868,8 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	minersArr := make([]nodeStat, len(miners))
 	for i, miner := range miners {
 		minersArr[i] = nodeStat{
-			MinerNodeResponse: minerTableToMinerNode(miner, nil),
-			TotalReward:       int64(miner.Rewards.TotalRewards),
+			NodeResponse: minerTableToMinerNode(miner, nil),
+			TotalReward:  int64(miner.Rewards.TotalRewards),
 		}
 	}
 

@@ -183,16 +183,16 @@ func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
 
 func rewardProviderDelegates(edb *EventDb, dps []DelegatePool) error {
 	var poolIds []string
-	var reward []int64
-	var totalReward []int64
-	var totalPenalty []int64
-	var lastUpdated []int64
+	var reward []uint64
+	var totalReward []uint64
+	var totalPenalty []uint64
+	var lastUpdated []uint64
 	for _, r := range dps {
 		poolIds = append(poolIds, r.PoolID)
-		reward = append(reward, int64(r.Reward))
-		totalReward = append(totalReward, int64(r.TotalReward))
-		totalPenalty = append(totalPenalty, int64(r.TotalPenalty))
-		lastUpdated = append(lastUpdated, r.RoundPoolLastUpdated)
+		reward = append(reward, uint64(r.Reward))
+		totalReward = append(totalReward, uint64(r.TotalReward))
+		totalPenalty = append(totalPenalty, uint64(r.TotalPenalty))
+		lastUpdated = append(lastUpdated, uint64(r.RoundPoolLastUpdated))
 	}
 
 	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).

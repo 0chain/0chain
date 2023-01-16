@@ -28,12 +28,12 @@ type StakePoolResponse struct {
 	Minter   cstate.ApprovedMinter            `json:"minter"`
 }
 
-type MinerNodeResponse struct {
+type NodeResponse struct {
 	*SimpleNodeResponse `json:"simple_miner"`
 	*StakePoolResponse  `json:"stake_pool"`
 }
 
-func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool) MinerNodeResponse {
+func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool) NodeResponse {
 	var status = node.NodeStatusInactive
 	if edbMiner.Active {
 		status = node.NodeStatusActive
@@ -61,7 +61,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		RoundServiceChargeLastUpdated: edbMiner.Rewards.RoundServiceChargeLastUpdated,
 	}
 
-	mn := MinerNodeResponse{
+	mn := NodeResponse{
 		SimpleNodeResponse: &msn,
 		StakePoolResponse: &StakePoolResponse{
 			Reward: edbMiner.Rewards.Rewards,
@@ -132,9 +132,9 @@ func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 
 func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
-		ID: 			 mn.ID,
+		ID:              mn.ID,
 		LastHealthCheck: mn.LastHealthCheck,
-		Downtime:		 downtime,
+		Downtime:        downtime,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagMinerHealthCheck, mn.ID, data)
