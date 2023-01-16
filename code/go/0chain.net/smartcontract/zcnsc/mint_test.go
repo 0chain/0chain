@@ -6,6 +6,7 @@ import (
 	"time"
 
 	. "0chain.net/smartcontract/zcnsc"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -64,6 +65,43 @@ func Test_FuzzyMintTest(t *testing.T) {
 		require.NotNil(t, response)
 		require.NotEmpty(t, response)
 	}
+}
+
+func Test_MaxFeeMint(t *testing.T) {
+	const maxFee = 10
+	ctx := MakeMockStateContext()
+	ctx.globalNode.ZCNSConfig.MaxFee = maxFee
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	response, err := contract.Mint(transaction, payload.Encode(), ctx)
+	require.NoError(t, err, "Testing authorizer: '%s'", defaultClient)
+	require.NotNil(t, response)
+	require.NotEmpty(t, response)
+
+	mm := ctx.GetMints()
+	require.Equal(t, len(mm), len(authorizersID)+1)
+	expectedShare, _, err := currency.DistributeCoin(maxFee, int64(len(authorizersID)))
+	require.NoError(t, err)
+	for i := 0; i < 3; i++ {
+		require.Equal(t, mm[i].ToClientID, authorizersID[i])
+		require.Equal(t, mm[i].Amount, expectedShare)
+	}
+
+	rp := &MintPayload{}
+	require.NoError(t, rp.Decode([]byte(response)))
+	require.Equal(t, payload.ReceivingClientID, rp.ReceivingClientID)
+	sz, err := currency.Int64ToCoin(int64(len(authorizersID)))
+	require.NoError(t, err)
+	totalShare, err := currency.MultCoin(expectedShare, sz)
+	require.NoError(t, err)
+	expectedAmount, err := currency.MinusCoin(payload.Amount, totalShare)
+	require.NoError(t, err)
+	require.Equal(t, rp.Amount, expectedAmount)
 }
 
 func Test_EmptySignaturesShouldFail(t *testing.T) {
