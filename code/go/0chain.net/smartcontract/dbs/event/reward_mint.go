@@ -57,7 +57,7 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardMintQuery) ([]
 	rawQuery := fmt.Sprintf(`
 		WITH
 		block_info as (
-			select b.from as from, b.to as to, ceil((b.to::FLOAT - b.from::FLOAT)/ %d)::INTEGER as step from
+			select b.from as from, b.to as to, ceil(((b.to::FLOAT - b.from::FLOAT)/ %d) + 1)::INTEGER as step from
 				(select min(round) as from, max(round) as to from blocks where creation_date between %d and %d) as b
 		),
 		ranges AS (
