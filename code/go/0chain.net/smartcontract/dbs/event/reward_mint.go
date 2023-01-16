@@ -57,16 +57,17 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardMintQuery) ([]
 	rawQuery := fmt.Sprintf(`
 		WITH
 		block_info as (
-			select b.from as from, b.to as to, ceil(((b.to::FLOAT - b.from::FLOAT)/ %d) + 1)::INTEGER as step from
+			select b.from as from, b.to as to, ceil((b.to::FLOAT - b.from::FLOAT)/ %d)::INTEGER as step from
 				(select min(round) as from, max(round) as to from blocks where creation_date between %d and %d) as b
 		),
 		ranges AS (
-			SELECT t AS r_min, t+(select step from block_info)-1 AS r_max
+			SELECT t AS r_min, t+(select step from block_info)-1 AS r_max, (select "to" from block_info) AS max_round
 			FROM generate_series((select "from" from block_info), (select "to" from block_info), (select step from block_info)) as t
 		)
 		SELECT coalesce(%s, 0) as val
 		FROM ranges r
 		LEFT JOIN reward_mints rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%s'
+		WHERE r.r_max <= r.max_round + 1
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
 	`, query.DataPoints, query.StartDate.UnixNano(), query.EndDate.UnixNano(), "sum(amount)", query.ClientID)
