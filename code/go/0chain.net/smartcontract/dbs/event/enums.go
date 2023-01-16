@@ -83,8 +83,6 @@ const (
 	TagUpdateAllocationStat
 	TagUpdateBlobberStat
 	TagCollectProviderReward
-	TagSendTransfer
-	TagReceiveTransfer
 	TagLockStakePool
 	TagUnlockStakePool
 	TagLockWritePool
@@ -182,8 +180,6 @@ func initTagString() {
 	TagString[TagUpdateAllocationStat] = "TagUpdateAllocationStat"
 	TagString[TagUpdateBlobberStat] = "TagUpdateBlobberStat"
 	TagString[TagCollectProviderReward] = "TagCollectProviderReward"
-	TagString[TagSendTransfer] = "TagSendTransfer"
-	TagString[TagReceiveTransfer] = "TagReceiveTransfer"
 	TagString[TagLockStakePool] = "TagLockStakePool"
 	TagString[TagUnlockStakePool] = "TagUnlockStakePool"
 	TagString[TagLockWritePool] = "TagLockWritePool"
