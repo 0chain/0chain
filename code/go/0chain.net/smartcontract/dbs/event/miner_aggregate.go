@@ -138,7 +138,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 		logging.Logger.Error("getting miner snapshots", zap.Error(err))
 		return
 	}
-	logging.Logger.Debug("miner_snapshot", zap.Int("total_old_miners", len(oldMiners)), zap.Any("oldMiner", oldMiners))
+	logging.Logger.Debug("miner_snapshot", zap.Int("total_old_miners", len(oldMiners)))
 
 	var aggregates []MinerAggregate
 	for _, current := range currentMiners {
