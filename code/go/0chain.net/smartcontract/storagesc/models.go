@@ -1346,13 +1346,14 @@ func getMaxChallengeCompletionTime() time.Duration {
 // return the expired challenge ids, or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp) ([]string, error) {
+	now common.Timestamp, blobberID string) ([]string, error) {
 	var (
 		expiredChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
 	)
 
 	cct := getMaxChallengeCompletionTime()
 	for _, oc := range allocChallenges.OpenChallenges {
+		if oc.BlobberID != blobberID { continue }
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break

@@ -1107,7 +1107,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	expiredIDs, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created)
+	expiredIDs, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created, challenge.BlobberID)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}
