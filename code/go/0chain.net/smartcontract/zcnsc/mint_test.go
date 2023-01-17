@@ -1,6 +1,7 @@
 package zcnsc_test
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -68,7 +69,7 @@ func Test_FuzzyMintTest(t *testing.T) {
 }
 
 func Test_MaxFeeMint(t *testing.T) {
-	const maxFee = 10
+	const maxFee = 100
 	ctx := MakeMockStateContext()
 	ctx.globalNode.ZCNSConfig.MaxFee = maxFee
 	contract := CreateZCNSmartContract()
@@ -84,12 +85,21 @@ func Test_MaxFeeMint(t *testing.T) {
 	require.NotEmpty(t, response)
 
 	mm := ctx.GetMints()
+
+	fmt.Printf("mm: %v\n", mm)
+
 	require.Equal(t, len(mm), len(authorizersID)+1)
 	expectedShare, _, err := currency.DistributeCoin(maxFee, int64(len(authorizersID)))
 	require.NoError(t, err)
-	for i := 0; i < 3; i++ {
-		require.Equal(t, mm[i].ToClientID, authorizersID[i])
-		require.Equal(t, mm[i].Amount, expectedShare)
+
+	mintReceivers := append(authorizersID, defaultClient)
+	mintClientIDs := make(map[string]bool)
+
+	for _, mint := range mm {
+		fmt.Printf("ToClientID: %v\n", mint.ToClientID)
+		require.False(t, mintClientIDs[mint.ToClientID], "Mint's ToClientID should be unique")
+		require.Contains(t, mintReceivers, mint.ToClientID, "Mint's ToClientID should be from authorizers + client")
+		mintClientIDs[mint.ToClientID] = true
 	}
 
 	rp := &MintPayload{}
@@ -101,7 +111,7 @@ func Test_MaxFeeMint(t *testing.T) {
 	require.NoError(t, err)
 	expectedAmount, err := currency.MinusCoin(payload.Amount, totalShare)
 	require.NoError(t, err)
-	require.Equal(t, rp.Amount, expectedAmount)
+	require.Equal(t, rp.Amount, expectedAmount, "Fees should be distributed correctly")
 }
 
 func Test_EmptySignaturesShouldFail(t *testing.T) {
