@@ -64,7 +64,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not start resource: %s", err)
 	}
 
-	hostAndPort := resource.GetHostPort("5432/tcp")
+	hostAndPort := getHostPort(resource, "5432/tcp")
 	databaseUrl := fmt.Sprintf("postgres://zchain_user:zchian@%s/events_db?sslmode=disable", hostAndPort)
 
 	log.Println("Connecting to database on url:", databaseUrl)
@@ -116,4 +116,12 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(code)
+}
+
+func getHostPort(resource *dockertest.Resource, id string) string {
+	dockerURL := os.Getenv("DOCKER_HOST_ENV")
+	if dockerURL == "" {
+		return resource.GetHostPort(id)
+	}
+	return dockerURL + ":" + resource.GetPort(id)
 }
