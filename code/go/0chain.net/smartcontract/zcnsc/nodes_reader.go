@@ -1,7 +1,12 @@
 package zcnsc
 
 import (
+	"fmt"
+
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/chain/state"
@@ -11,15 +16,25 @@ var (
 	cfg = config.SmartContractConfig
 )
 
+func NewAuthorizerNode(id string) *AuthorizerNode {
+	return &AuthorizerNode{
+		Provider: &provider.Provider{
+			ID:           id,
+			ProviderType: spenum.Authorizer,
+		},
+	}
+}
+
 // GetAuthorizerNode returns error if node not found
 func GetAuthorizerNode(id string, ctx state.StateContextI) (*AuthorizerNode, error) {
-	var node = new(AuthorizerNode)
-	node.ID = id
+	var node = NewAuthorizerNode(id)
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	if err != nil {
 		return nil, err
 	}
-
+	if node.ProviderType != spenum.Authorizer {
+		return nil, fmt.Errorf("provider is %s should be %s", node.ProviderType, spenum.Blobber)
+	}
 	return node, nil
 }
 

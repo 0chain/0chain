@@ -5,30 +5,39 @@ import (
 	"fmt"
 	"math/big"
 
+	"0chain.net/smartcontract/provider"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
-	commonsc "0chain.net/smartcontract/common"
-
 )
 
 const (
 	blobberHealthTime = 60 * 60 // 1 Hour
 )
 
+func newBlobber(id string) *StorageNode {
+	return &StorageNode{
+		Provider: &provider.Provider{
+			ID:           id,
+			ProviderType: spenum.Blobber,
+		},
+	}
+}
+
 func getBlobber(
 	blobberID string,
 	balances cstate.CommonStateContextI,
 ) (*StorageNode, error) {
-	blobber := new(StorageNode)
-	blobber.ID = blobberID
+	blobber := newBlobber(blobberID)
 	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
 	if err != nil {
 		return nil, err
@@ -329,9 +338,9 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI,
 ) (string, error) {
 	var (
-		blobber *StorageNode
+		blobber  *StorageNode
 		downtime uint64
-		err     error
+		err      error
 	)
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed",

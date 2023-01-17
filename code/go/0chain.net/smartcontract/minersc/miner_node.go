@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
@@ -21,8 +23,10 @@ type MinerNode struct {
 
 func NewMinerNode() *MinerNode {
 	mn := &MinerNode{
-		SimpleNode: &SimpleNode{},
-		StakePool:  stakepool.NewStakePool(),
+		SimpleNode: &SimpleNode{
+			Provider: &provider.Provider{},
+		},
+		StakePool: stakepool.NewStakePool(),
 	}
 	return mn
 }
@@ -34,11 +38,11 @@ type NodePool struct {
 }
 
 func GetSharderKey(sid string) datastore.Key {
-	return ADDRESS + sid
+	return provider.GetKey(sid)
 }
 
 func (mn *MinerNode) GetKey() datastore.Key {
-	return ADDRESS + mn.ID
+	return provider.GetKey(mn.ID)
 }
 
 func (mn *MinerNode) numDelegates() int {

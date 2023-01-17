@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/currency"
 
@@ -30,7 +33,12 @@ func init() {
 func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
 	ctx := MakeMockStateContext()
 	for _, authorizerKey := range authorizersID {
-		node := &AuthorizerNode{ID: authorizerKey}
+		node := &AuthorizerNode{
+			Provider: &provider.Provider{
+				ID:           authorizerKey,
+				ProviderType: spenum.Authorizer,
+			},
+		}
 		err := ctx.GetTrieNode(node.GetKey(), node)
 		require.NoError(t, err)
 	}

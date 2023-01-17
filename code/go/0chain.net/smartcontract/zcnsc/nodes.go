@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -234,13 +235,16 @@ type AuthorizerNode struct {
 // ID = authorizer node public id = Client ID
 func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 	a := &AuthorizerNode{
+		Provider: &provider.Provider{
+			ID:           ID,
+			ProviderType: spenum.Authorizer,
+		},
 		PublicKey: PK,
 		URL:       URL,
 		Config: &AuthorizerConfig{
 			Fee: 0,
 		},
 	}
-	a.ID = ID
 	return a
 }
 
@@ -255,7 +259,7 @@ func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) error {
 }
 
 func (an *AuthorizerNode) GetKey() string {
-	return fmt.Sprintf("%s:%s:%s", ADDRESS, AuthorizerNodeType, an.ID)
+	return provider.GetKey(an.ID)
 }
 
 func (an *AuthorizerNode) Encode() []byte {

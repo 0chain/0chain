@@ -3,6 +3,8 @@ package storagesc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
@@ -95,12 +97,20 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	return string(buff), nil
 }
 
+func newValidator(id string) *ValidationNode {
+	return &ValidationNode{
+		Provider: &provider.Provider{
+			ID:           id,
+			ProviderType: spenum.Validator,
+		},
+	}
+}
+
 func getValidator(
 	validatorID string,
 	balances state.CommonStateContextI,
 ) (*ValidationNode, error) {
-	validator := new(ValidationNode)
-	validator.ID = validatorID
+	validator := newValidator(validatorID)
 	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
 	if err != nil {
 		return nil, err

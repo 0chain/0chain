@@ -10,10 +10,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
-	commonsc "0chain.net/smartcontract/common"
 )
 
 func doesMinerExist(pkey datastore.Key,
@@ -99,7 +99,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		return "", common.NewError("add_miner",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
-	
+
 	// Check delegate wallet is not the same as operational wallet (PUK)
 	if err := commonsc.ValidateDelegateWallet(newMiner.PublicKey, newMiner.Settings.DelegateWallet); err != nil {
 		return "", err
@@ -341,14 +341,15 @@ func (msc *MinerSmartContract) getMinersList(balances cstate.QueryStateContextI)
 }
 
 func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, error) {
-
 	mn := NewMinerNode()
 	mn.ID = id
 	err := state.GetTrieNode(mn.GetKey(), mn)
 	if err != nil {
 		return nil, err
 	}
-
+	if mn.ProviderType != spenum.Miner {
+		return nil, fmt.Errorf("provider is %s should be %s", mn.ProviderType, spenum.Blobber)
+	}
 	return mn, nil
 }
 

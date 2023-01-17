@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/encryption"
@@ -153,7 +156,7 @@ func Test_AuthorizerPartialUpSizeSerialization(t *testing.T) {
 		Config *AuthorizerConfig `json:"config"`
 	}
 
-	target := &AuthorizerNode{}
+	target := NewAuthorizerNode("")
 	source := &PartialState{
 		Config: &AuthorizerConfig{
 			Fee: currency.Coin(222),
@@ -195,7 +198,7 @@ func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 		},
 	}
 
-	target := &AuthorizerNode{}
+	target := NewAuthorizerNode("")
 	err := target.Decode(source.Encode())
 	require.NoError(t, err)
 	require.Equal(t, currency.Coin(222), target.Config.Fee)
@@ -203,7 +206,10 @@ func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 
 func Test_AuthorizerNodeSerialization(t *testing.T) {
 	source := &AuthorizerNode{
-		ID:        "aaa",
+		Provider: &provider.Provider{
+			ID:           "aaa",
+			ProviderType: spenum.Authorizer,
+		},
 		PublicKey: "bbb",
 		URL:       "ddd",
 		Config: &AuthorizerConfig{
@@ -211,7 +217,7 @@ func Test_AuthorizerNodeSerialization(t *testing.T) {
 		},
 	}
 
-	target := &AuthorizerNode{}
+	target := NewAuthorizerNode("")
 
 	err := target.Decode(source.Encode())
 	require.NoError(t, err)
