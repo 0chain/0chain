@@ -21,7 +21,7 @@ type BlobberSnapshot struct {
 	TotalStake          currency.Coin `json:"total_stake"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
-	OpenChallenges      uint64        `json:"open_challenges"`
+	OpenChallenges      int64        `json:"open_challenges"`
 	CreationRound       int64         `json:"creation_round" gorm:"index"`
 	RankMetric          float64       `json:"rank_metric"`
 }
