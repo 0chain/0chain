@@ -2,13 +2,10 @@ package event
 
 import (
 	"testing"
-	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,10 +15,8 @@ func init() {
 }
 
 func TestEventDb_rewardProviders(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
-	logging.InitLogging("development", "")
-
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	db, clean := GetTestEventDB(t)
+	defer clean()
 
 	type Stat struct {
 		// for miner (totals)
@@ -106,33 +101,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 			Latitude:  0,
 		}
 	}
-	//    enabled: true
-	//    name: events_db
-	//    user: zchain_user
-	//    password: zchian
-	//    host: localhost
-	//    port: 5432
-	//    max_idle_conns: 100
-	//    max_open_conns: 200
-	//    conn_max_lifetime: 20s
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            "events_db",
-		User:            "zchain_user",
-		Password:        "zchian",
-		Host:            "localhost",
-		Port:            "5432",
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	eventDb, err := NewEventDb(access, config.DbSettings{Debug: true})
-	if err != nil {
-		t.Error(err)
-	}
-	eventDb.AutoMigrate()
-	defer eventDb.Drop()
-
 	// Miner - Add Event
 	mn := MinerNode{
 		&SimpleNode{
@@ -193,11 +161,11 @@ func TestEventDb_rewardProviders(t *testing.T) {
 	mnMiner1 := convertMn(mn)
 	mnMiner2 := convertMn(mn2)
 
-	if err := eventDb.addOrOverwriteMiner([]Miner{mnMiner1, mnMiner2}); err != nil {
+	if err := db.addOrOverwriteMiner([]Miner{mnMiner1, mnMiner2}); err != nil {
 		t.Error(err)
 	}
 
-	if err := eventDb.rewardProviders([]ProviderRewards{{
+	if err := db.rewardProviders([]ProviderRewards{{
 		ProviderID:   mnMiner1.ID,
 		Rewards:      20,
 		TotalRewards: 40,
@@ -209,11 +177,11 @@ func TestEventDb_rewardProviders(t *testing.T) {
 		t.Error(err)
 	}
 
-	assertMinerRewards(t, err, eventDb, mnMiner1.ID, int64(20+5), int64(40))
-	assertMinerRewards(t, err, eventDb, mnMiner2.ID, int64(30+5), int64(50))
+	assertMinerRewards(t, db, mnMiner1.ID, int64(20+5), int64(40))
+	assertMinerRewards(t, db, mnMiner2.ID, int64(30+5), int64(50))
 }
 
-func assertMinerRewards(t *testing.T, err error, eventDb *EventDb, minerId string, reward, totalReward int64) {
+func assertMinerRewards(t *testing.T, eventDb *EventDb, minerId string, reward, totalReward int64) {
 	miner, err := eventDb.GetMiner(minerId)
 	if err != nil {
 		t.Error(err)

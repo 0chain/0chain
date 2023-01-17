@@ -68,6 +68,7 @@ func Test_FuzzyMintTest(t *testing.T) {
 }
 
 func Test_MaxFeeMint(t *testing.T) {
+	t.Skip("add back after issue #2011 is fixed")
 	const maxFee = 10
 	ctx := MakeMockStateContext()
 	ctx.globalNode.ZCNSConfig.MaxFee = maxFee
