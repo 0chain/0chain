@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -113,6 +114,7 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 
 	delay := time.Millisecond
 	ts := time.Now()
+	var success bool
 	for tries := 1; tries <= 9; tries++ {
 		err := sc.storeTransactions(sTxns)
 		if err != nil {
@@ -122,9 +124,15 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 			continue
 		}
 
+		success = true
 		logging.Logger.Debug("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
 		break
 	}
+
+	if !success {
+		return errors.New("failed to save transactions")
+	}
+
 	duration := time.Since(ts)
 	txnSaveTimer.UpdateSince(ts)
 	p95 := txnSaveTimer.Percentile(.95)
