@@ -1,7 +1,6 @@
 package zcnsc_test
 
 import (
-	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -86,8 +85,6 @@ func Test_MaxFeeMint(t *testing.T) {
 
 	mm := ctx.GetMints()
 
-	fmt.Printf("mm: %v\n", mm)
-
 	require.Equal(t, len(mm), len(authorizersID)+1)
 	expectedShare, _, err := currency.DistributeCoin(maxFee, int64(len(authorizersID)))
 	require.NoError(t, err)
@@ -96,7 +93,6 @@ func Test_MaxFeeMint(t *testing.T) {
 	mintClientIDs := make(map[string]bool)
 
 	for _, mint := range mm {
-		fmt.Printf("ToClientID: %v\n", mint.ToClientID)
 		require.False(t, mintClientIDs[mint.ToClientID], "Mint's ToClientID should be unique")
 		require.Contains(t, mintReceivers, mint.ToClientID, "Mint's ToClientID should be from authorizers + client")
 		mintClientIDs[mint.ToClientID] = true
