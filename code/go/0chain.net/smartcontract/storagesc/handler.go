@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -2419,7 +2421,10 @@ type storageNodeResponse struct {
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		StorageNode: &StorageNode{
-			ID:      blobber.ID,
+			Provider: &provider.Provider{
+				ID:           blobber.ID,
+				ProviderType: spenum.Blobber,
+			},
 			BaseURL: blobber.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  blobber.Latitude,
@@ -2433,7 +2438,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			},
 			Capacity:        blobber.Capacity,
 			Allocated:       blobber.Allocated,
-			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
+			LastHealthCheck: blobber.LastHealthCheck,
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     blobber.DelegateWallet,
 				MinStake:           blobber.MinStake,

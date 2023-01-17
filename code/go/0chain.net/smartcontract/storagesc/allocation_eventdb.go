@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/transaction"
 
 	common2 "0chain.net/smartcontract/common"
@@ -54,9 +56,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &StorageNode{
-			ID:           b.ID,
-			BaseURL:      b.BaseURL,
-			ProviderType: spenum.Blobber,
+			Provider: &provider.Provider{
+				ID:           b.ID,
+				ProviderType: spenum.Blobber,
+			},
+			BaseURL: b.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  b.Latitude,
 				Longitude: b.Longitude,
@@ -65,11 +69,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			Capacity:        b.Capacity,
 			Allocated:       b.Allocated,
 			SavedData:       b.SavedData,
-			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
+			LastHealthCheck: b.LastHealthCheck,
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     b.DelegateWallet,
-				MinStake:           currency.Coin(b.MinStake),
-				MaxStake:           currency.Coin(b.MaxStake),
+				MinStake:           b.MinStake,
+				MaxStake:           b.MaxStake,
 				MaxNumDelegates:    b.NumDelegates,
 				ServiceChargeRatio: b.ServiceCharge,
 			},

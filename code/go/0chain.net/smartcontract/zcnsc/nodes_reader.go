@@ -13,7 +13,8 @@ var (
 
 // GetAuthorizerNode returns error if node not found
 func GetAuthorizerNode(id string, ctx state.StateContextI) (*AuthorizerNode, error) {
-	node := &AuthorizerNode{ID: id}
+	var node = new(AuthorizerNode)
+	node.ID = id
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	if err != nil {
 		return nil, err

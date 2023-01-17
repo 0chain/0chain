@@ -197,9 +197,8 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 }
 
 type ValidationNode struct {
-	ID                string             `json:"id"`
+	*provider.Provider
 	BaseURL           string             `json:"url"`
-	ProviderType      spenum.Provider    `json:"provider_type"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 }
@@ -336,9 +335,8 @@ type Info struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID                      string                 `json:"id"`
+	*provider.Provider
 	BaseURL                 string                 `json:"url"`
-	ProviderType            spenum.Provider        `json:"provider_type"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity

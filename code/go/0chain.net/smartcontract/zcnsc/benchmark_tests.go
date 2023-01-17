@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract"
@@ -117,7 +119,10 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				endpoint: sc.UpdateAuthorizerConfig,
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0]),
 				input: (&AuthorizerNode{
-					ID:        data.Clients[0],
+					Provider: &provider.Provider{
+						ID:           data.Clients[0],
+						ProviderType: spenum.Validator,
+					},
 					PublicKey: data.PublicKeys[0],
 					URL:       "http://localhost:3030",
 					Config: &AuthorizerConfig{

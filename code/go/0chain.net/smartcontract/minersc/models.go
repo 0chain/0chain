@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract"
@@ -665,7 +667,8 @@ type SimpleNodeGeolocation struct {
 
 // swagger:model SimpleNode
 type SimpleNode struct {
-	ID          string                `json:"id" validate:"hexadecimal,len=64"`
+	*provider.Provider
+	ID          string
 	N2NHost     string                `json:"n2n_host"`
 	Host        string                `json:"host"`
 	Port        int                   `json:"port"`
