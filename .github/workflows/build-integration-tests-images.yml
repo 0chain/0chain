@@ -30,7 +30,8 @@ jobs:
     - name: Docker Init Setup.
       run: |
         sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+        make install-mockery
+        make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
@@ -52,12 +53,7 @@ jobs:
     - name: Run Basic conductor tests
       run: |
         ./docker.local/bin/start.conductor.sh basic
-        
-  CLEAN_UP:
-    runs-on: [self-hosted, docker-builds]
-    needs: [BUILD_INTEGRATION_IMAGES]
-    if: always()
-    steps:
+
     - name: Cleanup 
       run: |
         rm -rf ./*
