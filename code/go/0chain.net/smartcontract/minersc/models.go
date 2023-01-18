@@ -668,7 +668,6 @@ type SimpleNodeGeolocation struct {
 // swagger:model SimpleNode
 type SimpleNode struct {
 	*provider.Provider
-	ID          string
 	N2NHost     string                `json:"n2n_host"`
 	Host        string                `json:"host"`
 	Port        int                   `json:"port"`

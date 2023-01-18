@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/core/common"
 
 	"github.com/0chain/common/core/currency"
@@ -102,7 +104,10 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        encryption.Hash("magic_block_miner_1"),
+					Provider: &provider.Provider{
+						ID:           encryption.Hash("magic_block_miner_1"),
+						ProviderType: spenum.Miner,
+					},
 					PublicKey: "miner's public key",
 					N2NHost:   "new n2n_host",
 					Host:      "new host",
@@ -125,7 +130,10 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        data.InactiveSharder,
+					Provider: &provider.Provider{
+						ID:           data.InactiveSharder,
+						ProviderType: spenum.Sharder,
+					},
 					PublicKey: data.InactiveSharderPK,
 					N2NHost:   "new n2n_host",
 					Host:      "new host",
@@ -304,7 +312,10 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID: data.Miners[0],
+					Provider: &provider.Provider{
+						ID:           data.Miners[0],
+						ProviderType: spenum.Miner,
+					},
 				},
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
@@ -326,7 +337,10 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID: data.Miners[0],
+					Provider: &provider.Provider{
+						ID:           data.Sharders[0],
+						ProviderType: spenum.Sharder,
+					},
 				},
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
@@ -374,7 +388,10 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        data.Sharders[0],
+					Provider: &provider.Provider{
+						ID:           data.Sharders[0],
+						ProviderType: spenum.Sharder,
+					},
 					PublicKey: "my public key",
 				},
 			}).Encode(),
@@ -387,7 +404,10 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        data.Miners[1],
+					Provider: &provider.Provider{
+						ID:           data.Miners[1],
+						ProviderType: spenum.Miner,
+					},
 					PublicKey: "my public key",
 				},
 			}).Encode(),
@@ -400,7 +420,10 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        data.Sharders[0],
+					Provider: &provider.Provider{
+						ID:           data.Sharders[0],
+						ProviderType: spenum.Sharder,
+					},
 					PublicKey: "my public key",
 				},
 			}).Encode(),
@@ -414,7 +437,6 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakepool.CollectRewardRequest{
-					//PoolId:       miner00,
 					ProviderType: spenum.Miner,
 					ProviderId:   data.Miners[0],
 				})

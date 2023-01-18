@@ -4,6 +4,9 @@ import (
 	"math/rand"
 	"testing"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
@@ -110,7 +113,12 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 
 	dmn.setConfigs(gn)
 	for _, mn := range miners {
-		dmn.SimpleNodes[mn.miner.id] = &SimpleNode{ID: mn.miner.id}
+		dmn.SimpleNodes[mn.miner.id] = &SimpleNode{
+			Provider: &provider.Provider{
+				ID:           mn.miner.id,
+				ProviderType: spenum.Miner,
+			},
+		}
 		dmn.Waited[mn.miner.id] = true
 	}
 

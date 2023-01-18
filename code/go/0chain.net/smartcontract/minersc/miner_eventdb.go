@@ -5,6 +5,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
@@ -16,7 +17,10 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNode{
-		ID:          edbMiner.ID,
+		Provider: &provider.Provider{
+			ID:           edbMiner.ID,
+			ProviderType: spenum.Miner,
+		},
 		N2NHost:     edbMiner.N2NHost,
 		Host:        edbMiner.Host,
 		Port:        edbMiner.Port,
@@ -66,7 +70,6 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	return event.Miner{
-
 		N2NHost:   mn.N2NHost,
 		Host:      mn.Host,
 		Port:      mn.Port,
@@ -117,9 +120,9 @@ func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error
 
 func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
 	data := dbs.DbHealthCheck{
-		ID: 			 mn.ID,
+		ID:              mn.ID,
 		LastHealthCheck: mn.LastHealthCheck,
-		Downtime:		 downtime,
+		Downtime:        downtime,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagMinerHealthCheck, mn.ID, data)
