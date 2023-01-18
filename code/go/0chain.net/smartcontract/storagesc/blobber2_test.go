@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -304,8 +305,10 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 
 	blobber := &StorageNode{
-		ID:           blobberId,
-		ProviderType: spenum.Blobber,
+		Provider: &provider.Provider{
+			ID:           blobberId,
+			ProviderType: spenum.Blobber,
+		},
 		Terms: Terms{
 			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
