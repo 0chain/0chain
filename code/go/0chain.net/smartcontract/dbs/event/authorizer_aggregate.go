@@ -150,6 +150,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 			Round:        round,
 			AuthorizerID: current.ID,
 			BucketID:     current.BucketId,
+			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
@@ -158,6 +159,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fee
+		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 	}
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {

@@ -19,7 +19,7 @@ type ValidatorAggregate struct {
 
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin	`json:"total_rewards"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -144,14 +144,18 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 			continue
 		}
 		aggregate := ValidatorAggregate{
-			Round:       round,
-			ValidatorID: current.ID,
-			BucketID:    current.BucketId,
+			Round:        round,
+			ValidatorID:  current.ID,
+			BucketID:     current.BucketId,
+			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
 
 		aggregates = append(aggregates, aggregate)
+
+		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
+
 	}
 
 	if len(aggregates) > 0 {
