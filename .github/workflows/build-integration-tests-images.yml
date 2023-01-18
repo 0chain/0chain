@@ -26,9 +26,7 @@ jobs:
     - name: Docker Init Setup.
       run: |
         sudo apt update -y
-        sudo usermod -aG sudo runner
         sudo apt-get -y install mockery
-        apt-get -y install mockery
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
