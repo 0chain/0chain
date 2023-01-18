@@ -9,7 +9,7 @@ on:
 jobs:
   BUILD_INTEGRATION_IMAGES:
     name: BUILD-INTEGRATION-IMAGES
-    runs-on: [self-hosted, tests-suite]
+    runs-on: [self-hosted, docker-builds]
     env:
       GOPATH: "/root/actions-runner/_work/_tool/go"
       GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
