@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -67,9 +69,11 @@ func TestNewAllocation(t *testing.T) {
 			"4", "5", "6", "7"},
 	}
 	var goodBlobber = StorageNode{
-		Capacity:     536870912,
-		Allocated:    73,
-		ProviderType: spenum.Blobber,
+		Provider: &provider.Provider{
+			ProviderType: spenum.Blobber,
+		},
+		Capacity:  536870912,
+		Allocated: 73,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -132,8 +136,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 	}
 
 	var blobberTemplate = StorageNode{
-		Capacity:     536870912,
-		ProviderType: spenum.Blobber,
+		Provider: &provider.Provider{
+			ProviderType: spenum.Blobber,
+		},
+		Capacity: 536870912,
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
@@ -251,8 +257,10 @@ func TestFinalizeAllocation(t *testing.T) {
 		minLockDemand: 0.1,
 	}
 	var blobberTemplate = StorageNode{
-		Capacity:     536870912,
-		ProviderType: spenum.Blobber,
+		Capacity: 536870912,
+		Provider: &provider.Provider{
+			ProviderType: spenum.Blobber,
+		},
 		Terms: Terms{
 			MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 			ReadPrice:        zcnToBalance(blobberYaml.readPrice),
