@@ -55,11 +55,6 @@ jobs:
       run: |
         ./docker.local/bin/start.conductor.sh basic
 
-  CLEAN_UP:
-    runs-on: [self-hosted, docker-builds]
-    needs: [BUILD_INTEGRATION_IMAGES]
-    if: always()
-    steps:
     - name: Cleanup 
       run: |
         rm -rf ./*
