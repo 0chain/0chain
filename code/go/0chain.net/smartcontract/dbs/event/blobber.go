@@ -49,7 +49,7 @@ type Blobber struct {
 
 	ChallengesPassed    uint64  `json:"challenges_passed"`
 	ChallengesCompleted uint64  `json:"challenges_completed"`
-	OpenChallenges      uint64  `json:"open_challenges"`
+	OpenChallenges      int64  `json:"open_challenges"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
