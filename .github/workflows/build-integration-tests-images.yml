@@ -31,8 +31,8 @@ jobs:
       run: |
         sudo apt update -y
         sudo usermod -aG sudo runner
-        make install-mockery
-        make build-mocks
+        sudo make install-mockery
+        # sudo make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
