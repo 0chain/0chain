@@ -1108,6 +1108,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	// remove expired challenges
 	expiredIDs, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created, challenge.BlobberID)
+	lenExpiredIDs   := len(expiredIDs)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}
@@ -1116,7 +1117,11 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	for _, id := range expiredIDs {
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, id))
 		if err != nil {
-			return common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
+			if err == util.ErrValueNotPresent {
+				lenExpiredIDs--
+			} else {
+				return common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
+			}
 		}
 	}
 
@@ -1151,7 +1156,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	beforeEmitAddChallenge(challInfo)
 
-	emitAddChallenge(challInfo, len(expiredIDs), balances)
+	emitAddChallenge(challInfo, lenExpiredIDs, balances)
 	return nil
 }
 
