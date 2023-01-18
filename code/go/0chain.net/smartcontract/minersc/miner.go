@@ -348,7 +348,7 @@ func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, erro
 		return nil, err
 	}
 	if mn.ProviderType != spenum.Miner {
-		return nil, fmt.Errorf("provider is %s should be %s", mn.ProviderType, spenum.Blobber)
+		return nil, fmt.Errorf("provider is %s should be %s", mn.ProviderType, spenum.Miner)
 	}
 	return mn, nil
 }
