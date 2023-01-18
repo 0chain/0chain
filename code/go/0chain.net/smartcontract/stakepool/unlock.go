@@ -50,6 +50,7 @@ func (sp *StakePool) UnlockPool(clientID string, providerType spenum.Provider, p
 		ProviderType: providerType,
 		Amount:       b,
 		Reward:		  amount,
+		Total:        b + i,
 	}
 
 	if dp.Status == spenum.Deleted {

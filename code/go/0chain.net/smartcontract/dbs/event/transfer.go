@@ -11,6 +11,7 @@ type DelegatePoolLock struct {
 	ProviderType spenum.Provider `json:"provider_type"`
 	Amount       int64           `json:"amount"`
 	Reward		 currency.Coin   `json:"reward"`
+	Total		 int64			 `json:"total"`
 }
 
 type ReadPoolLock struct {
