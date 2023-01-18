@@ -20,7 +20,7 @@ type MinerAggregate struct {
 	Fees          currency.Coin `json:"fees"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin	`json:"total_rewards"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -147,9 +147,10 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 			continue
 		}
 		aggregate := MinerAggregate{
-			Round:    round,
-			MinerID:  current.ID,
-			BucketID: current.BucketId,
+			Round:        round,
+			MinerID:      current.ID,
+			BucketID:     current.BucketId,
+			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
@@ -159,7 +160,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fees
-
+		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 		gs.TransactionsCount++
 	}
 	if len(aggregates) > 0 {

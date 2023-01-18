@@ -114,7 +114,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		Where("blobbers.id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Joins("Rewards").
 		Find(&currentBlobbers)
-	
+
 	if result.Error != nil {
 		logging.Logger.Error("getting current blobbers", zap.Error(result.Error))
 		return
@@ -170,6 +170,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		gs.AllocatedStorage += aggregate.Allocated - old.Allocated
 		gs.MaxCapacityStorage += aggregate.Capacity - old.Capacity
 		gs.UsedStorage += aggregate.SavedData - old.SavedData
+		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
 		if aggregate.WritePrice == 0 {

@@ -33,6 +33,7 @@ type Snapshot struct {
 	// updated from blobber snapshot aggregate table
 	AverageWritePrice    int64 `json:"average_write_price"`              //*494 AVG it's the price from the terms and triggered with their updates //???
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
+	TotalRewards         int64 `json:"total_rewards"`                    //SUM total of all rewards
 	SuccessfulChallenges int64 `json:"successful_challenges"`            //*493 SUM percentage of challenges failed by a particular blobber
 	TotalChallenges      int64 `json:"total_challenges"`                 //*493 SUM percentage of challenges failed by a particular blobber
 	AllocatedStorage     int64 `json:"allocated_storage"`                //*490 SUM clients have locked up storage by purchasing allocations (new + previous + update -sub fin+cancel or reduceed)

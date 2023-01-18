@@ -20,7 +20,7 @@ type SharderAggregate struct {
 	Fees          currency.Coin `json:"fees"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin	`json:"total_rewards"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -147,9 +147,10 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 			continue
 		}
 		aggregate := SharderAggregate{
-			Round:     round,
-			SharderID: current.ID,
-			BucketID:  current.BucketId,
+			Round:        round,
+			SharderID:    current.ID,
+			BucketID:     current.BucketId,
+			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
@@ -158,7 +159,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fees
-
+		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 		gs.TransactionsCount++
 	}
 	if len(aggregates) > 0 {
