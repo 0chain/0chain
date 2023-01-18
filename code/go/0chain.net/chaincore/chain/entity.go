@@ -565,7 +565,7 @@ func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 	return balance
 }
 
-/*setupInitialState - setup the initial state based on configuration */
+/*setupInitialState - set up the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
