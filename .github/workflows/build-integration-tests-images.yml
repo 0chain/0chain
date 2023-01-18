@@ -31,8 +31,8 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
-        make install-mockery
-        make build-mocks
+        sudo make install-mockery
+        sudo make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
@@ -55,7 +55,7 @@ jobs:
       run: |
         ./docker.local/bin/start.conductor.sh basic
         
-  notify_slack:
+  CLEAN_UP:
     runs-on: [self-hosted, docker-builds]
     needs: [BUILD_INTEGRATION_IMAGES]
     if: always()
