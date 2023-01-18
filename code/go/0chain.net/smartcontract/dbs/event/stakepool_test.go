@@ -22,7 +22,7 @@ func init() {
 }
 
 func TestEventDb_rewardProviders(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	logging.InitLogging("development", "")
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
@@ -99,8 +99,9 @@ func TestEventDb_rewardProviders(t *testing.T) {
 				MinStake:       mn.MinStake,
 				MaxStake:       mn.MaxStake,
 				Rewards: ProviderRewards{
-					ProviderID: mn.ID,
-					Rewards:    mn.Stat.GeneratorRewards,
+					ProviderID:   mn.ID,
+					Rewards:      mn.Stat.GeneratorRewards,
+					TotalRewards: mn.Stat.GeneratorRewards,
 				},
 				LastHealthCheck: mn.LastHealthCheck,
 			},
@@ -134,6 +135,7 @@ func TestEventDb_rewardProviders(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	eventDb.Drop()
 	eventDb.AutoMigrate()
 	defer eventDb.Drop()
 
@@ -204,19 +206,17 @@ func TestEventDb_rewardProviders(t *testing.T) {
 	if err := eventDb.rewardProviders([]ProviderRewards{{
 		ProviderID:                    mnMiner1.ID,
 		Rewards:                       20,
-		TotalRewards:                  40,
 		RoundServiceChargeLastUpdated: 7,
 	}, {
 		ProviderID:                    mnMiner2.ID,
 		Rewards:                       30,
-		TotalRewards:                  50,
 		RoundServiceChargeLastUpdated: 7,
 	}}); err != nil {
 		t.Error(err)
 	}
 
-	assertMinerRewards(t, err, eventDb, mnMiner1.ID, int64(20+5), int64(40))
-	assertMinerRewards(t, err, eventDb, mnMiner2.ID, int64(30+5), int64(50))
+	assertMinerRewards(t, err, eventDb, mnMiner1.ID, int64(20+5), int64(25), 7)
+	assertMinerRewards(t, err, eventDb, mnMiner2.ID, int64(30+5), int64(35), 7)
 }
 
 func TestEventDb_rewardProviderDelegates(t *testing.T) {
@@ -323,9 +323,8 @@ func TestEventDb_rewardProviderDelegates(t *testing.T) {
 	eventDb, err := NewEventDb(access, config.DbSettings{Debug: true})
 	require.NoError(t, err)
 	require.NoError(t, eventDb.Drop())
-	eventDb.Drop()
-	eventDb.AutoMigrate()
-	defer eventDb.Drop()
+	require.NoError(t, eventDb.AutoMigrate())
+	defer require.NoError(t, eventDb.Drop())
 	defer eventDb.Close()
 
 	// Miner - Add Event
@@ -388,28 +387,63 @@ func TestEventDb_rewardProviderDelegates(t *testing.T) {
 	mnMiner1 := convertMn(mn)
 	mnMiner2 := convertMn(mn2)
 
-	require.NoError(t, eventDb.addMiner([]Miner{mnMiner1, mnMiner2}))
+	err = eventDb.addMiner([]Miner{mnMiner1, mnMiner2})
+	require.NoError(t, err)
+
+	err = eventDb.addDelegatePools([]DelegatePool{
+		{
+			PoolID:       "pool 1",
+			ProviderID:   mnMiner1.ID,
+			ProviderType: spenum.Miner,
+			Reward:       5,
+			TotalReward:  23,
+		},
+		{
+			PoolID:       "pool 2",
+			ProviderID:   mnMiner2.ID,
+			ProviderType: spenum.Miner,
+			Reward:       0,
+			TotalReward:  0,
+		},
+	})
+	require.NoError(t, err)
 
 	err = eventDb.rewardProviderDelegates([]DelegatePool{{
 		ProviderID:           mnMiner1.ID,
 		ProviderType:         spenum.Miner,
 		PoolID:               "pool 1",
 		Reward:               20,
-		TotalReward:          40,
 		RoundPoolLastUpdated: 7,
 	}, {
 		ProviderID:           mnMiner2.ID,
-		Reward:               30,
-		TotalReward:          50,
-		RoundPoolLastUpdated: 11,
+		ProviderType:         spenum.Miner,
+		PoolID:               "pool 1",
+		Reward:               11,
+		RoundPoolLastUpdated: 7,
 	}})
 	require.NoError(t, err)
 
-	//assertMinerRewards(t, err, eventDb, mnMiner1.ID, int64(20+5), int64(40))
-	//assertMinerRewards(t, err, eventDb, mnMiner2.ID, int64(30+5), int64(50))
+	requireDelegateRewards(t, eventDb, "pool 1", mnMiner1.ID, uint64(25), uint64(43), 7)
+	requireDelegateRewards(t, eventDb, "pool 1", mnMiner2.ID, uint64(11), uint64(11), 7)
 }
 
-func assertMinerRewards(t *testing.T, err error, eventDb *EventDb, minerId string, reward, totalReward int64) {
+func requireDelegateRewards(
+	t *testing.T,
+	eventDb *EventDb,
+	poolId, providerID string,
+	reward, totalReward uint64,
+	lastUpdated int64,
+) {
+	dp, err := eventDb.GetDelegatePool(poolId, providerID)
+	require.NoError(t, err)
+	require.EqualValues(t, reward, uint64(dp.Reward))
+	require.EqualValues(t, totalReward, uint64(dp.TotalReward))
+	require.EqualValues(t, lastUpdated, dp.RoundPoolLastUpdated)
+}
+
+func assertMinerRewards(
+	t *testing.T, err error, eventDb *EventDb, minerId string, reward, totalReward, lastUpdated int64,
+) {
 	miner, err := eventDb.GetMiner(minerId)
 	if err != nil {
 		t.Error(err)
@@ -426,4 +460,6 @@ func assertMinerRewards(t *testing.T, err error, eventDb *EventDb, minerId strin
 		t.Error(err)
 	}
 	assert.Equal(t, int64(reward), r1)
+
+	assert.Equal(t, miner.Rewards.RoundServiceChargeLastUpdated, lastUpdated)
 }

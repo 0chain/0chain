@@ -165,18 +165,16 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
 	var ids []string
 	var rewards []uint64
-	var totalRewards []uint64
 	var lastUpdated []int64
 	for _, r := range prRewards {
 		ids = append(ids, r.ProviderID)
 		rewards = append(rewards, uint64(r.Rewards))
-		totalRewards = append(totalRewards, uint64(r.TotalRewards))
 		lastUpdated = append(lastUpdated, r.RoundServiceChargeLastUpdated)
 	}
 
 	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
-		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
+		AddUpdate("total_rewards", rewards, "provider_rewards.total_rewards + t.rewards").
 		AddUpdate("round_service_charge_last_updated", lastUpdated).
 		Exec(edb).Error
 }
@@ -184,21 +182,16 @@ func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
 func (edb *EventDb) rewardProviderDelegates(dps []DelegatePool) error {
 	var poolIds []string
 	var reward []uint64
-	var totalReward []uint64
-	var totalPenalty []uint64
 	var lastUpdated []uint64
 	for _, r := range dps {
 		poolIds = append(poolIds, r.PoolID)
 		reward = append(reward, uint64(r.Reward))
-		totalReward = append(totalReward, uint64(r.TotalReward))
-		totalPenalty = append(totalPenalty, uint64(r.TotalPenalty))
 		lastUpdated = append(lastUpdated, uint64(r.RoundPoolLastUpdated))
 	}
 
 	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
 		AddUpdate("reward", reward, "delegate_pools.reward + t.reward").
-		AddUpdate("total_reward", totalReward, "delegate_pools.total_reward + t.total_reward").
-		AddUpdate("total_penalty", totalPenalty, "delegate_pools.total_penalty + t.total_penalty").
+		AddUpdate("total_reward", reward, "delegate_pools.total_reward + t.reward").
 		AddUpdate("round_pool_last_updated", lastUpdated).
 		Exec(edb)
 	return ret.Error
