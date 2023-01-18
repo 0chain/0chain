@@ -223,8 +223,8 @@ func TestEventDb_rewardProviderDelegates(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	requireDelegateRewards(t, db, "pool 1", "miner one", uint64(25), uint64(43), 7)
-	requireDelegateRewards(t, db, "pool 2", "miner two", uint64(11), uint64(11), 7)
+	requireDelegateRewards(t, db, "pool 1", "miner one", 20+5, 23+20, 7)
+	requireDelegateRewards(t, db, "pool 2", "miner two", 11+0, 11+0, 7)
 }
 
 func requireDelegateRewards(
