@@ -29,7 +29,7 @@ type BlobberAggregate struct {
 	TotalRewards        currency.Coin `json:"total_rewards"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
-	OpenChallenges      int64        `json:"open_challenges"`
+	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
 	Downtime            uint64        `json:"downtime"`

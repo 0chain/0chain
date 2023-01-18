@@ -49,7 +49,7 @@ type Blobber struct {
 
 	ChallengesPassed    uint64  `json:"challenges_passed"`
 	ChallengesCompleted uint64  `json:"challenges_completed"`
-	OpenChallenges      int64  `json:"open_challenges"`
+	OpenChallenges      uint64  `json:"open_challenges"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
@@ -385,36 +385,8 @@ func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas]
 	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withBlobberChallengesMerged())
 }
 
-func (edb *EventDb) updateOpenBlobberChallenges(deltas []ChallengeStatsDeltas, eventId uint64) error {
-	var (
-		ids []string
-		openDeltas []int64
-	)
-	for _, d := range deltas {
-		ids = append(ids, d.Id)
-		openDeltas = append(openDeltas, d.OpenDelta)
-	}
-
-	// TEST CODE
-	// TODO: REMOVE
-	var blobbersBefore []*Blobber
-	if err := edb.Store.Get().Model(&Blobber{}).Where("id in ?", ids).Find(&blobbersBefore).Error; err != nil {
-		logging.Logger.Error("updateOpenBlobberChallenges failed: couldn't get blobbers", 
-			zap.Uint64("eventId", eventId),
-			zap.Any("deltas", deltas),
-		)
-
-		return err
-	}
-	logging.Logger.Info("updateOpenBlobberChallenges",
-		zap.Uint64("eventId", eventId),
-		zap.Any("deltas", deltas),
-		zap.Any("blobbersBefore", blobbersBefore),
-	)
-
-	return CreateBuilder("blobbers", "id", ids).
-		AddUpdate("open_challenges", openDeltas, "blobbers.open_challenges + t.open_challenges").Exec(edb).Debug().Error
-	// return edb.Store.Get().Debug().Raw(sqlUpdateOpenChallenges(deltas)).Debug().Scan(&Blobber{}).Error
+func (edb *EventDb) updateOpenBlobberChallenges(deltas []ChallengeStatsDeltas) error {
+	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(deltas)).Scan(&Blobber{}).Error
 }
 
 func sqlUpdateOpenChallenges(deltas []ChallengeStatsDeltas) string {
