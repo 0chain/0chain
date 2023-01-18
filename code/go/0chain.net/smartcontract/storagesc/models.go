@@ -1343,24 +1343,28 @@ func getMaxChallengeCompletionTime() time.Duration {
 }
 
 // removeExpiredChallenges removes all expired challenges from the allocation,
-// return the expired challenge ids, or error if any.
+// return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp, blobberID string) ([]string, error) {
+	now common.Timestamp, blobberID string) (map[string][]string, int, error) {
 	var (
-		expiredChallengeIDs = make([]string, 0, len(allocChallenges.OpenChallenges))
+		expiredChallengeMap = make(map[string][]string)
+		totalExpired		= 0
 	)
 
 	cct := getMaxChallengeCompletionTime()
 	for _, oc := range allocChallenges.OpenChallenges {
-		if oc.BlobberID != blobberID { continue }
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break
 		}
 
 		// expired
-		expiredChallengeIDs = append(expiredChallengeIDs, oc.ID)
+		if _, ok := expiredChallengeMap[oc.BlobberID]; !ok {
+			expiredChallengeMap[oc.BlobberID] = make([]string, 0, len(allocChallenges.OpenChallenges))
+		}
+		expiredChallengeMap[oc.BlobberID] = append(expiredChallengeMap[oc.BlobberID], oc.ID)
+		totalExpired++
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
@@ -1371,9 +1375,9 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		}
 	}
 
-	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeIDs):]
+	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[totalExpired:]
 
-	return expiredChallengeIDs, nil
+	return expiredChallengeMap, totalExpired, nil
 }
 
 type BlobberCloseConnection struct {
