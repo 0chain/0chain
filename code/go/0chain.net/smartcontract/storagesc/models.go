@@ -1346,25 +1346,28 @@ func getMaxChallengeCompletionTime() time.Duration {
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp, blobberID string) (map[string][]string, int, error) {
-	var (
-		expiredChallengeMap = make(map[string][]string)
-		totalExpired		= 0
-	)
+	now common.Timestamp, blobberID string) (map[string]string, error) {
+	var expiredChallengeBlobberMap = make(map[string]string)
 
 	cct := getMaxChallengeCompletionTime()
+
+
 	for _, oc := range allocChallenges.OpenChallenges {
+		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
+		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
+		logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ID))
+		if _, ok := expiredChallengeBlobberMap[oc.ID]; ok {
+			logging.Logger.Error("removeExpiredChallenges found duplicate expired challenge", zap.String("challengeID", oc.ID))
+			return nil, common.NewError("removeExpiredChallenges", "found duplicates expired challenge")
+		}
+		
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break
 		}
 
 		// expired
-		if _, ok := expiredChallengeMap[oc.BlobberID]; !ok {
-			expiredChallengeMap[oc.BlobberID] = make([]string, 0, len(allocChallenges.OpenChallenges))
-		}
-		expiredChallengeMap[oc.BlobberID] = append(expiredChallengeMap[oc.BlobberID], oc.ID)
-		totalExpired++
+		expiredChallengeBlobberMap[oc.ID] = oc.BlobberID
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
@@ -1375,9 +1378,9 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		}
 	}
 
-	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[totalExpired:]
+	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeBlobberMap):]
 
-	return expiredChallengeMap, totalExpired, nil
+	return expiredChallengeBlobberMap, nil
 }
 
 type BlobberCloseConnection struct {
