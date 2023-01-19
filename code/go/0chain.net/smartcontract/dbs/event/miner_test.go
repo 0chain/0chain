@@ -26,7 +26,7 @@ func init() {
 }
 
 func TestMinersBatchUpdate(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	logging.InitLogging("development", "")
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}

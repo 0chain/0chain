@@ -25,9 +25,6 @@ func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, e
 		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
-	//if err := eventDb.AutoMigrate(); err != nil {
-	//	return nil, err
-	//}
 	sqldb, err := eventDb.Store.Get().DB()
 	if err != nil {
 		return nil, err
