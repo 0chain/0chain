@@ -7,7 +7,7 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-//go:embed /docker.local/migration/*.sql
+//go:embed migrations/*.sql
 var embedMigrations embed.FS
 
 func Init() {
