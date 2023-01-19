@@ -21,13 +21,11 @@ type Miner struct {
 	PublicKey string
 	ShortName string
 	BuildTag  string
-
 	Delete    bool
 	Fees      currency.Coin
 	Active    bool
 	Longitude float64
 	Latitude  float64
-
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_miner_creation_round"`
 }
 
@@ -219,12 +217,11 @@ func (edb *EventDb) GetMinerCount() (int64, error) {
 	return count, res.Error
 }
 
-func (edb *EventDb) addMiner(miners []Miner) error {
-	err := edb.Store.Get().Clauses(clause.OnConflict{
+func (edb *EventDb) addOrOverwriteMiner(miners []Miner) error {
+	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&miners).Error
-	return err
 }
 
 func (mn *Miner) exists(edb *EventDb) (bool, error) {

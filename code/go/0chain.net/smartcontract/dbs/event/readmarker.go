@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	common2 "0chain.net/smartcontract/common"
-	"gorm.io/gorm"
+	"0chain.net/smartcontract/dbs/model"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -12,7 +12,7 @@ import (
 
 // swagger:model ReadMarker
 type ReadMarker struct {
-	gorm.Model
+	model.ImmutableModel
 	ClientID      string  `json:"client_id"`
 	BlobberID     string  `json:"blobber_id"`
 	AllocationID  string  `json:"allocation_id" gorm:"index:idx_ralloc_block,priority:1;index:idx_rauth_alloc,priority:2"` //used in alloc_read_size, used in readmarkers

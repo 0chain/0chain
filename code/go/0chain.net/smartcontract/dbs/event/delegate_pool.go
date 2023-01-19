@@ -2,18 +2,18 @@ package event
 
 import (
 	"fmt"
+
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs"
-	"gorm.io/gorm"
 )
 
 type DelegatePool struct {
-	gorm.Model
-
+	model.UpdatableModel
 	PoolID       string          `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
 	ProviderType spenum.Provider `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
 	ProviderID   string          `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
