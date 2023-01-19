@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/dbs"
@@ -249,7 +247,6 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 }
 
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
-	logging.Logger.Info("piers updateMiner", zap.Any("upd1ates", updates))
 	var miner = Miner{Provider: Provider{ID: updates.Id}}
 	exists, err := miner.exists(edb)
 

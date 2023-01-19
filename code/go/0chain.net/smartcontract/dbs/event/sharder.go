@@ -94,7 +94,7 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 	var s Sharder
 	var dps []DelegatePool
 
-	result := edb.Get().Preload("Rewards").
+	result := edb.Get().
 		Table("sharders").
 		Joins("left join provider_rewards on sharders.id = provider_rewards.provider_id").
 		Joins("left join delegate_pools on sharders.id = delegate_pools.provider_id").
@@ -104,7 +104,7 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 		return s, nil, result.Error
 	}
 	if len(sharderDps) == 0 {
-		return s, nil, fmt.Errorf("get miner %s found no records", id)
+		return s, nil, fmt.Errorf("get sharder %s found no records", id)
 	}
 	s = sharderDps[0].Sharder
 	s.Rewards = sharderDps[0].ProviderRewards
