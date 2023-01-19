@@ -12,7 +12,7 @@ type ValidatorSnapshot struct {
 
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin	`json:"total_rewards"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
 }
@@ -33,7 +33,6 @@ func (v *ValidatorSnapshot) GetTotalRewards() currency.Coin {
 	return v.TotalRewards
 }
 
-
 func (v *ValidatorSnapshot) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
 }
@@ -49,7 +48,6 @@ func (v *ValidatorSnapshot) SetServiceCharge(value float64) {
 func (v *ValidatorSnapshot) SetTotalRewards(value currency.Coin) {
 	v.TotalRewards = value
 }
-
 
 func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]ValidatorSnapshot, error) {
 	var snapshots []ValidatorSnapshot

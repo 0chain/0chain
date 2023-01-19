@@ -3,15 +3,15 @@ package event
 import (
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type SharderAggregate struct {
-	gorm.Model
+	model.ImmutableModel
 
 	SharderID string `json:"sharder_id" gorm:"index:idx_sharder_aggregate,unique"`
 	Round     int64  `json:"round" gorm:"index:idx_sharder_aggregate,unique"`

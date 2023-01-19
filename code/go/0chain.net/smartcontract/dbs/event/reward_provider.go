@@ -3,14 +3,14 @@ package event
 import (
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/model"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type RewardProvider struct {
-	gorm.Model
+	model.UpdatableModel
 	Amount      currency.Coin `json:"amount"`
 	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
 	ProviderId  string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
