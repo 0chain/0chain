@@ -113,9 +113,12 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentMiners []Miner
-	result := edb.Store.Get().
-		Raw("SELECT * FROM miners WHERE id in (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&currentMiners)
+
+	result := edb.Store.Get().Model(&Miner{}).
+		Where("miners.id in (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Joins("Rewards").
+		Find(&currentMiners)
+
 	if result.Error != nil {
 		logging.Logger.Error("getting current miners", zap.Error(result.Error))
 		return
@@ -142,9 +145,10 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 			continue
 		}
 		aggregate := MinerAggregate{
-			Round:    round,
-			MinerID:  current.ID,
-			BucketID: current.BucketId,
+			Round:        round,
+			MinerID:      current.ID,
+			BucketID:     current.BucketId,
+			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
@@ -154,7 +158,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fees
-
+		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 		gs.TransactionsCount++
 	}
 	if len(aggregates) > 0 {
