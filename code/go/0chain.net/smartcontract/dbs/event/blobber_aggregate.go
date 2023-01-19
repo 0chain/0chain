@@ -5,15 +5,15 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type BlobberAggregate struct {
-	gorm.Model
+	model.ImmutableModel
 	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,priority:2,unique"`
 	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,priority:1,unique"`
 	BucketID            int64         `json:"bucket_id"`
