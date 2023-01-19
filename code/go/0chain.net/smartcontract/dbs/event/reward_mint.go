@@ -45,6 +45,7 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenBlocks(query RewardMintQuery) ([
 		SELECT coalesce(sum(amount), 0) as val
 		FROM ranges r
 		LEFT JOIN reward_mints rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%[4]v'
+		WHERE r.r_max <= %[3]v + 1
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
 	`, query.StartBlock, query.EndBlock, step, query.ClientID)
@@ -61,12 +62,13 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardMintQuery) ([]
 				(select min(round) as from, max(round) as to from blocks where creation_date between %d and %d) as b
 		),
 		ranges AS (
-			SELECT t AS r_min, t+(select step from block_info)-1 AS r_max
+			SELECT t AS r_min, t+(select step from block_info)-1 AS r_max, (select "to" from block_info) AS max_round
 			FROM generate_series((select "from" from block_info), (select "to" from block_info), (select step from block_info)) as t
 		)
 		SELECT coalesce(%s, 0) as val
 		FROM ranges r
 		LEFT JOIN reward_mints rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%s'
+		WHERE r.r_max <= r.max_round + 1
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
 	`, query.DataPoints, query.StartDate.UnixNano(), query.EndDate.UnixNano(), "sum(amount)", query.ClientID)
