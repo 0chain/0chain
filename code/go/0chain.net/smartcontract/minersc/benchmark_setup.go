@@ -171,7 +171,7 @@ func AddMockNodes(
 					Balance:              pool.Balance,
 					Reward:               pool.Reward,
 					TotalReward:          pool.Reward,
-					Status:               int(pool.Status),
+					Status:               pool.Status,
 					RoundCreated:         pool.RoundCreated,
 					RoundPoolLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 				})
