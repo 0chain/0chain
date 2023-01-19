@@ -9,7 +9,7 @@ on:
 jobs:
   BUILD_INTEGRATION_IMAGES:
     name: BUILD-INTEGRATION-IMAGES
-    runs-on: [self-hosted, docker-builds]
+    runs-on: [self-hosted, tests-suite]
     env:
       GOPATH: "/root/actions-runner/_work/_tool/go"
       GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
@@ -54,12 +54,7 @@ jobs:
     - name: Run Basic conductor tests
       run: |
         ./docker.local/bin/start.conductor.sh basic
-        
-  notify_slack:
-    runs-on: [self-hosted, docker-builds]
-    needs: [BUILD_INTEGRATION_IMAGES]
-    if: always()
-    steps:
+
     - name: Cleanup 
       run: |
         rm -rf ./*
