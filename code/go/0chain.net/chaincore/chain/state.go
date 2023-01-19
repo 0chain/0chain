@@ -575,9 +575,6 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, err
 	}
 
-	c.emitSendTransferEvent(sctx, stateToUser(fromClient, fs, amount))
-	c.emitReceiveTransferEvent(sctx, stateToUser(toClient, ts, amount))
-
 	return []*event.User{stateToUser(fromClient, fs, -amount), stateToUser(toClient, ts, amount)}, nil
 }
 
@@ -623,8 +620,6 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	if err != nil {
 		return nil, common.NewError("mint_amount - insert", err.Error())
 	}
-
-	c.emitMintEvent(sctx, stateToUser(toClient, ts, amount))
 
 	return stateToUser(toClient, ts, amount), nil
 }
@@ -760,33 +755,6 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
 		func(events []event.Event, current event.Event) []event.Event {
 			return append([]event.Event{current}, events...)
 		})
-	return
-}
-func (c *Chain) emitMintEvent(sc bcstate.StateContextI, usr *event.User) {
-	if c.GetEventDb() == nil {
-		return
-	}
-
-	sc.EmitEvent(event.TypeStats, event.TagAddMint, usr.UserID, usr)
-
-	return
-}
-func (c *Chain) emitSendTransferEvent(sc bcstate.StateContextI, usr *event.User) {
-	if c.GetEventDb() == nil {
-		return
-	}
-
-	sc.EmitEvent(event.TypeStats, event.TagSendTransfer, usr.UserID, usr)
-
-	return
-}
-func (c *Chain) emitReceiveTransferEvent(sc bcstate.StateContextI, usr *event.User) {
-	if c.GetEventDb() == nil {
-		return
-	}
-
-	sc.EmitEvent(event.TypeStats, event.TagReceiveTransfer, usr.UserID, usr)
-
 	return
 }
 
