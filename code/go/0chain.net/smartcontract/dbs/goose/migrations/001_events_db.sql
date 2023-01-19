@@ -1420,8 +1420,8 @@ ALTER TABLE ONLY public.authorizers
 -- Name: blobber_aggregates blobber_aggregates_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
 --
 
-ALTER TABLE ONLY public.blobber_aggregates
-    ADD CONSTRAINT blobber_aggregates_pkey PRIMARY KEY (id);
+ALTER TABLE public.blobber_aggregates
+    ADD CONSTRAINT blobber_aggregates_pkey PRIMARY KEY (id, round);
 
 
 --
