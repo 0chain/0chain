@@ -43,7 +43,6 @@ func TestAddAndGetError(t *testing.T) {
 	require.Equal(t, 1, len(gotErr), "There should be 1 error")
 	gotErr[0].ID = wantErr.ID
 	gotErr[0].CreatedAt = wantErr.CreatedAt
-	gotErr[0].UpdatedAt = wantErr.UpdatedAt
 	require.Equal(t, []Error{wantErr}, gotErr, "The error should be equal")
 
 	gotErr, err = eventDb.GetErrorByTransactionHash("someT", common.Pagination{Limit: 20, IsDescending: true})
