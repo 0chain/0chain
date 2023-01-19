@@ -103,12 +103,12 @@ func BenchmarkRestTests(
 				Endpoint: mrh.getNodeStat,
 			},
 			{
-				FuncName: "nodeStat.miner.delegates",
+				FuncName: "test.nodeStat.miner.delegates",
 				Params: map[string]string{
 					"id":                data.Miners[0],
 					"include_delegates": "true",
 				},
-				Endpoint: mrh.getNodeStat,
+				Endpoint: mrh.testNodeStat,
 			},
 			{
 				FuncName: "nodeStat.sharder",
@@ -118,12 +118,12 @@ func BenchmarkRestTests(
 				Endpoint: mrh.getNodeStat,
 			},
 			{
-				FuncName: "nodeStat.sharer.delegates",
+				FuncName: "test.nodeStat.sharer.delegates",
 				Params: map[string]string{
 					"id":                data.Sharders[0],
 					"include_delegates": "true",
 				},
-				Endpoint: mrh.getNodeStat,
+				Endpoint: mrh.testNodeStat,
 			},
 			{
 				FuncName: "nodePoolStat",

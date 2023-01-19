@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const extraNodeStatTests = 3
+const extraNodeStatTests = 2 // test both sharder and miner
 
 func TestMinerBenchmarkRestTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}

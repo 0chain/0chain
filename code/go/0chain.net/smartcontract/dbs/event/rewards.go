@@ -7,7 +7,7 @@ import (
 
 // ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
 type ProviderRewards struct {
-	gorm.UpdatableModel
+	model.UpdatableModel
 	ProviderID                    string        `json:"provider_id" gorm:"uniqueIndex"`
 	Rewards                       currency.Coin `json:"rewards"`
 	TotalRewards                  currency.Coin `json:"total_rewards"`
