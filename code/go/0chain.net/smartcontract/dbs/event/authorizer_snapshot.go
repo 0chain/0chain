@@ -83,6 +83,7 @@ func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer) error {
 			TotalStake:    authorizer.TotalStake,
 			ServiceCharge: authorizer.ServiceCharge,
 			CreationRound: authorizer.CreationRound,
+			TotalRewards:  authorizer.Rewards.TotalRewards,
 		})
 	}
 
