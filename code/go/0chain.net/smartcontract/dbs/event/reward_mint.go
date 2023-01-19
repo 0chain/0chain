@@ -45,6 +45,7 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenBlocks(query RewardMintQuery) ([
 		SELECT coalesce(sum(amount), 0) as val
 		FROM ranges r
 		LEFT JOIN reward_mints rw ON rw.block_number BETWEEN r.r_min AND r.r_max AND client_id = '%[4]v'
+		WHERE r.r_max <= %[3]v + 1
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
 	`, query.StartBlock, query.EndBlock, step, query.ClientID)
