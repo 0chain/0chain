@@ -210,9 +210,11 @@ type DbAccess struct {
 }
 
 type DbSettings struct {
-	Debug           bool  `json:"debug"`
-	AggregatePeriod int64 `json:"aggregate_period"`
-	PageLimit       int64 `json:"page_limit"`
+	Debug                bool  `json:"debug"`
+	AggregatePeriod      int64 `json:"aggregate_period"`
+	PartitionChanePeriod int64 `json:"partition_change_period"`
+	PartitionKeepCount   int64 `json:"partition_keep_count"`
+	PageLimit            int64 `json:"page_limit"`
 }
 
 func (s *DbSettings) Update(updates map[string]string) error {

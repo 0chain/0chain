@@ -233,8 +233,10 @@ CREATE TABLE public.blobber_aggregates (
                                            inactive_rounds bigint,
                                            rank_metric numeric,
                                            downtime bigint
-);
+) PARTITION BY RANGE (round);
 
+CREATE TABLE blobber_aggregates_0 PARTITION OF blobber_aggregates
+    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.blobber_aggregates OWNER TO zchain_user;
 

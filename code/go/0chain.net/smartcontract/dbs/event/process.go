@@ -183,6 +183,21 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
 
+		if es.round%edb.settings.PartitionChanePeriod == 0 {
+			//edb.addPartition(es.round, "snapshots")
+			//edb.dropPartition(es.round, "snapshots")
+			edb.addPartition(es.round, "blobber_aggregates")
+			edb.dropPartition(es.round, "blobber_aggregates")
+			//edb.addPartition(es.round, "miner_aggregates")
+			//edb.dropPartition(es.round, "miner_aggregates")
+			//edb.addPartition(es.round, "sharder_aggregates")
+			//edb.dropPartition(es.round, "sharder_aggregates")
+			//edb.addPartition(es.round, "validator_aggregates")
+			//edb.dropPartition(es.round, "validator_aggregates")
+			//edb.addPartition(es.round, "authorizer_aggregates")
+			//edb.dropPartition(es.round, "authorizer_aggregates")
+		}
+
 		tx.addEvents(ctx, es)
 		tse := time.Now()
 		tags := make([]string, 0, len(es.events))
