@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
@@ -23,6 +25,49 @@ import (
 func init() {
 	viper.Set("logging.console", true)
 	viper.Set("logging.level", "debug")
+}
+
+func TestGetMinerWithDelegatePools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	minerIds := createMiners(t, edb, 2)
+
+	err := edb.addDelegatePools([]DelegatePool{
+		{
+			PoolID:       "pool_id",
+			ProviderType: spenum.Miner,
+			ProviderID:   minerIds[1],
+			DelegateID:   "delegate_id",
+
+			Balance: 30,
+		},
+		{
+			PoolID:       "pool_id_2",
+			ProviderType: spenum.Miner,
+			ProviderID:   minerIds[1],
+			DelegateID:   "delegate_id_2",
+
+			Balance: 30,
+		},
+	})
+	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
+
+	miners, err := edb.GetMiners()
+	miners = miners
+
+	p, err := edb.GetDelegatePool("pool_id", minerIds[1])
+	require.NoError(t, err, "Error while retrieving DelegatePool from event Database")
+	require.Equal(t, p.PoolID, "pool_id")
+	require.Equal(t, p.ProviderType, spenum.Miner)
+	require.Equal(t, p.ProviderID, minerIds[1])
+
+	s, dps, err := edb.GetMinerWithDelegatePools(minerIds[1])
+
+	require.NoError(t, err, "Error while getting sharder with delegate pools")
+	require.Equal(t, s.ID, minerIds[1])
+	require.Equal(t, 2, len(dps))
+	require.Equal(t, minerIds[1], dps[0].ProviderID)
 }
 
 func TestMinersBatchUpdate(t *testing.T) {
@@ -504,7 +549,7 @@ func TestGetMiners(t *testing.T) {
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
 
 	assert.NoError(t, err, "error while migrating database")
-	createMiners(t, eventDb, 10)
+	_ = createMiners(t, eventDb, 10)
 
 	t.Run("Inactive miners should be returned", func(t *testing.T) {
 		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
@@ -584,10 +629,11 @@ func TestGetMinerLocations(t *testing.T) {
 	})
 }
 
-func createMiners(t *testing.T, eventDb *EventDb, count int) {
+func createMiners(t *testing.T, eventDb *EventDb, count int) []string {
+	var ids []string
 	for i := 0; i < count; i++ {
+		id := fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i)
 		m := Miner{
-
 			N2NHost:   "198.18.0.73",
 			Host:      "198.18.0.73",
 			Port:      7073,
@@ -596,14 +642,14 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) {
 			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
 			Delete:    false,
 			Provider: Provider{
-				ID:             fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
+				ID:             id,
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
 				MinStake:       0,
 				MaxStake:       1000000000000,
 				Rewards: ProviderRewards{
-					ProviderID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
+					ProviderID: id,
 					Rewards:    9725520000000,
 				},
 				LastHealthCheck: 1644881505,
@@ -612,8 +658,10 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) {
 			Active: i%2 == 0,
 		}
 		err := eventDb.addMiner([]Miner{m})
+		ids = append(ids, id)
 		assert.NoError(t, err, "inserting miners failed")
 	}
+	return ids
 }
 
 func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {

@@ -56,7 +56,7 @@ func TestGetSharderWithDelegatePools(t *testing.T) {
 	p, err := edb.GetDelegatePool("pool_id", "1")
 	require.NoError(t, err, "Error while retrieving DelegatePool from event Database")
 	require.Equal(t, p.PoolID, "pool_id")
-	require.Equal(t, int(p.ProviderType), 2)
+	require.Equal(t, p.ProviderType, spenum.Sharder)
 	require.Equal(t, p.ProviderID, "1")
 
 	s, dps, err := edb.GetSharderWithDelegatePools("1")
@@ -64,7 +64,6 @@ func TestGetSharderWithDelegatePools(t *testing.T) {
 	require.NoError(t, err, "Error while getting sharder with delegate pools")
 	require.Equal(t, s.ID, "1")
 	require.Equal(t, 2, len(dps))
-	fmt.Println("dps[0].ProviderId", dps[0].ProviderID)
 	require.Equal(t, "1", dps[0].ProviderID) // failed, the provider id is ""
 }
 

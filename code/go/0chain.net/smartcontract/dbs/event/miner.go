@@ -68,10 +68,21 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	if len(minerDps) == 0 {
 		return m, nil, fmt.Errorf("get miner %s found no records", id)
 	}
+	if id != minerDps[0].Miner.ID {
+		return m, nil, fmt.Errorf("mismatched miner; want id %s but have id %s", id, minerDps[0].Miner.ID)
+	}
 	m = minerDps[0].Miner
+	if id != minerDps[0].ProviderRewards.ProviderID {
+		return m, nil, fmt.Errorf("mismatched sharder; want id %s but have id%s in provider rewrards",
+			id, minerDps[0].Miner.ID)
+	}
 	m.Rewards = minerDps[0].ProviderRewards
 	for i := range minerDps {
 		dps = append(dps, minerDps[i].DelegatePool)
+		if id != minerDps[i].DelegatePool.ProviderID {
+			return m, nil, fmt.Errorf("mismatched sharder id in delegate pool;"+
+				"want id %s but have id %s", id, minerDps[i].DelegatePool.ProviderID)
+		}
 	}
 
 	return m, dps, nil
