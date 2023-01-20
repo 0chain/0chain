@@ -123,6 +123,12 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
 			mergeUpdateValidatorUnStakesEvents(),
+
+			mergeMinerHealthCheckEvents(),
+			mergeSharderHealthCheckEvents(),
+			mergeBlobberHealthCheckEvents(),
+			mergeAuthorizerHealthCheckEvents(),
+			mergeValidatorHealthCheckEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -497,13 +503,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateValidatorStakes(*updates)
+		return edb.updateValidatorTotalStakes(*updates)
 	case TagUpdateValidatorUnStakeTotal:
 		updates, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateValidatorUnStakes(*updates)
+		return edb.updateValidatorTotalUnStakes(*updates)
 	case TagAddOrOverwriteMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
@@ -702,6 +708,36 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.addOrUpdateChallengePools(*cps)
 	case TagCollectProviderReward:
 		return edb.collectRewards(event.Index)
+	case TagMinerHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, MinerTable)
+	case TagSharderHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, SharderTable)
+	case TagBlobberHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, BlobberTable)
+	case TagAuthorizerHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, AuthorizerTable)
+	case TagValidatorHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

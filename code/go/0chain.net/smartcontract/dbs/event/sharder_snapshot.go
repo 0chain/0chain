@@ -14,6 +14,7 @@ type SharderSnapshot struct {
 	Fees          currency.Coin `json:"fees"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
+	TotalRewards  currency.Coin	`json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
 }
@@ -30,6 +31,10 @@ func (s *SharderSnapshot) GetServiceCharge() float64 {
 	return s.ServiceCharge
 }
 
+func (s *SharderSnapshot) GetTotalRewards() currency.Coin {
+	return s.TotalRewards
+}
+
 func (s *SharderSnapshot) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
 }
@@ -40,6 +45,10 @@ func (s *SharderSnapshot) SetUnstakeTotal(value currency.Coin) {
 
 func (s *SharderSnapshot) SetServiceCharge(value float64) {
 	s.ServiceCharge = value
+}
+
+func (s *SharderSnapshot) SetTotalRewards(value currency.Coin) {
+	s.TotalRewards = value
 }
 
 func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]SharderSnapshot, error) {
@@ -74,6 +83,7 @@ func (edb *EventDb) addSharderSnapshot(sharders []Sharder) error {
 			TotalStake:    sharder.TotalStake,
 			ServiceCharge: sharder.ServiceCharge,
 			CreationRound: sharder.CreationRound,
+			TotalRewards:  sharder.Rewards.TotalRewards,
 		})
 	}
 

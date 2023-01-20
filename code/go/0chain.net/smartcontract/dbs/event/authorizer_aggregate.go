@@ -3,15 +3,15 @@ package event
 import (
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type AuthorizerAggregate struct {
-	gorm.Model
+	model.ImmutableModel
 
 	AuthorizerID string `json:"authorizer_id" gorm:"index:idx_authorizer_aggregate,unique"`
 	Round        int64  `json:"round" gorm:"index:idx_authorizer_aggregate,unique"`
@@ -20,6 +20,7 @@ type AuthorizerAggregate struct {
 	Fee           currency.Coin `json:"fee"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -35,6 +36,10 @@ func (a *AuthorizerAggregate) GetServiceCharge() float64 {
 	return a.ServiceCharge
 }
 
+func (a *AuthorizerAggregate) GetTotalRewards() currency.Coin {
+	return a.TotalRewards
+}
+
 func (a *AuthorizerAggregate) SetTotalStake(value currency.Coin) {
 	a.TotalStake = value
 }
@@ -45,6 +50,10 @@ func (a *AuthorizerAggregate) SetUnstakeTotal(value currency.Coin) {
 
 func (a *AuthorizerAggregate) SetServiceCharge(value float64) {
 	a.ServiceCharge = value
+}
+
+func (a *AuthorizerAggregate) SetTotalRewards(value currency.Coin) {
+	a.TotalRewards = value
 }
 
 func (edb *EventDb) ReplicateAuthorizerAggregate(p common.Pagination) ([]AuthorizerAggregate, error) {
@@ -106,9 +115,10 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentAuthorizers []Authorizer
-	result := edb.Store.Get().
-		Raw("SELECT * FROM Authorizers WHERE id in (select id from authorizer_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&currentAuthorizers)
+	result := edb.Store.Get().Model(&Authorizer{}).
+		Where("authorizers.id in (select id from authorizer_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Joins("Rewards").
+		Find(&currentAuthorizers)
 	if result.Error != nil {
 		logging.Logger.Error("getting current Authorizers", zap.Error(result.Error))
 		return
@@ -140,6 +150,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 			Round:        round,
 			AuthorizerID: current.ID,
 			BucketID:     current.BucketId,
+			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
@@ -148,6 +159,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fee
+		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 	}
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm/clause"
 )
@@ -31,6 +32,10 @@ func (v *Validator) GetServiceCharge() float64 {
 	return v.ServiceCharge
 }
 
+func (v *Validator) GetTotalRewards() currency.Coin {
+	return v.Rewards.TotalRewards
+}
+
 func (v *Validator) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
 }
@@ -41,6 +46,10 @@ func (v *Validator) SetUnstakeTotal(value currency.Coin) {
 
 func (v *Validator) SetServiceCharge(value float64) {
 	v.ServiceCharge = value
+}
+
+func (v *Validator) SetTotalRewards(value currency.Coin) {
+	v.Rewards.TotalRewards = value
 }
 
 func (edb *EventDb) GetValidatorCount() (int64, error) {
@@ -121,19 +130,20 @@ func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (
 	}
 }
 
-func (edb *EventDb) updateValidatorStakes(validators []Validator) error {
-	updateFields := []string{"stake_total"}
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns(updateFields),
-	}).Create(&validators).Error
+func (edb *EventDb) updateValidatorTotalStakes(validators []Validator) error {
+	var provs []Provider
+	for _, v := range validators {
+		provs = append(provs, v.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "validators")
 }
-func (edb *EventDb) updateValidatorUnStakes(validators []Validator) error {
-	updateFields := []string{"unstake_total"}
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns(updateFields),
-	}).Create(&validators).Error
+
+func (edb *EventDb) updateValidatorTotalUnStakes(validators []Validator) error {
+	var provs []Provider
+	for _, v := range validators {
+		provs = append(provs, v.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "validators")
 }
 
 func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
@@ -146,4 +156,8 @@ func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
 
 func mergeUpdateValidatorUnStakesEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidatorUnStakeTotal, withUniqueEventOverwrite())
+}
+
+func mergeValidatorHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagValidatorHealthCheck, withUniqueEventOverwrite())
 }

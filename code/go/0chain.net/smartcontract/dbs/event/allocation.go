@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/0chain/common/core/currency"
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
@@ -14,7 +15,7 @@ import (
 )
 
 type Allocation struct {
-	gorm.Model
+	model.UpdatableModel
 	AllocationID             string        `json:"allocation_id" gorm:"uniqueIndex"`
 	AllocationName           string        `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
 	TransactionID            string        `json:"transaction_id"`

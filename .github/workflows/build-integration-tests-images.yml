@@ -28,6 +28,8 @@ jobs:
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
     - name: Docker Init Setup.
       run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh

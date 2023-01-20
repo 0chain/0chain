@@ -97,6 +97,10 @@ The conductor test suites are configured on yaml files. These test suites can be
 3. `blobber tests` - confirms storage functions continue to work despite bad or lost blobber, and confirms expected storage function failures
 - [conductor.blobber-1.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.blobber-1.yaml)
 - [conductor.blobber-2.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.blobber-2.yaml)
+- [conductor.blobber-3.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.blobber-3.yaml
+- [conductor.validator-1.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.validator-1.yaml))
+4. `authorizer tests` - confirms burns and mints continue to work despite authorizers bad behaviours
+- [conductor.authorizer.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.authorizer.yaml)
 
 ## Test cases covered
 
@@ -106,7 +110,7 @@ To know about the specific test cases covered by the conductor tests, navigate t
 
 Below are the basic setup required to run the test suites.
 
-### 1. Clone the repo 
+### 1. Clone the repo
 ```sh
 git clone git@github.com:0chain/0chain.git && cd 0chain
 ```
@@ -142,7 +146,7 @@ this will create folder called sharder* and miner* inside `./docker.local/` fold
 ```
 
 NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images by running the folowing:
-  
+
 ```sh
 ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh)
 ```
@@ -212,39 +216,25 @@ zwalletcli/
 (cd zwalletcli && make install)
 ```
 
-8. Patch 0dns for the latest 0chain network configuration
-
-```sh
-(cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch)
-(cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch)
-```
-
-9. Patch blobbers for the latest blobber tests
-
-```sh
-(cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch)
-(cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
-```
-
-10. Build 0dns
+8. Build 0dns
 
 ```sh
 (cd 0dns && ./docker.local/bin/init.sh)
 (cd 0dns && ./docker.local/bin/build.sh)
 ```
 
-11. Init setup for blobbers
+9. Init setup for blobbers
 
 ```sh
 (cd blobber && ./docker.local/bin/blobber.init.setup.sh)
 ```
 
-12. Build blobber base
+10. Build blobber base
 ```sh
 (cd blobber && ./docker.local/bin/build.base.sh)
 ```
 
-13. Add `~/.zcn/config.yaml` as follows
+11. Add `~/.zcn/config.yaml` as follows
 
 ```yaml
 block_worker: http://127.0.0.1:9091
@@ -256,7 +246,7 @@ max_txn_query: 5
 query_sleep_time: 5
 ```
 
-14. Apply if on Ubuntu 18.04
+12. Apply if on Ubuntu 18.04
 
 https://github.com/docker/for-linux/issues/563#issuecomment-547962928
 
@@ -265,11 +255,88 @@ package required by docker-compose and used by docker. A docker process
 (a build, for example) can sometimes fail due to the bug. Some tests have
 internal docker builds and can fail due to this bug.
 
-15. Run blobber tests
+13. Run blobber tests
 
 ```sh
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2)
+(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-3)
+(cd 0chain && ./docker.local/bin/start.conductor.sh validator-1)
+```
+
+## <a name="authorizer"></a>Running authorizer tests
+
+Blobber tests require more setup.
+
+1. Git clone [authorizer](https://github.com/0chain/token_bridge_authserver)
+2. Git clone [zboxcli](https://github.com/0chain/zboxcli)
+3. Git clone [zwalletcli](https://github.com/0chain/blobber)
+4. Git clone [0dns](https://github.com/0chain/0dns)
+5. Confirm directories
+
+```
+0chain/
+token_bridge_authserver/
+zboxcli/
+zwalletcli/
+0dns/
+```
+
+6. Install zboxcli
+
+```sh
+(cd zboxcli && make install)
+```
+
+7. Install zwalletcli
+
+```sh
+(cd zwalletcli && make install)
+```
+
+8. Build 0dns
+
+```sh
+(cd 0dns && ./docker.local/bin/init.sh)
+(cd 0dns && ./docker.local/bin/build.sh)
+```
+
+9. Init setup for authorizer
+
+```sh
+(cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh)
+```
+
+10. Build authorizer integration image
+```sh
+(cd blobber && ./docker.local/bin/build.authorizer-integration-tests.sh)
+```
+
+11. Add `~/.zcn/config.yaml` as follows
+
+```yaml
+block_worker: http://127.0.0.1:9091
+signature_scheme: bls0chain
+min_submit: 50
+min_confirmation: 50
+confirmation_chain_length: 3
+max_txn_query: 5
+query_sleep_time: 5
+```
+
+12. Apply if on Ubuntu 18.04
+
+https://github.com/docker/for-linux/issues/563#issuecomment-547962928
+
+The bug in Ubuntu 18.04 related. It relates to docker-credential-secretservice
+package required by docker-compose and used by docker. A docker process
+(a build, for example) can sometimes fail due to the bug. Some tests have
+internal docker builds and can fail due to this bug.
+
+13. Run authorizer tests
+
+```sh
+(cd 0chain && ./docker.local/bin/start.conductor.sh authorizer)
 ```
 
 ## Updating conductor tests

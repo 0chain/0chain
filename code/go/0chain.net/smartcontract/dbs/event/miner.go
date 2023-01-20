@@ -8,7 +8,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/guregu/null"
 	"gorm.io/gorm"
@@ -16,21 +15,18 @@ import (
 
 type Miner struct {
 	Provider
-	N2NHost   string `gorm:"column:n2n_host"`
-	Host      string
-	Port      int
-	Path      string
-	PublicKey string
-	ShortName string
-	BuildTag  string
-
-	Delete          bool
-	LastHealthCheck common.Timestamp
-	Fees            currency.Coin
-	Active          bool
-	Longitude       float64
-	Latitude        float64
-
+	N2NHost       string `gorm:"column:n2n_host"`
+	Host          string
+	Port          int
+	Path          string
+	PublicKey     string
+	ShortName     string
+	BuildTag      string
+	Delete        bool
+	Fees          currency.Coin
+	Active        bool
+	Longitude     float64
+	Latitude      float64
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_miner_creation_round"`
 }
 
@@ -102,6 +98,10 @@ func (m *Miner) GetServiceCharge() float64 {
 	return m.ServiceCharge
 }
 
+func (m *Miner) GetTotalRewards() currency.Coin {
+	return m.Rewards.TotalRewards
+}
+
 func (m *Miner) SetTotalStake(value currency.Coin) {
 	m.TotalStake = value
 }
@@ -112,6 +112,10 @@ func (m *Miner) SetUnstakeTotal(value currency.Coin) {
 
 func (m *Miner) SetServiceCharge(value float64) {
 	m.ServiceCharge = value
+}
+
+func (m *Miner) SetTotalRewards(value currency.Coin) {
+	m.Rewards.TotalRewards = value
 }
 
 func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p common2.Pagination) ([]Miner, error) {
@@ -275,17 +279,19 @@ func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag
 }
 
 func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake"}),
-	}).Create(&miners).Error
+	var provs []Provider
+	for _, s := range miners {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProviderTotalStakes(provs, "miners")
 }
 
 func (edb *EventDb) updateMinersTotalUnStakes(miners []Miner) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"unstake_total"}),
-	}).Create(&miners).Error
+	var provs []Provider
+	for _, s := range miners {
+		provs = append(provs, s.Provider)
+	}
+	return edb.updateProvidersTotalUnStakes(provs, "miners")
 }
 
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
@@ -293,4 +299,8 @@ func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
 }
 func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
 	return newEventsMerger[Miner](TagUpdateMinerTotalUnStake, withUniqueEventOverwrite())
+}
+
+func mergeMinerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
+	return newEventsMerger[dbs.DbHealthCheck](TagMinerHealthCheck, withUniqueEventOverwrite())
 }

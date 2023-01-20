@@ -223,7 +223,7 @@ type RoundFactory interface {
 	CreateRoundF(roundNum int64) RoundI
 }
 
-//NewRound - Create a new round object
+// NewRound - Create a new round object
 func NewRound(round int64) *Round {
 	r := datastore.GetEntityMetadata("round").Instance().(*Round)
 	r.Number = round
@@ -242,7 +242,7 @@ func (r *Round) GetKey() datastore.Key {
 	return datastore.ToKey(fmt.Sprintf("%v", r.GetRoundNumber()))
 }
 
-//GetRoundNumber - returns the round number
+// GetRoundNumber - returns the round number
 func (r *Round) GetRoundNumber() int64 {
 	return r.Number
 }
@@ -536,7 +536,7 @@ func SetupEntity(store datastore.Store) {
 	datastore.RegisterEntityMetadata("round", roundEntityMetadata)
 }
 
-//SetupRoundSummaryDB - setup the round summary db
+// SetupRoundSummaryDB - setup the round summary db
 func SetupRoundSummaryDB(workdir string) {
 	datadir := filepath.Join(workdir, "data/rocksdb/roundsummary")
 
@@ -604,11 +604,11 @@ func (r *Round) GetMinersByRank(nodes []*node.Node) []*node.Node {
 	return nodes
 }
 
-//Clear - implement interface
+// Clear - implement interface
 func (r *Round) Clear() {
 }
 
-//Restart - restart the round
+// Restart - restart the round
 func (r *Round) Restart() error {
 	r.mutex.Lock()
 	if r.getState() >= Share {
@@ -631,7 +631,7 @@ func (r *Round) VRFShareExist(share *VRFShare) (exist bool) {
 	return
 }
 
-//AddVRFShare - implement interface
+// AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -653,7 +653,7 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	return true
 }
 
-//GetVRFShares - implement interface
+// GetVRFShares - implement interface
 func (r *Round) GetVRFShares() map[string]*VRFShare {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -668,17 +668,17 @@ func (r *Round) getVRFShares() map[string]*VRFShare {
 	return result
 }
 
-//GetPhase - get the phase of the round
+// GetPhase - get the phase of the round
 func (r *Round) GetPhase() Phase {
 	return r.getState()
 }
 
-//SetPhase - set the phase of the round in a progressive order
+// SetPhase - set the phase of the round in a progressive order
 func (r *Round) SetPhase(state Phase) {
 	r.setPhase(state)
 }
 
-//ResetPhase resets the phase to any desired phase
+// ResetPhase resets the phase to any desired phase
 func (r *Round) ResetPhase(state Phase) {
 	atomic.StoreInt32((*int32)(&r.phase), int32(state))
 }
@@ -693,7 +693,7 @@ func (r *Round) setPhase(state Phase) {
 	}
 }
 
-//HasRandomSeed - implement interface
+// HasRandomSeed - implement interface
 func (r *Round) HasRandomSeed() bool {
 	return atomic.LoadInt64(&r.RandomSeed) != 0
 }
@@ -732,7 +732,49 @@ func (r *Round) getFinalizingState() FinalizingState {
 
 // Clone do light copy of round
 func (r *Round) Clone() RoundI {
-	var nr Round
-	nr = *r // nolint
-	return &nr
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	var (
+		mp      = make([]int, len(r.minerPerm))
+		pblocks = make([]*block.Block, len(r.proposedBlocks))
+		nblocks = make([]*block.Block, len(r.notarizedBlocks))
+		shares  = make(map[string]*VRFShare, len(r.shares))
+	)
+
+	copy(mp, r.minerPerm)
+
+	for i, b := range r.proposedBlocks {
+		pblocks[i] = b.Clone()
+	}
+
+	for i, b := range r.notarizedBlocks {
+		nblocks[i] = b.Clone()
+	}
+
+	for k, s := range r.shares {
+		shares[k] = s.Clone()
+	}
+
+	return &Round{
+		Number:           r.Number,
+		RandomSeed:       r.RandomSeed,
+		Block:            r.Block.Clone(),
+		BlockHash:        r.BlockHash,
+		VRFOutput:        r.VRFOutput,
+		minerPerm:        mp,
+		phase:            r.phase,
+		finalizingState:  r.finalizingState,
+		proposedBlocks:   pblocks,
+		notarizedBlocks:  nblocks,
+		shares:           shares,
+		softTimeoutCount: r.softTimeoutCount,
+		vrfStartTime:     r.vrfStartTime,
+		timeoutCounter: timeoutCounter{
+			prrs:  r.timeoutCounter.prrs,
+			perm:  r.timeoutCounter.perm,
+			count: r.timeoutCounter.count,
+			votes: r.timeoutCounter.votes,
+		},
+	}
 }

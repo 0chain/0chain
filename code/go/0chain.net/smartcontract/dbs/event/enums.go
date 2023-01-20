@@ -13,12 +13,23 @@ const (
 	NumberOfTypes
 )
 
+// ProviderTable Table names of all providers in events_db, used in general provider handlers
+type ProviderTable string
+
+const (
+	MinerTable      ProviderTable = "miners"
+	SharderTable    ProviderTable = "sharders"
+	BlobberTable    ProviderTable = "blobbers"
+	AuthorizerTable ProviderTable = "authorizers"
+	ValidatorTable  ProviderTable = "validators"
+)
+
 func (t EventType) String() string {
-	if int(t) < len(TagString) && int(t) >= 0 {
-		return TagString[t]
+	if int(t) < len(TypeString) && int(t) >= 0 {
+		return TypeString[t]
 	}
 
-	return "unknown tag"
+	return "unknown type"
 }
 
 func (t EventType) Int() int {
@@ -72,8 +83,6 @@ const (
 	TagUpdateAllocationStat
 	TagUpdateBlobberStat
 	TagCollectProviderReward
-	TagSendTransfer
-	TagReceiveTransfer
 	TagLockStakePool
 	TagUnlockStakePool
 	TagLockWritePool
@@ -96,6 +105,11 @@ const (
 	TagUpdateAuthorizerTotalStake
 	TagUpdateAuthorizerTotalUnStake
 	TagUniqueAddress
+	TagMinerHealthCheck
+	TagSharderHealthCheck
+	TagBlobberHealthCheck
+	TagAuthorizerHealthCheck
+	TagValidatorHealthCheck
 	NumberOfTags
 )
 
@@ -166,8 +180,6 @@ func initTagString() {
 	TagString[TagUpdateAllocationStat] = "TagUpdateAllocationStat"
 	TagString[TagUpdateBlobberStat] = "TagUpdateBlobberStat"
 	TagString[TagCollectProviderReward] = "TagCollectProviderReward"
-	TagString[TagSendTransfer] = "TagSendTransfer"
-	TagString[TagReceiveTransfer] = "TagReceiveTransfer"
 	TagString[TagLockStakePool] = "TagLockStakePool"
 	TagString[TagUnlockStakePool] = "TagUnlockStakePool"
 	TagString[TagLockWritePool] = "TagLockWritePool"
@@ -187,6 +199,11 @@ func initTagString() {
 	TagString[TagUpdateSharderTotalUnStake] = "TagUpdateSharderTotalUnStake"
 	TagString[TagUpdateAuthorizerTotalUnStake] = "TagUpdateAuthorizerTotalUnStake"
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
+	TagString[TagMinerHealthCheck] = "TagMinerHealthCheck"
+	TagString[TagSharderHealthCheck] = "TagSharderHealthCheck"
+	TagString[TagBlobberHealthCheck] = "TagBlobberHealthCheck"
+	TagString[TagAuthorizerHealthCheck] = "TagAuthorizerHealthCheck"
+	TagString[TagValidatorHealthCheck] = "TagValidatorHealthCheck"
 	TagString[NumberOfTags] = "invalid"
 }
 
