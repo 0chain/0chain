@@ -3255,23 +3255,29 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) getActivePassedBlobberRewardsPartitions(w http.ResponseWriter, r *http.Request) {
-	periodString := r.URL.Query().Get("period")
-	if periodString == "" {
-		err := common.NewErrInternal("missing parameter: period")
-		common.Respond(w, r, nil, err)
+	//periodString := r.URL.Query().Get("period")
+	//if periodString == "" {
+	//	err := common.NewErrBadRequest("missing parameter: period")
+	//	common.Respond(w, r, nil, err)
+	//	return
+	//}
+	//
+	//period, err := strconv.ParseInt(periodString, 10, 64)
+	//if err != nil {
+	//	err := common.NewErrBadRequest("invalid period value: " + err.Error())
+	//	common.Respond(w, r, nil, err)
+	//	return
+	//}
+
+	conf, err := getConfig(srh.GetQueryStateContext())
+	if err != nil && err != util.ErrValueNotPresent {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
 		return
 	}
 
-	period, err := strconv.ParseInt(periodString, 10, 64)
+	ps, err := getCommonActivePassedBlobberRewardsPartitions(srh.GetQueryStateContext(), conf.BlockReward.TriggerPeriod)
 	if err != nil {
-		err := common.NewErrInternal("invalid period value" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	ps, err := getCommonActivePassedBlobberRewardsPartitions(srh.GetQueryStateContext(), period)
-	if err != nil {
-		err := common.NewErrInternal("cannot get active-passed-blobber-rewards partition" + err.Error())
+		err := common.NewErrInternal("cannot get active-passed-blobber-rewards partition: " + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
