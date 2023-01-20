@@ -3,7 +3,6 @@ package cases
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 )
 
@@ -70,8 +69,6 @@ func (n *RoundHasFinalized) AddResult(blob []byte) error {
 	if err := roundInfo.Decode(blob); err != nil {
 		return err
 	}
-
-	fmt.Printf("adding result -> %+v %+v\n", roundInfo, n.roundID)
 
 	if roundInfo.Num == int64(n.roundID) && (n.res == nil || n.res.Num == 0) {
 		defer func() {
