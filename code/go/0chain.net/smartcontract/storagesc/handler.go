@@ -49,6 +49,7 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	srh := NewStorageRestHandler(rh)
 	storage := "/v1/screst/" + ADDRESS
+	test := "/v1/test/screst"
 	return []rest.Endpoint{
 		rest.MakeEndpoint(storage+"/get_blobber_count", common.UserRateLimit(srh.getBlobberCount)),
 		rest.MakeEndpoint(storage+"/getBlobber", common.UserRateLimit(srh.getBlobber)),
@@ -99,6 +100,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-sharder-aggregates", srh.replicateSharderAggregates),
 		rest.MakeEndpoint(storage+"/replicate-authorizer-aggregates", srh.replicateAuthorizerAggregates),
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
+
+		rest.MakeEndpoint(test+"/get-active-passed-blobber-rewards-partitions", common.UserRateLimit(srh.getActivePassedBlobberRewardsPartitions)),
 	}
 }
 
@@ -3235,4 +3238,43 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		validators = []event.ValidatorAggregate{}
 	}
 	common.Respond(w, r, validators, nil)
+}
+
+// swagger:route GET /v1/screst/test/get-active-passed-blobber-rewards-partitions getActivePassedBlobberRewardsPartitions
+// Gets list of validator aggregate records
+//
+// parameters:
+//
+//	+name: period
+//	 description: the period number for which active-passed-blobber-block-rewards partition is requested
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: StringMap
+//	500:
+func (srh *StorageRestHandler) getActivePassedBlobberRewardsPartitions(w http.ResponseWriter, r *http.Request) {
+	periodString := r.URL.Query().Get("period")
+	if periodString == "" {
+		err := common.NewErrInternal("missing parameter: period")
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	period, err := strconv.ParseInt(periodString, 10, 64)
+	if err != nil {
+		err := common.NewErrInternal("invalid period value" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	ps, err := getCommonActivePassedBlobberRewardsPartitions(srh.GetQueryStateContext(), period)
+	if err != nil {
+		err := common.NewErrInternal("cannot get active-passed-blobber-rewards partition" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, ps, nil)
 }

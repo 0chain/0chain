@@ -55,6 +55,16 @@ func GetPartitions(state state.StateContextI, name string) (*Partitions, error) 
 	return &Partitions{rs: &rs}, nil
 }
 
+// GetCommonContextPartitions returns partitions of given name for test handler
+func GetCommonContextPartitions(state state.CommonStateContextI, name string) (*Partitions, error) {
+	rs := randomSelector{}
+	if err := state.GetTrieNode(name, &rs); err != nil {
+		return nil, err
+	}
+
+	return &Partitions{rs: &rs}, nil
+}
+
 // GetName returns the partitions name
 func (p *Partitions) GetName() string {
 	return p.rs.Name

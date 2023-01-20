@@ -43,6 +43,11 @@ func getActivePassedBlobberRewardsPartitions(balances c_state.StateContextI, per
 	return partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
 }
 
+func getCommonActivePassedBlobberRewardsPartitions(ctx c_state.CommonStateContextI, period int64) (*partitions.Partitions, error) {
+	key := BlobberRewardKey(GetPreviousRewardRound(ctx.GetBlock().Round, period))
+	return partitions.GetCommonContextPartitions(ctx, key)
+}
+
 // getOngoingPassedBlobberRewardsPartitions gets blobbers passed challenge from ongoing challenge period
 func getOngoingPassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
 	key := BlobberRewardKey(GetCurrentRewardRound(balances.GetBlock().Round, period))
