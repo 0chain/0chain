@@ -667,17 +667,17 @@ type SimpleNodeGeolocation struct {
 
 // swagger:model SimpleNode
 type SimpleNode struct {
-	*provider.Provider
-	N2NHost     string                `json:"n2n_host"`
-	Host        string                `json:"host"`
-	Port        int                   `json:"port"`
-	Geolocation SimpleNodeGeolocation `json:"geolocation"`
-	Path        string                `json:"path"`
-	PublicKey   string                `json:"public_key"`
-	ShortName   string                `json:"short_name"`
-	BuildTag    string                `json:"build_tag"`
-	TotalStaked currency.Coin         `json:"total_stake"`
-	Delete      bool                  `json:"delete"`
+	*provider.Provider `json:"provider"`
+	N2NHost            string                `json:"n2n_host"`
+	Host               string                `json:"host"`
+	Port               int                   `json:"port"`
+	Geolocation        SimpleNodeGeolocation `json:"geolocation"`
+	Path               string                `json:"path"`
+	PublicKey          string                `json:"public_key"`
+	ShortName          string                `json:"short_name"`
+	BuildTag           string                `json:"build_tag"`
+	TotalStaked        currency.Coin         `json:"total_stake"`
+	Delete             bool                  `json:"delete"`
 
 	// settings and statistic
 
@@ -908,7 +908,7 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 
 // getMinersList returns miners list
 func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
-	minerNodes, err := getNodesList(state, AllMinersKey)
+	minerNodes, err := getNodesList(getMinerNode, state, AllMinersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
@@ -996,7 +996,7 @@ func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupShares
 
 // getShardersKeepList returns the sharder list
 func getShardersKeepList(balances cstate.CommonStateContextI) (*MinerNodes, error) {
-	sharders, err := getNodesList(balances, ShardersKeepKey)
+	sharders, err := getNodesList(getSharderNode, balances, ShardersKeepKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
@@ -1014,7 +1014,7 @@ func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) er
 
 // getAllShardersKeepList returns the sharder list
 func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
-	sharders, err := getNodesList(balances, AllShardersKey)
+	sharders, err := getNodesList(getSharderNode, balances, AllShardersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
@@ -1029,7 +1029,11 @@ func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) err
 	return err
 }
 
-func getNodesList(balances cstate.CommonStateContextI, key datastore.Key) (*MinerNodes, error) {
+func getNodesList(
+	getNode func(id string, state cstate.CommonStateContextI) (*MinerNode, error),
+	balances cstate.CommonStateContextI,
+	key datastore.Key,
+) (*MinerNodes, error) {
 	nodesList := &MinerNodes{}
 	err := balances.GetTrieNode(key, nodesList)
 	if err != nil {
@@ -1043,7 +1047,7 @@ func getNodesList(balances cstate.CommonStateContextI, key datastore.Key) (*Mine
 
 	// TODO: replace AllShardersKey data in MPT with keys only or use partitions to
 	// avoid sync issue
-	ss, err := cstate.GetItemsByIDs(ids, getMinerNode, balances)
+	ss, err := cstate.GetItemsByIDs(ids, getNode, balances)
 	if err != nil {
 		return nil, err
 	}

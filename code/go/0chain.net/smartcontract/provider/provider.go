@@ -5,6 +5,8 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
+//go:generate msgp -io=false -tests=false -v
+
 func GetKey(id string) datastore.Key {
 	return "provider:" + id
 }

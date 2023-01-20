@@ -4,6 +4,7 @@ package minersc
 
 import (
 	"0chain.net/chaincore/block"
+	"0chain.net/smartcontract/provider"
 	"github.com/tinylib/msgp/msgp"
 )
 
@@ -828,9 +829,17 @@ func (z *PhaseNode) Msgsize() (s int) {
 func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 14
-	// string "ID"
-	o = append(o, 0x8e, 0xa2, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ID)
+	// string "Provider"
+	o = append(o, 0x8e, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	if z.Provider == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o, err = z.Provider.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "Provider")
+			return
+		}
+	}
 	// string "N2NHost"
 	o = append(o, 0xa7, 0x4e, 0x32, 0x4e, 0x48, 0x6f, 0x73, 0x74)
 	o = msgp.AppendString(o, z.N2NHost)
@@ -905,11 +914,22 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "ID":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ID")
-				return
+		case "Provider":
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.Provider = nil
+			} else {
+				if z.Provider == nil {
+					z.Provider = new(provider.Provider)
+				}
+				bts, err = z.Provider.UnmarshalMsg(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Provider")
+					return
+				}
 			}
 		case "N2NHost":
 			z.N2NHost, bts, err = msgp.ReadStringBytes(bts)
@@ -1036,7 +1056,13 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SimpleNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
+	s = 1 + 9
+	if z.Provider == nil {
+		s += msgp.NilSize
+	} else {
+		s += z.Provider.Msgsize()
+	}
+	s += 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
 	return
 }
 

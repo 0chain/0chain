@@ -197,10 +197,10 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 }
 
 type ValidationNode struct {
-	*provider.Provider
-	BaseURL           string             `json:"url"`
-	PublicKey         string             `json:"-" msg:"-"`
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	*provider.Provider `json:"provider"`
+	BaseURL            string             `json:"url"`
+	PublicKey          string             `json:"-" msg:"-"`
+	StakePoolSettings  stakepool.Settings `json:"stake_pool_settings"`
 }
 
 // validate the validator configurations
@@ -335,7 +335,7 @@ type Info struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	*provider.Provider
+	*provider.Provider      `json:"provider"`
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
