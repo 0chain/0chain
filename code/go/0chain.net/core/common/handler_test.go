@@ -123,91 +123,6 @@ func TestRespond(t *testing.T) {
 	}
 }
 
-func TestCheckCrossOrigin(t *testing.T) {
-	t.Parallel()
-
-	type args struct {
-		w http.ResponseWriter
-		r *http.Request
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "Test_CheckCrossOrigin_TRUE",
-			args: args{
-				w: httptest.NewRecorder(),
-				r: httptest.NewRequest(http.MethodGet, "/", nil),
-			},
-			want: true,
-		},
-		{
-			name: "Test_CheckCrossOrigin_invalid_Origin_FALSE",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "invalid origin")
-
-				return args{
-					w: httptest.NewRecorder(),
-					r: r,
-				}
-			}(),
-			want: false,
-		},
-		{
-			name: "Test_CheckCrossOrigin_Invalid_Origin2_FALSE",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "0x7f")
-
-				return args{
-					w: httptest.NewRecorder(),
-					r: r,
-				}
-			}(),
-			want: false,
-		},
-		{
-			name: "Test_CheckCrossOrigin_LocalHost_TRUE",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "file://localhost:8080/")
-
-				return args{
-					w: httptest.NewRecorder(),
-					r: r,
-				}
-			}(),
-			want: true,
-		},
-		{
-			name: "Test_CheckCrossOrigin_0chain.net_TRUE",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "http://0chain.net")
-
-				return args{
-					w: httptest.NewRecorder(),
-					r: r,
-				}
-			}(),
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := CheckCrossOrigin(tt.args.w, tt.args.r); got != tt.want {
-				t.Errorf("CheckCrossOrigin() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestSetupCORSResponse(t *testing.T) {
 	t.Parallel()
 
@@ -225,7 +140,8 @@ func TestSetupCORSResponse(t *testing.T) {
 			wantW: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
 				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-				w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Accept-Encoding")
+				w.Header().Set("Access-Control-Allow-Headers", "*")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
 				return w
 			}(),
 		},
@@ -269,19 +185,6 @@ func TestToJSONResponse(t *testing.T) {
 
 				data, err := handler(nil, r)
 				Respond(w, r, data, err)
-
-				return w
-			}(),
-		},
-		{
-			name: "Test_ToJSONResponse_OK2",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "invalid origin")
-				return args{handler: handler, r: r}
-			}(),
-			want: func() http.ResponseWriter {
-				w := httptest.NewRecorder()
 
 				return w
 			}(),
@@ -352,19 +255,6 @@ func TestToJSONReqResponse(t *testing.T) {
 		},
 		{
 			name: "Test_ToJSONReqResponse_OK",
-			args: func() args {
-				r := httptest.NewRequest(http.MethodGet, "/", nil)
-				r.Header.Add("Origin", "invalid origin")
-				return args{handler: handler, r: r}
-			}(),
-			want: func() http.ResponseWriter {
-				w := httptest.NewRecorder()
-
-				return w
-			}(),
-		},
-		{
-			name: "Test_ToJSONReqResponse_OK2",
 			args: func() args {
 				buf := bytes.NewBuffer([]byte("{}"))
 				r := httptest.NewRequest(http.MethodGet, "/", buf)
