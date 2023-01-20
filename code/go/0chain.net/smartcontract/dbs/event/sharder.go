@@ -106,10 +106,21 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 	if len(sharderDps) == 0 {
 		return s, nil, fmt.Errorf("get sharder %s found no records", id)
 	}
+	if id != sharderDps[0].Sharder.ID {
+		return s, nil, fmt.Errorf("mismatched sharder; want id %s but have id %s", id, sharderDps[0].Sharder.ID)
+	}
 	s = sharderDps[0].Sharder
+	if id != sharderDps[0].ProviderRewards.ProviderID {
+		return s, nil, fmt.Errorf("mismatched sharder; want id %s but have id%s in provider rewrards",
+			id, sharderDps[0].Sharder.ID)
+	}
 	s.Rewards = sharderDps[0].ProviderRewards
 	for i := range sharderDps {
 		dps = append(dps, sharderDps[i].DelegatePool)
+		if id != sharderDps[i].DelegatePool.ProviderID {
+			return s, nil, fmt.Errorf("mismatched sharder id in delegate pool;"+
+				"want id %s but have id %s", id, sharderDps[i].DelegatePool.ProviderID)
+		}
 	}
 
 	return s, dps, nil
