@@ -49,6 +49,12 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	numAuth, err := getAuthorizerCount(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("error while retriving number of authorizers: %v, %s", err, info)
+		err = common.NewError(code, msg)
+		return
+	}
+
 	threshold := int(math.RoundToEven(gn.PercentAuthorizers * float64(numAuth)))
 
 	// if number of slices exceeds limits the check only withing required range
@@ -101,6 +107,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	if err != nil {
 		msg := fmt.Sprintf("failed to verify signatures with error: %v, %s", err, info)
 		err = common.NewError(code, msg)
+		return
 	}
 
 	if len(uniqueSignatures) < threshold {

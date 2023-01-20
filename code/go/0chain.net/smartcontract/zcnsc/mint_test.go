@@ -81,6 +81,45 @@ func Test_EmptySignaturesShouldFail(t *testing.T) {
 	require.Error(t, err)
 }
 
+func Test_EmptyAuthorizersShouldFail(t *testing.T) {
+	ctx := MakeMockStateContext()
+	ctx.stakingPools = nil
+	ctx.authorizers = nil
+
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	_, err = contract.Mint(transaction, payload.Encode(), ctx)
+	require.Error(t, err)
+}
+
+func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
+	ctx := MakeMockStateContext()
+	ctx.stakingPools = nil
+	ctx.authorizers = nil
+
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	// Add a few signatures.
+	var signatures []*AuthorizerSignature
+	for i := 0; i < 10; i++ {
+		signatures = append(signatures, &AuthorizerSignature{})
+	}
+	payload.Signatures = signatures
+
+	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	_, err = contract.Mint(transaction, payload.Encode(), ctx)
+	require.Error(t, err)
+}
+
 // TBD
 func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	ctx := MakeMockStateContext()
