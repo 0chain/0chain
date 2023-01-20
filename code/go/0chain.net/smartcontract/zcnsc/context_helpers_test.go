@@ -87,6 +87,7 @@ func MakeMockStateContext() *mockStateContext {
 	// Transfers
 
 	var transfers []*state.Transfer
+	var mints []*state.Mint
 
 	// EventsDB
 	events = make(map[string]*AuthorizerNode, 100)
@@ -188,7 +189,13 @@ func MakeMockStateContext() *mockStateContext {
 			return nil
 		})
 
-	ctx.On("AddMint", mock.AnythingOfType("*state.Mint")).Return(nil)
+	ctx.On("AddMint", mock.AnythingOfType("*state.Mint")).Return(func(m *state.Mint) error {
+		mints = append(mints, m)
+		return nil
+	})
+	ctx.On("GetMints").Return(func() []*state.Mint {
+		return mints
+	})
 
 	// EventsDB
 
