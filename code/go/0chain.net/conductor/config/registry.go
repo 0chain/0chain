@@ -235,6 +235,15 @@ func init() {
 		return ex.WrongVerificationTicketKey(&wvtk)
 	})
 
+	register("collect_verification_tickets_when_missing_vrf", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewCollectVerificationTicketsWhenMissedVRF()
+		if err = cfg.Decode(val); err != nil {
+			return
+		}
+		return ex.SetServerState(cfg)
+	})
+
 	register("wrong_notarized_block_hash", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var wnth Bad
@@ -409,6 +418,7 @@ func init() {
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
+
 		return ex.ConfigureTestCase(cfg)
 	})
 
@@ -591,6 +601,7 @@ func init() {
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
+
 		return ex.ConfigureTestCase(cfg)
 	})
 
