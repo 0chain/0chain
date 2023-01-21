@@ -83,6 +83,7 @@ func (edb *EventDb) addMinerSnapshot(miners []Miner) error {
 			TotalStake:    miner.TotalStake,
 			ServiceCharge: miner.ServiceCharge,
 			CreationRound: miner.CreationRound,
+			TotalRewards:  miner.Rewards.TotalRewards,
 		})
 	}
 

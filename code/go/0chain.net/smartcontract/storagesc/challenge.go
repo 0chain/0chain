@@ -1107,17 +1107,25 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	expiredIDs, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created)
+	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}
 
+	// maps blobberID to count of its expiredIDs.
+	expiredCountMap := make(map[string]int)
+
 	// TODO: maybe delete them periodically later instead of remove immediately
-	for _, id := range expiredIDs {
-		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, id))
+	for challengeID, blobberID := range expiredIDsMap {
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
 			return common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
 		}
+
+		if _, ok := expiredCountMap[blobberID]; !ok {
+			expiredCountMap[blobberID] = 0
+		}
+		expiredCountMap[blobberID]++
 	}
 
 	// add the generated challenge to the open challenges list in the allocation
@@ -1151,7 +1159,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	beforeEmitAddChallenge(challInfo)
 
-	emitAddChallenge(challInfo, len(expiredIDs), balances)
+	emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances)
 	return nil
 }
 
