@@ -83,6 +83,7 @@ func (edb *EventDb) addSharderSnapshot(sharders []Sharder) error {
 			TotalStake:    sharder.TotalStake,
 			ServiceCharge: sharder.ServiceCharge,
 			CreationRound: sharder.CreationRound,
+			TotalRewards:  sharder.Rewards.TotalRewards,
 		})
 	}
 

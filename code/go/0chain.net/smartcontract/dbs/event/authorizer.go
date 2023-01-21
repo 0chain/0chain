@@ -39,7 +39,6 @@ func (a *Authorizer) GetTotalRewards() currency.Coin {
 	return a.Rewards.TotalRewards
 }
 
-
 func (a *Authorizer) SetTotalStake(value currency.Coin) {
 	a.TotalStake = value
 }

@@ -32,6 +32,13 @@ type PostgresStore struct {
 	db *gorm.DB
 }
 
+// New creates a PostgresStore instance with gorm.DB
+func New(db *gorm.DB) *PostgresStore {
+	return &PostgresStore{
+		db: db,
+	}
+}
+
 func (store *PostgresStore) Open(config config.DbAccess) error {
 	if !config.Enabled {
 		return errors.New("db_open_error, db disabled")

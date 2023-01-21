@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -34,31 +36,38 @@ const (
 )
 
 func TestAddChallenge(t *testing.T) {
+	type challengeAdd struct {
+		blobberID string
+		ts        common.Timestamp
+	}
+	type blobberTS struct {
+		blobberID string
+		ts        common.Timestamp
+	}
 	type parameters struct {
 		blobberID    string
 		allocID      string
-		challengesTS []common.Timestamp
-		newChallenge *StorageChallenge
+		challengesTS []blobberTS
+		add          challengeAdd
 		cct          time.Duration
 		challInfo    *StorageChallengeResponse
-		ct           common.Timestamp
 	}
 
 	type args struct {
 		balances        cstate.StateContextI
 		alloc           *StorageAllocation
 		allocChallenges *AllocationChallenges
-		newChallenge    func(ts common.Timestamp) *StorageChallenge
 	}
 
 	type want struct {
 		openChallengeNum int
+		openDelta        map[string]int64
+		events           []event.Event
 		error            bool
 		errorMsg         string
 	}
 
 	var (
-		blobberID = "blobber_1"
 		allocID   = "alloc_1"
 		allocRoot = "alloc_root"
 	)
@@ -67,6 +76,7 @@ func TestAddChallenge(t *testing.T) {
 		ssc := &StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
+		config.SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", p.cct)
 
 		balances := &mockStateContext{
 			store: make(map[datastore.Key]util.MPTSerializable),
@@ -78,25 +88,6 @@ func TestAddChallenge(t *testing.T) {
 			allChallengeReadyBlobbersPartitionSize)
 		require.NoError(t, err)
 
-		var blobberMap = make(map[string]*BlobberAllocation)
-
-		blobberAllocs := make([]*BlobberAllocation, 1)
-		blobberAllocs[0] = &BlobberAllocation{
-			BlobberID:      blobberID,
-			AllocationRoot: "root " + blobberID,
-			Stats:          &StorageAllocationStats{},
-			Terms:          Terms{},
-		}
-
-		blobberMap[blobberID] = blobberAllocs[0]
-
-		err = challengeReadyParts.Add(
-			balances,
-			&ChallengeReadyBlobber{
-				BlobberID: blobberID,
-			})
-		require.NoError(t, err)
-
 		allocChallenges, err := ssc.getAllocationChallenges(allocID, balances)
 		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
 			allocChallenges = new(AllocationChallenges)
@@ -104,24 +95,43 @@ func TestAddChallenge(t *testing.T) {
 		}
 
 		alloc := &StorageAllocation{
-			ID:               allocID,
-			BlobberAllocs:    blobberAllocs,
-			BlobberAllocsMap: blobberMap,
+			ID:            allocID,
+			BlobberAllocs: make([]*BlobberAllocation, 0, len(p.challengesTS)),
+
+			BlobberAllocsMap: make(map[string]*BlobberAllocation),
 			Stats:            &StorageAllocationStats{},
 		}
 
-		for _, ts := range p.challengesTS {
+		for _, bts := range p.challengesTS {
+			bid := bts.blobberID
+			ts := bts.ts
+			ba := &BlobberAllocation{
+				BlobberID:      bid,
+				AllocationRoot: "root " + bid,
+				Stats:          &StorageAllocationStats{},
+				Terms:          Terms{},
+			}
+			alloc.BlobberAllocs = append(alloc.BlobberAllocs, ba)
+
+			alloc.BlobberAllocsMap[bid] = ba
+
+			err = challengeReadyParts.Add(
+				balances,
+				&ChallengeReadyBlobber{
+					BlobberID: bid,
+				})
+
 			c := &StorageChallenge{
-				ID:              fmt.Sprintf("%s:%s:%d", allocID, blobberID, ts),
+				ID:              fmt.Sprintf("%s:%s:%d", allocID, bid, ts),
 				AllocationID:    allocID,
-				BlobberID:       blobberID,
+				BlobberID:       bid,
 				TotalValidators: 1,
 				Created:         ts,
 			}
 
 			challInfo := &StorageChallengeResponse{
 				StorageChallenge: c,
-				AllocationRoot:   alloc.BlobberAllocsMap[blobberID].AllocationRoot,
+				AllocationRoot:   alloc.BlobberAllocsMap[bid].AllocationRoot,
 			}
 
 			err = ssc.addChallenge(alloc, c, allocChallenges, challInfo, balances)
@@ -135,7 +145,7 @@ func TestAddChallenge(t *testing.T) {
 		}
 	}
 
-	newChallenge := func(ts common.Timestamp) (*StorageChallenge, *StorageChallengeResponse) {
+	newChallenge := func(allocID, blobberID string, ts common.Timestamp) (*StorageChallenge, *StorageChallengeResponse) {
 		if ts == -1 {
 			ch := &StorageChallenge{BlobberID: ""}
 			return ch, &StorageChallengeResponse{StorageChallenge: ch}
@@ -163,49 +173,77 @@ func TestAddChallenge(t *testing.T) {
 			name: "OK",
 			parameters: parameters{
 				cct: 100 * time.Second,
-				ct:  common.Timestamp(10),
+				add: challengeAdd{"blobber_1", common.Timestamp(10)},
 			},
 			want: want{
 				openChallengeNum: 1,
+				openDelta: map[string]int64{
+					"blobber_1": 1,
+				},
 			},
 		},
 		{
 			name: "OK - more than one open challenges",
 			parameters: parameters{
-				cct:          100 * time.Second,
-				challengesTS: []common.Timestamp{10, 20},
-				ct:           common.Timestamp(30),
+				cct: 100 * time.Second,
+				challengesTS: []blobberTS{
+					{"blobber_1", 10},
+					{"blobber_2", 20},
+				},
+				add: challengeAdd{"blobber_1", common.Timestamp(30)},
 			},
 			want: want{
 				openChallengeNum: 3,
+				openDelta: map[string]int64{
+					"blobber_1": 1,
+					"blobber_2": 0,
+				},
 			},
 		},
 		{
 			name: "OK - one challenge expired",
 			parameters: parameters{
-				cct:          100 * time.Second,
-				challengesTS: []common.Timestamp{10, 20},
-				ct:           common.Timestamp(110),
+				cct: 100 * time.Second,
+				challengesTS: []blobberTS{
+					{"blobber_1", 10},
+					{"blobber_2", 20},
+				},
+				add: challengeAdd{"blobber_1", common.Timestamp(110)},
 			},
 			want: want{
 				openChallengeNum: 2,
+				openDelta: map[string]int64{
+					"blobber_1": 0,
+					"blobber_2": 0,
+				},
 			},
 		},
 		{
-			name: "OK - two challenge expired",
+			name: "OK - more challenges expired, multiple blobbers",
 			parameters: parameters{
-				cct:          100 * time.Second,
-				challengesTS: []common.Timestamp{10, 20},
-				ct:           common.Timestamp(120),
+				cct: 100 * time.Second,
+				challengesTS: []blobberTS{
+					{"blobber_1", 10},
+					{"blobber_2", 20},
+					{"blobber_2", 25},
+					{"blobber_2", 30},
+					{"blobber_3", 30},
+				},
+				add: challengeAdd{"blobber_1", common.Timestamp(130)},
 			},
 			want: want{
 				openChallengeNum: 1,
+				openDelta: map[string]int64{
+					"blobber_1": 1,
+					"blobber_2": -3,
+					"blobber_3": -1,
+				},
 			},
 		},
 		{
 			name: "Error challenge blobber ID is empty",
 			parameters: parameters{
-				ct: common.Timestamp(-1),
+				add: challengeAdd{"blobber_1", common.Timestamp(-1)},
 			},
 			want: want{
 				error:    true,
@@ -217,9 +255,11 @@ func TestAddChallenge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ssc, args := parepareSSCArgs(t, tt.parameters)
+			es := args.balances.GetEvents()
+			initESLen := len(es)
 
 			// add new challenge
-			c, challInfo := newChallenge(tt.parameters.ct)
+			c, challInfo := newChallenge(args.alloc.ID, tt.parameters.add.blobberID, tt.parameters.add.ts)
 			err := ssc.addChallenge(args.alloc,
 				c,
 				args.allocChallenges,
@@ -256,6 +296,27 @@ func TestAddChallenge(t *testing.T) {
 
 			// assert the open challenge number is correct
 			require.Equal(t, tt.want.openChallengeNum, len(ac.OpenChallenges))
+
+			// assert the open challenge update events are emitted
+			es = args.balances.GetEvents()[initESLen:]
+			updateOpenChallengeEventMap := make(map[string]int64)
+			for _, e := range es {
+				if e.Tag == event.TagUpdateBlobberOpenChallenges {
+					d, ok := e.Data.(event.ChallengeStatsDeltas)
+					require.True(t, ok)
+					updateOpenChallengeEventMap[d.Id] = d.OpenDelta
+				}
+			}
+
+			for bid, od := range tt.want.openDelta {
+				if od == 0 {
+					// asser there's no event emitted for unchanged open challenges stats
+					_, ok := updateOpenChallengeEventMap[bid]
+					require.False(t, ok)
+					continue
+				}
+				require.Equal(t, od, updateOpenChallengeEventMap[bid])
+			}
 		})
 	}
 }

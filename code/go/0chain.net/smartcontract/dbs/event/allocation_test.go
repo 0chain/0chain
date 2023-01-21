@@ -15,7 +15,6 @@ import (
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 func init() {
@@ -346,7 +345,6 @@ func TestAllocations(t *testing.T) {
 	require.NoError(t, err)
 
 	eventAddSa := Event{
-		Model:       gorm.Model{},
 		BlockNumber: 1,
 		TxHash:      "txn_hash",
 		Type:        TypeStats,
@@ -366,7 +364,6 @@ func TestAllocations(t *testing.T) {
 	require.NoError(t, err)
 
 	eventOverwriteSa := Event{
-		Model:       gorm.Model{},
 		BlockNumber: 2,
 		TxHash:      "txn_hash2",
 		Type:        TypeStats,
