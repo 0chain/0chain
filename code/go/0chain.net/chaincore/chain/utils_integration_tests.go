@@ -38,12 +38,3 @@ func IsSpammer(spammers []cases.NodeTypeTypeRank, roundNum int64) (isSpammer boo
 
 	return
 }
-
-// IsSpamReceiver checks whether a node is the spam receiver set in the round_has_finalized configuration.
-func IsSpamReceiver(state *crpc.State, roundNum int64) (isSpamReceiver bool) {
-	isSpamReceiver = false
-
-	nodeType, typeRank := GetNodeTypeAndTypeRank(roundNum)
-
-	return state.RoundHasFinalizedConfig.SpammingReceiver.NodeType == nodeType && state.RoundHasFinalizedConfig.SpammingReceiver.TypeRank == typeRank
-}

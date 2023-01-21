@@ -37,3 +37,9 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	interface{}, error) {
 	return vrfShareHandler(ctx, entity)
 }
+
+// NotarizedBlockHandler - handles a notarized block.
+func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
+	interface{}, error) {
+	return notarizedBlockHandler(ctx, entity)
+}
