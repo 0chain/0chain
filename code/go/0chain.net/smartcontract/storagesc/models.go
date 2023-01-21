@@ -1351,7 +1351,6 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 
 	cct := getMaxChallengeCompletionTime()
 
-
 	for _, oc := range allocChallenges.OpenChallenges {
 		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
 		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
@@ -1360,7 +1359,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 			logging.Logger.Error("removeExpiredChallenges found duplicate expired challenge", zap.String("challengeID", oc.ID))
 			return nil, common.NewError("removeExpiredChallenges", "found duplicates expired challenge")
 		}
-		
+
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break
