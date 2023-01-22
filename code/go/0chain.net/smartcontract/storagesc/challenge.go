@@ -610,10 +610,9 @@ func (sc *StorageSmartContract) challengePassed(
 			"can't get blobber"+err.Error())
 	}
 
-	// this expiry of blobber needs to be corrected once logic is finalized
-
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, triggerPeriod)
-	if blobber.RewardPartition.StartRound != rewardRound ||
+	// this expiry of blobber needs to be corrected once logic is finalized
+	if blobber.RewardRound.StartRound != rewardRound ||
 		balances.GetBlock().Round == 0 {
 
 		var dataRead float64 = 0
@@ -621,7 +620,7 @@ func (sc *StorageSmartContract) challengePassed(
 			dataRead = blobber.DataReadLastRewardRound
 		}
 
-		partIndex, err := ongoingParts.AddItem(
+		err := ongoingParts.Add(
 			balances,
 			&BlobberRewardNode{
 				ID:                blobber.ID,
@@ -636,8 +635,7 @@ func (sc *StorageSmartContract) challengePassed(
 				"can't add to ongoing partition list "+err.Error())
 		}
 
-		blobber.RewardPartition = RewardPartitionLocation{
-			Index:      partIndex,
+		blobber.RewardRound = RewardRound{
 			StartRound: rewardRound,
 			Timestamp:  t.CreationDate,
 		}
@@ -650,7 +648,7 @@ func (sc *StorageSmartContract) challengePassed(
 	}
 
 	var brStats BlobberRewardNode
-	if err := ongoingParts.GetItem(balances, blobber.RewardPartition.Index, blobber.ID, &brStats); err != nil {
+	if err := ongoingParts.Get(balances, blobber.ID, &brStats); err != nil {
 		return "", common.NewError("verify_challenge",
 			"can't get blobber reward from partition list: "+err.Error())
 	}
@@ -676,7 +674,7 @@ func (sc *StorageSmartContract) challengePassed(
 
 	emitUpdateChallenge(cab.challenge, true, balances)
 
-	err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
+	err = ongoingParts.UpdateItem(balances, &brStats)
 	if err != nil {
 		return "", common.NewErrorf("verify_challenge",
 			"error updating blobber reward item: %v", err)
@@ -911,18 +909,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if alloc.Expiration >= txn.CreationDate {
 			foundAllocation = true
 			break
-		} else {
-			allocBlob, ok := alloc.BlobberAllocsMap[blobberID]
-			if !ok {
-				return nil, errors.New("invalid blobber for allocation")
-			}
-			if err := removeAllocationFromBlobber(sc,
-				allocBlob,
-				allocID,
-				balances); err != nil {
-				return nil, err
-			}
 		}
+
 		err = alloc.save(balances, sc.ID)
 		if err != nil {
 			return nil, common.NewErrorf("populate_challenge",
