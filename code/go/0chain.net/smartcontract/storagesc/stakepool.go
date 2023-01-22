@@ -349,6 +349,9 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 		if err != util.ErrValueNotPresent {
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
+		if settings.DelegateWallet == "" {
+			return nil, fmt.Errorf("delegate_wallet is empty")
+		}
 		sp = newStakePool()
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 		sp.Minter = chainstate.MinterStorage
