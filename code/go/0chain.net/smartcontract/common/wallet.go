@@ -7,7 +7,7 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-//ValidateDelegateWallet - Protects against using the provider's clientID (operational wallet ID) as DelegateWalletID. Checks that clientID and delegateWalletID are not the same
+// ValidateDelegateWallet - Protects against using the provider's clientID (operational wallet ID) as DelegateWalletID. Checks that clientID and delegateWalletID are not the same
 func ValidateDelegateWallet(publicKey, delegateWalletID string) *common.Error {
 	if config.Development() {
 		return nil

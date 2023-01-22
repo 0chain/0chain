@@ -9,14 +9,13 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
-	commonsc "0chain.net/smartcontract/common"
-
 )
 
 const (
@@ -219,6 +218,10 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"malformed request: "+err.Error())
 	}
 
+	if blobber.StakePoolSettings.DelegateWallet == "" {
+		return "", common.NewError("add_or_update_blobber_failed", "delegate_wallet cannot be empty")
+	}
+
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
@@ -282,6 +285,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"can't get the blobber: "+err.Error())
 	}
 
+	// we get the stakepool associated with a blobber
 	var sp *stakePool
 	if sp, err = sc.getStakePool(spenum.Blobber, updatedBlobber.ID, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
@@ -290,7 +294,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 
 	if sp.Settings.DelegateWallet == "" {
 		return "", common.NewError("update_blobber_settings_failed",
-			"blobber's delegate_wallet is not set")
+			"blobber's delegate_wallet is not set: current stake pool"+string(sp.Encode()))
 	}
 
 	if t.ClientID != sp.Settings.DelegateWallet {
@@ -324,9 +328,9 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI,
 ) (string, error) {
 	var (
-		blobber *StorageNode
+		blobber  *StorageNode
 		downtime uint64
-		err     error
+		err      error
 	)
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
