@@ -224,9 +224,9 @@ func main() {
 	go sc.StartLFMBWorker(ctx)
 
 	setupBlockStorageProvider(mConf, workdir)
-	if sc.GetCurrentRound() == 0 {
-		sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-			magicBlock, initStates)
+	latestFinalizedBlock := sc.GetLatestFinalizedBlock()
+	if latestFinalizedBlock == nil || latestFinalizedBlock.Round == 0 {
+		sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock, initStates)
 	}
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
