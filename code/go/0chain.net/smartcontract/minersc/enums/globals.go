@@ -82,6 +82,8 @@ const (
 
 	DbsAggregateDebug
 	DbsAggregatePeriod
+	DbsPartitionChangePeriod
+	DbsPartitionKeepCount
 	DbsAggregatePageLimit
 
 	HealthCheckDeepScanEnabled          // todo restart worker

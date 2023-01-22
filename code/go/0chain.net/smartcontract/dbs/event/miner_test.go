@@ -30,6 +30,8 @@ func TestMinersBatchUpdate(t *testing.T) {
 	logging.InitLogging("development", "")
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionKeepCount: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionChangePeriod: 100}}}
 
 	type Stat struct {
 		// for miner (totals)
@@ -243,6 +245,9 @@ func TestMiners(t *testing.T) {
 	}
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionKeepCount: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionChangePeriod: 100}}}
+
 	type NodeType int
 
 	type SimpleNode struct {
@@ -511,6 +516,8 @@ func TestGetMiners(t *testing.T) {
 	require.NoError(t, err)
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionKeepCount: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionChangePeriod: 100}}}
 
 	assert.NoError(t, err, "error while migrating database")
 	createMiners(t, eventDb, 10)
@@ -555,6 +562,8 @@ func TestGetMinerLocations(t *testing.T) {
 	require.NoError(t, err)
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionKeepCount: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionChangePeriod: 100}}}
 
 	assert.NoError(t, err, "error while migrating database")
 	createMinersWithLocation(t, eventDb, 12)

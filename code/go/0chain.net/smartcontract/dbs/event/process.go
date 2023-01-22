@@ -183,7 +183,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
 
-		if es.round%edb.settings.PartitionChanePeriod == 0 {
+		if es.round%edb.settings.PartitionChangePeriod == 0 {
 			//edb.addPartition(es.round, "snapshots")
 			//edb.dropPartition(es.round, "snapshots")
 			edb.addPartition(es.round, "blobber_aggregates")
