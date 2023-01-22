@@ -81,26 +81,8 @@ func Test_EmptySignaturesShouldFail(t *testing.T) {
 	require.Error(t, err)
 }
 
-func Test_EmptyAuthorizersShouldFail(t *testing.T) {
-	ctx := MakeMockStateContext()
-	ctx.stakingPools = nil
-	ctx.authorizers = nil
-
-	contract := CreateZCNSmartContract()
-	payload, err := CreateMintPayload(ctx, defaultClient)
-	require.NoError(t, err)
-
-	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
-	require.NoError(t, err)
-
-	_, err = contract.Mint(transaction, payload.Encode(), ctx)
-	require.Error(t, err)
-}
-
 func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
-	ctx := MakeMockStateContext()
-	ctx.stakingPools = nil
-	ctx.authorizers = nil
+	ctx := MakeMockStateContextWithNoAutorizers()
 
 	contract := CreateZCNSmartContract()
 	payload, err := CreateMintPayload(ctx, defaultClient)
@@ -108,8 +90,8 @@ func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
 
 	// Add a few signatures.
 	var signatures []*AuthorizerSignature
-	for i := 0; i < 10; i++ {
-		signatures = append(signatures, &AuthorizerSignature{})
+	for _, id := range []string{"sign1", "sign2", "sign3"} {
+		signatures = append(signatures, &AuthorizerSignature{ID: id})
 	}
 	payload.Signatures = signatures
 

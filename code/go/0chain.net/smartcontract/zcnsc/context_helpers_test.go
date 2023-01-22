@@ -239,6 +239,192 @@ func MakeMockStateContext() *mockStateContext {
 	return ctx
 }
 
+func MakeMockStateContextWithNoAutorizers() *mockStateContext {
+	ctx := &mockStateContext{
+		StateContextI: &mocks.StateContextI{},
+	}
+
+	// GetSignatureScheme
+
+	ctx.On("GetSignatureScheme").Return(
+		func() encryption.SignatureScheme {
+			return encryption.NewBLS0ChainScheme()
+		},
+	)
+
+	// Global Node
+
+	ctx.globalNode = &GlobalNode{
+		ID: ADDRESS,
+		ZCNSConfig: &ZCNSConfig{
+			MinStakeAmount: 11,
+			OwnerId:        "8a15e216a3b4237330c1fff19c7b3916ece5b0f47341013ceb64d53595a4cebb",
+		},
+	}
+
+	// User Node
+
+	ctx.userNodes = make(map[string]*UserNode)
+	for _, client := range clients {
+		userNode := createUserNode(client)
+		ctx.userNodes[userNode.GetKey()] = userNode
+	}
+
+	// Transfers
+
+	var transfers []*state.Transfer
+
+	// EventsDB
+	events = make(map[string]*AuthorizerNode, 100)
+
+	/// GetClientBalance
+
+	ctx.On("GetClientBalance", mock.AnythingOfType("string")).Return(5, nil)
+
+	/// AddTransfer
+
+	ctx.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
+		func(transfer *state.Transfer) error {
+			transfers = append(transfers, transfer)
+			return nil
+		})
+
+	/// GetTransfers
+
+	ctx.On("GetTransfers").Return(func() []*state.Transfer {
+		return transfers
+	})
+
+	/// DeleteTrieNode
+
+	ctx.On("DeleteTrieNode", mock.AnythingOfType("string")).Return(
+		func(key datastore.Key) datastore.Key {
+			if strings.Contains(key, AuthorizerNodeType) {
+				delete(ctx.authorizers, key)
+				return key
+			}
+			return ""
+		},
+		func(_ datastore.Key) error {
+			return nil
+		})
+
+	/// InsertTrieNode
+
+	ctx.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("util.MPTSerializable")).Return(
+		func(key datastore.Key, node util.MPTSerializable) util.MPTSerializable {
+			if strings.Contains(key, UserNodeType) {
+				ctx.userNodes[key] = node.(*UserNode)
+				return node
+			}
+			if strings.Contains(key, AuthorizerNodeType) {
+				authorizerNode := node.(*AuthorizerNode)
+				ctx.authorizers[key] = &Authorizer{
+					Scheme: nil,
+					Node:   authorizerNode,
+				}
+				return authorizerNode
+			}
+
+			return nil
+		},
+		func(_ datastore.Key) error {
+			return nil
+		})
+
+	ctx.On("InsertTrieNode", ctx.globalNode.GetKey(),
+		mock.AnythingOfType("*zcnsc.GlobalNode")).Return(
+		func(_ datastore.Key, node util.MPTSerializable) datastore.Key {
+			ctx.globalNode = node.(*GlobalNode)
+			return ""
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
+			return nil
+		})
+
+	ctx.On("InsertTrieNode", mock.AnythingOfType("string"),
+		mock.AnythingOfType("*zcnsc.UserNode")).Return(
+		func(key datastore.Key, node util.MPTSerializable) datastore.Key {
+			n := node.(*UserNode)
+			ctx.userNodes[key] = n
+			return ""
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
+			return nil
+		})
+
+	ctx.On("InsertTrieNode", mock.AnythingOfType("string"),
+		mock.AnythingOfType("*zcnsc.AuthorizerNode")).Return(
+		func(key datastore.Key, node util.MPTSerializable) datastore.Key {
+			if strings.Contains(key, UserNodeType) {
+				ctx.userNodes[key] = node.(*UserNode)
+				return key
+			}
+			if strings.Contains(key, AuthorizerNodeType) {
+				authorizerNode := node.(*AuthorizerNode)
+				ctx.authorizers[key] = &Authorizer{
+					Scheme: nil,
+					Node:   authorizerNode,
+				}
+			}
+
+			return key
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
+			return nil
+		})
+
+	ctx.On("AddMint", mock.AnythingOfType("*state.Mint")).Return(nil)
+
+	// EventsDB
+
+	ctx.On("EmitEvent",
+		mock.AnythingOfType("event.EventType"),
+		mock.AnythingOfType("event.EventTag"),
+		mock.AnythingOfType("string"), // authorizerID
+		mock.Anything,                 // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, body string) {
+			fmt.Println(".")
+		})
+
+	ctx.On("EmitEvent",
+		event.TypeStats,
+		event.TagAddAuthorizer,
+		mock.AnythingOfType("string"), // authorizerID
+		mock.Anything,                 // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, ev *event.Authorizer) {
+			authorizerNode, err := AuthorizerFromEvent(ev)
+			if err != nil {
+				panic(err)
+			}
+			if authorizerNode.ID != id {
+				panic("authorizerID must be equal to ID")
+			}
+			events[id] = authorizerNode
+		})
+
+	ctx.On("EmitEvent",
+		event.TypeStats,
+		event.TagUpdateAuthorizer,
+		mock.AnythingOfType("string"), // authorizerID
+		mock.Anything,                 // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, ev *event.Authorizer) {
+			authorizerNode, err := AuthorizerFromEvent(ev)
+			if err != nil {
+				panic(err)
+			}
+			if authorizerNode.ID != id {
+				panic("authorizerID must be equal to ID")
+			}
+			events[id] = authorizerNode
+		})
+
+	return ctx
+}
+
 func createTestStakingPools(ctx *mockStateContext, delegateID string) *StakePool {
 	sp := NewStakePool()
 	sp.Minter = cstate.MinterStorage
