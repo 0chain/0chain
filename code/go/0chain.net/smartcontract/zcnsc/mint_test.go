@@ -82,7 +82,7 @@ func Test_EmptySignaturesShouldFail(t *testing.T) {
 }
 
 func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
-	ctx := MakeMockStateContextWithNoAutorizers()
+	ctx := MakeMockStateContextWithoutAutorizers()
 
 	contract := CreateZCNSmartContract()
 	payload, err := CreateMintPayload(ctx, defaultClient)
