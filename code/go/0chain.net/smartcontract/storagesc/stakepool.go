@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -353,14 +356,16 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 			return nil, fmt.Errorf("delegate_wallet is empty")
 		}
 		sp = newStakePool()
+		logging.Logger.Info("stake_pool_debug: creating new stakepool", zap.Any("providerType", providerType), zap.Any("providerId", providerId))
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 		sp.Minter = chainstate.MinterStorage
+	} else {
+		logging.Logger.Info("stake_pool_debug: already created", zap.Any("providerType", providerType), zap.Any("providerId", providerId), zap.Any("wallet", sp.Settings.DelegateWallet))
+		sp.Settings.MinStake = settings.MinStake
+		sp.Settings.MaxStake = settings.MaxStake
+		sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
+		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 	}
-
-	sp.Settings.MinStake = settings.MinStake
-	sp.Settings.MaxStake = settings.MaxStake
-	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
-	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 	return sp, nil
 }
 
