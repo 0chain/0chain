@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
-
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -21,7 +19,6 @@ import (
 
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
@@ -243,6 +240,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 		now = common.Timestamp(23000000)
 	)
+
 	blob := make([]string, mockNumBlobbers)
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
@@ -276,11 +274,13 @@ func TestFreeAllocationRequest(t *testing.T) {
 	}
 
 	setExpectations := func(t *testing.T, name string, p parameters, want want) args {
-		var err error
-		var balances = &mocks.StateContextI{}
-		balances.TestData()[newSaSaved] = false
-		var readPoolLocked = zcnToInt64(mockFreeTokens * mockReadPoolFraction)
-		var writePoolLocked = zcnToInt64(mockFreeTokens) - readPoolLocked
+		balances := newTestBalances(t, false)
+		// init config
+		_, err := balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+		require.NoError(t, err)
+
+		_, err = balances.InsertTrieNode(freeStorageAssignerKey(ADDRESS, p.marker.Assigner), &p.assigner)
+		require.NoError(t, err)
 
 		var txn = &transaction.Transaction{
 			ClientID:     p.marker.Recipient,
@@ -293,7 +293,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
-
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 
@@ -308,144 +307,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
-
-		balances.On(
-			"GetTrieNode",
-			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
-			mockSetValue(p.assigner)).Return(nil).Once()
-
-		balances.On("GetTrieNode", scConfigKey(ADDRESS),
-			mockSetValue(conf)).Return(nil)
-
-		balances.On("GetClientBalance", mockRecipient,
-			mockSetValue(conf)).Return(nil).Maybe()
-
-		for _, blobber := range mockAllBlobbers.Nodes {
-			balances.On(
-				"GetTrieNode", stakePoolKey(spenum.Blobber, blobber.ID),
-				mockSetValue(newStakePool())).Return(nil).Once()
-			balances.On(
-				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
-			).Return("", nil).Once()
-			balances.On(
-				"InsertTrieNode", stakePoolKey(spenum.Blobber, blobber.ID), mock.Anything,
-			).Return("", nil).Once()
-			balances.On(
-				"GetTrieNode", "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"+blobber.ID,
-				mock.MatchedBy(func(a *StorageNode) bool {
-					a.Terms.MaxOfferDuration = 24 * 365 * time.Hour * 2
-					a.Capacity = 100000000000
-					a.LastHealthCheck = common.Timestamp(time.Now().UnixNano())
-					return true
-				}),
-			).Return(nil)
-		}
-
-		balances.On(
-			"GetTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
-		).Return(util.ErrValueNotPresent).Once()
-		balances.On(
-			"InsertTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
-		).Return("", nil).Once()
-
-		allocation := StorageAllocation{ID: txn.Hash}
-		balances.On(
-			"GetTrieNode",
-			mock.MatchedBy(func(key string) bool {
-				if balances.TestData()[newSaSaved].(bool) {
-					return false
-				}
-				return key == allocation.GetKey(ssc.ID)
-			}),
-			mock.Anything,
-		).Return(util.ErrValueNotPresent).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			mock.MatchedBy(func(key string) bool {
-				if key != allocation.GetKey(ssc.ID) {
-					return false
-				}
-
-				balances.TestData()[newSaSaved] = true
-				return true
-			}),
-			mock.Anything,
-		).Return("", nil).Once()
-
-		zcn, _ := currency.ParseZCN(mockFreeTokens)
-		balances.On(
-			"InsertTrieNode",
-			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
-			&freeStorageAssigner{
-				ClientId:           p.assigner.ClientId,
-				PublicKey:          p.assigner.PublicKey,
-				IndividualLimit:    p.assigner.IndividualLimit,
-				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    zcn,
-				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
-			},
-		).Return("", nil).Once()
-
-		balances.On("AddMint", &state.Mint{
-			Minter:     ADDRESS,
-			ToClientID: ADDRESS,
-			Amount:     currency.Coin(writePoolLocked),
-		}).Return(nil).Once()
-
-		balances.On(
-			"GetSignatureScheme",
-		).Return(encryption.NewBLS0ChainScheme()).Once()
-
-		balances.On(
-			"AddMint", &state.Mint{
-				Minter:     ADDRESS,
-				ToClientID: ADDRESS,
-				Amount:     currency.Coin(readPoolLocked),
-			},
-		).Return(nil).Once()
-
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
-		).Return().Maybe()
-
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAddAllocation, mock.Anything, mock.Anything,
-		).Return().Maybe()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagLockReadPool, mock.Anything, mock.Anything,
-		).Return().Maybe()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, mock.Anything, mock.Anything,
-		).Return().Maybe()
-
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything,
-		).Return().Maybe()
-		balances.On("EmitEvent", event.TypeStats, event.TagUpdateBlobberTotalOffers,
-			mock.Anything, mock.Anything).Return().Maybe()
-
-		balances.On(
-			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient), mock.Anything,
-		).Return(util.ErrValueNotPresent).Once()
-		balances.On("InsertTrieNode",
-			readPoolKey(ssc.ID, p.marker.Recipient),
-			mock.MatchedBy(func(rp *readPool) bool {
-				return rp.Balance == currency.Coin(readPoolLocked)
-			})).Return("", nil).Once()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
-		).Return().Maybe()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
-		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}
@@ -559,7 +420,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		},
 	}
 	for _, test := range testCases {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
