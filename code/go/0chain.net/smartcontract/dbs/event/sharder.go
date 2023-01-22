@@ -16,18 +16,18 @@ import (
 
 type Sharder struct {
 	Provider
-	N2NHost         string `gorm:"column:n2n_host"`
-	Host            string
-	Port            int
-	Path            string
-	PublicKey       string
-	ShortName       string
-	BuildTag        string
-	Delete          bool
-	Fees            currency.Coin
-	Active          bool
-	Longitude       float64
-	Latitude        float64
+	N2NHost   string `gorm:"column:n2n_host"`
+	Host      string
+	Port      int
+	Path      string
+	PublicKey string
+	ShortName string
+	BuildTag  string
+	Delete    bool
+	Fees      currency.Coin
+	Active    bool
+	Longitude float64
+	Latitude  float64
 
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_sharder_creation_round"`
 }
@@ -48,7 +48,6 @@ func (s *Sharder) GetTotalRewards() currency.Coin {
 	return s.Rewards.TotalRewards
 }
 
-
 func (s *Sharder) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
 }
@@ -64,7 +63,6 @@ func (s *Sharder) SetServiceCharge(value float64) {
 func (s *Sharder) SetTotalRewards(value currency.Coin) {
 	s.Rewards.TotalRewards = value
 }
-
 
 // swagger:model SharderGeolocation
 type SharderGeolocation struct {

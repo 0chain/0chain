@@ -36,7 +36,6 @@ func (v *Validator) GetTotalRewards() currency.Coin {
 	return v.Rewards.TotalRewards
 }
 
-
 func (v *Validator) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
 }
@@ -52,7 +51,6 @@ func (v *Validator) SetServiceCharge(value float64) {
 func (v *Validator) SetTotalRewards(value currency.Coin) {
 	v.Rewards.TotalRewards = value
 }
-
 
 func (edb *EventDb) GetValidatorCount() (int64, error) {
 	var count int64

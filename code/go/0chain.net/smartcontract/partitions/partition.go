@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/core/common"
-
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/util"
@@ -95,7 +93,7 @@ func (p *partition) remove(id string) error {
 		return fmt.Errorf("searching empty partition")
 	}
 	index := p.findIndex(id)
-	if index == notFound {
+	if index == notFoundIndex {
 		return fmt.Errorf("cannot findIndex id %v in partition", id)
 	}
 	p.Items[index] = p.Items[len(p.Items)-1]
@@ -131,14 +129,14 @@ func (p *partition) itemRange(start, end int) ([]item, error) {
 	return p.Items[start:end], nil
 }
 
-func (p *partition) find(id string) (item, bool) {
-	for _, v := range p.Items {
+func (p *partition) find(id string) (item, int, bool) {
+	for i, v := range p.Items {
 		if v.ID == id {
-			return v, true
+			return v, i, true
 		}
 	}
 
-	return item{}, false
+	return item{}, -1, false
 }
 
 func (p *partition) findIndex(id string) int {
@@ -147,20 +145,11 @@ func (p *partition) findIndex(id string) int {
 			return i
 		}
 	}
-	return notFound
+	return notFoundIndex
 }
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-type PartitionLocation struct {
-	Location  int
-	Timestamp common.Timestamp
-}
-
-func NewPartitionLocation(location int, timestamp common.Timestamp) *PartitionLocation {
-	pl := new(PartitionLocation)
-	pl.Location = location
-	pl.Timestamp = timestamp
-
-	return pl
+type location struct {
+	Location int
 }
