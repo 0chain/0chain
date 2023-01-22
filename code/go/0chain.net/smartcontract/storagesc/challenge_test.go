@@ -115,7 +115,7 @@ func TestAddChallenge(t *testing.T) {
 
 			alloc.BlobberAllocsMap[bid] = ba
 
-			_, err = challengeReadyParts.AddItem(
+			err = challengeReadyParts.Add(
 				balances,
 				&ChallengeReadyBlobber{
 					BlobberID: bid,
