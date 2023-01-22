@@ -1002,6 +1002,7 @@ CREATE TABLE public.snapshots (
                                   mined_total bigint,
                                   average_write_price bigint,
                                   total_staked bigint,
+                                  total_rewards bigint,
                                   successful_challenges bigint,
                                   total_challenges bigint,
                                   allocated_storage bigint,
