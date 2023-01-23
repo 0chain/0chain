@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -19,13 +20,11 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		code = "failed to mint"
 	)
 
-	var (
-		info = fmt.Sprintf(
-			"transaction hash %s, clientID: %s, payload: %s",
-			trans.Hash,
-			trans.ClientID,
-			string(inputData),
-		)
+	info := fmt.Sprintf(
+		"transaction hash %s, clientID: %s, payload: %s",
+		trans.Hash,
+		trans.ClientID,
+		string(inputData),
 	)
 
 	gn, err := GetGlobalNode(ctx)
@@ -125,6 +124,39 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	// record the global nonce from solidity smart contract
 	gn.WZCNNonceMinted[payload.Nonce] = true
 
+	var (
+		amount currency.Coin
+		n      currency.Coin
+		share  currency.Coin
+	)
+	share, _, err = currency.DistributeCoin(gn.ZCNSConfig.MaxFee, int64(len(payload.Signatures)))
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, DistributeCoin operation, %s", code, info))
+		return
+	}
+	n, err = currency.Int64ToCoin(int64(len(payload.Signatures)))
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, convert len signatures to coin, %s", code, info))
+		return
+	}
+	amount, err = currency.MinusCoin(payload.Amount, share*n)
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share * len(signatures), %s", code, info))
+		return
+	}
+	payload.Amount = amount
+	for _, sig := range payload.Signatures {
+		err = ctx.AddMint(&state.Mint{
+			Minter:     gn.ID,
+			ToClientID: sig.ID,
+			Amount:     share,
+		})
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("%s, AddMint for authorizers, %s", code, info))
+			return
+		}
+	}
+
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
 		Minter:     gn.ID,
@@ -132,7 +164,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		Amount:     payload.Amount,
 	})
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, add mint operation, %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("%s, Add mint operation, %s", code, info))
 		return
 	}
 

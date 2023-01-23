@@ -3,15 +3,15 @@ package event
 import (
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type SharderAggregate struct {
-	gorm.Model
+	model.ImmutableModel
 
 	SharderID string `json:"sharder_id" gorm:"index:idx_sharder_aggregate,unique"`
 	Round     int64  `json:"round" gorm:"index:idx_sharder_aggregate,unique"`
@@ -20,7 +20,7 @@ type SharderAggregate struct {
 	Fees          currency.Coin `json:"fees"`
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin	`json:"total_rewards"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -115,9 +115,12 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentSharders []Sharder
-	result := edb.Store.Get().
-		Raw("SELECT * FROM sharders WHERE id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&currentSharders)
+
+	result := edb.Store.Get().Model(&Sharder{}).
+		Where("sharders.id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Joins("Rewards").
+		Find(&currentSharders)
+
 	if result.Error != nil {
 		logging.Logger.Error("getting current sharders", zap.Error(result.Error))
 		return
@@ -144,9 +147,10 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 			continue
 		}
 		aggregate := SharderAggregate{
-			Round:     round,
-			SharderID: current.ID,
-			BucketID:  current.BucketId,
+			Round:        round,
+			SharderID:    current.ID,
+			BucketID:     current.BucketId,
+			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
@@ -155,7 +159,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 		aggregates = append(aggregates, aggregate)
 
 		gs.totalTxnFees += aggregate.Fees
-
+		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 		gs.TransactionsCount++
 	}
 	if len(aggregates) > 0 {

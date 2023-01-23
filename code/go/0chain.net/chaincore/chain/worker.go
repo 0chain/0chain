@@ -370,7 +370,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		}
 
 		prevBlockHash := pr.GetBlockHash()
-		if prevBlockHash == "" {
+		if prevBlockHash == "" || !pr.IsFinalized() {
 			logging.Logger.Error("finalize block - previous round not finalized",
 				zap.Int64("round", fb.Round))
 			return errors.New("previous round not finalized")
@@ -387,8 +387,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 	}
 	// finalize
-	c.finalizeBlock(ctx, fb, bsh)
-	return nil
+	return c.finalizeBlock(ctx, fb, bsh)
 }
 
 /*PruneClientStateWorker - a worker that prunes the client state */
