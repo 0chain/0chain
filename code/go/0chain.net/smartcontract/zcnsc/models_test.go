@@ -239,7 +239,7 @@ func Test_UpdateAuthorizerConfigTest(t *testing.T) {
 			Fee: currency.Coin(999),
 		},
 	}
-	target := &AuthorizerNode{}
+	target := NewAuthorizerNode("")
 
 	bytes, err := json.Marshal(source)
 	require.NoError(t, err)
