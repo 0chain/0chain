@@ -150,9 +150,8 @@ func main() {
 
 	var gb *block.Block
 
-	if mc.GetCurrentRound() == 0 {
-		gb = mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-			magicBlock, initStates)
+	if mc.LatestFinalizedBlock == nil || mc.LatestFinalizedBlock.Round == 0 {
+		gb = mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock, initStates)
 	}
 
 	mb := mc.GetLatestMagicBlock()
