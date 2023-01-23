@@ -9,7 +9,7 @@ on:
 jobs:
   BUILD_INTEGRATION_IMAGES:
     name: BUILD-INTEGRATION-IMAGES
-    runs-on: [self-hosted, tests-suite]
+    runs-on: [self-hosted, arc-runner]
     env:
       GOPATH: "/root/actions-runner/_work/_tool/go"
       GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
@@ -31,6 +31,8 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+        whoami
+        chmod +x generate_mocks.sh
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
