@@ -10,10 +10,10 @@ jobs:
   BUILD_INTEGRATION_IMAGES:
     name: BUILD-INTEGRATION-IMAGES
     runs-on: [self-hosted, arc-runner]
-    env:
-      GOPATH: "/root/actions-runner/_work/_tool/go"
-      GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
-      GOCACHE: "/root/actions-runner/_work/_tool/.cache/go-build"
+    # env:
+    #   GOPATH: "/root/actions-runner/_work/_tool/go"
+    #   GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
+    #   GOCACHE: "/root/actions-runner/_work/_tool/.cache/go-build"
 
     steps:
     - uses: actions/checkout@v2
