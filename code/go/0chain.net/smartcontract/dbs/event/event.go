@@ -4,14 +4,13 @@ import (
 	"errors"
 
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"golang.org/x/net/context"
 	"gorm.io/gorm/clause"
-
-	"gorm.io/gorm"
 )
 
 type Event struct {
-	gorm.Model
+	model.ImmutableModel
 	BlockNumber int64       `json:"block_number" gorm:"index:idx_event"`
 	TxHash      string      `json:"tx_hash" gorm:"index:idx_event"`
 	Type        EventType   `json:"type" gorm:"index:idx_event"`

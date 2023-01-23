@@ -1679,7 +1679,6 @@ func toReadMarkerResponse(rm event.ReadMarker) ReadMarkerResponse {
 	return ReadMarkerResponse{
 		ID:            rm.ID,
 		CreatedAt:     rm.CreatedAt,
-		UpdatedAt:     rm.UpdatedAt,
 		Timestamp:     rm.Timestamp,
 		ReadCounter:   rm.ReadCounter,
 		ReadSize:      rm.ReadSize,
@@ -2080,8 +2079,8 @@ type WriteMarkerResponse struct {
 	Operation   string `json:"operation"`
 
 	// TODO: Decide which pieces of information are important to the response
-	// User       User       `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	// Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	// User       User       `model:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	// Allocation Allocation `model:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 func toWriteMarkerResponse(wm event.WriteMarker) WriteMarkerResponse {

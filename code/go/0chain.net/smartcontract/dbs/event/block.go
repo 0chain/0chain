@@ -4,14 +4,13 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"gorm.io/gorm/clause"
-
-	"gorm.io/gorm"
 )
 
 // swagger:model Block
 type Block struct {
-	gorm.Model
+	model.UpdatableModel
 
 	Hash                  string    `json:"hash" gorm:"uniqueIndex:idx_bhash"`
 	Version               string    `json:"version"`

@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z randomSelectorDecode) MarshalMsg(b []byte) (o []byte, err error) {
+func (z partitionsDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
 	// string "Name"
@@ -23,7 +23,7 @@ func (z randomSelectorDecode) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *randomSelectorDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *partitionsDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -71,7 +71,7 @@ func (z *randomSelectorDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z randomSelectorDecode) Msgsize() (s int) {
+func (z partitionsDecode) Msgsize() (s int) {
 	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 14 + msgp.IntSize + 14 + msgp.IntSize
 	return
 }

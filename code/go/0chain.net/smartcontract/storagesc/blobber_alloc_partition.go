@@ -25,24 +25,20 @@ func partitionsBlobberAllocations(blobberID string, balances state.StateContextI
 	return partitions.CreateIfNotExists(balances, getBlobberAllocationsKey(blobberID), blobberAllocationPartitionSize)
 }
 
-func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, allocID string) (
-	*partitions.Partitions, *partitions.PartitionLocation, error) {
+func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, allocID string) (*partitions.Partitions, error) {
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, state)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
+		return nil, fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
 	}
 
-	loc, err := blobAllocsParts.AddItem(state, &BlobberAllocationNode{ID: allocID})
+	err = blobAllocsParts.Add(state, &BlobberAllocationNode{ID: allocID})
 	if err != nil {
-		if err == partitions.ErrPartitionItemAlreadyExist {
-			return blobAllocsParts, &partitions.PartitionLocation{Location: loc}, nil
-		}
-		return nil, nil, fmt.Errorf("could not add blobber allocation node to partition, %v", err)
+		return nil, err
 	}
 
 	if err := blobAllocsParts.Save(state); err != nil {
-		return nil, nil, fmt.Errorf("could not update blobber allocations partitions: %v", err)
+		return nil, fmt.Errorf("could not update blobber allocations partitions: %v", err)
 	}
 
-	return blobAllocsParts, &partitions.PartitionLocation{Location: loc}, nil
+	return blobAllocsParts, nil
 }

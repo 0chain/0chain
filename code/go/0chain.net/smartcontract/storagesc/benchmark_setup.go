@@ -197,7 +197,7 @@ func AddMockChallenges(
 			continue
 		}
 
-		loc, err := challengeReadyBlobbersPart.AddItem(balances, &ChallengeReadyBlobber{
+		err := challengeReadyBlobbersPart.Add(balances, &ChallengeReadyBlobber{
 			BlobberID: ch.BlobberID,
 		})
 		if err != nil {
@@ -205,14 +205,6 @@ func AddMockChallenges(
 		}
 
 		blobbersMap[ch.BlobberID] = struct{}{}
-
-		blobPartitionsLocations := &blobberPartitionsLocations{
-			ID:                         ch.BlobberID,
-			ChallengeReadyPartitionLoc: &partitions.PartitionLocation{Location: loc},
-		}
-		if err := blobPartitionsLocations.save(balances, ADDRESS); err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	err = challengeReadyBlobbersPart.Save(balances)
@@ -243,7 +235,7 @@ func AddMockChallenges(
 		}
 		for allocID := range val {
 
-			_, err = aPart.AddItem(balances, &BlobberAllocationNode{
+			err = aPart.Add(balances, &BlobberAllocationNode{
 				ID: allocID,
 			})
 			if err != nil {
@@ -440,7 +432,7 @@ func AddMockBlobbers(
 		}
 
 		if i < numRewardPartitionBlobbers {
-			_, err = partition.AddItem(balances,
+			err = partition.Add(balances,
 				&BlobberRewardNode{
 					ID:                blobber.ID,
 					SuccessChallenges: 10,
@@ -574,7 +566,7 @@ func AddMockValidators(
 			}
 		}
 
-		if _, err := valParts.AddItem(balances, &vpn); err != nil {
+		if err := valParts.Add(balances, &vpn); err != nil {
 			panic(err)
 		}
 	}
