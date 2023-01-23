@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -43,54 +42,11 @@ import (
 	. "github.com/0chain/common/core/logging"
 )
 
-func processMinioConfig(reader io.Reader) (blockstore.MinioConfiguration, error) {
-	var (
-		mConf   blockstore.MinioConfiguration
-		scanner = bufio.NewScanner(reader)
-		more    = scanner.Scan()
-	)
-
-	if !more {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
-	}
-	mConf.StorageServiceURL = scanner.Text()
-	more = scanner.Scan()
-	if !more {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
-	}
-
-	mConf.AccessKeyID = scanner.Text()
-	more = scanner.Scan()
-	if !more {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
-	}
-
-	mConf.SecretAccessKey = scanner.Text()
-	more = scanner.Scan()
-	if !more {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
-	}
-
-	mConf.BucketName = scanner.Text()
-	more = scanner.Scan()
-	if !more {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
-	}
-
-	mConf.BucketLocation = scanner.Text()
-
-	mConf.DeleteLocal = viper.GetBool("minio.delete_local_copy")
-	mConf.Secure = viper.GetBool("minio.use_ssl")
-
-	return mConf, nil
-}
-
 func main() {
 
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
-	minioFile := flag.String("minio_file", "", "minio_file")
 	initialStatesFile := flag.String("initial_states", "", "initial_states")
 	flag.String("nodes_file", "", "nodes_file (deprecated)")
 	workdir := ""
@@ -109,21 +65,10 @@ func main() {
 		logging.InitLogging("production", workdir)
 	}
 
-	reader, err := os.Open(*minioFile)
-	if err != nil {
-		panic(err)
-	}
-
-	mConf, err := processMinioConfig(reader)
-	if err != nil {
-		panic(err)
-	}
-	reader.Close()
-
 	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
 
-	reader, err = os.Open(*keysFile)
+	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
 	}
@@ -223,7 +168,12 @@ func main() {
 	// TODO: put it in a better place
 	go sc.StartLFMBWorker(ctx)
 
-	setupBlockStorageProvider(mConf, workdir)
+	sViper := viper.Sub("storage")
+	if sViper == nil {
+		panic("Storage config is required")
+	}
+	blockstore.Init(ctx, sViper)
+
 	if sc.GetCurrentRound() == 0 {
 		sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 			magicBlock, initStates)
@@ -492,51 +442,4 @@ func initN2NHandlers(c *sharder.Chain) {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-}
-
-func setupBlockStorageProvider(mConf blockstore.MinioConfiguration, workdir string) {
-	// setting up minio client from configs if minio enabled
-	var (
-		mClient blockstore.MinioClient
-		err     error
-	)
-	if viper.GetBool("minio.enabled") {
-		mClient, err = blockstore.CreateMinioClientFromConfig(mConf)
-		if err != nil {
-			panic("can not create minio client")
-		}
-
-		// trying to initialize bucket.
-		if err := mClient.MakeBucket(mConf.BucketName, mConf.BucketLocation); err != nil {
-			Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
-			exists, errBucketExists := mClient.BucketExists(mConf.BucketName)
-			if errBucketExists == nil && exists {
-				Logger.Info("We already own ", zap.Any("bucket_name", mConf.BucketName))
-			} else {
-				Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", mConf.BucketName))
-				panic(err)
-			}
-		} else {
-			Logger.Info(mConf.BucketName + " bucket successfully created")
-		}
-	}
-
-	fsbs := blockstore.NewFSBlockStore(filepath.Join(workdir, "data/blocks"), mClient)
-	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
-	switch blockStorageProvider {
-	case "", "blockstore.FSBlockStore":
-		blockstore.SetupStore(fsbs)
-	case "blockstore.BlockDBStore":
-		blockstore.SetupStore(blockstore.NewBlockDBStore(fsbs))
-	case "blockstore.MultiBlockstore":
-		var bs = []blockstore.BlockStore{
-			fsbs,
-			blockstore.NewBlockDBStore(
-				blockstore.NewFSBlockStore(filepath.Join(workdir, "data/blocksdb"), mClient),
-			),
-		}
-		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
-	default:
-		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
-	}
 }

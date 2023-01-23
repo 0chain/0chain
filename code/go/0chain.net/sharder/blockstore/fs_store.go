@@ -2,230 +2,148 @@ package blockstore
 
 import (
 	"bufio"
+	"bytes"
 	"compress/zlib"
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
-
-	"github.com/minio/minio-go"
-	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/viper"
-	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/logging"
+	"golang.org/x/sys/unix"
 )
 
-const fileExt = ".dat.zlib"
-
-type (
-	// FSBlockStore - a block store implementation using file system.
-	FSBlockStore struct {
-		RootDirectory         string
-		blockMetadataProvider datastore.EntityMetadata
-		Minio                 MinioClient
-	}
+const (
+	averageBlockSize      = 100 * KB
+	minimumInodesRequired = 5 * 365 * 24 * 3600 * 2
+	roundRange            = 1000
+	twoMillion            = 2000000
+	mPrefix               = "M"
+	extension             = "dat.zlib"
 )
 
 var (
-	// Make sure FSBlockStore implements BlockStore.
-	_ BlockStore = (*FSBlockStore)(nil)
+	store BlockStoreI
 )
 
-// NewFSBlockStore - return a new fs block store.
-func NewFSBlockStore(rootDir string, minio MinioClient) *FSBlockStore {
-	return &FSBlockStore{
-		RootDirectory:         rootDir,
-		blockMetadataProvider: datastore.GetEntityMetadata("block"),
-		Minio:                 minio,
-	}
-}
-
-func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
-	defer func() {
-		if err := recover(); err != nil {
-			Logger.Error("Failed to get file", zap.Any("recover", err), zap.Int64("round", round))
-		}
-	}()
-
-	var file strings.Builder
-	var dirRoundRange = chain.GetServerChain().RoundRange()
-
-	file.WriteString(fbs.RootDirectory)
-	file.WriteString(string(os.PathSeparator))
-	file.WriteString(strconv.Itoa(int(round / dirRoundRange)))
-
-	if len(hash) == 0 {
-		Logger.Warn("Hash is empty. returning only header", zap.Int64("round", round))
-		return file.String()
-	}
-
-	for i := 0; i < 3; i++ {
-		file.WriteString(string(os.PathSeparator))
-		if len(hash[3*i:]) < 3 {
-			file.WriteString(hash[3*i:])
-			break
-		}
-		file.WriteString(hash[3*i : 3*i+3]) // FIXME panics if hash size < 9
-		// i=0 => hash[0:3]
-		// i=1 => hash[3:6]
-		// i=3 => hash[6:9]
-	}
-
-	file.WriteString(string(os.PathSeparator))
-	if len(hash) > 9 {
-		file.WriteString(hash[9:])
-	}
-
-	return file.String()
-}
-
-func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
-	return fbs.getFileWithoutExtension(hash, round) + fileExt
-}
-
-func (fbs *FSBlockStore) write(hash string, round int64, v datastore.Entity) error {
-	fn := fbs.getFileName(hash, round)
-	dir := filepath.Dir(fn)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	f, err := os.OpenFile(fn, os.O_RDWR|os.O_CREATE, 0644)
+func hasEnoughInodesAndSize(p string) error {
+	var diskStat unix.Statfs_t
+	err := unix.Statfs(p, &diskStat)
 	if err != nil {
 		return err
 	}
+
+	availableSize := diskStat.Bavail * uint64(diskStat.Bsize)
+	freeInodes := diskStat.Ffree
+
+	if freeInodes < minimumInodesRequired {
+		return fmt.Errorf("insufficient inodes. Required %d, available %d",
+			minimumInodesRequired, freeInodes)
+	}
+
+	requiredAvgSize := minimumInodesRequired * averageBlockSize
+
+	if availableSize < uint64(requiredAvgSize) {
+		return fmt.Errorf("insufficient disk space. Required %d, available %d",
+			requiredAvgSize, availableSize)
+	}
+	return nil
+}
+
+func getMPrefixDir(round int64) (string, int64) {
+	i := round / twoMillion
+	r := round % twoMillion
+	return fmt.Sprintf("%s%d", mPrefix, i), r
+}
+
+func getBlockFilePath(hash string, round int64) string {
+	mPref, roundRemainder := getMPrefixDir(round)
+
+	dirNum := roundRemainder / roundRange
+
+	return filepath.Join(mPref, fmt.Sprint(dirNum), fmt.Sprintf("%s.%s", hash, extension))
+}
+
+type BlockStore struct {
+	totalBlocks           int
+	totalBlocksSize       uint64
+	basePath              string
+	blockMetadataProvider datastore.EntityMetadata
+	write                 func(bStore *BlockStore, b *block.Block) error
+	read                  func(bStore *BlockStore, hash string, round int64) (*block.Block, error)
+	cache                 cacher
+}
+
+func (bStore *BlockStore) GetTotalBlocks() int {
+	return bStore.totalBlocks
+}
+
+func (bStore *BlockStore) GetTotalBlocksSize() uint64 {
+	return bStore.totalBlocksSize
+}
+
+func (bStore *BlockStore) writeBlockToCache(b *block.Block) error {
+	buffer := new(bytes.Buffer)
+	err := datastore.WriteMsgpack(buffer, b)
+	if err != nil {
+		return err
+	}
+
+	return bStore.cache.Write(b.Hash, buffer.Bytes())
+}
+
+func (bStore *BlockStore) writeToDisk(b *block.Block) error {
+	bPath := filepath.Join(bStore.basePath, getBlockFilePath(b.Hash, b.Round))
+	err := os.MkdirAll(filepath.Dir(bPath), 0700)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(bPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
 	bf := bufio.NewWriterSize(f, 64*1024)
 	w, err := zlib.NewWriterLevel(bf, zlib.BestCompression)
 	if err != nil {
 		return err
 	}
-	if err := datastore.WriteMsgpack(w, v); err != nil {
+	if err := datastore.WriteMsgpack(w, b); err != nil {
 		return err
 	}
 	if err = w.Close(); err != nil {
 		return err
 	}
-	if err = bf.Flush(); err != nil {
-		return err
-	}
-	if err = f.Close(); err != nil {
-		return err
-	}
-	return nil
+	return bf.Flush()
 }
 
-// Write - write the block to the file system
-func (fbs *FSBlockStore) Write(b *block.Block) error {
-	if err := fbs.write(b.Hash, b.Round, b); err != nil {
-		return err
-	}
-	if b.MagicBlock != nil && b.Round == b.MagicBlock.StartingRound {
-		Logger.Debug("save magic block",
-			zap.Int64("round", b.Round),
-			zap.String("mb hash", b.MagicBlock.Hash),
-		)
-		return fbs.write(b.MagicBlock.Hash, b.MagicBlock.StartingRound, b)
-	}
-	return nil
+func (bStore *BlockStore) Write(b *block.Block) error {
+	return bStore.write(bStore, b)
 }
 
-// ReadWithBlockSummary - read the block given the block summary
-func (fbs *FSBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
-	return fbs.read(bs.Hash, bs.Round)
+func (bStore *BlockStore) Read(hash string, round int64) (*block.Block, error) {
+	return bStore.read(bStore, hash, round)
 }
 
-// Read a block from the file system by its hash. Walk over round/RoundRange
-// directories looking for block with given hash.
-func (fbs *FSBlockStore) Read(hash string, round int64) (b *block.Block, err error) {
-	// check out hash can be ""
-	if len(hash) != 64 {
-		return nil, common.NewError("fbs_store_read", "invalid block hash length given")
-	}
-
-	return fbs.read(hash, round)
-
-	/*
-
-		// for example
-		// 01c/08c/7f5/4c43fb351ebc31161dd9572465ea1640b11b5629aefe3a4937f0394.dat.zlib
-		var s1, s2, s3, tail = hash[0:3], hash[3:6], hash[6:9], hash[9:] + fileExt
-
-		// walk over all 'round/RoundRange'
-		err = filepath.Walk(fbs.RootDirectory,
-			func(path string, fi os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if !fi.IsDir() {
-					return nil
-				}
-				path = filepath.Join(path, s1, s2, s3, tail) // block path
-				fi, err = os.Stat(path)
-				if err != nil {
-					if os.IsNotExist(err) {
-						// can't use errors.Is(err, os.ErrNotExist) with go1.12
-						return nil // not an error (continue)
-					}
-					return err // filesystem error
-				}
-				// got the file
-				if b, err = fbs.read(hash, round); err != nil {
-					return err
-				}
-				return io.EOF // ok (just stop walking loop)
-			})
-
-		if err != io.EOF {
-			return // unexpected error
-		}
-
-		err = nil // reset the io.EOF
-
-		// err is not nil doesn't mean we have the block
-
-		if b == nil {
-			return nil, os.ErrNotExist
-		}
-
-		return // got it
-
-	*/
-}
-
-func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
-	if len(hash) != 64 {
-		return nil, encryption.ErrInvalidHash
-	}
-	fileName := fbs.getFileName(hash, round)
-	f, err := os.Open(fileName)
+func (bStore *BlockStore) readFromDisk(hash string, round int64) (*block.Block, error) {
+	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash, round))
+	f, err := os.Open(bPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			if viper.GetBool("minio.enabled") {
-				err = fbs.DownloadFromCloud(hash, round)
-				if err != nil {
-					return nil, err
-				}
-			}
-			f, err = os.Open(fileName)
-			if err != nil {
-				return nil, err
-
-			}
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 	defer f.Close()
+
 	r, err := zlib.NewReader(f)
 	if err != nil {
 		return nil, err
 	}
 	defer r.Close()
-	b := fbs.blockMetadataProvider.Instance().(*block.Block)
+	b := bStore.blockMetadataProvider.Instance().(*block.Block)
 	err = datastore.ReadMsgpack(r, b)
 	if err != nil {
 		return nil, err
@@ -233,44 +151,85 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	return b, nil
 }
 
-// Delete - delete from the hash of the block
-func (fbs *FSBlockStore) Delete(hash string) error {
-	return common.NewError("interface_not_implemented", "FSBlockStore cannote provide this interface")
+// ReadWithBlockSummary - read the block given the block summary
+func (bStore *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
+	return bStore.Read(bs.Hash, bs.Round)
 }
 
-// DeleteBlock - delete the given block from the file system
-func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
-	fileName := fbs.getFileName(b.Hash, b.Round)
-	err := os.Remove(fileName)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// This function should check for minimum disk size, inodes requirement.
+// Other reasonable parameters as well.
+func Init(ctx context.Context, sViper *viper.Viper) {
+	logging.Logger.Info("Initializing storage")
 
-func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
-	filePath := fbs.getFileName(hash, round)
-	_, err := fbs.Minio.FPutObject(fbs.Minio.BucketName(), hash, filePath, minio.PutObjectOptions{})
-	if err != nil {
-		return err
+	basePath := sViper.GetString("root_dir")
+	if basePath == "" {
+		panic("root dir cannot be empty")
 	}
 
-	if fbs.Minio.DeleteLocal() {
-		err = os.Remove(filePath)
-		if err != nil {
-			Logger.Error("Failed to delete block which is moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
+	err := hasEnoughInodesAndSize(basePath)
+	if err != nil {
+		panic(err)
+	}
+
+	bStore := new(BlockStore)
+	bStore.basePath = basePath
+
+	cViper := sViper.Sub("cache")
+	if cViper != nil {
+		bStore.cache = initCache(cViper)
+	}
+
+	switch {
+	default:
+		bStore.write = func(bStore *BlockStore, b *block.Block) error {
+			return bStore.writeToDisk(b)
 		}
-		Logger.Info("Local block successfully deleted, moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
+
+		bStore.read = func(bStore *BlockStore, hash string, round int64) (*block.Block, error) {
+			return bStore.readFromDisk(hash, round)
+		}
+	case cViper != nil:
+		bStore.write = func(bStore *BlockStore, b *block.Block) error {
+			err := bStore.writeToDisk(b)
+			if err != nil {
+				return err
+			}
+
+			go func() {
+				if err := bStore.writeBlockToCache(b); err != nil {
+					logging.Logger.Error(err.Error())
+				}
+			}()
+
+			return nil
+		}
+
+		bStore.read = func(bStore *BlockStore, hash string, round int64) (*block.Block, error) {
+			data, err := bStore.cache.Read(hash)
+			b := bStore.blockMetadataProvider.Instance().(*block.Block)
+			if err == nil {
+				r := bytes.NewReader(data)
+				err = datastore.ReadMsgpack(r, b)
+				if err == nil {
+					return b, nil
+				}
+			}
+
+			b, err = bStore.readFromDisk(hash, round)
+			if err != nil {
+				return nil, err
+			}
+
+			go bStore.writeBlockToCache(b)
+			return b, nil
+		}
 	}
-	return nil
 }
 
-func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
-	filePath := fbs.getFileName(hash, round)
-	return fbs.Minio.FGetObject(fbs.Minio.BucketName(), hash, filePath, minio.GetObjectOptions{})
+func GetStoreNew() BlockStoreI {
+	return store
 }
 
-func (fbs *FSBlockStore) CloudObjectExists(hash string) bool {
-	_, err := fbs.Minio.StatObject(fbs.Minio.BucketName(), hash, minio.StatObjectOptions{})
-	return err == nil
+func SetStoreNew(s BlockStoreI) {
+	store = s
 }

@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/remeh/sizedwaitgroup"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -18,7 +17,6 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
-	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/minersc"
 
 	"github.com/0chain/common/core/logging"
@@ -41,11 +39,6 @@ func SetupWorkers(ctx context.Context) {
 		sc.MagicBlockStorage)
 	go sc.UpdateMagicBlockWorker(ctx)
 	go sc.RegisterSharderKeepWorker(ctx)
-	// Move old blocks to cloud
-	if viper.GetBool("minio.enabled") {
-		go sc.MinioWorker(ctx)
-	}
-
 	go sc.SharderHealthCheck(ctx)
 }
 
@@ -383,56 +376,6 @@ func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 			return chain.DefaultCountPruneRoundStorage
 		}
 	}
-}
-
-func (sc *Chain) MinioWorker(ctx context.Context) {
-	if !viper.GetBool("minio.enabled") {
-		return
-	}
-	var oldBlockRoundRange = viper.GetInt64("minio.old_block_round_range")
-	var numWorkers = viper.GetInt("minio.num_workers")
-	ticker := time.NewTicker(time.Duration(viper.GetInt64("minio.worker_frequency")) * time.Second)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			roundToProcess := sc.GetCurrentRound() - oldBlockRoundRange
-			fs := blockstore.GetStore()
-			swg := sizedwaitgroup.New(numWorkers)
-			for roundToProcess > 0 {
-				hash, err := sc.GetBlockHash(ctx, roundToProcess)
-				if err != nil {
-					logging.Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
-					roundToProcess--
-					continue
-				}
-				if fs.CloudObjectExists(hash) {
-					logging.Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
-					break
-				} else {
-					swg.Add()
-					go sc.moveBlockToCloud(ctx, roundToProcess, hash, fs, &swg)
-					roundToProcess--
-				}
-			}
-			swg.Wait()
-			logging.Logger.Info("Moved old blocks to cloud successfully")
-		}
-	}
-}
-
-func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, hash string, fs blockstore.BlockStore, swg *sizedwaitgroup.SizedWaitGroup) {
-	err := fs.UploadToCloud(hash, round)
-	if err != nil {
-		logging.Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
-	} else {
-		logging.Logger.Info("Block successfully uploaded to cloud", zap.Any("round", round))
-		sc.TieringStats.TotalBlocksUploaded++
-		sc.TieringStats.LastRoundUploaded = round
-		sc.TieringStats.LastUploadTime = time.Now()
-	}
-	swg.Done()
 }
 
 func (sc *Chain) SharderHealthCheck(ctx context.Context) {

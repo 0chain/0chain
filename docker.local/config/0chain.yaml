@@ -57,8 +57,6 @@ server_chain:
     validation:
       batch_size: 1000
     reuse_txns: false
-    storage:
-      provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
 
   round_range: 10000000
   dkg: true
@@ -183,14 +181,6 @@ latitude: 28.644800
 # longitude is miner/sharder longitude geolocation
 longitude: 77.216721
 
-minio:
-  enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
-  worker_frequency: 1800 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
-  use_ssl: false # Use SSL for connection or not
-  old_block_round_range: 250000 # How old the block should be to be considered for moving to cloud, Should be greater than proximity scan window
-  delete_local_copy: true # Delete local copy of block once it's moved to cloud
-
 cassandra:
   connection:
     delay: 10 # in seconds
@@ -198,6 +188,11 @@ cassandra:
 #   host: cassandra
 #   port: 9042
 
+storage:
+  root_dir: "/path/to/root/directory"
+  # cache:
+  #   path: "path/to/cache"
+  #   size: 1GB
 # integration tests related configurations
 integration_tests:
   # address of the server
