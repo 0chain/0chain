@@ -34,7 +34,8 @@ jobs:
         whoami
         sudo usermod -aG sudo runner
         chmod +x generate_mocks.sh
-        sudo mkdir -p /root/actions-runner/_work/_tool/go/bin/
+        # sudo mkdir -p /root/actions-runner/_work/_tool/go/bin/
+        sudo su
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
