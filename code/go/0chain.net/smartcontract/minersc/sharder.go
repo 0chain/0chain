@@ -166,7 +166,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	//err = emitAddSharder(newSharder, balances)
-	emitAddOrOverwriteSharder(newSharder, balances)
+	emitAddSharder(newSharder, balances)
 
 	// save all sharders list
 	if err = updateAllShardersList(balances, allSharders); err != nil {
