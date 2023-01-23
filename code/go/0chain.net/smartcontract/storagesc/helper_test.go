@@ -92,8 +92,7 @@ func getValidatorURL(id string) string {
 }
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
-	var sn StorageNode
-	sn.ID = c.id
+	var sn = newBlobber(c.id)
 	sn.BaseURL = getBlobberURL(c.id)
 	sn.Terms = c.terms
 	sn.Capacity = c.cap
@@ -116,8 +115,7 @@ func (c *Client) stakeLockRequest(t testing.TB) []byte {
 }
 
 func (c *Client) addValidatorRequest(t testing.TB) []byte {
-	var vn ValidationNode
-	vn.ID = c.id
+	var vn = newValidator(c.id)
 	vn.ProviderType = spenum.Validator
 	vn.BaseURL = getValidatorURL(c.id)
 	vn.StakePoolSettings.MaxNumDelegates = 100
@@ -152,8 +150,7 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
-	blobber := new(StorageNode)
-	blobber.ID = c.id
+	blobber := newBlobber(c.id)
 	blobber.ProviderType = spenum.Blobber
 	//_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 	//require.NoError(t, err)
