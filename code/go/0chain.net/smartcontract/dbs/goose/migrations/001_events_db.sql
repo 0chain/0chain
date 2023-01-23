@@ -494,7 +494,8 @@ CREATE TABLE public.delegate_pools (
                                        total_reward bigint,
                                        total_penalty bigint,
                                        status bigint,
-                                       round_created bigint
+                                       round_created bigint,
+                                       round_pool_last_updated bigint
 );
 
 
