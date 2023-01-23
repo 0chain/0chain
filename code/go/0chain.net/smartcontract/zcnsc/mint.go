@@ -55,6 +55,10 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	if numAuth == 0 {
+		return "", common.NewError(code, "no authorizers found")
+	}
+
 	threshold := int(math.RoundToEven(gn.PercentAuthorizers * float64(numAuth)))
 
 	// if number of slices exceeds limits the check only withing required range

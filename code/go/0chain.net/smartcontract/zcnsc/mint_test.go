@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/common"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
@@ -79,6 +80,7 @@ func Test_EmptySignaturesShouldFail(t *testing.T) {
 
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
 	require.Error(t, err)
+	require.Contains(t, err.Error(), "signatures entry is missing in payload")
 }
 
 func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
@@ -99,7 +101,7 @@ func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
-	require.Error(t, err)
+	require.Equal(t, common.NewError("failed to mint", "no authorizers found"), err)
 }
 
 // TBD
