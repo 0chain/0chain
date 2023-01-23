@@ -32,9 +32,9 @@ jobs:
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         whoami
-        sudo mkdir -p /root/actions-runner/_work/_tool/go/bin/
         sudo usermod -aG sudo runner
         chmod +x generate_mocks.sh
+        sudo mkdir -p /root/actions-runner/_work/_tool/go/bin/
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
