@@ -55,6 +55,3 @@ jobs:
       run: |
         ./docker.local/bin/start.conductor.sh basic
 
-    - name: Cleanup 
-      run: |
-        rm -rf ./*
