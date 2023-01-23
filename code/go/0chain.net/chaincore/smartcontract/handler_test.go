@@ -143,7 +143,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "miner",
 			address:    minersc.ADDRESS,
-			restpoints: 24,
+			restpoints: 25,
 		},
 		{
 			name:       "vesting",
@@ -355,11 +355,11 @@ func TestExecuteSmartContract(t *testing.T) {
 		})).Return(nil)
 	stateContextIMock.On("EmitEvent",
 		mock.Anything,
-		mock.MatchedBy(func (v event.EventTag) bool {
+		mock.MatchedBy(func(v event.EventTag) bool {
 			return v == event.TagMinerHealthCheck ||
-				v == event.TagSharderHealthCheck  ||
-				v == event.TagBlobberHealthCheck  ||
-				v == event.TagValidatorHealthCheck||
+				v == event.TagSharderHealthCheck ||
+				v == event.TagBlobberHealthCheck ||
+				v == event.TagValidatorHealthCheck ||
 				v == event.TagAuthorizerHealthCheck
 		}),
 		mock.Anything,
