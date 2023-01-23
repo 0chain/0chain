@@ -3,6 +3,10 @@ package event
 import (
 	"testing"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
+	"github.com/stretchr/testify/require"
+
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	"github.com/0chain/common/core/currency"
@@ -90,8 +94,9 @@ func TestEventDb_rewardProviders(t *testing.T) {
 				MinStake:       mn.MinStake,
 				MaxStake:       mn.MaxStake,
 				Rewards: ProviderRewards{
-					ProviderID: mn.ID,
-					Rewards:    mn.Stat.GeneratorRewards,
+					ProviderID:   mn.ID,
+					Rewards:      mn.Stat.GeneratorRewards,
+					TotalRewards: mn.Stat.GeneratorRewards,
 				},
 				LastHealthCheck: mn.LastHealthCheck,
 			},
@@ -161,41 +166,88 @@ func TestEventDb_rewardProviders(t *testing.T) {
 	mnMiner1 := convertMn(mn)
 	mnMiner2 := convertMn(mn2)
 
-	if err := db.addOrOverwriteMiner([]Miner{mnMiner1, mnMiner2}); err != nil {
+	if err := db.addMiner([]Miner{mnMiner1, mnMiner2}); err != nil {
 		t.Error(err)
 	}
 
 	if err := db.rewardProviders([]ProviderRewards{{
-		ProviderID:   mnMiner1.ID,
-		Rewards:      20,
-		TotalRewards: 40,
+		ProviderID:                    mnMiner1.ID,
+		Rewards:                       20,
+		RoundServiceChargeLastUpdated: 7,
 	}, {
-		ProviderID:   mnMiner2.ID,
-		Rewards:      30,
-		TotalRewards: 50,
+		ProviderID:                    mnMiner2.ID,
+		Rewards:                       30,
+		RoundServiceChargeLastUpdated: 7,
 	}}); err != nil {
 		t.Error(err)
 	}
 
-	assertMinerRewards(t, db, mnMiner1.ID, int64(20+5), int64(40))
-	assertMinerRewards(t, db, mnMiner2.ID, int64(30+5), int64(50))
+	assertMinerRewards(t, db, mnMiner1.ID, uint64(20+5), uint64(25), 7)
+	assertMinerRewards(t, db, mnMiner2.ID, uint64(30+5), uint64(35), 7)
 }
 
-func assertMinerRewards(t *testing.T, eventDb *EventDb, minerId string, reward, totalReward int64) {
+func TestEventDb_rewardProviderDelegates(t *testing.T) {
+	db, clean := GetTestEventDB(t)
+	defer clean()
+
+	err := db.addDelegatePools([]DelegatePool{
+		{
+			PoolID:       "pool 1",
+			ProviderID:   "miner one",
+			ProviderType: spenum.Miner,
+			Reward:       5,
+			TotalReward:  23,
+		},
+		{
+			PoolID:       "pool 2",
+			ProviderID:   "miner two",
+			ProviderType: spenum.Miner,
+			Reward:       0,
+			TotalReward:  0,
+		},
+	})
+	require.NoError(t, err)
+
+	err = db.rewardProviderDelegates([]DelegatePool{{
+		ProviderID:           "miner one",
+		ProviderType:         spenum.Miner,
+		PoolID:               "pool 1",
+		Reward:               20,
+		RoundPoolLastUpdated: 7,
+	}, {
+		ProviderID:           "miner two",
+		ProviderType:         spenum.Miner,
+		PoolID:               "pool 2",
+		Reward:               11,
+		RoundPoolLastUpdated: 7,
+	}})
+	require.NoError(t, err)
+
+	requireDelegateRewards(t, db, "pool 1", "miner one", 20+5, 23+20, 7)
+	requireDelegateRewards(t, db, "pool 2", "miner two", 11+0, 11+0, 7)
+}
+
+func requireDelegateRewards(
+	t *testing.T,
+	eventDb *EventDb,
+	poolId, providerID string,
+	reward, totalReward uint64,
+	lastUpdated int64,
+) {
+	dp, err := eventDb.GetDelegatePool(poolId, providerID)
+	require.NoError(t, err)
+	require.EqualValues(t, reward, uint64(dp.Reward))
+	require.EqualValues(t, totalReward, uint64(dp.TotalReward))
+	require.EqualValues(t, lastUpdated, dp.RoundPoolLastUpdated)
+}
+
+func assertMinerRewards(t *testing.T, eventDb *EventDb, minerId string, reward, totalReward uint64, lastUpdated int64) {
 	miner, err := eventDb.GetMiner(minerId)
 	if err != nil {
 		t.Error(err)
 	}
 
-	rt1, err := miner.Rewards.TotalRewards.Int64()
-	if err != nil {
-		t.Error(err)
-	}
-	assert.Equal(t, int64(totalReward), rt1)
-
-	r1, err := miner.Rewards.Rewards.Int64()
-	if err != nil {
-		t.Error(err)
-	}
-	assert.Equal(t, int64(reward), r1)
+	assert.Equal(t, totalReward, uint64(miner.Rewards.TotalRewards))
+	assert.Equal(t, reward, uint64(miner.Rewards.Rewards))
+	assert.Equal(t, miner.Rewards.RoundServiceChargeLastUpdated, lastUpdated)
 }

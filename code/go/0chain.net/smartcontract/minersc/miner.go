@@ -129,12 +129,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 				"saving all miners list: %v", err)
 		}
 
-		err = emitAddOrOverwriteMiner(newMiner, balances)
-		if err != nil {
-			return "", common.NewErrorf("add_miner",
-				"insert new miner: %v", err)
-		}
-
+		emitAddMiner(newMiner, balances)
 		update = true
 	}
 
