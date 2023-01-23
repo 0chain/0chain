@@ -9,11 +9,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
 --
 -- Name: allocation_blobber_terms; Type: TABLE; Schema: public; Owner: zchain_user
 --
@@ -497,7 +492,8 @@ CREATE TABLE public.delegate_pools (
                                        total_reward bigint,
                                        total_penalty bigint,
                                        status bigint,
-                                       round_created bigint
+                                       round_created bigint,
+                                       round_pool_last_updated bigint
 );
 
 
@@ -702,7 +698,8 @@ CREATE TABLE public.provider_rewards (
                                          updated_at timestamp with time zone,
                                          provider_id text,
                                          rewards bigint,
-                                         total_rewards bigint
+                                         total_rewards bigint,
+                                         round_service_charge_last_updated bigint
 );
 
 
@@ -1000,6 +997,7 @@ CREATE TABLE public.snapshots (
                                   mined_total bigint,
                                   average_write_price bigint,
                                   total_staked bigint,
+                                  total_rewards bigint,
                                   successful_challenges bigint,
                                   total_challenges bigint,
                                   allocated_storage bigint,
