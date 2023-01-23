@@ -186,8 +186,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		if es.round%edb.settings.PartitionChangePeriod == 0 {
 			//edb.addPartition(es.round, "snapshots")
 			//edb.dropPartition(es.round, "snapshots")
-			edb.addPartition(es.round, "blobber_aggregates")
-			edb.dropPartition(es.round, "blobber_aggregates")
+			if err := edb.addPartition(es.round, "blobber_aggregates"); err != nil {
+				logging.Logger.Error("error creating partition", zap.Error(err))
+			}
+			if err := edb.dropPartition(es.round, "blobber_aggregates"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
 			//edb.addPartition(es.round, "miner_aggregates")
 			//edb.dropPartition(es.round, "miner_aggregates")
 			//edb.addPartition(es.round, "sharder_aggregates")
