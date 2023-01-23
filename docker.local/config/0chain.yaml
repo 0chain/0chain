@@ -2,8 +2,8 @@ version: 1.0
 
 logging:
   level: "debug"
-  verbose: false
-  console: false # printing log to console is only supported in development mode
+  verbose: true
+  console: true # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
 

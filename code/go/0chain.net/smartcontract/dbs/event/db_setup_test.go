@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
 	"github.com/0chain/common/core/logging"
 	_ "github.com/jackc/pgx/v5"
@@ -105,9 +106,15 @@ func TestMain(m *testing.M) {
 		settings:      dbSetting,
 	}
 
-	if err := gEventDB.AutoMigrate(); err != nil {
-		log.Fatalf("Could not auto migrate database: %s", err)
+	s, err := gormDB.DB()
+	if err != nil {
+		log.Fatal(err)
 	}
+	goose.Init()
+	goose.Migrate(s)
+	//if err := goose.Migrate(s); err != nil {
+	//	log.Fatalf("Could not auto migrate database: %s", err)
+	//}
 
 	//Run tests
 	code := m.Run()
