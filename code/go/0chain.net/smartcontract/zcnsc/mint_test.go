@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -151,6 +152,28 @@ func Test_EmptySignaturesShouldFail(t *testing.T) {
 
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
 	require.Error(t, err)
+	require.Contains(t, err.Error(), "signatures entry is missing in payload")
+}
+
+func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
+	ctx := MakeMockStateContextWithoutAutorizers()
+
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	// Add a few signatures.
+	var signatures []*AuthorizerSignature
+	for _, id := range []string{"sign1", "sign2", "sign3"} {
+		signatures = append(signatures, &AuthorizerSignature{ID: id})
+	}
+	payload.Signatures = signatures
+
+	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+	require.NoError(t, err)
+
+	_, err = contract.Mint(transaction, payload.Encode(), ctx)
+	require.Equal(t, common.NewError("failed to mint", "no authorizers found"), err)
 }
 
 // TBD

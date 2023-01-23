@@ -45,6 +45,19 @@ func (ctx *mockStateContext) GetLatestFinalizedBlock() *block.Block {
 }
 
 func MakeMockStateContext() *mockStateContext {
+	ctx := MakeMockStateContextWithoutAutorizers()
+
+	// AuthorizerNodes & StakePools
+	ctx.authorizers = make(map[string]*Authorizer, len(authorizersID))
+	ctx.stakingPools = make(map[string]*StakePool, len(authorizersID))
+	for _, id := range authorizersID {
+		createTestAuthorizer(ctx, id)
+		createTestStakingPools(ctx, id)
+	}
+	return ctx
+}
+
+func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 	ctx := &mockStateContext{
 		StateContextI: &mocks.StateContextI{},
 	}
@@ -73,15 +86,6 @@ func MakeMockStateContext() *mockStateContext {
 	for _, client := range clients {
 		userNode := createUserNode(client)
 		ctx.userNodes[userNode.GetKey()] = userNode
-	}
-
-	// AuthorizerNodes & StakePools
-
-	ctx.authorizers = make(map[string]*Authorizer, len(authorizersID))
-	ctx.stakingPools = make(map[string]*StakePool, len(authorizersID))
-	for _, id := range authorizersID {
-		createTestAuthorizer(ctx, id)
-		createTestStakingPools(ctx, id)
 	}
 
 	// Transfers

@@ -112,9 +112,6 @@ func TestMain(m *testing.M) {
 	}
 	goose.Init()
 	goose.Migrate(s)
-	//if err := goose.Migrate(s); err != nil {
-	//	log.Fatalf("Could not auto migrate database: %s", err)
-	//}
 
 	//Run tests
 	code := m.Run()

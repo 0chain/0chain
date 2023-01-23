@@ -700,7 +700,8 @@ CREATE TABLE public.provider_rewards (
                                          updated_at timestamp with time zone,
                                          provider_id text,
                                          rewards bigint,
-                                         total_rewards bigint
+                                         total_rewards bigint,
+                                         round_service_charge_last_updated bigint
 );
 
 

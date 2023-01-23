@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const extraNodeStatTests = 2 // test both sharder and miner
+
 func TestMinerBenchmarkRestTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}
 	mockSigScheme.On("SetPublicKey", mock.Anything).Return(nil)
@@ -20,7 +22,7 @@ func TestMinerBenchmarkRestTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(GetEndpoints(rest.NewRestHandler(nil))),
+		len(GetEndpoints(rest.NewRestHandler(nil)))+extraNodeStatTests,
 		len(BenchmarkRestTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }
