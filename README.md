@@ -200,7 +200,7 @@ However, you can use the <a href='https://github.com/0chain/block-explorer'>bloc
 
 ## Monitoring the progress
 
-1. Use <a href='https://github.com/0chain/block-explorer'>block explorer</a> to see the progress of the block chain.
+1. Use <a href='https://github.com/0chain/block-explorer'>block explorer</a> to see the progress of the blockchain.
 
 2. In addition, use the '/\_diagnostics' link on any node to view internal details of the blockchain and the node.
 
@@ -360,7 +360,7 @@ This gives the start timestamps that can be used to correlate the events and the
 
 ### Prerequisites
 
-Docker and Git must be installed to run the tests .
+Docker and Git must be installed to run the tests.
 
 Install Git using the following command:
 
@@ -395,7 +395,7 @@ Now run the script containing unit tests .
 ./docker.local/bin/unit_test.sh
 ```
 
-The list of packages is optional, and if provided runs only the tests from those packages. Command for running unit tests with specific packages .
+The list of packages is optional, and if provided runs only the tests from those packages. Command for running unit tests with specific packages.
 
 ```
 ./docker.local/bin/unit_test.sh [<packages>]
@@ -427,7 +427,7 @@ This step copies the code from the source path to the destination path.
 
 #### Step 5: RUN cd $SRC_DIR/go/0chain.net &&  go mod download
 
-The RUN command is an image build step which allows installing of application and packages requited for testing while the`go mod download` downloads the specific module versions you've specified in the `go.mod`file.
+The RUN command is an image build step which allows installing of application and packages required for testing while the`go mod download` downloads the specific module versions you've specified in the `go.mod`file.
 
 #### Step 6: RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd@v1.5. &&     chmod -R +w . &&  make clean libzstd.a
 
@@ -435,7 +435,7 @@ This step runs the gozstd package and provides write permissions to the director
 
 #### Step 7: WORKDIR $SRC_DIR/go
 
-This step defines the working directory for running unit tests which is (0chain/code/go/0chain.net/).For all the running general unit tests their code coverage will be defined in the terminal like this
+This step defines the working directory for running unit tests which is (0chain/code/go/0chain.net/). For all the running general unit tests their code coverage will be defined in the terminal like this
 
 ```
 ok      0chain.net/chaincore/block      0.128s  coverage: 98.9% of statements
@@ -538,7 +538,7 @@ minio:
   enabled: false
   # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
   worker_frequency: 3600
-  # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
+  # Number of workers to run in parallel, Just to make execution faster we can have multiple workers running simultaneously
   num_workers: 5
   # Use SSL for connection or not
   use_ssl: false
@@ -551,14 +551,14 @@ minio:
 
 ## Integration tests
 
-Integration testing combines individual 0chain modules and test them as a group. Integration testing evaluates the compliance of a system for specific functional requirements and usually occurs after unit testing .
+Integration testing combines individual 0chain modules and test them as a group. Integration testing evaluates the compliance of a system for specific functional requirements and usually occurs after unit testing.
 
-For integration testing, A conductor which is RPC(Remote Procedure Call) server is implemented to control behaviour of nodes .To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
+For integration testing, A conductor which is RPC(Remote Procedure Call) server is implemented to control behaviour of nodes. To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
 
 ## Benchmarks
 Benchmark 0chain smart-contract endpoints.
 
-Runs testing.Benchmark on each 0chain endpoint. The blockchain database used in these tests is constructed from the parameters in the benchmark.yaml. file. Smartcontracts do not (or should not) access tha chain so a populated MPT database is enough to give a realistic benchmark.
+Runs testing.Benchmark on each 0chain endpoint. The blockchain database used in these tests is constructed from the parameters in the benchmark.yaml. file. Smartcontracts do not (or should not) access the chain so a populated MPT database is enough to give a realistic benchmark.
 
 More info in [read.me](code/go/0chain.net/smartcontract/benchmark/main/readme.md)
 
@@ -567,7 +567,7 @@ A conductor requires the nodes to be built in a certain order to control them du
 
 ![integration testing](https://user-images.githubusercontent.com/65766301/120053178-6a624180-c046-11eb-8255-ac9b4e202e32.png)
 
-For running multiple test cases,conductor uses a test suite which contains multiple sets of tests .A test suites can be categorized into 3 types of tests
+For running multiple test cases,conductor uses a test suite which contains multiple sets of tests. A test suites can be categorized into 3 types of tests
 
 `standard tests` - Checks whether chain continue to function properly despite bad miner and sharder participants
 
@@ -628,7 +628,7 @@ tests:
 
 ### Prerequisites
 
-Docker and Git must be installed to run the tests .
+Docker and Git must be installed to run the tests.
 
 Install Git using the following command:
 
