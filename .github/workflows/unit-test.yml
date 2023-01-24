@@ -17,10 +17,8 @@ jobs:
 
       - name: Check msgp changes
         run: |
-          sudo sed -i 's/http:\/\/mirror.enzu.com\/ubuntu/http:\/\/mirror.genesisadaptive.com\/ubuntu/g' /etc/apt/sources.list
-          sudo cat /etc/apt/sources.list
-          sudo apt update
-          sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
+          sudo apt update -y
+          sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
@@ -49,10 +47,8 @@ jobs:
 
       - name: Check msgp changes
         run: |
-          sudo sed -i 's/http:\/\/mirror.enzu.com\/ubuntu/http:\/\/mirror.genesisadaptive.com\/ubuntu/g' /etc/apt/sources.list
-          sudo cat /etc/apt/sources.list
-          sudo apt update
-          sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
+          sudo apt update -y
+          sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
