@@ -26,7 +26,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-        
+
     - name: Docker Init Setup.
       run: |
         sudo apt update -y
