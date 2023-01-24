@@ -533,8 +533,8 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	challenge *StorageChallenge,
 	cr *ChallengeResponse) (*verifyTicketsResult, error) {
 	// get unique validation tickets map
-	vtsMap := make(map[string]*ValidationTicket, len(cr.ValidationTickets))
-	for i, vt := range cr.ValidationTickets {
+	vtsMap := make(map[string]struct{}, len(cr.ValidationTickets))
+	for _, vt := range cr.ValidationTickets {
 		if vt == nil {
 			return nil, errors.New("found nil validation tickets")
 		}
@@ -543,14 +543,14 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 			return nil, errors.New("found invalid validator id in validation ticket")
 		}
 
-		vtsMap[vt.ValidatorID] = cr.ValidationTickets[i]
+		_, ok := vtsMap[vt.ValidatorID]
+		if ok {
+			return nil, errors.New("found duplicate validation tickets")
+		}
+		vtsMap[vt.ValidatorID] = struct{}{}
 	}
 
-	tksNum := len(vtsMap)
-	if tksNum < len(cr.ValidationTickets) {
-		return nil, errors.New("found duplicate validation tickets")
-	}
-
+	tksNum := len(cr.ValidationTickets)
 	threshold := challenge.TotalValidators / 2
 	if tksNum < threshold {
 		return nil, fmt.Errorf("validation tickets less than threshold: %d, tickets: %d", threshold, tksNum)
@@ -561,7 +561,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		validators       []string // validators for rewards
 	)
 
-	for vid, vt := range vtsMap {
+	for _, vt := range cr.ValidationTickets {
 		if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
 			return nil, fmt.Errorf("invalid validation ticket: %v", err)
 		}
@@ -570,7 +570,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 			return nil, fmt.Errorf("invalid validation ticket: %v", err)
 		}
 
-		validators = append(validators, vid)
+		validators = append(validators, vt.ValidatorID)
 		if !vt.Result {
 			failure++
 			continue
