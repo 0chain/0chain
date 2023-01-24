@@ -9,9 +9,15 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
+	"0chain.net/core/memorystore"
 	"0chain.net/core/viper"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	memoryStorage := memorystore.GetStorageProvider()
+	block.SetupEntity(memoryStorage)
+}
 
 func TestGetMPrefixDir(t *testing.T) {
 
