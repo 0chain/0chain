@@ -190,9 +190,9 @@ cassandra:
 
 storage:
   root_dir: "/path/to/root/directory"
-  # cache:
-  #   path: "path/to/cache"
-  #   size: 1GB
+  cache:
+    path: "/path/to/cache"
+    size: 1GB
 # integration tests related configurations
 integration_tests:
   # address of the server
