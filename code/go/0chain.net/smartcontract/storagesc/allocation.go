@@ -128,6 +128,7 @@ func (nar *newAllocationRequest) validate(now time.Time, conf *Config) error {
 
 	dur := common.ToTime(nar.Expiration).Sub(now)
 	if dur < conf.MinAllocDuration {
+		logging.Logger.Debug("insufficient allocation duration", zap.Any("dur", dur), zap.Any("min", conf.MinAllocDuration))
 		return errors.New("insufficient allocation duration")
 	}
 	return nil
