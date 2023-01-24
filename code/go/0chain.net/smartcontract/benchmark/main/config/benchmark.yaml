@@ -33,7 +33,7 @@ options:
     - "miner_rest"
     - "faucet"
     - "faucet_rest"
-     "vesting"
+    - "vesting"
     - "vesting_rest"
     - "multi_sig"
     - "zcnscbridge"
