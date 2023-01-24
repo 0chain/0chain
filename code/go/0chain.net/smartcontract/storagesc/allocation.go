@@ -1209,14 +1209,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			return "", common.NewError("allocation_updating_failed",
 				"allocation size becomes too small")
 		}
-	
-		// get blobber of the allocation to update them
-		var blobbers []*StorageNode
-		if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
-			return "", common.NewError("allocation_updating_failed",
-				err.Error())
-		}
-	
+		
 		if len(request.AddBlobberId) > 0 {
 			blobbers, err = alloc.changeBlobbers(
 				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
