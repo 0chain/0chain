@@ -125,14 +125,17 @@ func AddMockNodes(
 			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
 
-					PublicKey:       newNode.PublicKey,
+					PublicKey: newNode.PublicKey,
 					Provider: event.Provider{
 						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
 						MinStake:      newNode.Settings.MinStake,
 						MaxStake:      newNode.Settings.MaxStake,
-						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+						Rewards: event.ProviderRewards{
+							ProviderID:                    newNode.ID,
+							RoundServiceChargeLastUpdated: 7,
+						},
 						LastHealthCheck: newNode.LastHealthCheck,
 					},
 				}
@@ -141,16 +144,18 @@ func AddMockNodes(
 				}
 			} else {
 				sharderDb := event.Sharder{
-
-					PublicKey:       newNode.PublicKey,
+					PublicKey: newNode.PublicKey,
 					Provider: event.Provider{
 						LastHealthCheck: newNode.LastHealthCheck,
-						ID:            newNode.ID,
-						ServiceCharge: newNode.Settings.ServiceChargeRatio,
-						NumDelegates:  newNode.Settings.MaxNumDelegates,
-						MinStake:      newNode.Settings.MinStake,
-						MaxStake:      newNode.Settings.MaxStake,
-						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+						ID:              newNode.ID,
+						ServiceCharge:   newNode.Settings.ServiceChargeRatio,
+						NumDelegates:    newNode.Settings.MaxNumDelegates,
+						MinStake:        newNode.Settings.MinStake,
+						MaxStake:        newNode.Settings.MaxStake,
+						Rewards: event.ProviderRewards{
+							ProviderID:                    newNode.ID,
+							RoundServiceChargeLastUpdated: 11,
+						},
 					},
 				}
 				if err := eventDb.Store.Get().Create(&sharderDb).Error; err != nil {
@@ -159,15 +164,16 @@ func AddMockNodes(
 			}
 			for id, pool := range newNode.Pools {
 				dps = append(dps, event.DelegatePool{
-					PoolID:       id,
-					ProviderType: nodeType,
-					ProviderID:   newNode.ID,
-					DelegateID:   pool.DelegateID,
-					Balance:      pool.Balance,
-					Reward:       pool.Reward,
-					TotalReward:  pool.Reward,
-					Status:       int(pool.Status),
-					RoundCreated: pool.RoundCreated,
+					PoolID:               id,
+					ProviderType:         nodeType,
+					ProviderID:           newNode.ID,
+					DelegateID:           pool.DelegateID,
+					Balance:              pool.Balance,
+					Reward:               pool.Reward,
+					TotalReward:          pool.Reward,
+					Status:               pool.Status,
+					RoundCreated:         pool.RoundCreated,
+					RoundPoolLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 				})
 			}
 		}
@@ -216,6 +222,7 @@ func AddMockNodes(
 			log.Fatal(err)
 		}
 	}
+
 	return nodes, publickKeys
 }
 

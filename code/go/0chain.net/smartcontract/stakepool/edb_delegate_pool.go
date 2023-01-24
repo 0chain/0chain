@@ -33,7 +33,7 @@ func (dp DelegatePool) emitNew(
 		ProviderID:   providerId,
 		DelegateID:   dp.DelegateID,
 
-		Status:       int(dp.Status),
+		Status:       dp.Status,
 		RoundCreated: balances.GetBlock().Round,
 	}
 
