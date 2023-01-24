@@ -18,6 +18,7 @@ jobs:
       - name: Check msgp changes
         run: |
           sudo sed -i 's/http:\/\/mirror.enzu.com\/ubuntu/http:\/\/mirror.genesisadaptive.com\/ubuntu/g' /etc/apt/sources.list
+          sudo cat /etc/apt/sources.list
           sudo apt update
           sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           ./docker.local/bin/check.msgp.sh
