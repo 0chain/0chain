@@ -68,21 +68,11 @@ func getBlockFilePath(hash string, round int64) string {
 }
 
 type BlockStore struct {
-	totalBlocks           int
-	totalBlocksSize       uint64
 	basePath              string
 	blockMetadataProvider datastore.EntityMetadata
 	write                 func(bStore *BlockStore, b *block.Block) error
 	read                  func(bStore *BlockStore, hash string, round int64) (*block.Block, error)
 	cache                 cacher
-}
-
-func (bStore *BlockStore) GetTotalBlocks() int {
-	return bStore.totalBlocks
-}
-
-func (bStore *BlockStore) GetTotalBlocksSize() uint64 {
-	return bStore.totalBlocksSize
 }
 
 func (bStore *BlockStore) writeBlockToCache(b *block.Block) error {
@@ -206,8 +196,8 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 		}
 
 		bStore.read = func(bStore *BlockStore, hash string, round int64) (*block.Block, error) {
-			data, err := bStore.cache.Read(hash)
 			b := bStore.blockMetadataProvider.Instance().(*block.Block)
+			data, err := bStore.cache.Read(hash)
 			if err == nil {
 				r := bytes.NewReader(data)
 				err = datastore.ReadMsgpack(r, b)
