@@ -20,6 +20,6 @@ func (edb *EventDb) dropPartition(round int64, table string) error {
 		return nil
 	}
 
-	raw := fmt.Sprintf("DROP TABLE %v_?", table)
-	return edb.Store.Get().Exec(raw, toDrop).Error
+	raw := fmt.Sprintf("DROP TABLE %v_%v", table, toDrop)
+	return edb.Store.Get().Exec(raw).Error
 }
