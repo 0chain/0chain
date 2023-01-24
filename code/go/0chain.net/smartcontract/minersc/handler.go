@@ -406,16 +406,16 @@ type nodeStat struct {
 //	484:
 func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
-		provider_id      = r.URL.Query().Get("provider_id")
+		providerId      = r.URL.Query().Get("provider_id")
 		includeDelegates = strings.ToLower(r.URL.Query().Get("include_delegates")) == "true"
 	)
-	providerTypeString := r.URL.Query().Get("provider_type")
-	providerType, err := strconv.Atoi(providerTypeString)
+	pTypeStr := r.URL.Query().Get("provider_type")
+	providerType, err := strconv.Atoi(pTypeStr)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
 		return
 	}
-	if provider_id == "" {
+	if providerId == "" {
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
 		return
 	}
@@ -432,33 +432,31 @@ func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request
 		var miner event.Miner
 
 		if includeDelegates {
-			miner, dps, err = edb.GetMinerWithDelegatePools(provider_id)
+			miner, dps, err = edb.GetMinerWithDelegatePools(providerId)
 		} else {
-			miner, err = edb.GetMiner(provider_id)
+			miner, err = edb.GetMiner(providerId)
 		}
-		if err == nil {
-			common.Respond(w, r, nodeStat{
-				NodeResponse: minerTableToMinerNode(miner, dps),
-				TotalReward:  int64(miner.Rewards.TotalRewards),
-			}, nil)
-		} else {
+		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
-		}
+		} 
+		common.Respond(w, r, nodeStat{
+			NodeResponse: minerTableToMinerNode(miner, dps),
+			TotalReward:  int64(miner.Rewards.TotalRewards),
+		}, nil)
 		return
 	case spenum.Sharder:
 		var sharder event.Sharder
 		if includeDelegates {
-			sharder, dps, err = edb.GetSharderWithDelegatePools(provider_id)
+			sharder, dps, err = edb.GetSharderWithDelegatePools(providerId)
 		} else {
-			sharder, err = edb.GetSharder(provider_id)
+			sharder, err = edb.GetSharder(providerId)
 		}
-		if err == nil {
-			common.Respond(w, r, nodeStat{
-				NodeResponse: sharderTableToSharderNode(sharder, dps),
-				TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
-		} else {
+		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		}
+		common.Respond(w, r, nodeStat{
+			NodeResponse: sharderTableToSharderNode(sharder, dps),
+			TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
 		return
 	default:
 		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider type"))

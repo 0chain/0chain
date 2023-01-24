@@ -73,7 +73,7 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	}
 	m = minerDps[0].Miner
 	if id != minerDps[0].ProviderRewards.ProviderID {
-		return m, nil, fmt.Errorf("mismatched miner; want id %s but have id%s in provider rewrards",
+		return m, nil, fmt.Errorf("mismatched miner; want id %s but have id %s in provider rewrards",
 			id, minerDps[0].ProviderRewards.ProviderID)
 	}
 	m.Rewards = minerDps[0].ProviderRewards
