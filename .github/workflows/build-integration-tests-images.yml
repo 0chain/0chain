@@ -9,11 +9,11 @@ on:
 jobs:
   BUILD_INTEGRATION_IMAGES:
     name: BUILD-INTEGRATION-IMAGES
-    runs-on: [self-hosted, docker-builds]
-    env:
-      GOPATH: "/root/actions-runner/_work/_tool/go"
-      GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
-      GOCACHE: "/root/actions-runner/_work/_tool/.cache/go-build"
+    runs-on: [self-hosted, arc-runner]
+    # env:
+    #   GOPATH: "/root/actions-runner/_work/_tool/go"
+    #   GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
+    #   GOCACHE: "/root/actions-runner/_work/_tool/.cache/go-build"
 
     steps:
     - uses: actions/checkout@v2
@@ -55,6 +55,3 @@ jobs:
       run: |
         ./docker.local/bin/start.conductor.sh basic
 
-    - name: Cleanup 
-      run: |
-        rm -rf ./*
