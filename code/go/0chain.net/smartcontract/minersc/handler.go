@@ -438,6 +438,7 @@ func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request
 		}
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
+			return
 		} 
 		common.Respond(w, r, nodeStat{
 			NodeResponse: minerTableToMinerNode(miner, dps),
@@ -453,6 +454,7 @@ func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request
 		}
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
+			return
 		}
 		common.Respond(w, r, nodeStat{
 			NodeResponse: sharderTableToSharderNode(sharder, dps),
