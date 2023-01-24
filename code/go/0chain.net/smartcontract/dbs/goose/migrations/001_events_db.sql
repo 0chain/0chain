@@ -130,8 +130,10 @@ CREATE TABLE public.authorizer_aggregates (
                                               total_stake bigint,
                                               total_rewards bigint,
                                               service_charge numeric
-);
+)PARTITION BY RANGE (round);
 
+CREATE TABLE authorizer_aggregates_0 PARTITION OF authorizer_aggregates
+    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.authorizer_aggregates OWNER TO zchain_user;
 
@@ -569,8 +571,10 @@ CREATE TABLE public.events (
                                type bigint,
                                tag bigint,
                                index text
-);
+)PARTITION BY RANGE (block_number);
 
+CREATE TABLE events_0 PARTITION OF events
+    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.events OWNER TO zchain_user;
 
@@ -610,8 +614,10 @@ CREATE TABLE public.miner_aggregates (
                                          total_stake bigint,
                                          total_rewards bigint,
                                          service_charge numeric
-);
+)PARTITION BY RANGE (round);
 
+CREATE TABLE miner_aggregates_0 PARTITION OF miner_aggregates
+    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.miner_aggregates OWNER TO zchain_user;
 
@@ -904,8 +910,10 @@ CREATE TABLE public.sharder_aggregates (
                                            total_stake bigint,
                                            total_rewards bigint,
                                            service_charge numeric
-);
+)PARTITION BY RANGE (round);
 
+CREATE TABLE sharder_aggregates_0 PARTITION OF sharder_aggregates
+    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.sharder_aggregates OWNER TO zchain_user;
 
@@ -1011,8 +1019,10 @@ CREATE TABLE public.snapshots (
                                   block_count bigint,
                                   average_txn_fee bigint,
                                   created_at bigint
-);
+)PARTITION BY RANGE (round);
 
+CREATE TABLE snapshots_0 PARTITION OF snapshots
+    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.snapshots OWNER TO zchain_user;
 
@@ -1119,8 +1129,10 @@ CREATE TABLE public.validator_aggregates (
                                              total_stake bigint,
                                              total_rewards bigint,
                                              service_charge numeric
-);
+)PARTITION BY RANGE (round);
 
+CREATE TABLE validator_aggregates_0 PARTITION OF validator_aggregates
+    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.validator_aggregates OWNER TO zchain_user;
 
@@ -1403,7 +1415,7 @@ ALTER TABLE ONLY public.allocations
 --
 
 ALTER TABLE ONLY public.authorizer_aggregates
-    ADD CONSTRAINT authorizer_aggregates_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT authorizer_aggregates_pkey PRIMARY KEY (id, round);
 
 
 --
@@ -1483,7 +1495,7 @@ ALTER TABLE ONLY public.errors
 --
 
 ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT events_pkey PRIMARY KEY (id, block_number);
 
 
 --
@@ -1491,7 +1503,7 @@ ALTER TABLE ONLY public.events
 --
 
 ALTER TABLE ONLY public.miner_aggregates
-    ADD CONSTRAINT miner_aggregates_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT miner_aggregates_pkey PRIMARY KEY (id, round);
 
 
 --
@@ -1547,7 +1559,7 @@ ALTER TABLE ONLY public.reward_providers
 --
 
 ALTER TABLE ONLY public.sharder_aggregates
-    ADD CONSTRAINT sharder_aggregates_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT sharder_aggregates_pkey PRIMARY KEY (id, round);
 
 
 --
@@ -1587,7 +1599,7 @@ ALTER TABLE ONLY public.users
 --
 
 ALTER TABLE ONLY public.validator_aggregates
-    ADD CONSTRAINT validator_aggregates_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT validator_aggregates_pkey PRIMARY KEY (id, round);
 
 
 --
