@@ -214,6 +214,8 @@ func initGlobalSettingNames() {
 
 	GlobalSettingName[DbsAggregateDebug] = "server_chain.dbs.settings.debug"
 	GlobalSettingName[DbsAggregatePeriod] = "server_chain.dbs.settings.aggregate_period"
+	GlobalSettingName[DbsPartitionChangePeriod] = "server_chain.dbs.settings.partition_change_period"
+	GlobalSettingName[DbsPartitionKeepCount] = "server_chain.dbs.settings.partition_keep_count"
 	GlobalSettingName[DbsAggregatePageLimit] = "server_chain.dbs.settings.page_limit" +
 		""
 	GlobalSettingName[HealthCheckDeepScanEnabled] = "server_chain.health_check.deep_scan.enabled"
@@ -332,9 +334,11 @@ func initGlobalSettings() {
 		GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, false},
 		GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, false},
 
-		GlobalSettingName[DbsAggregateDebug]:     {smartcontract.Boolean, true},
-		GlobalSettingName[DbsAggregatePeriod]:    {smartcontract.Int64, true},
-		GlobalSettingName[DbsAggregatePageLimit]: {smartcontract.Int64, true},
+		GlobalSettingName[DbsAggregateDebug]:        {smartcontract.Boolean, true},
+		GlobalSettingName[DbsAggregatePeriod]:       {smartcontract.Int64, true},
+		GlobalSettingName[DbsPartitionChangePeriod]: {smartcontract.Int64, true},
+		GlobalSettingName[DbsPartitionKeepCount]:    {smartcontract.Int64, true},
+		GlobalSettingName[DbsAggregatePageLimit]:    {smartcontract.Int64, true},
 
 		GlobalSettingName[HealthCheckDeepScanEnabled]:          {smartcontract.Boolean, false},
 		GlobalSettingName[HealthCheckDeepScanBatchSize]:        {smartcontract.Int64, false},
