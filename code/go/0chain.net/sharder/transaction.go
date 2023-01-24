@@ -172,7 +172,7 @@ func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) 
 		if err == nil {
 			txnSummaryMV = true
 		} else {
-			logging.Logger.Info("create mv", zap.Error(err))
+			logging.Logger.Error("create mv", zap.Error(err))
 			txnSummaryMV = true
 			return 0, err
 		}

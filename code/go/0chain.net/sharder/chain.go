@@ -194,7 +194,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	bl.lfb.SetStateStatus(block.StateSuccessful)
 	if err = sc.InitBlockState(bl.lfb); err != nil {
 		bl.lfb.SetStateStatus(0)
-		logging.Logger.Info("load_lfb -- can't initialize stored block state",
+		logging.Logger.Error("load_lfb -- can't initialize stored block state",
 			zap.Error(err))
 		// return common.NewErrorf("load_lfb",
 		//	"can't init block state: %v", err) // fatal

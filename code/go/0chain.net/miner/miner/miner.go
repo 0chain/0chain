@@ -230,7 +230,7 @@ func main() {
 			initProfHandlers(pprofMux)
 			go func() {
 				err2 := profServer.ListenAndServe()
-				logging.Logger.Info("Http server shut down", zap.Error(err2))
+				logging.Logger.Error("Http server shut down", zap.Error(err2))
 			}()
 		}
 
