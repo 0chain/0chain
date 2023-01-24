@@ -248,13 +248,13 @@ func initCache(viper *viper.Viper) cacher {
 }
 
 func parseCacheSize(sizeI interface{}) (int64, error) {
-	switch sizeI.(type) {
+	switch sizeI := sizeI.(type) {
 	case int:
-		return int64(sizeI.(int)), nil
+		return int64(sizeI), nil
 	case float64:
-		return int64(sizeI.(float64)), nil
+		return int64(sizeI), nil
 	case string:
-		s := sizeI.(string)
+		s := sizeI
 		s = strings.ToLower(s)
 		multiplier := 1
 		var sep string
@@ -289,6 +289,7 @@ func parseCacheSize(sizeI interface{}) (int64, error) {
 		}
 
 		size *= int64(multiplier)
+		return size, nil
 	}
 
 	return 0, fmt.Errorf("invalid size value: %v", sizeI)

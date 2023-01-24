@@ -172,6 +172,7 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 	}
 
 	bStore := new(BlockStore)
+	bStore.blockMetadataProvider = datastore.GetEntityMetadata("block")
 	bStore.basePath = basePath
 
 	cViper := sViper.Sub("cache")
@@ -224,12 +225,6 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 			return b, nil
 		}
 	}
-}
 
-func GetStoreNew() BlockStoreI {
-	return store
-}
-
-func SetStoreNew(s BlockStoreI) {
-	store = s
+	SetupStore(bStore)
 }
