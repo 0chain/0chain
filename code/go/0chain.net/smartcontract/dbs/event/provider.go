@@ -94,7 +94,6 @@ func (edb *EventDb) updateProvidersTotalUnStakes(providers []Provider, tablename
 
 func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tableName ProviderTable) error {
 	table := string(tableName)
-	logging.Logger.Info("Running update provider health check with data: ", zap.Any("updates", updates), zap.String("tableName", table))
 
 	var ids []string
 	var lastHealthCheck []int64

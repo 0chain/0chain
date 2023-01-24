@@ -111,7 +111,7 @@ func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		for err != nil {
 			tries++
-			logging.Logger.Error("setup genesis block -- failed to store magic block map", zap.Any("error", err), zap.Any("tries", tries))
+			logging.Logger.Error("setup genesis block -- failed to store magic block map", zap.Error(err), zap.Int64("tries", tries))
 			time.Sleep(time.Millisecond * 100)
 			err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		}

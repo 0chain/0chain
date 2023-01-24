@@ -166,7 +166,7 @@ func main() {
 		}
 
 		logging.Logger.Info("Inside nonGenesis", zap.String("host_name", hostName),
-			zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum), zap.String("path", path), zap.String("description", description))
+			zap.String("n2n_host_name", n2nHostName), zap.Int("port_num", portNum), zap.String("path", path), zap.String("description", description))
 
 		node.Self.Underlying().Host = hostName
 		node.Self.Underlying().N2NHost = n2nHostName
@@ -175,7 +175,7 @@ func main() {
 		node.Self.Underlying().Description = description
 	} else {
 		if initStateErr != nil {
-			logging.Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+			logging.Logger.Panic("Failed to read initialStates", zap.Error(initStateErr))
 		}
 	}
 
@@ -206,7 +206,7 @@ func main() {
 
 	logging.Logger.Info("Starting miner", zap.String("build_tag", build.BuildTag), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
 	logging.Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
-	logging.Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
+	logging.Logger.Info("Self identity", zap.Int("set_index", node.Self.Underlying().SetIndex), zap.String("id", node.Self.Underlying().GetKey()))
 
 	registerInConductor(node.Self.Underlying().GetKey())
 
@@ -306,7 +306,7 @@ func main() {
 
 		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), mpks); err != nil {
 			if mc.ChainConfig.IsViewChangeEnabled() {
-				logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
+				logging.Logger.Error("Failed to verify genesis dkg", zap.Error(err))
 			} else {
 				logging.Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
 			}

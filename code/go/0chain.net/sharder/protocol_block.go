@@ -51,8 +51,8 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("round block hash", fr.GetBlockHash()),
-		zap.Any("lf_round", sc.GetLatestFinalizedBlock().Round),
-		zap.Any("current_round", sc.GetCurrentRound()))
+		zap.Int64("lf_round", sc.GetLatestFinalizedBlock().Round),
+		zap.Int64("current_round", sc.GetCurrentRound()))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -86,7 +86,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	go func() {
 		defer wg.Done()
 		if err := sc.StoreBlockSummaryFromBlock(b); err != nil {
-			Logger.Panic("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+			Logger.Panic("db error (store block summary)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		}
 	}()
 
@@ -96,7 +96,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			defer wg.Done()
 			bs := b.GetSummary()
 			if err := sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap()); err != nil {
-				Logger.DPanic("failed to store magic block map", zap.Any("error", err))
+				Logger.DPanic("failed to store magic block map", zap.Error(err))
 			}
 		}()
 	}
@@ -117,7 +117,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			blockSaveTimer.UpdateSince(ts)
 			p95 := blockSaveTimer.Percentile(.95)
 			if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-				Logger.Warn("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+				Logger.Warn("block save - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 			}
 		}()
 	}
@@ -260,8 +260,8 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	if err = b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round),
-			zap.Any("hash", b.Hash), zap.Error(err))
+		Logger.Error("block validation", zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash), zap.Error(err))
 		return fmt.Errorf("validate block failed, err: %v", err)
 	}
 

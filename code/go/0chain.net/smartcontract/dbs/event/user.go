@@ -39,7 +39,7 @@ func (edb *EventDb) GetUser(userID string) (*User, error) {
 func (edb *EventDb) addOrUpdateUsers(users []User) error {
 	ts := time.Now()
 	defer func() {
-		logging.Logger.Debug("event db - upsert users ", zap.Any("duration", time.Since(ts)),
+		logging.Logger.Debug("event db - upsert users ", zap.Duration("duration", time.Since(ts)),
 			zap.Int("num", len(users)))
 	}()
 	return edb.Store.Get().Clauses(clause.OnConflict{

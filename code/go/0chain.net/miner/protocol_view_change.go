@@ -164,35 +164,35 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 		logging.Logger.Debug("dkg process: trying",
 			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.Any("next_phase", pn.Phase.String()),
+			zap.String("next_phase", pn.Phase.String()),
 			zap.Bool("active", active),
-			zap.Any("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
+			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
 
 		// only go through if pn.Phase is expected
 		if !(pn.Phase == minersc.Start ||
 			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
 			logging.Logger.Debug(
 				"dkg process: jumping over a phase; skip and wait for restart",
-				zap.Any("current_phase", mc.CurrentPhase()),
-				zap.Any("next_phase", pn.Phase))
+				zap.String("current_phase", mc.CurrentPhase().String()),
+				zap.String("next_phase", pn.Phase.String()))
 			mc.SetCurrentPhase(minersc.Unknown)
 			continue
 		}
 
 		logging.Logger.Info("dkg process: start",
 			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.Any("next_phase", pn.Phase.String()),
-			zap.Any("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
+			zap.String("next_phase", pn.Phase.String()),
+			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
 
 		var phaseFunc, ok = mc.viewChangeProcess.phaseFuncs[pn.Phase]
 		if !ok {
 			logging.Logger.Debug("dkg process: no such phase func",
-				zap.Any("phase", pn.Phase))
+				zap.String("phase", pn.Phase.String()))
 			continue
 		}
 
 		logging.Logger.Debug("dkg process: run phase function",
-			zap.Any("name", getFunctionName(phaseFunc)))
+			zap.String("name", getFunctionName(phaseFunc)))
 
 		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 		if lfmb == nil {
@@ -202,9 +202,9 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
-				zap.Any("current_phase", mc.CurrentPhase()),
-				zap.Any("next_phase", pn.Phase.String()),
-				zap.Any("error", err),
+				zap.String("current_phase", mc.CurrentPhase().String()),
+				zap.String("next_phase", pn.Phase.String()),
+				zap.Error(err),
 			)
 			if pn.Phase != minersc.Share {
 				continue
@@ -213,17 +213,17 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		}
 
 		logging.Logger.Debug("dkg process: move phase",
-			zap.Any("current_phase", mc.CurrentPhase()),
+			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.Any("next_phase", pn),
-			zap.Any("txn", txn))
+			zap.String("txn", txn.Hash))
 
 		if txn == nil || (txn != nil && mc.ConfirmTransaction(ctx, txn, 0)) {
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)
 			phaseStartRound = pn.StartRound
 			logging.Logger.Debug("dkg process: moved phase",
-				zap.Any("prev_phase", prevPhase),
-				zap.Any("current_phase", mc.CurrentPhase()),
+				zap.String("prev_phase", prevPhase.String()),
+				zap.String("current_phase", mc.CurrentPhase().String()),
 			)
 		}
 	}
@@ -351,13 +351,13 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 
 	var mpks *block.Mpks
 	if mpks, err = mc.getMinersMpks(ctx, lfb, mb, active); err != nil {
-		logging.Logger.Error("can't share", zap.Any("error", err))
+		logging.Logger.Error("can't share", zap.Error(err))
 		return
 	}
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
-		logging.Logger.Error("can't share", zap.Any("error", err))
+		logging.Logger.Error("can't share", zap.Error(err))
 		return
 	}
 
@@ -392,7 +392,7 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		id := bls.ComputeIDdkg(k)
 		share, err := mc.viewChangeDKG.ComputeDKGKeyShare(id)
 		if err != nil {
-			logging.Logger.Error("can't compute secret share", zap.Any("error", err))
+			logging.Logger.Error("can't compute secret share", zap.Error(err))
 			return err
 		}
 		if k == node.Self.Underlying().GetKey() {
@@ -404,7 +404,7 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 	}
 	if !foundSelf {
 		logging.Logger.Error("failed to add secret key for self",
-			zap.Any("lfb_round", lfb.Round))
+			zap.Int64("lfb_round", lfb.Round))
 	}
 
 	return nil
@@ -435,8 +435,8 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 
 	var selfNodeKey = node.Self.Underlying().GetKey()
 	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.isDKGSet() || !ok {
-		logging.Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.isDKGSet()),
-			zap.Any("ok", ok))
+		logging.Logger.Error("failed to send sijs", zap.Bool("dkg_set", mc.isDKGSet()),
+			zap.Bool("ok", ok))
 		return // (nil, nil)
 	}
 
@@ -516,7 +516,7 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 			zap.Int("total sent num", totalSentNum),
 			zap.Int("fail num", failNum),
 			zap.Int("K", mb.K),
-			zap.Any("fail to miners", sendFail))
+			zap.Strings("fail to miners", sendFail))
 		return nil, errors.New("failed to send sijs")
 	}
 
@@ -836,7 +836,7 @@ func ReadDKGSummaryFile(path string) (dkgs *bls.DKGSummary, err error) {
 		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("decoding dkg summary file: %v", err))
 	}
 
-	logging.Logger.Info("read dkg summary file", zap.Any("ID", dkgs.ID))
+	logging.Logger.Info("read dkg summary file", zap.String("ID", dkgs.ID))
 	return
 }
 
@@ -998,7 +998,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	)
 
 	if err = share.SetHexString(secShare); err != nil {
-		logging.Logger.Error("failed to set hex string", zap.Any("error", err))
+		logging.Logger.Error("failed to set hex string", zap.Error(err))
 		return nil, common.NewErrorf("sign_share",
 			"setting hex string: %v", err)
 	}
@@ -1009,8 +1009,8 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	}
 
 	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
-		logging.Logger.Error("failed to verify dkg share", zap.Any("share", secShare),
-			zap.Any("node_id", nodeID))
+		logging.Logger.Error("failed to verify dkg share", zap.String("share", secShare),
+			zap.String("node_id", nodeID))
 		return nil, common.NewError("sign_share", "failed to verify DKG share")
 	}
 
@@ -1024,7 +1024,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	message.Message = encryption.Hash(secShare)
 	message.Sign, err = node.Self.Sign(message.Message)
 	if err != nil {
-		logging.Logger.Error("failed to sign DKG share message", zap.Any("error", err))
+		logging.Logger.Error("failed to sign DKG share message", zap.Error(err))
 		return nil, common.NewErrorf("sign_share",
 			"signing DKG share message: %v", err)
 	}

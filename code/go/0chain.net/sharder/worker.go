@@ -362,7 +362,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 
 		if !sc.ConfirmTransaction(ctx, txn, 0) {
 			logging.Logger.Debug("register_sharder_keep_worker -- failed "+
-				"to confirm transaction", zap.Any("txn", txn))
+				"to confirm transaction", zap.String("txn", txn.Hash))
 			continue
 		}
 
@@ -403,12 +403,12 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 			for roundToProcess > 0 {
 				hash, err := sc.GetBlockHash(ctx, roundToProcess)
 				if err != nil {
-					logging.Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
+					logging.Logger.Error("Unable to get block hash from round number", zap.Int64("round", roundToProcess))
 					roundToProcess--
 					continue
 				}
 				if fs.CloudObjectExists(hash) {
-					logging.Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
+					logging.Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Int64("round", roundToProcess))
 					break
 				} else {
 					swg.Add()
@@ -425,9 +425,9 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, hash string, fs blockstore.BlockStore, swg *sizedwaitgroup.SizedWaitGroup) {
 	err := fs.UploadToCloud(hash, round)
 	if err != nil {
-		logging.Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
+		logging.Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Int64("round", round))
 	} else {
-		logging.Logger.Info("Block successfully uploaded to cloud", zap.Any("round", round))
+		logging.Logger.Info("Block successfully uploaded to cloud", zap.Int64("round", round))
 		sc.TieringStats.TotalBlocksUploaded++
 		sc.TieringStats.LastRoundUploaded = round
 		sc.TieringStats.LastUploadTime = time.Now()
