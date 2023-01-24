@@ -130,10 +130,7 @@ CREATE TABLE public.authorizer_aggregates (
                                               total_stake bigint,
                                               total_rewards bigint,
                                               service_charge numeric
-)PARTITION BY RANGE (round);
-
-CREATE TABLE authorizer_aggregates_0 PARTITION OF authorizer_aggregates
-    FOR VALUES FROM (0) TO (100);
+) PARTITION BY RANGE (round);
 
 ALTER TABLE public.authorizer_aggregates OWNER TO zchain_user;
 
@@ -231,9 +228,6 @@ CREATE TABLE public.blobber_aggregates (
                                            rank_metric numeric,
                                            downtime bigint
 ) PARTITION BY RANGE (round);
-
-CREATE TABLE blobber_aggregates_0 PARTITION OF blobber_aggregates
-    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.blobber_aggregates OWNER TO zchain_user;
 
@@ -573,8 +567,6 @@ CREATE TABLE public.events (
                                index text
 )PARTITION BY RANGE (block_number);
 
-CREATE TABLE events_0 PARTITION OF events
-    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.events OWNER TO zchain_user;
 
@@ -614,10 +606,8 @@ CREATE TABLE public.miner_aggregates (
                                          total_stake bigint,
                                          total_rewards bigint,
                                          service_charge numeric
-)PARTITION BY RANGE (round);
+) PARTITION BY RANGE (round);
 
-CREATE TABLE miner_aggregates_0 PARTITION OF miner_aggregates
-    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.miner_aggregates OWNER TO zchain_user;
 
@@ -910,10 +900,8 @@ CREATE TABLE public.sharder_aggregates (
                                            total_stake bigint,
                                            total_rewards bigint,
                                            service_charge numeric
-)PARTITION BY RANGE (round);
+) PARTITION BY RANGE (round);
 
-CREATE TABLE sharder_aggregates_0 PARTITION OF sharder_aggregates
-    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.sharder_aggregates OWNER TO zchain_user;
 
@@ -1021,8 +1009,6 @@ CREATE TABLE public.snapshots (
                                   created_at bigint
 )PARTITION BY RANGE (round);
 
-CREATE TABLE snapshots_0 PARTITION OF snapshots
-    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.snapshots OWNER TO zchain_user;
 
@@ -1129,10 +1115,8 @@ CREATE TABLE public.validator_aggregates (
                                              total_stake bigint,
                                              total_rewards bigint,
                                              service_charge numeric
-)PARTITION BY RANGE (round);
+) PARTITION BY RANGE (round);
 
-CREATE TABLE validator_aggregates_0 PARTITION OF validator_aggregates
-    FOR VALUES FROM (0) TO (100);
 
 ALTER TABLE public.validator_aggregates OWNER TO zchain_user;
 
@@ -1839,7 +1823,7 @@ CREATE INDEX idx_dprov_active ON public.delegate_pools USING btree (provider_id,
 -- Name: idx_event; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
--- CREATE INDEX idx_event ON public.events USING btree (block_number, tx_hash, type, tag, index);
+CREATE INDEX idx_event ON public.events USING btree (block_number, tx_hash, type, tag, index);
 
 
 --
@@ -2153,6 +2137,21 @@ ALTER TABLE ONLY public.write_markers
 ALTER TABLE ONLY public.write_markers
     ADD CONSTRAINT fk_write_markers_user FOREIGN KEY (client_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
+
+CREATE TABLE blobber_aggregates_0 PARTITION OF blobber_aggregates
+    FOR VALUES FROM (0) TO (100);
+CREATE TABLE public.miner_aggregates_0 PARTITION OF miner_aggregates
+    FOR VALUES FROM (0) TO (100);
+CREATE TABLE public.authorizer_aggregates_0 PARTITION OF authorizer_aggregates
+    FOR VALUES FROM (0) TO (100);
+CREATE TABLE public.validator_aggregates_0 PARTITION OF validator_aggregates
+    FOR VALUES FROM (0) TO (100);
+CREATE TABLE public.sharder_aggregates_0 PARTITION OF sharder_aggregates
+    FOR VALUES FROM (0) TO (100);
+CREATE TABLE snapshots_0 PARTITION OF snapshots
+    FOR VALUES FROM (0) TO (100);
+CREATE TABLE events_0 PARTITION OF events
+    FOR VALUES FROM (0) TO (100);
 
 --
 -- PostgreSQL database dump complete
