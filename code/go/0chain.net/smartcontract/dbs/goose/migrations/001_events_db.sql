@@ -1839,7 +1839,7 @@ CREATE INDEX idx_dprov_active ON public.delegate_pools USING btree (provider_id,
 -- Name: idx_event; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE INDEX idx_event ON public.events USING btree (block_number, tx_hash, type, tag, index);
+-- CREATE INDEX idx_event ON public.events USING btree (block_number, tx_hash, type, tag, index);
 
 
 --
