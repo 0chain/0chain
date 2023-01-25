@@ -70,8 +70,13 @@ func (tb *testBalances) GetTransaction() *transaction.Transaction {
 }
 
 // stubs
-func (tb *testBalances) GetBlock() *block.Block                      { return tb.block }
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI          { return nil }
+func (tb *testBalances) GetBlock() *block.Block { return tb.block }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI {
+	if tb.mpts == nil {
+		return nil
+	}
+	return tb.mpts.mpt
+}
 func (tb *testBalances) Validate() error                             { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                     { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error          { return nil }

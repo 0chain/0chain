@@ -551,10 +551,57 @@ func TestVerifyChallenge(t *testing.T) {
 
 }
 
+func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
+	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
+	return tmpt
+}
+
+// TODO: test to run the same verify challenge SC multiple times result in the same state
+func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
+	ssc, balances, tp, alloc, b3, valids, validators, blobber := prepareAllocChallenges(t, 10)
+	step := (int64(alloc.Expiration) - tp) / 10
+
+	challID := fmt.Sprintf("chall-0")
+	genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
+
+	chall := &ChallengeResponse{
+		ID: challID,
+	}
+
+	for i := 0; i < 10; i++ {
+		chall.ValidationTickets = append(chall.ValidationTickets,
+			valids[i].validTicket(t, chall.ID, b3.id, true, tp))
+	}
+
+	tp += step / 2
+	tx := newTransaction(b3.id, ssc.ID, 0, tp)
+	balances.setTransaction(t, tx)
+
+	stateRoots := make(map[string]struct{}, 10)
+	for i := 0; i < 20; i++ {
+		clientState := createTxnMPT(balances.GetState())
+		signatureScheme := &encryption.BLS0ChainScheme{}
+		cs := cstate.NewStateContext(balances.block, clientState,
+			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
+
+		var resp string
+		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), cs)
+		require.NoError(t, err)
+
+		require.Equal(t, resp, "challenge passed by blobber")
+		stateRoots[util.ToHex(cs.GetState().GetRoot())] = struct{}{}
+	}
+
+	// Assert muultiple verify challenges running would all result in the same state root, i.e. there's only one
+	// record in the stateRoots map.
+	require.Equal(t, len(stateRoots), 1)
+}
+
 func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64, *StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode) {
 	var (
 		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
+		balances       = newTestBalances(t, true)
 		client         = newClient(100*x10, balances)
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 
