@@ -1569,3 +1569,19 @@ func (vt *ValidationTicket) VerifySign(balances cstate.StateContextI) (bool, err
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
 }
+
+func (vt *ValidationTicket) Validate(challengeID, blobberID string) error {
+	if err := encryption.VerifyPublicKeyClientID(vt.ValidatorKey, vt.ValidatorID); err != nil {
+		return fmt.Errorf("invalid validator tickets: %v", err)
+	}
+
+	if vt.ChallengeID != challengeID {
+		return errors.New("challenge id does not match")
+	}
+
+	if vt.BlobberID != blobberID {
+		return errors.New("challenge blobber id does not match")
+	}
+
+	return nil
+}

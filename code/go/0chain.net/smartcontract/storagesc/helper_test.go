@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -226,9 +227,11 @@ func addValidator(t testing.TB, ssc *StorageSmartContract, now int64,
 	valid.scheme = scheme
 
 	valid.pk = scheme.GetPublicKey()
-	valid.id = encryption.Hash(valid.pk)
+	b, err := hex.DecodeString(valid.pk)
+	require.NoError(t, err)
+	valid.id = encryption.Hash(b)
 
-	var _, err = valid.callAddValidator(t, ssc, now, balances)
+	_, err = valid.callAddValidator(t, ssc, now, balances)
 	require.NoError(t, err)
 	return
 }
