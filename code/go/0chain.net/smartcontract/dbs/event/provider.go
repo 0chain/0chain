@@ -8,8 +8,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
