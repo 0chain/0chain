@@ -1476,9 +1476,13 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 	for i < e && count < 5 {
 		var mr = mc.GetMinerRound(i)
 		if mr == nil || mr.IsFinalized() {
-			logging.Logger.Info("restartRound->kickFinalization continued",
-				zap.Int64("miner round", mr.Number),
-				zap.Bool("miner is finalized", mr != nil && mr.IsFinalized()))
+			if mr != nil {
+				logging.Logger.Info("restartRound->kickFinalization continued",
+					zap.Int64("miner round", mr.Number),
+					zap.Bool("miner is finalized", mr.IsFinalized()))
+			} else {
+				logging.Logger.Info("restartRound->kickFinalization continued. Miner Round is nil")
+			}
 			i++
 			count++
 			continue // skip finalized blocks, skip nil miner rounds
