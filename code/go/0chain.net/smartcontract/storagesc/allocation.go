@@ -55,11 +55,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	}
 
 	err = alloc.emitAdd(balances)
-	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
-		FieldType:    event.Allocated,
-		AllocationId: alloc.ID,
-		Delta:        alloc.Size,
-	})
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation in db: %v", err)
@@ -318,11 +313,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("could not bind allocation to blobber: %v", err)
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, b.ID, event.AllocationValueChanged{
-			FieldType:    event.Allocated,
-			AllocationId: sa.ID,
-			Delta:        bSize(request.Size, request.DataShards),
-		})
+
+		emitUpdateBlobber(b, balances)
 	}
 
 	var options []WithOption
@@ -894,11 +886,6 @@ func (sc *StorageSmartContract) extendAllocation(
 	var prevExpiration = alloc.Expiration
 	alloc.Expiration += req.Expiration // new expiration
 	alloc.Size += req.Size             // new size
-	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
-		FieldType:    event.Allocated,
-		AllocationId: alloc.ID,
-		Delta:        req.Size,
-	})
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
@@ -1031,11 +1018,6 @@ func (sc *StorageSmartContract) reduceAllocation(
 	// adjust the expiration if changed, boundaries has already checked
 	alloc.Expiration += req.Expiration
 	alloc.Size += req.Size
-	balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, alloc.ID, event.AllocationValueChanged{
-		FieldType:    event.Allocated,
-		AllocationId: alloc.ID,
-		Delta:        req.Size,
-	})
 
 	// 1. update terms
 	for i, ba := range alloc.BlobberAllocs {

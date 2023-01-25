@@ -679,10 +679,6 @@ func TestExtendAllocation(t *testing.T) {
 		).Return("", nil).Once()
 		balances.On(
 			"EmitEvent",
-			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
-		).Return().Maybe()
-		balances.On(
-			"EmitEvent",
 			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
@@ -857,10 +853,6 @@ func TestTransferAllocation(t *testing.T) {
 		balances.On(
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateAllocation, mock.Anything, mock.Anything,
-		).Return().Maybe()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
