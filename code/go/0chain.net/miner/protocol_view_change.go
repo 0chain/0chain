@@ -215,7 +215,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		logging.Logger.Debug("dkg process: move phase",
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.Any("next_phase", pn),
-			zap.String("txn", txn.Hash))
+			zap.Any("txn", txn))
 
 		if txn == nil || (txn != nil && mc.ConfirmTransaction(ctx, txn, 0)) {
 			prevPhase := mc.CurrentPhase()

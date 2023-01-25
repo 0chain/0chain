@@ -229,7 +229,7 @@ func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, 
 	}
 	jsObj, err := json.Marshal(txn)
 	if err != nil {
-		logging.Logger.Error("Error in serializing the transaction", zap.String("error", err.Error()), zap.String("transaction", txn.Hash))
+		logging.Logger.Error("Error in serializing the transaction", zap.String("error", err.Error()), zap.Any("transaction", txn))
 		return nil, err
 	}
 

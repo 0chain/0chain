@@ -327,7 +327,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
 				zap.Duration("time_spent", time.Since(t)),
-				zap.String("txn", txn.Hash))
+				zap.Any("txn", txn))
 			//return original error, to handle upwards
 			return nil, err
 		case context.Canceled:
@@ -338,7 +338,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
 				zap.Duration("time_spent", time.Since(t)),
-				zap.String("txn", txn.Hash))
+				zap.Any("txn", txn))
 			//return original error, to handle upwards
 			return nil, err
 		default:
@@ -351,7 +351,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 						zap.String("begin client state", util.ToHex(startRoot)),
 						zap.String("prev block", b.PrevBlock.Hash),
 						zap.Duration("time_spent", time.Since(t)),
-						zap.String("txn", txn.Hash))
+						zap.Any("txn", txn))
 					return nil, err
 				}
 
@@ -362,7 +362,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 					zap.String("begin client state", util.ToHex(startRoot)),
 					zap.String("prev block", b.PrevBlock.Hash),
 					zap.Duration("time_spent", time.Since(t)),
-					zap.String("txn", txn.Hash))
+					zap.Any("txn", txn))
 
 				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
 				clientState = CreateTxnMPT(bState) // begin transaction
@@ -453,7 +453,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		u, err := c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Error(err),
-				zap.String("transaction", txn.Hash),
+				zap.Any("transaction", txn),
 				zap.String("to clientID", mint.ToClientID))
 			return nil, err
 		}
@@ -465,7 +465,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	u, err := c.incrementNonce(sctx, txn.ClientID)
 	if err != nil {
 		logging.Logger.Error("update nonce error", zap.Error(err),
-			zap.String("transaction", txn.Hash),
+			zap.Any("transaction", txn),
 			zap.String("clientID", txn.ClientID))
 		return nil, err
 	}
@@ -483,7 +483,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		if state.DebugTxn() {
 			logging.Logger.DPanic("update state - merge mpt error",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
-				zap.String("txn", txn.Hash), zap.Error(err))
+				zap.Any("txn", txn), zap.Error(err))
 		}
 
 		logging.Logger.Error("error committing txn", zap.Error(err))
@@ -566,7 +566,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		logging.Logger.Error("transfer amount - error",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
-			zap.String("txn", txn.Hash), zap.Error(err))
+			zap.Any("txn", txn), zap.Error(err))
 		return nil, err
 	}
 
@@ -611,7 +611,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		logging.Logger.Error("transfer amount - error",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
-			zap.String("txn", txn.Hash),
+			zap.Any("txn", txn),
 			zap.Error(err))
 		return nil, err
 	}
