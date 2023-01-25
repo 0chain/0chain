@@ -129,6 +129,15 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeBlobberHealthCheckEvents(),
 			mergeAuthorizerHealthCheckEvents(),
 			mergeValidatorHealthCheckEvents(),
+
+			mergeUpdateUserCollectedRewardsEvents(),
+			mergeIncreaseUserTotalStakeEvents(),
+			mergeDecreaseUserTotalStakeEvents(),
+			mergeIncreaseUserReadPoolTotalEvents(),
+			mergeDecreaseUserReadPoolTotalEvents(),
+			mergeIncreaseUserWritePoolTotalEvents(),
+			mergeDecreaseUserWritePoolTotalEvents(),
+			mergeUpdateUserPayedFeesEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -345,6 +354,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	}
 
 	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateUserAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateMinerAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateSharderAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), gs)
@@ -737,6 +747,54 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
+	case TagLockReadPool:
+		rpl, ok := fromEvent[[]ReadPoolLock](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserReadPoolTotal(*rpl, true)
+	case TagUnlockReadPool:
+		rpu, ok := fromEvent[[]ReadPoolLock](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserReadPoolTotal(*rpu, false)
+	case TagLockWritePool:
+		wpl, ok := fromEvent[[]WritePoolLock](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserWritePoolTotal(*wpl, true)
+	case TagUnlockWritePool:
+		wpu, ok := fromEvent[[]WritePoolLock](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserWritePoolTotal(*wpu, false)
+	case TagLockStakePool:
+		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserTotalStake(*dpl, true)
+	case TagUnlockStakePool:
+		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserTotalStake(*dpl, false)
+	case TagUpdateUserPayedFees:
+		t, ok := fromEvent[[]Transaction](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserPayedFees(*t)
+	case TagUpdateUserCollectedRewards:
+		rms, ok := fromEvent[[]RewardMint](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserCollectedRewards(*rms)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
