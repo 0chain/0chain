@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [Intorduction](#introduction)
+- [Introduction](#introduction)
 - [0chain style](#0chain-style)
 - [Writing a test](#writing-a-test)  
 - [Mocks](#mocks)
@@ -26,7 +26,7 @@ be overemphasised. Unit tests -
    In fast moving agile projects they might form the only for the only source of
    documentation.
 6. Help find concurrency errors in the code. Golang provides the `-race` option 
-   for running unit tests; This options gives an error and provides a report 
+   for running unit tests; This option gives an error and provides a report 
    when two goroutines show too much interest in the same memory location 
    around the same time. 
    
@@ -87,10 +87,10 @@ reader to follow.
 
 #### Do use nonsense input text
 
-You do not need to use realistic test data unless its necessary. In fact, I would
+You do not need to use realistic test data unless it's necessary. In fact, I would
 recommend using nonsense text strings when they have no effect. Giving a hash a value
 like`"my hash"`, makes it clear that the function makes does not use this value.
-Further, when debugging its clear the source of any hash values encountered.
+Further, when debugging it's clear the source of any hash values encountered.
 
 #### Use require
 
@@ -103,7 +103,7 @@ This speeds up continuous integration checks that rely on running  unit test.
 
 Do not have comments in finalised unit tests. When viewing unit test results we
 mainly look for test pass or failure, In some circumstances unit test coverage.
-Comments or log outputs just obscures the information.
+Comments or log outputs just obscure the information.
 
 By all means use comments or logs while developing code, but remove them in the final draft.
 
@@ -131,7 +131,7 @@ any concurrency issues.
 
 Functions called only once per execution, often initialise 
 'logical constant' global objects. Initialising these 'logically constant' objects
-involves no concurrency checks, hence no necessity exist for our unit tests these
+involves no concurrency checks, hence no necessity exists for our unit tests these
 functions in parallel.
 
 #### Avoid using external data
@@ -267,7 +267,7 @@ at this point.
 
 Get the test to run without errors. 
 
-Single step though the function. Make any necessary change to prevent
+Single step through the function. Make any necessary change to prevent
 an error. This will likely involve adding more default objects, and
 setting any values needed to avoid returning an error. Remember be
 minimalistic.
@@ -276,19 +276,19 @@ minimalistic.
 
 Devise test to cover all code paths.
 
-Single step though your function again, and this time focus on which code you
+Single step through your function again, and this time focus on which code you
 `do not` step through.
 
 ##### Skipped blocks
 
 Add code to prevent skipping blocks. The typical situation will be an `if` 
 statement. Make whoever changes to the test setup you need to get the code
-to pass though skipped blocks.
+to pass through skipped blocks.
 
 If we have
 ```go
   if input.Thing != nil {
-  	doSomthing()
+  	doSomething()
   }
 ```
 then add
@@ -315,7 +315,7 @@ the test function.
 
 ##### Skipped loops
 
-`For loops` with empty ranges; We need to give them a range to loop though.
+`For loops` with empty ranges; We need to give them a range to loop through.
 
 So
 ```go
@@ -355,7 +355,7 @@ for each branch.
  
 Only our test function needs testing, not any external functions that
 it might call. We need to mock these out external function calls. 
-Check that our function passes though the correct parameters 
+Check that our function passes through the correct parameters 
 and handles the response correctly.
 
 If the function forms part of an interface then we can use [Mocks](#mocks), 
@@ -374,13 +374,13 @@ Otherwise, we should fine a way of handling the external call smoothly. Try to
 do the minimal necessary.
 
 Usually unit tests should not have any effect on the production code. However,
-one possibility exception might be to make problem methods part of an interface
+one possible exception might be to make problem methods part of an interface
 so that we can mock them.
 
 ### Configure test setup
 
 Having done the preliminary steps, we have a pile object definitions, 
-and a list of tests we wish to run. However, everything we need should be
+and a list of tests we wish to run. However, everything we need should
 already be there. We need to shuffle everything around so all our tests
 work. 
 
