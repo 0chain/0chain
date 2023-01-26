@@ -211,7 +211,12 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 				return nil, err
 			}
 
-			go bStore.writeBlockToCache(b)
+			go func() {
+				err := bStore.writeBlockToCache(b)
+				if err != nil {
+					logging.Logger.Error(err.Error())
+				}
+			}()
 			return b, nil
 		}
 	}
