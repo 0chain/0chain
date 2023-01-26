@@ -147,7 +147,9 @@ func (mc *Chain) validateTransaction(b *block.Block,
 			}
 			return nil
 		}
-		mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
+		if cstate.ErrInvalidState(err) {
+			mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
+		}
 		return err
 	}
 
@@ -994,6 +996,13 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	collectionName := txn.GetCollectionName()
 	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
 	err = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
+	if cstate.ErrInvalidState(err) {
+		logging.Logger.Error("generate block - process txn failed",
+			zap.Error(err),
+			zap.Int64("round", b.Round))
+		return err
+	}
+
 	if len(iterInfo.invalidTxns) > 0 {
 		var keys []string
 		for _, txn := range iterInfo.pastTxns {

@@ -33,6 +33,8 @@ func SetupWorkers(ctx context.Context) {
 	go sc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go sc.FinalizedBlockWorker(ctx, sc) // 3) sequentially processes finalized blocks
 
+	go sc.SyncLFBStateWorker(ctx)
+
 	// Setup the deep and proximity scan
 	go sc.HealthCheckSetup(ctx, DeepScan)
 	go sc.HealthCheckSetup(ctx, ProximityScan)
