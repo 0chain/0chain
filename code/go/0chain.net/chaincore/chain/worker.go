@@ -504,7 +504,10 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				defer func() {
 					for _, ch := range mns.replyC {
 						if synced {
-							ch <- struct{}{}
+							select {
+							case ch <- struct{}{}:
+							default:
+							}
 						} else {
 							close(ch)
 						}
