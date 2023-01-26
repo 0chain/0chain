@@ -17,8 +17,8 @@ jobs:
 
       - name: Check msgp changes
         run: |
-          sudo apt update -y
-          sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+          sudo apt update
+          sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
@@ -47,8 +47,8 @@ jobs:
 
       - name: Check msgp changes
         run: |
-          sudo apt update -y
-          sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+          sudo apt update
+          sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
