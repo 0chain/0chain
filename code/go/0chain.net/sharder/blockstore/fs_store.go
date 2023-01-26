@@ -17,12 +17,20 @@ import (
 )
 
 const (
-	averageBlockSize      = 100 * KB
-	minimumInodesRequired = 5 * 365 * 24 * 3600 * 2
-	roundRange            = 1000
-	twoMillion            = 2000000
-	mPrefix               = "M"
-	extension             = "dat.zlib"
+	averageBlockSize = 15 * KB
+	// minimumInodesRequired is minimum inodes requirements of a disk.
+	/// Here 3 is number of years and 80M is expected maximum number of block generation
+	minimumInodesRequired = 3 * 80000000
+	// roundRange will determine to create sub-directory inside Mprefixed directory.
+	// Round 1-999 blocks will be put into "0" directory, round 1000-1999 will be put into "1" directory
+	// and so on ...
+	roundRange = 1000
+	twoMillion = 2000000
+	// mPrefix is prefix of a directory that will contain two million blocks. If round number is TwoMillion,
+	// then new directory will be created as:
+	// mPrefix + string(round_number/TwoMillion). So in above case "M1"
+	mPrefix   = "M"
+	extension = "dat.zlib"
 )
 
 var (
@@ -146,8 +154,10 @@ func (bStore *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.B
 	return bStore.Read(bs.Hash, bs.Round)
 }
 
-// This function should check for minimum disk size, inodes requirement.
-// Other reasonable parameters as well.
+// Init checks for minimum disk size, inodes requirement and assigns
+// block storer to a variable. If any error occurs during initialization
+// it will panic.
+// It will register read and write function based on whether cache config is provided or not.
 func Init(ctx context.Context, sViper *viper.Viper) {
 	logging.Logger.Info("Initializing storage")
 
