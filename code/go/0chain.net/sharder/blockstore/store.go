@@ -11,14 +11,12 @@ type BlockStoreI interface {
 	ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error)
 }
 
-var Store BlockStoreI
-
 /*GetStore - get the block store that's is setup */
 func GetStore() BlockStoreI {
-	return Store
+	return store
 }
 
 /*SetupStore - Setup a file system based block storage */
-func SetupStore(store BlockStoreI) {
-	Store = store
+func SetupStore(s BlockStoreI) {
+	store = s
 }

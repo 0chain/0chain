@@ -168,10 +168,10 @@ func TestBlockGeneration(t *testing.T) {
 		return
 	}
 
-	err = blockstore.Store.Write(b)
+	err = blockstore.GetStore().Write(b)
 	require.NoError(t, err)
 
-	_, err = blockstore.Store.Read(b.Hash, r.Number)
+	_, err = blockstore.GetStore().Read(b.Hash, r.Number)
 	require.NoError(t, err)
 
 	common.Done()
