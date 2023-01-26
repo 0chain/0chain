@@ -1,10 +1,9 @@
 package event
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
-
-	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -38,7 +37,6 @@ type MinerGeolocation struct {
 }
 
 func (edb *EventDb) GetMiner(id string) (Miner, error) {
-
 	var miner Miner
 	return miner, edb.Store.Get().
 		Preload("Rewards").
@@ -47,19 +45,48 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
-//func (edb *EventDb) MinerStats(id string) (*providerAggregateStats, error) {
-//	var miner providerAggregateStats
-//	result := edb.Store.Get().
-//		Model(&Miner{}).
-//		Where(&Miner{ID: id}).
-//		First(&miner)
-//	if result.Error != nil {
-//		return nil, fmt.Errorf("error retrieving miner %v, error %v",
-//			id, result.Error)
-//	}
-//
-//	return &miner, nil
-//}
+//nolint
+func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool, error) {
+	var minerDps []struct {
+		Miner
+		DelegatePool
+		ProviderRewards
+	}
+	var m Miner
+	var dps []DelegatePool
+
+	result := edb.Get().Preload("Rewards").
+		Table("miners").
+		Joins("left join provider_rewards on miners.id = provider_rewards.provider_id").
+		Joins("left join delegate_pools on miners.id = delegate_pools.provider_id").
+		Where("miners.id = ?", id).
+		Scan(&minerDps)
+	if result.Error != nil {
+		return m, nil, result.Error
+	}
+
+	if len(minerDps) == 0 {
+		return m, nil, fmt.Errorf("get miner %s found no records", id)
+	}
+	if id != minerDps[0].Miner.ID {
+		return m, nil, fmt.Errorf("mismatched miner; want id %s but have id %s", id, minerDps[0].Miner.ID)
+	}
+	m = minerDps[0].Miner
+	if id != minerDps[0].ProviderRewards.ProviderID {
+		return m, nil, fmt.Errorf("mismatched miner; want id %s but have id%s in provider rewrards",
+			id, minerDps[0].Miner.ID)
+	}
+	m.Rewards = minerDps[0].ProviderRewards
+	for i := range minerDps {
+		dps = append(dps, minerDps[i].DelegatePool)
+		if id != minerDps[i].DelegatePool.ProviderID {
+			return m, nil, fmt.Errorf("mismatched miner id in delegate pool;"+
+				"want id %s but have id %s", id, minerDps[i].DelegatePool.ProviderID)
+		}
+	}
+
+	return m, dps, nil
+}
 
 type MinerQuery struct {
 	gorm.Model
@@ -143,7 +170,6 @@ func (edb *EventDb) GetMinerGeolocations(filter MinerQuery, p common2.Pagination
 }
 
 func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
-
 	var miners []Miner
 
 	result := edb.Store.Get().
@@ -156,7 +182,6 @@ func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
 }
 
 func (edb *EventDb) CountActiveMiners() (int64, error) {
-
 	var count int64
 
 	result := edb.Store.Get().
@@ -168,7 +193,6 @@ func (edb *EventDb) CountActiveMiners() (int64, error) {
 }
 
 func (edb *EventDb) CountInactiveMiners() (int64, error) {
-
 	var count int64
 
 	result := edb.Store.Get().
@@ -187,7 +211,6 @@ func (edb *EventDb) GetMinersTotalStake() (int64, error) {
 }
 
 func (edb *EventDb) GetMiners() ([]Miner, error) {
-
 	var miners []Miner
 
 	result := edb.Store.Get().
@@ -205,7 +228,7 @@ func (edb *EventDb) GetMinerCount() (int64, error) {
 	return count, res.Error
 }
 
-func (edb *EventDb) addOrOverwriteMiner(miners []Miner) error {
+func (edb *EventDb) addMiner(miners []Miner) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
@@ -232,7 +255,6 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 }
 
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
-
 	var miner = Miner{Provider: Provider{ID: updates.Id}}
 	exists, err := miner.exists(edb)
 
@@ -253,7 +275,6 @@ func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 }
 
 func (edb *EventDb) deleteMiner(id string) error {
-
 	result := edb.Store.Get().
 		Where(&Miner{Provider: Provider{ID: id}}).
 		Delete(&Miner{})
