@@ -166,10 +166,6 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	before, err := sp.stake()
-	if err != nil {
-		return err
-	}
 
 	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
 	if err != nil {
@@ -204,18 +200,6 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return err
 	}
 
-	if blobAlloc.Terms.WritePrice > 0 {
-		stake, err := sp.stake()
-		if err != nil {
-			return err
-		}
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
-			FieldType:    event.Staked,
-			AllocationId: "",
-			BlobberId:    blobAlloc.BlobberID,
-			Delta:        int64((stake - before) / blobAlloc.Terms.WritePrice),
-		})
-	}
 	// Save the pools
 	if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't Save sake pool: %v", err)
@@ -391,14 +375,6 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			return err
 		}
 		blobAlloc.Penalty = penalty
-		if blobAlloc.Terms.WritePrice > 0 {
-			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
-				FieldType:    event.Staked,
-				AllocationId: "",
-				BlobberId:    blobAlloc.BlobberID,
-				Delta:        -int64(move / blobAlloc.Terms.WritePrice),
-			})
-		}
 		// Save stake pool
 		if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't Save blobber's stake pool: %v", err)

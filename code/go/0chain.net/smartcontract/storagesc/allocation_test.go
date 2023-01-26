@@ -677,10 +677,6 @@ func TestExtendAllocation(t *testing.T) {
 				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
-		).Return().Maybe()
 
 		return ssc, &txn, sa, blobbers, balances
 	}

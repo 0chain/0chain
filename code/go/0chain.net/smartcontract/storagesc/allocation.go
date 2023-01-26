@@ -909,12 +909,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		b.Allocated += diff // new capacity used
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
-			FieldType:    event.Allocated,
-			AllocationId: alloc.ID,
-			BlobberId:    b.ID,
-			Delta:        diff,
-		})
 
 		// update terms using weighted average
 		details.Terms, err = weightedAverage(&details.Terms, &b.Terms,
@@ -1024,12 +1018,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 		var b = blobbers[i]
 		oldOffer := ba.Offer()
 		b.Allocated += diff // new capacity used
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, b.ID, event.AllocationBlobberValueChanged{
-			FieldType:    event.Allocated,
-			AllocationId: alloc.ID,
-			BlobberId:    b.ID,
-			Delta:        diff,
-		})
+
 		ba.Size = size // new size
 		// update stake pool
 		newOffer := ba.Offer()
@@ -1656,18 +1645,7 @@ func (sc *StorageSmartContract) finishAllocation(
 
 		tag, data := event.NewUpdateBlobberTotalStakeEvent(d.BlobberID, staked)
 		balances.EmitEvent(event.TypeStats, tag, d.BlobberID, data)
-		if d.Terms.WritePrice > 0 {
-			stake, err := sps[i].stake()
-			if err != nil {
-				return err
-			}
-			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, d.BlobberID, event.AllocationBlobberValueChanged{
-				FieldType:    event.Staked,
-				AllocationId: "",
-				BlobberId:    d.BlobberID,
-				Delta:        int64((stake - before[i]) / d.Terms.WritePrice),
-			})
-		}
+
 		// update the blobber
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return fmt.Errorf("failed to save blobber: %s, err: %v", d.BlobberID, err)

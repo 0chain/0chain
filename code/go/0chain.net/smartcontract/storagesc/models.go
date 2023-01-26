@@ -15,7 +15,6 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/threshold/bls"
 	"github.com/0chain/common/core/currency"
@@ -963,12 +962,6 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 	addedBlobber.Allocated += sa.bSize()
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, addedBlobber.ID, event.AllocationBlobberValueChanged{
-		FieldType:    event.Allocated,
-		AllocationId: sa.ID,
-		BlobberId:    addedBlobber.ID,
-		Delta:        sa.bSize(),
-	})
 	afterSize := sa.bSize()
 
 	blobbers = append(blobbers, addedBlobber)
