@@ -323,8 +323,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			AllocationId: sa.ID,
 			Delta:        bSize(request.Size, request.DataShards),
 		})
-
-		emitUpdateBlobber(b, balances)
 	}
 
 	var options []WithOption
