@@ -73,11 +73,12 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	}
 	m = minerDps[0].Miner
 
-	if "" == minerDps[0].ProviderRewards.ProviderID {
-		return m, nil, fmt.Errorf("cannot find provider rewards table for miner %v. rewards %v",
-			id, minerDps[0].ProviderRewards)
-	}
+	//if "" == minerDps[0].ProviderRewards.ProviderID {
+	//	return m, nil, fmt.Errorf("cannot find provider rewards table for miner %v. rewards %v",
+	//		id, minerDps[0].ProviderRewards)
+	//} todo remove
 	m.Rewards = minerDps[0].ProviderRewards
+	m.Rewards.ProviderID = id
 	if len(minerDps) == 1 && minerDps[0].DelegatePool.ProviderID == "" {
 		return m, nil, nil
 	}
