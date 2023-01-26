@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
@@ -205,50 +204,4 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 		require.Equal(t, users[i-5].TxnHash, u.TxnHash)
 		require.Equal(t, users[i-5].Round, u.Round)
 	}
-}
-
-func TestAddAndUpdateStakePoolRewards(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, closeDB := prepareEventDB(t)
-	defer closeDB()
-
-	// create new users
-	miners := make([]Miner, 10)
-	for i := 0; i < 10; i++ {
-		miners[i] = Miner{
-			Provider: Provider{
-				ID: fmt.Sprintf("m_%v", i),
-				Rewards: ProviderRewards{
-					ProviderID:   fmt.Sprintf("m_%v", i),
-					Rewards:      currency.Coin((i + 1) * 10),
-					TotalRewards: currency.Coin((i + 1) * 1000),
-				},
-			},
-		}
-	}
-
-	err := rewardProvider(eventDb, "miner_id", "miners", miners)
-	require.NoError(t, err)
-}
-
-func TestUpdateStakePoolDelegateRewards(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, closeDB := prepareEventDB(t)
-	defer closeDB()
-
-	// create new users
-	var miners []DelegatePool
-	for i := 0; i < 10; i++ {
-		miners = append(miners, DelegatePool{
-			ProviderID:   fmt.Sprintf("pd_%v", i),
-			ProviderType: spenum.Miner,
-			DelegateID:   fmt.Sprintf("p_%v", i),
-			PoolID:       fmt.Sprintf("p_%v", i),
-			Reward:       currency.Coin((i + 1) * 10),
-			TotalReward:  currency.Coin((i + 1) * 1000),
-		})
-	}
-
-	err := rewardProviderDelegates(eventDb, miners)
-	require.NoError(t, err)
 }

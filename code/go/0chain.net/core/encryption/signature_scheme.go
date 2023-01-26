@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/0chain/common/core/encryption"
 )
 
 const (
@@ -15,7 +17,7 @@ const (
 var ErrKeyRead = errors.New("error reading the keys")
 var ErrInvalidSignatureScheme = errors.New("invalid signature scheme")
 
-//SignatureScheme - an encryption scheme for signing and verifying messages
+// SignatureScheme - an encryption scheme for signing and verifying messages
 type SignatureScheme interface {
 	GenerateKeys() error
 
@@ -29,7 +31,7 @@ type SignatureScheme interface {
 	Verify(signature string, hash string) (bool, error)
 }
 
-//AggregateSignatureScheme - a signature scheme that can aggregate individual signatures
+// AggregateSignatureScheme - a signature scheme that can aggregate individual signatures
 type AggregateSignatureScheme interface {
 	Aggregate(ss SignatureScheme, idx int, signature string, hash string) error
 	Verify() (bool, error)
@@ -47,7 +49,7 @@ type ReconstructSignatureScheme interface {
 	Reconstruct() (string, error)
 }
 
-//IsValidSignatureScheme - whether a signature scheme exists
+// IsValidSignatureScheme - whether a signature scheme exists
 func IsValidSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -59,7 +61,7 @@ func IsValidSignatureScheme(sigScheme string) bool {
 	}
 }
 
-//GetSignatureScheme - given the name, return a signature scheme
+// GetSignatureScheme - given the name, return a signature scheme
 func GetSignatureScheme(sigScheme string) SignatureScheme {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -71,7 +73,7 @@ func GetSignatureScheme(sigScheme string) SignatureScheme {
 	}
 }
 
-//IsValidAggregateSignatureScheme - whether an aggregate signature scheme exists
+// IsValidAggregateSignatureScheme - whether an aggregate signature scheme exists
 func IsValidAggregateSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -83,7 +85,7 @@ func IsValidAggregateSignatureScheme(sigScheme string) bool {
 	}
 }
 
-//GetAggregateSignatureScheme - get an aggregate signature scheme
+// GetAggregateSignatureScheme - get an aggregate signature scheme
 func GetAggregateSignatureScheme(sigScheme string, total int, batchSize int) AggregateSignatureScheme {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -95,7 +97,7 @@ func GetAggregateSignatureScheme(sigScheme string, total int, batchSize int) Agg
 	}
 }
 
-//IsValidThresholdSignatureScheme - whether a threshold signature scheme exists
+// IsValidThresholdSignatureScheme - whether a threshold signature scheme exists
 func IsValidThresholdSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -107,7 +109,7 @@ func IsValidThresholdSignatureScheme(sigScheme string) bool {
 	}
 }
 
-//GetThresholdSignatureScheme - get a threshold signature scheme
+// GetThresholdSignatureScheme - get a threshold signature scheme
 func GetThresholdSignatureScheme(sigScheme string) ThresholdSignatureScheme {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -119,7 +121,7 @@ func GetThresholdSignatureScheme(sigScheme string) ThresholdSignatureScheme {
 	}
 }
 
-//GenerateThresholdKeyShares - generate T-of-N secret key shares for a key
+// GenerateThresholdKeyShares - generate T-of-N secret key shares for a key
 func GenerateThresholdKeyShares(sigScheme string, t, n int, originalKey SignatureScheme) ([]ThresholdSignatureScheme, error) {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -131,7 +133,7 @@ func GenerateThresholdKeyShares(sigScheme string, t, n int, originalKey Signatur
 	}
 }
 
-//IsValidReconstructSignatureScheme - whether a signature reconstruction scheme exists
+// IsValidReconstructSignatureScheme - whether a signature reconstruction scheme exists
 func IsValidReconstructSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -143,7 +145,7 @@ func IsValidReconstructSignatureScheme(sigScheme string) bool {
 	}
 }
 
-//GetReconstructSignatureScheme - get a signature reconstruction scheme
+// GetReconstructSignatureScheme - get a signature reconstruction scheme
 func GetReconstructSignatureScheme(sigScheme string, t, n int) ReconstructSignatureScheme {
 	switch sigScheme {
 	case SignatureSchemeEd25519:
@@ -155,7 +157,7 @@ func GetReconstructSignatureScheme(sigScheme string, t, n int) ReconstructSignat
 	}
 }
 
-//GetRawHash - given a hash interface (raw hash, hex string), return the raw hash
+// GetRawHash - given a hash interface (raw hash, hex string), return the raw hash
 func GetRawHash(hash interface{}) ([]byte, error) {
 	switch hashImpl := hash.(type) {
 	case []byte:
@@ -169,4 +171,18 @@ func GetRawHash(hash interface{}) ([]byte, error) {
 	default:
 		panic("unknown hash type")
 	}
+}
+
+// VerifyPublicKeyClientID verifies if the clientID is generated from the public key
+func VerifyPublicKeyClientID(pubKey string, clientID string) error {
+	pubKeyBytes, err := hex.DecodeString(pubKey)
+	if err != nil {
+		return fmt.Errorf("invalid public key: %v", err)
+	}
+
+	if encryption.Hash(pubKeyBytes) != clientID {
+		return fmt.Errorf("mismatched public key and client ID")
+	}
+
+	return nil
 }

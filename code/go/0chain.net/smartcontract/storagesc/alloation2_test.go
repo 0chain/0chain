@@ -174,8 +174,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 		stake = stake / 10
 		if i < allocation.DataShards+allocation.ParityShards {
 			ba := &BlobberAllocation{
-				BlobberID: nextBlobber.ID,
-				Terms:     Terms{},
+				AllocationID: allocation.ID,
+				BlobberID:    nextBlobber.ID,
+				Terms:        Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:        blobberUsedSize,
 					OpenChallenges:  int64(i + 1),
@@ -363,6 +364,10 @@ func testCancelAllocation(
 
 	for i, blobberChallenges := range challenges {
 		blobberID := strconv.Itoa(i)
+
+		err := partitionsChallengeReadyBlobberAddOrUpdate(ctx, blobberID, 1000)
+		require.NoError(t, err)
+
 		for _, created := range blobberChallenges {
 			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
 				ID:        fmt.Sprintf("%s:%s:%v", sAllocation.ID, blobberID, created),
@@ -370,7 +375,7 @@ func testCancelAllocation(
 				CreatedAt: created,
 			})
 		}
-		_, err := ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
+		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
 		require.NoError(t, err)
 	}
 
@@ -552,6 +557,11 @@ func setupMocksFinishAllocation(
 	}
 	input, err := json.Marshal(&request)
 	require.NoError(t, err)
+
+	for _, ba := range sAllocation.BlobberAllocs {
+		_, err = partitionsBlobberAllocationsAdd(ctx, ba.BlobberID, ba.AllocationID)
+		require.NoError(t, err)
+	}
 
 	return ssc, txn, input, ctx
 }

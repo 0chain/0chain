@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -305,14 +305,7 @@ func TestChangeBlobbers(t *testing.T) {
 				},
 			}
 			if i < arg.blobberInChallenge {
-				bcLoc, err := bcPart.AddItem(balances, &ChallengeReadyBlobber{BlobberID: ba.BlobberID})
-				require.NoError(t, err)
-
-				bcPartitionLoc := &blobberPartitionsLocations{
-					ID:                         ba.BlobberID,
-					ChallengeReadyPartitionLoc: &partitions.PartitionLocation{Location: bcLoc},
-				}
-				err = bcPartitionLoc.save(balances, sc.ID)
+				err := bcPart.Add(balances, &ChallengeReadyBlobber{BlobberID: ba.BlobberID})
 				require.NoError(t, err)
 
 				bcAllocations := arg.blobbersAllocationInChallenge[i]
@@ -324,11 +317,8 @@ func TestChangeBlobbers(t *testing.T) {
 					if j > 0 {
 						allocID += "_" + strconv.Itoa(j)
 					}
-					allocLoc, err := bcAllocPart.AddItem(balances, &BlobberAllocationNode{ID: allocID})
+					err := bcAllocPart.Add(balances, &BlobberAllocationNode{ID: allocID})
 					require.NoError(t, err)
-					if j == 0 {
-						ba.BlobberAllocationsPartitionLoc = &partitions.PartitionLocation{Location: allocLoc}
-					}
 				}
 				err = bcAllocPart.Save(balances)
 				require.NoError(t, err)
@@ -414,14 +404,6 @@ func TestChangeBlobbers(t *testing.T) {
 		}
 
 		if want.challengeEnabled {
-			bpLocation := &blobberPartitionsLocations{ID: arg.removeBlobberID}
-			err := bpLocation.load(balances, sc.ID)
-			require.NoError(t, err)
-			if want.blobberInChallenge < arg.blobberInChallenge {
-				require.Nil(t, bpLocation.ChallengeReadyPartitionLoc)
-			} else {
-				require.NotNil(t, bpLocation.ChallengeReadyPartitionLoc)
-			}
 			for i := 0; i < arg.blobberInChallenge; i++ {
 				bcPart, err := partitionsChallengeReadyBlobbers(balances)
 				require.NoError(t, err)
@@ -1299,13 +1281,14 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
 		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
 
+		tx.Hash = encryption.Hash("blobber_not_enough_to_honour_allocation_no_pools")
 		tx.Value = 400
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg9)
 
 	})
 	// 10. ok
-	t.Run("Blobbers provided are not enough to honour the allocation no pools", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 		nar.Owner = clientID
@@ -1346,6 +1329,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		balances.balances[clientID] = 1100 + 4500
 
+		tx.Hash = encryption.Hash("ok")
 		tx.Value = 5000
 		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
@@ -1354,7 +1338,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var aresp StorageAllocation
 		require.NoError(t, aresp.Decode([]byte(resp)))
 
-		assert.Equal(t, txHash, aresp.ID)
+		assert.Equal(t, tx.Hash, aresp.ID)
 		assert.Equal(t, 1, aresp.DataShards)
 		assert.Equal(t, 1, aresp.ParityShards)
 		assert.Equal(t, int64(10*GB), aresp.Size)
@@ -1405,7 +1389,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var details = []*BlobberAllocation{
 			{
 				BlobberID:     "b1",
-				AllocationID:  txHash,
+				AllocationID:  tx.Hash,
 				Size:          10 * GB,
 				Stats:         &StorageAllocationStats{},
 				Terms:         sb.Nodes[0].Terms,
@@ -1414,7 +1398,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			},
 			{
 				BlobberID:     "b2",
-				AllocationID:  txHash,
+				AllocationID:  tx.Hash,
 				Size:          10 * GB,
 				Stats:         &StorageAllocationStats{},
 				Terms:         sb.Nodes[1].Terms,
@@ -1435,6 +1419,22 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var cp *challengePool
 		cp, err = ssc.getChallengePool(aresp.ID, balances)
 		require.NoError(t, err)
+
+		// blobber allocation existence
+		p, err := partitionsBlobberAllocations("b1", balances)
+		require.NoError(t, err)
+
+		var baNode1 BlobberAllocationNode
+		err = p.Get(balances, tx.Hash, &baNode1)
+		require.NoError(t, err)
+		require.Equal(t, tx.Hash, baNode1.ID)
+
+		p, err = partitionsBlobberAllocations("b2", balances)
+		require.NoError(t, err)
+		var baNode2 BlobberAllocationNode
+		err = p.Get(balances, tx.Hash, &baNode2)
+		require.NoError(t, err)
+		require.Equal(t, tx.Hash, baNode2.ID)
 
 		assert.Zero(t, cp.Balance)
 	})
@@ -1703,13 +1703,12 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 		errMsg                           string
 	}
 
-	setup := func(arg args) (*StorageSmartContract, chainState.StateContextI, string, string, int) {
+	setup := func(arg args) (*StorageSmartContract, chainState.StateContextI, string, string) {
 		var (
-			ssc           = newTestStorageSC()
-			balances      = newTestBalances(t, false)
-			removeID      = arg.removeBlobberID
-			allocationID  = arg.allocationID
-			allocationLoc int
+			ssc          = newTestStorageSC()
+			balances     = newTestBalances(t, false)
+			removeID     = arg.removeBlobberID
+			allocationID = arg.allocationID
 		)
 
 		bcpartition, err := partitionsChallengeReadyBlobbers(balances)
@@ -1717,25 +1716,15 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 
 		for i := 0; i < arg.numBlobbers; i++ {
 			blobberID := "blobber_" + strconv.Itoa(i)
-			blobLoc, err := bcpartition.AddItem(balances, &ChallengeReadyBlobber{BlobberID: blobberID})
-			require.NoError(t, err)
-
-			bcPartitionLoc := new(blobberPartitionsLocations)
-
-			bcPartitionLoc.ID = blobberID
-			bcPartitionLoc.ChallengeReadyPartitionLoc = &partitions.PartitionLocation{Location: blobLoc}
-			err = bcPartitionLoc.save(balances, ssc.ID)
+			err := bcpartition.Add(balances, &ChallengeReadyBlobber{BlobberID: blobberID})
 			require.NoError(t, err)
 
 			bcAllocPartition, err := partitionsBlobberAllocations(blobberID, balances)
 			require.NoError(t, err)
 			for j := 0; j < arg.numAllocInChallenge; j++ {
 				allocID := "allocation_" + strconv.Itoa(j)
-				loc, err := bcAllocPartition.AddItem(balances, &BlobberAllocationNode{ID: allocID})
+				err := bcAllocPartition.Add(balances, &BlobberAllocationNode{ID: allocID})
 				require.NoError(t, err)
-				if blobberID == arg.removeBlobberID && allocationID == arg.allocationID {
-					allocationLoc = loc
-				}
 			}
 			err = bcAllocPartition.Save(balances)
 			require.NoError(t, err)
@@ -1744,7 +1733,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 		err = bcpartition.Save(balances)
 		require.NoError(t, err)
 
-		return ssc, balances, removeID, allocationID, allocationLoc
+		return ssc, balances, removeID, allocationID
 	}
 
 	validate := func(want want, balances chainState.StateContextI) {
@@ -1804,12 +1793,9 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ssc, balances, removeBlobberID, allocationID, allocationPartitionLoc := setup(tt.args)
-			err := removeAllocationFromBlobber(ssc,
-				&BlobberAllocation{
-					BlobberID:                      removeBlobberID,
-					BlobberAllocationsPartitionLoc: &partitions.PartitionLocation{Location: allocationPartitionLoc}},
-				allocationID, balances)
+			_, balances, removeBlobberID, allocationID := setup(tt.args)
+			err := removeAllocationFromBlobber(balances,
+				&BlobberAllocation{BlobberID: removeBlobberID, AllocationID: allocationID})
 			require.NoError(t, err)
 			validate(tt.want, balances)
 		})
@@ -1823,10 +1809,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		client               = newClient(50*x10, balances)
 		tp, exp        int64 = 100, 1000
 		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, 0, balances)
-
-		alloc *StorageAllocation
-		resp  string
-		err   error
+		alloc          *StorageAllocation
+		resp           string
+		err            error
 	)
 
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -1885,6 +1870,132 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	)
 
 	assert.True(t, math.Abs(float64(bsize*numb-tbs)) < 100)
+
+	//
+	// add blobber
+	//
+	tp += 100
+	nb := addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+	tp += 100
+	req := updateAllocationRequest{
+		ID:           alloc.ID,
+		AddBlobberId: nb.id,
+	}
+	resp, err = req.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	require.NoError(t, err)
+
+	// assert that the new blobber offer is updated
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	nblobAlloc, ok := alloc.BlobberAllocsMap[nb.id]
+	require.True(t, ok)
+
+	nsp, err := ssc.getStakePool(spenum.Blobber, nb.id, balances)
+	require.NoError(t, err)
+	require.Equal(t, nsp.TotalOffers, nblobAlloc.Offer())
+
+	// assert the blobber allocation is added
+	baParts, err := partitionsBlobberAllocations(nb.id, balances)
+	require.NoError(t, err)
+	var it BlobberAllocationNode
+
+	err = baParts.Get(balances, alloc.ID, &it)
+	require.NoError(t, err)
+	require.Equal(t, alloc.ID, it.ID)
+
+	//
+	// remove blobber
+	//
+
+	tp += 100
+	nb2 := addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+	tp += 100
+
+	req = updateAllocationRequest{
+		ID:              alloc.ID,
+		AddBlobberId:    nb2.id,
+		RemoveBlobberId: nb.id,
+	}
+	resp, err = req.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	require.NoError(t, err)
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	// assert blobber is removed from allocation
+	_, ok = alloc.BlobberAllocsMap[nb.id]
+	require.False(t, ok)
+
+	// assert allocation is removed from blobber
+	baParts, err = partitionsBlobberAllocations(nb.id, balances)
+	require.NoError(t, err)
+	var noneIt BlobberAllocationNode
+	err = baParts.Get(balances, alloc.ID, &noneIt)
+	require.True(t, partitions.ErrItemNotFound(err))
+
+	// commit connection to get update challenge ready partition
+	// assert there's no challenge ready partition before commit connection
+	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)
+	require.NoError(t, err)
+	var cit ChallengeReadyBlobber
+	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	require.True(t, partitions.ErrItemNotFound(err))
+
+	tp += 100
+	// write
+	const allocRoot = "alloc-root-1"
+	var cc = &BlobberCloseConnection{
+		AllocationRoot:     allocRoot,
+		PrevAllocationRoot: "",
+		WriteMarker: &WriteMarker{
+			AllocationRoot:         allocRoot,
+			PreviousAllocationRoot: "",
+			AllocationID:           allocID,
+			Size:                   10 * 1024 * 1024, // 100 MB
+			BlobberID:              nb2.id,
+			Timestamp:              common.Timestamp(tp),
+			ClientID:               client.id,
+		},
+	}
+	cc.WriteMarker.Signature, err = client.scheme.Sign(
+		encryption.Hash(cc.WriteMarker.GetHashData()))
+	require.NoError(t, err)
+	var tx = newTransaction(nb2.id, ssc.ID, 0, tp)
+	balances.setTransaction(t, tx)
+	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances)
+	require.NoError(t, err)
+	require.NotZero(t, resp)
+
+	// assert nb2 is challenge ready
+	challengeReadyParts, err = partitionsChallengeReadyBlobbers(balances)
+	require.NoError(t, err)
+	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	require.NoError(t, err)
+	require.Equal(t, cit.BlobberID, nb2.id)
+
+	//
+	// remove blobber nb2, assert it self is removed from challenge ready partition
+	//
+
+	tp += 100
+	nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
+
+	tp += 100
+	req = updateAllocationRequest{
+		ID:              alloc.ID,
+		AddBlobberId:    nb3.id,
+		RemoveBlobberId: nb2.id,
+	}
+
+	resp, err = req.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	require.NoError(t, err)
+
+	// assert blobber nb2 is removed from challenge ready partition
+	challengeReadyParts, err = partitionsChallengeReadyBlobbers(balances)
+	require.NoError(t, err)
+	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	require.True(t, partitions.ErrItemNotFound(err))
+
 	//
 	// increase duration
 	//
@@ -1894,7 +2005,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	uar.ID = alloc.ID
-	uar.Expiration = (alloc.Expiration)
+	uar.Expiration = alloc.Expiration
 	uar.Size = -(alloc.Size / 2)
 
 	tp += 100
@@ -1940,7 +2051,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 // - finalize allocation
 func Test_finalize_allocation(t *testing.T) {
-	t.Skip("This test fails because the challenge pool is less than the min lock demand")
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
@@ -2045,12 +2155,11 @@ func Test_finalize_allocation(t *testing.T) {
 		tp += step / 2
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
-		var resp string
-		resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-		// todo fix validator delegates so that this does not error
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), "no stake pools to move tokens to"))
-		require.Zero(t, resp)
+		b := &block.Block{}
+		b.Round = i
+		balances.setBlock(t, b)
+		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+		require.NoError(t, err)
 	}
 
 	// balances
@@ -2091,4 +2200,192 @@ func Test_finalize_allocation(t *testing.T) {
 	assert.True(t,
 		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
 		"should receive min_lock_demand")
+
+	// assert that allocation is removed from all the blobber
+	for _, b := range blobs {
+		p, err := partitionsBlobberAllocations(b.id, balances)
+		require.NoError(t, err)
+		var baNode BlobberAllocationNode
+		err = p.Get(balances, allocID, &baNode)
+		require.True(t, partitions.ErrItemNotFound(err))
+
+	}
+	// assert blobber challenge ready partition is removed
+	challengeParts, err := partitionsChallengeReadyBlobbers(balances)
+	require.NoError(t, err)
+	var crbNode ChallengeReadyBlobber
+	err = challengeParts.Get(balances, b1.id, &crbNode)
+	require.True(t, partitions.ErrItemNotFound(err))
+}
+
+func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
+	var (
+		ssc            = newTestStorageSC()
+		balances       = newTestBalances(t, false)
+		client         = newClient(100*x10, balances)
+		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		err      error
+	)
+
+	setConfig(t, balances)
+
+	tp += 100
+	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
+
+	// bind another allocation to the blobber
+
+	// blobbers: stake 10k, balance 40k
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	var b1 *Client
+	for _, b := range blobs {
+		if b.id == alloc.BlobberAllocs[0].BlobberID {
+			b1 = b
+			break
+		}
+	}
+	require.NotNil(t, b1)
+
+	// bind one more allocation to b1
+	_, err = partitionsBlobberAllocationsAdd(balances, b1.id, encryption.Hash("new_allocation_id"))
+	require.NoError(t, err)
+
+	// add 10 validators
+	var valids []*Client
+	tp += 100
+	for i := 0; i < 10; i++ {
+		valids = append(valids, addValidator(t, ssc, tp, balances))
+	}
+
+	// generate some challenges to fill challenge pool
+
+	const allocRoot = "alloc-root-1"
+
+	// write 100 MB
+	tp += 100
+	var cc = &BlobberCloseConnection{
+		AllocationRoot:     allocRoot,
+		PrevAllocationRoot: "",
+		WriteMarker: &WriteMarker{
+			AllocationRoot:         allocRoot,
+			PreviousAllocationRoot: "",
+			AllocationID:           allocID,
+			Size:                   10 * 1024 * 1024, // 100 MB
+			BlobberID:              b1.id,
+			Timestamp:              common.Timestamp(tp),
+			ClientID:               client.id,
+		},
+	}
+	cc.WriteMarker.Signature, err = client.scheme.Sign(
+		encryption.Hash(cc.WriteMarker.GetHashData()))
+	require.NoError(t, err)
+
+	// write
+	tp += 100
+	var tx = newTransaction(b1.id, ssc.ID, 0, tp)
+	balances.setTransaction(t, tx)
+	var resp string
+	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances)
+	require.NoError(t, err)
+	require.NotZero(t, resp)
+
+	// until the end
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	//load validators
+	validators, err := getValidatorsList(balances)
+	require.NoError(t, err)
+
+	// load blobber
+	var blobber *StorageNode
+	blobber, err = ssc.getBlobber(b1.id, balances)
+	require.NoError(t, err)
+
+	var (
+		step    = (int64(alloc.Expiration) - tp) / 10
+		challID string
+	)
+
+	// expire the allocation challenging it (+ last challenge)
+	for i := int64(0); i < 2; i++ {
+		tp += step / 2
+
+		challID = fmt.Sprintf("chall-%d", i)
+		genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+
+		var chall = new(ChallengeResponse)
+		chall.ID = challID
+
+		for _, val := range valids {
+			chall.ValidationTickets = append(chall.ValidationTickets,
+				val.validTicket(t, chall.ID, b1.id, true, tp))
+		}
+
+		tp += step / 2
+		tx = newTransaction(b1.id, ssc.ID, 0, tp)
+		balances.setTransaction(t, tx)
+		b := &block.Block{}
+		b.Round = i
+		balances.setBlock(t, b)
+		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+		require.NoError(t, err)
+	}
+
+	// balances
+	var cp *challengePool
+	_, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+
+	// expire the allocation
+	var conf *Config
+	conf, err = getConfig(balances)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+	tp += int64(alloc.Until(conf.MaxChallengeCompletionTime))
+
+	// finalize it
+
+	var req lockRequest
+	req.AllocationID = allocID
+
+	tx = newTransaction(client.id, ssc.ID, 0, tp)
+	balances.setTransaction(t, tx)
+	_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
+	require.NoError(t, err)
+
+	// check out all the balances
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+
+	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))
+	assert.Zero(t, cp.Balance, "should be drained")
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	assert.True(t, alloc.Finalized)
+	assert.True(t,
+		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
+		"should receive min_lock_demand")
+
+	// assert that allocation is removed from blobber
+	p, err := partitionsBlobberAllocations(b1.id, balances)
+	require.NoError(t, err)
+	var baNode BlobberAllocationNode
+	err = p.Get(balances, allocID, &baNode)
+	require.True(t, partitions.ErrItemNotFound(err))
+
+	// assert blobber challenge ready partition is not removed as we still have one allocation is bound
+	challengeParts, err := partitionsChallengeReadyBlobbers(balances)
+	require.NoError(t, err)
+	var crbNode ChallengeReadyBlobber
+	err = challengeParts.Get(balances, b1.id, &crbNode)
+	require.NoError(t, err)
+	require.Equal(t, b1.id, crbNode.BlobberID)
 }

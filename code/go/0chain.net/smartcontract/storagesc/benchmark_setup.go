@@ -195,7 +195,7 @@ func AddMockChallenges(
 			continue
 		}
 
-		loc, err := challengeReadyBlobbersPart.AddItem(balances, &ChallengeReadyBlobber{
+		err := challengeReadyBlobbersPart.Add(balances, &ChallengeReadyBlobber{
 			BlobberID: ch.BlobberID,
 		})
 		if err != nil {
@@ -203,14 +203,6 @@ func AddMockChallenges(
 		}
 
 		blobbersMap[ch.BlobberID] = struct{}{}
-
-		blobPartitionsLocations := &blobberPartitionsLocations{
-			ID:                         ch.BlobberID,
-			ChallengeReadyPartitionLoc: &partitions.PartitionLocation{Location: loc},
-		}
-		if err := blobPartitionsLocations.save(balances, ADDRESS); err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	err = challengeReadyBlobbersPart.Save(balances)
@@ -241,7 +233,7 @@ func AddMockChallenges(
 		}
 		for allocID := range val {
 
-			_, err = aPart.AddItem(balances, &BlobberAllocationNode{
+			err = aPart.Add(balances, &BlobberAllocationNode{
 				ID: allocID,
 			})
 			if err != nil {
@@ -413,13 +405,13 @@ func AddMockBlobbers(
 				Allocated:        blobber.Allocated,
 				ReadData:         blobber.Allocated * 2,
 				Provider: event.Provider{
-					ID:             blobber.ID,
-					DelegateWallet: blobber.StakePoolSettings.DelegateWallet,
-					MinStake:       blobber.StakePoolSettings.MinStake,
-					MaxStake:       blobber.StakePoolSettings.MaxStake,
-					NumDelegates:   blobber.StakePoolSettings.MaxNumDelegates,
-					ServiceCharge:  blobber.StakePoolSettings.ServiceChargeRatio,
-					LastHealthCheck:  blobber.LastHealthCheck,
+					ID:              blobber.ID,
+					DelegateWallet:  blobber.StakePoolSettings.DelegateWallet,
+					MinStake:        blobber.StakePoolSettings.MinStake,
+					MaxStake:        blobber.StakePoolSettings.MaxStake,
+					NumDelegates:    blobber.StakePoolSettings.MaxNumDelegates,
+					ServiceCharge:   blobber.StakePoolSettings.ServiceChargeRatio,
+					LastHealthCheck: blobber.LastHealthCheck,
 				},
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
@@ -436,7 +428,7 @@ func AddMockBlobbers(
 		}
 
 		if i < numRewardPartitionBlobbers {
-			_, err = partition.AddItem(balances,
+			err = partition.Add(balances,
 				&BlobberRewardNode{
 					ID:                blobber.ID,
 					SuccessChallenges: 10,
@@ -567,7 +559,7 @@ func AddMockValidators(
 			}
 		}
 
-		if _, err := valParts.AddItem(balances, &vpn); err != nil {
+		if err := valParts.Add(balances, &vpn); err != nil {
 			panic(err)
 		}
 	}
@@ -612,7 +604,7 @@ func GetMockBlobberStakePools(
 					Reward:       0,
 					TotalReward:  0,
 					TotalPenalty: 0,
-					Status:       int(spenum.Active),
+					Status:       spenum.Active,
 					RoundCreated: 1,
 				}
 				if err := eventDb.Store.Get().Create(&dp).Error; err != nil {
