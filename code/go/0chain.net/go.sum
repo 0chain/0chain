@@ -36,12 +36,8 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3fOKtUw0Xmo=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c h1:TDqF7VJa7uLLlEsFnxRKwOP8dx/k6DGOTJQ7OvG5ztw=
-github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c/go.mod h1:OxV9kVgVzAPgGHHPcS/aUSL2ZxNvKDU6jPoggKMbqns=
-github.com/0chain/common v0.0.6-0.20221204054337-1b865e0f5751 h1:dUaDrOxV/srCJ2oY+INAE7r5+cQ+Klns3pQn9/yioKg=
-github.com/0chain/common v0.0.6-0.20221204054337-1b865e0f5751/go.mod h1:UyDC8Qyl5z9lGkCnf9RHJPMektnFX8XtCJZHXCCVj8E=
-github.com/0chain/common v0.0.6-0.20221205101222-dfcb1958195b h1:mYQ/VVfvOO/sJc/d5OzjXe9aQS9lP3Mp0SbcCamYA5c=
-github.com/0chain/common v0.0.6-0.20221205101222-dfcb1958195b/go.mod h1:UyDC8Qyl5z9lGkCnf9RHJPMektnFX8XtCJZHXCCVj8E=
+github.com/0chain/common v0.0.6-0.20230127095721-8df4d1d72565 h1:z+DtCR8mBsjPnEsT2XtRu4X7GfBiMnz9dYvWYs9V0B4=
+github.com/0chain/common v0.0.6-0.20230127095721-8df4d1d72565/go.mod h1:UyDC8Qyl5z9lGkCnf9RHJPMektnFX8XtCJZHXCCVj8E=
 github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb h1:FOnCz8xXwqo6cJZpI83T9x/kmjbT0YdYqxzSHIVkMGs=
 github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb/go.mod h1:3i9d+2Osik7apjXERxpAlKxE7SilJKkHoW9Ihdjdfxs=
 github.com/0chain/msgp v1.1.62 h1:D/s/TYygUwQnMlvfHUjh56FEaI0wP2VfPVS0TTGGu9I=
