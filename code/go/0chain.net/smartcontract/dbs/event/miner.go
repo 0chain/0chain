@@ -75,10 +75,6 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	}
 	m = minerDps[0].Miner
 
-	//if "" == minerDps[0].ProviderRewards.ProviderID {
-	//	return m, nil, fmt.Errorf("cannot find provider rewards table for miner %v. rewards %v",
-	//		id, minerDps[0].ProviderRewards)
-	//} todo
 	for i := 0; i < len(minerDps); i++ {
 		logging.Logger.Info("GetMinerWithDelegatePools Results",
 			zap.Int("index", i),
@@ -90,7 +86,7 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 
 	m.Rewards = minerDps[0].ProviderRewards
 	m.Rewards.ProviderID = id
-	if len(minerDps) == 1 && minerDps[0].DelegatePool.ProviderID == "" {
+	if len(minerDps) == 1 && minerDps[0].DelegatePool.PoolID == "" {
 		// The miner has no delegate pools
 		return m, nil, nil
 	}
