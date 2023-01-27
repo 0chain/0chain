@@ -49,12 +49,12 @@ func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, sche
 				return nil, false
 			}
 			if err := signatureScheme.SetPublicKey(pk); err != nil {
-				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.Any("message", share.Message), zap.Any("sign", share.Sign))
+				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.String("message", share.Message), zap.String("sign", share.Sign))
 				return nil, false
 			}
 			sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
 			if !sigOK || err != nil {
-				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.Any("message", share.Message), zap.Any("sign", share.Sign))
+				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.String("message", share.Message), zap.String("sign", share.Sign))
 				return nil, false
 			}
 		} else {
@@ -69,7 +69,7 @@ func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, sche
 			}
 
 			if !bls.ValidateShare(pks, sij, bls.ComputeIDdkg(key)) {
-				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.Any("sij.pi", sij.GetPublicKey().GetHexString()))
+				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.String("sij.pi", sij.GetPublicKey().GetHexString()))
 				return nil, false
 			}
 			keys = append(keys, key)

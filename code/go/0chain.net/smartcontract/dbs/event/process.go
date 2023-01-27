@@ -56,8 +56,8 @@ func (edb *EventDb) ProcessEvents(
 		du := time.Since(ts)
 		if du.Milliseconds() > 200 {
 			logging.Logger.Warn("process events slow",
-				zap.Any("duration", du),
-				zap.Any("merge events duration", pdu),
+				zap.Duration("duration", du),
+				zap.Duration("merge events duration", pdu),
 				zap.Int64("round", round),
 				zap.String("block", block),
 				zap.Int("block size", blockSize))
@@ -66,7 +66,7 @@ func (edb *EventDb) ProcessEvents(
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
 			zap.Error(ctx.Err()),
-			zap.Any("duration", du),
+			zap.Duration("duration", du),
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
@@ -263,7 +263,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		due := time.Since(tse)
 		logging.Logger.Debug("event db process",
-			zap.Any("duration", due),
+			zap.Duration("duration", due),
 			zap.Int("events number", len(es.events)),
 			zap.Strings("tags", tags),
 			zap.Int64("round", es.round),
@@ -272,7 +272,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		if due.Milliseconds() > 200 {
 			logging.Logger.Warn("event db work slow",
-				zap.Any("duration", due),
+				zap.Duration("duration", due),
 				zap.Int("events number", len(es.events)),
 				zap.Strings("tags", tags),
 				zap.Int64("round", es.round),
@@ -332,7 +332,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addStat",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),
@@ -346,7 +346,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addchain",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),

@@ -197,7 +197,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			waited, dmn.K)
 	}
 	if err != nil {
-		logging.Logger.Info("adjust_view_change", zap.Error(err))
+		logging.Logger.Error("adjust_view_change", zap.Error(err))
 		// don't do this view change, save the gn later
 		// reset the ViewChange to previous one (for miners)
 		var prev = gn.prevMagicBlock(balances)

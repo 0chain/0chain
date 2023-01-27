@@ -899,7 +899,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 		logging.Logger.Error("previous state not compute yet",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
-			zap.Any("state status", pb.GetStateStatus()))
+			zap.Int8("state status", pb.GetStateStatus()))
 		return ErrPreviousStateNotComputed
 	}
 	//b.SetStateDB(pb, c.GetStateDB())
@@ -1052,7 +1052,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		du := time.Since(ts)
 		if du > 5*time.Second {
 			logging.Logger.Error("apply block state changes took too long",
-				zap.Any("duration", du))
+				zap.Duration("duration", du))
 		}
 	}()
 
