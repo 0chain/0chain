@@ -1,22 +1,26 @@
 name: CONDUCTOR BLOBBER-01 TESTS
 
 on:
-  schedule:
-    # Runs everyday at 02:00 am
-    - cron: '0 2 * * * '
-  workflow_dispatch:
+  # schedule:
+  #   # Runs everyday at 02:00 am
+  #   - cron: '0 2 * * * '
+  # workflow_dispatch:
+  push:
+    branches: [ master, staging ]
+  pull_request:
+    branches: [ master, staging ]
 
 jobs:
   CONDUCTOR_BLOBBERS_01_TESTS:
     name: CONDUCTOR-BLOBBERS-01-TESTS
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [self-hosted, conductor-test03]
 
     steps:
     - name: Go 1.18 setup.
       uses: actions/setup-go@v2
       with:
         go-version: '1.18'
-      
+
     - name: Docker Compose Setup.
       run: |
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
@@ -28,7 +32,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-    
+
     - name: Get Branch
       id: get_branch
       run: |
