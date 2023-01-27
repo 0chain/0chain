@@ -186,7 +186,7 @@ jobs:
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
       - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@master
+        uses: 0chain/actions/deploy-0chain@fix/aggregates-cleanup
         with:
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
