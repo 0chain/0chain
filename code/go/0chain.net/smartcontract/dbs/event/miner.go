@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/dbs"
@@ -74,15 +72,6 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 		return m, nil, fmt.Errorf("mismatched miner; want id %s but have id %s", id, minerDps[0].Miner.ID)
 	}
 	m = minerDps[0].Miner
-
-	for i := 0; i < len(minerDps); i++ {
-		logging.Logger.Info("GetMinerWithDelegatePools Results",
-			zap.Int("index", i),
-			zap.Any("provider_rewards", minerDps[i].ProviderRewards),
-			zap.Any("miner", minerDps[i].Miner),
-			zap.Any("delegate pool", minerDps[i].DelegatePool),
-		)
-	}
 
 	m.Rewards = minerDps[0].ProviderRewards
 	m.Rewards.ProviderID = id
