@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/dbs"
@@ -76,7 +78,9 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	//if "" == minerDps[0].ProviderRewards.ProviderID {
 	//	return m, nil, fmt.Errorf("cannot find provider rewards table for miner %v. rewards %v",
 	//		id, minerDps[0].ProviderRewards)
-	//} todo remove
+	//}
+	logging.Logger.Info("GetMinerWithDelegatePools Results",
+		zap.Any("results", minerDps))
 	m.Rewards = minerDps[0].ProviderRewards
 	m.Rewards.ProviderID = id
 	if len(minerDps) == 1 && minerDps[0].DelegatePool.ProviderID == "" {
