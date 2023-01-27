@@ -81,7 +81,8 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	//} todo
 	for i := 0; i < len(minerDps); i++ {
 		logging.Logger.Info("GetMinerWithDelegatePools Results",
-			zap.Any("delegate pool", minerDps[i].ProviderRewards),
+			zap.Int("index", i),
+			zap.Any("provider_rewards", minerDps[i].ProviderRewards),
 			zap.Any("miner", minerDps[i].Miner),
 			zap.Any("delegate pool", minerDps[i].DelegatePool),
 		)
