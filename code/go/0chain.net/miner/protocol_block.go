@@ -147,7 +147,9 @@ func (mc *Chain) validateTransaction(b *block.Block,
 			}
 			return nil
 		}
-		mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
+		if cstate.ErrInvalidState(err) {
+			mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
+		}
 		return err
 	}
 
@@ -184,7 +186,7 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 		if txn.TransactionType == transaction.TxnTypeSmartContract {
 			err := txn.VerifyOutputHash(ctx)
 			if err != nil {
-				logging.Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("output", txn.TransactionOutput))
+				logging.Logger.Error("Smart contract output verification failed", zap.Error(err), zap.String("output", txn.TransactionOutput))
 				return common.NewError("txn_output_verification_failed", "Transaction output hash verification failed")
 			}
 		}
@@ -400,9 +402,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	bpTimer.UpdateSince(start)
 	logging.Logger.Debug("SignBlock finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
-	logging.Logger.Info("verify block successful", zap.Any("round", b.Round),
-		zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
-		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash),
+	logging.Logger.Info("verify block successful", zap.Int64("round", b.Round),
+		zap.Int("block_size", len(b.Txns)), zap.Duration("time", time.Since(start)),
+		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash),
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Int8("state_status", b.GetStateStatus()))
 
@@ -505,13 +507,13 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				}
 				if txn.OutputHash == "" {
 					cancel = true
-					logging.Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
+					logging.Logger.Error("validate transactions - no output hash", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
 					return
 				}
 				err := txn.ValidateWrtTimeForBlock(ctx, b.CreationDate, !aggregate)
 				if err != nil {
 					cancel = true
-					logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
+					logging.Logger.Error("validate transactions", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
 					return
 				}
 
@@ -554,7 +556,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				return ctx.Err()
 			case result := <-validChannel:
 				if roundMismatch {
-					logging.Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
+					logging.Logger.Info("validate transactions (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("current_round", mc.GetCurrentRound()))
 					return ErrRoundMismatch
 				}
 				if !result {
@@ -994,12 +996,19 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	collectionName := txn.GetCollectionName()
 	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
 	err = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
+	if cstate.ErrInvalidState(err) {
+		logging.Logger.Error("generate block - process txn failed",
+			zap.Error(err),
+			zap.Int64("round", b.Round))
+		return err
+	}
+
 	if len(iterInfo.invalidTxns) > 0 {
 		var keys []string
 		for _, txn := range iterInfo.pastTxns {
 			keys = append(keys, txn.GetKey())
 		}
-		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round),
+		logging.Logger.Info("generate block (found txns very old)", zap.Int64("round", b.Round),
 			zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)), zap.Strings("txn_hashes", keys))
 		go func() {
 			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
@@ -1012,19 +1021,19 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		for _, txn := range iterInfo.pastTxns {
 			keys = append(keys, txn.GetKey())
 		}
-		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Any("round", b.Round), zap.Int("txn num", len(keys)))
+		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Int64("round", b.Round), zap.Int("txn num", len(keys)))
 	}
 	if iterInfo.roundMismatch {
-		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
+		logging.Logger.Debug("generate block (round mismatch)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
 		return ErrRoundMismatch
 	}
 	if iterInfo.roundTimeout {
-		logging.Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
+		logging.Logger.Debug("generate block (round timeout)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
 		return ErrRoundTimeout
 	}
 	if iterInfo.reInclusionErr != nil {
 		logging.Logger.Error("generate block (txn reinclusion check)",
-			zap.Any("round", b.Round), zap.Error(iterInfo.reInclusionErr))
+			zap.Int64("round", b.Round), zap.Error(iterInfo.reInclusionErr))
 	}
 
 	switch err {
