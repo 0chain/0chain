@@ -32,7 +32,6 @@ func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 				columns[fkey] = make([]interface{}, 0, len(objects))
 			}
 			fvalue := v.Field(fidx).Interface()
-			fmt.Printf("%v => %v\n", fkey, fvalue)
 			columns[fkey] = append(columns[fkey], fvalue)
 		}
 		

@@ -127,11 +127,15 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 
 	// Bind the required fields for update to the updater
 	for _, fieldKey := range updateFields {
-		fieldValues, ok := columns[fieldKey]
+		if fieldKey == "id" {
+			continue
+		}
+
+		fieldList, ok := columns[fieldKey]
 		if !ok {
 			return common.NewErrorf("update_validators", "required field %v for update is not found in provided data", fieldKey)
 		}
-		updater = updater.AddUpdate(fieldKey, fieldValues)
+		updater = updater.AddUpdate(fieldKey, fieldList)
 	}
 
 	return updater.Exec(edb).Debug().Error
