@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
 	"github.com/0chain/common/core/logging"
@@ -33,16 +34,16 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.blockChannel = make(chan *block.Block, 1)
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
-	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
+	sharderChain.BlockCache = cache.NewLRUCache[string, *block.Block](blockCacheSize)
 	transactionCacheSize := 5 * blockCacheSize
-	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
+	sharderChain.BlockTxnCache = cache.NewLRUCache[string, *transaction.TransactionSummary](transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	c.SetViewChanger(sharderChain)
 	c.SetAfterFetcher(sharderChain)
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	sharderChain.TieringStats = &MinioStats{}
-	sharderChain.processingBlocks = cache.NewLRUCache(1000)
+	sharderChain.processingBlocks = cache.NewLRUCache[string, struct{}](1000)
 	c.RoundF = SharderRoundFactory{}
 }
 
@@ -62,13 +63,13 @@ type Chain struct {
 	*chain.Chain
 	blockChannel   chan *block.Block
 	RoundChannel   chan *round.Round
-	BlockCache     cache.Cache
-	BlockTxnCache  cache.Cache
+	BlockCache     *cache.LRU[string, *block.Block]
+	BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
 	TieringStats   *MinioStats
 
-	processingBlocks *cache.LRU
+	processingBlocks *cache.LRU[string, struct{}]
 	pbMutex          sync.RWMutex
 }
 
@@ -110,7 +111,7 @@ func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		for err != nil {
 			tries++
-			logging.Logger.Error("setup genesis block -- failed to store magic block map", zap.Any("error", err), zap.Any("tries", tries))
+			logging.Logger.Error("setup genesis block -- failed to store magic block map", zap.Error(err), zap.Int64("tries", tries))
 			time.Sleep(time.Millisecond * 100)
 			err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		}
@@ -193,7 +194,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	bl.lfb.SetStateStatus(block.StateSuccessful)
 	if err = sc.InitBlockState(bl.lfb); err != nil {
 		bl.lfb.SetStateStatus(0)
-		logging.Logger.Info("load_lfb -- can't initialize stored block state",
+		logging.Logger.Error("load_lfb -- can't initialize stored block state",
 			zap.Error(err))
 		// return common.NewErrorf("load_lfb",
 		//	"can't init block state: %v", err) // fatal
@@ -206,8 +207,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	}
 
 	sc.SetRandomSeed(bl.r, bl.r.GetRandomSeed())
-	bl.r.Block = bl.lfb
-	bl.r.BlockHash = bl.lfb.Hash
+	bl.r.Finalize(bl.lfb)
 
 	// set LFB and LFMB of the Chain, add the block to internal Chain's map
 	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb, bl.r)

@@ -1,7 +1,10 @@
 package storagesc
 
 import (
+	"strconv"
+
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -20,10 +23,12 @@ func (ssc *StorageSmartContract) collectReward(
 	if err != nil {
 		return "", common.NewError("collect_reward_failed", "can't get config: "+err.Error())
 	}
+	var req stakepool.CollectRewardRequest
 	minted, err := stakepool.CollectReward(
 		input, func(
 			crr stakepool.CollectRewardRequest, balances cstate.StateContextI,
 		) (currency.Coin, error) {
+			req = crr
 			sp, err := ssc.getStakePool(crr.ProviderType, crr.ProviderId, balances)
 			if err != nil {
 				return 0, err
@@ -35,11 +40,11 @@ func (ssc *StorageSmartContract) collectReward(
 				return 0, err
 			}
 
-			if err := sp.save(crr.ProviderType, crr.ProviderId, balances); err != nil {
+			if err := sp.Save(crr.ProviderType, crr.ProviderId, balances); err != nil {
 				return 0, err
 			}
 
-			err = sp.stakeForProvider(crr.ProviderType, crr.ProviderId, balances)
+			//err = sp.EmitStakeEvent(crr.ProviderType, crr.ProviderId, balances)
 			if err != nil {
 				return 0, err
 			}
@@ -53,7 +58,14 @@ func (ssc *StorageSmartContract) collectReward(
 	}
 
 	if err := conf.saveMints(minted, balances); err != nil {
-		return "", common.NewError("collect_reward_failed", "can't save config: "+err.Error())
+		return "", common.NewError("collect_reward_failed", "can't Save config: "+err.Error())
 	}
-	return "", err
+
+	return toJson(&event.RewardMint{
+		Amount:       int64(minted),
+		BlockNumber:  balances.GetBlock().Round,
+		ClientID:     txn.ClientID,
+		ProviderType: strconv.Itoa(int(req.ProviderType)),
+		ProviderID:   req.ProviderId,
+	}), err
 }

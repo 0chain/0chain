@@ -55,18 +55,36 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	}, nil
 }
 
-func emitAddChallenge(ch *StorageChallengeResponse, expiredN int, balances cstate.StateContextI) {
+func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]int, expiredN int, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
 		AllocationID:    ch.AllocationID,
 		OpenChallenges:  int64(1 - expiredN), // increase one challenge and remove expired ones
 		TotalChallenges: int64(1),
 	})
+
+	chBlobberOpenDelta := 1
+	if exp, ok := expiredCountMap[ch.BlobberID]; ok {
+		chBlobberOpenDelta -= exp
+	}
+
+	// Update open challenges count of challenge blobber
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, ch.BlobberID, event.ChallengeStatsDeltas{
 		Id:        ch.BlobberID,
-		OpenDelta: int64(1 - expiredN),
+		OpenDelta: int64(chBlobberOpenDelta),
 	})
-	logging.Logger.Debug("emitted add challenge")
+
+	// Remove expired challenge count of the other blobbers
+	for bid, expiredCount := range expiredCountMap {
+		if bid != ch.BlobberID {
+			// Emit event per blobber and the merger will be able to merge them for each blobber
+			balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, bid, event.ChallengeStatsDeltas{
+				Id:        bid,
+				OpenDelta: int64(-expiredCount),
+			})
+		}
+	}
+	logging.Logger.Debug("emitted add_challenge")
 }
 
 func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI) {
@@ -86,7 +104,7 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	}
 
 	b := event.Blobber{
-		BlobberID:           sc.BlobberID,
+		Provider:            event.Provider{ID: sc.BlobberID},
 		ChallengesCompleted: 1,
 	}
 
@@ -124,10 +142,10 @@ func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, l
 	return chs, nil
 }
 
-func getChallengeForBlobber(blobberID, challengeID string,
+func getChallenge(challengeID string,
 	edb *event.EventDb) (*StorageChallengeResponse, error) {
 
-	challenge, err := edb.GetChallengeForBlobber(blobberID, challengeID)
+	challenge, err := edb.GetChallenge(challengeID)
 	if err != nil {
 		return nil, err
 	}

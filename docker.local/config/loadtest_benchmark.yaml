@@ -99,7 +99,7 @@ smart_contracts:
     min_blobber_capacity: 1024
     max_charge: 0.2
     min_stake: 0.0
-    max_stake: 100.0
+    max_stake: 20000.0
     max_delegates: 200
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
@@ -178,4 +178,4 @@ internal:
   control_m: 25000
   control_n: 90
   show_output: false
-
+  bench_data_list_length: 12

@@ -6,12 +6,14 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
 )
 
 func doesMinerExist(pkey datastore.Key,
@@ -47,7 +49,18 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
-	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
+	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
+
+	if magicBlockMiners == nil {
+		return "", common.NewError("add_miner", "magic block miners nil")
+	}
+
+	if !magicBlockMiners.HasNode(newMiner.ID) {
+
+		logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
+		return "", common.NewErrorf("add_miner",
+			"failed to add new miner: Not in magic block")
+	}
 
 	allMiners, err := getMinersList(balances)
 	if err != nil {
@@ -60,7 +73,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	msc.verifyMinerState(allMiners, balances,
 		"add_miner: checking all miners list in the beginning")
 
-	if newMiner.Settings.DelegateWallet == "" {
+	if config.Development() && newMiner.Settings.DelegateWallet == "" {
 		newMiner.Settings.DelegateWallet = newMiner.ID
 	}
 
@@ -70,19 +83,23 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.String("base URL", newMiner.N2NHost),
 		zap.String("ID", newMiner.ID),
 		zap.String("pkey", newMiner.PublicKey),
-		zap.Any("mscID", msc.ID),
+		zap.String("mscID", msc.ID),
 		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet),
 		zap.Float64("service_charge", newMiner.Settings.ServiceChargeRatio),
-		zap.Int("number_of_delegates", newMiner.Settings.MaxNumDelegates),
+		zap.Int("num_delegates", newMiner.Settings.MaxNumDelegates),
 		zap.Int64("min_stake", int64(newMiner.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newMiner.Settings.MaxStake)),
 	)
-	logging.Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
 		return "", common.NewError("add_miner",
 			"PublicKey or the ID is empty. Cannot proceed")
+	}
+	
+	// Check delegate wallet is not the same as operational wallet (PUK)
+	if err := commonsc.ValidateDelegateWallet(newMiner.PublicKey, newMiner.Settings.DelegateWallet); err != nil {
+		return "", err
 	}
 
 	err = validateNodeSettings(newMiner, gn, "add_miner")
@@ -109,12 +126,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 				"saving all miners list: %v", err)
 		}
 
-		err = emitAddOrOverwriteMiner(newMiner, balances)
-		if err != nil {
-			return "", common.NewErrorf("add_miner",
-				"insert new miner: %v", err)
-		}
-
+		emitAddMiner(newMiner, balances)
 		update = true
 	}
 
@@ -196,15 +208,13 @@ func (msc *MinerSmartContract) deleteNode(
 
 	for key, pool := range deleteNode.Pools {
 		switch pool.Status {
-		case spenum.Pending:
+		case spenum.Active:
+			pool.Status = spenum.Deleted
 			_, err := deleteNode.UnlockPool(
 				pool.DelegateID, nodeType, key, balances)
 			if err != nil {
 				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
 			}
-		case spenum.Active:
-			pool.Status = spenum.Deleting
-		case spenum.Deleting:
 		case spenum.Deleted:
 		default:
 			return nil, fmt.Errorf(

@@ -4,14 +4,13 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"gorm.io/gorm/clause"
-
-	"gorm.io/gorm"
 )
 
 // swagger:model Block
 type Block struct {
-	gorm.Model
+	model.UpdatableModel
 
 	Hash                  string    `json:"hash" gorm:"uniqueIndex:idx_bhash"`
 	Version               string    `json:"version"`
@@ -27,6 +26,7 @@ type Block struct {
 	PrevHash              string    `json:"prev_hash"`
 	Signature             string    `json:"signature"`
 	ChainId               string    `json:"chain_id"`
+	StateChangesCount     int       `json:"state_changes_count"`
 	RunningTxnCount       string    `json:"running_txn_count"`
 	RoundTimeoutCount     int       `json:"round_timeout_count"`
 	CreatedAt             time.Time `json:"created_at"`

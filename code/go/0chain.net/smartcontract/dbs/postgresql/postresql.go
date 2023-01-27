@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/core/viper"
-
-	"gorm.io/gorm/logger"
-
 	"0chain.net/chaincore/config"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/dbs"
-
+	"github.com/0chain/common/core/logging"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"moul.io/zapgorm2"
 )
 
 func GetPostgresSqlDb(config config.DbAccess) (dbs.Store, error) {
@@ -33,6 +32,13 @@ type PostgresStore struct {
 	db *gorm.DB
 }
 
+// New creates a PostgresStore instance with gorm.DB
+func New(db *gorm.DB) *PostgresStore {
+	return &PostgresStore{
+		db: db,
+	}
+}
+
 func (store *PostgresStore) Open(config config.DbAccess) error {
 	if !config.Enabled {
 		return errors.New("db_open_error, db disabled")
@@ -44,7 +50,8 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 
 	lgr := logger.Default.LogMode(logger.Silent)
 	if viper.GetBool("logging.verbose") {
-		lgr = logger.Default.LogMode(logger.Info)
+		lgr := zapgorm2.New(logging.Logger)
+		lgr.SetAsDefault()
 	}
 
 	maxRetries := 60 * 1 // 1 minutes
@@ -59,7 +66,6 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 			&gorm.Config{
 				Logger:                 lgr,
 				SkipDefaultTransaction: false,
-				PrepareStmt:            true,
 				CreateBatchSize:        50,
 			})
 

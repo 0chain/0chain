@@ -78,7 +78,6 @@ func TestReadMarkersPaginated(t *testing.T) {
 			want := ReadMarker{TransactionID: transactionHash, BlobberID: "blobberID 0", ClientID: "someClientID", AllocationID: strconv.Itoa(i), AuthTicket: strconv.Itoa(i), BlockNumber: int64(i), ReadSize: float64(i)}
 			want.ID = rm.ID
 			want.CreatedAt = rm.CreatedAt
-			want.UpdatedAt = rm.UpdatedAt
 			assert.Equal(t, want, rm, "RM was not correct")
 		}
 		assert.Equal(t, 10, len(rms), "Not all readmarker are sent correctly")
@@ -92,7 +91,6 @@ func TestReadMarkersPaginated(t *testing.T) {
 			want := ReadMarker{TransactionID: transactionHash, BlobberID: "blobberID 0", ClientID: "someClientID", AllocationID: strconv.Itoa(i + 5), AuthTicket: strconv.Itoa(i + 5), BlockNumber: int64(i + 5), ReadSize: float64(i + 5)}
 			want.ID = rm.ID
 			want.CreatedAt = rm.CreatedAt
-			want.UpdatedAt = rm.UpdatedAt
 			assert.Equal(t, want, rm, "RM was not correct")
 		}
 		assert.Equal(t, 5, len(rms), "Not all readmarker are sent correctly")
@@ -106,7 +104,6 @@ func TestReadMarkersPaginated(t *testing.T) {
 			want := ReadMarker{TransactionID: transactionHash, BlobberID: "blobberID 9", ClientID: "someClientID", AllocationID: strconv.Itoa(9 - i), AuthTicket: strconv.Itoa(9 - i), BlockNumber: int64(9 - i), ReadSize: float64(9 - i)}
 			want.ID = rm.ID
 			want.CreatedAt = rm.CreatedAt
-			want.UpdatedAt = rm.UpdatedAt
 			assert.Equal(t, want, rm, "RM was not correct")
 		}
 		assert.Equal(t, 10, len(rms), "Not all readmarker are sent correctly")
@@ -123,7 +120,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 func insertMultipleReadMarker(t *testing.T, eventDb *EventDb) {
 	for j := 0; j < 10; j++ {
 		blobberID := fmt.Sprintf("blobberID %v", j)
-		err := eventDb.addOrOverwriteBlobber([]Blobber{Blobber{BlobberID: blobberID}})
+		err := eventDb.addOrOverwriteBlobber([]Blobber{{Provider: Provider{ID: blobberID}}})
 		if !assert.NoError(t, err, "Error while writing blobber marker") {
 			return
 		}

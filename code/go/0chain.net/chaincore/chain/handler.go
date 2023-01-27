@@ -61,34 +61,34 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
 
-		"/v1/block/get/latest_finalized": common.UserRateLimit(
+		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
 			),
-		),
-		"/v1/block/get/latest_finalized_magic_block_summary": common.UserRateLimit(
+		)),
+		"/v1/block/get/latest_finalized_magic_block_summary": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockSummaryHandler,
 			),
-		),
-		"/v1/block/get/latest_finalized_magic_block": common.UserRateLimit(
+		)),
+		"/v1/block/get/latest_finalized_magic_block": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedMagicBlockHandler(c),
 			),
-		),
-		"/v1/block/get/recent_finalized": common.UserRateLimit(
+		)),
+		"/v1/block/get/recent_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				RecentFinalizedBlockHandler,
 			),
-		),
-		"/v1/block/get/fee_stats": common.UserRateLimit(
+		)),
+		"/v1/block/get/fee_stats": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestBlockFeeStatsHandler,
 			),
-		),
-		"/": common.UserRateLimit(
+		)),
+		"/": common.WithCORS(common.UserRateLimit(
 			HomePageAndNotFoundHandler,
-		),
+		)),
 		"/_diagnostics": common.UserRateLimit(
 			DiagnosticsHomepageHandler,
 		),
@@ -101,12 +101,12 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/round_info": common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
-		"/v1/estimate_txn_fee": common.UserRateLimit(
+		"/v1/estimate_txn_fee": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				SuggestedFeeHandler,
 			),
-		),
-		"/v1/transaction/put": common.UserRateLimit(
+		)),
+		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
 			datastore.ToJSONEntityReqResponse(
 				datastore.DoAsyncEntityJSONHandler(
 					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
@@ -114,7 +114,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				),
 				transactionEntityMetadata,
 			),
-		),
+		)),
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
@@ -1378,6 +1378,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		nonce = s.Nonce
 	}
 	if txn.Nonce <= nonce {
+		logging.Logger.Error("invalid transaction nonce", zap.Int64("txn_nonce", txn.Nonce), zap.Int64("nonce", nonce))
 		return nil, errors.New("invalid transaction nonce")
 	}
 

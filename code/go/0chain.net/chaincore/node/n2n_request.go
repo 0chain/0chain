@@ -317,7 +317,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					zap.String("handler", uri),
 					zap.String("entity", eName),
 					zap.Any("params", params),
-					zap.Any("status_code", resp.StatusCode),
+					zap.Int("status_code", resp.StatusCode),
 					zap.String("response", data))
 				return false
 			}
@@ -362,7 +362,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				zap.Duration("duration", duration),
 				zap.String("handler", uri),
 				zap.String("entity", eName),
-				zap.Any("id", entity.GetKey()),
+				zap.String("id", entity.GetKey()),
 				zap.Any("params", params),
 				zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
 			_, err = handler(ctx, entity)

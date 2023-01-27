@@ -89,6 +89,11 @@ func validateConfig() {
 			viper.GetInt(bk.NumClients), multisigsc.MaxSigners))
 	}
 
+	if viper.GetInt(bk.NumBlobberDelegates) > viper.GetInt(bk.NumActiveClients) {
+		log.Fatal(fmt.Errorf("blolbber delegates %d cannot exceed active clients %d",
+			viper.GetInt(bk.NumBlobberDelegates), viper.GetInt(bk.NumActiveClients)))
+	}
+
 	if viper.GetInt(bk.NumClients) > viper.GetInt(bk.NumAllocations) {
 		log.Fatal(fmt.Errorf("number of clients %d must not exceed the number of allocations %d",
 			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumAllocations)))
@@ -117,5 +122,8 @@ func validateConfig() {
 	if viper.GetInt(bk.NumActiveSharders) > viper.GetInt(bk.NumSharders) {
 		log.Fatal(fmt.Errorf("number of active sharders %d cannot exceed the number of sharders %d",
 			viper.GetInt(bk.NumActiveSharders), viper.GetInt(bk.NumSharders)))
+	}
+	if viper.GetInt(bk.BenchDataListLength) <= 0 {
+		log.Fatal(fmt.Errorf("bench_data_list_length %d, must be greater than zero", viper.GetInt(bk.BenchDataListLength)))
 	}
 }

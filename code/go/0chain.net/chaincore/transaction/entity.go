@@ -32,7 +32,6 @@ import (
 var TXN_TIME_TOLERANCE int64
 
 var transactionCount uint64 = 0
-var redis_txns string
 
 // ErrTxnMissingPublicKey is returned if the transaction does not have ClientID and public key
 var (
@@ -41,16 +40,12 @@ var (
 	ErrTxnInsufficientFee  = errors.New("insufficient transaction fee")
 )
 
-func init() {
-	redis_txns = os.Getenv("REDIS_TXNS")
-}
-
 func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
 	if len(redisTxnsHost) > 0 && redisTxnsPort > 0 {
 		memorystore.AddPool("txndb", memorystore.NewPool(redisTxnsHost, redisTxnsPort))
 	} else {
 		//inside docker
-		memorystore.AddPool("txndb", memorystore.NewPool(redis_txns, 6479))
+		memorystore.AddPool("txndb", memorystore.NewPool(os.Getenv("REDIS_TXNS"), 6379))
 	}
 }
 
@@ -431,7 +426,7 @@ func (t *Transaction) ComputeOutputHash() string {
 /*VerifyOutputHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 	if t.OutputHash != t.ComputeOutputHash() {
-		logging.Logger.Info("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
+		logging.Logger.Error("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
 		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v %v", t.Hash, t.OutputHash, t.ComputeOutputHash(), t.TransactionOutput))
 	}
 	return nil

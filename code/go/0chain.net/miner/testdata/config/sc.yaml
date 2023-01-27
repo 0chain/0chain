@@ -41,7 +41,7 @@ smart_contracts:
     x_percent: 0.70 # percentage of prev mb miners required to be part of next mb
     # etc
     min_stake: 0.0 # min stake can be set by a node (boundary for all nodes)
-    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
+    max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
     start_rounds: 50
     contribute_rounds: 50
     share_rounds: 50
@@ -103,7 +103,7 @@ smart_contracts:
     # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
     time_unit: "720h"
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
-    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
+    max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
     max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC

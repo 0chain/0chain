@@ -3,6 +3,7 @@ package event
 import (
 	"time"
 
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -12,7 +13,7 @@ import (
 )
 
 type User struct {
-	gorm.Model
+	model.UpdatableModel
 	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
 	TxnHash string        `json:"txn_hash"`
 	Balance currency.Coin `json:"balance"`
@@ -38,7 +39,7 @@ func (edb *EventDb) GetUser(userID string) (*User, error) {
 func (edb *EventDb) addOrUpdateUsers(users []User) error {
 	ts := time.Now()
 	defer func() {
-		logging.Logger.Debug("event db - upsert users ", zap.Any("duration", time.Since(ts)),
+		logging.Logger.Debug("event db - upsert users ", zap.Duration("duration", time.Since(ts)),
 			zap.Int("num", len(users)))
 	}()
 	return edb.Store.Get().Clauses(clause.OnConflict{
@@ -49,10 +50,4 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 
 func mergeAddUsersEvents() *eventsMergerImpl[User] {
 	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
-}
-
-func (edb *EventDb) GetUserFromId(userId string) (User, error) {
-	user := User{}
-	return user, edb.Store.Get().Model(&User{}).Where(User{UserID: userId}).Scan(&user).Error
-
 }

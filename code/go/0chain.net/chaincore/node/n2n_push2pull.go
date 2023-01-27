@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	pushDataCache      = cache.NewLRUCache(100)
+	pushDataCache      = cache.NewLRUCache[string, interface{}](100)
 	pullingEntityCache = newPullingCache(1000, 5)
 )
 
@@ -71,7 +71,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 		duration := time.Since(start)
 		if err != nil {
 			logging.N2n.Error("message pull", zap.String("from", nd.GetPseudoName()),
-				zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
+				zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.String("id", entity.GetKey()), zap.Error(err))
 			return nil, err
 		}
 		//N2n.Debug("message pull", zap.String("from", nd.GetPseudoName()), zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
@@ -105,7 +105,7 @@ func updatePullStats(sender *Node, uri string, length int, ts time.Time) {
 // pullingCache represents the cache for pulling request.
 // the key is the 'entityName:id', and value is a buffered channel
 type pullingCache struct {
-	cache *cache.LRU
+	cache *cache.LRU[string, chan pullHandlerFunc]
 	mutex sync.Mutex
 	// chanSize is the channel buffer size
 	chanSize int
@@ -113,7 +113,7 @@ type pullingCache struct {
 
 func newPullingCache(cacheSize, chanSize int) *pullingCache {
 	return &pullingCache{
-		cache:    cache.NewLRUCache(cacheSize),
+		cache:    cache.NewLRUCache[string, chan pullHandlerFunc](cacheSize),
 		chanSize: chanSize,
 	}
 }

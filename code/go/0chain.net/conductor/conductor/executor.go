@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -301,7 +302,6 @@ func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
 }
 
 func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
-
 	if r.verbose {
 		log.Printf(" [INF] wait add miners: %s, sharders: %s, blobbers: %s, authorizers %s",
 			wadd.Miners, wadd.Sharders, wadd.Blobbers, wadd.Authorizers)
@@ -320,12 +320,6 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 				return err
 			}
 		}
-	}
-
-	// filter initialized nodes
-	nodes := r.server.Nodes()
-	for name := range nodes {
-		r.waitAdd.Take(name)
 	}
 
 	return
@@ -889,6 +883,11 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 	r.server.CurrentTest = configurator.TestCase()
 	r.currTestCaseName = configurator.Name()
 
+	switch cfg := configurator.(type) {
+	case *cases.RoundHasFinalized:
+		_ = r.server.CurrentTest.Configure([]byte(strconv.Itoa(cfg.Round)))
+	}
+
 	return nil
 }
 
@@ -930,6 +929,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.AdversarialValidator = update
 		case *config.LockNotarizationAndSendNextRoundVRF:
 			state.LockNotarizationAndSendNextRoundVRF = update
+		case *config.CollectVerificationTicketsWhenMissedVRF:
+			state.CollectVerificationTicketsWhenMissedVRF = update
 		}
 	})
 

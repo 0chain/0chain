@@ -49,7 +49,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	err = entity.GetEntityMetadata().GetStore().Write(ctx, txn)
 	if err != nil {
-		logging.Logger.Info("put transaction", zap.Any("error", err), zap.Any("txn", txn.Hash), zap.Any("txn_obj", datastore.ToJSON(txn).String()))
+		logging.Logger.Error("put transaction", zap.Error(err), zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 		return nil, err
 	}
 
@@ -83,7 +83,7 @@ func PutTransactionWithoutVerifySig(ctx context.Context, entity datastore.Entity
 	}
 	err = entity.GetEntityMetadata().GetStore().Write(ctx, txn)
 	if err != nil {
-		logging.Logger.Info("put transaction", zap.Any("error", err), zap.Any("txn", txn.Hash), zap.Any("txn_obj", datastore.ToJSON(txn).String()))
+		logging.Logger.Error("put transaction", zap.Error(err), zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 		return nil, err
 	}
 

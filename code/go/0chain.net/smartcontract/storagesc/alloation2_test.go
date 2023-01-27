@@ -174,8 +174,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 		stake = stake / 10
 		if i < allocation.DataShards+allocation.ParityShards {
 			ba := &BlobberAllocation{
-				BlobberID: nextBlobber.ID,
-				Terms:     Terms{},
+				AllocationID: allocation.ID,
+				BlobberID:    nextBlobber.ID,
+				Terms:        Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:        blobberUsedSize,
 					OpenChallenges:  int64(i + 1),
@@ -363,6 +364,10 @@ func testCancelAllocation(
 
 	for i, blobberChallenges := range challenges {
 		blobberID := strconv.Itoa(i)
+
+		err := partitionsChallengeReadyBlobberAddOrUpdate(ctx, blobberID, 1000)
+		require.NoError(t, err)
+
 		for _, created := range blobberChallenges {
 			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
 				ID:        fmt.Sprintf("%s:%s:%v", sAllocation.ID, blobberID, created),
@@ -370,7 +375,7 @@ func testCancelAllocation(
 				CreatedAt: created,
 			})
 		}
-		_, err := ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
+		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
 		require.NoError(t, err)
 	}
 
@@ -538,7 +543,7 @@ func setupMocksFinishAllocation(
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 		}
 		sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
-		require.NoError(t, sp.save(spenum.Blobber, blobber.ID, ctx))
+		require.NoError(t, sp.Save(spenum.Blobber, blobber.ID, ctx))
 
 		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 		require.NoError(t, err)
@@ -552,6 +557,11 @@ func setupMocksFinishAllocation(
 	}
 	input, err := json.Marshal(&request)
 	require.NoError(t, err)
+
+	for _, ba := range sAllocation.BlobberAllocs {
+		_, err = partitionsBlobberAllocationsAdd(ctx, ba.BlobberID, ba.AllocationID)
+		require.NoError(t, err)
+	}
 
 	return ssc, txn, input, ctx
 }
@@ -758,14 +768,14 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		var stakePool = newStakePool()
 		stakePool.Pools["paula"] = &stakepool.DelegatePool{}
 		stakePool.Pools["paula"].Balance = currency.Coin(stakes[i])
-		require.NoError(t, stakePool.save(spenum.Blobber, blobber.ID, ctx))
+		require.NoError(t, stakePool.Save(spenum.Blobber, blobber.ID, ctx))
 	}
 
 	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
 	for _, blobber := range blobbers {
-		// save the blobber
+		// Save the blobber
 		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 		if err != nil {
 			require.NoError(t, err)

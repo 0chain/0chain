@@ -2,15 +2,15 @@ package event
 
 import (
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 // Transaction model to save the transaction data
 // swagger:model Transaction
 type Transaction struct {
-	gorm.Model
+	model.ImmutableModel
 	Hash              string        `json:"hash" gorm:"uniqueIndex:idx_thash"`
 	BlockHash         string        `json:"block_hash" gorm:"index:idx_tblock_hash"`
 	Round             int64         `json:"round"`
