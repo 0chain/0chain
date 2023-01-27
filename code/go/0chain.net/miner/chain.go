@@ -197,7 +197,7 @@ func (mc *Chain) PushBlockMessageChannel(bm *BlockMessage) {
 		case mc.blockMessageChannel <- bm:
 		case <-time.After(3 * time.Second):
 			logging.Logger.Warn("push block message to channel timeout",
-				zap.Any("message type", bm.Type))
+				zap.Int("message type", bm.Type))
 		}
 	}()
 }
@@ -390,18 +390,18 @@ func StartChainRequestHandler(_ context.Context, req *http.Request) (interface{}
 
 	r, err := strconv.Atoi(req.FormValue("round"))
 	if err != nil {
-		logging.Logger.Error("failed to send start chain", zap.Any("error", err))
+		logging.Logger.Error("failed to send start chain", zap.Error(err))
 		return nil, err
 	}
 
 	mb := mc.GetMagicBlock(int64(r))
 	if mb == nil || !mb.Miners.HasNode(nodeID) {
-		logging.Logger.Error("failed to send start chain", zap.Any("id", nodeID))
+		logging.Logger.Error("failed to send start chain", zap.String("id", nodeID))
 		return nil, common.NewError("failed to send start chain", "miner is not in active set")
 	}
 
 	if mc.GetCurrentRound() != int64(r) {
-		logging.Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", r))
+		logging.Logger.Error("failed to send start chain -- different rounds", zap.Int64("current_round", mc.GetCurrentRound()), zap.Int("requested_round", r))
 		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), r))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)

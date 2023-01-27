@@ -264,7 +264,7 @@ func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
 		for _, b := range blobbers {
 			bids = append(bids, b.ID)
 		}
-		logging.Logger.Debug("add or overwrite blobbers failed", zap.Any("ids", bids))
+		logging.Logger.Debug("add or overwrite blobbers failed", zap.Strings("ids", bids))
 	}
 	return err
 }

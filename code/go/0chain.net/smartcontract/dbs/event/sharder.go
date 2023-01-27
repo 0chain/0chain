@@ -111,7 +111,7 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 	}
 	s = sharderDps[0].Sharder
 	if id != sharderDps[0].ProviderRewards.ProviderID {
-		return s, nil, fmt.Errorf("mismatched sharder; want id %s but have id%s in provider rewrards",
+		return s, nil, fmt.Errorf("mismatched sharder; want id %s but have id %s in provider rewrards",
 			id, sharderDps[0].Sharder.ID)
 	}
 	s.Rewards = sharderDps[0].ProviderRewards

@@ -423,7 +423,7 @@ func (t *Transaction) ComputeOutputHash() string {
 /*VerifyOutputHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 	if t.OutputHash != t.ComputeOutputHash() {
-		logging.Logger.Info("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
+		logging.Logger.Error("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
 		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v %v", t.Hash, t.OutputHash, t.ComputeOutputHash(), t.TransactionOutput))
 	}
 	return nil
