@@ -3,6 +3,8 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/core/common"
+	"0chain.net/core/util"
 	"github.com/0chain/common/core/currency"
 
 	common2 "0chain.net/smartcontract/common"
@@ -109,10 +111,30 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 		"delegate_wallet", "num_delegates",
 		"service_charge",
 	}
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns(updateFields),
-	}).Create(&validators).Error
+
+	// Create column-based listing of the given data
+	columns, err := util.Columnize(validators)
+	if err != nil {
+		return err
+	}
+
+	// Create the updater
+	ids, ok := columns["id"]
+	if !ok {
+		return common.NewError("update_validators", "no id field provided in event Data")
+	}
+	updater := CreateBuilder("validators", "id", ids)
+
+	// Bind the required fields for update to the updater
+	for _, fieldKey := range updateFields {
+		fieldValues, ok := columns[fieldKey]
+		if !ok {
+			return common.NewErrorf("update_validators", "required field %v for update is not found in provided data", fieldKey)
+		}
+		updater = updater.AddUpdate(fieldKey, fieldValues)
+	}
+
+	return updater.Exec(edb).Debug().Error
 }
 
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {

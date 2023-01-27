@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func columnize[T any](objects []T) (map[string][]interface{}, error) {
+func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 	columns := make(map[string][]interface{})
 	
 	for _, obj := range objects {
