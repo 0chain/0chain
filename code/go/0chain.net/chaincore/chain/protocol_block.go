@@ -459,7 +459,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	logging.Logger.Debug("finalized block - done",
 		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-		zap.Any("duration", time.Since(ts)))
+		zap.Duration("duration", time.Since(ts)))
 	return nil
 }
 
@@ -483,7 +483,7 @@ func (wgs *waitGroupSync) Run(name string, round int64, f func()) {
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("Run slow on", zap.String("name", name),
 				zap.Int64("round", round),
-				zap.Any("duration", du))
+				zap.Duration("duration", du))
 		}
 	}()
 }
