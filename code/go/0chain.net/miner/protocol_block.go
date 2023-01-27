@@ -909,8 +909,7 @@ func txnIterHandlerFunc(
 			return false, nil
 		}
 
-		cost, err := mc.EstimateTransactionCostFee(ctx, lfb, lfb.ClientState, txn,
-			chain.WithSync(), chain.WithNotifyC(waitC))
+		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost fee",
 				zap.Error(err),
