@@ -289,11 +289,6 @@ func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
 			return err
 		}
 		movedBackList = append(movedBackList, coinValue)
-
-		coinValue, err = alloc.MovedToValidators.Int64()
-		if err != nil {
-			return err
-		}
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
