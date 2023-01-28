@@ -14,7 +14,8 @@ const ExprTemplate = "%v = %v"
 const UnnestTemplate = "unnest(?::%v[]) AS %v"
 const UpdateTemplate = "UPDATE %v SET"
 const WhereTemplate = "WHERE %v.%v = t.%v"
-const QueryTemplate = "%v %v FROM (SELECT %v) AS t %v"
+const ExtraConditionTemplate = "AND %v.%v = t.%v "
+const QueryTemplate = "%v %v FROM (SELECT %v) AS t %v %v"
 
 var typeToSQL = map[reflect.Type]string{
 	reflect.TypeOf([]string{}):  "text",
@@ -32,10 +33,12 @@ var typeToSQL = map[reflect.Type]string{
 // Update row will look like this <<id, val1, val2, ... valn>>
 // Note that all update rows should have the same number of values, id is required together with at least one update.
 type UpdateBuilder struct {
+	tableName string
 	sets    []string
 	unnests []string
 	update  string
 	where   string
+	extraConditions string
 	values  []interface{}
 }
 
@@ -43,6 +46,7 @@ type UpdateBuilder struct {
 // These id values will be used to select appropriate rows and apply updates to them accordingly
 func CreateBuilder(table string, idColumn string, idValues interface{}) (b *UpdateBuilder) {
 	b = &UpdateBuilder{}
+	b.tableName = table
 	b.AddUpdate(idColumn, idValues)
 	b.sets = nil
 	b.update = fmt.Sprintf(UpdateTemplate, table)
@@ -88,6 +92,13 @@ func (b *UpdateBuilder) AddUpdate(column string, values interface{}, expr ...str
 	return b
 }
 
+// AddCondition Add ANDed condition to the update query 
+func (b *UpdateBuilder) AddCondition(column string, values interface{}) *UpdateBuilder {
+	b.extraConditions += fmt.Sprintf(ExtraConditionTemplate, b.tableName, column, column)
+	b.AddUpdate(column, values)
+	return b
+}
+
 type Query struct {
 	Q string
 	V []interface{}
@@ -103,7 +114,7 @@ func (b *UpdateBuilder) build() *Query {
 		unnests = unnests + u
 	}
 
-	return &Query{Q: fmt.Sprintf(QueryTemplate, b.update, sets, unnests, b.where), V: b.values}
+	return &Query{Q: fmt.Sprintf(QueryTemplate, b.update, sets, unnests, b.where, b.extraConditions), V: b.values}
 }
 
 // Exec builds and executes the query
