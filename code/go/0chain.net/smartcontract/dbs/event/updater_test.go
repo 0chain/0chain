@@ -30,7 +30,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 				ids:     interface{}([]string{"1"}),
 				updates: []update{{val: []string{"c1"}, key: "column"}},
 			},
-			want: "UPDATE table SET column = t.column FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column) AS t WHERE table.id = t.id",
+			want: "UPDATE table SET column = t.column FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column) AS t WHERE table.id = t.id ",
 		},
 		{
 			name: "simple int ids",
@@ -38,7 +38,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 				ids:     []int{1},
 				updates: []update{{val: []string{"c1"}, key: "column"}},
 			},
-			want: "UPDATE table SET column = t.column FROM (SELECT unnest(?::bigint[]) AS id, unnest(?::text[]) AS column) AS t WHERE table.id = t.id",
+			want: "UPDATE table SET column = t.column FROM (SELECT unnest(?::bigint[]) AS id, unnest(?::text[]) AS column) AS t WHERE table.id = t.id ",
 		},
 		{
 			name: "several updates",
@@ -51,7 +51,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 					{val: []string{"c41", "c42", "c43"}, key: "column4"},
 				},
 			},
-			want: "UPDATE table SET column1 = t.column1, column2 = t.column2, column3 = t.column3, column4 = t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::text[]) AS column2, unnest(?::text[]) AS column3, unnest(?::text[]) AS column4) AS t WHERE table.id = t.id",
+			want: "UPDATE table SET column1 = t.column1, column2 = t.column2, column3 = t.column3, column4 = t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::text[]) AS column2, unnest(?::text[]) AS column3, unnest(?::text[]) AS column4) AS t WHERE table.id = t.id ",
 		},
 		{
 			name: "several updates with different values",
@@ -64,7 +64,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 					{val: []float64{1, 2, 3}, key: "column4"},
 				},
 			},
-			want: "UPDATE table SET column1 = t.column1, column2 = t.column2, column3 = t.column3, column4 = t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::bigint[]) AS column2, unnest(?::bytea[]) AS column3, unnest(?::decimal[]) AS column4) AS t WHERE table.id = t.id",
+			want: "UPDATE table SET column1 = t.column1, column2 = t.column2, column3 = t.column3, column4 = t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::bigint[]) AS column2, unnest(?::bytea[]) AS column3, unnest(?::decimal[]) AS column4) AS t WHERE table.id = t.id ",
 		},
 		{
 			name: "several updates with condition",
@@ -77,7 +77,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 					{val: []string{"c41", "c42", "c43"}, key: "column4", condition: "column4 * t.column4"},
 				},
 			},
-			want: "UPDATE table SET column1 = column1 + t.column1, column2 = column2 - t.column2, column3 = t.column3, column4 = column4 * t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::text[]) AS column2, unnest(?::text[]) AS column3, unnest(?::text[]) AS column4) AS t WHERE table.id = t.id",
+			want: "UPDATE table SET column1 = column1 + t.column1, column2 = column2 - t.column2, column3 = t.column3, column4 = column4 * t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::text[]) AS column2, unnest(?::text[]) AS column3, unnest(?::text[]) AS column4) AS t WHERE table.id = t.id ",
 		},
 		{
 			name: "several updates with different values and conditions",
@@ -90,7 +90,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 					{val: []float64{1, 2, 3}, key: "column4", condition: "column4 * t.column4"},
 				},
 			},
-			want: "UPDATE table SET column1 = column1 + t.column1, column2 = column2 - t.column2, column3 = t.column3, column4 = column4 * t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::bigint[]) AS column2, unnest(?::bytea[]) AS column3, unnest(?::decimal[]) AS column4) AS t WHERE table.id = t.id",
+			want: "UPDATE table SET column1 = column1 + t.column1, column2 = column2 - t.column2, column3 = t.column3, column4 = column4 * t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::bigint[]) AS column2, unnest(?::bytea[]) AS column3, unnest(?::decimal[]) AS column4) AS t WHERE table.id = t.id ",
 		},
 	}
 	for _, tt := range tests {
