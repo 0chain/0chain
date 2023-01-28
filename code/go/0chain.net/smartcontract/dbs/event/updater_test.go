@@ -119,6 +119,11 @@ func TestUpdateBuilder_build(t *testing.T) {
 			var vals []interface{}
 			vals = append(vals, []interface{}{pq.Array(tt.fields.ids)})
 
+			for _, c := range tt.fields.extraConditions {
+				toTest.AddCondition(c.key, c.val)
+				vals = append(vals, []interface{}{pq.Array(c.val)})
+			}
+
 			for _, u := range tt.fields.updates {
 				if len(u.condition) > 0 {
 					toTest.AddUpdate(u.key, u.val, u.condition)
