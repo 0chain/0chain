@@ -75,7 +75,7 @@ func TestGetMinerWithDelegatePoolsNoPools(t *testing.T) {
 
 	s, dps, err := edb.GetMinerWithDelegatePools(minerIds[1])
 
-	require.NoError(t, err, "Error while getting sharder with delegate pools")
+	require.NoError(t, err, "Error while getting miner with delegate pools")
 	require.Nil(t, dps, "there should be no delegate pools")
 	require.Equal(t, s.ID, minerIds[1])
 }
