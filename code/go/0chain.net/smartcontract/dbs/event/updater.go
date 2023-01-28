@@ -95,7 +95,7 @@ func (b *UpdateBuilder) AddUpdate(column string, values interface{}, expr ...str
 // AddCondition Add ANDed condition to the update query 
 func (b *UpdateBuilder) AddCondition(column string, values interface{}) *UpdateBuilder {
 	b.extraConditions += fmt.Sprintf(ExtraConditionTemplate, b.tableName, column, column)
-	b.AddUpdate(column, values)
+	b.values = append(b.values, []interface{}{pq.Array(values)})
 	return b
 }
 
