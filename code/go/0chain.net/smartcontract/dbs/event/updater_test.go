@@ -14,9 +14,15 @@ func TestUpdateBuilder_build(t *testing.T) {
 		val       interface{}
 	}
 
+	type condition struct {
+		key string
+		val interface{}
+	}
+
 	type fields struct {
 		ids     interface{}
 		updates []update
+		extraConditions []condition
 	}
 
 	tests := []struct {
@@ -91,6 +97,20 @@ func TestUpdateBuilder_build(t *testing.T) {
 				},
 			},
 			want: "UPDATE table SET column1 = column1 + t.column1, column2 = column2 - t.column2, column3 = t.column3, column4 = column4 * t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::bigint[]) AS column2, unnest(?::bytea[]) AS column3, unnest(?::decimal[]) AS column4) AS t WHERE table.id = t.id ",
+		},
+		{
+			name: "multiple extra conditions",
+			fields: fields{
+				ids: []string{"1","2","3"},
+				updates: []update{
+					{val: []string{"c11", "c12", "c13"}, key: "column1"},
+				},
+				extraConditions: []condition{
+					{key: "id2", val: []string{"1_2", "2_2", "3_2"}},
+					{key: "id3", val: []string{"1_3", "2_3", "3_3"}},
+				},
+			},
+			want: "UPDATE table SET column1 = t.column1 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS id2, unnest(?::text[]) AS id3, unnest(?::text[]) AS column1) AS t WHERE table.id = t.id AND table.id2 = t.id2 AND table.id3 = t.id3 ",
 		},
 	}
 	for _, tt := range tests {
