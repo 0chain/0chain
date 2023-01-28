@@ -95,6 +95,16 @@ func (b *UpdateBuilder) AddUpdate(column string, values interface{}, expr ...str
 // AddCondition Add ANDed condition to the update query 
 func (b *UpdateBuilder) AddCondition(column string, values interface{}) *UpdateBuilder {
 	b.extraConditions += fmt.Sprintf(ExtraConditionTemplate, b.tableName, column, column)
+	atype, ok := typeToSQL[reflect.TypeOf(values)]
+
+	if !ok {
+		atype = typeToSQL[reflect.TypeOf([]string{})]
+	}
+
+	if b.unnests != nil {
+		b.unnests = append(b.unnests, ", ")
+	}
+	b.unnests = append(b.unnests, fmt.Sprintf(UnnestTemplate, atype, column))
 	b.values = append(b.values, []interface{}{pq.Array(values)})
 	return b
 }
