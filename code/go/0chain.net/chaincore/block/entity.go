@@ -165,6 +165,7 @@ type Block struct {
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
+	uniqueBlockExtMutex   sync.RWMutex    `json:"-" msgpack:"-"`
 	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
 	// StateChangesCount represents the state changes number in client state of current block.
 	// this will be used to verify the state changes acquire from remote
@@ -787,10 +788,12 @@ func (b *Block) Clone() *Block {
 	}
 	b.stateMutex.RUnlock()
 
+	b.uniqueBlockExtMutex.RLock()
 	clone.UniqueBlockExtensions = make(map[string]bool, len(b.UniqueBlockExtensions))
 	for k, v := range b.UniqueBlockExtensions {
 		clone.UniqueBlockExtensions[k] = v
 	}
+	b.uniqueBlockExtMutex.RUnlock()
 
 	return clone
 }
