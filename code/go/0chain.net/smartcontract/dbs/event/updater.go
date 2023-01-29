@@ -63,49 +63,17 @@ func CreateBuilder(table string, idColumn string, idValues interface{}) (b *Upda
 // If expression is set, then it will be used instead of default, e. g. expr = "table.column =table.column + t.column ",
 // which means that current value of column will be increased, so *UPDATE table SET table.column =table.column + t.column* will be generated instead
 func (b *UpdateBuilder) AddUpdate(column string, values interface{}, expr ...string) *UpdateBuilder {
-	if b.sets != nil {
-		b.sets = append(b.sets, ", ")
-	}
-	switch len(expr) {
-	case 0:
-		b.sets = append(b.sets, fmt.Sprintf(SetTemplate, column, column))
-	case 1:
-		b.sets = append(b.sets, fmt.Sprintf(ExprTemplate, column, expr[0]))
-	default:
-		logging.Logger.Warn("only one expr is supported, ignoring")
-		b.sets = append(b.sets, fmt.Sprintf(ExprTemplate, column, expr[0]))
-	}
-
-	atype, ok := typeToSQL[reflect.TypeOf(values)]
-
-	if !ok {
-		atype = typeToSQL[reflect.TypeOf([]string{})]
-	}
-
-	if b.unnests != nil {
-		b.unnests = append(b.unnests, ", ")
-	}
-	b.unnests = append(b.unnests, fmt.Sprintf(UnnestTemplate, atype, column))
-
-	b.values = append(b.values, []interface{}{pq.Array(values)})
-
+	b.addToSets(column, values, expr...)
+	b.addToUnnests(column, values)
+	b.addToValues(values)
 	return b
 }
 
 // AddCondition Add ANDed condition to the update query 
 func (b *UpdateBuilder) AddCondition(column string, values interface{}) *UpdateBuilder {
-	b.extraConditions += fmt.Sprintf(ExtraConditionTemplate, b.tableName, column, column)
-	atype, ok := typeToSQL[reflect.TypeOf(values)]
-
-	if !ok {
-		atype = typeToSQL[reflect.TypeOf([]string{})]
-	}
-
-	if b.unnests != nil {
-		b.unnests = append(b.unnests, ", ")
-	}
-	b.unnests = append(b.unnests, fmt.Sprintf(UnnestTemplate, atype, column))
-	b.values = append(b.values, []interface{}{pq.Array(values)})
+	b.addToExtraConditions(column)
+	b.addToUnnests(column, values)
+	b.addToValues(values)
 	return b
 }
 
@@ -125,6 +93,42 @@ func (b *UpdateBuilder) build() *Query {
 	}
 
 	return &Query{Q: fmt.Sprintf(QueryTemplate, b.update, sets, unnests, b.where, b.extraConditions), V: b.values}
+}
+
+func (b *UpdateBuilder) addToSets(column string, values interface{}, expr ...string) {
+	if b.sets != nil {
+		b.sets = append(b.sets, ", ")
+	}
+	switch len(expr) {
+	case 0:
+		b.sets = append(b.sets, fmt.Sprintf(SetTemplate, column, column))
+	case 1:
+		b.sets = append(b.sets, fmt.Sprintf(ExprTemplate, column, expr[0]))
+	default:
+		logging.Logger.Warn("only one expr is supported, ignoring")
+		b.sets = append(b.sets, fmt.Sprintf(ExprTemplate, column, expr[0]))
+	}
+}
+
+func (b *UpdateBuilder) addToUnnests(column string, values interface{}) {
+	atype, ok := typeToSQL[reflect.TypeOf(values)]
+
+	if !ok {
+		atype = typeToSQL[reflect.TypeOf([]string{})]
+	}
+
+	if b.unnests != nil {
+		b.unnests = append(b.unnests, ", ")
+	}
+	b.unnests = append(b.unnests, fmt.Sprintf(UnnestTemplate, atype, column))
+}
+
+func (b *UpdateBuilder) addToValues(values interface{}) {
+	b.values = append(b.values, []interface{}{pq.Array(values)})
+}
+
+func (b *UpdateBuilder) addToExtraConditions(column string) {
+	b.extraConditions += fmt.Sprintf(ExtraConditionTemplate, b.tableName, column, column)
 }
 
 // Exec builds and executes the query
