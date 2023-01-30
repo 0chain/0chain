@@ -57,6 +57,7 @@ func AddMockNodes(
 		key                string
 		dRewards           []event.RewardDelegate
 		dps                []event.DelegatePool
+		providerType       spenum.Provider
 	)
 
 	if nodeType == spenum.Miner {
@@ -64,11 +65,13 @@ func AddMockNodes(
 		numNodes = viper.GetInt(benchmark.NumMiners)
 		numDelegates = viper.GetInt(benchmark.NumMinerDelegates)
 		key = AllMinersKey
+		providerType = spenum.Miner
 	} else {
 		numActive = viper.GetInt(benchmark.NumActiveSharders)
 		numNodes = viper.GetInt(benchmark.NumSharders)
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 		key = AllShardersKey
+		providerType = spenum.Sharder
 	}
 
 	for i := 0; i < numNodes; i++ {
@@ -77,6 +80,7 @@ func AddMockNodes(
 		if err != nil {
 			log.Fatal(err)
 		}
+		newNode.ProviderType = providerType
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
