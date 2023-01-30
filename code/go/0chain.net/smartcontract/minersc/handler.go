@@ -406,16 +406,10 @@ type nodeStat struct {
 //	484:
 func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
-		providerId      = r.URL.Query().Get("provider_id")
+		id               = r.URL.Query().Get("id")
 		includeDelegates = strings.ToLower(r.URL.Query().Get("include_delegates")) == "true"
 	)
-	pTypeStr := r.URL.Query().Get("provider_type")
-	providerType, err := strconv.Atoi(pTypeStr)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider_type: "+err.Error()))
-		return
-	}
-	if providerId == "" {
+	if id == "" {
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
 		return
 	}
@@ -424,46 +418,36 @@ func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-
+	var errMiner error
+	var miner event.Miner
 	var dps []event.DelegatePool
-
-	switch spenum.Provider(providerType) {
-	case spenum.Miner:
-		var miner event.Miner
-
-		if includeDelegates {
-			miner, dps, err = edb.GetMinerWithDelegatePools(providerId)
-		} else {
-			miner, err = edb.GetMiner(providerId)
-		}
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
-			return
-		} 
+	if includeDelegates {
+		miner, dps, errMiner = edb.GetMinerWithDelegatePools(id)
+	} else {
+		miner, errMiner = edb.GetMiner(id)
+	}
+	if errMiner == nil {
 		common.Respond(w, r, nodeStat{
 			NodeResponse: minerTableToMinerNode(miner, dps),
 			TotalReward:  int64(miner.Rewards.TotalRewards),
 		}, nil)
 		return
-	case spenum.Sharder:
-		var sharder event.Sharder
-		if includeDelegates {
-			sharder, dps, err = edb.GetSharderWithDelegatePools(providerId)
-		} else {
-			sharder, err = edb.GetSharder(providerId)
-		}
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
-			return
-		}
-		common.Respond(w, r, nodeStat{
-			NodeResponse: sharderTableToSharderNode(sharder, dps),
-			TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
-		return
-	default:
-		common.Respond(w, r, nil, common.NewErrBadRequest("invalid provider type"))
+	}
+	var errSharder error
+	var sharder event.Sharder
+	if includeDelegates {
+		sharder, dps, errSharder = edb.GetSharderWithDelegatePools(id)
+	} else {
+		sharder, errSharder = edb.GetSharder(id)
+	}
+	if errSharder != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(fmt.Sprintf(
+			"no matching provider for id %s, miner not found: %v, and sharder not found: %v", id, errMiner, errSharder)))
 		return
 	}
+	common.Respond(w, r, nodeStat{
+		NodeResponse: sharderTableToSharderNode(sharder, dps),
+		TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat nodeStat
