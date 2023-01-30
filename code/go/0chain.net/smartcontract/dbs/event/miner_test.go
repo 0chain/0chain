@@ -175,7 +175,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 		t.Error(err)
 	}
 	eventDb.AutoMigrate()
-	defer eventDb.Drop()
+	//defer eventDb.Drop()
 
 	// Miner - Add Event
 	mn := MinerNode{
