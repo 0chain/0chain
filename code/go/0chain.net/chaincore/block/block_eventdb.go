@@ -35,7 +35,7 @@ func blockToBlockEvent(block *Block) *event.Block {
 }
 
 func CreateBlockEvent(block *Block) (error, event.Event) {
-	logging.Logger.Info("create block event", zap.Any("block", block))
+	logging.Logger.Info("create block event", zap.String("blockHash", block.Hash), zap.Int64("round", block.Round))
 	// todo block.Round is zero, need to replace with block/round number
 	return nil, event.Event{
 		BlockNumber: block.Round,

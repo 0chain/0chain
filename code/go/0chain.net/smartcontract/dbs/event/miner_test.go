@@ -53,9 +53,6 @@ func TestGetMinerWithDelegatePools(t *testing.T) {
 	})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
-	miners, err := edb.GetMiners()
-	miners = miners
-
 	p, err := edb.GetDelegatePool("pool_id", minerIds[1])
 	require.NoError(t, err, "Error while retrieving DelegatePool from event Database")
 	require.Equal(t, p.PoolID, "pool_id")
@@ -68,6 +65,19 @@ func TestGetMinerWithDelegatePools(t *testing.T) {
 	require.Equal(t, s.ID, minerIds[1])
 	require.Equal(t, 2, len(dps))
 	require.Equal(t, minerIds[1], dps[0].ProviderID)
+}
+
+func TestGetMinerWithDelegatePoolsNoPools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	minerIds := createMiners(t, edb, 2)
+
+	s, dps, err := edb.GetMinerWithDelegatePools(minerIds[1])
+
+	require.NoError(t, err, "Error while getting miner with delegate pools")
+	require.Nil(t, dps, "there should be no delegate pools")
+	require.Equal(t, s.ID, minerIds[1])
 }
 
 func TestMinersBatchUpdate(t *testing.T) {
@@ -175,7 +185,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 		t.Error(err)
 	}
 	eventDb.AutoMigrate()
-	defer eventDb.Drop()
+	//defer eventDb.Drop()
 
 	// Miner - Add Event
 	mn := MinerNode{

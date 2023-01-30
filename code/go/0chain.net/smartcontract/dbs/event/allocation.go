@@ -168,7 +168,7 @@ func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("event db - update allocation stakes slow",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.Int("num", len(allocs)))
 		}
 	}()

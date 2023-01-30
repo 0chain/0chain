@@ -60,7 +60,7 @@ func (ipsc *StorageSmartContract) GetCost(t *transaction.Transaction, funcName s
 	}
 	cost, ok := conf.Cost[funcName]
 	if !ok {
-		logging.Logger.Error("no cost given", zap.Any("funcName", funcName))
+		logging.Logger.Error("no cost given", zap.String("funcName", funcName))
 		return math.MaxInt32, errors.New("no cost given for " + funcName)
 	}
 	return cost, nil

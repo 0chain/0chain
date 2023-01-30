@@ -72,8 +72,8 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)
 		if !ok || err != nil {
 			logging.Logger.Error("invalid share or sign",
-				zap.Error(err), zap.Any("minersc/dkg.gosign_status", ok),
-				zap.Any("message", share.Message), zap.Any("sign", share.Sign))
+				zap.Error(err), zap.Bool("minersc/dkg.gosign_status", ok),
+				zap.String("message", share.Message), zap.String("sign", share.Sign))
 			return
 		}
 		shareOrSignSuccess[n.ID] = share
@@ -168,7 +168,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	for id := range dmn.SimpleNodes {
 		var nodeSend = node.GetNode(id)
 		if nodeSend == nil {
-			logging.Logger.Warn("failed to get node", zap.Any("id", id))
+			logging.Logger.Warn("failed to get node", zap.String("id", id))
 			continue
 		}
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
@@ -188,7 +188,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
-		logging.Logger.Error("can't contribute", zap.Any("error", err))
+		logging.Logger.Error("can't contribute", zap.Error(err))
 		return
 	}
 

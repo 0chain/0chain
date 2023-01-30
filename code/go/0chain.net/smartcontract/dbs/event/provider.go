@@ -8,8 +8,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -94,7 +92,6 @@ func (edb *EventDb) updateProvidersTotalUnStakes(providers []Provider, tablename
 
 func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tableName ProviderTable) error {
 	table := string(tableName)
-	logging.Logger.Info("Running update provider health check with data: ", zap.Any("updates", updates), zap.String("tableName", table))
 
 	var ids []string
 	var lastHealthCheck []int64
