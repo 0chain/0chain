@@ -499,7 +499,7 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	if len(b.UniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount() {
+	if len(b.uniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount() {
 		return true
 	}
 	return false
