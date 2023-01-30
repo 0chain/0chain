@@ -13,23 +13,23 @@ SET row_security = off;
 
 
 ALTER TABLE public.users
-    ADD bucket_id bigint NOT NULL DEFAULT 0,
-    ADD collected_reward bigint,
-    ADD total_stake bigint,
-    ADD read_pool_total bigint,
-    ADD write_pool_total bigint,
-    ADD payed_fees bigint
+    bucket_id bigint NOT NULL DEFAULT 0,
+    collected_reward bigint,
+    total_stake bigint,
+    read_pool_total bigint,
+    write_pool_total bigint,
+    payed_fees bigint
 ;
 
 
 CREATE TABLE public.user_snapshots (
-    ADD user_id text,
-    ADD round bigint,
-    ADD collected_reward bigint,
-    ADD total_stake bigint,
-    ADD read_pool_total bigint,
-    ADD write_pool_total bigint,
-    ADD payed_fees bigint
+    user_id text,
+    round bigint,
+    collected_reward bigint,
+    total_stake bigint,
+    read_pool_total bigint,
+    write_pool_total bigint,
+    payed_fees bigint
 );
 
 ALTER TABLE public.user_snapshots OWNER TO zchain_user;
