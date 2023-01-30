@@ -67,6 +67,19 @@ func TestGetSharderWithDelegatePools(t *testing.T) {
 	require.Equal(t, "1", dps[0].ProviderID) // failed, the provider id is ""
 }
 
+func TestGetSharderWithDelegatePoolsNoPools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	createSharders(t, edb, 2)
+
+	s, dps, err := edb.GetSharderWithDelegatePools("1")
+
+	require.NoError(t, err, "Error while getting sharder with delegate pools")
+	require.Nil(t, dps, "there should be no delegate pools")
+	require.Equal(t, s.ID, "1")
+}
+
 func TestSharders(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 
