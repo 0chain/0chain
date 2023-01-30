@@ -180,7 +180,7 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 	return b
 }
 
-func (b *Block) GetuniqueBlockExtensions() (uBlExts map[string]bool) {
+func (b *Block) GetUniqueBlockExtensions() (uBlExts map[string]bool) {
 	b.uniqueBlockExtMutex.RLock()
 	defer b.uniqueBlockExtMutex.RUnlock()
 
@@ -797,7 +797,7 @@ func (b *Block) Clone() *Block {
 	}
 	b.stateMutex.RUnlock()
 
-	uniqueBlockExtensions := b.GetuniqueBlockExtensions()
+	uniqueBlockExtensions := b.GetUniqueBlockExtensions()
 	clone.uniqueBlockExtensions = make(map[string]bool, len(b.uniqueBlockExtensions))
 	for k, v := range uniqueBlockExtensions {
 		clone.uniqueBlockExtensions[k] = v
