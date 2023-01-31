@@ -82,8 +82,7 @@ func (edb *EventDb) calculateUserAggregate(gs *globalSnapshot, round, limit, off
 
 	var currentUsers []User
 	result := edb.Store.Get().Model(&User{}).
-		Where("users.id in (select id from temp_user_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Joins("Rewards").
+		Where("users.id in (select id from temp_user_ids ORDER BY id limit ? offset ?)", limit, offset).
 		Find(&currentUsers)
 
 	if result.Error != nil {
