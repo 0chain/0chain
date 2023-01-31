@@ -76,18 +76,6 @@ func (mn *MinerNode) Decode(p []byte) error {
 	return json.Unmarshal(p, mn)
 }
 
-func (mn *MinerNode) GetNodePools(status string) []*NodePool {
-	nodePools := make([]*NodePool, 0)
-	for id, pool := range mn.Pools {
-		nodePool := NodePool{id, pool}
-		if len(status) == 0 || pool.Status.String() == status {
-			nodePools = append(nodePools, &nodePool)
-		}
-	}
-
-	return nodePools
-}
-
 func (mn *MinerNode) GetNodePool(poolID string) *NodePool {
 	dp, ok := mn.Pools[poolID]
 	if !ok {

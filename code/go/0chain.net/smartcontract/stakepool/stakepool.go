@@ -181,6 +181,24 @@ func (sp *StakePool) OrderedPoolIds() []string {
 	return ids
 }
 
+// GetOrderedPools returns a slice of ordered pools
+func (sp *StakePool) GetOrderedPools() []*DelegatePool {
+	pids := make([]string, 0, len(sp.Pools))
+	for pid := range sp.Pools {
+		pids = append(pids, pid)
+	}
+
+	sort.SliceStable(pids, func(i, j int) bool {
+		return pids[i] < pids[j]
+	})
+
+	pools := make([]*DelegatePool, len(sp.Pools))
+	for i, pid := range pids {
+		pools[i] = sp.Pools[pid]
+	}
+	return pools
+}
+
 func (sp *StakePool) HasStakePool(user string) bool {
 	_, found := sp.Pools[user]
 	return found
@@ -499,7 +517,7 @@ func (sp *StakePool) DistributeRewards(
 		return fmt.Errorf("no stake")
 	}
 
-	for id, pool := range sp.Pools {
+	for _, pool := range sp.GetOrderedPools() {
 		if valueBalance == 0 {
 			break
 		}
@@ -518,7 +536,7 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[id] = reward
+		spUpdate.DelegateRewards[pool.DelegateID] = reward
 		if err != nil {
 			return err
 		}
@@ -538,7 +556,7 @@ func (sp *StakePool) DistributeRewards(
 }
 
 func (sp *StakePool) stake() (stake currency.Coin, err error) {
-	for _, pool := range sp.Pools {
+	for _, pool := range sp.GetOrderedPools() {
 		newStake, err := currency.AddCoin(stake, pool.Balance)
 		if err != nil {
 			return 0, err
@@ -549,15 +567,7 @@ func (sp *StakePool) stake() (stake currency.Coin, err error) {
 }
 
 func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *StakePoolReward) error {
-	var pools []*DelegatePool
-	for _, v := range sp.Pools {
-		pools = append(pools, v)
-	}
-	sort.SliceStable(pools, func(i, j int) bool {
-		return pools[i].DelegateID < pools[j].DelegateID
-	})
-
-	return equallyDistributeRewards(coins, pools, spUpdate)
+	return equallyDistributeRewards(coins, sp.GetOrderedPools(), spUpdate)
 }
 
 func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpdate *StakePoolReward) error {

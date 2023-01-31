@@ -182,3 +182,19 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 		})
 	}
 }
+
+func TestGetOrderedPools(t *testing.T) {
+	sp := &StakePool{
+		Pools: map[string]*DelegatePool{
+			"p1": &DelegatePool{DelegateID: "p1"},
+			"p2": &DelegatePool{DelegateID: "p2"},
+			"p3": &DelegatePool{DelegateID: "p3"},
+		},
+	}
+
+	ps := sp.GetOrderedPools()
+	require.EqualValues(t, 3, len(ps))
+	require.Equal(t, "p1", ps[0].DelegateID)
+	require.Equal(t, "p2", ps[1].DelegateID)
+	require.Equal(t, "p3", ps[2].DelegateID)
+}
