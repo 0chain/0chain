@@ -927,7 +927,10 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 		b.Events = append(b.Events, event.Event{
 			Type: event.TypeStats,
 			Tag:  event.TagUpdateUserPayedFees,
-			Data: txn,
+			Data: event.Transaction{
+				ClientId: txn.ClientID,
+				Fee:      txn.Fee,
+			},
 		})
 
 		events, err := c.UpdateState(ctx, b, bState, txn, waitC...)
