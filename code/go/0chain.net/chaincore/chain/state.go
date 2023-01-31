@@ -386,7 +386,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.Int("txn_status", txn.Status),
 			zap.Duration("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
-			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())))
+			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())),
+			zap.String("output", output))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value))
