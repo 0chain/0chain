@@ -565,7 +565,7 @@ func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 	return balance
 }
 
-/*setupInitialState - setup the initial state based on configuration */
+/*setupInitialState - set up the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
@@ -616,7 +616,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
 	}
-	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
+	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
 
@@ -936,8 +936,8 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
-			zap.Any("num_generators", genNum), zap.Int("miner_by_rank", len(miners)),
-			zap.Any("round", r.GetRoundNumber()))
+			zap.Int("num_generators", genNum), zap.Int("miner_by_rank", len(miners)),
+			zap.Int64("round", r.GetRoundNumber()))
 		return miners
 	}
 	return miners[:genNum]
@@ -1198,12 +1198,12 @@ func (c *Chain) getBlocks() []*block.Block {
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	miners := c.GetMiners(r.GetRoundNumber())
 	if miners == nil || miners.Size() == 0 {
-		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
+		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 	}
 	bNode := miners.GetNode(b.MinerID)
 	if bNode == nil {
-		logging.Logger.Warn("set_round_rank  --  get node by id", zap.Any("round", r.GetRoundNumber()),
-			zap.Any("block", b.Hash), zap.Any("miner_id", b.MinerID), zap.Any("miners", miners))
+		logging.Logger.Warn("set_round_rank  --  get node by id", zap.Int64("round", r.GetRoundNumber()),
+			zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
 		return
 	}
 	b.RoundRank = r.GetMinerRank(bNode)
@@ -1477,7 +1477,7 @@ func (c *Chain) updateConfig(pb *block.Block) {
 
 	configMap, err := getConfigMap(clientState)
 	if err != nil {
-		logging.Logger.Info("cannot get global settings",
+		logging.Logger.Error("cannot get global settings",
 			zap.Int64("start of round", pb.Round),
 			zap.Error(err),
 		)
@@ -1548,8 +1548,8 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 		lfmb.MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 
 		logging.Logger.Error("failed to update magic block",
-			zap.Any("finalized_magic_block_hash", lfmb.MagicBlock.Hash),
-			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
+			zap.String("finalized_magic_block_hash", lfmb.MagicBlock.Hash),
+			zap.String("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block",
 			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlock.Hash))
 	}
@@ -1573,8 +1573,8 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 		if lfmb.Hash == newMagicBlock.PreviousMagicBlockHash {
 			logging.Logger.Info("update magic block -- hashes match ",
-				zap.Any("LFMB previous MB hash", lfmb.PreviousMagicBlockHash),
-				zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
+				zap.String("LFMB previous MB hash", lfmb.PreviousMagicBlockHash),
+				zap.String("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
 			c.PreviousMagicBlock = lfmb.MagicBlock
 		}
 	}

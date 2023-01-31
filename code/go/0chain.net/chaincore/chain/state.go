@@ -60,14 +60,14 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 		if bsc != nil {
 			if err = c.ApplyBlockStateChange(b, bsc); err != nil {
 				logging.Logger.Error("compute state - applying state change",
-					zap.Any("round", b.Round), zap.Any("block", b.Hash),
+					zap.Int64("round", b.Round), zap.String("block", b.Hash),
 					zap.Error(err))
 				return err
 			}
 		}
 		if !b.IsStateComputed() {
 			logging.Logger.Error("compute state - state change error",
-				zap.Any("round", b.Round), zap.Any("block", b.Hash),
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.Error(err))
 			return err
 		}
@@ -209,7 +209,7 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 		err := json.Unmarshal(dataBytes, &scData)
 		if err != nil {
 			logging.Logger.Error("Error while decoding the JSON from transaction",
-				zap.Any("input", txn.TransactionData), zap.Any("error", err))
+				zap.String("input", txn.TransactionData), zap.Error(err))
 			return math.MaxInt32, err
 		}
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
@@ -311,7 +311,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 		if err = json.Unmarshal(dataBytes, &scData); err != nil {
 			logging.Logger.Error("Error while decoding the JSON from transaction",
-				zap.Any("input", txn.TransactionData), zap.Any("error", err))
+				zap.String("input", txn.TransactionData), zap.Error(err))
 			return nil, err
 		}
 
@@ -392,9 +392,9 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
-				zap.Any("txn type", txn.TransactionType),
-				zap.Any("transaction_ClientID", txn.ClientID),
-				zap.Any("minersc_address", minersc.ADDRESS),
+				zap.Int("txn type", txn.TransactionType),
+				zap.String("transaction_ClientID", txn.ClientID),
+				zap.String("minersc_address", minersc.ADDRESS),
 				zap.Any("state_balance", txn.Fee),
 				zap.Any("current_root", sctx.GetState().GetRoot()))
 			return nil, err
@@ -408,9 +408,9 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, minersc.ADDRESS, txn.Fee))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
-				zap.Any("txn type", txn.TransactionType),
-				zap.Any("transaction_ClientID", txn.ClientID),
-				zap.Any("minersc_address", minersc.ADDRESS),
+				zap.Int("txn type", txn.TransactionType),
+				zap.String("transaction_ClientID", txn.ClientID),
+				zap.String("minersc_address", minersc.ADDRESS),
 				zap.Any("state_balance", txn.Fee))
 			return nil, err
 		}
@@ -421,10 +421,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		tEvents, err := c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
 		if err != nil {
 			logging.Logger.Error("Failed to transfer amount",
-				zap.Any("txn type", txn.TransactionType),
+				zap.Int("txn type", txn.TransactionType),
 				zap.String("txn data", txn.TransactionData),
-				zap.Any("transfer_ClientID", transfer.ClientID),
-				zap.Any("to_ClientID", transfer.ToClientID),
+				zap.String("transfer_ClientID", transfer.ClientID),
+				zap.String("to_ClientID", transfer.ToClientID),
 				zap.Any("amount", transfer.Amount),
 				zap.Error(err))
 			return nil, err
@@ -439,8 +439,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			signedTransfer.ToClientID, signedTransfer.Amount)
 		if err != nil {
 			logging.Logger.Error("Failed to process signed transfer",
-				zap.Any("signedTransfer_ClientID", signedTransfer.ClientID),
-				zap.Any("signedTransfer_to_ClientID", signedTransfer.ToClientID),
+				zap.String("signedTransfer_ClientID", signedTransfer.ClientID),
+				zap.String("signedTransfer_to_ClientID", signedTransfer.ToClientID),
 				zap.Any("signedTransfer_amount", signedTransfer.Amount))
 			return nil, err
 		}
@@ -452,8 +452,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	for _, mint := range sctx.GetMints() {
 		u, err := c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
-			logging.Logger.Error("mint error", zap.Any("error", err),
-				zap.Any("transaction", txn.Hash),
+			logging.Logger.Error("mint error", zap.Error(err),
+				zap.Any("transaction", txn),
 				zap.String("to clientID", mint.ToClientID))
 			return nil, err
 		}
@@ -464,8 +464,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	u, err := c.incrementNonce(sctx, txn.ClientID)
 	if err != nil {
-		logging.Logger.Error("update nonce error", zap.Any("error", err),
-			zap.Any("transaction", txn.Hash),
+		logging.Logger.Error("update nonce error", zap.Error(err),
+			zap.Any("transaction", txn),
 			zap.String("clientID", txn.ClientID))
 		return nil, err
 	}
@@ -486,7 +486,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.Any("txn", txn), zap.Error(err))
 		}
 
-		logging.Logger.Error("error committing txn", zap.Any("error", err))
+		logging.Logger.Error("error committing txn", zap.Error(err))
 		return nil, err
 	}
 
@@ -636,8 +636,8 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 	if nonce+1 != txnNonce {
 		b := sctx.GetBlock()
 		logging.Logger.Error("validate nonce - error",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn_nonce", txnNonce),
-			zap.Any("local_nonce", s.Nonce), zap.Error(err))
+			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("txn_nonce", txnNonce),
+			zap.Int64("local_nonce", s.Nonce), zap.Error(err))
 		return ErrWrongNonce
 	}
 

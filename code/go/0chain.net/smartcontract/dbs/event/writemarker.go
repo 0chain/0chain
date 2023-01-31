@@ -117,7 +117,7 @@ func (edb *EventDb) addWriteMarkers(wms []WriteMarker) error {
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("event db - add write markers slow",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.Int("num", len(wms)))
 		}
 	}()

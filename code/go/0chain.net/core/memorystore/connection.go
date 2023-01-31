@@ -46,7 +46,7 @@ func GetInfo() {
 			panic("invalid setup")
 		}
 		if re.MatchString(info) {
-			Logger.Info("Redis is not ready to take connections", zap.Any("retry", tries))
+			Logger.Info("Redis is not ready to take connections", zap.Int("retry", tries))
 			time.Sleep(delay)
 		} else {
 			break

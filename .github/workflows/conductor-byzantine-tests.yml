@@ -13,7 +13,7 @@ env:
 jobs:
   CONDUCTOR_BYZANTINE_TESTS:
     name: CONDUCTOR-BYZANTINE-TESTS
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [self-hosted, conductor-test03]
 
     steps:
     - uses: actions/checkout@v1
@@ -72,6 +72,10 @@ jobs:
       with:
         name: Conductor-test-logs
         path: ./con-byz-tests-logs.tar.gz
+
+    - name: Cleanup
+      run: |
+        rm -rf *
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
