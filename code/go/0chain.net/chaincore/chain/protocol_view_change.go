@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"context"
 	"encoding/json"
 	"errors"
