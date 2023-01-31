@@ -23,6 +23,7 @@ ALTER TABLE public.users
 
 
 CREATE TABLE public.user_snapshots (
+    id bigint NOT NULL,
     user_id text,
     round bigint,
     collected_reward bigint,
@@ -38,6 +39,7 @@ ALTER TABLE public.user_snapshots OWNER TO zchain_user;
 
 
 CREATE TABLE public.user_aggregates (
+    id bigint NOT NULL,
     user_id text,
     round bigint,
     collected_reward bigint,
