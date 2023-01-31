@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -362,22 +361,6 @@ func (conf *Config) validateStakeRange(min, max currency.Coin) (err error) {
 	}
 	return
 }
-
-func (conf *Config) Encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(conf); err != nil {
-		panic(err) // must not happens
-	}
-	return
-}
-
-func (conf *Config) Decode(b []byte) error {
-	return json.Unmarshal(b, conf)
-}
-
-//
-// rest handler and update function
-//
 
 func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateContextI) error {
 	minted, err := currency.AddCoin(conf.Minted, toMint)
