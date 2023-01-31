@@ -56,10 +56,10 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 
 func (edb *EventDb) updateUserCollectedRewards(users []User) error {
 	var ids []string
-	var collectedRewards []int64
+	var collectedRewards []uint64
 	for _, u := range users {
 		ids = append(ids, u.UserID)
-		collectedRewards = append(collectedRewards, int64(u.CollectedReward))
+		collectedRewards = append(collectedRewards, uint64(u.CollectedReward))
 	}
 
 	return CreateBuilder("users", "user_id", ids).
@@ -68,10 +68,10 @@ func (edb *EventDb) updateUserCollectedRewards(users []User) error {
 
 func (edb *EventDb) updateUserTotalStake(users []User, shouldIncrease bool) error {
 	var ids []string
-	var stakes []int64
+	var stakes []uint64
 	for _, u := range users {
 		ids = append(ids, u.UserID)
-		stakes = append(stakes, int64(u.TotalStake))
+		stakes = append(stakes, uint64(u.TotalStake))
 	}
 
 	operation := "+"
@@ -85,10 +85,10 @@ func (edb *EventDb) updateUserTotalStake(users []User, shouldIncrease bool) erro
 
 func (edb *EventDb) updateUserReadPoolTotal(users []User, shouldIncrease bool) error {
 	var ids []string
-	var readpools []int64
+	var readpools []uint64
 	for _, u := range users {
 		ids = append(ids, u.UserID)
-		readpools = append(readpools, int64(u.ReadPoolTotal))
+		readpools = append(readpools, uint64(u.ReadPoolTotal))
 	}
 	operation := "+"
 	if !shouldIncrease {
@@ -101,10 +101,10 @@ func (edb *EventDb) updateUserReadPoolTotal(users []User, shouldIncrease bool) e
 
 func (edb *EventDb) updateUserWritePoolTotal(users []User, shouldIncrease bool) error {
 	var ids []string
-	var writepools []int64
+	var writepools []uint64
 	for _, u := range users {
 		ids = append(ids, u.UserID)
-		writepools = append(writepools, int64(u.WritePoolTotal))
+		writepools = append(writepools, uint64(u.WritePoolTotal))
 	}
 
 	operation := "+"
@@ -118,10 +118,10 @@ func (edb *EventDb) updateUserWritePoolTotal(users []User, shouldIncrease bool) 
 
 func (edb *EventDb) updateUserPayedFees(users []User) error {
 	var ids []string
-	var fees []currency.Coin
+	var fees []uint64
 	for _, u := range users {
 		ids = append(ids, u.UserID)
-		fees = append(fees, u.PayedFees)
+		fees = append(fees, uint64(u.PayedFees))
 	}
 
 	return CreateBuilder("users", "user_id", ids).
