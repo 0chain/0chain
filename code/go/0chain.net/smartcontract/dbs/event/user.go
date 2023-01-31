@@ -128,35 +128,35 @@ func (edb *EventDb) updateUserPayedFees(txns []Transaction) error {
 		AddUpdate("payed_fees", fees, "users.payed_fees + t.fee").Exec(edb).Error
 }
 
-func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUpdateUserCollectedRewards, withUniqueEventOverwrite())
+func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[RewardMint] {
+	return newEventsMerger[RewardMint](TagUpdateUserCollectedRewards, withUniqueEventOverwrite())
 }
 
-func mergeIncreaseUserTotalStakeEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagLockStakePool, withUniqueEventOverwrite())
+func mergeIncreaseUserTotalStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
+	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withUniqueEventOverwrite())
 }
-func mergeDecreaseUserTotalStakeEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUnlockStakePool, withUniqueEventOverwrite())
-}
-
-func mergeIncreaseUserReadPoolTotalEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagLockReadPool, withUniqueEventOverwrite())
+func mergeDecreaseUserTotalStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
+	return newEventsMerger[DelegatePoolLock](TagUnlockStakePool, withUniqueEventOverwrite())
 }
 
-func mergeDecreaseUserReadPoolTotalEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUnlockReadPool, withUniqueEventOverwrite())
+func mergeIncreaseUserReadPoolTotalEvents() *eventsMergerImpl[ReadPoolLock] {
+	return newEventsMerger[ReadPoolLock](TagLockReadPool, withUniqueEventOverwrite())
 }
 
-func mergeIncreaseUserWritePoolTotalEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagLockWritePool, withUniqueEventOverwrite())
+func mergeDecreaseUserReadPoolTotalEvents() *eventsMergerImpl[ReadPoolLock] {
+	return newEventsMerger[ReadPoolLock](TagUnlockReadPool, withUniqueEventOverwrite())
 }
 
-func mergeDecreaseUserWritePoolTotalEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUnlockWritePool, withUniqueEventOverwrite())
+func mergeIncreaseUserWritePoolTotalEvents() *eventsMergerImpl[WritePoolLock] {
+	return newEventsMerger[WritePoolLock](TagLockWritePool, withUniqueEventOverwrite())
 }
 
-func mergeUpdateUserPayedFeesEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUpdateUserPayedFees, withUniqueEventOverwrite())
+func mergeDecreaseUserWritePoolTotalEvents() *eventsMergerImpl[WritePoolLock] {
+	return newEventsMerger[WritePoolLock](TagUnlockWritePool, withUniqueEventOverwrite())
+}
+
+func mergeUpdateUserPayedFeesEvents() *eventsMergerImpl[Transaction] {
+	return newEventsMerger[Transaction](TagUpdateUserPayedFees, withUniqueEventOverwrite())
 }
 
 func mergeAddUsersEvents() *eventsMergerImpl[User] {
