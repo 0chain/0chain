@@ -1,9 +1,10 @@
 package event
 
 import (
+	"time"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
-	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -11,7 +12,6 @@ import (
 )
 
 type UserAggregate struct {
-	model.ImmutableModel
 	UserID          string        `json:"user_id" gorm:"uniqueIndex"`
 	Round           int64         `json:"round"`
 	CollectedReward currency.Coin `json:"collected_reward"`
@@ -19,6 +19,7 @@ type UserAggregate struct {
 	ReadPoolTotal   currency.Coin `json:"read_pool_total"`
 	WritePoolTotal  currency.Coin `json:"write_pool_total"`
 	PayedFees       currency.Coin `json:"payed_fees"`
+	CreatedAt       time.Time
 }
 
 func (edb *EventDb) ReplicateUserAggregate(p common.Pagination) ([]UserAggregate, error) {
