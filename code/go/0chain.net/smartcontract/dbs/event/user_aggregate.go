@@ -45,7 +45,7 @@ func (edb *EventDb) updateUserAggregate(round, pageAmount int64, gs *globalSnaps
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_user_ids "+
-		"ON COMMIT DROP AS SELECT id as id FROM users where bucket_id = ?",
+		"ON COMMIT DROP AS SELECT user_id as id FROM users where bucket_id = ?",
 		currentBucket)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
