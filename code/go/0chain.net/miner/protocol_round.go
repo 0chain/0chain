@@ -1160,12 +1160,20 @@ func (mc *Chain) AddNotarizedBlock(r *Round, b *block.Block) bool {
 	if !b.IsStateComputed() {
 		logging.Logger.Info("add notarized block - computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		if err := mc.ComputeOrSyncState(ctx, b); err != nil {
-			logging.Logger.Info("can't compute state for notarized block", zap.Error(err),
-				zap.Int64("block_round", b.Round),
-				zap.Int64("round", r.GetRoundNumber()),
-				zap.String("block", b.Hash))
+		if err := mc.syncAndRetry(ctx, b, "add notarized block", func(ctx context.Context, waitC chan struct{}) error {
+			return mc.ComputeState(ctx, b, waitC)
+		}); err != nil {
+			logging.Logger.Error("add notarized block failed", zap.Error(err),
+				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			return false
 		}
+
+		//if err := mc.ComputeOrSyncState(ctx, b); err != nil {
+		//	logging.Logger.Info("can't compute state for notarized block", zap.Error(err),
+		//		zap.Int64("block_round", b.Round),
+		//		zap.Int64("round", r.GetRoundNumber()),
+		//		zap.String("block", b.Hash))
+		//}
 	}
 
 	//if !r.IsVerificationComplete() {
