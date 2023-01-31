@@ -797,11 +797,7 @@ func (b *Block) Clone() *Block {
 	}
 	b.stateMutex.RUnlock()
 
-	uniqueBlockExtensions := b.GetUniqueBlockExtensions()
-	clone.uniqueBlockExtensions = make(map[string]bool, len(b.uniqueBlockExtensions))
-	for k, v := range uniqueBlockExtensions {
-		clone.uniqueBlockExtensions[k] = v
-	}
+	clone.uniqueBlockExtensions = b.GetUniqueBlockExtensions()
 
 	return clone
 }
