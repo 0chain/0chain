@@ -43,6 +43,8 @@ CREATE TABLE public.user_aggregates (
     read_pool_total bigint,
     write_pool_total bigint,
     payed_fees bigint
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
 );
 
 ALTER TABLE public.user_aggregates OWNER TO zchain_user;
