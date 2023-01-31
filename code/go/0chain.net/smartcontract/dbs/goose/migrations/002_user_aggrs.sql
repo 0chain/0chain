@@ -23,7 +23,6 @@ ALTER TABLE public.users
 
 
 CREATE TABLE public.user_snapshots (
-    id bigint NOT NULL,
     user_id text,
     round bigint,
     collected_reward bigint,
@@ -31,7 +30,6 @@ CREATE TABLE public.user_snapshots (
     read_pool_total bigint,
     write_pool_total bigint,
     payed_fees bigint,
-    created_at timestamp with time zone
 );
 
 ALTER TABLE public.user_snapshots OWNER TO zchain_user;
