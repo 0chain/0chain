@@ -62,7 +62,7 @@ func (edb *EventDb) updateUserCollectedRewards(rms []RewardMint) error {
 		collectedRewards = append(collectedRewards, rm.Amount)
 	}
 
-	return CreateBuilder("user", "user_id", ids).
+	return CreateBuilder("users", "user_id", ids).
 		AddUpdate("collected_reward", collectedRewards, "users.collected_reward + t.amount").Exec(edb).Error
 }
 
@@ -95,7 +95,7 @@ func (edb *EventDb) updateUserReadPoolTotal(rpls []ReadPoolLock, shouldIncrease 
 		operation = "-"
 	}
 
-	return CreateBuilder("user", "user_id", ids).
+	return CreateBuilder("users", "user_id", ids).
 		AddUpdate("read_pool_total", readpools, "users.read_pool_total "+operation+" t.amount").Exec(edb).Error
 }
 
@@ -112,7 +112,7 @@ func (edb *EventDb) updateUserWritePoolTotal(wpls []WritePoolLock, shouldIncreas
 		operation = "-"
 	}
 
-	return CreateBuilder("user", "user_id", ids).
+	return CreateBuilder("users", "user_id", ids).
 		AddUpdate("write_pool_total", writepools, "users.write_pool_total "+operation+" t.amount").Exec(edb).Error
 }
 
@@ -124,7 +124,7 @@ func (edb *EventDb) updateUserPayedFees(txns []Transaction) error {
 		fees = append(fees, t.Fee)
 	}
 
-	return CreateBuilder("user", "user_id", ids).
+	return CreateBuilder("users", "user_id", ids).
 		AddUpdate("payed_fees", fees, "users.payed_fees + t.fee").Exec(edb).Error
 }
 
