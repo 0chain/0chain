@@ -283,6 +283,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", err
 	}
 
+	logging.Logger.Debug("new_allocation_request_debug",
+		zap.String("after setup allocation", util.ToHex(balances.GetState().GetRoot())),
+		zap.String("txn", txn.Hash))
+
 	for _, b := range blobberNodes {
 		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
 		if err != nil {
@@ -326,6 +330,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 		emitUpdateBlobber(b, balances)
 	}
+
+	logging.Logger.Debug("new_allocation_request_debug",
+		zap.String("after update blobbers", util.ToHex(balances.GetState().GetRoot())),
+		zap.String("txn", txn.Hash))
 
 	var options []WithOption
 	if mintNewTokens > 0 {
