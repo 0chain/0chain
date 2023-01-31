@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -8,6 +9,7 @@ import (
 
 // swagger:model UserSnapshot
 type UserSnapshot struct {
+	model.ImmutableModel
 	UserID          string        `json:"user_id" gorm:"uniqueIndex"`
 	Round           int64         `json:"round"`
 	CollectedReward currency.Coin `json:"collected_reward"`
