@@ -58,7 +58,7 @@ func (_ *StorageSmartContract) getBlobber(
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	balances cstate.StateContextI) (bool, error) {
-	blobber := new(StorageNode)
+	blobber := newBlobber("")
 	blobber.BaseURL = blobberURL
 	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 	switch err {
@@ -226,7 +226,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var blobber = new(StorageNode)
+	var blobber = newBlobber(t.ClientID)
 	if err = blobber.Decode(input); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"malformed request: "+err.Error())
@@ -284,7 +284,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"can't get config: "+err.Error())
 	}
 
-	var updatedBlobber = new(StorageNode)
+	var updatedBlobber = newBlobber("")
 	if err = updatedBlobber.Decode(input); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())

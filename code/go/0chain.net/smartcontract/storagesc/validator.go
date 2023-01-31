@@ -18,7 +18,7 @@ import (
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
-	newValidator := &ValidationNode{}
+	newValidator := newValidator("")
 	err := newValidator.Decode(input) //json.Unmarshal(input, &newValidator)
 	if err != nil {
 		return "", err
