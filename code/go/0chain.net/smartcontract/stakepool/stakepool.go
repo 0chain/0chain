@@ -264,9 +264,9 @@ func (sp *StakePool) MintRewards(
 			ProviderID:   providerId,
 		})
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.RewardMint{
-			Amount:   int64(dPool.Reward),
-			ClientID: clientId,
+		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.User{
+			CollectedReward: dPool.Reward,
+			UserID:          clientId,
 		})
 
 		delegateReward = dPool.Reward

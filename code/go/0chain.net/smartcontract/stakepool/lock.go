@@ -110,10 +110,13 @@ func (sp *StakePool) LockPool(
 		ProviderId:   providerId,
 		ProviderType: providerType,
 		Amount:       i,
-		Reward: 	  currency.Coin(0),
+		Reward:       currency.Coin(0),
 		Total:        i,
 	}
-	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, lock)
+	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, event.User{
+		UserID:     txn.ClientID,
+		TotalStake: currency.Coin(i),
+	})
 
 	if err := balances.AddTransfer(state.NewTransfer(
 		txn.ClientID, txn.ToClientID, txn.Value,

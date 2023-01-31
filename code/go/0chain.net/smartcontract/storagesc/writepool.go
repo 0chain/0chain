@@ -87,10 +87,9 @@ func (ssc *StorageSmartContract) writePoolLock(
 
 	allocation.WritePool, err = currency.AddCoin(allocation.WritePool, txn.Value)
 	i, _ := txn.Value.Int64()
-	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, allocation.ID, event.WritePoolLock{
-		Client:       txn.ClientID,
-		AllocationId: allocation.ID,
-		Amount:       i,
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, allocation.ID, event.User{
+		UserID:         txn.ClientID,
+		WritePoolTotal: currency.Coin(i),
 	})
 	if err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
