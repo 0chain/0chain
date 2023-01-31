@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"errors"
+	"sort"
 	"strings"
 	"time"
 
@@ -75,14 +76,21 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]i
 	})
 
 	// Remove expired challenge count of the other blobbers
-	for bid, expiredCount := range expiredCountMap {
+	bids := make([]string, 0, len(expiredCountMap))
+	for bid := range expiredCountMap {
 		if bid != ch.BlobberID {
-			// Emit event per blobber and the merger will be able to merge them for each blobber
-			balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, bid, event.ChallengeStatsDeltas{
-				Id:        bid,
-				OpenDelta: int64(-expiredCount),
-			})
+			bids = append(bids, bid)
 		}
+	}
+
+	// sort to ensure the consistent events emit order
+	sort.SliceStable(bids, func(i, j int) bool { return bids[i] < bids[j] })
+	for _, bid := range bids {
+		// Emit event per blobber and the merger will be able to merge them for each blobber
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, bid, event.ChallengeStatsDeltas{
+			Id:        bid,
+			OpenDelta: int64(-expiredCountMap[bid]),
+		})
 	}
 	logging.Logger.Debug("emitted add_challenge")
 }

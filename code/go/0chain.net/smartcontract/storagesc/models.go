@@ -1310,31 +1310,28 @@ func getMaxChallengeCompletionTime() time.Duration {
 	return config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)
 }
 
+type challengeBlobberID struct {
+	challengeID string
+	blobberID   string
+}
+
 // removeExpiredChallenges removes all expired challenges from the allocation,
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp) (map[string]string, error) {
-	var expiredChallengeBlobberMap = make(map[string]string)
-
+	now common.Timestamp) ([]challengeBlobberID, error) {
 	cct := getMaxChallengeCompletionTime()
-
+	var expired []challengeBlobberID
 	for _, oc := range allocChallenges.OpenChallenges {
-		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
-		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
-		logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ID))
-		if _, ok := expiredChallengeBlobberMap[oc.ID]; ok {
-			logging.Logger.Error("removeExpiredChallenges found duplicate expired challenge", zap.String("challengeID", oc.ID))
-			return nil, common.NewError("removeExpiredChallenges", "found duplicates expired challenge")
-		}
-
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			// not expired, following open challenges would not expire too, so break here
 			break
 		}
 
-		// expired
-		expiredChallengeBlobberMap[oc.ID] = oc.BlobberID
+		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
+		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
+		logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ID))
+		expired = append(expired, challengeBlobberID{challengeID: oc.ID, blobberID: oc.BlobberID})
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
@@ -1345,9 +1342,8 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		}
 	}
 
-	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeBlobberMap):]
-
-	return expiredChallengeBlobberMap, nil
+	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expired):]
+	return expired, nil
 }
 
 type BlobberCloseConnection struct {
