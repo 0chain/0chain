@@ -324,7 +324,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) {
 			zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
 			zap.Int64("fb_RRS", fb.GetRoundRandomSeed()),
 			zap.Int("fb_toc", fb.RoundTimeoutCount),
-			zap.Any("fb_Sender", fb.MinerID))
+			zap.String("fb_Sender", fb.MinerID))
 		// remove the old block with the same rank and add it below
 		r.notarizedBlocks = append(r.notarizedBlocks[:found], r.notarizedBlocks[found+1:]...)
 	}
@@ -570,8 +570,8 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	}
 	if miner.SetIndex >= len(r.minerPerm) {
 		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
-			zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", miner.SetIndex),
-			zap.Any("node", miner))
+			zap.Ints("r.minerPerm", r.minerPerm), zap.Int("set_index", miner.SetIndex),
+			zap.String("node", miner.ID))
 		return -1
 	}
 	return r.minerPerm[miner.SetIndex]
@@ -581,23 +581,23 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 func (r *Round) GetMinersByRank(nodes []*node.Node) []*node.Node {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	logging.Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)),
-		zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
+	logging.Logger.Info("get miners by rank", zap.Int("num_miners", len(nodes)),
+		zap.Int64("round", r.Number), zap.Ints("r.minerPerm", r.minerPerm))
 	sort.Slice(nodes, func(i, j int) bool {
 		idxi, idxj := 0, 0
 		if nodes[i].SetIndex < len(r.minerPerm) {
 			idxi = r.minerPerm[nodes[i].SetIndex]
 		} else {
 			logging.Logger.Warn("get miner by rank -- the node index in the permutation is missing",
-				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[i].SetIndex),
-				zap.Any("node", nodes[i]))
+				zap.Ints("r.minerPerm", r.minerPerm), zap.Int("set_index", nodes[i].SetIndex),
+				zap.String("node", nodes[i].ID))
 		}
 		if nodes[j].SetIndex < len(r.minerPerm) {
 			idxj = r.minerPerm[nodes[j].SetIndex]
 		} else {
 			logging.Logger.Warn("get miner by rank -- the node index in the permutation is missing",
-				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[j].SetIndex),
-				zap.Any("node", nodes[j]))
+				zap.Ints("r.minerPerm", r.minerPerm), zap.Int("set_index", nodes[j].SetIndex),
+				zap.String("node", nodes[j].ID))
 		}
 		return idxi > idxj
 	})

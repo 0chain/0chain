@@ -740,7 +740,7 @@ func (sc *StorageSmartContract) challengeFailed(
 		return "", common.NewError("challenge_penalty_error", err.Error())
 	}
 
-	logging.Logger.Info("Challenge failed", zap.Any("challenge", cab.challenge.ID))
+	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 
 	err := sc.blobberPenalty(t, cab.alloc, cab.latestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
 		cab.validators, balances)
@@ -772,7 +772,7 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	case nil:
 	case util.ErrValueNotPresent:
 		logging.Logger.Error("client state has invalid allocations",
-			zap.Any("selected_allocation", allocID))
+			zap.String("selected_allocation", allocID))
 		return nil, common.NewErrorf("invalid_allocation",
 			"client state has invalid allocations")
 	default:

@@ -9,7 +9,7 @@ on:
 jobs:
   CONDUCTOR_VALIDATORS_01_TESTS:
     name: CONDUCTOR-VALIDATORS-01-TESTS
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [self-hosted, conductor-test03]
 
     steps:
     - name: Go 1.18 setup.
@@ -162,6 +162,9 @@ jobs:
         name: Conductor-test-logs
         path: ./con-tests-logs.tar.gz
 
+    - name: Cleanup
+      run: |
+        rm -rf *
     # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
     #   run: |
     #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
