@@ -42,7 +42,9 @@ func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 			// Resolve field key in this order: json Tag > gorm.column Tag > snake-casing FieldName
 			fkey := f.Tag.Get("json")
 			if fkey == "" {
-				fkey = gormColumRegex.FindString(f.Tag.Get("gorm"))
+				if matches := gormColumRegex.FindStringSubmatch(f.Tag.Get("gorm")); len(matches) > 1 {
+					fkey = matches[1]
+				}
 			}
 			if fkey == "" {
 				fkey = toSnakeCase(f.Name)
