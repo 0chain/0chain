@@ -5,7 +5,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
@@ -17,29 +16,23 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNodeResponse{
-		SimpleNode: SimpleNode{
-			Provider: &provider.Provider{
-				ID:           edbSharder.ID,
-				ProviderType: spenum.Sharder,
-			},
-			N2NHost:     edbSharder.N2NHost,
-			Host:        edbSharder.Host,
-			Port:        edbSharder.Port,
-			Path:        edbSharder.Path,
-			PublicKey:   edbSharder.PublicKey,
-			ShortName:   edbSharder.ShortName,
-			BuildTag:    edbSharder.BuildTag,
-			TotalStaked: edbSharder.TotalStake,
-			Delete:      edbSharder.Delete,
-
-			LastHealthCheck: edbSharder.LastHealthCheck,
-			Geolocation: SimpleNodeGeolocation{
-				Latitude:  edbSharder.Latitude,
-				Longitude: edbSharder.Longitude,
-			},
-			NodeType: NodeTypeSharder,
-			Status:   status,
+		ID:              edbSharder.ID,
+		N2NHost:         edbSharder.N2NHost,
+		Host:            edbSharder.Host,
+		Port:            edbSharder.Port,
+		Path:            edbSharder.Path,
+		PublicKey:       edbSharder.PublicKey,
+		ShortName:       edbSharder.ShortName,
+		BuildTag:        edbSharder.BuildTag,
+		TotalStaked:     edbSharder.TotalStake,
+		Delete:          edbSharder.Delete,
+		LastHealthCheck: edbSharder.LastHealthCheck,
+		Geolocation: SimpleNodeGeolocation{
+			Latitude:  edbSharder.Latitude,
+			Longitude: edbSharder.Longitude,
 		},
+		NodeType:                      NodeTypeSharder,
+		Status:                        status,
 		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
 	}
 
