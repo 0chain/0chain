@@ -696,15 +696,15 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		}
 	}
 
+	output, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
+	}
+
 	err = sp.Empty(t.ToClientID, t.ClientID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
-	}
-
-	output, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}
 
 	// Save the pool
