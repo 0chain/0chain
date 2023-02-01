@@ -2407,7 +2407,20 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 // swagger:model storageNodeResponse
 type storageNodeResponse struct {
-	*StorageNode
+	ID                      string                 `json:"id" validate:"hexadecimal,len=64"`
+	BaseURL                 string                 `json:"url"`
+	Geolocation             StorageNodeGeolocation `json:"geolocation"`
+	Terms                   Terms                  `json:"terms"`     // terms
+	Capacity                int64                  `json:"capacity"`  // total blobber capacity
+	Allocated               int64                  `json:"allocated"` // allocated capacity
+	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
+	PublicKey               string                 `json:"-"`
+	SavedData               int64                  `json:"saved_data"`
+	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
+	StakePoolSettings       stakepool.Settings     `json:"stake_pool_settings"`
+	RewardRound             RewardRound            `json:"reward_round"`
+
 	TotalStake               currency.Coin `json:"total_stake"`
 	CreationRound            int64         `json:"creation_round"`
 	ReadData                 int64         `json:"read_data"`
@@ -2417,41 +2430,74 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 }
 
+func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
+	return storageNodeResponse{
+		ID:                      sn.ID,
+		BaseURL:                 sn.BaseURL,
+		Geolocation:             sn.Geolocation,
+		Terms:                   sn.Terms,
+		Capacity:                sn.Capacity,
+		Allocated:               sn.Allocated,
+		LastHealthCheck:         sn.LastHealthCheck,
+		PublicKey:               sn.PublicKey,
+		SavedData:               sn.SavedData,
+		DataReadLastRewardRound: sn.DataReadLastRewardRound,
+		LastRewardDataReadRound: sn.LastRewardDataReadRound,
+		StakePoolSettings:       sn.StakePoolSettings,
+		RewardRound:             sn.RewardRound,
+	}
+}
+
+func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
+	return StorageNode{
+		Provider: &provider.Provider{
+			ID:           snr.ID,
+			ProviderType: spenum.Blobber,
+		},
+		BaseURL:                 snr.BaseURL,
+		Geolocation:             snr.Geolocation,
+		Terms:                   snr.Terms,
+		Capacity:                snr.Capacity,
+		Allocated:               snr.Allocated,
+		LastHealthCheck:         snr.LastHealthCheck,
+		PublicKey:               snr.PublicKey,
+		SavedData:               snr.SavedData,
+		DataReadLastRewardRound: snr.DataReadLastRewardRound,
+		LastRewardDataReadRound: snr.LastRewardDataReadRound,
+		StakePoolSettings:       snr.StakePoolSettings,
+		RewardRound:             snr.RewardRound,
+	}
+}
+
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
-		StorageNode: &StorageNode{
-			Provider: &provider.Provider{
-				ID:           blobber.ID,
-				ProviderType: spenum.Blobber,
-			},
-			BaseURL: blobber.BaseURL,
-			Geolocation: StorageNodeGeolocation{
-				Latitude:  blobber.Latitude,
-				Longitude: blobber.Longitude,
-			},
-			Terms: Terms{
-				ReadPrice:        blobber.ReadPrice,
-				WritePrice:       blobber.WritePrice,
-				MinLockDemand:    blobber.MinLockDemand,
-				MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
-			},
-			Capacity:        blobber.Capacity,
-			Allocated:       blobber.Allocated,
-			LastHealthCheck: blobber.LastHealthCheck,
-			StakePoolSettings: stakepool.Settings{
-				DelegateWallet:     blobber.DelegateWallet,
-				MinStake:           blobber.MinStake,
-				MaxStake:           blobber.MaxStake,
-				MaxNumDelegates:    blobber.NumDelegates,
-				ServiceChargeRatio: blobber.ServiceCharge,
-			},
+		ID:      blobber.ID,
+		BaseURL: blobber.BaseURL,
+		Geolocation: StorageNodeGeolocation{
+			Latitude:  blobber.Latitude,
+			Longitude: blobber.Longitude,
 		},
-		TotalStake:     blobber.TotalStake,
-		CreationRound:  blobber.CreationRound,
-		ReadData:       blobber.ReadData,
-		UsedAllocation: blobber.Used,
-		TotalOffers:    blobber.OffersTotal,
-
+		Terms: Terms{
+			ReadPrice:        blobber.ReadPrice,
+			WritePrice:       blobber.WritePrice,
+			MinLockDemand:    blobber.MinLockDemand,
+			MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
+		},
+		Capacity:        blobber.Capacity,
+		Allocated:       blobber.Allocated,
+		LastHealthCheck: blobber.LastHealthCheck,
+		StakePoolSettings: stakepool.Settings{
+			DelegateWallet:     blobber.DelegateWallet,
+			MinStake:           blobber.MinStake,
+			MaxStake:           blobber.MaxStake,
+			MaxNumDelegates:    blobber.NumDelegates,
+			ServiceChargeRatio: blobber.ServiceCharge,
+		},
+		TotalStake:               blobber.TotalStake,
+		CreationRound:            blobber.CreationRound,
+		ReadData:                 blobber.ReadData,
+		UsedAllocation:           blobber.Used,
+		TotalOffers:              blobber.OffersTotal,
 		TotalServiceCharge:       blobber.Rewards.TotalRewards,
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
 	}
