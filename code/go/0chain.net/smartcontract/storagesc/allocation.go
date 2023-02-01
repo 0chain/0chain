@@ -552,10 +552,6 @@ func (uar *updateAllocationRequest) validate(
 		return errors.New("allocation is already immutable")
 	}
 
-	if uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable {
-		return errors.New("allocation is already third party extendable")
-	}
-
 	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddBlobberId) == 0 && len(uar.Name) == 0 && uar.FileOptions == alloc.FileOptions {
 		if !uar.SetImmutable && !uar.SetThirdPartyExtendable {
 			return errors.New("update allocation changes nothing")
