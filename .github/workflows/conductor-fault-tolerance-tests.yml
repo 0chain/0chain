@@ -13,7 +13,7 @@ env:
 jobs:
   CONDUCTOR_FAULT_TOLERANCE_TESTS:
     name: CONDUCTOR-FAULT-TOLERANCE-TESTS
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [self-hosted, conductor-test03]
 
     steps:
     - uses: actions/checkout@v1
@@ -84,6 +84,10 @@ jobs:
       with:
         name: Conductor-test-logs
         path: ./con-ft-tests-logs.tar.gz
+
+    - name: Cleanup
+      run: |
+        rm -rf *
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]

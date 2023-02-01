@@ -52,7 +52,7 @@ func validateStateChangesRoot(b *Block) error {
 		if bsc.GetRoot() != nil {
 			computedRoot = bsc.GetRoot().GetHash()
 		}
-		logging.Logger.Error("block state change - root mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_root", util.ToHex(b.ClientStateHash)), zap.Any("computed_root", computedRoot))
+		logging.Logger.Error("block state change - root mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_root", util.ToHex(b.ClientStateHash)), zap.String("computed_root", computedRoot))
 		return ErrStateMismatch
 	}
 	return nil
@@ -92,9 +92,9 @@ func ValidateState(ctx context.Context, b *Block, priorRoot util.Key) error {
 				b.ClientState.PrettyPrint(StateOut)
 			}
 			if state.DebugBlock() {
-				logging.Logger.DPanic("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.Int("changes", len(changes.Nodes)))
+				logging.Logger.DPanic("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.Int("changes", len(changes.Nodes)))
 			} else {
-				logging.Logger.Error("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.Int("changes", len(changes.Nodes)))
+				logging.Logger.Error("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.Int("changes", len(changes.Nodes)))
 			}
 		}
 		if priorRoot == nil {
