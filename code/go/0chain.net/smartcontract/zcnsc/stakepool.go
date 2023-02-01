@@ -1,15 +1,17 @@
 package zcnsc
 
 import (
-	chainstate "0chain.net/chaincore/chain/state"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"errors"
-	"fmt"
+
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 )
@@ -63,13 +65,13 @@ func (sp *StakePool) GetKey() datastore.Key {
 }
 
 // save the stake pool
-func (sp *StakePool) save(sscKey, providerID string, balances chainstate.StateContextI) (err error) {
+func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(StakePoolKey(sscKey, providerID), sp)
 	return
 }
 
 // empty a delegate pool if possible, call update before the empty
-func (sp *StakePool) empty(sscID, clientID string, balances chainstate.StateContextI) (bool, error) {
+func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI) (bool, error) {
 	var dp, ok = sp.Pools[clientID]
 	if !ok {
 		return false, fmt.Errorf("no such delegate pool: %q", clientID)
@@ -95,7 +97,7 @@ func (sp *StakePool) empty(sscID, clientID string, balances chainstate.StateCont
 //
 
 // getStakePool of given authorizer
-func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances chainstate.StateContextI) (sp *StakePool, err error) {
+func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances cstate.StateContextI) (sp *StakePool, err error) {
 	sp = NewStakePool()
 	err = balances.GetTrieNode(StakePoolKey(zcn.ID, authorizerID), sp)
 	if err != nil {
@@ -105,7 +107,7 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 	return sp, nil
 }
 
-func (zcn *ZCNSmartContract) GetStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (sp *StakePool, err error) {
+func (zcn *ZCNSmartContract) getStakePoolForAdapter(providerType spenum.Provider, providerID datastore.Key, balances cstate.CommonStateContextI) (sp *StakePool, err error) {
 	sp = NewStakePool()
 	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
 	if err != nil {
@@ -116,8 +118,8 @@ func (zcn *ZCNSmartContract) GetStakePool(providerType spenum.Provider, provider
 }
 
 func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
-	balances chainstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
-	pool, err := zcn.GetStakePool(providerType, providerID, balances)
+	balances cstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+	pool, err := zcn.getStakePoolForAdapter(providerType, providerID, balances)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +129,7 @@ func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, p
 
 // add delegated stake pool
 func (zcn *ZCNSmartContract) stakePoolLock(t *transaction.Transaction,
-	input []byte, balances chainstate.StateContextI) (res string, err error) {
+	input []byte, balances cstate.StateContextI) (res string, err error) {
 	return stakepool.StakePoolLock(t, input, balances, zcn.getStakePoolAdapter)
 }
 
@@ -135,7 +137,7 @@ func (zcn *ZCNSmartContract) stakePoolLock(t *transaction.Transaction,
 func (zcn *ZCNSmartContract) stakePoolUnlock(
 	t *transaction.Transaction,
 	input []byte,
-	balances chainstate.StateContextI,
+	balances cstate.StateContextI,
 ) (resp string, err error) {
 	return stakepool.StakePoolUnlock(t, input, balances, zcn.getStakePoolAdapter)
 }
@@ -149,7 +151,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	gn *GlobalNode,
 	authorizerID datastore.Key,
 	settings stakepool.Settings,
-	ctx chainstate.StateContextI,
+	ctx cstate.StateContextI,
 ) (*StakePool, error) {
 	if err := validateStakePoolSettings(settings, gn); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
@@ -164,7 +166,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
 		sp = NewStakePool()
-		sp.Minter = chainstate.MinterStorage
+		sp.Minter = cstate.MinterStorage
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 		changed = true
 	}
@@ -222,16 +224,8 @@ func (gn *GlobalNode) validateStakeRange(min, max currency.Coin) (err error) {
 	return
 }
 
-func toJson(val interface{}) string {
-	var b, err = json.Marshal(val)
-	if err != nil {
-		panic(err)
-	}
-	return string(b)
-}
-
 func (zcn *ZCNSmartContract) AddToDelegatePool(t *transaction.Transaction,
-	input []byte, balances chainstate.StateContextI) (
+	input []byte, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	return stakepool.StakePoolLock(t, input, balances, zcn.getStakePoolAdapter)
@@ -239,7 +233,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(t *transaction.Transaction,
 
 func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte,
-	balances chainstate.StateContextI) (resp string, err error) {
+	balances cstate.StateContextI) (resp string, err error) {
 
 	return stakepool.StakePoolUnlock(t, inputData, balances, zcn.getStakePoolAdapter)
 }
