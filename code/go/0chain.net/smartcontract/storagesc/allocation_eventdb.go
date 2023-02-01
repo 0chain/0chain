@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/smartcontract/provider"
-
 	"0chain.net/chaincore/transaction"
 
 	common2 "0chain.net/smartcontract/common"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -20,11 +17,11 @@ import (
 
 type StorageAllocationBlobbers struct {
 	StorageAllocation `json:",inline"`
-	Blobbers          []*StorageNode `json:"blobbers"`
+	Blobbers          []*storageNodeResponse `json:"blobbers"`
 }
 
 func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
-	storageNodes := make([]*StorageNode, 0)
+	storageNodes := make([]*storageNodeResponse, 0)
 	blobberDetails := make([]*BlobberAllocation, 0)
 	blobberIDs := make([]string, 0)
 	blobberTermsMap := make(map[string]Terms)
@@ -55,11 +52,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
 
 	for _, b := range blobbers {
-		storageNodes = append(storageNodes, &StorageNode{
-			Provider: &provider.Provider{
-				ID:           b.ID,
-				ProviderType: spenum.Blobber,
-			},
+		storageNodes = append(storageNodes, &storageNodeResponse{
+			ID:      b.ID,
 			BaseURL: b.BaseURL,
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  b.Latitude,
