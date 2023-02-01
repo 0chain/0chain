@@ -1,8 +1,9 @@
 package event
 
 import (
-	common2 "0chain.net/smartcontract/common"
 	"fmt"
+
+	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -171,13 +172,6 @@ func (edb *EventDb) CountInactiveSharders() (int64, error) {
 		Count(&count)
 
 	return count, result.Error
-}
-
-func (edb *EventDb) GetShardersTotalStake() (int64, error) {
-	var count int64
-
-	err := edb.Store.Get().Table("sharders").Select("sum(total_stake)").Row().Scan(&count)
-	return count, err
 }
 
 func (edb *EventDb) addSharders(sharders []Sharder) error {

@@ -88,19 +88,6 @@ func (edb *EventDb) GetActiveAllocationsCount() (int64, error) {
 	return count, nil
 }
 
-func (edb *EventDb) GetActiveAllocsBlobberCount() (int64, error) {
-	var count int64
-	err := edb.Store.Get().
-		Raw("SELECT SUM(parity_shards) + SUM(data_shards) FROM allocations WHERE finalized = ? AND cancelled = ?",
-			false, false).
-		Scan(&count).Error
-	if err != nil {
-		return 0, fmt.Errorf("error retrieving blobber allocations count, error: %v", err)
-	}
-
-	return count, nil
-}
-
 func (edb *EventDb) addAllocations(allocs []Allocation) error {
 	return edb.Store.Get().Create(&allocs).Error
 }
