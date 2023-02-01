@@ -151,7 +151,7 @@ func (bStore *BlockStore) readFromDisk(hash string, round int64) (*block.Block, 
 
 // ReadWithBlockSummary - read the block given the block summary
 func (bStore *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
-	return bStore.Read(bs.Hash, bs.Round)
+	return bStore.read(bStore, bs.Hash, bs.Round)
 }
 
 // Init checks for minimum disk size, inodes requirement and assigns
