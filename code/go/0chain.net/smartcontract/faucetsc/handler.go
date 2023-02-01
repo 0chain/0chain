@@ -13,7 +13,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/util"
 )
 
 const (
@@ -63,16 +62,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var faucetConfig *FaucetConfig
-	if gn.FaucetConfig == nil {
-		faucetConfig, err = getFaucetConfig()
-		if err != nil {
-			NoResourceOrErrInternal(w, r, err)
-			return
-		}
-	} else {
-		faucetConfig = gn.FaucetConfig
-	}
+	var faucetConfig = gn.FaucetConfig
 
 	pourAmount, err := faucetConfig.PourAmount.ToZCN()
 	if err != nil {
@@ -194,17 +184,13 @@ func (frh *FaucetscRestHandler) getPersonalPeriodicLimit(w http.ResponseWriter, 
 	common.Respond(w, r, resp, nil)
 }
 
-func getGlobalNode(sctx state.QueryStateContextI) (GlobalNode, error) {
-	gn := GlobalNode{ID: ADDRESS}
-	err := sctx.GetTrieNode(gn.GetKey(), &gn)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return gn, err
-		}
-		gn.FaucetConfig, err = getFaucetConfig()
-		if err != nil {
-			return gn, err
-		}
+func getGlobalNode(sctx state.QueryStateContextI) (*GlobalNode, error) {
+	cfg.l.RLock()
+	if cfg.gnode == nil && cfg.err == nil {
+		cfg.l.RUnlock()
+		MakeConfig(sctx)
+		return cfg.gnode, cfg.err
 	}
-	return gn, nil
+	defer cfg.l.RUnlock()
+	return cfg.gnode, cfg.err
 }

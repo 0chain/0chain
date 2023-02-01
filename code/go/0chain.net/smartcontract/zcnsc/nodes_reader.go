@@ -35,18 +35,12 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 }
 
 func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
-	node := &GlobalNode{ID: ADDRESS}
-	err := ctx.GetTrieNode(node.GetKey(), node)
-	switch err {
-	case nil, util.ErrValueNotPresent:
-		if node.ZCNSConfig == nil {
-			node.ZCNSConfig = getConfig()
-		}
-		if node.WZCNNonceMinted == nil {
-			node.WZCNNonceMinted = make(map[int64]bool)
-		}
-		return node, nil
-	default:
-		return nil, err
+	gnc.l.RLock()
+	if gnc.gnode == nil && gnc.err == nil {
+		gnc.l.RUnlock()
+		MakeConfig(ctx)
+		return gnc.gnode, gnc.err
 	}
+	defer gnc.l.RUnlock()
+	return gnc.gnode, gnc.err
 }

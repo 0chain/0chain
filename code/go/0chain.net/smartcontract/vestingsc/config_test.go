@@ -85,7 +85,7 @@ func TestVestingSmartContract_getConfigHandler(t *testing.T) {
 		balances   = newTestBalances()
 		ctx        = context.Background()
 		configured = configureConfig()
-		err        = InitConfig(balances)
+		err        = MakeConfig(balances)
 	)
 	require.NoError(t, err)
 

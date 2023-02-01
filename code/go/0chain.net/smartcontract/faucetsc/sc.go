@@ -249,13 +249,14 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 }
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
-	gn := &GlobalNode{ID: fc.ID}
-	err := balances.GetTrieNode(globalNodeKey, gn)
-	if err != nil {
-		return nil, err
+	cfg.l.RLock()
+	if cfg.gnode == nil && cfg.err == nil {
+		cfg.l.RUnlock()
+		MakeConfig(balances)
+		return cfg.gnode, cfg.err
 	}
-
-	return gn, nil
+	defer cfg.l.RUnlock()
+	return cfg.gnode, cfg.err
 }
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) (*GlobalNode, error) {

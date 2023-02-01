@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/0chain/common/core/currency"
@@ -74,6 +75,16 @@ type config struct {
 	MaxDescriptionLength int            `json:"max_description_length"`
 	OwnerId              string         `json:"owner_id"`
 	Cost                 map[string]int `json:"cost"`
+}
+
+type cache struct {
+	config *config
+	l      sync.RWMutex
+	err    error
+}
+
+var cfg = &cache{
+	l: sync.RWMutex{},
 }
 
 func (c *config) validate() (err error) {
@@ -274,43 +285,42 @@ func getConfiguredConfig() (conf *config, err error) {
 func getConfigReadOnly(
 	balances chainstate.CommonStateContextI,
 ) (conf *config, err error) {
-	conf = new(config)
-	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
-	switch err {
-	case nil:
-		return conf, nil
-	case util.ErrValueNotPresent:
-		if conf, err = getConfiguredConfig(); err != nil {
-			return nil, err
-		}
-		return conf, nil
-	default:
-		return nil, err
+	cfg.l.RLock()
+	if cfg.config == nil && cfg.err == nil {
+		cfg.l.RUnlock()
+		MakeConfig(balances)
+		return cfg.config, cfg.err
 	}
+	defer cfg.l.RUnlock()
+	return cfg.config, cfg.err
 }
 
 func (vsc *VestingSmartContract) getConfig(
 	balances chainstate.StateContextI,
 ) (conf *config, err error) {
-	conf = new(config)
-	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
-	if err != nil {
-		return nil, err
+	cfg.l.RLock()
+	if cfg.config == nil && cfg.err == nil {
+		cfg.l.RUnlock()
+		MakeConfig(balances)
+		return cfg.config, cfg.err
 	}
-	return conf, nil
+	defer cfg.l.RUnlock()
+	return cfg.config, cfg.err
 }
 
-func InitConfig(balances chainstate.StateContextI) error {
-	err := balances.GetTrieNode(scConfigKey(ADDRESS), &config{})
-	if err == util.ErrValueNotPresent {
-		conf, err := getConfiguredConfig()
-		if err != nil {
-			return err
+func MakeConfig(balances chainstate.CommonStateContextI) error {
+	cfg.l.Lock()
+	defer cfg.l.Unlock()
+	cfg.err = balances.GetTrieNode(scConfigKey(ADDRESS), cfg.config)
+	if cfg.err == util.ErrValueNotPresent {
+		cfg.config, cfg.err = getConfiguredConfig()
+		if cfg.err != nil {
+			return cfg.err
 		}
-		_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-		return err
+		_, cfg.err = balances.InsertTrieNode(scConfigKey(ADDRESS), cfg.config)
+		return cfg.err
 	}
-	return err
+	return cfg.err
 }
 
 //

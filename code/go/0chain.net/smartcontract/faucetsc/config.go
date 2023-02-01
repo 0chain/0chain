@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"sync"
 	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -54,6 +55,16 @@ type FaucetConfig struct {
 	Cost            map[string]int `json:"cost"`
 }
 
+type cache struct {
+	gnode *GlobalNode
+	l     sync.RWMutex
+	err   error
+}
+
+var cfg = &cache{
+	l: sync.RWMutex{},
+}
+
 // configurations from sc.yaml
 func getFaucetConfig() (conf *FaucetConfig, err error) {
 
@@ -81,20 +92,22 @@ func getFaucetConfig() (conf *FaucetConfig, err error) {
 	return
 }
 
-func InitConfig(balances cstate.CommonStateContextI) error {
-	gn := new(GlobalNode)
-	err := balances.GetTrieNode(globalNodeKey, gn)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return err
-		}
-		gn.FaucetConfig, err = getFaucetConfig()
-		if err != nil {
-			return err
+func MakeConfig(balances cstate.CommonStateContextI) error {
+	cfg.l.Lock()
+	defer cfg.l.Unlock()
+	var gn = new(GlobalNode)
+	cfg.err = balances.GetTrieNode(globalNodeKey, gn)
+	if cfg.err == util.ErrValueNotPresent {
+		gn.FaucetConfig, cfg.err = getFaucetConfig()
+		if cfg.err != nil {
+			return cfg.err
 		}
 		gn.ID = ADDRESS
-		_, err = balances.InsertTrieNode(globalNodeKey, gn)
-		return err
+		_, cfg.err = balances.InsertTrieNode(globalNodeKey, gn)
+		if cfg.err != nil {
+			return cfg.err
+		}
 	}
-	return nil
+	cfg.gnode = gn
+	return cfg.err
 }

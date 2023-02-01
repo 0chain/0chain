@@ -3,6 +3,7 @@ package zcnsc
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/currency"
@@ -42,16 +43,32 @@ var CostFunctions = []string{
 	AddAuthorizerFunc,
 }
 
-// InitConfig initializes global node config to MPT
-func InitConfig(ctx state.StateContextI) error {
+type cache struct {
+	gnode *GlobalNode
+	l     sync.RWMutex
+	err   error
+}
+
+var gnc = &cache{
+	l: sync.RWMutex{},
+}
+
+// MakeConfig initializes or updates global node config to MPT
+func MakeConfig(ctx state.CommonStateContextI) error {
+	gnc.l.Lock()
+	defer gnc.l.Unlock()
 	node := &GlobalNode{ID: ADDRESS}
-	err := ctx.GetTrieNode(node.GetKey(), node)
-	if err == util.ErrValueNotPresent {
+	gnc.err = ctx.GetTrieNode(node.GetKey(), node)
+	if gnc.err == util.ErrValueNotPresent {
 		node.ZCNSConfig = getConfig()
-		_, err := ctx.InsertTrieNode(node.GetKey(), node)
-		return err
+		if node.WZCNNonceMinted == nil {
+			node.WZCNNonceMinted = make(map[int64]bool)
+		}
+		_, gnc.err = ctx.InsertTrieNode(node.GetKey(), node)
+		return gnc.err
 	}
-	return err
+	gnc.gnode = node
+	return gnc.err
 }
 
 func GetGlobalNode(ctx state.CommonStateContextI) (*GlobalNode, error) {

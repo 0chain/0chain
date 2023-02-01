@@ -44,6 +44,16 @@ var (
 	}
 )
 
+type cache struct {
+	gnode *GlobalNode
+	l     sync.RWMutex
+	err   error
+}
+
+var cfg = &cache{
+	l: sync.RWMutex{},
+}
+
 //MinerSmartContract Smartcontract that takes care of all miner related requests
 type MinerSmartContract struct {
 	*sci.SmartContract
@@ -132,36 +142,34 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	return scFunc(t, input, gn, balances)
 }
 
-func getGlobalNode(
-	balances cstate.CommonStateContextI,
-) (gn *GlobalNode, err error) {
-	gn = new(GlobalNode)
-	err = balances.GetTrieNode(GlobalNodeKey, gn)
-	if err != nil {
-		return nil, err
+func getGlobalNode(balances cstate.CommonStateContextI) (gn *GlobalNode, err error) {
+	cfg.l.RLock()
+	if cfg.gnode == nil && cfg.err == nil {
+		cfg.l.RUnlock()
+		MakeConfig(sctx)
+		return cfg.gnode, cfg.err
 	}
-
-	return gn, nil
+	defer cfg.l.RUnlock()
+	return cfg.gnode, cfg.err
 }
 
-func InitConfig(
-	balances cstate.CommonStateContextI,
-) (err error) {
+func MakeConfig(balances cstate.CommonStateContextI) (err error) {
+	cfg.l.Lock()
+	defer cfg.l.Unlock()
 	gn := new(GlobalNode)
-	err = balances.GetTrieNode(GlobalNodeKey, gn)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return err
+	cfg.err = balances.GetTrieNode(GlobalNodeKey, gn)
+	if cfg.err == util.ErrValueNotPresent {
+		cfg.err = gn.readConfig()
+		if cfg.err != nil {
+			return fmt.Errorf("error reading config: %v", cfg.err)
 		}
-		err = gn.readConfig()
-		if err != nil {
-			return fmt.Errorf("error reading config: %v", err)
+		if cfg.err = gn.validate(); cfg.err != nil {
+			return fmt.Errorf("validating global node: %v", cfg.err)
 		}
-		if err := gn.validate(); err != nil {
-			return fmt.Errorf("validating global node: %v", err)
+		if _, cfg.err = balances.InsertTrieNode(GlobalNodeKey, gn); cfg.err != nil {
+			return cfg.err
 		}
-		_, err = balances.InsertTrieNode(GlobalNodeKey, gn)
-		return err
 	}
-	return nil
+	cfg.gnode = gn
+	return cfg.err
 }

@@ -583,41 +583,46 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		panic(err)
 	}
 
-	err := faucetsc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB faucetsc InitConfig failed", zap.Error(err))
-		panic(err)
-	}
-
-	err = minersc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB minersc InitConfig failed", zap.Error(err))
-		panic(err)
-	}
-
-	err = storagesc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB storagesc InitConfig failed", zap.Error(err))
-		panic(err)
-	}
-
-	err = vestingsc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB vestingsc InitConfig failed", zap.Error(err))
-		panic(err)
-	}
-
-	err = zcnsc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB zcnsc InitConfig failed", zap.Error(err))
-		panic(err)
-	}
+	makeConfigs(stateCtx)
 
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
 	}
 	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func makeConfigs(stateCtx *cstate.StateContext) error {
+	err := faucetsc.MakeConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB faucetsc MakeConfig failed", zap.Error(err))
+		return err
+	}
+
+	err = minersc.MakeConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB minersc MakeConfig failed", zap.Error(err))
+		return err
+	}
+
+	err = storagesc.MakeConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB storagesc MakeConfig failed", zap.Error(err))
+		return err
+	}
+
+	err = vestingsc.MakeConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB vestingsc MakeConfig failed", zap.Error(err))
+		return err
+	}
+
+	err = zcnsc.MakeConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB zcnsc MakeConfig failed", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {

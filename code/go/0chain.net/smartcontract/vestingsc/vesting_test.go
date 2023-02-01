@@ -175,7 +175,7 @@ func TestVestingSmartContract_add(t *testing.T) {
 		client   = newClient(0, balances)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		ar       addRequest
-		err      = InitConfig(balances)
+		err      = MakeConfig(balances)
 	)
 	require.NoError(t, err)
 
@@ -248,7 +248,7 @@ func TestVestingSmartContract_delete(t *testing.T) {
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		dr       poolRequest
-		err      = InitConfig(balances)
+		err      = MakeConfig(balances)
 	)
 	require.NoError(t, err)
 
@@ -318,7 +318,7 @@ func TestVestingSmartContract_stop(t *testing.T) {
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		sr       stopRequest
-		err      = InitConfig(balances)
+		err      = MakeConfig(balances)
 	)
 	require.NoError(t, err)
 
@@ -392,7 +392,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		lr       poolRequest
-		err      = InitConfig(balances)
+		err      = MakeConfig(balances)
 	)
 	require.NoError(t, err)
 
@@ -457,7 +457,7 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
 		lr       poolRequest
-		err      = InitConfig(balances)
+		err      = MakeConfig(balances)
 	)
 	require.NoError(t, err)
 
@@ -525,7 +525,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 		params   = make(url.Values)
 		client   = newClient(0, balances)
 		resp     interface{}
-		err      = InitConfig(balances)
+		err      = MakeConfig(balances)
 	)
 	require.NoError(t, err)
 
