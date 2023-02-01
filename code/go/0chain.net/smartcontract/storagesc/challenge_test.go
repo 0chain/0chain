@@ -463,6 +463,308 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 }
 
+func TestVerifyChallenge(t *testing.T) {
+	tt := []struct {
+		name                      string
+		ticketNum                 int
+		hasDuplicateTicket        bool
+		hasNonceSelectedValidator bool
+		wrongClientID             bool
+		err                       error
+	}{
+		{
+			name:      "ok",
+			ticketNum: 10,
+		},
+		{
+			name:               "duplicate ticket",
+			ticketNum:          10,
+			hasDuplicateTicket: true,
+			err:                common.NewError("verify_challenge", "found duplicate validation tickets"),
+		},
+		{
+			name:      "not enough tickets",
+			ticketNum: 4, // threshold is 5
+			err:       common.NewError("verify_challenge", "validation tickets less than threshold: 5, tickets: 4"),
+		},
+		{
+			name:                      "ticket signed with unauthorized validator",
+			ticketNum:                 5,
+			hasNonceSelectedValidator: true,
+			err:                       common.NewError("verify_challenge", "found invalid validator id in validation ticket"),
+		},
+		{
+			name:          "wrong txn client id",
+			ticketNum:     5,
+			wrongClientID: true,
+			err:           errors.New("challenge blobber id does not match"),
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ssc, balances, tp, alloc, b3, valids, validators, blobber := prepareAllocChallenges(t, 10)
+			step := (int64(alloc.Expiration) - tp) / 10
+
+			challID := fmt.Sprintf("chall-0")
+			genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
+
+			chall := &ChallengeResponse{
+				ID: challID,
+			}
+
+			for i := 0; i < tc.ticketNum; i++ {
+				chall.ValidationTickets = append(chall.ValidationTickets,
+					valids[i].validTicket(t, chall.ID, b3.id, true, tp))
+			}
+
+			if tc.hasDuplicateTicket {
+				chall.ValidationTickets[0] = chall.ValidationTickets[1]
+			}
+
+			if tc.hasNonceSelectedValidator {
+				tp += 10
+				var newValids []*Client
+				newValids, tp = testAddValidators(t, balances, ssc, 1, tp)
+				// replace the last ticket with the new none selected validator
+				chall.ValidationTickets[len(chall.ValidationTickets)-1] = newValids[0].validTicket(t, chall.ID, b3.id, true, tp)
+			}
+
+			tp += step / 2
+			var tx *transaction.Transaction
+			if tc.wrongClientID {
+				tx = newTransaction(alloc.BlobberAllocs[0].BlobberID, ssc.ID, 0, tp)
+			} else {
+				tx = newTransaction(b3.id, ssc.ID, 0, tp)
+			}
+			balances.setTransaction(t, tx)
+			var resp string
+			resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+			require.Equal(t, tc.err, err)
+			if err != nil {
+				return
+			}
+
+			require.Equal(t, resp, "challenge passed by blobber")
+		})
+	}
+
+}
+
+func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
+	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
+	return tmpt
+}
+
+// TODO: test to run the same verify challenge SC multiple times result in the same state
+func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
+	ssc, balances, tp, alloc, b3, valids, validators, blobber := prepareAllocChallenges(t, 10)
+	step := (int64(alloc.Expiration) - tp) / 10
+
+	challID := fmt.Sprintf("chall-0")
+	genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
+
+	chall := &ChallengeResponse{
+		ID: challID,
+	}
+
+	for i := 0; i < 10; i++ {
+		chall.ValidationTickets = append(chall.ValidationTickets,
+			valids[i].validTicket(t, chall.ID, b3.id, true, tp))
+	}
+
+	tp += step / 2
+	tx := newTransaction(b3.id, ssc.ID, 0, tp)
+	balances.setTransaction(t, tx)
+
+	stateRoots := make(map[string]struct{}, 10)
+	for i := 0; i < 20; i++ {
+		clientState := createTxnMPT(balances.GetState())
+		signatureScheme := &encryption.BLS0ChainScheme{}
+		cs := cstate.NewStateContext(balances.block, clientState,
+			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
+
+		var resp string
+		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), cs)
+		require.NoError(t, err)
+
+		require.Equal(t, resp, "challenge passed by blobber")
+		stateRoots[util.ToHex(cs.GetState().GetRoot())] = struct{}{}
+	}
+
+	// Assert muultiple verify challenges running would all result in the same state root, i.e. there's only one
+	// record in the stateRoots map.
+	require.Equal(t, len(stateRoots), 1)
+}
+
+func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64, *StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode) {
+	var (
+		ssc            = newTestStorageSC()
+		balances       = newTestBalances(t, true)
+		client         = newClient(100*x10, balances)
+		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+
+		// no owner
+		reader = newClient(100*x10, balances)
+		err    error
+	)
+
+	// new allocation
+	tp += 100
+	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
+
+	// blobbers: stake 10k, balance 40k
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	b1 := testGetBlobber(blobs, alloc, 0)
+	require.NotNil(t, b1)
+
+	// read as owner
+	tp = testCommitRead(t, balances, client, client, alloc, b1.id, ssc, tp)
+
+	//read as unauthorized separate user
+	tp = testCommitRead(t, balances, client, reader, alloc, b1.id, ssc, tp)
+
+	b2 := testGetBlobber(blobs, alloc, 1)
+	require.NotNil(t, b2)
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, b2.id, ssc)
+
+	b3 := testGetBlobber(blobs, alloc, 2)
+	require.NotNil(t, b3)
+
+	// add 10 validators
+	valids, tp := testAddValidators(t, balances, ssc, validatorsNum, tp)
+
+	//_, err := ssc.getChallengePool(allocID, balances)
+	//require.NoError(t, err)
+
+	const allocRoot = "alloc-root-1"
+
+	// write 100MB
+	_, tp = testCommitWrite(t, balances, client, allocID, allocRoot, 100*1024*1024, tp, b3.id, ssc)
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	// load validators
+	validators, err := getValidatorsList(balances)
+	require.NoError(t, err)
+
+	// load blobber
+	var blobber *StorageNode
+	blobber, err = ssc.getBlobber(b3.id, balances)
+	require.NoError(t, err)
+	return ssc, balances, tp, alloc, b3, valids, validators, blobber
+}
+
+func testAddValidators(t *testing.T, balances *testBalances, ssc *StorageSmartContract, num int, tp int64) ([]*Client, int64) {
+	var valids []*Client
+	tp += 100
+	for i := 0; i < num; i++ {
+		valids = append(valids, addValidator(t, ssc, tp, balances))
+	}
+	return valids, tp
+}
+
+func testGetBlobber(blobs []*Client, alloc *StorageAllocation, i int) *Client {
+	var bc *Client
+	for _, b := range blobs {
+		if b.id == alloc.BlobberAllocs[i].BlobberID {
+			bc = b
+			break
+		}
+	}
+	return bc
+}
+
+func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client,
+	alloc *StorageAllocation, blobberID string, ssc *StorageSmartContract, tp int64) int64 {
+	tp += 100
+	var rm ReadConnection
+	rm.ReadMarker = &ReadMarker{
+		ClientID:        reader.id,
+		ClientPublicKey: reader.pk,
+		BlobberID:       blobberID,
+		AllocationID:    alloc.ID,
+		OwnerID:         client.id,
+		Timestamp:       common.Timestamp(tp),
+		ReadCounter:     1 * GB / (64 * KB),
+	}
+	var err error
+	rm.ReadMarker.Signature, err = reader.scheme.Sign(
+		encryption.Hash(rm.ReadMarker.GetHashData()))
+	require.NoError(t, err)
+
+	tp += 100
+	var tx = newTransaction(blobberID, ssc.ID, 0, tp)
+	balances.setTransaction(t, tx)
+	_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
+	require.Error(t, err)
+
+	// read pool lock
+	tp += 100
+
+	readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
+	require.NoError(t, err)
+	tx = newTransaction(reader.id, ssc.ID, readPoolFund, tp)
+	balances.setTransaction(t, tx)
+	_, err = ssc.readPoolLock(tx, mustEncode(t, &readPoolLockRequest{
+		TargetId: reader.id,
+	}), balances)
+	require.NoError(t, err)
+
+	var rp *readPool
+	rp, err = ssc.getReadPool(reader.id, balances)
+	require.NoError(t, err)
+	require.EqualValues(t, readPoolFund, int64(rp.Balance))
+
+	// read
+	tp += 100
+	tx = newTransaction(blobberID, ssc.ID, 0, tp)
+	balances.setTransaction(t, tx)
+	_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
+	require.NoError(t, err)
+	return tp
+}
+
+func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract) (*transaction.Transaction, int64) {
+	tp += 100
+	cc := &BlobberCloseConnection{
+		AllocationRoot:     allocRoot,
+		PrevAllocationRoot: "",
+		WriteMarker: &WriteMarker{
+			AllocationRoot:         allocRoot,
+			PreviousAllocationRoot: "",
+			AllocationID:           allocID,
+			//Size:                   100 * 1024 * 1024, // 100 MB
+			Size:      size,
+			BlobberID: blobberID,
+			Timestamp: common.Timestamp(tp),
+			ClientID:  client.id,
+		},
+	}
+	var err error
+	cc.WriteMarker.Signature, err = client.scheme.Sign(
+		encryption.Hash(cc.WriteMarker.GetHashData()))
+	require.NoError(t, err)
+
+	// write
+	//tp += 100
+	var tx = newTransaction(blobberID, ssc.ID, 0, tp)
+	balances.setTransaction(t, tx)
+	var resp string
+	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+		balances)
+	require.NoError(t, err)
+	require.NotZero(t, resp)
+	return tx, tp
+}
+
 func testBlobberPenalty(
 	t *testing.T,
 	scYaml Config,

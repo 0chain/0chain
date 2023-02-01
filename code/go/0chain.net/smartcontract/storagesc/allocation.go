@@ -323,6 +323,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			AllocationId: sa.ID,
 			Delta:        bSize(request.Size, request.DataShards),
 		})
+
+		emitUpdateBlobber(b, balances)
 	}
 
 	var options []WithOption
@@ -1359,9 +1361,9 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 
 		if ba.Stats.TotalChallenges == 0 {
 			logging.Logger.Warn("empty total challenges on finalizedPassRates",
-				zap.Any("OpenChallenges", ba.Stats.OpenChallenges),
-				zap.Any("FailedChallenges", ba.Stats.FailedChallenges),
-				zap.Any("SuccessChallenges", ba.Stats.SuccessChallenges))
+				zap.Int64("OpenChallenges", ba.Stats.OpenChallenges),
+				zap.Int64("FailedChallenges", ba.Stats.FailedChallenges),
+				zap.Int64("SuccessChallenges", ba.Stats.SuccessChallenges))
 			return nil, errors.New("empty total challenges")
 		}
 

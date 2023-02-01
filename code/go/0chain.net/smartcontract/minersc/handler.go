@@ -418,29 +418,31 @@ func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	var err error
+	var errMiner error
 	var miner event.Miner
 	var dps []event.DelegatePool
 	if includeDelegates {
-		miner, dps, err = edb.GetMinerWithDelegatePools(id)
+		miner, dps, errMiner = edb.GetMinerWithDelegatePools(id)
 	} else {
-		miner, err = edb.GetMiner(id)
+		miner, errMiner = edb.GetMiner(id)
 	}
-	if err == nil {
+	if errMiner == nil {
 		common.Respond(w, r, nodeStat{
 			NodeResponse: minerTableToMinerNode(miner, dps),
 			TotalReward:  int64(miner.Rewards.TotalRewards),
 		}, nil)
 		return
 	}
+	var errSharder error
 	var sharder event.Sharder
 	if includeDelegates {
-		sharder, dps, err = edb.GetSharderWithDelegatePools(id)
+		sharder, dps, errSharder = edb.GetSharderWithDelegatePools(id)
 	} else {
-		sharder, err = edb.GetSharder(id)
+		sharder, errSharder = edb.GetSharder(id)
 	}
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("miner/sharder not found"))
+	if errSharder != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(fmt.Sprintf(
+			"no matching provider for id %s, miner not found: %v, and sharder not found: %v", id, errMiner, errSharder)))
 		return
 	}
 	common.Respond(w, r, nodeStat{

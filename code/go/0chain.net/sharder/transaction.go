@@ -119,13 +119,13 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 		err := sc.storeTransactions(sTxns)
 		if err != nil {
 			delay = 2 * delay
-			logging.Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
+			logging.Logger.Error("save transactions error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
 			time.Sleep(delay)
 			continue
 		}
 
 		success = true
-		logging.Logger.Debug("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
+		logging.Logger.Debug("transactions saved successfully", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)))
 		break
 	}
 
@@ -137,7 +137,7 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 	txnSaveTimer.UpdateSince(ts)
 	p95 := txnSaveTimer.Percentile(.95)
 	if txnSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-		logging.Logger.Info("save transactions - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+		logging.Logger.Info("save transactions - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	}
 	return nil
 }
@@ -172,7 +172,7 @@ func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) 
 		if err == nil {
 			txnSummaryMV = true
 		} else {
-			logging.Logger.Info("create mv", zap.Error(err))
+			logging.Logger.Error("create mv", zap.Error(err))
 			txnSummaryMV = true
 			return 0, err
 		}
