@@ -146,7 +146,7 @@ func getGlobalNode(balances cstate.CommonStateContextI) (gn *GlobalNode, err err
 	cfg.l.RLock()
 	if cfg.gnode == nil && cfg.err == nil {
 		cfg.l.RUnlock()
-		MakeConfig(sctx)
+		MakeConfig(balances)
 		return cfg.gnode, cfg.err
 	}
 	defer cfg.l.RUnlock()
