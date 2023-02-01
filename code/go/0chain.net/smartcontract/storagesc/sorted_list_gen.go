@@ -46,7 +46,7 @@ func (z *SortedBlobbers) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			(*z)[zb0001] = nil
 		} else {
 			if (*z)[zb0001] == nil {
-				(*z)[zb0001] = newBlobber("")
+				(*z)[zb0001] = new(StorageNode)
 			}
 			bts, err = (*z)[zb0001].UnmarshalMsg(bts)
 			if err != nil {
