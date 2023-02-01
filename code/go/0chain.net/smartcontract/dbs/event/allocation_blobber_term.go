@@ -94,7 +94,7 @@ func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 	}
 
 	return CreateBuilder("allocation_blobber_terms", "allocation_id", allocationIdList).
-		AddCondition("blobber_id", blobberIdList).
+		AddIdPart("blobber_id", blobberIdList).
 		AddUpdate("read_price", readPriceList).
 		AddUpdate("write_price", writePriceList).
 		AddUpdate("min_lock_demand", minLockDemandList).

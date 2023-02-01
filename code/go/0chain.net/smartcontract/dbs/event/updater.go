@@ -13,9 +13,9 @@ const SetTemplate = "%v = t.%v"
 const ExprTemplate = "%v = %v"
 const UnnestTemplate = "unnest(?::%v[]) AS %v"
 const UpdateTemplate = "UPDATE %v SET"
-const WhereTemplate = "WHERE %v.%v = t.%v"
-const ExtraConditionTemplate = "AND %v.%v = t.%v "
-const QueryTemplate = "%v %v FROM (SELECT %v) AS t %v %v"
+const WhereTemplate = "WHERE %v.%v = t.%v" // TODO: Remove
+const ConditionTemplate = "%v %v %v"
+const QueryTemplate = "%v %v FROM (SELECT %v) AS t %v"
 
 var typeToSQL = map[reflect.Type]string{
 	reflect.TypeOf([]string{}):  "text",
@@ -38,7 +38,6 @@ type UpdateBuilder struct {
 	unnests []string
 	update  string
 	where   string
-	extraConditions string
 	values  []interface{}
 }
 
@@ -47,12 +46,14 @@ type UpdateBuilder struct {
 func CreateBuilder(table string, idColumn string, idValues interface{}) (b *UpdateBuilder) {
 	b = &UpdateBuilder{}
 	b.tableName = table
-	b.AddUpdate(idColumn, idValues)
-	b.sets = nil
 	b.update = fmt.Sprintf(UpdateTemplate, table)
-	b.where = fmt.Sprintf(WhereTemplate, table, idColumn, idColumn)
-
+	b.addWhereConditionFromValues(idColumn).addToUnnests(idColumn, idValues).addToValues(idValues)
 	return b
+}
+
+// AddIdPart Add new part of a composite id key
+func (b *UpdateBuilder) AddIdPart(columnName string, values interface{}) *UpdateBuilder {
+	return b.addWhereConditionFromValues(columnName).addToUnnests(columnName, values).addToValues(values)
 }
 
 // AddUpdate adds column to an update.
@@ -63,18 +64,12 @@ func CreateBuilder(table string, idColumn string, idValues interface{}) (b *Upda
 // If expression is set, then it will be used instead of default, e. g. expr = "table.column =table.column + t.column ",
 // which means that current value of column will be increased, so *UPDATE table SET table.column =table.column + t.column* will be generated instead
 func (b *UpdateBuilder) AddUpdate(column string, values interface{}, expr ...string) *UpdateBuilder {
-	b.addToSets(column, values, expr...)
-	b.addToUnnests(column, values)
-	b.addToValues(values)
-	return b
+	return b.addToSets(column, values, expr...).addToUnnests(column, values).addToValues(values)
 }
 
-// AddCondition Add ANDed condition to the update query 
-func (b *UpdateBuilder) AddCondition(column string, values interface{}) *UpdateBuilder {
-	b.addToExtraConditions(column)
-	b.addToUnnests(column, values)
-	b.addToValues(values)
-	return b
+// AddCondition Add ANDed condition comparing a field to a static value to the update query 
+func (b *UpdateBuilder) AddCondition(column, operator, value string) *UpdateBuilder {
+	return b.addWhereCondition(b.tableName + "." + column, operator, value)
 }
 
 type Query struct {
@@ -92,10 +87,10 @@ func (b *UpdateBuilder) build() *Query {
 		unnests = unnests + u
 	}
 
-	return &Query{Q: fmt.Sprintf(QueryTemplate, b.update, sets, unnests, b.where, b.extraConditions), V: b.values}
+	return &Query{Q: fmt.Sprintf(QueryTemplate, b.update, sets, unnests, b.where), V: b.values}
 }
 
-func (b *UpdateBuilder) addToSets(column string, values interface{}, expr ...string) {
+func (b *UpdateBuilder) addToSets(column string, values interface{}, expr ...string) *UpdateBuilder {
 	if b.sets != nil {
 		b.sets = append(b.sets, ", ")
 	}
@@ -108,9 +103,11 @@ func (b *UpdateBuilder) addToSets(column string, values interface{}, expr ...str
 		logging.Logger.Warn("only one expr is supported, ignoring")
 		b.sets = append(b.sets, fmt.Sprintf(ExprTemplate, column, expr[0]))
 	}
+
+	return b
 }
 
-func (b *UpdateBuilder) addToUnnests(column string, values interface{}) {
+func (b *UpdateBuilder) addToUnnests(column string, values interface{}) *UpdateBuilder {
 	atype, ok := typeToSQL[reflect.TypeOf(values)]
 
 	if !ok {
@@ -121,14 +118,28 @@ func (b *UpdateBuilder) addToUnnests(column string, values interface{}) {
 		b.unnests = append(b.unnests, ", ")
 	}
 	b.unnests = append(b.unnests, fmt.Sprintf(UnnestTemplate, atype, column))
+
+	return b
 }
 
-func (b *UpdateBuilder) addToValues(values interface{}) {
+func (b *UpdateBuilder) addToValues(values interface{}) *UpdateBuilder {
 	b.values = append(b.values, []interface{}{pq.Array(values)})
+	return b
 }
 
-func (b *UpdateBuilder) addToExtraConditions(column string) {
-	b.extraConditions += fmt.Sprintf(ExtraConditionTemplate, b.tableName, column, column)
+// Add condition in the form tableName.columnName = t.columnName
+func (b *UpdateBuilder) addWhereConditionFromValues(column string) *UpdateBuilder {
+	return b.addWhereCondition(b.tableName + "." + column, "=", "t." + column)
+}
+
+func (b *UpdateBuilder) addWhereCondition(left, operator, right string) *UpdateBuilder {
+	if b.where != "" {
+		b.where += " AND "
+	} else {
+		b.where += "WHERE "
+	}
+	b.where += fmt.Sprintf(ConditionTemplate, left, operator, right)
+	return b
 }
 
 // Exec builds and executes the query
