@@ -408,8 +408,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	validateBlock := func(b *block.Block) (*block.Block, error) {
 		if err = b.Validate(ctx); err != nil {
 			logging.Logger.Error("fetch_fb_from_sharders - invalid",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash),
-				zap.Any("block_obj", b), zap.Error(err))
+				zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 			return nil, err
 		}
 
@@ -535,14 +534,13 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 		nb, ok := <-blockC
 		if !ok {
 			logging.Logger.Debug("fetch_nb_from_miners - no notarized block given",
-				zap.Any("duration", time.Since(ts)))
+				zap.Duration("duration", time.Since(ts)))
 			return nil, common.NewErrorf("fetch_nb_from_miners", "no notarized block given")
 		}
 
 		if err = nb.Validate(ctx); err != nil {
 			logging.Logger.Error("fetch_nb_from_miners - invalid",
-				zap.Int64("round", nb.Round), zap.String("block", hash),
-				zap.Any("block_obj", nb), zap.Error(err))
+				zap.Int64("round", nb.Round), zap.String("block", hash), zap.Error(err))
 			continue
 		}
 
@@ -554,13 +552,13 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 			case context.DeadlineExceeded:
 				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets timeout",
 					zap.Int64("round", nb.Round), zap.String("block", hash),
-					zap.Any("duration", time.Since(ts)),
+					zap.Duration("duration", time.Since(ts)),
 					zap.Error(err))
 				return nil, err
 			case context.Canceled:
 				logging.Logger.Debug("fetch_nb_from_miners - verify notarization tickets canceled",
 					zap.Int64("round", nb.Round), zap.String("block", hash),
-					zap.Any("duration", time.Since(ts)),
+					zap.Duration("duration", time.Since(ts)),
 					zap.Error(err))
 				return nil, err
 			default:

@@ -52,8 +52,8 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				if bmsg.Sender != nil {
 					logging.Logger.Debug("message",
 						zap.Any("msg", GetMessageLookup(bmsg.Type)),
-						zap.Any("sender_index", bmsg.Sender.SetIndex),
-						zap.Any("id", bmsg.Sender.GetKey()))
+						zap.Int("sender_index", bmsg.Sender.SetIndex),
+						zap.String("id", bmsg.Sender.GetKey()))
 				} else {
 					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
 				}
@@ -72,13 +72,13 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				if bmsg.Sender != nil {
 					logging.Logger.Debug("message (done)",
 						zap.Any("msg", GetMessageLookup(bmsg.Type)),
-						zap.Any("sender_index", bmsg.Sender.SetIndex),
-						zap.Any("id", bmsg.Sender.GetKey()),
-						zap.Any("duration", time.Since(ts)))
+						zap.Int("sender_index", bmsg.Sender.SetIndex),
+						zap.String("id", bmsg.Sender.GetKey()),
+						zap.Duration("duration", time.Since(ts)))
 				} else {
 					logging.Logger.Debug("message (done)",
 						zap.Any("msg", GetMessageLookup(bmsg.Type)),
-						zap.Any("duration", time.Since(ts)))
+						zap.Duration("duration", time.Since(ts)))
 				}
 			}(msg)
 		}
@@ -104,7 +104,7 @@ func roundTimeoutProcess(ctx context.Context, proto Protocol, rn int64) {
 	case <-rc:
 		logging.Logger.Info("protocol.HandleRoundTimeout finished",
 			zap.Int64("round", rn),
-			zap.Any("duration", time.Since(ts)))
+			zap.Duration("duration", time.Since(ts)))
 	}
 }
 
@@ -138,8 +138,8 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						}
 					} else {
 						logging.Logger.Info("round timeout",
-							zap.Any("round", r.Number),
-							zap.Any("current round", cround),
+							zap.Int64("round", r.Number),
+							zap.Int64("current round", cround),
 							zap.Int("VRF_shares", len(r.GetVRFShares())),
 							zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
 							zap.Int("verificationTickets", len(r.verificationTickets)),
