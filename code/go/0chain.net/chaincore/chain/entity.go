@@ -567,7 +567,8 @@ func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 
 /*setupInitialState - setup the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
-	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
+	memMPT := util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
+	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
 	for _, v := range initStates.States {
 		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
 			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
@@ -613,9 +614,24 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		panic(err)
 	}
 
-	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
-		logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
+	gbInitedKey := encryption.RawHash("genesis block state init")
+	_, err = c.stateDB.GetNode(gbInitedKey)
+	switch err {
+	case nil:
+	case util.ErrNodeNotFound:
+		logging.Logger.Info("initialize genesis block state",
+			zap.Int("changes", pmt.GetChangeCount()), zap.String("root", util.ToHex(pmt.GetRoot())))
+		if err := pmt.SaveChanges(context.Background(), c.stateDB, false); err != nil {
+			logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
+		}
+
+		if err := stateDB.PutNode(gbInitedKey, util.NewValueNode()); err != nil {
+			logging.Logger.Panic("set gb initialized failed", zap.Error(err))
+		}
+	default:
+		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
 	}
+
 	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
