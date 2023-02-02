@@ -12,8 +12,9 @@ import (
 
 	"0chain.net/core/viper"
 
-	"github.com/0chain/common/core/currency"
 	"encoding/json"
+
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -309,9 +310,14 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 
 /*GetSignatureScheme - get the signature scheme associated with this transaction */
 func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
-	var err error
+
 	co, err := client.GetClientFromCache(t.ClientID)
 	if err != nil {
+		err = encryption.VerifyPublicKeyClientID(t.PublicKey, t.ClientID)
+		if err != nil {
+			return nil, err
+		}
+
 		co = client.NewClient()
 		co.ID = t.ClientID
 		if err := co.SetPublicKey(t.PublicKey); err != nil {
@@ -326,6 +332,12 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 		if t.PublicKey == "" {
 			return nil, errors.New("get signature scheme failed, empty public key in transaction")
 		}
+
+		err = encryption.VerifyPublicKeyClientID(t.PublicKey, t.ClientID)
+		if err != nil {
+			return nil, err
+		}
+
 		co.ID = t.ClientID
 		if err := co.SetPublicKey(t.PublicKey); err != nil {
 			return nil, err
