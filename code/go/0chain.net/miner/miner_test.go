@@ -5,13 +5,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/alicebob/miniredis/v2"
 	"log"
 	"os"
 	"os/user"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/alicebob/miniredis/v2"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/setupsc"
@@ -239,6 +240,8 @@ func TestBlockVerification(t *testing.T) {
 func TestTwoCorrectBlocks(t *testing.T) {
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
+
+	config.SetupSmartContractConfig("testdata")
 	ctx := context.Background()
 	mr := CreateMockRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
