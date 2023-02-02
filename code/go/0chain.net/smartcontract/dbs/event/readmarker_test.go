@@ -109,12 +109,6 @@ func TestReadMarkersPaginated(t *testing.T) {
 		assert.Equal(t, 10, len(rms), "Not all readmarker are sent correctly")
 	})
 
-	t.Run("ReadMarkers size total", func(t *testing.T) {
-		gotWM, err := eventDb.GetDataReadFromAllocationForLastNBlocks(5, "")
-		assert.NoError(t, err)
-		assert.Equal(t, int64(300), gotWM)
-	})
-
 }
 
 func insertMultipleReadMarker(t *testing.T, eventDb *EventDb) {

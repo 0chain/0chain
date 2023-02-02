@@ -1,9 +1,10 @@
 package event
 
 import (
-	common2 "0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
+
+	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -203,13 +204,6 @@ func (edb *EventDb) CountInactiveMiners() (int64, error) {
 		Count(&count)
 
 	return count, result.Error
-}
-
-func (edb *EventDb) GetMinersTotalStake() (int64, error) {
-	var count int64
-
-	err := edb.Store.Get().Table("miners").Select("sum(total_stake)").Row().Scan(&count)
-	return count, err
 }
 
 func (edb *EventDb) GetMiners() ([]Miner, error) {

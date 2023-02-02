@@ -675,8 +675,6 @@ type StorageAllocation struct {
 	TimeUnit time.Duration `json:"time_unit"`
 
 	Curators []string `json:"curators"`
-	// Name is the name of an allocation
-	Name string `json:"name"`
 }
 
 type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
@@ -1402,7 +1400,6 @@ type WriteMarker struct {
 
 	// file info
 	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name"`
 	ContentHash string `json:"content_hash"`
 }
 

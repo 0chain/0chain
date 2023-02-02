@@ -31,14 +31,6 @@ type ReadMarker struct {
 	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
-func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
-	var total int64
-	return total, edb.Store.Get().Model(&ReadMarker{}).
-		Select("sum(read_size)").
-		Where(&ReadMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
-		Find(&total).Error
-}
-
 func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit common2.Pagination) ([]ReadMarker, error) {
 	queryBuilder := edb.Store.Get().
 		Model(&ReadMarker{}).
