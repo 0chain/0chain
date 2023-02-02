@@ -26,9 +26,11 @@ WHERE parent.relname='blobber_aggregates'`
 func TestPartitionCreate(t *testing.T) {
 	logging.InitLogging("development", "")
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionKeepCount: 2}}}
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{PartitionChangePeriod: 100}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 
 	db, f := GetTestEventDB(t)
 	defer f()
