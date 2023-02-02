@@ -44,10 +44,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/getStakePoolStat", common.UserRateLimit(mrh.getStakePoolStat)),
 		rest.MakeEndpoint(miner+"/getMinerList", common.UserRateLimit(mrh.getMinerList)),
 		rest.MakeEndpoint(miner+"/get_miners_stats", common.UserRateLimit(mrh.getMinersStats)),
-		rest.MakeEndpoint(miner+"/get_miners_stake", common.UserRateLimit(mrh.getMinersStake)),
 		rest.MakeEndpoint(miner+"/getSharderList", common.UserRateLimit(mrh.getSharderList)),
 		rest.MakeEndpoint(miner+"/get_sharders_stats", common.UserRateLimit(mrh.getShardersStats)),
-		rest.MakeEndpoint(miner+"/get_sharders_stake", common.UserRateLimit(mrh.getShardersStake)),
 		rest.MakeEndpoint(miner+"/getSharderKeepList", common.UserRateLimit(mrh.getSharderKeepList)),
 		rest.MakeEndpoint(miner+"/getPhase", common.UserRateLimit(mrh.getPhase)),
 		rest.MakeEndpoint(miner+"/getDkgList", common.UserRateLimit(mrh.getDkgList)),
@@ -684,31 +682,6 @@ func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, allShardersList, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake get_sharders_stake
-// get total sharder stake
-//
-// responses:
-//
-//	200: Int64Map
-//	404:
-func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Request) {
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	ts, err := edb.GetShardersTotalStake()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
-		return
-	}
-
-	common.Respond(w, r, rest.Int64Map{
-		"sharders_total_stake": ts,
-	}, nil)
-
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats get_sharders_stats
 // get count of active and inactive miners
 //
@@ -809,31 +782,6 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	common.Respond(w, r, rest.InterfaceMap{
 		"Nodes": shardersArr,
 	}, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake get_miners_stake
-// get total miner stake
-//
-// responses:
-//
-//	200: Int64Map
-//	404:
-func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Request) {
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	ts, err := edb.GetMinersTotalStake()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
-		return
-	}
-
-	common.Respond(w, r, rest.Int64Map{
-		"miners_total_stake": ts,
-	}, nil)
-
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats get_miners_stats

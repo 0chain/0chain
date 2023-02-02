@@ -362,6 +362,14 @@ func (conf *Config) validateStakeRange(min, max currency.Coin) (err error) {
 	return
 }
 
+func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
+	return conf.validateStakeRange(min, max)
+}
+
+//
+// rest handler and update function
+//
+
 func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateContextI) error {
 	minted, err := currency.AddCoin(conf.Minted, toMint)
 	if err != nil {
