@@ -1,7 +1,6 @@
 package zcnsc
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -20,22 +19,6 @@ import (
 
 //go:generate msgp -v -io=false -tests=false -unexported
 
-type stakePoolRequest struct {
-	AuthorizerID string `json:"authorizer_id,omitempty"`
-}
-
-func (spr *stakePoolRequest) decode(p []byte) (err error) {
-	if err = json.Unmarshal(p, spr); err != nil {
-		return
-	}
-	return // ok
-}
-
-func (spr *stakePoolRequest) encode() []byte {
-	bytes, _ := json.Marshal(spr)
-	return bytes
-}
-
 // ----------- LockingPool pool --------------------------
 
 //type stakePool stakepool.Provider
@@ -51,22 +34,13 @@ func NewStakePool() *StakePool {
 	}
 }
 
-// StakePoolKey stake pool key for the storage SC and service provider ID
-func StakePoolKey(scKey, providerID string) datastore.Key {
-	return scKey + ":stakepool:" + providerID
-}
-
-func stakePoolKey(providerType spenum.Provider, providerID string) datastore.Key {
-	return providerType.String() + ":stakepool:" + providerID
-}
-
 func (sp *StakePool) GetKey() datastore.Key {
-	return StakePoolKey(ADDRESS, sp.Settings.DelegateWallet)
+	return stakepool.StakePoolKey(spenum.Authorizer, sp.Settings.DelegateWallet)
 }
 
 // save the stake pool
 func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(StakePoolKey(sscKey, providerID), sp)
+	_, err = balances.InsertTrieNode(stakepool.StakePoolKey(spenum.Authorizer, providerID), sp)
 	return
 }
 
@@ -99,7 +73,7 @@ func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI
 // getStakePool of given authorizer
 func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances cstate.StateContextI) (sp *StakePool, err error) {
 	sp = NewStakePool()
-	err = balances.GetTrieNode(StakePoolKey(zcn.ID, authorizerID), sp)
+	err = balances.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, authorizerID), sp)
 	if err != nil {
 		return nil, err
 	}
@@ -107,9 +81,9 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 	return sp, nil
 }
 
-func (zcn *ZCNSmartContract) getStakePoolForAdapter(providerType spenum.Provider, providerID datastore.Key, balances cstate.CommonStateContextI) (sp *StakePool, err error) {
+func (zcn *ZCNSmartContract) getStakePoolForAdapter(_ spenum.Provider, providerID datastore.Key, balances cstate.CommonStateContextI) (sp *StakePool, err error) {
 	sp = NewStakePool()
-	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
+	err = balances.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, providerID), sp)
 	if err != nil {
 		return nil, err
 	}
