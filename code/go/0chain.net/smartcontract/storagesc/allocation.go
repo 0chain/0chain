@@ -88,7 +88,6 @@ type newAllocationRequest struct {
 // storageAllocation from the request
 func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa = new(StorageAllocation)
-	sa.Name = nar.Name
 	sa.DataShards = nar.DataShards
 	sa.ParityShards = nar.ParityShards
 	sa.Size = nar.Size
@@ -1160,9 +1159,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
-	if len(request.Name) > 0 {
-		alloc.Name = request.Name
-	}
 
 	// adjust expiration
 	var newExpiration = alloc.Expiration + request.Expiration
