@@ -9,7 +9,11 @@ on:
 jobs:
   BUILD_INTEGRATION_IMAGES:
     name: BUILD-INTEGRATION-IMAGES
-    runs-on: [self-hosted, tests-suite]
+    runs-on: [self-hosted, arc-runner]
+    # env:
+    #   GOPATH: "/root/actions-runner/_work/_tool/go"
+    #   GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
+    #   GOCACHE: "/root/actions-runner/_work/_tool/.cache/go-build"
 
     steps:
     - uses: actions/checkout@v2
@@ -25,9 +29,8 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
-        export GOPATH="/root/actions-runner/_work/_tool/go"
-        export GOMODCACHE="/root/actions-runner/_work/_tool/go/pkg/mod"
-        export GOCACHE="/root/actions-runner/_work/_tool/.cache/go-build"
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
@@ -51,3 +54,4 @@ jobs:
     - name: Run Basic conductor tests
       run: |
         ./docker.local/bin/start.conductor.sh basic
+

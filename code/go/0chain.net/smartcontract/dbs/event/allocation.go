@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/0chain/common/core/currency"
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
@@ -14,9 +15,8 @@ import (
 )
 
 type Allocation struct {
-	gorm.Model
+	model.UpdatableModel
 	AllocationID             string        `json:"allocation_id" gorm:"uniqueIndex"`
-	AllocationName           string        `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
 	TransactionID            string        `json:"transaction_id"`
 	DataShards               int           `json:"data_shards"`
 	ParityShards             int           `json:"parity_shards"`
@@ -82,19 +82,6 @@ func (edb *EventDb) GetActiveAllocationsCount() (int64, error) {
 	result := edb.Store.Get().Model(&Allocation{}).Where("finalized = ? AND cancelled = ?", false, false).Count(&count)
 	if result.Error != nil {
 		return 0, fmt.Errorf("error retrieving active allocations , error: %v", result.Error)
-	}
-
-	return count, nil
-}
-
-func (edb *EventDb) GetActiveAllocsBlobberCount() (int64, error) {
-	var count int64
-	err := edb.Store.Get().
-		Raw("SELECT SUM(parity_shards) + SUM(data_shards) FROM allocations WHERE finalized = ? AND cancelled = ?",
-			false, false).
-		Scan(&count).Error
-	if err != nil {
-		return 0, fmt.Errorf("error retrieving blobber allocations count, error: %v", err)
 	}
 
 	return count, nil
@@ -167,7 +154,7 @@ func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("event db - update allocation stakes slow",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.Int("num", len(allocs)))
 		}
 	}()

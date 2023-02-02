@@ -3,26 +3,26 @@ package event
 import (
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/model"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type RewardProvider struct {
-	gorm.Model
+	model.UpdatableModel
 	Amount      currency.Coin `json:"amount"`
-	BlockNumber int64         `json:"block_number" gorm:"index:idx_block,priority:1"`
-	ProviderId  string        `json:"provider_id" gorm:"index:idx_provider,priority:2"`
-	RewardType  spenum.Reward `json:"reward_type" gorm:"index:idx_reward_type,priority:3"`
+	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
+	ProviderId  string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
+	RewardType  spenum.Reward `json:"reward_type"`
 }
 
-func (edb *EventDb) insertProviderReward(updates []dbs.StakePoolReward, round int64) error {
-	if len(updates) == 0 {
+func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round int64) error {
+	if len(inserts) == 0 {
 		return nil
 	}
 	var prs []RewardProvider
-	for _, sp := range updates {
+	for _, sp := range inserts {
 		pr := RewardProvider{
 			Amount:      sp.Reward,
 			BlockNumber: round,
@@ -45,9 +45,9 @@ func (edb *EventDb) GetProviderRewards(limit common.Pagination, id string, start
 		}
 	} else {
 		if start == end {
-			query = query.Where("provider = ? AND block_number = ?", id, start)
+			query = query.Where("provider_id = ? AND block_number = ?", id, start)
 		} else {
-			query = query.Where("provider = ? AND block_number >= ? AND block_number < ?", id, start, end)
+			query = query.Where("provider_id = ? AND block_number >= ? AND block_number < ?", id, start, end)
 		}
 	}
 

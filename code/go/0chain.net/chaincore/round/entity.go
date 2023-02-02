@@ -223,7 +223,7 @@ type RoundFactory interface {
 	CreateRoundF(roundNum int64) RoundI
 }
 
-//NewRound - Create a new round object
+// NewRound - Create a new round object
 func NewRound(round int64) *Round {
 	r := datastore.GetEntityMetadata("round").Instance().(*Round)
 	r.Number = round
@@ -242,7 +242,7 @@ func (r *Round) GetKey() datastore.Key {
 	return datastore.ToKey(fmt.Sprintf("%v", r.GetRoundNumber()))
 }
 
-//GetRoundNumber - returns the round number
+// GetRoundNumber - returns the round number
 func (r *Round) GetRoundNumber() int64 {
 	return r.Number
 }
@@ -324,7 +324,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) {
 			zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
 			zap.Int64("fb_RRS", fb.GetRoundRandomSeed()),
 			zap.Int("fb_toc", fb.RoundTimeoutCount),
-			zap.Any("fb_Sender", fb.MinerID))
+			zap.String("fb_Sender", fb.MinerID))
 		// remove the old block with the same rank and add it below
 		r.notarizedBlocks = append(r.notarizedBlocks[:found], r.notarizedBlocks[found+1:]...)
 	}
@@ -536,7 +536,7 @@ func SetupEntity(store datastore.Store) {
 	datastore.RegisterEntityMetadata("round", roundEntityMetadata)
 }
 
-//SetupRoundSummaryDB - setup the round summary db
+// SetupRoundSummaryDB - setup the round summary db
 func SetupRoundSummaryDB(workdir string) {
 	datadir := filepath.Join(workdir, "data/rocksdb/roundsummary")
 
@@ -570,8 +570,8 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	}
 	if miner.SetIndex >= len(r.minerPerm) {
 		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
-			zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", miner.SetIndex),
-			zap.Any("node", miner))
+			zap.Ints("r.minerPerm", r.minerPerm), zap.Int("set_index", miner.SetIndex),
+			zap.String("node", miner.ID))
 		return -1
 	}
 	return r.minerPerm[miner.SetIndex]
@@ -581,34 +581,34 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 func (r *Round) GetMinersByRank(nodes []*node.Node) []*node.Node {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	logging.Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)),
-		zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
+	logging.Logger.Info("get miners by rank", zap.Int("num_miners", len(nodes)),
+		zap.Int64("round", r.Number), zap.Ints("r.minerPerm", r.minerPerm))
 	sort.Slice(nodes, func(i, j int) bool {
 		idxi, idxj := 0, 0
 		if nodes[i].SetIndex < len(r.minerPerm) {
 			idxi = r.minerPerm[nodes[i].SetIndex]
 		} else {
 			logging.Logger.Warn("get miner by rank -- the node index in the permutation is missing",
-				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[i].SetIndex),
-				zap.Any("node", nodes[i]))
+				zap.Ints("r.minerPerm", r.minerPerm), zap.Int("set_index", nodes[i].SetIndex),
+				zap.String("node", nodes[i].ID))
 		}
 		if nodes[j].SetIndex < len(r.minerPerm) {
 			idxj = r.minerPerm[nodes[j].SetIndex]
 		} else {
 			logging.Logger.Warn("get miner by rank -- the node index in the permutation is missing",
-				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[j].SetIndex),
-				zap.Any("node", nodes[j]))
+				zap.Ints("r.minerPerm", r.minerPerm), zap.Int("set_index", nodes[j].SetIndex),
+				zap.String("node", nodes[j].ID))
 		}
 		return idxi > idxj
 	})
 	return nodes
 }
 
-//Clear - implement interface
+// Clear - implement interface
 func (r *Round) Clear() {
 }
 
-//Restart - restart the round
+// Restart - restart the round
 func (r *Round) Restart() error {
 	r.mutex.Lock()
 	if r.getState() >= Share {
@@ -631,7 +631,7 @@ func (r *Round) VRFShareExist(share *VRFShare) (exist bool) {
 	return
 }
 
-//AddVRFShare - implement interface
+// AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -653,7 +653,7 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	return true
 }
 
-//GetVRFShares - implement interface
+// GetVRFShares - implement interface
 func (r *Round) GetVRFShares() map[string]*VRFShare {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -668,17 +668,17 @@ func (r *Round) getVRFShares() map[string]*VRFShare {
 	return result
 }
 
-//GetPhase - get the phase of the round
+// GetPhase - get the phase of the round
 func (r *Round) GetPhase() Phase {
 	return r.getState()
 }
 
-//SetPhase - set the phase of the round in a progressive order
+// SetPhase - set the phase of the round in a progressive order
 func (r *Round) SetPhase(state Phase) {
 	r.setPhase(state)
 }
 
-//ResetPhase resets the phase to any desired phase
+// ResetPhase resets the phase to any desired phase
 func (r *Round) ResetPhase(state Phase) {
 	atomic.StoreInt32((*int32)(&r.phase), int32(state))
 }
@@ -693,7 +693,7 @@ func (r *Round) setPhase(state Phase) {
 	}
 }
 
-//HasRandomSeed - implement interface
+// HasRandomSeed - implement interface
 func (r *Round) HasRandomSeed() bool {
 	return atomic.LoadInt64(&r.RandomSeed) != 0
 }
@@ -732,7 +732,49 @@ func (r *Round) getFinalizingState() FinalizingState {
 
 // Clone do light copy of round
 func (r *Round) Clone() RoundI {
-	var nr Round
-	nr = *r // nolint
-	return &nr
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	var (
+		mp      = make([]int, len(r.minerPerm))
+		pblocks = make([]*block.Block, len(r.proposedBlocks))
+		nblocks = make([]*block.Block, len(r.notarizedBlocks))
+		shares  = make(map[string]*VRFShare, len(r.shares))
+	)
+
+	copy(mp, r.minerPerm)
+
+	for i, b := range r.proposedBlocks {
+		pblocks[i] = b.Clone()
+	}
+
+	for i, b := range r.notarizedBlocks {
+		nblocks[i] = b.Clone()
+	}
+
+	for k, s := range r.shares {
+		shares[k] = s.Clone()
+	}
+
+	return &Round{
+		Number:           r.Number,
+		RandomSeed:       r.RandomSeed,
+		Block:            r.Block.Clone(),
+		BlockHash:        r.BlockHash,
+		VRFOutput:        r.VRFOutput,
+		minerPerm:        mp,
+		phase:            r.phase,
+		finalizingState:  r.finalizingState,
+		proposedBlocks:   pblocks,
+		notarizedBlocks:  nblocks,
+		shares:           shares,
+		softTimeoutCount: r.softTimeoutCount,
+		vrfStartTime:     r.vrfStartTime,
+		timeoutCounter: timeoutCounter{
+			prrs:  r.timeoutCounter.prrs,
+			perm:  r.timeoutCounter.perm,
+			count: r.timeoutCounter.count,
+			votes: r.timeoutCounter.votes,
+		},
+	}
 }

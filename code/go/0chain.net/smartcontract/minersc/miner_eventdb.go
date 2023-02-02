@@ -7,37 +7,63 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 )
 
-func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool) MinerNode {
+type SimpleNodeResponse struct {
+	SimpleNode
+	RoundServiceChargeLastUpdated int64 `json:"round_service_charge_last_updated"`
+}
+
+type DelegatePoolResponse struct {
+	stakepool.DelegatePool
+	RoundPoolLastUpdated int64 `json:"round_pool_last_updated"`
+}
+
+type StakePoolResponse struct {
+	Pools    map[string]*DelegatePoolResponse `json:"pools"`
+	Reward   currency.Coin                    `json:"rewards"`
+	Settings stakepool.Settings               `json:"settings"`
+	Minter   cstate.ApprovedMinter            `json:"minter"`
+}
+
+type NodeResponse struct {
+	*SimpleNodeResponse `json:"simple_miner"`
+	*StakePoolResponse  `json:"stake_pool"`
+}
+
+func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool) NodeResponse {
 	var status = node.NodeStatusInactive
 	if edbMiner.Active {
 		status = node.NodeStatusActive
 	}
-	msn := SimpleNode{
-		ID:          edbMiner.ID,
-		N2NHost:     edbMiner.N2NHost,
-		Host:        edbMiner.Host,
-		Port:        edbMiner.Port,
-		Path:        edbMiner.Path,
-		PublicKey:   edbMiner.PublicKey,
-		ShortName:   edbMiner.ShortName,
-		BuildTag:    edbMiner.BuildTag,
-		TotalStaked: edbMiner.Provider.TotalStake,
-		Delete:      edbMiner.Delete,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbMiner.Latitude,
-			Longitude: edbMiner.Longitude,
+	msn := SimpleNodeResponse{
+		SimpleNode: SimpleNode{
+			ID:          edbMiner.ID,
+			N2NHost:     edbMiner.N2NHost,
+			Host:        edbMiner.Host,
+			Port:        edbMiner.Port,
+			Path:        edbMiner.Path,
+			PublicKey:   edbMiner.PublicKey,
+			ShortName:   edbMiner.ShortName,
+			BuildTag:    edbMiner.BuildTag,
+			TotalStaked: edbMiner.Provider.TotalStake,
+			Delete:      edbMiner.Delete,
+			Geolocation: SimpleNodeGeolocation{
+				Latitude:  edbMiner.Latitude,
+				Longitude: edbMiner.Longitude,
+			},
+			NodeType:        NodeTypeMiner,
+			LastHealthCheck: edbMiner.LastHealthCheck,
+			Status:          status,
 		},
-		NodeType:        NodeTypeMiner,
-		LastHealthCheck: edbMiner.LastHealthCheck,
-		Status:          status,
+		RoundServiceChargeLastUpdated: edbMiner.Rewards.RoundServiceChargeLastUpdated,
 	}
 
-	mn := MinerNode{
-		SimpleNode: &msn,
-		StakePool: &stakepool.StakePool{
+	mn := NodeResponse{
+		SimpleNodeResponse: &msn,
+		StakePoolResponse: &StakePoolResponse{
 			Reward: edbMiner.Rewards.Rewards,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbMiner.DelegateWallet,
@@ -51,14 +77,17 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 	if len(delegates) == 0 {
 		return mn
 	}
-	mn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	mn.StakePoolResponse.Pools = make(map[string]*DelegatePoolResponse)
 	for _, delegate := range delegates {
-		mn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
-			Balance:      delegate.Balance,
-			Reward:       delegate.Reward,
-			Status:       spenum.PoolStatus(delegate.Status),
-			RoundCreated: delegate.RoundCreated,
-			DelegateID:   delegate.DelegateID,
+		mn.StakePoolResponse.Pools[delegate.PoolID] = &DelegatePoolResponse{
+			DelegatePool: stakepool.DelegatePool{
+				Balance:      delegate.Balance,
+				Reward:       delegate.Reward,
+				Status:       spenum.PoolStatus(delegate.Status),
+				RoundCreated: delegate.RoundCreated,
+				DelegateID:   delegate.DelegateID,
+			},
+			RoundPoolLastUpdated: delegate.RoundPoolLastUpdated,
 		}
 	}
 	return mn
@@ -66,7 +95,6 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	return event.Miner{
-
 		N2NHost:   mn.N2NHost,
 		Host:      mn.Host,
 		Port:      mn.Port,
@@ -88,8 +116,8 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 				Rewards:      mn.Reward,
 				TotalRewards: mn.Reward,
 			},
+			LastHealthCheck: mn.LastHealthCheck,
 		},
-		LastHealthCheck: mn.LastHealthCheck,
 
 		Active:    mn.Status == node.NodeStatusActive,
 		Longitude: mn.Geolocation.Longitude,
@@ -97,21 +125,19 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 	}
 }
 
-//func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
-//
-//	logging.Logger.Info("emitting add miner event")
-//
-//	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
-//
-//	return nil
-//}
-
-func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
-
+func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 	logging.Logger.Info("emitting add or overwrite miner event")
+	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
+}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, mn.ID, minerNodeToMinerTable(mn))
+func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
+	data := dbs.DbHealthCheck{
+		ID:              mn.ID,
+		LastHealthCheck: mn.LastHealthCheck,
+		Downtime:        downtime,
+	}
 
+	balances.EmitEvent(event.TypeStats, event.TagMinerHealthCheck, mn.ID, data)
 	return nil
 }
 

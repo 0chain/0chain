@@ -122,7 +122,7 @@ func (mc *Chain) BlockVerifyWorkers(ctx context.Context) {
 						logging.Logger.Error("process verify block failed",
 							zap.Int64("round", b.Round),
 							zap.String("block", b.Hash),
-							zap.Any("duration", time.Since(ts)),
+							zap.Duration("duration", time.Since(ts)),
 							zap.Error(err))
 						continue
 					}
@@ -369,7 +369,7 @@ func (mc *Chain) NotarizationProcessWorker(ctx context.Context) {
 					logging.Logger.Info("process notarization success",
 						zap.Int64("round", not.Round),
 						zap.String("block", not.BlockID),
-						zap.Any("duration", time.Since(ts)))
+						zap.Duration("duration", time.Since(ts)))
 				case <-cctx.Done():
 					logging.Logger.Error("process notarization timeout",
 						zap.Int64("round", not.Round),
@@ -518,7 +518,7 @@ func (mc *Chain) handleNotarizedBlockMessage(ctx context.Context,
 	var mr = mc.getOrCreateRound(ctx, nb.Round)
 	if mr == nil {
 		logging.Logger.Debug("can't create round",
-			zap.String("block", nb.Hash), zap.Any("round", nb.Round),
+			zap.String("block", nb.Hash), zap.Int64("round", nb.Round),
 			zap.Bool("has_pr", mc.GetMinerRound(nb.Round-1) != nil))
 		return // can't handle yet
 	}

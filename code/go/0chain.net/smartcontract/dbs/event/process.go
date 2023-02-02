@@ -56,8 +56,8 @@ func (edb *EventDb) ProcessEvents(
 		du := time.Since(ts)
 		if du.Milliseconds() > 200 {
 			logging.Logger.Warn("process events slow",
-				zap.Any("duration", du),
-				zap.Any("merge events duration", pdu),
+				zap.Duration("duration", du),
+				zap.Duration("merge events duration", pdu),
 				zap.Int64("round", round),
 				zap.String("block", block),
 				zap.Int("block size", blockSize))
@@ -66,7 +66,7 @@ func (edb *EventDb) ProcessEvents(
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
 			zap.Error(ctx.Err()),
-			zap.Any("duration", du),
+			zap.Duration("duration", du),
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
@@ -79,8 +79,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	var (
 		mergers = []eventsMerger{
 			mergeAddUsersEvents(),
-			mergeAddProviderEvents[Miner](TagAddOrOverwriteMiner, withUniqueEventOverwrite()),
-			mergeAddProviderEvents[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Miner](TagAddMiner, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Sharder](TagAddSharder, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
@@ -123,6 +123,12 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
 			mergeUpdateValidatorUnStakesEvents(),
+
+			mergeMinerHealthCheckEvents(),
+			mergeSharderHealthCheckEvents(),
+			mergeBlobberHealthCheckEvents(),
+			mergeAuthorizerHealthCheckEvents(),
+			mergeValidatorHealthCheckEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -212,7 +218,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		due := time.Since(tse)
 		logging.Logger.Debug("event db process",
-			zap.Any("duration", due),
+			zap.Duration("duration", due),
 			zap.Int("events number", len(es.events)),
 			zap.Strings("tags", tags),
 			zap.Int64("round", es.round),
@@ -221,7 +227,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		if due.Milliseconds() > 200 {
 			logging.Logger.Warn("event db work slow",
-				zap.Any("duration", due),
+				zap.Duration("duration", due),
 				zap.Int("events number", len(es.events)),
 				zap.Strings("tags", tags),
 				zap.Int64("round", es.round),
@@ -281,7 +287,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addStat",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),
@@ -295,7 +301,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addchain",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),
@@ -339,6 +345,10 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	}
 
 	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateMinerAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateSharderAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), gs)
 	gs.update(events)
 
 	gs.Round = round
@@ -493,19 +503,19 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateValidatorStakes(*updates)
+		return edb.updateValidatorTotalStakes(*updates)
 	case TagUpdateValidatorUnStakeTotal:
 		updates, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateValidatorUnStakes(*updates)
-	case TagAddOrOverwriteMiner:
+		return edb.updateValidatorTotalUnStakes(*updates)
+	case TagAddMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteMiner(*miners)
+		return edb.addMiner(*miners)
 	case TagUpdateMiner:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -518,19 +528,18 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.deleteMiner(*minerID)
-	case TagAddOrOverwriteSharder:
+	case TagAddSharder:
 		sharders, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		return edb.addOrOverwriteSharders(*sharders)
+		return edb.addSharders(*sharders)
 	case TagUpdateMinerTotalStake:
 		m, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-
 		return edb.updateMinersTotalStakes(*m)
 	case TagUpdateMinerTotalUnStake:
 		m, ok := fromEvent[[]Miner](event.Data)
@@ -698,6 +707,36 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.addOrUpdateChallengePools(*cps)
 	case TagCollectProviderReward:
 		return edb.collectRewards(event.Index)
+	case TagMinerHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, MinerTable)
+	case TagSharderHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, SharderTable)
+	case TagBlobberHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, BlobberTable)
+	case TagAuthorizerHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, AuthorizerTable)
+	case TagValidatorHealthCheck:
+		healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

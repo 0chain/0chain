@@ -70,8 +70,6 @@ func (msc *MinerSmartContract) AddSharder(
 	balances cstate.StateContextI,
 ) (resp string, err error) {
 
-	logging.Logger.Info("add_sharder", zap.Any("txn", t))
-
 	var newSharder = NewMinerNode()
 	if err = newSharder.Decode(input); err != nil {
 		logging.Logger.Error("Error in decoding the input", zap.Error(err))
@@ -94,7 +92,7 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder",
 			"failed to add new sharder: Not in magic block")
 	}
-	
+
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
 
 	if config.Development() && newSharder.Settings.DelegateWallet == "" {
@@ -107,14 +105,13 @@ func (msc *MinerSmartContract) AddSharder(
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
-		zap.Any("mscID", msc.ID),
+		zap.String("mscID", msc.ID),
 		zap.String("delegate_wallet", newSharder.Settings.DelegateWallet),
 		zap.Float64("service_charge", newSharder.Settings.ServiceChargeRatio),
 		zap.Int("number_of_delegates", newSharder.Settings.MaxNumDelegates),
 		zap.Int64("min_stake", int64(newSharder.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newSharder.Settings.MaxStake)))
 
-	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
@@ -163,7 +160,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	//err = emitAddSharder(newSharder, balances)
-	emitAddOrOverwriteSharder(newSharder, balances)
+	emitAddSharder(newSharder, balances)
 
 	// save all sharders list
 	if err = updateAllShardersList(balances, allSharders); err != nil {
@@ -343,11 +340,10 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
-		zap.Any("mscID", msc.ID),
+		zap.String("mscID", msc.ID),
 		zap.Int64("pn_start_round", pn.StartRound),
 		zap.String("phase", pn.Phase.String()))
 
-	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
 		return "", errors.New("PublicKey or the ID is empty. Cannot proceed")

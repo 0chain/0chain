@@ -77,13 +77,13 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 			settings := getMockStakePoolSettings(id)
 			authorizer := event.Authorizer{
 				URL:             authorizer.URL,
-				LastHealthCheck: int64(common.Now()),
 				Provider: event.Provider{
 					ID:             authorizer.ID,
 					DelegateWallet: clients[i],
 					MinStake:       settings.MinStake,
 					MaxStake:       settings.MaxStake,
 					ServiceCharge:  settings.ServiceChargeRatio,
+					LastHealthCheck: common.Now(),
 				},
 			}
 			_ = eventDb.Store.Get().Create(&authorizer)

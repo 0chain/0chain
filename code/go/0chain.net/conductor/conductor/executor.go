@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -882,6 +883,11 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 	r.server.CurrentTest = configurator.TestCase()
 	r.currTestCaseName = configurator.Name()
 
+	switch cfg := configurator.(type) {
+	case *cases.RoundHasFinalized:
+		_ = r.server.CurrentTest.Configure([]byte(strconv.Itoa(cfg.Round)))
+	}
+
 	return nil
 }
 
@@ -923,6 +929,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.AdversarialValidator = update
 		case *config.LockNotarizationAndSendNextRoundVRF:
 			state.LockNotarizationAndSendNextRoundVRF = update
+		case *config.CollectVerificationTicketsWhenMissedVRF:
+			state.CollectVerificationTicketsWhenMissedVRF = update
 		}
 	})
 

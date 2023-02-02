@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -165,7 +164,8 @@ type Block struct {
 	ticketsMutex          sync.RWMutex `json:"-" msgpack:"-"`
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
-	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
+	uniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
+	uniqueBlockExtMutex   sync.RWMutex    `json:"-" msgpack:"-"`
 	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
 	// StateChangesCount represents the state changes number in client state of current block.
 	// this will be used to verify the state changes acquire from remote
@@ -178,6 +178,13 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 	b.Round = round
 	b.ChainID = chainID
 	return b
+}
+
+func (b *Block) GetUniqueBlockExtensions() (uBlExts map[string]bool) {
+	b.uniqueBlockExtMutex.RLock()
+	defer b.uniqueBlockExtMutex.RUnlock()
+
+	return b.uniqueBlockExtensions
 }
 
 // GetVerificationTickets of the block async safe.
@@ -703,11 +710,13 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 
 // AddUniqueBlockExtension - add unique block extensions.
 func (b *Block) AddUniqueBlockExtension(eb *Block) {
+	b.uniqueBlockExtMutex.Lock()
+	defer b.uniqueBlockExtMutex.Unlock()
 	//TODO: We need to compare for view change and add the eb.MinerID only if he was in the view that b belongs to
-	if b.UniqueBlockExtensions == nil {
-		b.UniqueBlockExtensions = make(map[string]bool)
+	if b.uniqueBlockExtensions == nil {
+		b.uniqueBlockExtensions = make(map[string]bool)
 	}
-	b.UniqueBlockExtensions[eb.MinerID] = true
+	b.uniqueBlockExtensions[eb.MinerID] = true
 }
 
 // DoReadLock - implement ReadLockable interface.
@@ -788,10 +797,7 @@ func (b *Block) Clone() *Block {
 	}
 	b.stateMutex.RUnlock()
 
-	clone.UniqueBlockExtensions = make(map[string]bool, len(b.UniqueBlockExtensions))
-	for k, v := range b.UniqueBlockExtensions {
-		clone.UniqueBlockExtensions[k] = v
-	}
+	clone.uniqueBlockExtensions = b.GetUniqueBlockExtensions()
 
 	return clone
 }
@@ -900,7 +906,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 		logging.Logger.Error("previous state not compute yet",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
-			zap.Any("state status", pb.GetStateStatus()))
+			zap.Int8("state status", pb.GetStateStatus()))
 		return ErrPreviousStateNotComputed
 	}
 	//b.SetStateDB(pb, c.GetStateDB())
@@ -1053,7 +1059,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		du := time.Since(ts)
 		if du > 5*time.Second {
 			logging.Logger.Error("apply block state changes took too long",
-				zap.Any("duration", du))
+				zap.Duration("duration", du))
 		}
 	}()
 
@@ -1110,7 +1116,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	return nil
 }
 
-// SaveChanges persistents the state changes
+// SaveChanges persistent the state changes
 func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 	b.stateMutex.Lock()
 	defer b.stateMutex.Unlock()
@@ -1118,26 +1124,43 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 		logging.Logger.Error("save changes - client state is nil",
 			zap.Int64("round", b.Round),
 			zap.String("hash", b.Hash))
-		return errors.New("save changes - client state is nil")
+		return common.NewError("save_state_changes", "client state is nil")
 	}
 
-	var err error
-	ts := time.Now()
+	var (
+		ts          = time.Now()
+		changeCount = b.ClientState.GetChangeCount()
+	)
+
 	switch b.GetStateStatus() {
 	case StateSynched, StateSuccessful:
-		err = b.ClientState.SaveChanges(ctx, c.GetStateDB(), false)
+		if err := b.ClientState.SaveChanges(ctx, c.GetStateDB(), false); err != nil {
+			logging.Logger.Error("save state",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Int("block_size", len(b.Txns)),
+				zap.Int("changes", changeCount),
+				zap.String("client_state", util.ToHex(b.ClientStateHash)),
+				zap.Duration("duration", time.Since(ts)),
+				zap.Error(err))
+			return err
+		}
 	default:
-		return common.NewError("state_save_without_success", "State can't be saved without successful computation")
+		return common.NewError("save_state_changes", "invalid state status")
 	}
-	duration := time.Since(ts)
+
 	StateSaveTimer.UpdateSince(ts)
-	p95 := StateSaveTimer.Percentile(.95)
-	changeCount := b.ClientState.GetChangeCount()
+	var (
+		p95      = StateSaveTimer.Percentile(.95)
+		duration = time.Since(ts)
+	)
+
 	if changeCount > 0 {
 		StateChangeSizeMetric.Update(int64(changeCount))
 	}
+
 	if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-		logging.Logger.Info("save state - slow",
+		logging.Logger.Debug("save state - slow",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
@@ -1146,7 +1169,7 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 			zap.Duration("duration", duration),
 			zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	} else {
-		logging.Logger.Debug("save state",
+		logging.Logger.Info("save state",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
@@ -1154,18 +1177,8 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 			zap.String("client_state", util.ToHex(b.ClientStateHash)),
 			zap.Duration("duration", duration))
 	}
-	if err != nil {
-		logging.Logger.Info("save state",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int("block_size", len(b.Txns)),
-			zap.Int("changes", changeCount),
-			zap.String("client_state", util.ToHex(b.ClientStateHash)),
-			zap.Duration("duration", duration),
-			zap.Error(err))
-	}
 
-	return err
+	return nil
 }
 
 func copyVerificationTickets(src []*VerificationTicket) []*VerificationTicket {
