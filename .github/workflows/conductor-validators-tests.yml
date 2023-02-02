@@ -37,7 +37,7 @@ jobs:
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
-        cd 0chain && git checkout ${{ steps.get_branch.outputs.BRANCH }}
+        cd 0chain
 
     - name: Docker Init Setup.
       run: |
