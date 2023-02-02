@@ -21,11 +21,11 @@ type User struct {
 	Change          currency.Coin `json:"change"`
 	Round           int64         `json:"round"`
 	Nonce           int64         `json:"nonce"`
-	CollectedReward currency.Coin `json:"collected_reward"`
-	TotalStake      currency.Coin `json:"total_stake"`
-	ReadPoolTotal   currency.Coin `json:"read_pool_total"`
-	WritePoolTotal  currency.Coin `json:"write_pool_total"`
-	PayedFees       currency.Coin `json:"payed_fees"`
+	CollectedReward int64         `json:"collected_reward"`
+	TotalStake      int64         `json:"total_stake"`
+	ReadPoolTotal   int64         `json:"read_pool_total"`
+	WritePoolTotal  int64         `json:"write_pool_total"`
+	PayedFees       int64         `json:"payed_fees"`
 }
 
 func (edb *EventDb) GetUser(userID string) (*User, error) {
@@ -56,103 +56,91 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 
 func (edb *EventDb) updateUserCollectedRewards(users []User) error {
 	var ids []string
-	var collectedRewards []uint64
+	var collectedRewards []int64
 	for _, u := range users {
 		ids = append(ids, u.UserID)
-		collectedRewards = append(collectedRewards, uint64(u.CollectedReward))
+		collectedRewards = append(collectedRewards, u.CollectedReward)
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("collected_reward", collectedRewards, "users.collected_reward + t.collected_reward").Exec(edb).Error
+		AddUpdate("collected_reward", collectedRewards, "t.collected_reward").Exec(edb).Error
 }
 
-func (edb *EventDb) updateUserTotalStake(users []User, shouldIncrease bool) error {
+func (edb *EventDb) updateUserTotalStake(dpls []DelegatePoolLock, shouldIncrease bool) error {
 	var ids []string
-	var stakes []uint64
-	for _, u := range users {
-		ids = append(ids, u.UserID)
-		stakes = append(stakes, uint64(u.TotalStake))
-	}
-
-	operation := "+"
-	if !shouldIncrease {
-		operation = "-"
+	var stakes []int64
+	for _, dpl := range dpls {
+		ids = append(ids, dpl.Client)
+		if shouldIncrease {
+			stakes = append(stakes, dpl.Amount)
+			continue
+		}
+		stakes = append(stakes, -dpl.Amount)
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("total_stake", stakes, "users.total_stake "+operation+" t.total_stake").Exec(edb).Error
+		AddUpdate("total_stake", stakes, "t.total_stake").Exec(edb).Error
 }
 
-func (edb *EventDb) updateUserReadPoolTotal(users []User, shouldIncrease bool) error {
+func (edb *EventDb) updateUserReadPoolTotal(rpls []ReadPoolLock, shouldIncrease bool) error {
 	var ids []string
-	var readpools []uint64
-	for _, u := range users {
-		ids = append(ids, u.UserID)
-		readpools = append(readpools, uint64(u.ReadPoolTotal))
-	}
-	operation := "+"
-	if !shouldIncrease {
-		operation = "-"
-	}
+	var readpools []int64
+	for _, rpl := range rpls {
+		ids = append(ids, rpl.Client)
+		if shouldIncrease {
+			readpools = append(readpools, rpl.Amount)
+			continue
+		}
+		readpools = append(readpools, -rpl.Amount)
 
+	}
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("read_pool_total", readpools, "users.read_pool_total "+operation+" t.read_pool_total").Exec(edb).Error
+		AddUpdate("read_pool_total", readpools, "t.read_pool_total").Exec(edb).Error
 }
 
-func (edb *EventDb) updateUserWritePoolTotal(users []User, shouldIncrease bool) error {
+func (edb *EventDb) updateUserWritePoolTotal(wpls []WritePoolLock, shouldIncrease bool) error {
 	var ids []string
-	var writepools []uint64
-	for _, u := range users {
-		ids = append(ids, u.UserID)
-		writepools = append(writepools, uint64(u.WritePoolTotal))
-	}
+	var writepools []int64
+	for _, wpl := range wpls {
+		ids = append(ids, wpl.Client)
+		if shouldIncrease {
+			writepools = append(writepools, wpl.Amount)
+			continue
+		}
+		writepools = append(writepools, -wpl.Amount)
 
-	operation := "+"
-	if !shouldIncrease {
-		operation = "-"
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("write_pool_total", writepools, "users.write_pool_total "+operation+" t.write_pool_total").Exec(edb).Error
+		AddUpdate("write_pool_total", writepools, "t.write_pool_total").Exec(edb).Error
 }
 
 func (edb *EventDb) updateUserPayedFees(users []User) error {
 	var ids []string
-	var fees []uint64
+	var fees []int64
 	for _, u := range users {
 		ids = append(ids, u.UserID)
-		fees = append(fees, uint64(u.PayedFees))
+		fees = append(fees, u.PayedFees)
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("payed_fees", fees, "users.payed_fees + t.payed_fees").Exec(edb).Error
+		AddUpdate("payed_fees", fees, "t.payed_fees").Exec(edb).Error
 }
 
 func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[User] {
 	return newEventsMerger[User](TagUpdateUserCollectedRewards, withUniqueEventOverwrite())
 }
 
-func mergeIncreaseUserTotalStakeEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagLockStakePool, withUniqueEventOverwrite())
-}
-func mergeDecreaseUserTotalStakeEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUnlockStakePool, withUniqueEventOverwrite())
+func mergeUpdateUserTotalStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
+	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withUniqueEventOverwrite())
 }
 
-func mergeIncreaseUserReadPoolTotalEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagLockReadPool, withUniqueEventOverwrite())
+func mergeUpdateUserReadPoolTotalEvents() *eventsMergerImpl[ReadPoolLock] {
+	return newEventsMerger[ReadPoolLock](TagLockReadPool, withUniqueEventOverwrite())
 }
 
-func mergeDecreaseUserReadPoolTotalEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUnlockReadPool, withUniqueEventOverwrite())
-}
-
-func mergeIncreaseUserWritePoolTotalEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagLockWritePool, withUniqueEventOverwrite())
-}
-
-func mergeDecreaseUserWritePoolTotalEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUnlockWritePool, withUniqueEventOverwrite())
+func mergeUpdateUserWritePoolTotalEvents() *eventsMergerImpl[WritePoolLock] {
+	return newEventsMerger[WritePoolLock](TagLockWritePool, withUniqueEventOverwrite())
 }
 
 func mergeUpdateUserPayedFeesEvents() *eventsMergerImpl[User] {

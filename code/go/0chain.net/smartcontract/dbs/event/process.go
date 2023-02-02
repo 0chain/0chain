@@ -131,12 +131,9 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeValidatorHealthCheckEvents(),
 
 			mergeUpdateUserCollectedRewardsEvents(),
-			mergeIncreaseUserTotalStakeEvents(),
-			mergeDecreaseUserTotalStakeEvents(),
-			mergeIncreaseUserReadPoolTotalEvents(),
-			mergeDecreaseUserReadPoolTotalEvents(),
-			mergeIncreaseUserWritePoolTotalEvents(),
-			mergeDecreaseUserWritePoolTotalEvents(),
+			mergeUpdateUserTotalStakeEvents(),
+			mergeUpdateUserReadPoolTotalEvents(),
+			mergeUpdateUserWritePoolTotalEvents(),
 			mergeUpdateUserPayedFeesEvents(),
 		}
 
@@ -748,41 +745,41 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
 	case TagLockReadPool:
-		u, ok := fromEvent[[]User](event.Data)
+		rpl, ok := fromEvent[[]ReadPoolLock](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateUserReadPoolTotal(*u, true)
+		return edb.updateUserReadPoolTotal(*rpl, true)
 	case TagUnlockReadPool:
-		u, ok := fromEvent[[]User](event.Data)
+		u, ok := fromEvent[[]ReadPoolLock](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 		return edb.updateUserReadPoolTotal(*u, false)
 	case TagLockWritePool:
-		u, ok := fromEvent[[]User](event.Data)
+		wpl, ok := fromEvent[[]WritePoolLock](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateUserWritePoolTotal(*u, true)
+		return edb.updateUserWritePoolTotal(*wpl, true)
 	case TagUnlockWritePool:
-		u, ok := fromEvent[[]User](event.Data)
+		u, ok := fromEvent[[]WritePoolLock](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 		return edb.updateUserWritePoolTotal(*u, false)
 	case TagLockStakePool:
-		u, ok := fromEvent[[]User](event.Data)
+		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateUserTotalStake(*u, true)
+		return edb.updateUserTotalStake(*dpl, true)
 	case TagUnlockStakePool:
-		u, ok := fromEvent[[]User](event.Data)
+		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateUserTotalStake(*u, false)
+		return edb.updateUserTotalStake(*dpl, false)
 	case TagUpdateUserPayedFees:
 		u, ok := fromEvent[[]User](event.Data)
 		if !ok {

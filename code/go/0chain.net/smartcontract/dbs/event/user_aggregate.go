@@ -5,20 +5,19 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
-	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 )
 
 type UserAggregate struct {
-	UserID          string        `json:"user_id" gorm:"uniqueIndex"`
-	Round           int64         `json:"round"`
-	CollectedReward currency.Coin `json:"collected_reward"`
-	TotalStake      currency.Coin `json:"total_stake"`
-	ReadPoolTotal   currency.Coin `json:"read_pool_total"`
-	WritePoolTotal  currency.Coin `json:"write_pool_total"`
-	PayedFees       currency.Coin `json:"payed_fees"`
+	UserID          string `json:"user_id" gorm:"uniqueIndex"`
+	Round           int64  `json:"round"`
+	CollectedReward int64  `json:"collected_reward"`
+	TotalStake      int64  `json:"total_stake"`
+	ReadPoolTotal   int64  `json:"read_pool_total"`
+	WritePoolTotal  int64  `json:"write_pool_total"`
+	PayedFees       int64  `json:"payed_fees"`
 	CreatedAt       time.Time
 }
 
