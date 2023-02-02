@@ -363,6 +363,10 @@ func (conf *Config) validateStakeRange(min, max currency.Coin) (err error) {
 	return
 }
 
+func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
+	return conf.validateStakeRange(min, max)
+}
+
 func (conf *Config) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(conf); err != nil {

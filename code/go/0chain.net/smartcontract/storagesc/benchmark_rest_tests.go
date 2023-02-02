@@ -180,7 +180,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getchallenge",
 				Params: map[string]string{
-					"challenge":  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
+					"challenge": getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 				},
 				Endpoint: srh.getChallenge,
 			},
@@ -255,30 +255,6 @@ func BenchmarkRestTests(
 			{
 				FuncName: "validators",
 				Endpoint: srh.validators,
-			},
-			{
-				FuncName: "alloc_written_size",
-				Params: map[string]string{
-					"allocation_id": getMockAllocationId(0),
-					"block_number":  "1",
-				},
-				Endpoint: srh.getWrittenAmount,
-			},
-			{
-				FuncName: "allocWrittenSizePerPeriod",
-				Params: map[string]string{
-					"block-start": "1",
-					"block-end":   "100",
-				},
-				Endpoint: srh.getWrittenAmountPerPeriod,
-			},
-			{
-				FuncName: "alloc_read_size",
-				Params: map[string]string{
-					"allocation_id": getMockAllocationId(0),
-					"block_number":  "1",
-				},
-				Endpoint: srh.getReadAmount,
 			},
 			{
 				FuncName: "alloc_write_marker_count",
