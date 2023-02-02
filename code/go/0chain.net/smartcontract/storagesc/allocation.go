@@ -82,7 +82,7 @@ type newAllocationRequest struct {
 	WritePriceRange      PriceRange       `json:"write_price_range"`
 	IsImmutable          bool             `json:"is_immutable"`
 	ThirdPartyExtendable bool             `json:"third_party_extendable"`
-	FileOptions          uint8            `json:"file_options"`
+	FileOptions          uint16            `json:"file_options"`
 }
 
 // storageAllocation from the request
@@ -537,7 +537,7 @@ type updateAllocationRequest struct {
 	AddBlobberId         string           `json:"add_blobber_id"`
 	RemoveBlobberId      string           `json:"remove_blobber_id"`
 	SetThirdPartyExtendable bool          `json:"set_third_party_extendable"`
-	FileOptions          uint8            `json:"file_options"`
+	FileOptions          uint16            `json:"file_options"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {

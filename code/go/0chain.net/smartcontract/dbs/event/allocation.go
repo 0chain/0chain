@@ -46,7 +46,7 @@ type Allocation struct {
 	LatestClosedChallengeTxn string        `json:"latest_closed_challenge_txn"`
 	WritePool                currency.Coin `json:"write_pool"`
 	ThirdPartyExtendable	 bool		   `json:"third_party_extendable"`
-	FileOptions				 uint8		   `json:"file_options"`
+	FileOptions				 uint16		   `json:"file_options"`
 
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
