@@ -37,7 +37,7 @@ jobs:
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
-        cd 0chain
+        cd 0chain && git checkout fix/byzantine-and-validator-tests
 
     - name: Docker Init Setup.
       run: |
