@@ -51,20 +51,12 @@ func BenchmarkRestTests(
 				Endpoint: mrh.getMinersStats,
 			},
 			{
-				FuncName: "get_miners_stake",
-				Endpoint: mrh.getMinersStake,
-			},
-			{
 				FuncName: "getSharderList",
 				Endpoint: mrh.getSharderList,
 			},
 			{
 				FuncName: "get_sharders_stats",
 				Endpoint: mrh.getShardersStats,
-			},
-			{
-				FuncName: "get_sharders_stake",
-				Endpoint: mrh.getMinersStake,
 			},
 			{
 				FuncName: "getPhase",

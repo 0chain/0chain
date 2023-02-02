@@ -356,7 +356,6 @@ func TestChangeBlobbers(t *testing.T) {
 			Owner:            mockOwner,
 			BlobberAllocs:    blobberAllocation,
 			BlobberAllocsMap: blobberMap,
-			Name:             mockAllocationName,
 			Size:             confMinAllocSize,
 			Expiration:       mockAllocationExpiry,
 			ReadPriceRange:   PriceRange{mockMinPrice, mockMaxPrice},

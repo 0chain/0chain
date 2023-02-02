@@ -95,7 +95,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	sa := &StorageAllocation{
 		ID:             alloc.AllocationID,
 		Tx:             alloc.TransactionID,
-		Name:           alloc.AllocationName,
 		DataShards:     alloc.DataShards,
 		ParityShards:   alloc.ParityShards,
 		Size:           alloc.Size,
@@ -138,7 +137,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
 	alloc := &event.Allocation{
 		AllocationID:      sa.ID,
-		AllocationName:    sa.Name,
 		TransactionID:     sa.Tx,
 		DataShards:        sa.DataShards,
 		ParityShards:      sa.ParityShards,
@@ -195,7 +193,6 @@ func (sa *StorageAllocation) buildEventBlobberTerms() []event.AllocationBlobberT
 func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 	eAlloc := event.Allocation{
 		AllocationID:      sa.ID,
-		AllocationName:    sa.Name,
 		TransactionID:     sa.Tx,
 		DataShards:        sa.DataShards,
 		ParityShards:      sa.ParityShards,
