@@ -70,7 +70,7 @@ func TestBlockStoreWriteReadFromDisk(t *testing.T) {
 	b := new(block.Block)
 	b.Hash = "new hash"
 	b.Round = 1
-	err = bStore.writeToDisk(b)
+	err = bStore.writeToDisk(b.Hash, b.Round, b)
 	require.NoError(t, err)
 
 	bPath := filepath.Join(basePath, getBlockFilePath(b.Hash, b.Round))
@@ -112,7 +112,7 @@ cache:
 	b.Hash = "new hash"
 	b.Round = 1
 
-	err = bStore.writeBlockToCache(b)
+	err = bStore.writeBlockToCache(b.Hash, b)
 	require.NoError(t, err)
 
 	data, err := bStore.cache.Read(b.Hash)

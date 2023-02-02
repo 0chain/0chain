@@ -13,6 +13,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
 	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"golang.org/x/sys/unix"
 )
 
@@ -78,23 +79,23 @@ func getBlockFilePath(hash string, round int64) string {
 type BlockStore struct {
 	basePath              string
 	blockMetadataProvider datastore.EntityMetadata
-	write                 func(bStore *BlockStore, b *block.Block) error
+	write                 func(bStore *BlockStore, hash string, rount int64, b *block.Block) error
 	read                  func(bStore *BlockStore, hash string, round int64) (*block.Block, error)
 	cache                 cacher
 }
 
-func (bStore *BlockStore) writeBlockToCache(b *block.Block) error {
+func (bStore *BlockStore) writeBlockToCache(hash string, b *block.Block) error {
 	buffer := new(bytes.Buffer)
 	err := datastore.WriteMsgpack(buffer, b)
 	if err != nil {
 		return err
 	}
 
-	return bStore.cache.Write(b.Hash, buffer.Bytes())
+	return bStore.cache.Write(hash, buffer.Bytes())
 }
 
-func (bStore *BlockStore) writeToDisk(b *block.Block) error {
-	bPath := filepath.Join(bStore.basePath, getBlockFilePath(b.Hash, b.Round))
+func (bStore *BlockStore) writeToDisk(hash string, round int64, b *block.Block) error {
+	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash, round))
 	err := os.MkdirAll(filepath.Dir(bPath), 0700)
 	if err != nil {
 		return err
@@ -121,7 +122,19 @@ func (bStore *BlockStore) writeToDisk(b *block.Block) error {
 }
 
 func (bStore *BlockStore) Write(b *block.Block) error {
-	return bStore.write(bStore, b)
+	err := bStore.write(bStore, b.Hash, b.Round, b)
+	if err != nil {
+		return err
+	}
+
+	if b.MagicBlock != nil && b.Round == b.MagicBlock.StartingRound {
+		logging.Logger.Debug("save magic block",
+			zap.Int64("round", b.Round),
+			zap.String("mb hash", b.MagicBlock.Hash),
+		)
+		return bStore.write(bStore, b.MagicBlock.Hash, b.MagicBlock.StartingRound, b)
+	}
+	return nil
 }
 
 func (bStore *BlockStore) Read(hash string, round int64) (*block.Block, error) {
@@ -182,22 +195,22 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 
 	switch {
 	default:
-		bStore.write = func(bStore *BlockStore, b *block.Block) error {
-			return bStore.writeToDisk(b)
+		bStore.write = func(bStore *BlockStore, hash string, round int64, b *block.Block) error {
+			return bStore.writeToDisk(hash, round, b)
 		}
 
 		bStore.read = func(bStore *BlockStore, hash string, round int64) (*block.Block, error) {
 			return bStore.readFromDisk(hash, round)
 		}
 	case cViper != nil:
-		bStore.write = func(bStore *BlockStore, b *block.Block) error {
-			err := bStore.writeToDisk(b)
+		bStore.write = func(bStore *BlockStore, hash string, round int64, b *block.Block) error {
+			err := bStore.writeToDisk(hash, round, b)
 			if err != nil {
 				return err
 			}
 
 			go func() {
-				if err := bStore.writeBlockToCache(b); err != nil {
+				if err := bStore.writeBlockToCache(hash, b); err != nil {
 					logging.Logger.Error(err.Error())
 				}
 			}()
@@ -222,7 +235,7 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 			}
 
 			go func() {
-				err := bStore.writeBlockToCache(b)
+				err := bStore.writeBlockToCache(b.Hash, b)
 				if err != nil {
 					logging.Logger.Error(err.Error())
 				}
