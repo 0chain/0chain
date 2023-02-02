@@ -6,9 +6,9 @@ enable:
 sets:
   - name: "Bad Validators"
     tests:
-    # - "Failing valid challenges of blobber"
+    - "Failing valid challenges of blobber"
     - "Emulate denial of service having a validator not responding"
-    # - "Passing invalid challenges of blobber"
+    - "Passing invalid challenges of blobber"
 
 # test cases
 tests:
