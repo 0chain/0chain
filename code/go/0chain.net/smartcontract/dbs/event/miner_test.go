@@ -84,7 +84,11 @@ func TestMinersBatchUpdate(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 	logging.InitLogging("development", "")
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 
 	type Stat struct {
 		// for miner (totals)
@@ -288,7 +292,12 @@ func TestMiners(t *testing.T) {
 		SharderFees    currency.Coin `json:"sharder_fees,omitempty"`
 	}
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
+
 	type NodeType int
 
 	type SimpleNode struct {
@@ -556,8 +565,11 @@ func TestGetMiners(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
-
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 	assert.NoError(t, err, "error while migrating database")
 	_ = createMiners(t, eventDb, 10)
 
@@ -600,7 +612,11 @@ func TestGetMinerLocations(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 
 	assert.NoError(t, err, "error while migrating database")
 	createMinersWithLocation(t, eventDb, 12)
