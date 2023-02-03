@@ -80,7 +80,6 @@ type newAllocationRequest struct {
 	Blobbers             []string         `json:"blobbers"`
 	ReadPriceRange       PriceRange       `json:"read_price_range"`
 	WritePriceRange      PriceRange       `json:"write_price_range"`
-	IsImmutable          bool             `json:"is_immutable"`
 	ThirdPartyExtendable bool             `json:"third_party_extendable"`
 	FileOptions          uint16            `json:"file_options"`
 }
@@ -97,7 +96,6 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.PreferredBlobbers = nar.Blobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
-	sa.IsImmutable = nar.IsImmutable
 	sa.ThirdPartyExtendable = nar.ThirdPartyExtendable
 	sa.FileOptions = nar.FileOptions
 
@@ -532,7 +530,6 @@ type updateAllocationRequest struct {
 	OwnerID              string           `json:"owner_id"`        // Owner of the allocation
 	Size                 int64            `json:"size"`            // difference
 	Expiration           common.Timestamp `json:"expiration_date"` // difference
-	SetImmutable         bool             `json:"set_immutable"`
 	UpdateTerms          bool             `json:"update_terms"`
 	AddBlobberId         string           `json:"add_blobber_id"`
 	RemoveBlobberId      string           `json:"remove_blobber_id"`
@@ -549,14 +546,8 @@ func (uar *updateAllocationRequest) validate(
 	conf *Config,
 	alloc *StorageAllocation,
 ) error {
-	if uar.SetImmutable && alloc.IsImmutable {
-		return errors.New("allocation is already immutable")
-	}
-
-	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddBlobberId) == 0 && len(uar.Name) == 0 && uar.FileOptions == alloc.FileOptions {
-		if !uar.SetImmutable && !uar.SetThirdPartyExtendable {
-			return errors.New("update allocation changes nothing")
-		}
+	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddBlobberId) == 0 && len(uar.Name) == 0 {
+		return errors.New("update allocation changes nothing")
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
 			return fmt.Errorf("new allocation size is too small: %d < %d",
@@ -1249,10 +1240,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	
 		if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
-		}
-	
-		if request.SetImmutable {
-			alloc.IsImmutable = true
 		}
 
 		if request.SetThirdPartyExtendable {

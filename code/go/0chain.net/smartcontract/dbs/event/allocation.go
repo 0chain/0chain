@@ -24,7 +24,6 @@ type Allocation struct {
 	Expiration               int64         `json:"expiration"`
 	Owner                    string        `json:"owner" gorm:"index:idx_aowner"`
 	OwnerPublicKey           string        `json:"owner_public_key"`
-	IsImmutable              bool          `json:"is_immutable"`
 	ReadPriceMin             currency.Coin `json:"read_price_min"`
 	ReadPriceMax             currency.Coin `json:"read_price_max"`
 	WritePriceMin            currency.Coin `json:"write_price_min"`
@@ -109,7 +108,6 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"expiration",
 		"owner",
 		"owner_public_key",
-		"is_immutable",
 		"read_price_min",
 		"read_price_max",
 		"write_price_min",

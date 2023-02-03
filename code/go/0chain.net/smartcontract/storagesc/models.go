@@ -627,9 +627,6 @@ type StorageAllocation struct {
 	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
 
-	// Defines mutability of the files in the allocation, used by blobber on CommitWrite
-	IsImmutable bool `json:"is_immutable"`
-
 	// Flag to determine if anyone can extend this allocation
 	ThirdPartyExtendable bool `json:"third_party_extendable"`
 
