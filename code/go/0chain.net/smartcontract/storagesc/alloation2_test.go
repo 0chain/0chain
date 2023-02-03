@@ -73,7 +73,7 @@ func TestNewAllocation(t *testing.T) {
 	var writePrice = blobberYaml.writePrice
 	for i := 0; i < request.DataShards+request.ParityShards+4; i++ {
 		var nextBlobber = StorageNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ProviderType: spenum.Blobber,
 			},
 			Capacity:  536870912,
@@ -147,7 +147,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var blobberUsedSize = allocation.UsedSize / int64(allocation.DataShards+allocation.ParityShards)
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = StorageNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ProviderType: spenum.Blobber,
 			},
 			Capacity: 536870912,
@@ -270,7 +270,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = StorageNode{
 			Capacity: 536870912,
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ProviderType: spenum.Blobber,
 			},
 			Terms: Terms{

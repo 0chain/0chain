@@ -400,7 +400,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ProviderType: spenum.Blobber,
 					},
 					BaseURL:           "my_new_blobber.com",
@@ -424,7 +424,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           encryption.Hash("my_new_validator"),
 						ProviderType: spenum.Validator,
 					},
@@ -462,7 +462,7 @@ func BenchmarkTests(
 				stake := currency.Coin(viper.GetInt64(bk.StorageMaxStake) * 1e10)
 				totalStake := stake * currency.Coin(viper.GetInt(bk.NumBlobberDelegates))
 				bytes, _ := json.Marshal(&StorageNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           getMockBlobberId(0),
 						ProviderType: spenum.Blobber,
 					},
@@ -486,7 +486,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           getMockValidatorId(0),
 						ProviderType: spenum.Validator,
 					},

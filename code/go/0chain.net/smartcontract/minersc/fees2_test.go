@@ -319,7 +319,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var miner = &MinerNode{
 		SimpleNode: &SimpleNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           minerID,
 				ProviderType: spenum.Miner,
 			},
@@ -341,7 +341,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	for i := 0; i < numberOfSharders; i++ {
 		sharder := &MinerNode{
 			SimpleNode: &SimpleNode{
-				Provider: &provider.Provider{
+				Provider: provider.Provider{
 					ID:           sharderIDs[i],
 					ProviderType: spenum.Sharder,
 				},

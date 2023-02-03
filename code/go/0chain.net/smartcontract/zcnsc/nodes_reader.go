@@ -18,7 +18,7 @@ var (
 
 func NewAuthorizerNode(id string) *AuthorizerNode {
 	return &AuthorizerNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID:           id,
 			ProviderType: spenum.Authorizer,
 		},

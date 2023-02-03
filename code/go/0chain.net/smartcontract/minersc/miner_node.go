@@ -24,7 +24,7 @@ type MinerNode struct {
 func NewMinerNode() *MinerNode {
 	mn := &MinerNode{
 		SimpleNode: &SimpleNode{
-			Provider: &provider.Provider{},
+			Provider: provider.Provider{},
 		},
 		StakePool: stakepool.NewStakePool(),
 	}

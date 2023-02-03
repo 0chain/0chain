@@ -206,7 +206,7 @@ func Test_AuthorizerSettings_ShouldBeSerializable(t *testing.T) {
 
 func Test_AuthorizerNodeSerialization(t *testing.T) {
 	source := &AuthorizerNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID:           "aaa",
 			ProviderType: spenum.Authorizer,
 		},

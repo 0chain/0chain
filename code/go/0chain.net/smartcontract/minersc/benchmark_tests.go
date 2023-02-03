@@ -104,7 +104,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           encryption.Hash("magic_block_miner_1"),
 						ProviderType: spenum.Miner,
 					},
@@ -130,7 +130,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           data.InactiveSharder,
 						ProviderType: spenum.Sharder,
 					},
@@ -312,7 +312,7 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           data.Miners[0],
 						ProviderType: spenum.Miner,
 					},
@@ -337,7 +337,7 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           data.Sharders[0],
 						ProviderType: spenum.Sharder,
 					},
@@ -388,7 +388,7 @@ func BenchmarkTests(
 			txn:      &transaction.Transaction{CreationDate: creationTime},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           data.Sharders[0],
 						ProviderType: spenum.Sharder,
 					},
@@ -404,7 +404,7 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           data.Miners[1],
 						ProviderType: spenum.Miner,
 					},
@@ -420,7 +420,7 @@ func BenchmarkTests(
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           data.Sharders[0],
 						ProviderType: spenum.Sharder,
 					},

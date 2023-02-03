@@ -114,7 +114,7 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 	dmn.setConfigs(gn)
 	for _, mn := range miners {
 		dmn.SimpleNodes[mn.miner.id] = &SimpleNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           mn.miner.id,
 				ProviderType: spenum.Miner,
 			},

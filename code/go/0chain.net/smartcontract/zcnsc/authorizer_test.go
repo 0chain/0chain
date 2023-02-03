@@ -34,7 +34,7 @@ func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
 	ctx := MakeMockStateContext()
 	for _, authorizerKey := range authorizersID {
 		node := &AuthorizerNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           authorizerKey,
 				ProviderType: spenum.Authorizer,
 			},

@@ -26,7 +26,7 @@ const (
 
 func newBlobber(id string) *StorageNode {
 	return &StorageNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID:           id,
 			ProviderType: spenum.Blobber,
 		},

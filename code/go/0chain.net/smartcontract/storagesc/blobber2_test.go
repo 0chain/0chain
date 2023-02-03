@@ -306,7 +306,7 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 
 	blobber := &StorageNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID:           blobberId,
 			ProviderType: spenum.Blobber,
 		},

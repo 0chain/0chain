@@ -119,7 +119,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				endpoint: sc.UpdateAuthorizerConfig,
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0], 3000),
 				input: (&AuthorizerNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           data.Clients[0],
 						ProviderType: spenum.Validator,
 					},

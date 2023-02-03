@@ -12,7 +12,7 @@ import (
 
 func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID:           v.ID,
 			ProviderType: spenum.Validator,
 		},

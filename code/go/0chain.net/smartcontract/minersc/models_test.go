@@ -34,61 +34,61 @@ func newMockPooler(ids []string) *mockPooler {
 func createTestSimpleNodesAndNodePool() (SimpleNodes, Pooler) {
 	sn := NewSimpleNodes()
 	sn["0"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "0",
 		},
 		TotalStaked: 12,
 	}
 	sn["1"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "1",
 		},
 		TotalStaked: 10,
 	}
 	sn["2"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "2",
 		},
 		TotalStaked: 8,
 	}
 	sn["3"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "3",
 		},
 		TotalStaked: 5,
 	}
 	sn["4"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "4",
 		},
 		TotalStaked: 3,
 	}
 	sn["5"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "5",
 		},
 		TotalStaked: 3,
 	}
 	sn["6"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "6",
 		},
 		TotalStaked: 2,
 	}
 	sn["7"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "7",
 		},
 		TotalStaked: 2,
 	}
 	sn["8"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "8",
 		},
 		TotalStaked: 2,
 	}
 	sn["9"] = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "9",
 		},
 		TotalStaked: 1,
@@ -144,7 +144,7 @@ func TestSimpleNodesReduce(t *testing.T) {
 func TestQuickFixDuplicateHosts(t *testing.T) {
 	node := func(id, n2nhost, host string, port int) *MinerNode {
 		return &MinerNode{SimpleNode: &SimpleNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID: id,
 			},
 			N2NHost: n2nhost,
@@ -156,7 +156,7 @@ func TestQuickFixDuplicateHosts(t *testing.T) {
 		return []*MinerNode{
 			{
 				SimpleNode: &SimpleNode{
-					Provider: &provider.Provider{},
+					Provider: provider.Provider{},
 					N2NHost:  "abc.com",
 					Host:     "lmn.com",
 					Port:     0,
@@ -180,26 +180,26 @@ func TestQuickFixDuplicateHosts(t *testing.T) {
 
 func TestValidateSimpleNode(t *testing.T) {
 	sn := &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "",
 		},
 	}
 	assert.Error(t, sn.Validate(), "id is empty")
 	sn = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "66dfd72",
 		},
 	}
 	assert.Error(t, sn.Validate(), "len(id) < 64")
 
 	sn = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "g6dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214",
 		},
 	}
 	assert.Error(t, sn.Validate(), "invalid hexadecimal")
 	sn = &SimpleNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID: "66dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214",
 		},
 	}

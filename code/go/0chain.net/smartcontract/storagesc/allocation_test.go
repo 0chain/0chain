@@ -74,7 +74,7 @@ func TestSelectBlobbers(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           mockBlobberId + strconv.Itoa(index),
 				ProviderType: spenum.Blobber,
 			},
@@ -334,7 +334,7 @@ func TestChangeBlobbers(t *testing.T) {
 			}
 
 			blobber := &StorageNode{
-				Provider: &provider.Provider{
+				Provider: provider.Provider{
 					ID:           ba.BlobberID,
 					ProviderType: spenum.Blobber,
 				},
@@ -563,7 +563,7 @@ func TestExtendAllocation(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           mockBlobberId + strconv.Itoa(index),
 				ProviderType: spenum.Blobber,
 			},
@@ -1026,7 +1026,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 	all = new(StorageNodes)
 	all.Nodes = []*StorageNode{
 		{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           "b1",
 				ProviderType: spenum.Blobber,
 			},
@@ -1042,7 +1042,7 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			LastHealthCheck: 0,
 		},
 		{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           "b2",
 				ProviderType: spenum.Blobber,
 			},

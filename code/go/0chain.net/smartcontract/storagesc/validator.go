@@ -99,7 +99,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 func newValidator(id string) *ValidationNode {
 	return &ValidationNode{
-		Provider: &provider.Provider{
+		Provider: provider.Provider{
 			ID:           id,
 			ProviderType: spenum.Validator,
 		},

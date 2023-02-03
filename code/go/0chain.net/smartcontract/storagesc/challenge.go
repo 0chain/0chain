@@ -947,7 +947,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if randValidator.Id != blobberID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
-					Provider: &provider.Provider{
+					Provider: provider.Provider{
 						ID:           randValidator.Id,
 						ProviderType: spenum.Validator,
 					},

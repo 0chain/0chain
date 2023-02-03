@@ -91,7 +91,7 @@ func TestDeleteMiner(t *testing.T) {
 
 		mnInput := &MinerNode{
 			SimpleNode: &SimpleNode{
-				Provider: &provider.Provider{
+				Provider: provider.Provider{
 					ID:           mockDeletedMinerId,
 					ProviderType: spenum.Miner,
 				},

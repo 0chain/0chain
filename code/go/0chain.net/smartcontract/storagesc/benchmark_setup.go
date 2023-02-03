@@ -370,7 +370,7 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
 		blobber := &StorageNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           id,
 				ProviderType: spenum.Blobber,
 			},
@@ -531,7 +531,7 @@ func AddMockValidators(
 		id := getMockValidatorId(i)
 		url := getMockValidatorUrl(i)
 		validator := &ValidationNode{
-			Provider: &provider.Provider{
+			Provider: provider.Provider{
 				ID:           id,
 				ProviderType: spenum.Validator,
 			},

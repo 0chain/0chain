@@ -1,9 +1,10 @@
 package minersc_test
 
 import (
-	"0chain.net/smartcontract/provider"
 	"strconv"
 	"testing"
+
+	"0chain.net/smartcontract/provider"
 
 	"github.com/0chain/common/core/currency"
 
@@ -90,7 +91,7 @@ func TestDeleteSharder(t *testing.T) {
 
 		mnInput := &MinerNode{
 			SimpleNode: &SimpleNode{
-				Provider: &provider.Provider{
+				Provider: provider.Provider{
 					ID:           mockDeletedSharderId,
 					ProviderType: spenum.Miner,
 				},
