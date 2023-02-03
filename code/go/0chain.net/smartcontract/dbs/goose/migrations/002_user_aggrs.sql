@@ -44,7 +44,7 @@ CREATE TABLE public.user_aggregates (
     write_pool_total bigint,
     payed_fees bigint,
     created_at timestamp with time zone
-);
+) PARTITION BY RANGE (round);
 
 ALTER TABLE public.user_aggregates OWNER TO zchain_user;
 
@@ -54,6 +54,9 @@ CREATE INDEX idx_user_snapshot_user_id ON public.user_snapshots USING btree (use
 
 CREATE UNIQUE INDEX idx_user_aggregate ON public.user_aggregates USING btree (round, user_id);
 
+
+ALTER TABLE ONLY public.user_aggregates
+    ADD CONSTRAINT user_aggregates_pkey PRIMARY KEY (user_id, round);
 
 --
 -- Migration complete

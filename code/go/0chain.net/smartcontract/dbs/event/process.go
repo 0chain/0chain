@@ -232,6 +232,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			if err := edb.dropPartition(es.round, "authorizer_aggregates"); err != nil {
 				logging.Logger.Error("error dropping partition", zap.Error(err))
 			}
+			if err := edb.dropPartition(es.round, "user_aggregates"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
 		}
 
 		tx.addEvents(ctx, es)
