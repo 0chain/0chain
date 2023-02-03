@@ -295,6 +295,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 				zap.Error(err))
 			return "", fmt.Errorf("can't Save blobber: %v", err)
 		}
+		logging.Logger.Debug("new_allocation_request_debug - after insert blobber",
+			zap.String("blobber id", b.ID),
+			zap.String("txn", txn.Hash),
+			zap.String("root", util.ToHex(balances.GetState().GetRoot())))
 
 		if err := spMap[b.ID].addOffer(sa.BlobberAllocsMap[b.ID].Offer()); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error adding offer to blobber",
@@ -312,6 +316,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
 
+		logging.Logger.Debug("new_allocation_request_debug - after save stake pool",
+			zap.String("blobber id", b.ID),
+			zap.String("txn", txn.Hash),
+			zap.String("root", util.ToHex(balances.GetState().GetRoot())))
+
 		if _, err := partitionsBlobberAllocationsAdd(balances, b.ID, sa.ID); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error adding allocation to blobber",
 				zap.String("txn", txn.Hash),
@@ -321,6 +330,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("could not bind allocation to blobber: %v", err)
 		}
 
+		logging.Logger.Debug("new_allocation_request_debug - after save partition",
+			zap.String("blobber id", b.ID),
+			zap.String("txn", txn.Hash),
+			zap.String("root", util.ToHex(balances.GetState().GetRoot())))
 		balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, b.ID, event.AllocationValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: sa.ID,
