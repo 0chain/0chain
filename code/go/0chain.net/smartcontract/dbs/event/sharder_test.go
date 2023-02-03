@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	common2 "0chain.net/smartcontract/common"
-	"github.com/0chain/common/core/currency"
-
 	"0chain.net/core/common"
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +24,60 @@ import (
 
 func init() {
 	logging.Logger = zap.NewNop()
+}
+
+func TestGetSharderWithDelegatePools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	createSharders(t, edb, 2)
+
+	err := edb.addDelegatePools([]DelegatePool{
+		{
+
+			PoolID:       "pool_id",
+			ProviderType: spenum.Sharder,
+			ProviderID:   "1",
+			DelegateID:   "delegate_id",
+
+			Balance: 30,
+		},
+		{
+			PoolID:       "pool_id_2",
+			ProviderType: spenum.Sharder,
+			ProviderID:   "1",
+			DelegateID:   "delegate_id_2",
+
+			Balance: 30,
+		},
+	})
+	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
+
+	p, err := edb.GetDelegatePool("pool_id", "1")
+	require.NoError(t, err, "Error while retrieving DelegatePool from event Database")
+	require.Equal(t, p.PoolID, "pool_id")
+	require.Equal(t, p.ProviderType, spenum.Sharder)
+	require.Equal(t, p.ProviderID, "1")
+
+	s, dps, err := edb.GetSharderWithDelegatePools("1")
+
+	require.NoError(t, err, "Error while getting sharder with delegate pools")
+	require.Equal(t, s.ID, "1")
+	require.Equal(t, 2, len(dps))
+	require.Equal(t, "1", dps[0].ProviderID) // failed, the provider id is ""
+}
+
+func TestGetSharderWithDelegatePoolsNoPools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	createSharders(t, edb, 2)
+
+	s, dps, err := edb.GetSharderWithDelegatePools("1")
+
+	require.NoError(t, err, "Error while getting sharder with delegate pools")
+	require.Nil(t, dps, "there should be no delegate pools")
+	require.Equal(t, s.ID, "1")
 }
 
 func TestSharders(t *testing.T) {
@@ -168,7 +222,7 @@ func TestSharders(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash",
 		Type:        TypeStats,
-		Tag:         TagAddOrOverwriteSharder,
+		Tag:         TagAddSharder,
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
@@ -189,7 +243,7 @@ func TestSharders(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
 		Type:        TypeStats,
-		Tag:         TagAddOrOverwriteSharder,
+		Tag:         TagAddSharder,
 		Data:        string(data),
 	}
 	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10)
@@ -343,16 +397,21 @@ func TestGetSharderLocations(t *testing.T) {
 
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}}
-		err := eventDb.addOrOverwriteSharders([]Sharder{s})
+		id := fmt.Sprintf("%d", i)
+		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: id}}
+		err := eventDb.addSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
+
+		require.NoError(t, eventDb.Get().Create(&ProviderRewards{
+			ProviderID: id,
+		}).Error)
 	}
 }
 
 func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
-		err := eventDb.addOrOverwriteSharders([]Sharder{s})
+		err := eventDb.addSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }

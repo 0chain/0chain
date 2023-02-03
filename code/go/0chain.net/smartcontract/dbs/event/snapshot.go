@@ -96,7 +96,6 @@ type globalSnapshot struct {
 }
 
 func (edb *EventDb) addSnapshot(s Snapshot) error {
-	logging.Logger.Info("add_snapshot", zap.Any("snapshot", s))
 	return edb.Store.Get().Create(&s).Error
 }
 
@@ -138,7 +137,7 @@ func (gs *globalSnapshot) update(e []Event) {
 			gs.TotalMint += int64(m.Amount)
 			gs.ZCNSupply += int64(m.Amount)
 			logging.Logger.Info("snapshot update TagAddMint",
-				zap.Any("total mint and zcn mint", gs))
+				zap.Int64("total_mint", gs.TotalMint), zap.Int64("zcn_supply", gs.ZCNSupply))
 		case TagBurn:
 			m, ok := fromEvent[state.Burn](event.Data)
 			if !ok {
@@ -148,7 +147,7 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ZCNSupply -= int64(m.Amount)
 			logging.Logger.Info("snapshot update TagBurn",
-				zap.Any("zcn burn", gs))
+				zap.Int64("zcn_supply", gs.ZCNSupply))
 		case TagLockStakePool:
 			d, ok := fromEvent[DelegatePoolLock](event.Data)
 			if !ok {

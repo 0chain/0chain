@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 
 	common2 "0chain.net/smartcontract/common"
@@ -87,8 +86,50 @@ func (edb *EventDb) GetSharder(id string) (Sharder, error) {
 		First(&sharder).Error
 }
 
-func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
+func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegatePool, error) {
+	var sharderDps []struct {
+		Sharder
+		DelegatePool
+		ProviderRewards //nolint
+	}
+	var s Sharder
+	var dps []DelegatePool
 
+	result := edb.Get().
+		Table("sharders").
+		Joins("left join provider_rewards on sharders.id = provider_rewards.provider_id").
+		Joins("left join delegate_pools on sharders.id = delegate_pools.provider_id").
+		Where("sharders.id = ?", id).
+		Scan(&sharderDps)
+	if result.Error != nil {
+		return s, nil, result.Error
+	}
+	if len(sharderDps) == 0 {
+		return s, nil, fmt.Errorf("get sharder %s found no records", id)
+	}
+	if id != sharderDps[0].Sharder.ID {
+		return s, nil, fmt.Errorf("mismatched sharder; want id %s but have id %s", id, sharderDps[0].Sharder.ID)
+	}
+	s = sharderDps[0].Sharder
+
+	s.Rewards = sharderDps[0].ProviderRewards
+	s.Rewards.ProviderID = id
+	if len(sharderDps) == 1 && sharderDps[0].DelegatePool.PoolID == "" {
+		// The sharder has no delegate pools
+		return s, nil, nil
+	}
+	for i := range sharderDps {
+		dps = append(dps, sharderDps[i].DelegatePool)
+		if id != sharderDps[i].DelegatePool.ProviderID {
+			return s, nil, fmt.Errorf("mismatched sharder id in delegate pool;"+
+				"want id %s but have id %s", id, sharderDps[i].DelegatePool.ProviderID)
+		}
+	}
+
+	return s, dps, nil
+}
+
+func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
 	var sharders []Sharder
 
 	result := edb.Store.Get().
@@ -101,7 +142,6 @@ func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
 }
 
 func (edb *EventDb) GetSharders() ([]Sharder, error) {
-
 	var sharders []Sharder
 
 	result := edb.Store.Get().
@@ -113,7 +153,6 @@ func (edb *EventDb) GetSharders() ([]Sharder, error) {
 }
 
 func (edb *EventDb) CountActiveSharders() (int64, error) {
-
 	var count int64
 
 	result := edb.Store.Get().
@@ -125,7 +164,6 @@ func (edb *EventDb) CountActiveSharders() (int64, error) {
 }
 
 func (edb *EventDb) CountInactiveSharders() (int64, error) {
-
 	var count int64
 
 	result := edb.Store.Get().
@@ -136,37 +174,11 @@ func (edb *EventDb) CountInactiveSharders() (int64, error) {
 	return count, result.Error
 }
 
-func (edb *EventDb) GetShardersTotalStake() (int64, error) {
-	var count int64
-
-	err := edb.Store.Get().Table("sharders").Select("sum(total_stake)").Row().Scan(&count)
-	return count, err
-}
-
-func (edb *EventDb) addOrOverwriteSharders(sharders []Sharder) error {
+func (edb *EventDb) addSharders(sharders []Sharder) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&sharders).Error
-}
-
-func (sh *Sharder) exists(edb *EventDb) (bool, error) {
-
-	var sharder Sharder
-
-	result := edb.Get().
-		Model(&Sharder{}).
-		Where(&Sharder{Provider: Provider{ID: sh.ID}}).
-		Take(&sharder)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
-	} else if result.Error != nil {
-		return false, fmt.Errorf("error searching for sharder %v, error %v",
-			sh.ID, result.Error)
-	}
-
-	return true, nil
 }
 
 type SharderQuery struct {
@@ -224,18 +236,7 @@ func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagina
 }
 
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
-
 	var sharder = Sharder{Provider: Provider{ID: updates.Id}}
-	exists, err := sharder.exists(edb)
-
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("sharder %v not in database cannot update",
-			sharder.ID)
-	}
-
 	result := edb.Store.Get().
 		Model(&Sharder{}).
 		Where(&Sharder{Provider: Provider{ID: sharder.ID}}).
@@ -245,7 +246,6 @@ func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
 }
 
 func (edb *EventDb) deleteSharder(id string) error {
-
 	result := edb.Store.Get().
 		Where(&Sharder{Provider: Provider{ID: id}}).
 		Delete(&Sharder{})

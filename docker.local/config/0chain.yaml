@@ -76,14 +76,10 @@ server_chain:
     min_fee: 0
     transfer_cost: 10
     exempt:
-      - add_miner
-      - miner_health_check
-      - add_sharder
-      - sharder_health_check
       - contributeMpk
-      - sharder_keep
       - shareSignsOrShares
       - wait
+      - mint
   client:
     signature_scheme: bls0chain # ed25519 or bls0chain
     discover: true
@@ -147,6 +143,8 @@ server_chain:
       # event database settings blockchain
       debug: false
       aggregate_period: 10
+      partition_change_period: 100
+      partition_keep_count: 10
       page_limit: 50
 
 network:

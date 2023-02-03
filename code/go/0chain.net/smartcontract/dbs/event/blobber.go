@@ -75,40 +75,6 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	return &blobber, nil
 }
 
-func (edb *EventDb) GetBlobberRank(blobberId string) (int64, error) {
-	blobber, err := edb.GetBlobber(blobberId)
-	if err != nil {
-		return 0, err
-	}
-	var rank int64
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Where("rank_metric > ?", blobber.RankMetric).
-		Count(&rank)
-	return rank + 1, result.Error
-}
-
-func (edb *EventDb) BlobberTotalCapacity() (int64, error) {
-	var total int64
-	return total, edb.Store.Get().Model(&Blobber{}).
-		Select("SUM(capacity)").
-		Find(&total).Error
-}
-
-func (edb *EventDb) BlobberAverageWritePrice() (float64, error) {
-	var average float64
-	return average, edb.Store.Get().Model(&Blobber{}).
-		Select("AVG(write_price)").
-		Find(&average).Error
-}
-
-func (edb *EventDb) TotalUsedData() (int64, error) {
-	var total int64
-	return total, edb.Store.Get().Model(&Blobber{}).
-		Select("sum(used)").
-		Find(&total).Error
-}
-
 func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().
@@ -264,7 +230,7 @@ func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
 		for _, b := range blobbers {
 			bids = append(bids, b.ID)
 		}
-		logging.Logger.Debug("add or overwrite blobbers failed", zap.Any("ids", bids))
+		logging.Logger.Debug("add or overwrite blobbers failed", zap.Strings("ids", bids))
 	}
 	return err
 }

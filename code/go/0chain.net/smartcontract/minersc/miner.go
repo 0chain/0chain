@@ -62,8 +62,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			"failed to add new miner: Not in magic block")
 	}
 
-	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
-
 	allMiners, err := getMinersList(balances)
 	if err != nil {
 		logging.Logger.Error("add_miner: Error in getting list from the DB",
@@ -85,14 +83,13 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.String("base URL", newMiner.N2NHost),
 		zap.String("ID", newMiner.ID),
 		zap.String("pkey", newMiner.PublicKey),
-		zap.Any("mscID", msc.ID),
+		zap.String("mscID", msc.ID),
 		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet),
 		zap.Float64("service_charge", newMiner.Settings.ServiceChargeRatio),
 		zap.Int("num_delegates", newMiner.Settings.MaxNumDelegates),
 		zap.Int64("min_stake", int64(newMiner.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newMiner.Settings.MaxStake)),
 	)
-	logging.Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
@@ -129,12 +126,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 				"saving all miners list: %v", err)
 		}
 
-		err = emitAddOrOverwriteMiner(newMiner, balances)
-		if err != nil {
-			return "", common.NewErrorf("add_miner",
-				"insert new miner: %v", err)
-		}
-
+		emitAddMiner(newMiner, balances)
 		update = true
 	}
 

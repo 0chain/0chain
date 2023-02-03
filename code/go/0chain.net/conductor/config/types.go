@@ -121,3 +121,19 @@ func NewAdversarialValidator() *AdversarialValidator {
 func (n *AdversarialValidator) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
 }
+
+// CollectVerificationTicketsWhenMissedVRF represents the collect_verification_tickets_when_missing_vrf directive state.
+type CollectVerificationTicketsWhenMissedVRF struct {
+	Miner string `json:"miner" yaml:"miner" mapstructure:"miner"`
+	Round int    `json:"round" yaml:"round" mapstructure:"round"`
+}
+
+// NewCollectVerificationTicketsWhenMissedVRF returns an entity of CollectVerificationTicketsWhenMissedVRF
+func NewCollectVerificationTicketsWhenMissedVRF() *CollectVerificationTicketsWhenMissedVRF {
+	return &CollectVerificationTicketsWhenMissedVRF{}
+}
+
+// Decode implements MapDecoder interface.
+func (n *CollectVerificationTicketsWhenMissedVRF) Decode(val interface{}) error {
+	return mapstructure.Decode(val, n)
+}

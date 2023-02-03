@@ -56,8 +56,8 @@ func (edb *EventDb) ProcessEvents(
 		du := time.Since(ts)
 		if du.Milliseconds() > 200 {
 			logging.Logger.Warn("process events slow",
-				zap.Any("duration", du),
-				zap.Any("merge events duration", pdu),
+				zap.Duration("duration", du),
+				zap.Duration("merge events duration", pdu),
 				zap.Int64("round", round),
 				zap.String("block", block),
 				zap.Int("block size", blockSize))
@@ -66,7 +66,7 @@ func (edb *EventDb) ProcessEvents(
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
 			zap.Error(ctx.Err()),
-			zap.Any("duration", du),
+			zap.Duration("duration", du),
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
@@ -79,8 +79,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	var (
 		mergers = []eventsMerger{
 			mergeAddUsersEvents(),
-			mergeAddProviderEvents[Miner](TagAddOrOverwriteMiner, withUniqueEventOverwrite()),
-			mergeAddProviderEvents[Sharder](TagAddOrOverwriteSharder, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Miner](TagAddMiner, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Sharder](TagAddSharder, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
@@ -183,6 +183,51 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
 
+		if es.round%edb.settings.PartitionChangePeriod == 0 {
+			if err := edb.addPartition(es.round, "events"); err != nil {
+				logging.Logger.Error("error creating partition", zap.Error(err))
+			}
+			if err := edb.dropPartition(es.round, "events"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
+			if err := edb.addPartition(es.round, "snapshots"); err != nil {
+				logging.Logger.Error("error creating partition", zap.Error(err))
+			}
+			if err := edb.dropPartition(es.round, "snapshots"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
+			if err := edb.addPartition(es.round, "blobber_aggregates"); err != nil {
+				logging.Logger.Error("error creating partition", zap.Error(err))
+			}
+			if err := edb.dropPartition(es.round, "blobber_aggregates"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
+			if err := edb.addPartition(es.round, "miner_aggregates"); err != nil {
+				logging.Logger.Error("error creating partition", zap.Error(err))
+			}
+			if err := edb.dropPartition(es.round, "miner_aggregates"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
+			if err := edb.addPartition(es.round, "sharder_aggregates"); err != nil {
+				logging.Logger.Error("error creating partition", zap.Error(err))
+			}
+			if err := edb.dropPartition(es.round, "sharder_aggregates"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
+			if err := edb.addPartition(es.round, "validator_aggregates"); err != nil {
+				logging.Logger.Error("error creating partition", zap.Error(err))
+			}
+			if err := edb.dropPartition(es.round, "validator_aggregates"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
+			if err := edb.addPartition(es.round, "authorizer_aggregates"); err != nil {
+				logging.Logger.Error("error creating partition", zap.Error(err))
+			}
+			if err := edb.dropPartition(es.round, "authorizer_aggregates"); err != nil {
+				logging.Logger.Error("error dropping partition", zap.Error(err))
+			}
+		}
+
 		tx.addEvents(ctx, es)
 		tse := time.Now()
 		tags := make([]string, 0, len(es.events))
@@ -218,7 +263,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		due := time.Since(tse)
 		logging.Logger.Debug("event db process",
-			zap.Any("duration", due),
+			zap.Duration("duration", due),
 			zap.Int("events number", len(es.events)),
 			zap.Strings("tags", tags),
 			zap.Int64("round", es.round),
@@ -227,7 +272,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		if due.Milliseconds() > 200 {
 			logging.Logger.Warn("event db work slow",
-				zap.Any("duration", due),
+				zap.Duration("duration", due),
 				zap.Int("events number", len(es.events)),
 				zap.Strings("tags", tags),
 				zap.Int64("round", es.round),
@@ -287,7 +332,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addStat",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),
@@ -301,7 +346,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Warn("event db save slow - addchain",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.String("event tag", event.Tag.String()),
 				zap.Int64("round", round),
 				zap.String("block", block),
@@ -510,12 +555,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateValidatorTotalUnStakes(*updates)
-	case TagAddOrOverwriteMiner:
+	case TagAddMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrOverwriteMiner(*miners)
+		return edb.addMiner(*miners)
 	case TagUpdateMiner:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -528,19 +573,18 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.deleteMiner(*minerID)
-	case TagAddOrOverwriteSharder:
+	case TagAddSharder:
 		sharders, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 
-		return edb.addOrOverwriteSharders(*sharders)
+		return edb.addSharders(*sharders)
 	case TagUpdateMinerTotalStake:
 		m, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-
 		return edb.updateMinersTotalStakes(*m)
 	case TagUpdateMinerTotalUnStake:
 		m, ok := fromEvent[[]Miner](event.Data)

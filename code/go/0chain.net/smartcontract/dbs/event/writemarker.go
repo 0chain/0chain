@@ -55,22 +55,6 @@ func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
 	return &wm, nil
 }
 
-func (edb *EventDb) GetAllocationWrittenSizeInLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
-	var total int64
-	return total, edb.Store.Get().Model(&WriteMarker{}).
-		Select("sum(size)").
-		Where(&WriteMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
-		Find(&total).Error
-}
-
-func (edb *EventDb) GetAllocationWrittenSizeInBlocks(startBlockNum, endBlockNum int64) (int64, error) {
-	var total int64
-	return total, edb.Store.Get().Model(&WriteMarker{}).
-		Select("COALESCE(SUM(size),0)").
-		Where("block_number > ? AND block_number < ?", startBlockNum, endBlockNum).
-		Find(&total).Error
-}
-
 func (edb *EventDb) GetWriteMarkerCount(allocationID string) (int64, error) {
 	var total int64
 	return total, edb.Store.Get().Model(&WriteMarker{}).Where("allocation_id = ?", allocationID).Count(&total).Error
@@ -117,7 +101,7 @@ func (edb *EventDb) addWriteMarkers(wms []WriteMarker) error {
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("event db - add write markers slow",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.Int("num", len(wms)))
 		}
 	}()

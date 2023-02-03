@@ -19,7 +19,6 @@ import (
 )
 
 func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
-	balances := newTestBalances(t, true)
 	type params struct {
 		numBlobbers       int
 		wp                []currency.Coin
@@ -36,13 +35,13 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		blobberDelegatesRewards [][]currency.Coin
 	}
 
-	setupRewards := func(t *testing.T, p params, sc *StorageSmartContract) {
+	setupRewards := func(t *testing.T, p params, balances state.StateContextI, sc *StorageSmartContract) state.StateContextI {
 		conf := setConfig(t, balances)
 		allBR, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
-			_, err = allBR.AddItem(balances, &BlobberRewardNode{
+			err = allBR.Add(balances, &BlobberRewardNode{
 				ID:                bID,
 				SuccessChallenges: p.successChallenges[i],
 				WritePrice:        p.wp[i],
@@ -67,9 +66,10 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		}
 		err = allBR.Save(balances)
 		require.NoError(t, err)
+		return balances
 	}
 
-	compareResult := func(t *testing.T, p params, r result, ssc *StorageSmartContract) {
+	compareResult := func(t *testing.T, p params, r result, balances state.StateContextI, ssc *StorageSmartContract) {
 		conf, err := ssc.getConfig(balances, false)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
@@ -135,12 +135,12 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			balances := newTestBalances(t, true)
 			ssc := newTestStorageSC()
-			setupRewards(t, tt.params, ssc)
+			setupRewards(t, tt.params, balances, ssc)
 			err := ssc.blobberBlockRewards(balances)
 			require.EqualValues(t, tt.wantErr, err != nil)
-			compareResult(t, tt.params, tt.result, ssc)
-
+			compareResult(t, tt.params, tt.result, balances, ssc)
 		})
 	}
 }
@@ -179,7 +179,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 			DataRead:          float64(i),
 		}
 		//bs[i] = b
-		if _, err := part.AddItem(sctx, &br); err != nil {
+		if err := part.Add(sctx, &br); err != nil {
 			panic(err)
 		}
 	}
@@ -201,7 +201,7 @@ func BenchmarkPartitionsGetItem(b *testing.B) {
 	id := strconv.Itoa(10)
 	for i := 0; i < b.N; i++ {
 		var br BlobberRewardNode
-		_ = part.GetItem(ps, 0, id, &br)
+		_ = part.Get(ps, id, &br)
 	}
 }
 
@@ -255,7 +255,7 @@ func BenchmarkGetUpdateItem(b *testing.B) {
 	require.NoError(b, err)
 
 	for i := 0; i < b.N; i++ {
-		_ = part.UpdateItem(ps, 0, &BlobberRewardNode{ID: "100"})
+		_ = part.UpdateItem(ps, &BlobberRewardNode{ID: "100"})
 	}
 
 	_ = part.Save(ps)
@@ -291,7 +291,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	p, err := partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 
-	_, err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_1"})
+	err = p.Add(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_1"})
 	require.NoError(t, err)
 	err = p.Save(state)
 	require.NoError(t, err)
@@ -302,7 +302,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, s)
 
-	_, err = p.AddItem(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_2"})
+	err = p.Add(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_2"})
 	require.NoError(t, err)
 
 	err = p.Save(state)
