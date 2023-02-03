@@ -222,9 +222,11 @@ const (
 	EventDbOpenConns       = DbsEvents + "max_open_conns"
 	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
 
-	EventDbDebug           = DbSettings + "debug"
-	EventDbAggregatePeriod = DbSettings + "aggregate_period"
-	EventDbPageLimit       = DbSettings + "page_limit"
+	EventDbDebug                 = DbSettings + "debug"
+	EventDbAggregatePeriod       = DbSettings + "aggregate_period"
+	EventDbPartitionChangePeriod = DbSettings + "partition_change_period"
+	EventDbPartitionKeepCount    = DbSettings + "partition_keep_count"
+	EventDbPageLimit             = DbSettings + "page_limit"
 )
 
 func (s Source) String() string {

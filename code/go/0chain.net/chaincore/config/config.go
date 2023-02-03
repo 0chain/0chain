@@ -210,9 +210,11 @@ type DbAccess struct {
 }
 
 type DbSettings struct {
-	Debug           bool  `json:"debug"`
-	AggregatePeriod int64 `json:"aggregate_period"`
-	PageLimit       int64 `json:"page_limit"`
+	Debug                 bool  `json:"debug"`
+	AggregatePeriod       int64 `json:"aggregate_period"`
+	PartitionChangePeriod int64 `json:"partition_change_period"`
+	PartitionKeepCount    int64 `json:"partition_keep_count"`
+	PageLimit             int64 `json:"page_limit"`
 }
 
 func (s *DbSettings) Update(updates map[string]string) error {
@@ -229,6 +231,20 @@ func (s *DbSettings) Update(updates map[string]string) error {
 			return err
 		}
 		s.AggregatePeriod = iValue.(int64)
+	}
+	if value, found := updates[enums.DbsPartitionChangePeriod.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.PartitionChangePeriod = iValue.(int64)
+	}
+	if value, found := updates[enums.DbsPartitionKeepCount.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.PartitionKeepCount = iValue.(int64)
 	}
 	if value, found := updates[enums.DbsAggregatePageLimit.String()]; found {
 		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
