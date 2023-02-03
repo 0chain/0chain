@@ -547,7 +547,7 @@ func setupMocksFinishAllocation(
 		sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
 		require.NoError(t, sp.Save(spenum.Blobber, blobber.ID, ctx))
 
-		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+		_, err = ctx.InsertTrieNode(blobber.GetKey(), blobber)
 		require.NoError(t, err)
 	}
 
@@ -778,7 +778,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	for _, blobber := range blobbers {
 		// Save the blobber
-		_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+		_, err = ctx.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			require.NoError(t, err)
 		}

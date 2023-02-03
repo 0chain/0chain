@@ -38,7 +38,7 @@ func getBlobber(
 	balances cstate.CommonStateContextI,
 ) (*StorageNode, error) {
 	blobber := newBlobber(blobberID)
-	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
+	err := balances.GetTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			stakedCapacity, blobber.Capacity)
 	}
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
@@ -248,7 +248,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	// Save the blobber
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"saving blobber: "+err.Error())
@@ -352,7 +352,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 	emitBlobberHealthCheck(blobber, downtime, balances)
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
+	_, err = balances.InsertTrieNode(blobber.GetKey(),
 		blobber)
 	if err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -537,7 +537,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't Save read pool: %v", err)
 	}
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't Save blobber: %v", err)
@@ -804,7 +804,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	// Save blobber
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving blobber object: %v", err)

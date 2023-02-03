@@ -1,12 +1,13 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/provider"
 	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/provider"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -315,7 +316,7 @@ func testCommitBlobberRead(
 		},
 	}
 
-	_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	_, err = ctx.InsertTrieNode(blobber.GetKey(), blobber)
 
 	var rPool = readPool{readPoolIn.Balance}
 

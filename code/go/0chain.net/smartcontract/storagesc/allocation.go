@@ -282,7 +282,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	for _, b := range blobberNodes {
-		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		_, err = balances.InsertTrieNode(b.GetKey(), b)
 		if err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
 				zap.String("txn", txn.Hash),
@@ -710,7 +710,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 	balances chainstate.StateContextI,
 ) (err error) {
 	for _, b := range blobbers {
-		if _, err = balances.InsertTrieNode(b.GetKey(ADDRESS), b); err != nil {
+		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
 		emitUpdateBlobber(b, balances)
@@ -1684,7 +1684,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			})
 		}
 		// update the blobber
-		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
+		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return fmt.Errorf("failed to save blobber: %s, err: %v", d.BlobberID, err)
 		}
 

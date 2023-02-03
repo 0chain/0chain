@@ -388,7 +388,7 @@ func AddMockBlobbers(
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
-		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
+		_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			log.Fatal("insert blobber into mpt", err)
 		}

@@ -346,7 +346,7 @@ func TestChangeBlobbers(t *testing.T) {
 				},
 				LastHealthCheck: now,
 			}
-			_, err := balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
 			blobbers = append(blobbers, blobber)
 		}
@@ -1206,9 +1206,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b1 := allBlobbers.Nodes[1]
 		b1.LastHealthCheck = tx.CreationDate
 		nar.Blobbers = append(nar.Blobbers, b0.ID)
-		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
 		nar.Blobbers = append(nar.Blobbers, b1.ID)
-		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
@@ -1237,9 +1237,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b1 := allBlobbers.Nodes[1]
 		b1.LastHealthCheck = tx.CreationDate
 		nar.Blobbers = append(nar.Blobbers, b0.ID)
-		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
 		nar.Blobbers = append(nar.Blobbers, b1.ID)
-		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
 		var (
@@ -1281,9 +1281,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b1.Allocated = 10 * GB
 
 		nar.Blobbers = append(nar.Blobbers, b0.ID)
-		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
 		nar.Blobbers = append(nar.Blobbers, b1.ID)
-		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
 		var (
@@ -1327,9 +1327,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		b1.Allocated = 10 * GB
 
 		nar.Blobbers = append(nar.Blobbers, b0.ID)
-		_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
 		nar.Blobbers = append(nar.Blobbers, b1.ID)
-		_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
 		var (
@@ -1548,9 +1548,9 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	b1.Allocated = 10 * GB
 
 	nar.Blobbers = append(nar.Blobbers, b0.ID)
-	_, err = balances.InsertTrieNode(b0.GetKey(ssc.ID), b0)
+	_, err = balances.InsertTrieNode(b0.GetKey(), b0)
 	nar.Blobbers = append(nar.Blobbers, b1.ID)
-	_, err = balances.InsertTrieNode(b1.GetKey(ssc.ID), b1)
+	_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 	require.NoError(t, err)
 
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}

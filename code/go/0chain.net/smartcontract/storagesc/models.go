@@ -207,7 +207,7 @@ type ValidationNode struct {
 func (sn *ValidationNode) validate(_ *Config) (err error) {
 	if strings.Contains(sn.BaseURL, "localhost") &&
 		node.Self.Host != "localhost" {
-		return errors.New("invalid vali1dator base url")
+		return errors.New("invalid validator base url")
 	}
 
 	return
@@ -371,7 +371,7 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 	return
 }
 
-func (sn *StorageNode) GetKey(_ string) datastore.Key {
+func (sn *StorageNode) GetKey() datastore.Key {
 	return provider.GetKey(sn.ID)
 }
 
@@ -928,7 +928,7 @@ func (sa *StorageAllocation) removeBlobber(
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
 	}
 
-	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(ADDRESS), removedBlobber); err != nil {
+	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
 		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
 

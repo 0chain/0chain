@@ -642,7 +642,7 @@ func (sc *StorageSmartContract) challengePassed(
 			Timestamp:  t.CreationDate,
 		}
 
-		_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			return "", common.NewError("verify_challenge",
 				"error inserting blobber to chain"+err.Error())
