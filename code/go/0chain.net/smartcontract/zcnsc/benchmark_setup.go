@@ -72,17 +72,20 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 		if err != nil {
 			panic(err)
 		}
+		if err := increaseAuthorizerCount(ctx); err != nil {
+			log.Fatal(err)
+		}
 
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			settings := getMockStakePoolSettings(id)
 			authorizer := event.Authorizer{
-				URL:             authorizer.URL,
+				URL: authorizer.URL,
 				Provider: event.Provider{
-					ID:             authorizer.ID,
-					DelegateWallet: clients[i],
-					MinStake:       settings.MinStake,
-					MaxStake:       settings.MaxStake,
-					ServiceCharge:  settings.ServiceChargeRatio,
+					ID:              authorizer.ID,
+					DelegateWallet:  clients[i],
+					MinStake:        settings.MinStake,
+					MaxStake:        settings.MaxStake,
+					ServiceCharge:   settings.ServiceChargeRatio,
 					LastHealthCheck: common.Now(),
 				},
 			}
@@ -102,7 +105,7 @@ func addMockStakePools(clients []string, ctx cstate.StateContextI) {
 		}
 		sp.Reward = 11
 		sp.Minter = cstate.MinterZcn
-		_, err := ctx.InsertTrieNode(StakePoolKey(ADDRESS, clients[i]), sp)
+		_, err := ctx.InsertTrieNode(stakepool.StakePoolKey(spenum.Authorizer, clients[i]), sp)
 		if err != nil {
 			log.Fatal(err)
 		}
