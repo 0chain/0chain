@@ -130,15 +130,15 @@ func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currenc
 
 /*ComputeClientID - compute the client id if there is a public key in the transaction */
 func (t *Transaction) ComputeClientID() error {
-	if t.ClientID != "" {
-		return nil
-	}
-
 	if t.PublicKey == "" {
 		logging.Logger.Error("invalid transaction",
 			zap.Error(ErrTxnMissingPublicKey),
 			zap.String("txn", datastore.ToJSON(t).String()))
 		return ErrTxnMissingPublicKey
+	}
+
+	if t.ClientID != "" {
+		return encryption.VerifyPublicKeyClientID(t.PublicKey, t.ClientID)
 	}
 
 	// Doing this is OK because the transaction signature has ClientID
@@ -313,11 +313,6 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 
 	co, err := client.GetClientFromCache(t.ClientID)
 	if err != nil {
-		err = encryption.VerifyPublicKeyClientID(t.PublicKey, t.ClientID)
-		if err != nil {
-			return nil, err
-		}
-
 		co = client.NewClient()
 		co.ID = t.ClientID
 		if err := co.SetPublicKey(t.PublicKey); err != nil {
@@ -331,11 +326,6 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 	if co.SigScheme == nil {
 		if t.PublicKey == "" {
 			return nil, errors.New("get signature scheme failed, empty public key in transaction")
-		}
-
-		err = encryption.VerifyPublicKeyClientID(t.PublicKey, t.ClientID)
-		if err != nil {
-			return nil, err
 		}
 
 		co.ID = t.ClientID
