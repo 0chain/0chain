@@ -180,11 +180,15 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 	return b
 }
 
-func (b *Block) GetUniqueBlockExtensions() (uBlExts map[string]bool) {
+func (b *Block) GetUniqueBlockExtensions() map[string]bool {
 	b.uniqueBlockExtMutex.RLock()
 	defer b.uniqueBlockExtMutex.RUnlock()
 
-	return b.uniqueBlockExtensions
+	cb := make(map[string]bool, len(b.uniqueBlockExtensions))
+	for k, v := range b.uniqueBlockExtensions {
+		cb[k] = v
+	}
+	return cb
 }
 
 // GetVerificationTickets of the block async safe.
