@@ -48,20 +48,6 @@ CREATE TABLE public.user_aggregates (
 
 ALTER TABLE public.user_aggregates OWNER TO zchain_user;
 
-CREATE SEQUENCE public.user_aggregates_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.user_aggregates_id_seq OWNER TO zchain_user;
-
-
-ALTER SEQUENCE public.user_aggregates_id_seq OWNED BY public.user_aggregates.user_id;
-
-
 CREATE INDEX idx_user_snapshot_user_id ON public.user_snapshots USING btree (user_id);
 
 
