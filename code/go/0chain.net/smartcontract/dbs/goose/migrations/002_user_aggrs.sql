@@ -58,6 +58,9 @@ CREATE UNIQUE INDEX idx_user_aggregate ON public.user_aggregates USING btree (ro
 ALTER TABLE ONLY public.user_aggregates
     ADD CONSTRAINT user_aggregates_pkey PRIMARY KEY (user_id, round);
 
+CREATE TABLE public.user_aggregates_0 PARTITION OF user_aggregates
+    FOR VALUES FROM (0) TO (100);
+
 --
 -- Migration complete
 --
