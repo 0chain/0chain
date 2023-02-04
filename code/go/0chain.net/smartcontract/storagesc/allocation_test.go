@@ -697,11 +697,11 @@ func TestExtendAllocation(t *testing.T) {
 			name: "ok_funded",
 			args: args{
 				request: updateAllocationRequest{
-					ID:           mockAllocationId,
-					OwnerID:      mockOwner,
-					Size:         zcnToInt64(31),
-					Expiration:   7000,
-					FileOptions:  63,
+					ID:          mockAllocationId,
+					OwnerID:     mockOwner,
+					Size:        zcnToInt64(31),
+					Expiration:  7000,
+					FileOptions: 63,
 				},
 				expiration: mockExpiration,
 				value:      0.1e10,
@@ -712,11 +712,11 @@ func TestExtendAllocation(t *testing.T) {
 			name: "ok_unfounded",
 			args: args{
 				request: updateAllocationRequest{
-					ID:           mockAllocationId,
-					OwnerID:      mockOwner,
-					Size:         zcnToInt64(31),
-					Expiration:   7000,
-					FileOptions:  63,
+					ID:          mockAllocationId,
+					OwnerID:     mockOwner,
+					Size:        zcnToInt64(31),
+					Expiration:  7000,
+					FileOptions: 63,
 				},
 				expiration: mockExpiration,
 				value:      0.0,
@@ -1806,7 +1806,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		ssc                  = newTestStorageSC()
 		balances             = newTestBalances(t, false)
 		client               = newClient(1000*x10, balances)
-		otherClient			 = newClient(50*x10, balances)
+		otherClient          = newClient(50*x10, balances)
 		tp, exp        int64 = 100, 1000
 		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, 0, balances)
 		alloc          *StorageAllocation
@@ -1873,8 +1873,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// Owner can extend regardless of the value of `third_party_extendable`
 	req := updateAllocationRequest{
-		ID: alloc.ID,
-		Size: 100,
+		ID:         alloc.ID,
+		Size:       100,
 		Expiration: 100,
 	}
 	tp += 100
@@ -1883,8 +1883,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// Others cannot extend the allocation if `third_party_extendable` = false
 	req = updateAllocationRequest{
-		ID: alloc.ID,
-		Size: 100,
+		ID:         alloc.ID,
+		Size:       100,
 		Expiration: 100,
 	}
 	tp += 100
@@ -1894,19 +1894,19 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// Owner can change `third_party_extendable`
 	req = updateAllocationRequest{
-		ID: alloc.ID,
+		ID:                      alloc.ID,
 		SetThirdPartyExtendable: true,
 	}
 	tp += 100
 	resp, err = req.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
 	require.NoError(t, err)
-	
+
 	// Others can extend the allocation if `third_party_extendable` = true
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 	req = updateAllocationRequest{
-		ID: alloc.ID,
-		Size: 100,
+		ID:         alloc.ID,
+		Size:       100,
 		Expiration: 100,
 	}
 	tp += 100
@@ -1921,7 +1921,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// Other cannot perform any other action than extending. No error returned but the value is unchanged.
 	req = updateAllocationRequest{
-		ID: alloc.ID,
+		ID:          alloc.ID,
 		FileOptions: 61,
 	}
 	tp += 100
@@ -1935,7 +1935,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// expiration date cannot be decreased
 	req = updateAllocationRequest{
-		ID: alloc.ID,
+		ID:         alloc.ID,
 		Expiration: -1,
 	}
 	tp += 100

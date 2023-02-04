@@ -81,7 +81,7 @@ type newAllocationRequest struct {
 	ReadPriceRange       PriceRange       `json:"read_price_range"`
 	WritePriceRange      PriceRange       `json:"write_price_range"`
 	ThirdPartyExtendable bool             `json:"third_party_extendable"`
-	FileOptions          uint16            `json:"file_options"`
+	FileOptions          uint16           `json:"file_options"`
 }
 
 // storageAllocation from the request
@@ -525,16 +525,16 @@ func validateBlobbers(
 }
 
 type updateAllocationRequest struct {
-	ID                   string           `json:"id"`              // allocation id
-	Name                 string           `json:"name"`            // allocation name
-	OwnerID              string           `json:"owner_id"`        // Owner of the allocation
-	Size                 int64            `json:"size"`            // difference
-	Expiration           common.Timestamp `json:"expiration_date"` // difference
-	UpdateTerms          bool             `json:"update_terms"`
-	AddBlobberId         string           `json:"add_blobber_id"`
-	RemoveBlobberId      string           `json:"remove_blobber_id"`
-	SetThirdPartyExtendable bool          `json:"set_third_party_extendable"`
-	FileOptions          uint16            `json:"file_options"`
+	ID                      string           `json:"id"`              // allocation id
+	Name                    string           `json:"name"`            // allocation name
+	OwnerID                 string           `json:"owner_id"`        // Owner of the allocation
+	Size                    int64            `json:"size"`            // difference
+	Expiration              common.Timestamp `json:"expiration_date"` // difference
+	UpdateTerms             bool             `json:"update_terms"`
+	AddBlobberId            string           `json:"add_blobber_id"`
+	RemoveBlobberId         string           `json:"remove_blobber_id"`
+	SetThirdPartyExtendable bool             `json:"set_third_party_extendable"`
+	FileOptions             uint16           `json:"file_options"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -546,7 +546,11 @@ func (uar *updateAllocationRequest) validate(
 	conf *Config,
 	alloc *StorageAllocation,
 ) error {
-	if uar.Size == 0 && uar.Expiration == 0 && len(uar.AddBlobberId) == 0 && len(uar.Name) == 0 {
+	if uar.Size == 0 &&
+		uar.Expiration == 0 &&
+		len(uar.AddBlobberId) == 0 &&
+		len(uar.Name) == 0 &&
+		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) {
 		return errors.New("update allocation changes nothing")
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
@@ -1136,7 +1140,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
-	if (t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner) && ! alloc.ThirdPartyExtendable {
+	if (t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner) && !alloc.ThirdPartyExtendable {
 		return "", common.NewError("allocation_updating_failed",
 			"only owner can update the allocation")
 	}
@@ -1150,7 +1154,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't update expired allocation")
 	}
-	
+
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
 
@@ -1159,7 +1163,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			err.Error())
 	}
-
 
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
@@ -1173,31 +1176,31 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			return "", err
 		}
 	} else /* Owner Actions */ {
-		
+
 		// update allocation transaction hash
 		alloc.Tx = t.Hash
-	
+
 		// adjust expiration
 		var newExpiration = alloc.Expiration + request.Expiration
 		// close allocation now
-	
+
 		if newExpiration <= t.CreationDate {
 			return sc.closeAllocation(t, alloc, balances) // update alloc tx, expir
 		}
-	
+
 		// an allocation can't be shorter than configured in SC
 		// (prevent allocation shortening for entire period)
 		if newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
 			return "", common.NewError("allocation_updating_failed",
 				"allocation duration becomes too short")
 		}
-	
+
 		var newSize = request.Size + alloc.Size
 		if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
 			return "", common.NewError("allocation_updating_failed",
 				"allocation size becomes too small")
 		}
-		
+
 		if len(request.AddBlobberId) > 0 {
 			blobbers, err = alloc.changeBlobbers(
 				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
@@ -1206,12 +1209,12 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				return "", common.NewError("allocation_updating_failed", err.Error())
 			}
 		}
-	
+
 		if len(blobbers) != len(alloc.BlobberAllocs) {
 			return "", common.NewError("allocation_updating_failed",
 				"error allocation blobber size mismatch")
 		}
-	
+
 		if request.UpdateTerms {
 			for i, bd := range alloc.BlobberAllocs {
 				if bd.Terms.WritePrice >= blobbers[i].Terms.WritePrice {
@@ -1224,7 +1227,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				bd.Terms.MaxOfferDuration = blobbers[i].Terms.MaxOfferDuration
 			}
 		}
-	
+
 		// if size or expiration increased, then we use new terms
 		// otherwise, we use the same terms
 		if request.Size > 0 || request.Expiration > 0 {
@@ -1237,7 +1240,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if err != nil {
 			return "", err
 		}
-	
+
 		if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
 		}
@@ -1245,7 +1248,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if request.SetThirdPartyExtendable {
 			alloc.ThirdPartyExtendable = true
 		}
-	
+
 		alloc.FileOptions = request.FileOptions
 
 		if len(request.RemoveBlobberId) > 0 {
@@ -1257,7 +1260,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			})
 		}
 	}
-
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)
 	if err != nil {
