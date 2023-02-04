@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/sortedmap"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -149,7 +150,7 @@ func (mp *MintPayload) GetStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *MintPayload) verifySignatures(signatures map[string]*AuthorizerSignature, state cstate.StateContextI) error {
+func (mp *MintPayload) verifySignatures(signatures []*AuthorizerSignature, state cstate.StateContextI) error {
 	toSign := mp.GetStringToSign()
 	if len(signatures) == 0 {
 		return errors.New("signatures not found")
@@ -185,13 +186,13 @@ func (mp *MintPayload) verifySignatures(signatures map[string]*AuthorizerSignatu
 	return nil
 }
 
-func (mp *MintPayload) getUniqueSignatures() map[string]*AuthorizerSignature {
-	uniqueSignatures := make(map[string]*AuthorizerSignature)
-	for _, v := range mp.Signatures {
-
-		uniqueSignatures[v.ID] = v
+func (mp *MintPayload) getUniqueSignatures() []*AuthorizerSignature {
+	sigsMap := sortedmap.New[string, *AuthorizerSignature]()
+	for i, v := range mp.Signatures {
+		sigsMap.Put(v.ID, mp.Signatures[i])
 	}
-	return uniqueSignatures
+
+	return sigsMap.GetValues()
 }
 
 // ---- BurnPayloadResponse ----------
