@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-ALTER TABLE allocations DROP COLUMN IF EXISTS is_immutable boolean;
+ALTER TABLE allocations DROP COLUMN IF EXISTS is_immutable;
 -- +goose StatementEnd
 
 -- +goose Down
