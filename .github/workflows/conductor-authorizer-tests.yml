@@ -1,15 +1,14 @@
-name: CONDUCTOR VALIDATOR-01 TESTS
+name: CONDUCTOR AUTHORIZER TESTS
 
 on:
   schedule:
-    # Runs everyday at 03:00 am
-    - cron: '0 7 * * * '
+    - cron: '0 10 * * * '
   workflow_dispatch:
 
 jobs:
-  CONDUCTOR_VALIDATORS_01_TESTS:
-    name: CONDUCTOR-VALIDATORS-01-TESTS
-    runs-on: [self-hosted, conductor-test03]
+  CONDUCTOR_AUTHORIZER_TESTS:
+    name: CONDUCTOR-AUTHORIZER-TESTS
+    runs-on: [self-hosted, arc-runner]
 
     steps:
     - name: Go 1.18 setup.
@@ -22,6 +21,12 @@ jobs:
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Get Branch
       id: get_branch
@@ -37,8 +42,6 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         cd 0chain
         make install-mockery
         make build-mocks
@@ -69,9 +72,9 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
-    - name: Git clone blobber
+    - name: Git clone authorizer
       run: |
-        git clone https://github.com/0chain/blobber.git
+        git clone https://github.com/0chain/token_bridge_authserver.git
 
     - name: Git clone zboxcli
       run: |
@@ -104,28 +107,21 @@ jobs:
       run: |
         cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
 
-    - name: Blobbers Patching
-      run: |
-        cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
-
     - name: Build 0dns
       run: |
         cd 0dns
         ./docker.local/bin/init.sh
         ./docker.local/bin/build.sh
 
-    - name: Init setup for blobbers
+    - name: Init setup for authorizers
       run: |
-        chmod +x blobber/docker.local/bin/blobber.init.setup.sh
-        cd blobber && ./docker.local/bin/blobber.init.setup.sh
+        cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh
 
-    - name: Build blobber base
+    - name: Build authorizer
       run: |
-        cd blobber && ./docker.local/bin/build.base.sh
-
-    - name: Build blobber
-      run: |
-        cd blobber && ./docker.local/bin/build.blobber-integration-tests.sh
+        cd token_bridge_authserver
+        chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
+        ./docker.local/bin/build.authorizer-integration-tests.sh
 
     - name: Add ZCN config
       run: |
@@ -148,9 +144,10 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    - name: Starting validator Tests.
+    - name: Starting authorizer Tests.
       run: |
-        cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh authorizer
 
     - name: Creating Artifact con-tests-logs.tar.gz file.
       run: |
@@ -162,9 +159,6 @@ jobs:
         name: Conductor-test-logs
         path: ./con-tests-logs.tar.gz
 
-    - name: Cleanup
-      run: |
-        rm -rf *
     # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
     #   run: |
     #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
@@ -177,9 +171,9 @@ jobs:
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_VALIDATORS_01_TESTS]
-    if: always() && (needs.CONDUCTOR_VALIDATORS_01_TESTS.result == 'failure')
+    needs: [CONDUCTOR_AUTHORIZER_TESTS]
+    if: always() && (needs.CONDUCTOR_AUTHORIZER_TESTS.result == 'failure')
     steps:
       - name: "Notify Slack"
         run: |
-          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_VALIDATORS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

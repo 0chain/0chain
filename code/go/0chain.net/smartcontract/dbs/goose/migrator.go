@@ -16,8 +16,6 @@ func Init() {
 	if err := goose.SetDialect("postgres"); err != nil {
 		panic(err)
 	}
-
-	// run app
 }
 
 func Migrate(db *sql.DB) {

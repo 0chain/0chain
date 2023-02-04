@@ -1,8 +1,9 @@
 package event
 
 import (
-	common2 "0chain.net/smartcontract/common"
 	"fmt"
+
+	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -110,11 +111,13 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 		return s, nil, fmt.Errorf("mismatched sharder; want id %s but have id %s", id, sharderDps[0].Sharder.ID)
 	}
 	s = sharderDps[0].Sharder
-	if id != sharderDps[0].ProviderRewards.ProviderID {
-		return s, nil, fmt.Errorf("mismatched sharder; want id %s but have id %s in provider rewrards",
-			id, sharderDps[0].Sharder.ID)
-	}
+
 	s.Rewards = sharderDps[0].ProviderRewards
+	s.Rewards.ProviderID = id
+	if len(sharderDps) == 1 && sharderDps[0].DelegatePool.PoolID == "" {
+		// The sharder has no delegate pools
+		return s, nil, nil
+	}
 	for i := range sharderDps {
 		dps = append(dps, sharderDps[i].DelegatePool)
 		if id != sharderDps[i].DelegatePool.ProviderID {
@@ -169,13 +172,6 @@ func (edb *EventDb) CountInactiveSharders() (int64, error) {
 		Count(&count)
 
 	return count, result.Error
-}
-
-func (edb *EventDb) GetShardersTotalStake() (int64, error) {
-	var count int64
-
-	err := edb.Store.Get().Table("sharders").Select("sum(total_stake)").Row().Scan(&count)
-	return count, err
 }
 
 func (edb *EventDb) addSharders(sharders []Sharder) error {

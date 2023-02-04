@@ -164,7 +164,8 @@ type Block struct {
 	ticketsMutex          sync.RWMutex `json:"-" msgpack:"-"`
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
-	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
+	uniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
+	uniqueBlockExtMutex   sync.RWMutex    `json:"-" msgpack:"-"`
 	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
 	// StateChangesCount represents the state changes number in client state of current block.
 	// this will be used to verify the state changes acquire from remote
@@ -177,6 +178,17 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 	b.Round = round
 	b.ChainID = chainID
 	return b
+}
+
+func (b *Block) GetUniqueBlockExtensions() map[string]bool {
+	b.uniqueBlockExtMutex.RLock()
+	defer b.uniqueBlockExtMutex.RUnlock()
+
+	cb := make(map[string]bool, len(b.uniqueBlockExtensions))
+	for k, v := range b.uniqueBlockExtensions {
+		cb[k] = v
+	}
+	return cb
 }
 
 // GetVerificationTickets of the block async safe.
@@ -702,11 +714,13 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 
 // AddUniqueBlockExtension - add unique block extensions.
 func (b *Block) AddUniqueBlockExtension(eb *Block) {
+	b.uniqueBlockExtMutex.Lock()
+	defer b.uniqueBlockExtMutex.Unlock()
 	//TODO: We need to compare for view change and add the eb.MinerID only if he was in the view that b belongs to
-	if b.UniqueBlockExtensions == nil {
-		b.UniqueBlockExtensions = make(map[string]bool)
+	if b.uniqueBlockExtensions == nil {
+		b.uniqueBlockExtensions = make(map[string]bool)
 	}
-	b.UniqueBlockExtensions[eb.MinerID] = true
+	b.uniqueBlockExtensions[eb.MinerID] = true
 }
 
 // DoReadLock - implement ReadLockable interface.
@@ -787,10 +801,7 @@ func (b *Block) Clone() *Block {
 	}
 	b.stateMutex.RUnlock()
 
-	clone.UniqueBlockExtensions = make(map[string]bool, len(b.UniqueBlockExtensions))
-	for k, v := range b.UniqueBlockExtensions {
-		clone.UniqueBlockExtensions[k] = v
-	}
+	clone.uniqueBlockExtensions = b.GetUniqueBlockExtensions()
 
 	return clone
 }

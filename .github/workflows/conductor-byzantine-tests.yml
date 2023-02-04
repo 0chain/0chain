@@ -13,7 +13,7 @@ env:
 jobs:
   CONDUCTOR_BYZANTINE_TESTS:
     name: CONDUCTOR-BYZANTINE-TESTS
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [self-hosted, conductor-test03]
 
     steps:
     - uses: actions/checkout@v1
@@ -28,13 +28,13 @@ jobs:
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
-    
+
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-    
+
     - name: Docker Init Setup.
       run: |
         sudo apt update -y
@@ -72,6 +72,10 @@ jobs:
       with:
         name: Conductor-test-logs
         path: ./con-byz-tests-logs.tar.gz
+
+    - name: Cleanup
+      run: |
+        rm -rf *
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
