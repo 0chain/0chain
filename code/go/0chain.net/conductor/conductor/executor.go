@@ -322,6 +322,9 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 		}
 	}
 
+	// it is not necessary to wait for authorizers because they are registered previously
+	r.waitAdd.Authorizers = []config.NodeName{}
+
 	return
 }
 
@@ -931,6 +934,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.LockNotarizationAndSendNextRoundVRF = update
 		case *config.CollectVerificationTicketsWhenMissedVRF:
 			state.CollectVerificationTicketsWhenMissedVRF = update
+		case *config.AdversarialAuthorizer:
+			state.AdversarialAuthorizer = update
 		}
 	})
 
