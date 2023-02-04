@@ -550,7 +550,8 @@ func (uar *updateAllocationRequest) validate(
 		uar.Expiration == 0 &&
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
-		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) {
+		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) &&
+		uar.FileOptions == alloc.FileOptions {
 		return errors.New("update allocation changes nothing")
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
