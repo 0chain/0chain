@@ -133,7 +133,12 @@ func (b *UpdateBuilder) addWhereConditionFromValues(column string) *UpdateBuilde
 }
 
 func (b *UpdateBuilder) addWhereCondition(left, operator, right string) *UpdateBuilder {
-	b.where += " AND " + fmt.Sprintf(ConditionTemplate, left, operator, right)
+	if b.where != "" {
+		b.where += " AND "
+	} else {
+		b.where += "WHERE "
+	}
+	b.where += fmt.Sprintf(ConditionTemplate, left, operator, right)
 	return b
 }
 
