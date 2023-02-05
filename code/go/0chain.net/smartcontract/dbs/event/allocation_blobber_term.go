@@ -76,25 +76,25 @@ func (edb *EventDb) deleteAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 
 func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
 	var (
-		allocationIdList 	 []string
-		blobberIdList 		 []string
-		readPriceList 		 []int64
-		writePriceList 		 []int64
-		minLockDemandList 	 []float64
+		allocationIdList     []string
+		blobberIdList        []string
+		readPriceList        []int64
+		writePriceList       []int64
+		minLockDemandList    []float64
 		maxOfferDurationList []int64
 	)
 
 	for _, t := range terms {
-		allocationIdList  	= append(allocationIdList, t.AllocationID)
-		blobberIdList 		= append(blobberIdList, t.BlobberID)
-		readPriceList 		= append(readPriceList, t.ReadPrice)
-		writePriceList 		= append(writePriceList, t.WritePrice)
-		minLockDemandList 	= append(minLockDemandList, t.MinLockDemand)
+		allocationIdList = append(allocationIdList, t.AllocationID)
+		blobberIdList = append(blobberIdList, t.BlobberID)
+		readPriceList = append(readPriceList, t.ReadPrice)
+		writePriceList = append(writePriceList, t.WritePrice)
+		minLockDemandList = append(minLockDemandList, t.MinLockDemand)
 		maxOfferDurationList = append(maxOfferDurationList, t.MaxOfferDuration.Milliseconds())
 	}
 
 	return CreateBuilder("allocation_blobber_terms", "allocation_id", allocationIdList).
-		AddIdPart("blobber_id", blobberIdList).
+		AddCompositeId("blobber_id", blobberIdList).
 		AddUpdate("read_price", readPriceList).
 		AddUpdate("write_price", writePriceList).
 		AddUpdate("min_lock_demand", minLockDemandList).

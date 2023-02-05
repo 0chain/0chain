@@ -101,7 +101,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 		{
 			name: "multiple id parts",
 			fields: fields{
-				ids: []string{"1","2","3"},
+				ids: []string{"1", "2", "3"},
 				updates: []update{
 					{val: []string{"c11", "c12", "c13"}, key: "column1"},
 				},
@@ -120,7 +120,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 			vals = append(vals, []interface{}{pq.Array(tt.fields.ids)})
 
 			for _, c := range tt.fields.idParts {
-				toTest.AddIdPart(c.key, c.val)
+				toTest.AddCompositeId(c.key, c.val)
 				vals = append(vals, []interface{}{pq.Array(c.val)})
 			}
 

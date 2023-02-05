@@ -34,11 +34,11 @@ var typeToSQL = map[reflect.Type]string{
 // Note that all update rows should have the same number of values, id is required together with at least one update.
 type UpdateBuilder struct {
 	tableName string
-	sets    []string
-	unnests []string
-	update  string
-	where   string
-	values  []interface{}
+	sets      []string
+	unnests   []string
+	update    string
+	where     string
+	values    []interface{}
 }
 
 // CreateBuilder receives table name, id column name and set of id values as parameters.
@@ -51,8 +51,8 @@ func CreateBuilder(table string, idColumn string, idValues interface{}) (b *Upda
 	return b
 }
 
-// AddIdPart Add new part of a composite id key
-func (b *UpdateBuilder) AddIdPart(columnName string, values interface{}) *UpdateBuilder {
+// AddCompositeId Add new part of a composite id key
+func (b *UpdateBuilder) AddCompositeId(columnName string, values interface{}) *UpdateBuilder {
 	return b.addWhereConditionFromValues(columnName).addToUnnests(columnName, values).addToValues(values)
 }
 
@@ -67,9 +67,9 @@ func (b *UpdateBuilder) AddUpdate(column string, values interface{}, expr ...str
 	return b.addToSets(column, values, expr...).addToUnnests(column, values).addToValues(values)
 }
 
-// AddCondition Add ANDed condition comparing a field to a static value to the update query 
+// AddCondition Add ANDed condition comparing a field to a static value to the update query
 func (b *UpdateBuilder) AddCondition(column, operator, value string) *UpdateBuilder {
-	return b.addWhereCondition(b.tableName + "." + column, operator, value)
+	return b.addWhereCondition(b.tableName+"."+column, operator, value)
 }
 
 type Query struct {
@@ -129,7 +129,7 @@ func (b *UpdateBuilder) addToValues(values interface{}) *UpdateBuilder {
 
 // Add condition in the form tableName.columnName = t.columnName
 func (b *UpdateBuilder) addWhereConditionFromValues(column string) *UpdateBuilder {
-	return b.addWhereCondition(b.tableName + "." + column, "=", "t." + column)
+	return b.addWhereCondition(b.tableName+"."+column, "=", "t."+column)
 }
 
 func (b *UpdateBuilder) addWhereCondition(left, operator, right string) *UpdateBuilder {
