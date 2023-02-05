@@ -63,7 +63,7 @@ func (edb *EventDb) updateUserCollectedRewards(users []User) error {
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("collected_reward", collectedRewards, "t.collected_reward").Exec(edb).Error
+		AddUpdate("collected_reward", collectedRewards, "users.collected_rewards + t.collected_reward").Exec(edb).Error
 }
 
 func (edb *EventDb) updateUserTotalStake(dpls []DelegatePoolLock, shouldIncrease bool) error {
@@ -79,7 +79,7 @@ func (edb *EventDb) updateUserTotalStake(dpls []DelegatePoolLock, shouldIncrease
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("total_stake", stakes, "t.total_stake").Exec(edb).Error
+		AddUpdate("total_stake", stakes, "users.total_stake + t.total_stake").Exec(edb).Error
 }
 
 func (edb *EventDb) updateUserReadPoolTotal(rpls []ReadPoolLock, shouldIncrease bool) error {
@@ -95,7 +95,7 @@ func (edb *EventDb) updateUserReadPoolTotal(rpls []ReadPoolLock, shouldIncrease 
 
 	}
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("read_pool_total", readpools, "t.read_pool_total").Exec(edb).Error
+		AddUpdate("read_pool_total", readpools, "users.read_pool_total + t.read_pool_total").Exec(edb).Error
 }
 
 func (edb *EventDb) updateUserWritePoolTotal(wpls []WritePoolLock, shouldIncrease bool) error {
@@ -112,7 +112,7 @@ func (edb *EventDb) updateUserWritePoolTotal(wpls []WritePoolLock, shouldIncreas
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("write_pool_total", writepools, "t.write_pool_total").Exec(edb).Error
+		AddUpdate("write_pool_total", writepools, "users.write_pool_total + t.write_pool_total").Exec(edb).Error
 }
 
 func (edb *EventDb) updateUserPayedFees(users []User) error {
@@ -124,7 +124,7 @@ func (edb *EventDb) updateUserPayedFees(users []User) error {
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("payed_fees", fees, "t.payed_fees").Exec(edb).Error
+		AddUpdate("payed_fees", fees, "users.payed_fees + t.payed_fees").Exec(edb).Error
 }
 
 func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[User] {
