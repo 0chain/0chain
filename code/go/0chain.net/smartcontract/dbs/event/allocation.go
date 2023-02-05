@@ -282,7 +282,7 @@ func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
 		AddUpdate("num_writes", numWritesList, "allocations.num_writes + t.num_writes").
 		AddUpdate("moved_to_challenge", movedToChallengeList, "allocations.moved_to_challenge + t.moved_to_challenge").
 		AddUpdate("moved_back", movedBackList, "allocations.moved_back + t.moved_back").
-		AddUpdate("write_pool", writePoolList, "allocations.write_pool - t.write_pool").Exec(edb).Error
+		AddUpdate("write_pool", writePoolList, "allocations.write_pool - t.moved_to_challenge + t.moved_back").Exec(edb).Error
 }
 
 func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
