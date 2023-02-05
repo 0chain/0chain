@@ -846,6 +846,7 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	if err != nil {
 		return "", common.NewError("update_settings_insert", err.Error())
 	}
+	cfg.config = conf
 
 	return "", nil
 }

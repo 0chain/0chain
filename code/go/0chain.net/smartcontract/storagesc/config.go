@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/0chain/common/core/currency"
@@ -194,6 +195,16 @@ type Config struct {
 
 	OwnerId string         `json:"owner_id"`
 	Cost    map[string]int `json:"cost"`
+}
+
+type cache struct {
+	config *Config
+	l      sync.RWMutex
+	err    error
+}
+
+var cfg = &cache{
+	l: sync.RWMutex{},
 }
 
 func (conf *Config) validate() (err error) {
@@ -394,6 +405,7 @@ func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateCon
 	}
 	conf.Minted = minted
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	cfg.config = conf
 	return err
 }
 
@@ -557,24 +569,26 @@ func getConfiguredConfig() (conf *Config, err error) {
 	return
 }
 
-func InitConfig(balances chainState.StateContextI) error {
-	err := balances.GetTrieNode(scConfigKey(ADDRESS), &Config{})
-	if err == util.ErrValueNotPresent {
-		conf, err := getConfiguredConfig()
-		if err != nil {
-			return err
+func InitConfig(balances chainState.CommonStateContextI) error {
+	cfg.l.Lock()
+	defer cfg.l.Unlock()
+	cfg.config = &Config{}
+	cfg.err = balances.GetTrieNode(scConfigKey(ADDRESS), cfg.config)
+	if cfg.err == util.ErrValueNotPresent {
+		cfg.config, cfg.err = getConfiguredConfig()
+		if cfg.err != nil {
+			return cfg.err
 		}
-		_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-		return err
+		_, cfg.err = balances.InsertTrieNode(scConfigKey(ADDRESS), cfg.config)
+		return cfg.err
 	}
-	return err
+	return cfg.err
 }
 
 // getConfig
 func (ssc *StorageSmartContract) getConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *Config, err error) {
-
 	conf = newConfig()
 	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {
