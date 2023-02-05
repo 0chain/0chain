@@ -394,6 +394,7 @@ func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateCon
 	}
 	conf.Minted = minted
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	c.update(conf, err)
 	return err
 }
 
@@ -557,17 +558,19 @@ func getConfiguredConfig() (conf *Config, err error) {
 	return
 }
 
-func InitConfig(balances chainState.StateContextI) error {
-	err := balances.GetTrieNode(scConfigKey(ADDRESS), &Config{})
-	if err == util.ErrValueNotPresent {
-		conf, err := getConfiguredConfig()
-		if err != nil {
-			return err
+func InitConfig(balances chainState.CommonStateContextI) error {
+	c.l.Lock()
+	defer c.l.Unlock()
+	c.config = &Config{}
+	c.err = balances.GetTrieNode(scConfigKey(ADDRESS), c.config)
+	if c.err == util.ErrValueNotPresent {
+		c.config, c.err = getConfiguredConfig()
+		if c.err != nil {
+			return c.err
 		}
-		_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-		return err
+		_, c.err = balances.InsertTrieNode(scConfigKey(ADDRESS), c.config)
 	}
-	return err
+	return c.err
 }
 
 // getConfig

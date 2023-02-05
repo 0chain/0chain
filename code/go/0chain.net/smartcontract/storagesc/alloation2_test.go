@@ -551,6 +551,7 @@ func setupMocksFinishAllocation(
 
 	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
+	c.update(&scYaml, err)
 
 	var request = lockRequest{
 		AllocationID: sAllocation.ID,
@@ -773,6 +774,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
+	c.update(&scYaml, err)
 
 	for _, blobber := range blobbers {
 		// Save the blobber

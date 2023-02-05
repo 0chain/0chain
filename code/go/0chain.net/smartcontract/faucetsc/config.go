@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"sync"
 	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -54,6 +55,21 @@ type FaucetConfig struct {
 	Cost            map[string]int `json:"cost"`
 }
 
+type cache struct {
+	config *FaucetConfig
+	l      sync.RWMutex
+}
+
+var c = &cache{
+	l: sync.RWMutex{},
+}
+
+func (*cache) update(conf *FaucetConfig) {
+	c.l.Lock()
+	c.config = conf
+	c.l.Unlock()
+}
+
 // configurations from sc.yaml
 func getFaucetConfig() (conf *FaucetConfig, err error) {
 
@@ -82,19 +98,21 @@ func getFaucetConfig() (conf *FaucetConfig, err error) {
 }
 
 func InitConfig(balances cstate.CommonStateContextI) error {
-	gn := new(GlobalNode)
+	c.l.Lock()
+	defer c.l.Unlock()
+
+	var gn = &GlobalNode{ID: ADDRESS}
 	err := balances.GetTrieNode(globalNodeKey, gn)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return err
-		}
+	if err == util.ErrValueNotPresent {
 		gn.FaucetConfig, err = getFaucetConfig()
 		if err != nil {
 			return err
 		}
-		gn.ID = ADDRESS
 		_, err = balances.InsertTrieNode(globalNodeKey, gn)
-		return err
+		if err != nil {
+			return err
+		}
 	}
-	return nil
+	c.config = gn.FaucetConfig
+	return err
 }

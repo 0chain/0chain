@@ -49,6 +49,7 @@ func AddMockConfig(balances cstate.StateContextI) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	cfg.update(&conf, err)
 }
 
 func AddMockVestingPools(

@@ -588,6 +588,7 @@ func (gn *GlobalNode) save(balances cstate.StateContextI) (err error) {
 	if _, err = balances.InsertTrieNode(GlobalNodeKey, gn); err != nil {
 		return fmt.Errorf("saving global node: %v", err)
 	}
+	c.update(gn, err)
 	return
 }
 

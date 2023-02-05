@@ -130,9 +130,6 @@ func TestUpdateConfig(t *testing.T) {
 		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
-		prevConf := configureConfig()
-		balances.On("GetTrieNode", scConfigKey(ADDRESS),
-			mockSetValue(prevConf)).Return(nil).Once()
 		var conf config
 		// not testing for error here to allow entering bad data
 		if value, ok := p.input[Settings[MinLock]]; ok {
