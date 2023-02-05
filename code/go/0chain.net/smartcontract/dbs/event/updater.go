@@ -14,7 +14,7 @@ const ExprTemplate = "%v = %v"
 const UnnestTemplate = "unnest(?::%v[]) AS %v"
 const UpdateTemplate = "UPDATE %v SET"
 const WhereTemplate = "WHERE %v.%v = t.%v" // TODO: Remove
-const ConditionTemplate = "%v %v %v"
+const ConditionTemplate = " AND %v %v %v"
 const QueryTemplate = "%v %v FROM (SELECT %v) AS t %v"
 
 var typeToSQL = map[reflect.Type]string{
@@ -47,7 +47,7 @@ func CreateBuilder(table string, idColumn string, idValues interface{}) (b *Upda
 	b = &UpdateBuilder{}
 	b.tableName = table
 	b.update = fmt.Sprintf(UpdateTemplate, table)
-	b.addWhereConditionFromValues(idColumn).addToUnnests(idColumn, idValues).addToValues(idValues)
+	b.addIdCondition(idColumn).addToUnnests(idColumn, idValues).addToValues(idValues)
 	return b
 }
 
@@ -132,12 +132,12 @@ func (b *UpdateBuilder) addWhereConditionFromValues(column string) *UpdateBuilde
 	return b.addWhereCondition(b.tableName+"."+column, "=", "t."+column)
 }
 
+func (b *UpdateBuilder) addIdCondition(column string) *UpdateBuilder {
+	b.where = fmt.Sprintf("WHERE %v.%v = t.%v", b.tableName, column, column)
+	return b
+}
+
 func (b *UpdateBuilder) addWhereCondition(left, operator, right string) *UpdateBuilder {
-	if b.where != "" {
-		b.where += " AND "
-	} else {
-		b.where += "WHERE "
-	}
 	b.where += fmt.Sprintf(ConditionTemplate, left, operator, right)
 	return b
 }
