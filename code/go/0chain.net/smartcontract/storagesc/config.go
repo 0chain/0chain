@@ -405,6 +405,7 @@ func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateCon
 	}
 	conf.Minted = minted
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	cfg.config = conf
 	return err
 }
 
@@ -571,6 +572,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 func MakeConfig(balances chainState.CommonStateContextI) error {
 	cfg.l.Lock()
 	defer cfg.l.Unlock()
+	cfg.config = &Config{}
 	cfg.err = balances.GetTrieNode(scConfigKey(ADDRESS), cfg.config)
 	if cfg.err == util.ErrValueNotPresent {
 		cfg.config, cfg.err = getConfiguredConfig()
@@ -587,7 +589,13 @@ func MakeConfig(balances chainState.CommonStateContextI) error {
 func (ssc *StorageSmartContract) getConfig(
 	balances chainState.StateContextI, setup bool) (
 	conf *Config, err error) {
-	return getConfig(balances)
+	conf = newConfig()
+	err = balances.GetTrieNode(scConfigKey(ADDRESS), conf)
+	if err != nil {
+		return nil, err
+	}
+	return conf, nil
+	// return getConfig(balances)
 }
 
 // getReadPoolConfig

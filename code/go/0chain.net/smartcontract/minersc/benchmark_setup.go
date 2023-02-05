@@ -32,6 +32,7 @@ func AddMockGlobalNode(balances cstate.StateContextI) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	cfg.gnode = &gn
 }
 
 func AddMockNodes(

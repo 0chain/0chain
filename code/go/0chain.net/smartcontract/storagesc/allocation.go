@@ -1464,6 +1464,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		}
 		sps = append(sps, sp)
 	}
+
 	conf, err := getConfig(balances)
 	if err != nil {
 		return "", common.NewError("can't get config", err.Error())
@@ -1523,7 +1524,6 @@ func (sc *StorageSmartContract) finalizeAllocation(
 		return "", common.NewError("fini_alloc_failed",
 			"allocation already finalized")
 	}
-
 	conf, err := getConfig(balances)
 	if err != nil {
 		return "", common.NewError("can't get config", err.Error())

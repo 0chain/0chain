@@ -57,17 +57,19 @@ var gnc = &cache{
 func MakeConfig(ctx state.CommonStateContextI) error {
 	gnc.l.Lock()
 	defer gnc.l.Unlock()
-	node := &GlobalNode{ID: ADDRESS}
-	gnc.err = ctx.GetTrieNode(node.GetKey(), node)
-	if gnc.err == util.ErrValueNotPresent {
-		node.ZCNSConfig = getConfig()
-		if node.WZCNNonceMinted == nil {
-			node.WZCNNonceMinted = make(map[int64]bool)
+	gnc.gnode = &GlobalNode{ID: ADDRESS}
+	gnc.err = ctx.GetTrieNode(gnc.gnode.GetKey(), gnc.gnode)
+	switch gnc.err {
+	case nil, util.ErrValueNotPresent:
+		if gnc.gnode.ZCNSConfig == nil {
+			gnc.gnode.ZCNSConfig = getConfig()
 		}
-		_, gnc.err = ctx.InsertTrieNode(node.GetKey(), node)
+		if gnc.gnode.WZCNNonceMinted == nil {
+			gnc.gnode.WZCNNonceMinted = make(map[int64]bool)
+		}
+		_, gnc.err = ctx.InsertTrieNode(gnc.gnode.GetKey(), gnc.gnode)
 		return gnc.err
 	}
-	gnc.gnode = node
 	return gnc.err
 }
 
@@ -110,6 +112,7 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 	if err != nil {
 		return "", common.NewError(Code, "saving global node: "+err.Error())
 	}
+	MakeConfig(ctx)
 
 	return string(gn.Encode()), nil
 }

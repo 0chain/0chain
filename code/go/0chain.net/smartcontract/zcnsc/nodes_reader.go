@@ -43,4 +43,18 @@ func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
 	}
 	defer gnc.l.RUnlock()
 	return gnc.gnode, gnc.err
+	// node := &GlobalNode{ID: ADDRESS}
+	// err := ctx.GetTrieNode(node.GetKey(), node)
+	// switch err {
+	// case nil, util.ErrValueNotPresent:
+	// 	if node.ZCNSConfig == nil {
+	// 		node.ZCNSConfig = getConfig()
+	// 	}
+	// 	if node.WZCNNonceMinted == nil {
+	// 		node.WZCNNonceMinted = make(map[int64]bool)
+	// 	}
+	// 	return node, nil
+	// default:
+	// 	return nil, err
+	// }
 }

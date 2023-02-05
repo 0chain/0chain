@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
@@ -456,11 +455,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		for _, txn := range fb.Txns {
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
-	}
-	stateCtx := cstate.NewStateContext(fb, fb.ClientState, nil, nil, nil, nil, nil, nil, nil)
-	if err := makeConfigs(stateCtx); err != nil {
-		logging.Logger.Error("finalize block - makeConfigs failed", zap.Error(err))
-		return err
 	}
 
 	logging.Logger.Debug("finalized block - done",

@@ -9,14 +9,13 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
-	commonsc "0chain.net/smartcontract/common"
-
 )
 
 const (
@@ -324,9 +323,9 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI,
 ) (string, error) {
 	var (
-		blobber *StorageNode
+		blobber  *StorageNode
 		downtime uint64
-		err     error
+		err      error
 	)
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -350,7 +349,6 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
-
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",

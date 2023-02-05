@@ -248,6 +248,7 @@ func (vsc *VestingSmartContract) updateConfig(
 	if err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
+	MakeConfig(balances)
 
 	return "", nil
 }
@@ -311,6 +312,7 @@ func (vsc *VestingSmartContract) getConfig(
 func MakeConfig(balances chainstate.CommonStateContextI) error {
 	cfg.l.Lock()
 	defer cfg.l.Unlock()
+	cfg.config = &config{}
 	cfg.err = balances.GetTrieNode(scConfigKey(ADDRESS), cfg.config)
 	if cfg.err == util.ErrValueNotPresent {
 		cfg.config, cfg.err = getConfiguredConfig()

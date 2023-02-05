@@ -334,7 +334,6 @@ func testCommitBlobberRead(
 		}
 	}
 	require.NoError(t, sPool.Save(spenum.Blobber, blobberId, ctx))
-
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {
 		return err
