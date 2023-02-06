@@ -63,7 +63,7 @@ func (edb *EventDb) updateUserCollectedRewards(users []User) error {
 	}
 
 	return CreateBuilder("users", "user_id", ids).
-		AddUpdate("collected_reward", collectedRewards, "users.collected_rewards + t.collected_reward").Exec(edb).Error
+		AddUpdate("collected_reward", collectedRewards, "users.collected_reward + t.collected_reward").Exec(edb).Error
 }
 
 func (edb *EventDb) updateUserTotalStake(dpls []DelegatePoolLock, shouldIncrease bool) error {
