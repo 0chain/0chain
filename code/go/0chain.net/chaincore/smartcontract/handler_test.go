@@ -429,7 +429,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					InputData:    scData,
 				},
 			},
-			want:    "{\"simple_miner\":{\"provider\":{\"id\":\"\",\"provider_type\":1},\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":{\"pools\":{},\"rewards\":0,\"settings\":{\"delegate_wallet\":\"\",\"min_stake\":0,\"max_stake\":0,\"num_delegates\":0,\"service_charge\":0},\"minter\":0}}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"provider_type\":1,\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":{\"pools\":{},\"rewards\":0,\"settings\":{\"delegate_wallet\":\"\",\"min_stake\":0,\"max_stake\":0,\"num_delegates\":0,\"service_charge\":0},\"minter\":0}}",
 			wantErr: false,
 		},
 	}
