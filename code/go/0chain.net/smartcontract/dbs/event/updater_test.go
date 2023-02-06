@@ -14,15 +14,22 @@ func TestUpdateBuilder_build(t *testing.T) {
 		val       interface{}
 	}
 
-	type condition struct {
+	type idPart struct {
 		key string
 		val interface{}
+	}
+
+	type condition struct {
+		column string
+		operator string
+		value string
 	}
 
 	type fields struct {
 		ids     interface{}
 		updates []update
-		idParts []condition
+		idParts []idPart
+		conditions []condition
 	}
 
 	tests := []struct {
@@ -105,12 +112,25 @@ func TestUpdateBuilder_build(t *testing.T) {
 				updates: []update{
 					{val: []string{"c11", "c12", "c13"}, key: "column1"},
 				},
-				idParts: []condition{
+				idParts: []idPart{
 					{key: "id2", val: []string{"1_2", "2_2", "3_2"}},
 					{key: "id3", val: []string{"1_3", "2_3", "3_3"}},
 				},
 			},
 			want: "UPDATE table SET column1 = t.column1 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS id2, unnest(?::text[]) AS id3, unnest(?::text[]) AS column1) AS t WHERE table.id = t.id AND table.id2 = t.id2 AND table.id3 = t.id3",
+		},
+		{
+			name: "add custom where condition not related to join",
+			fields: fields{
+				ids: []string{"1", "2", "3"},
+				updates: []update{
+					{val: []string{"c11", "c12", "c13"}, key: "column1"},
+				},
+				conditions: []condition{
+					{column: "column2", operator: ">=", value: "100"},
+				},
+			},
+			want: "UPDATE table SET column1 = t.column1 FROM (SELECT unnest(?::text[]) AS id) AS t WHERE table.id = t.id AND column2 >= 100",
 		},
 	}
 	for _, tt := range tests {
@@ -131,6 +151,10 @@ func TestUpdateBuilder_build(t *testing.T) {
 					toTest.AddUpdate(u.key, u.val)
 				}
 				vals = append(vals, []interface{}{pq.Array(u.val)})
+			}
+
+			for _, c := range tt.fields.conditions {
+				toTest.AddCondition(c.column, c.operator, c.value)
 			}
 			assert.Equalf(t, &Query{tt.want, vals}, toTest.build(), "build()")
 		})
