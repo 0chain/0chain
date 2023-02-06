@@ -64,13 +64,6 @@ docker.local/log_dumps
 
 **/vendor/
 
-**/mocks/*
-!**/mocks/mocks.go
-!**/mocks/custom.go
-!**/mocks/.gitkeep
-
-mock_*.go
-
 burn_error.txt
 
 *.sst
