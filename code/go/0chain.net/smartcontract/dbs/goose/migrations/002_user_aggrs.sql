@@ -60,6 +60,9 @@ ALTER TABLE public.user_aggregates
 CREATE TABLE public.user_aggregates_0 PARTITION OF public.user_aggregates
     FOR VALUES FROM (0) TO (100);
 
+ALTER TABLE public.user_aggregates_0 OWNER TO zchain_user;
+
+
 --
 -- Migration complete
 --

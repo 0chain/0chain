@@ -2140,18 +2140,42 @@ ALTER TABLE ONLY public.write_markers
 
 CREATE TABLE public.blobber_aggregates_0 PARTITION OF public.blobber_aggregates
     FOR VALUES FROM (0) TO (100);
+
+ALTER TABLE public.blobber_aggregates_0 OWNER TO zchain_user;
+
 CREATE TABLE public.miner_aggregates_0 PARTITION OF public.miner_aggregates
     FOR VALUES FROM (0) TO (100);
+
+ALTER TABLE public.miner_aggregates_0 OWNER TO zchain_user;
+
+
 CREATE TABLE public.authorizer_aggregates_0 PARTITION OF public.authorizer_aggregates
     FOR VALUES FROM (0) TO (100);
+
+ALTER TABLE public.authorizer_aggregates_0 OWNER TO zchain_user;
+
 CREATE TABLE public.validator_aggregates_0 PARTITION OF public.validator_aggregates
     FOR VALUES FROM (0) TO (100);
+
+ALTER TABLE public.validator_aggregates_0 OWNER TO zchain_user;
+
+
 CREATE TABLE public.sharder_aggregates_0 PARTITION OF public.sharder_aggregates
     FOR VALUES FROM (0) TO (100);
-CREATE TABLE snapshots_0 PARTITION OF public.snapshots
+
+ALTER TABLE public.sharder_aggregates_0 OWNER TO zchain_user;
+
+
+CREATE TABLE public.snapshots_0 PARTITION OF public.snapshots
     FOR VALUES FROM (0) TO (100);
-CREATE TABLE events_0 PARTITION OF public.events
+
+ALTER TABLE public.snapshots_0 OWNER TO zchain_user;
+
+
+CREATE TABLE public.events_0 PARTITION OF public.events
     FOR VALUES FROM (0) TO (100);
+
+ALTER TABLE public.events_0 OWNER TO zchain_user;
 
 --
 -- PostgreSQL database dump complete
