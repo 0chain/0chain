@@ -2,7 +2,23 @@ package config
 
 import "github.com/mitchellh/mapstructure"
 
-// BlobberList represents the blobber_list directive state.
+// AdversarialAuthorizer represents the adversarial_authorizer directive state.
+type AdversarialAuthorizer struct {
+	ID              string `json:"id" yaml:"id" mapstructure:"id"`
+	SendFakedTicket bool   `json:"send_faked_ticket" yaml:"send_faked_ticket" mapstructure:"send_faked_ticket"`
+}
+
+// NewAdversarialAuthorizer returns an entity of AdversarialAuthorizer
+func NewAdversarialAuthorizer() *AdversarialAuthorizer {
+	return &AdversarialAuthorizer{}
+}
+
+// Decode implements MapDecoder interface.
+func (n *AdversarialAuthorizer) Decode(val interface{}) error {
+	return mapstructure.Decode(val, n)
+}
+
+// LockNotarizationAndSendNextRoundVRF represents the lock_notarization_and_send_next_round_vrf directive state.
 type LockNotarizationAndSendNextRoundVRF struct {
 	Round       int    `json:"round" yaml:"round" mapstructure:"round"`
 	Adversarial string `json:"adversarial" yaml:"adversarial" mapstructure:"adversarial"`

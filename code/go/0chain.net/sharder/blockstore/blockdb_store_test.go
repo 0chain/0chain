@@ -308,7 +308,8 @@ func Test_txnRecord_Decode(t *testing.T) {
 			HashIDField: datastore.HashIDField{
 				Hash: encryption.Hash("data"),
 			},
-			ClientID: "1234",
+			ClientID:  "91642fdfe3b2196c5d2601529ef8d16da6d8554140260de10f62ff8cd6ff7e64",
+			PublicKey: "667e8dd9ff6626868570daeb5f783e5e2af2f3093dc1b7e7d5743ef86d715c210e289a4d8e72ca0919707d78fec350eb661da0063ac3c97cfb42f908e1bb261f",
 		}
 	)
 
