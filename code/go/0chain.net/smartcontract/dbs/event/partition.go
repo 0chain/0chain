@@ -9,13 +9,8 @@ func (edb *EventDb) addPartition(round int64, table string) error {
 	from := number * edb.settings.PartitionChangePeriod
 	to := (number + 1) * edb.settings.PartitionChangePeriod
 
-	raw_create := fmt.Sprintf("CREATE TABLE IF NOT EXISTS public.%v_%v PARTITION OF public.%v FOR VALUES FROM (%v) TO (%v)", table, number, table, from, to)
-	err := edb.Store.Get().Exec(raw_create).Error
-	if err != nil {
-		return err
-	}
-	raw_grant := fmt.Sprintf("ALTER TABLE public.%v_%v OWNER TO zchain_user;", table, number)
-	return edb.Store.Get().Exec(raw_grant).Error
+	raw := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v_%v PARTITION OF %v FOR VALUES FROM (%v) TO (%v)", table, number, table, from, to)
+	return edb.Store.Get().Exec(raw).Error
 }
 
 func (edb *EventDb) dropPartition(round int64, table string) error {
@@ -25,6 +20,6 @@ func (edb *EventDb) dropPartition(round int64, table string) error {
 		return nil
 	}
 
-	raw := fmt.Sprintf("DROP TABLE public.%v_%v", table, toDrop)
+	raw := fmt.Sprintf("ALTER TABLE %v DROP PARTITION %v_%v", table, table, toDrop)
 	return edb.Store.Get().Exec(raw).Error
 }

@@ -2138,44 +2138,20 @@ ALTER TABLE ONLY public.write_markers
     ADD CONSTRAINT fk_write_markers_user FOREIGN KEY (client_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
-CREATE TABLE public.blobber_aggregates_0 PARTITION OF public.blobber_aggregates
+CREATE TABLE blobber_aggregates_0 PARTITION OF blobber_aggregates
     FOR VALUES FROM (0) TO (100);
-
-ALTER TABLE public.blobber_aggregates_0 OWNER TO zchain_user;
-
-CREATE TABLE public.miner_aggregates_0 PARTITION OF public.miner_aggregates
+CREATE TABLE public.miner_aggregates_0 PARTITION OF miner_aggregates
     FOR VALUES FROM (0) TO (100);
-
-ALTER TABLE public.miner_aggregates_0 OWNER TO zchain_user;
-
-
-CREATE TABLE public.authorizer_aggregates_0 PARTITION OF public.authorizer_aggregates
+CREATE TABLE public.authorizer_aggregates_0 PARTITION OF authorizer_aggregates
     FOR VALUES FROM (0) TO (100);
-
-ALTER TABLE public.authorizer_aggregates_0 OWNER TO zchain_user;
-
-CREATE TABLE public.validator_aggregates_0 PARTITION OF public.validator_aggregates
+CREATE TABLE public.validator_aggregates_0 PARTITION OF validator_aggregates
     FOR VALUES FROM (0) TO (100);
-
-ALTER TABLE public.validator_aggregates_0 OWNER TO zchain_user;
-
-
-CREATE TABLE public.sharder_aggregates_0 PARTITION OF public.sharder_aggregates
+CREATE TABLE public.sharder_aggregates_0 PARTITION OF sharder_aggregates
     FOR VALUES FROM (0) TO (100);
-
-ALTER TABLE public.sharder_aggregates_0 OWNER TO zchain_user;
-
-
-CREATE TABLE public.snapshots_0 PARTITION OF public.snapshots
+CREATE TABLE snapshots_0 PARTITION OF snapshots
     FOR VALUES FROM (0) TO (100);
-
-ALTER TABLE public.snapshots_0 OWNER TO zchain_user;
-
-
-CREATE TABLE public.events_0 PARTITION OF public.events
+CREATE TABLE events_0 PARTITION OF events
     FOR VALUES FROM (0) TO (100);
-
-ALTER TABLE public.events_0 OWNER TO zchain_user;
 
 --
 -- PostgreSQL database dump complete
