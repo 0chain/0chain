@@ -130,7 +130,7 @@ func TestUpdateBuilder_build(t *testing.T) {
 					{column: "column2", operator: ">=", value: "100"},
 				},
 			},
-			want: "UPDATE table SET column1 = t.column1 FROM (SELECT unnest(?::text[]) AS id) AS t WHERE table.id = t.id AND column2 >= 100",
+			want: "UPDATE table SET column1 = t.column1 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1) AS t WHERE table.id = t.id AND table.column2 >= 100",
 		},
 	}
 	for _, tt := range tests {
