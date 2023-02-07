@@ -1,8 +1,10 @@
 package event
 
 import (
+	"math/big"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -26,6 +28,18 @@ type User struct {
 	ReadPoolTotal   int64         `json:"read_pool_total"`
 	WritePoolTotal  int64         `json:"write_pool_total"`
 	PayedFees       int64         `json:"payed_fees"`
+}
+
+func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
+	intID := new(big.Int)
+	intID.SetString(u.UserID, 16)
+
+	period := config.Configuration().ChainConfig.DbSettings().AggregatePeriod
+	u.BucketID = 0
+	if period != 0 {
+		u.BucketID = big.NewInt(0).Mod(intID, big.NewInt(period)).Int64()
+	}
+	return
 }
 
 func (edb *EventDb) GetUser(userID string) (*User, error) {
