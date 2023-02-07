@@ -39,12 +39,10 @@ func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 		for fidx := 0; fidx < t.NumField(); fidx++ {
 			f := t.Field(fidx)
 			
-			// Resolve field key in this order: json Tag > gorm.column Tag > snake-casing FieldName
-			fkey := f.Tag.Get("json")
-			if fkey == "" {
-				if matches := gormColumRegex.FindStringSubmatch(f.Tag.Get("gorm")); len(matches) > 1 {
-					fkey = matches[1]
-				}
+			// Resolve field key in this order: gorm.column Tag > snake-casing FieldName
+			var fkey string
+			if matches := gormColumRegex.FindStringSubmatch(f.Tag.Get("gorm")); len(matches) > 1 {
+				fkey = matches[1]
 			}
 			if fkey == "" {
 				fkey = toSnakeCase(f.Name)
