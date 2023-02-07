@@ -95,6 +95,7 @@ type DelegatePoolStat struct {
 	TotalPenalty currency.Coin `json:"total_penalty"`
 	Status       string        `json:"status"`
 	RoundCreated int64         `json:"round_created"`
+	StakedAt     time.Time     `json:"staked_at"`
 }
 
 // swagger:model userPoolStat
