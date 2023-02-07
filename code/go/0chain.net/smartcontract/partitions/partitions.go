@@ -154,6 +154,7 @@ func (p *Partitions) add(state state.StateContextI, item PartitionItem) (int, er
 	if partsNum > 0 {
 		part, err = p.getPartition(state, partsNum-1)
 		if err != nil {
+			logging.Logger.Debug("partition add - failed to get last partition", zap.Error(err))
 			return 0, err
 		}
 	}
@@ -318,8 +319,7 @@ func (p *Partitions) removeItem(
 	if replace == nil {
 		logging.Logger.Error("empty last partition - should not happen!!",
 			zap.Int("part index", p.NumPartitions-1),
-			zap.Int("part num", p.NumPartitions),
-			zap.Int("parts len", p.NumPartitions))
+			zap.Int("part num", p.NumPartitions))
 
 		return fmt.Errorf("empty last partitions, currpt data")
 	}
@@ -404,9 +404,9 @@ func (p *Partitions) Exist(state state.StateContextI, id string) (bool, error) {
 }
 
 func (p *Partitions) Save(state state.StateContextI) error {
-	for _, partition := range p.Partitions {
-		if partition != nil && partition.changed() {
-			err := partition.save(state)
+	for _, part := range p.Partitions {
+		if part != nil && part.changed() {
+			err := part.save(state)
 			if err != nil {
 				return err
 			}
@@ -508,9 +508,10 @@ func (p *Partitions) addPartition() *partition {
 func (p *Partitions) deleteTail(balances state.StateContextI) error {
 	_, err := balances.DeleteTrieNode(p.partitionKey(p.partitionsNum() - 1))
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return err
-		}
+		logging.Logger.Debug("partition delete tail failed",
+			zap.Error(err),
+			zap.Int("partition num", p.partitionsNum()))
+		return err
 	}
 	p.Partitions = p.Partitions[:p.partitionsNum()-1]
 	p.NumPartitions--

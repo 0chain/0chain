@@ -6,7 +6,6 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
-	"github.com/0chain/common/core/util"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -35,9 +34,10 @@ func (p *partition) save(state state.StateContextI) error {
 func (p *partition) load(state state.StateContextI, key datastore.Key) error {
 	err := state.GetTrieNode(key, p)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return err
-		}
+		return err
+		//if err != util.ErrValueNotPresent {
+		//	return err
+		//}
 	}
 
 	p.Key = key
@@ -126,7 +126,9 @@ func (p *partition) itemRange(start, end int) ([]item, error) {
 		return nil, fmt.Errorf("invalid index, start:%v, end:%v, len:%v", start, end, len(p.Items))
 	}
 
-	return p.Items[start:end], nil
+	vs := make([]item, len(p.Items[start:end]))
+	copy(vs, p.Items[start:end])
+	return vs, nil
 }
 
 func (p *partition) find(id string) (item, int, bool) {
