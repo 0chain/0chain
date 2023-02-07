@@ -898,6 +898,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 			DelegateID:   pool.DelegateID,
 			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
+			StakedAt:     pool.StakedAt,
 		}
 		dps.Balance = pool.Balance
 
@@ -2670,16 +2671,17 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 // If a match is found the matching object is returned.
 //
 // parameters:
-//    + name: searchString
-//      description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address
-//      required: true
-//      in: query
-//      type: string
+//   - name: searchString
+//     description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address
+//     required: true
+//     in: query
+//     type: string
 //
 // responses:
-//  200: StringMap
-//  400:
-//  500:
+//
+//	200: StringMap
+//	400:
+//	500:
 func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		query = r.URL.Query().Get("searchString")
