@@ -9,22 +9,6 @@ DOCKER_DIR="$ROOT/docker.local/build.miner"
 DOCKER_FILE="$DOCKER_DIR/Dockerfile"
 DOCKERCOMPOSE="$DOCKER_DIR/docker-compose.yml"
 
-generate_mocks=1
-for arg in "$@"
-do
-    case $arg in
-        --no-mocks)
-            generate_mocks=0
-        shift
-        ;;
-    esac
-done
-
-# generate mocks
-if (( generate_mocks == 1 )); then
-    make build-mocks
-fi
-
 cmd="build"
 
 if [[ "$*" == *"--dev"* ]]
