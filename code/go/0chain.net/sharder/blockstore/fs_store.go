@@ -6,6 +6,7 @@ import (
 	"compress/zlib"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 
@@ -21,17 +22,16 @@ const (
 	averageBlockSize = 15 * KB
 	// minimumInodesRequired is minimum inodes requirements of a disk.
 	/// Here 3 is number of years and 80M is expected maximum number of block generation
-	minimumInodesRequired = 3 * 80000000
-	// roundRange will determine to create sub-directory inside Mprefixed directory.
-	// Round 1-999 blocks will be put into "0" directory, round 1000-1999 will be put into "1" directory
-	// and so on ...
-	roundRange = 1000
-	twoMillion = 2000000
-	// mPrefix is prefix of a directory that will contain two million blocks. If round number is TwoMillion,
-	// then new directory will be created as:
-	// mPrefix + string(round_number/TwoMillion). So in above case "M1"
-	mPrefix   = "M"
-	extension = "dat.zlib"
+	expectedTotalBlocksIn3Years = 3 * 80000000
+	extension                   = "dat.zlib"
+	// subDirs will determine the number of subdirs that should be created to store a block.
+	// For example if a block hash is `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+	// and subDirs is 5, then block's path will be:
+	//
+	// BasePath/e/3/b/0/c/44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.dat.zlib
+	// subDirs 5 will create total of 16^5 + 16^4 + ..+ 16 =  1118480 directories which will store all the finalized
+	// blocks.
+	subDirs = 5
 )
 
 var (
@@ -47,6 +47,10 @@ func hasEnoughInodesAndSize(p string) error {
 
 	availableSize := diskStat.Bavail * uint64(diskStat.Bsize)
 	freeInodes := diskStat.Ffree
+	minimumInodesRequired := uint64(expectedTotalBlocksIn3Years)
+	for i := 0; i < subDirs; i++ {
+		minimumInodesRequired += uint64(math.Pow(16, float64(i+1)))
+	}
 
 	if freeInodes < minimumInodesRequired {
 		return fmt.Errorf("insufficient inodes. Required %d, available %d",
@@ -62,25 +66,19 @@ func hasEnoughInodesAndSize(p string) error {
 	return nil
 }
 
-func getMPrefixDir(round int64) (string, int64) {
-	i := round / twoMillion
-	r := round % twoMillion
-	return fmt.Sprintf("%s%d", mPrefix, i), r
-}
-
-func getBlockFilePath(hash string, round int64) string {
-	mPref, roundRemainder := getMPrefixDir(round)
-
-	dirNum := roundRemainder / roundRange
-
-	return filepath.Join(mPref, fmt.Sprint(dirNum), fmt.Sprintf("%s.%s", hash, extension))
+func getBlockFilePath(hash string) string {
+	var s string
+	for i := 0; i < subDirs; i++ {
+		s += string(hash[i]) + string(os.PathSeparator)
+	}
+	return filepath.Join(s, fmt.Sprintf("%s.%s", hash[subDirs:], extension))
 }
 
 type BlockStore struct {
 	basePath              string
 	blockMetadataProvider datastore.EntityMetadata
-	write                 func(bStore *BlockStore, hash string, rount int64, b *block.Block) error
-	read                  func(bStore *BlockStore, hash string, round int64) (*block.Block, error)
+	write                 func(bStore *BlockStore, hash string, b *block.Block) error
+	read                  func(bStore *BlockStore, hash string) (*block.Block, error)
 	cache                 cacher
 }
 
@@ -94,8 +92,8 @@ func (bStore *BlockStore) writeBlockToCache(hash string, b *block.Block) error {
 	return bStore.cache.Write(hash, buffer.Bytes())
 }
 
-func (bStore *BlockStore) writeToDisk(hash string, round int64, b *block.Block) error {
-	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash, round))
+func (bStore *BlockStore) writeToDisk(hash string, b *block.Block) error {
+	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash))
 	err := os.MkdirAll(filepath.Dir(bPath), 0700)
 	if err != nil {
 		return err
@@ -122,7 +120,7 @@ func (bStore *BlockStore) writeToDisk(hash string, round int64, b *block.Block) 
 }
 
 func (bStore *BlockStore) Write(b *block.Block) error {
-	err := bStore.write(bStore, b.Hash, b.Round, b)
+	err := bStore.write(bStore, b.Hash, b)
 	if err != nil {
 		return err
 	}
@@ -132,17 +130,17 @@ func (bStore *BlockStore) Write(b *block.Block) error {
 			zap.Int64("round", b.Round),
 			zap.String("mb hash", b.MagicBlock.Hash),
 		)
-		return bStore.write(bStore, b.MagicBlock.Hash, b.MagicBlock.StartingRound, b)
+		return bStore.write(bStore, b.MagicBlock.Hash, b)
 	}
 	return nil
 }
 
-func (bStore *BlockStore) Read(hash string, round int64) (*block.Block, error) {
-	return bStore.read(bStore, hash, round)
+func (bStore *BlockStore) Read(hash string) (*block.Block, error) {
+	return bStore.read(bStore, hash)
 }
 
-func (bStore *BlockStore) readFromDisk(hash string, round int64) (*block.Block, error) {
-	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash, round))
+func (bStore *BlockStore) readFromDisk(hash string) (*block.Block, error) {
+	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash))
 	f, err := os.Open(bPath)
 	if err != nil {
 		return nil, err
@@ -164,7 +162,7 @@ func (bStore *BlockStore) readFromDisk(hash string, round int64) (*block.Block, 
 
 // ReadWithBlockSummary - read the block given the block summary
 func (bStore *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
-	return bStore.read(bStore, bs.Hash, bs.Round)
+	return bStore.read(bStore, bs.Hash)
 }
 
 // Init checks for minimum disk size, inodes requirement and assigns
@@ -195,16 +193,16 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 
 	switch {
 	default:
-		bStore.write = func(bStore *BlockStore, hash string, round int64, b *block.Block) error {
-			return bStore.writeToDisk(hash, round, b)
+		bStore.write = func(bStore *BlockStore, hash string, b *block.Block) error {
+			return bStore.writeToDisk(hash, b)
 		}
 
-		bStore.read = func(bStore *BlockStore, hash string, round int64) (*block.Block, error) {
-			return bStore.readFromDisk(hash, round)
+		bStore.read = func(bStore *BlockStore, hash string) (*block.Block, error) {
+			return bStore.readFromDisk(hash)
 		}
 	case cViper != nil:
-		bStore.write = func(bStore *BlockStore, hash string, round int64, b *block.Block) error {
-			err := bStore.writeToDisk(hash, round, b)
+		bStore.write = func(bStore *BlockStore, hash string, b *block.Block) error {
+			err := bStore.writeToDisk(hash, b)
 			if err != nil {
 				return err
 			}
@@ -218,7 +216,7 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 			return nil
 		}
 
-		bStore.read = func(bStore *BlockStore, hash string, round int64) (*block.Block, error) {
+		bStore.read = func(bStore *BlockStore, hash string) (*block.Block, error) {
 			b := bStore.blockMetadataProvider.Instance().(*block.Block)
 			data, err := bStore.cache.Read(hash)
 			if err == nil {
@@ -229,7 +227,7 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 				}
 			}
 
-			b, err = bStore.readFromDisk(hash, round)
+			b, err = bStore.readFromDisk(hash)
 			if err != nil {
 				return nil, err
 			}

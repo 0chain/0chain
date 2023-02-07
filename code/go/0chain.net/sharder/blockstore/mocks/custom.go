@@ -29,7 +29,7 @@ func (b2 BlockStoreCustom) Write(b *block.Block) error {
 	return nil
 }
 
-func (b2 BlockStoreCustom) Read(hash string, _ int64) (*block.Block, error) {
+func (b2 BlockStoreCustom) Read(hash string) (*block.Block, error) {
 	v, ok := b2.blocks[hash]
 	if !ok {
 		return nil, errors.New("unknown block")

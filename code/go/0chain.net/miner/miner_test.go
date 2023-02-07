@@ -171,7 +171,7 @@ func TestBlockGeneration(t *testing.T) {
 	err = blockstore.GetStore().Write(b)
 	require.NoError(t, err)
 
-	_, err = blockstore.GetStore().Read(b.Hash, r.Number)
+	_, err = blockstore.GetStore().Read(b.Hash)
 	require.NoError(t, err)
 
 	common.Done()
@@ -605,7 +605,7 @@ func (m *MockBlockStore) Write(b *block.Block) error {
 	return datastore.WriteMsgpack(f, b)
 }
 
-func (m *MockBlockStore) Read(hash string, round int64) (*block.Block, error) {
+func (m *MockBlockStore) Read(hash string) (*block.Block, error) {
 	f, err := os.Open(filepath.Join(m.rootDir, hash))
 	if err != nil {
 		return nil, err
@@ -620,7 +620,7 @@ func (m *MockBlockStore) Read(hash string, round int64) (*block.Block, error) {
 }
 
 func (m *MockBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
-	return m.Read(bs.Hash, bs.Round)
+	return m.Read(bs.Hash)
 }
 
 func getMockStore() (blockstore.BlockStoreI, func(), error) {

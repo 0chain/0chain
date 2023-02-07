@@ -2,7 +2,6 @@ package blockstore
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,42 +18,6 @@ func init() {
 	block.SetupEntity(memoryStorage)
 }
 
-func TestGetMPrefixDir(t *testing.T) {
-
-	type input struct {
-		mPrefix        string
-		roundRemainder int64
-	}
-	tests := map[int64]*input{
-		1: {
-			mPrefix:        fmt.Sprintf("%s%d", mPrefix, 0),
-			roundRemainder: 1,
-		},
-		twoMillion: {
-			mPrefix:        fmt.Sprintf("%s%d", mPrefix, 1),
-			roundRemainder: 0,
-		},
-		twoMillion*2 + 1: {
-			mPrefix:        fmt.Sprintf("%s%d", mPrefix, 2),
-			roundRemainder: 1,
-		},
-		twoMillion*300 + 1000: {
-			mPrefix:        fmt.Sprintf("%s%d", mPrefix, 300),
-			roundRemainder: 1000,
-		},
-	}
-
-	for round := range tests {
-		t.Run(fmt.Sprintf("Test for round %d", round), func(t *testing.T) {
-			in := tests[round]
-			require.NotNil(t, in)
-			mPrefix, roundRemainder := getMPrefixDir(round)
-			require.Equal(t, in.mPrefix, mPrefix)
-			require.Equal(t, in.roundRemainder, roundRemainder)
-		})
-	}
-}
-
 func TestBlockStoreWriteReadFromDisk(t *testing.T) {
 	basePath := "block_store_path"
 	err := os.Mkdir(basePath, 0700)
@@ -69,20 +32,18 @@ func TestBlockStoreWriteReadFromDisk(t *testing.T) {
 
 	b := new(block.Block)
 	b.Hash = "new hash"
-	b.Round = 1
-	err = bStore.writeToDisk(b.Hash, b.Round, b)
+	err = bStore.writeToDisk(b.Hash, b)
 	require.NoError(t, err)
 
-	bPath := filepath.Join(basePath, getBlockFilePath(b.Hash, b.Round))
+	bPath := filepath.Join(basePath, getBlockFilePath(b.Hash))
 
 	_, err = os.Stat(bPath)
 	require.NoError(t, err)
 
-	b1, err := bStore.readFromDisk(b.Hash, b.Round)
+	b1, err := bStore.readFromDisk(b.Hash)
 	require.NoError(t, err)
 
 	require.Equal(t, b.Hash, b1.Hash)
-	require.Equal(t, b.Round, b1.Round)
 }
 
 func TestBlockStoreWriteReadFromCache(t *testing.T) {
@@ -110,7 +71,6 @@ cache:
 
 	b := new(block.Block)
 	b.Hash = "new hash"
-	b.Round = 1
 
 	err = bStore.writeBlockToCache(b.Hash, b)
 	require.NoError(t, err)
@@ -124,5 +84,4 @@ cache:
 	require.NoError(t, err)
 
 	require.Equal(t, b.Hash, b1.Hash)
-	require.Equal(t, b.Round, b1.Round)
 }

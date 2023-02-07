@@ -266,8 +266,7 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 		zap.Int64("block_with_magic_block_round",
 			lfb.LatestFinalizedMagicBlockRound))
 
-	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash,
-		lfb.LatestFinalizedMagicBlockRound)
+	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
 	if err != nil {
 		// fatality, can't find related LFMB
 		return nil, common.NewErrorf("load_lfb",
