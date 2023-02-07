@@ -627,9 +627,6 @@ type StorageAllocation struct {
 	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
 
-	// Defines mutability of the files in the allocation, used by blobber on CommitWrite
-	IsImmutable bool `json:"is_immutable"`
-
 	// Flag to determine if anyone can extend this allocation
 	ThirdPartyExtendable bool `json:"third_party_extendable"`
 
@@ -642,7 +639,7 @@ type StorageAllocation struct {
 	// 00001000 - 8  - move
 	// 00010000 - 16 - copy
 	// 00100000 - 32 - rename
-	FileOptions uint8 `json:"file_options"`
+	FileOptions uint16 `json:"file_options"`
 
 	WritePool currency.Coin `json:"write_pool"`
 

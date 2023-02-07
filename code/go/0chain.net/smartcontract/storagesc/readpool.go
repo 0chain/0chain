@@ -229,6 +229,7 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 	}
 
 	i, _ := txn.Value.Int64()
+
 	balances.EmitEvent(event.TypeStats, event.TagLockReadPool, txn.ClientID, event.ReadPoolLock{
 		Client: txn.ClientID,
 		PoolId: targetId,
@@ -260,6 +261,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, _ 
 
 	i, _ := balance.Int64()
 	key := readPoolKey(ssc.ID, txn.ClientID)
+
 	balances.EmitEvent(event.TypeStats, event.TagUnlockReadPool, key, event.ReadPoolLock{
 		Client: txn.ClientID,
 		PoolId: key,

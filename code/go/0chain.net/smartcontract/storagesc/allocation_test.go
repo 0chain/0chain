@@ -697,11 +697,11 @@ func TestExtendAllocation(t *testing.T) {
 			name: "ok_funded",
 			args: args{
 				request: updateAllocationRequest{
-					ID:           mockAllocationId,
-					OwnerID:      mockOwner,
-					Size:         zcnToInt64(31),
-					Expiration:   7000,
-					SetImmutable: false,
+					ID:          mockAllocationId,
+					OwnerID:     mockOwner,
+					Size:        zcnToInt64(31),
+					Expiration:  7000,
+					FileOptions: 63,
 				},
 				expiration: mockExpiration,
 				value:      0.1e10,
@@ -712,11 +712,11 @@ func TestExtendAllocation(t *testing.T) {
 			name: "ok_unfounded",
 			args: args{
 				request: updateAllocationRequest{
-					ID:           mockAllocationId,
-					OwnerID:      mockOwner,
-					Size:         zcnToInt64(31),
-					Expiration:   7000,
-					SetImmutable: false,
+					ID:          mockAllocationId,
+					OwnerID:     mockOwner,
+					Size:        zcnToInt64(31),
+					Expiration:  7000,
+					FileOptions: 63,
 				},
 				expiration: mockExpiration,
 				value:      0.0,
@@ -1805,7 +1805,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	var (
 		ssc                  = newTestStorageSC()
 		balances             = newTestBalances(t, false)
-		client               = newClient(50*x10, balances)
+		client               = newClient(1000*x10, balances)
+		otherClient          = newClient(50*x10, balances)
 		tp, exp        int64 = 100, 1000
 		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, 0, balances)
 		alloc          *StorageAllocation
@@ -1870,13 +1871,85 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	assert.True(t, math.Abs(float64(bsize*numb-tbs)) < 100)
 
+	// Owner can extend regardless of the value of `third_party_extendable`
+	req := updateAllocationRequest{
+		ID:         alloc.ID,
+		Size:       100,
+		Expiration: 100,
+	}
+	tp += 100
+	resp, err = req.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
+	require.NoError(t, err)
+
+	// Others cannot extend the allocation if `third_party_extendable` = false
+	req = updateAllocationRequest{
+		ID:         alloc.ID,
+		Size:       100,
+		Expiration: 100,
+	}
+	tp += 100
+	resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
+	require.Error(t, err)
+	assert.Equal(t, "allocation_updating_failed: only owner can update the allocation", err.Error())
+
+	// Owner can change `third_party_extendable`
+	req = updateAllocationRequest{
+		ID:                      alloc.ID,
+		SetThirdPartyExtendable: true,
+	}
+	tp += 100
+	resp, err = req.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
+	require.NoError(t, err)
+
+	// Others can extend the allocation if `third_party_extendable` = true
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	req = updateAllocationRequest{
+		ID:         alloc.ID,
+		Size:       100,
+		Expiration: 100,
+	}
+	tp += 100
+	expectedSize := alloc.Size + 100
+	expectedExpiration := alloc.Expiration + 100
+	resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
+	require.NoError(t, err)
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	assert.Equal(t, expectedSize, alloc.Size)
+	assert.Equal(t, expectedExpiration, alloc.Expiration)
+
+	// Other cannot perform any other action than extending. No error returned but the value is unchanged.
+	req = updateAllocationRequest{
+		ID:          alloc.ID,
+		FileOptions: 61,
+	}
+	tp += 100
+	expectedFileOptions := alloc.FileOptions
+	resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
+	require.NoError(t, err)
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	assert.Equal(t, expectedFileOptions, alloc.FileOptions)
+
+	// expiration date cannot be decreased
+	req = updateAllocationRequest{
+		ID:         alloc.ID,
+		Expiration: -1,
+	}
+	tp += 100
+	resp, err = req.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
+	require.Error(t, err)
+	assert.Equal(t, "allocation_updating_failed: duration of an allocation cannot be reduced", err.Error())
+
 	//
 	// add blobber
 	//
 	tp += 100
 	nb := addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
 	tp += 100
-	req := updateAllocationRequest{
+	req = updateAllocationRequest{
 		ID:           alloc.ID,
 		AddBlobberId: nb.id,
 	}
