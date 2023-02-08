@@ -157,8 +157,8 @@ func mergeUpdateUserTotalStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
 }
 
 func withTotalStakeMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *User) (*User, error) {
-		a.TotalStake += b.TotalStake
+	return withEventMerge(func(a, b *DelegatePoolLock) (*DelegatePoolLock, error) {
+		a.Amount += b.Amount
 		return a, nil
 	})
 }
@@ -168,8 +168,8 @@ func mergeUpdateUserReadPoolTotalEvents() *eventsMergerImpl[ReadPoolLock] {
 }
 
 func withReadPoolMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *User) (*User, error) {
-		a.ReadPoolTotal += b.ReadPoolTotal
+	return withEventMerge(func(a, b *ReadPoolLock) (*ReadPoolLock, error) {
+		a.Amount += b.Amount
 		return a, nil
 	})
 }
@@ -179,8 +179,8 @@ func mergeUpdateUserWritePoolTotalEvents() *eventsMergerImpl[WritePoolLock] {
 }
 
 func withWritePoolMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *User) (*User, error) {
-		a.WritePoolTotal += b.WritePoolTotal
+	return withEventMerge(func(a, b *WritePoolLock) (*WritePoolLock, error) {
+		a.Amount += b.Amount
 		return a, nil
 	})
 }
