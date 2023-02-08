@@ -76,7 +76,8 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 
 func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn := transaction.Provider().(*transaction.Transaction)
-	feeTxn.ClientID = b.MinerID
+	feeTxn.ClientID = node.Self.ID
+	feeTxn.PublicKey = node.Self.PublicKey
 	feeTxn.ToClientID = minersc.ADDRESS
 	feeTxn.CreationDate = b.CreationDate
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -105,7 +106,8 @@ func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState 
 
 func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Transaction {
 	scTxn := transaction.Provider().(*transaction.Transaction)
-	scTxn.ClientID = b.MinerID
+	scTxn.ClientID = node.Self.ID
+	scTxn.PublicKey = node.Self.PublicKey
 	scTxn.ToClientID = storagesc.ADDRESS
 	scTxn.CreationDate = b.CreationDate
 	scTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -116,7 +118,8 @@ func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Tr
 
 func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = b.MinerID
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -127,7 +130,8 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 
 func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = b.MinerID
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
