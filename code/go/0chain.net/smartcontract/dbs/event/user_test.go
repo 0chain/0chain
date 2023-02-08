@@ -208,8 +208,9 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 
 func makeUserCollectedRewardsEvent(id string, reward int64) Event {
 	return Event{
-		Type: TypeStats,
-		Tag:  TagUpdateUserCollectedRewards,
+		Type:  TypeStats,
+		Tag:   TagUpdateUserCollectedRewards,
+		Index: id,
 		Data: User{
 			UserID:          id,
 			CollectedReward: reward,
@@ -219,8 +220,9 @@ func makeUserCollectedRewardsEvent(id string, reward int64) Event {
 
 func makeUserTotalStakeEvent(id string, amount int64) Event {
 	return Event{
-		Type: TypeStats,
-		Tag:  TagLockStakePool,
+		Type:  TypeStats,
+		Tag:   TagLockStakePool,
+		Index: id,
 		Data: DelegatePoolLock{
 			Client: id,
 			Amount: amount,
@@ -230,8 +232,9 @@ func makeUserTotalStakeEvent(id string, amount int64) Event {
 
 func makeUserReadPoolLockEvent(id string, amount int64) Event {
 	return Event{
-		Type: TypeStats,
-		Tag:  TagLockReadPool,
+		Type:  TypeStats,
+		Tag:   TagLockReadPool,
+		Index: id,
 		Data: ReadPoolLock{
 			Client: id,
 			Amount: amount,
@@ -241,8 +244,9 @@ func makeUserReadPoolLockEvent(id string, amount int64) Event {
 
 func makeUserWritePoolLockEvent(id string, amount int64) Event {
 	return Event{
-		Type: TypeStats,
-		Tag:  TagLockWritePool,
+		Type:  TypeStats,
+		Tag:   TagLockWritePool,
+		Index: id,
 		Data: WritePoolLock{
 			Client: id,
 			Amount: amount,
@@ -252,8 +256,9 @@ func makeUserWritePoolLockEvent(id string, amount int64) Event {
 
 func makeUserPayedFeesEvent(id string, fee int64) Event {
 	return Event{
-		Type: TypeStats,
-		Tag:  TagUpdateUserPayedFees,
+		Type:  TypeStats,
+		Tag:   TagUpdateUserPayedFees,
+		Index: id,
 		Data: User{
 			UserID:    id,
 			PayedFees: fee,
@@ -496,8 +501,8 @@ func TestMergeUpdateUserWritePoolLockEvents(t *testing.T) {
 		{
 			name: "two different clients",
 			events: []Event{
-				makeUserReadPoolLockEvent("c_1", 100),
-				makeUserReadPoolLockEvent("c_2", 200),
+				makeUserWritePoolLockEvent("c_1", 100),
+				makeUserWritePoolLockEvent("c_2", 200),
 			},
 			expect: expect{
 				pools: map[string]WritePoolLock{
@@ -509,8 +514,8 @@ func TestMergeUpdateUserWritePoolLockEvents(t *testing.T) {
 		{
 			name: "two same clients",
 			events: []Event{
-				makeUserReadPoolLockEvent("c_1", 100),
-				makeUserReadPoolLockEvent("c_1", 200),
+				makeUserWritePoolLockEvent("c_1", 100),
+				makeUserWritePoolLockEvent("c_1", 200),
 			},
 			expect: expect{
 				pools: map[string]WritePoolLock{
