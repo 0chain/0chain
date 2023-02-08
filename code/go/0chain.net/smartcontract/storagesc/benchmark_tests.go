@@ -231,9 +231,9 @@ func BenchmarkTests(
 					OwnerID:         data.Clients[0],
 					Size:            10000000,
 					Expiration:      common.Timestamp(50 * 60 * 60),
-					SetImmutable:    true,
 					RemoveBlobberId: getMockBlobberId(0),
 					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
+					FileOptions: 	 63,
 				}
 				bytes, _ := json.Marshal(&uar)
 				return bytes

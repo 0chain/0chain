@@ -98,6 +98,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-sharder-aggregates", srh.replicateSharderAggregates),
 		rest.MakeEndpoint(storage+"/replicate-authorizer-aggregates", srh.replicateAuthorizerAggregates),
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
+		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
 	}
 }
 
@@ -2722,16 +2723,17 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 // If a match is found the matching object is returned.
 //
 // parameters:
-//    + name: searchString
-//      description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address
-//      required: true
-//      in: query
-//      type: string
+//   - name: searchString
+//     description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address
+//     required: true
+//     in: query
+//     type: string
 //
 // responses:
-//  200: StringMap
-//  400:
-//  500:
+//
+//	200: StringMap
+//	400:
+//	500:
 func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		query = r.URL.Query().Get("searchString")
@@ -3091,4 +3093,50 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		validators = []event.ValidatorAggregate{}
 	}
 	common.Respond(w, r, validators, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate replicateUserAggregates
+// Gets list of user aggregate records
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: StringMap
+//	500:
+func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r *http.Request) {
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	users, err := edb.ReplicateUserAggregate(limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get user aggregates" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(users) == 0 {
+		users = []event.UserAggregate{}
+	}
+	common.Respond(w, r, users, nil)
 }
