@@ -124,6 +124,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		TimeUnit:                        720 * time.Hour,
 		FailedChallengesToRevokeMinLock: 10,
 		MaxStake:                        zcnToBalance(100.0),
+		CancellationCharge:              float64(0.2),
 	}
 	var now = common.Timestamp(scYaml.MaxChallengeCompletionTime) * 5
 	var blobberYaml = mockBlobberYaml{
@@ -176,7 +177,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 			ba := &BlobberAllocation{
 				AllocationID: allocation.ID,
 				BlobberID:    nextBlobber.ID,
-				Terms:        Terms{},
+				Terms: Terms{
+					WritePrice: zcnToBalance(blobberYaml.writePrice),
+				},
 				Stats: &StorageAllocationStats{
 					UsedSize:        blobberUsedSize,
 					OpenChallenges:  int64(i + 1),
@@ -184,6 +187,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 				},
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
+				Size:          1 * GB,
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
@@ -394,8 +398,15 @@ func testCancelAllocation(
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
+	totalCancellationCharge := 952500
+	confirmFinalizeAllocation(t, f, *newCp, sps, int64(totalCancellationCharge/len(blobbers)))
 
-	confirmFinalizeAllocation(t, f, *newCp, sps)
+	var req lockRequest
+	req.decode(input)
+	allocation, _ := ssc.getAllocation(req.AllocationID, ctx)
+	remainingWritePool, _ := allocation.WritePool.Int64()
+	require.Equal(t, int64(0), remainingWritePool)
+
 	return nil
 }
 
@@ -432,7 +443,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 		sps = append(sps, sp)
 	}
 
-	confirmFinalizeAllocation(t, f, *newCp, sps)
+	confirmFinalizeAllocation(t, f, *newCp, sps, 0)
 	return nil
 }
 
@@ -441,6 +452,7 @@ func confirmFinalizeAllocation(
 	f formulaeFinalizeAllocation,
 	challengePool challengePool,
 	sps []*stakePool,
+	cancellationCharge int64,
 ) {
 	require.EqualValues(t, 0, challengePool.Balance)
 
@@ -457,19 +469,19 @@ func confirmFinalizeAllocation(
 		}
 	}
 
-	f.blobberServiceCharge(0)
+	f.blobberServiceCharge(0, 0)
 	f.minLockServiceCharge(0)
-	f.blobberDelegateReward(0, 0)
+	f.blobberDelegateReward(0, 0, 0)
 	f.minLockDelegatePayment(0, 0)
 
 	for i, sp := range sps {
-		serviceCharge := f.blobberServiceCharge(i) + f.minLockServiceCharge(i)
+		serviceCharge := f.blobberServiceCharge(i, cancellationCharge) + f.minLockServiceCharge(i)
 		require.Equal(t, serviceCharge, int64(sp.Reward))
 		for poolId, dp := range sp.Pools {
 			wSplit := strings.Split(poolId, " ")
 			dId, err := strconv.Atoi(wSplit[2])
 			require.NoError(t, err)
-			reward := f.blobberDelegateReward(i, dId) + f.minLockDelegatePayment(i, dId)
+			reward := f.blobberDelegateReward(i, dId, cancellationCharge) + f.minLockDelegatePayment(i, dId)
 			require.InDelta(t, reward, int64(dp.Reward), errDelta)
 		}
 	}
@@ -533,6 +545,7 @@ func setupMocksFinishAllocation(
 		var id = strconv.Itoa(i)
 		var sp = newStakePool()
 		sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
+		sp.TotalOffers = currency.Coin(200000000000)
 		for j, stake := range bStakes[i] {
 			var jd = strconv.Itoa(j)
 			var delegatePool = &stakepool.DelegatePool{}
@@ -617,14 +630,14 @@ func (f *formulaeFinalizeAllocation) minLockDelegatePayment(blobber, delegate in
 	return int64(delegateMinLock * delegateStake / totalStake)
 }
 
-func (f *formulaeFinalizeAllocation) blobberServiceCharge(blobberIndex int) int64 {
+func (f *formulaeFinalizeAllocation) blobberServiceCharge(blobberIndex int, cancellationCharge int64) int64 {
 	var serviceCharge = blobberYaml.serviceCharge
-	var blobberRewards = f._blobberReward(blobberIndex)
+	var blobberRewards = f._blobberReward(blobberIndex, cancellationCharge)
 
 	return int64(blobberRewards * serviceCharge)
 }
 
-func (f *formulaeFinalizeAllocation) blobberDelegateReward(bIndex, dIndex int) int64 {
+func (f *formulaeFinalizeAllocation) blobberDelegateReward(bIndex, dIndex int, cancellationCharge int64) int64 {
 	require.True(f.t, bIndex < len(f.bStakes))
 	require.True(f.t, dIndex < len(f.bStakes[bIndex]))
 	var totalStake = 0.0
@@ -632,13 +645,13 @@ func (f *formulaeFinalizeAllocation) blobberDelegateReward(bIndex, dIndex int) i
 		totalStake += stake.zcnAmount
 	}
 	var delegateStake = f.bStakes[bIndex][dIndex].zcnAmount
-	var totalDelegateReward = f._blobberReward(bIndex) - float64(f.blobberServiceCharge(bIndex))
+	var totalDelegateReward = f._blobberReward(bIndex, cancellationCharge) - float64(f.blobberServiceCharge(bIndex, cancellationCharge))
 
 	require.True(f.t, totalStake > 0)
 	return int64(float64(totalDelegateReward) * delegateStake / totalStake)
 }
 
-func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
+func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellationCharge int64) float64 {
 	var challengePool = float64(f._challengePool())
 
 	var used = float64(f.allocation.BlobberAllocs[blobberIndex].Stats.UsedSize)
@@ -652,7 +665,7 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
 	var ratio = used / totalUsed
 	var passRate = f._passRates[blobberIndex]
 
-	return challengePool * ratio * passRate
+	return challengePool*ratio*passRate + float64(cancellationCharge)
 }
 
 func (f *formulaeFinalizeAllocation) setCancelPassRates() {
