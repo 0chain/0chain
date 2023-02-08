@@ -126,6 +126,7 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 			DelegateID:   dp.DelegateID,
 			Status:       spenum.PoolStatus(dp.Status).String(),
 			RoundCreated: dp.RoundCreated,
+			StakedAt:     dp.StakedAt,
 		}
 		dpStats.Balance = dp.Balance
 
