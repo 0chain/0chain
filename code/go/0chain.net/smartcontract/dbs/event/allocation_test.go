@@ -142,7 +142,6 @@ func TestAllocations(t *testing.T) {
 		PreferredBlobbers []string                      `json:"preferred_blobbers"`
 		BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 		BlobberMap        map[string]*BlobberAllocation `json:"-"`
-		IsImmutable       bool                          `json:"is_immutable"`
 
 		// Requested ranges.
 		ReadPriceRange  PriceRange `json:"read_price_range"`
@@ -178,6 +177,8 @@ func TestAllocations(t *testing.T) {
 		TimeUnit time.Duration `json:"time_unit"`
 
 		Curators []string `json:"curators"`
+
+		FileOptions uint16 `json:"file_options"`
 	}
 
 	convertSa := func(sa StorageAllocation) Allocation {
@@ -203,7 +204,6 @@ func TestAllocations(t *testing.T) {
 			Terms:                    allocationTerms,
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
-			IsImmutable:              sa.IsImmutable,
 			ReadPriceMin:             sa.ReadPriceRange.Min,
 			ReadPriceMax:             sa.ReadPriceRange.Max,
 			WritePriceMin:            sa.WritePriceRange.Min,
@@ -223,6 +223,7 @@ func TestAllocations(t *testing.T) {
 			SuccessfulChallenges:     sa.Stats.SuccessChallenges,
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
+			FileOptions: 			  sa.FileOptions,
 		}
 	}
 
@@ -319,7 +320,7 @@ func TestAllocations(t *testing.T) {
 				},
 			},
 		},
-		IsImmutable: false,
+		FileOptions: 63,
 		ReadPriceRange: PriceRange{
 			Min: 10,
 			Max: 20,
