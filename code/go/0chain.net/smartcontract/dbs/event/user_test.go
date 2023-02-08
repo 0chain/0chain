@@ -282,8 +282,8 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 			},
 			expect: expect{
 				users: map[string]User{
-					"u_1": {UserID: "u_1", TotalStake: 100},
-					"u_2": {UserID: "u_2", TotalStake: 200},
+					"u_1": {UserID: "u_1", CollectedReward: 100},
+					"u_2": {UserID: "u_2", CollectedReward: 200},
 				},
 			},
 		},
@@ -295,7 +295,7 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 			},
 			expect: expect{
 				users: map[string]User{
-					"u_1": {UserID: "u_1", TotalStake: 300},
+					"u_1": {UserID: "u_1", CollectedReward: 300},
 				},
 			},
 		},

@@ -113,7 +113,7 @@ func (sp *StakePool) LockPool(
 		Reward:       currency.Coin(0),
 		Total:        i,
 	}
-	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, lock)
+	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, txn.ClientID, lock)
 
 	if err := balances.AddTransfer(state.NewTransfer(
 		txn.ClientID, txn.ToClientID, txn.Value,
