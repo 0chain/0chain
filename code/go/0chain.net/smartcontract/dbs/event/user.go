@@ -156,6 +156,10 @@ func mergeUpdateUserTotalStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
 	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withTotalStakeMerged())
 }
 
+func mergeUpdateUserTotalUnstakeEvents() *eventsMergerImpl[DelegatePoolLock] {
+	return newEventsMerger[DelegatePoolLock](TagUnlockStakePool, withTotalStakeMerged())
+}
+
 func withTotalStakeMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *DelegatePoolLock) (*DelegatePoolLock, error) {
 		a.Amount += b.Amount
@@ -163,8 +167,12 @@ func withTotalStakeMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateUserReadPoolTotalEvents() *eventsMergerImpl[ReadPoolLock] {
+func mergeUpdateUserReadPoolLockEvents() *eventsMergerImpl[ReadPoolLock] {
 	return newEventsMerger[ReadPoolLock](TagLockReadPool, withReadPoolMerged())
+}
+
+func mergeUpdateUserReadPoolUnlockEvents() *eventsMergerImpl[ReadPoolLock] {
+	return newEventsMerger[ReadPoolLock](TagUnlockReadPool, withReadPoolMerged())
 }
 
 func withReadPoolMerged() eventMergeMiddleware {
@@ -174,8 +182,12 @@ func withReadPoolMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateUserWritePoolTotalEvents() *eventsMergerImpl[WritePoolLock] {
+func mergeUpdateUserWritePoolLockEvents() *eventsMergerImpl[WritePoolLock] {
 	return newEventsMerger[WritePoolLock](TagLockWritePool, withWritePoolMerged())
+}
+
+func mergeUpdateUserWritePoolUnlockEvents() *eventsMergerImpl[WritePoolLock] {
+	return newEventsMerger[WritePoolLock](TagUnlockWritePool, withWritePoolMerged())
 }
 
 func withWritePoolMerged() eventMergeMiddleware {

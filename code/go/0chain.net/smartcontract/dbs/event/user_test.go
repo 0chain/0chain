@@ -217,6 +217,50 @@ func makeUserCollectedRewardsEvent(id string, reward int64) Event {
 	}
 }
 
+func makeUserTotalStakeEvent(id string, amount int64) Event {
+	return Event{
+		Type: TypeStats,
+		Tag:  TagLockStakePool,
+		Data: DelegatePoolLock{
+			Client: id,
+			Amount: amount,
+		},
+	}
+}
+
+func makeUserReadPoolLockEvent(id string, amount int64) Event {
+	return Event{
+		Type: TypeStats,
+		Tag:  TagLockReadPool,
+		Data: ReadPoolLock{
+			Client: id,
+			Amount: amount,
+		},
+	}
+}
+
+func makeUserWritePoolLockEvent(id string, amount int64) Event {
+	return Event{
+		Type: TypeStats,
+		Tag:  TagLockWritePool,
+		Data: WritePoolLock{
+			Client: id,
+			Amount: amount,
+		},
+	}
+}
+
+func makeUserPayedFeesEvent(id string, fee int64) Event {
+	return Event{
+		Type: TypeStats,
+		Tag:  TagUpdateUserPayedFees,
+		Data: User{
+			UserID:    id,
+			PayedFees: fee,
+		},
+	}
+}
+
 func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 	type expect struct {
 		users  map[string]User
@@ -231,26 +275,10 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 		expect    expect
 	}{
 		{
-			name:   "no user",
-			events: []Event{},
-			expect: expect{
-				users: map[string]User{},
-			},
-		},
-		{
-			name:   "one user",
-			events: []Event{makeUserCollectedRewardsEvent("u_1", 100)},
-			expect: expect{
-				users: map[string]User{
-					"u_1": {UserID: "u_1", CollectedReward: 100},
-				},
-			},
-		},
-		{
 			name: "two different users",
 			events: []Event{
-				makeBlobberTotalStakeEvent("u_1", 100),
-				makeBlobberTotalStakeEvent("u_2", 200),
+				makeUserCollectedRewardsEvent("u_1", 100),
+				makeUserCollectedRewardsEvent("u_2", 200),
 			},
 			expect: expect{
 				users: map[string]User{
@@ -262,8 +290,8 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 		{
 			name: "two same users",
 			events: []Event{
-				makeBlobberTotalStakeEvent("u_1", 100),
-				makeBlobberTotalStakeEvent("u_1", 200),
+				makeUserCollectedRewardsEvent("u_1", 100),
+				makeUserCollectedRewardsEvent("u_1", 200),
 			},
 			expect: expect{
 				users: map[string]User{
@@ -299,6 +327,298 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 
 			for _, u := range *users {
 				exp, ok := tc.expect.users[u.UserID]
+				require.True(t, ok)
+				require.EqualValues(t, exp, u)
+			}
+		})
+	}
+}
+
+func TestMergeUpdateUserTotalStakeEvents(t *testing.T) {
+	type expect struct {
+		pools  map[string]DelegatePoolLock
+		others []Event
+	}
+
+	tt := []struct {
+		name      string
+		events    []Event
+		round     int64
+		blockHash string
+		expect    expect
+	}{
+		{
+			name: "two different clients",
+			events: []Event{
+				makeUserTotalStakeEvent("c_1", 100),
+				makeUserTotalStakeEvent("c_2", 200),
+			},
+			expect: expect{
+				pools: map[string]DelegatePoolLock{
+					"c_1": {Client: "c_1", Amount: 100},
+					"c_2": {Client: "c_2", Amount: 200},
+				},
+			},
+		},
+		{
+			name: "two same clients",
+			events: []Event{
+				makeUserTotalStakeEvent("c_1", 100),
+				makeUserTotalStakeEvent("c_1", 200),
+			},
+			expect: expect{
+				pools: map[string]DelegatePoolLock{
+					"c_1": {Client: "c_1", Amount: 300},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			em := mergeUpdateUserTotalStakeEvents()
+			others := make([]Event, 0, len(tc.events))
+			for _, e := range tc.events {
+				if em.filter(e) {
+					continue
+				}
+
+				others = append(others, e)
+			}
+
+			mergedEvent, err := em.merge(tc.round, tc.blockHash)
+			require.NoError(t, err)
+
+			if mergedEvent == nil {
+				return
+			}
+
+			pools, ok := fromEvent[[]DelegatePoolLock](mergedEvent.Data)
+			require.True(t, ok)
+
+			require.Equal(t, len(tc.expect.pools), len(*pools))
+
+			for _, p := range *pools {
+				exp, ok := tc.expect.pools[p.Client]
+				require.True(t, ok)
+				require.EqualValues(t, exp, p)
+			}
+		})
+	}
+}
+
+func TestMergeUpdateUserReadPoolLockEvents(t *testing.T) {
+	type expect struct {
+		pools  map[string]ReadPoolLock
+		others []Event
+	}
+
+	tt := []struct {
+		name      string
+		events    []Event
+		round     int64
+		blockHash string
+		expect    expect
+	}{
+		{
+			name: "two different clients",
+			events: []Event{
+				makeUserReadPoolLockEvent("c_1", 100),
+				makeUserReadPoolLockEvent("c_2", 200),
+			},
+			expect: expect{
+				pools: map[string]ReadPoolLock{
+					"c_1": {Client: "c_1", Amount: 100},
+					"c_2": {Client: "c_2", Amount: 200},
+				},
+			},
+		},
+		{
+			name: "two same clients",
+			events: []Event{
+				makeUserReadPoolLockEvent("c_1", 100),
+				makeUserReadPoolLockEvent("c_1", 200),
+			},
+			expect: expect{
+				pools: map[string]ReadPoolLock{
+					"c_1": {Client: "c_1", Amount: 300},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			em := mergeUpdateUserReadPoolLockEvents()
+			others := make([]Event, 0, len(tc.events))
+			for _, e := range tc.events {
+				if em.filter(e) {
+					continue
+				}
+
+				others = append(others, e)
+			}
+
+			mergedEvent, err := em.merge(tc.round, tc.blockHash)
+			require.NoError(t, err)
+
+			if mergedEvent == nil {
+				return
+			}
+
+			pools, ok := fromEvent[[]ReadPoolLock](mergedEvent.Data)
+			require.True(t, ok)
+
+			require.Equal(t, len(tc.expect.pools), len(*pools))
+
+			for _, p := range *pools {
+				exp, ok := tc.expect.pools[p.Client]
+				require.True(t, ok)
+				require.EqualValues(t, exp, p)
+			}
+		})
+	}
+}
+
+func TestMergeUpdateUserWritePoolLockEvents(t *testing.T) {
+	type expect struct {
+		pools  map[string]WritePoolLock
+		others []Event
+	}
+
+	tt := []struct {
+		name      string
+		events    []Event
+		round     int64
+		blockHash string
+		expect    expect
+	}{
+		{
+			name: "two different clients",
+			events: []Event{
+				makeUserReadPoolLockEvent("c_1", 100),
+				makeUserReadPoolLockEvent("c_2", 200),
+			},
+			expect: expect{
+				pools: map[string]WritePoolLock{
+					"c_1": {Client: "c_1", Amount: 100},
+					"c_2": {Client: "c_2", Amount: 200},
+				},
+			},
+		},
+		{
+			name: "two same clients",
+			events: []Event{
+				makeUserReadPoolLockEvent("c_1", 100),
+				makeUserReadPoolLockEvent("c_1", 200),
+			},
+			expect: expect{
+				pools: map[string]WritePoolLock{
+					"c_1": {Client: "c_1", Amount: 300},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			em := mergeUpdateUserWritePoolLockEvents()
+			others := make([]Event, 0, len(tc.events))
+			for _, e := range tc.events {
+				if em.filter(e) {
+					continue
+				}
+
+				others = append(others, e)
+			}
+
+			mergedEvent, err := em.merge(tc.round, tc.blockHash)
+			require.NoError(t, err)
+
+			if mergedEvent == nil {
+				return
+			}
+
+			pools, ok := fromEvent[[]WritePoolLock](mergedEvent.Data)
+			require.True(t, ok)
+
+			require.Equal(t, len(tc.expect.pools), len(*pools))
+
+			for _, p := range *pools {
+				exp, ok := tc.expect.pools[p.Client]
+				require.True(t, ok)
+				require.EqualValues(t, exp, p)
+			}
+		})
+	}
+}
+
+func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
+	type expect struct {
+		pools  map[string]User
+		others []Event
+	}
+
+	tt := []struct {
+		name      string
+		events    []Event
+		round     int64
+		blockHash string
+		expect    expect
+	}{
+		{
+			name: "two different clients",
+			events: []Event{
+				makeUserPayedFeesEvent("c_1", 100),
+				makeUserPayedFeesEvent("c_2", 200),
+			},
+			expect: expect{
+				pools: map[string]User{
+					"c_1": {UserID: "c_1", PayedFees: 100},
+					"c_2": {UserID: "c_2", PayedFees: 200},
+				},
+			},
+		},
+		{
+			name: "two same clients",
+			events: []Event{
+				makeUserPayedFeesEvent("c_1", 100),
+				makeUserPayedFeesEvent("c_1", 200),
+			},
+			expect: expect{
+				pools: map[string]User{
+					"c_1": {UserID: "c_1", PayedFees: 300},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			em := mergeUpdateUserPayedFeesEvents()
+			others := make([]Event, 0, len(tc.events))
+			for _, e := range tc.events {
+				if em.filter(e) {
+					continue
+				}
+
+				others = append(others, e)
+			}
+
+			mergedEvent, err := em.merge(tc.round, tc.blockHash)
+			require.NoError(t, err)
+
+			if mergedEvent == nil {
+				return
+			}
+
+			users, ok := fromEvent[[]User](mergedEvent.Data)
+			require.True(t, ok)
+
+			require.Equal(t, len(tc.expect.pools), len(*users))
+
+			for _, u := range *users {
+				exp, ok := tc.expect.pools[u.UserID]
 				require.True(t, ok)
 				require.EqualValues(t, exp, u)
 			}
