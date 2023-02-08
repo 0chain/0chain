@@ -152,11 +152,11 @@ func withCollectedRewardsMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateUserTotalStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
+func mergeUserStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
 	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withTotalStakeMerged())
 }
 
-func mergeUpdateUserTotalUnstakeEvents() *eventsMergerImpl[DelegatePoolLock] {
+func mergeUserUnstakeEvents() *eventsMergerImpl[DelegatePoolLock] {
 	return newEventsMerger[DelegatePoolLock](TagUnlockStakePool, withTotalStakeMerged())
 }
 
@@ -167,11 +167,11 @@ func withTotalStakeMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateUserReadPoolLockEvents() *eventsMergerImpl[ReadPoolLock] {
+func mergeUserReadPoolLockEvents() *eventsMergerImpl[ReadPoolLock] {
 	return newEventsMerger[ReadPoolLock](TagLockReadPool, withReadPoolMerged())
 }
 
-func mergeUpdateUserReadPoolUnlockEvents() *eventsMergerImpl[ReadPoolLock] {
+func mergeUserReadPoolUnlockEvents() *eventsMergerImpl[ReadPoolLock] {
 	return newEventsMerger[ReadPoolLock](TagUnlockReadPool, withReadPoolMerged())
 }
 
@@ -182,11 +182,11 @@ func withReadPoolMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateUserWritePoolLockEvents() *eventsMergerImpl[WritePoolLock] {
+func mergeUserWritePoolLockEvents() *eventsMergerImpl[WritePoolLock] {
 	return newEventsMerger[WritePoolLock](TagLockWritePool, withWritePoolMerged())
 }
 
-func mergeUpdateUserWritePoolUnlockEvents() *eventsMergerImpl[WritePoolLock] {
+func mergeUserWritePoolUnlockEvents() *eventsMergerImpl[WritePoolLock] {
 	return newEventsMerger[WritePoolLock](TagUnlockWritePool, withWritePoolMerged())
 }
 

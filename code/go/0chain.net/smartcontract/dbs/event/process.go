@@ -131,12 +131,12 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeValidatorHealthCheckEvents(),
 
 			mergeUpdateUserCollectedRewardsEvents(),
-			mergeUpdateUserTotalStakeEvents(),
-			mergeUpdateUserTotalUnstakeEvents(),
-			mergeUpdateUserReadPoolLockEvents(),
-			mergeUpdateUserReadPoolUnlockEvents(),
-			mergeUpdateUserWritePoolLockEvents(),
-			mergeUpdateUserWritePoolUnlockEvents(),
+			mergeUserStakeEvents(),
+			mergeUserUnstakeEvents(),
+			mergeUserReadPoolLockEvents(),
+			mergeUserReadPoolUnlockEvents(),
+			mergeUserWritePoolLockEvents(),
+			mergeUserWritePoolUnlockEvents(),
 			mergeUpdateUserPayedFeesEvents(),
 		}
 

@@ -376,7 +376,7 @@ func TestMergeUpdateUserTotalStakeEvents(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			em := mergeUpdateUserTotalStakeEvents()
+			em := mergeUserStakeEvents()
 			others := make([]Event, 0, len(tc.events))
 			for _, e := range tc.events {
 				if em.filter(e) {
@@ -449,7 +449,7 @@ func TestMergeUpdateUserReadPoolLockEvents(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			em := mergeUpdateUserReadPoolLockEvents()
+			em := mergeUserReadPoolLockEvents()
 			others := make([]Event, 0, len(tc.events))
 			for _, e := range tc.events {
 				if em.filter(e) {
@@ -522,7 +522,7 @@ func TestMergeUpdateUserWritePoolLockEvents(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			em := mergeUpdateUserWritePoolLockEvents()
+			em := mergeUserWritePoolLockEvents()
 			others := make([]Event, 0, len(tc.events))
 			for _, e := range tc.events {
 				if em.filter(e) {
