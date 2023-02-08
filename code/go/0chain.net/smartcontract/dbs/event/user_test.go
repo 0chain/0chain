@@ -205,3 +205,103 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 		require.Equal(t, users[i-5].Round, u.Round)
 	}
 }
+
+func makeUserCollectedRewardsEvent(id string, reward int64) Event {
+	return Event{
+		Type: TypeStats,
+		Tag:  TagUpdateUserCollectedRewards,
+		Data: User{
+			UserID:          id,
+			CollectedReward: reward,
+		},
+	}
+}
+
+func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
+	type expect struct {
+		users  map[string]User
+		others []Event
+	}
+
+	tt := []struct {
+		name      string
+		events    []Event
+		round     int64
+		blockHash string
+		expect    expect
+	}{
+		{
+			name:   "no user",
+			events: []Event{},
+			expect: expect{
+				users: map[string]User{},
+			},
+		},
+		{
+			name:   "one user",
+			events: []Event{makeUserCollectedRewardsEvent("u_1", 100)},
+			expect: expect{
+				users: map[string]User{
+					"u_1": {UserID: "u_1", CollectedReward: 100},
+				},
+			},
+		},
+		{
+			name: "two different users",
+			events: []Event{
+				makeBlobberTotalStakeEvent("u_1", 100),
+				makeBlobberTotalStakeEvent("u_2", 200),
+			},
+			expect: expect{
+				users: map[string]User{
+					"u_1": {UserID: "u_1", TotalStake: 100},
+					"u_2": {UserID: "u_2", TotalStake: 200},
+				},
+			},
+		},
+		{
+			name: "two same users",
+			events: []Event{
+				makeBlobberTotalStakeEvent("u_1", 100),
+				makeBlobberTotalStakeEvent("u_1", 200),
+			},
+			expect: expect{
+				users: map[string]User{
+					"u_1": {UserID: "u_1", TotalStake: 300},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			em := mergeUpdateUserCollectedRewardsEvents()
+			others := make([]Event, 0, len(tc.events))
+			for _, e := range tc.events {
+				if em.filter(e) {
+					continue
+				}
+
+				others = append(others, e)
+			}
+
+			mergedEvent, err := em.merge(tc.round, tc.blockHash)
+			require.NoError(t, err)
+
+			if mergedEvent == nil {
+				return
+			}
+
+			users, ok := fromEvent[[]User](mergedEvent.Data)
+			require.True(t, ok)
+
+			require.Equal(t, len(tc.expect.users), len(*users))
+
+			for _, u := range *users {
+				exp, ok := tc.expect.users[u.UserID]
+				require.True(t, ok)
+				require.EqualValues(t, exp, u)
+			}
+		})
+	}
+}
