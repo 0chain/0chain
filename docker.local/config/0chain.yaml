@@ -141,6 +141,8 @@ server_chain:
       # event database settings blockchain
       debug: false
       aggregate_period: 10
+      partition_change_period: 100
+      partition_keep_count: 10
       page_limit: 50
 
 network:

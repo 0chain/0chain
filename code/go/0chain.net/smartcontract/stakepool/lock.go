@@ -110,7 +110,7 @@ func (sp *StakePool) LockPool(
 		ProviderId:   providerId,
 		ProviderType: providerType,
 		Amount:       i,
-		Reward: 	  currency.Coin(0),
+		Reward:       currency.Coin(0),
 		Total:        i,
 	}
 	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, lock)

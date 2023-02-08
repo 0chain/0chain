@@ -180,11 +180,15 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 	return b
 }
 
-func (b *Block) GetUniqueBlockExtensions() (uBlExts map[string]bool) {
+func (b *Block) GetUniqueBlockExtensions() map[string]bool {
 	b.uniqueBlockExtMutex.RLock()
 	defer b.uniqueBlockExtMutex.RUnlock()
 
-	return b.uniqueBlockExtensions
+	cb := make(map[string]bool, len(b.uniqueBlockExtensions))
+	for k, v := range b.uniqueBlockExtensions {
+		cb[k] = v
+	}
+	return cb
 }
 
 // GetVerificationTickets of the block async safe.
@@ -929,6 +933,15 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 			Tag:         event.TagAddTransactions,
 			Index:       txn.Hash,
 			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),
+		})
+
+		b.Events = append(b.Events, event.Event{
+			Type: event.TypeStats,
+			Tag:  event.TagUpdateUserPayedFees,
+			Data: event.User{
+				UserID:    txn.ClientID,
+				PayedFees: int64(txn.Fee),
+			},
 		})
 
 		events, err := c.UpdateState(ctx, b, bState, txn, waitC...)

@@ -28,7 +28,7 @@ import (
 
 //go:generate msgp -v -io=false -tests=false
 
-func stakePoolKey(p spenum.Provider, id string) datastore.Key {
+func StakePoolKey(p spenum.Provider, id string) datastore.Key {
 	return p.String() + ":stakepool:" + id
 }
 
@@ -191,7 +191,7 @@ func (sp *StakePool) Save(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	_, err := balances.InsertTrieNode(stakePoolKey(p, id), sp)
+	_, err := balances.InsertTrieNode(StakePoolKey(p, id), sp)
 	return err
 }
 
@@ -200,7 +200,7 @@ func (sp *StakePool) Get(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	return balances.GetTrieNode(stakePoolKey(p, id), sp)
+	return balances.GetTrieNode(StakePoolKey(p, id), sp)
 }
 
 func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.Coin, error) {
@@ -263,6 +263,12 @@ func (sp *StakePool) MintRewards(
 			ProviderType: providerType.String(),
 			ProviderID:   providerId,
 		})
+
+		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.User{
+			CollectedReward: int64(dPool.Reward),
+			UserID:          clientId,
+		})
+
 		delegateReward = dPool.Reward
 		dPool.Reward = 0
 	}
@@ -605,19 +611,24 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 	return nil
 }
 
-type stakePoolRequest struct {
+type StakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
 	ProviderID   string          `json:"provider_id,omitempty"`
 }
 
-func (spr *stakePoolRequest) decode(p []byte) (err error) {
+func (spr *StakePoolRequest) Encode() []byte {
+	bytes, _ := json.Marshal(spr)
+	return bytes
+}
+
+func (spr *StakePoolRequest) decode(p []byte) (err error) {
 	return json.Unmarshal(p, spr)
 }
 
 func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
 
-	var spr stakePoolRequest
+	var spr StakePoolRequest
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"invalid request: %v", err)
@@ -669,7 +680,8 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
 ) (resp string, err error) {
-	var spr stakePoolRequest
+	var spr StakePoolRequest
+
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)

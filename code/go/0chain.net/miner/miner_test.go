@@ -213,6 +213,8 @@ func TestBlockVerification(t *testing.T) {
 func TestTwoCorrectBlocks(t *testing.T) {
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
+
+	config.SetupSmartContractConfig("testdata")
 	ctx := context.Background()
 	mr := CreateMockRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
