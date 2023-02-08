@@ -1,41 +1,23 @@
 package zcnsc
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 )
 
 //msgp:ignore unlockResponse stakePoolRequest
 
 //go:generate msgp -v -io=false -tests=false -unexported
-
-type stakePoolRequest struct {
-	AuthorizerID string `json:"authorizer_id,omitempty"`
-}
-
-func (spr *stakePoolRequest) decode(p []byte) (err error) {
-	if err = json.Unmarshal(p, spr); err != nil {
-		return
-	}
-	return // ok
-}
-
-func (spr *stakePoolRequest) encode() []byte {
-	bytes, _ := json.Marshal(spr)
-	return bytes
-}
 
 // ----------- LockingPool pool --------------------------
 
@@ -52,18 +34,13 @@ func NewStakePool() *StakePool {
 	}
 }
 
-// StakePoolKey stake pool key for the storage SC and service provider ID
-func StakePoolKey(scKey, providerID string) datastore.Key {
-	return scKey + ":stakepool:" + providerID
-}
-
 func (sp *StakePool) GetKey() datastore.Key {
-	return StakePoolKey(ADDRESS, sp.Settings.DelegateWallet)
+	return stakepool.StakePoolKey(spenum.Authorizer, sp.Settings.DelegateWallet)
 }
 
 // save the stake pool
 func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(StakePoolKey(sscKey, providerID), sp)
+	_, err = balances.InsertTrieNode(stakepool.StakePoolKey(spenum.Authorizer, providerID), sp)
 	return
 }
 
@@ -96,12 +73,47 @@ func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI
 // getStakePool of given authorizer
 func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances cstate.StateContextI) (sp *StakePool, err error) {
 	sp = NewStakePool()
-	err = balances.GetTrieNode(StakePoolKey(zcn.ID, authorizerID), sp)
+	err = balances.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, authorizerID), sp)
 	if err != nil {
 		return nil, err
 	}
 
 	return sp, nil
+}
+
+func (zcn *ZCNSmartContract) getStakePoolForAdapter(_ spenum.Provider, providerID datastore.Key, balances cstate.CommonStateContextI) (sp *StakePool, err error) {
+	sp = NewStakePool()
+	err = balances.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, providerID), sp)
+	if err != nil {
+		return nil, err
+	}
+
+	return sp, nil
+}
+
+func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
+	balances cstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+	pool, err := zcn.getStakePoolForAdapter(providerType, providerID, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	return pool, nil
+}
+
+// add delegated stake pool
+func (zcn *ZCNSmartContract) stakePoolLock(t *transaction.Transaction,
+	input []byte, balances cstate.StateContextI) (res string, err error) {
+	return stakepool.StakePoolLock(t, input, balances, zcn.getStakePoolAdapter)
+}
+
+// stake pool can return excess tokens from stake pool
+func (zcn *ZCNSmartContract) stakePoolUnlock(
+	t *transaction.Transaction,
+	input []byte,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	return stakepool.StakePoolUnlock(t, input, balances, zcn.getStakePoolAdapter)
 }
 
 // initial or successive method should be used by add_authorizer
@@ -186,89 +198,16 @@ func (gn *GlobalNode) validateStakeRange(min, max currency.Coin) (err error) {
 	return
 }
 
-func (zcn *ZCNSmartContract) AddToDelegatePool(
-	t *transaction.Transaction,
-	input []byte,
-	ctx cstate.StateContextI,
-) (resp string, err error) {
-	code := "stake_pool_lock_failed"
+func (zcn *ZCNSmartContract) AddToDelegatePool(t *transaction.Transaction,
+	input []byte, balances cstate.StateContextI) (
+	resp string, err error) {
 
-	gn, err := GetGlobalNode(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("failed to get global node, err: %v", err)
-		return "", common.NewError(code, msg)
-	}
-
-	if t.Value < gn.MinLockAmount {
-		return "", common.NewError(code, fmt.Sprintf("too small stake to lock: %v < %v", t.Value, gn.MinLockAmount))
-	}
-
-	var spr stakePoolRequest
-	if err = spr.decode(input); err != nil {
-		return "", common.NewErrorf(code, "invalid request: %v", err)
-	}
-
-	var sp *StakePool
-	if sp, err = zcn.getStakePool(spr.AuthorizerID, ctx); err != nil {
-		return "", common.NewErrorf(code, "can't get stake pool: %v", err)
-	}
-
-	if len(sp.Pools) >= gn.MaxDelegates && !sp.HasStakePool(t.ClientID) {
-		return "", common.NewErrorf(code, "max_delegates reached: %v, no more stake pools allowed", gn.MaxDelegates)
-	}
-
-	out, err := sp.LockPool(t, spenum.Authorizer, spr.AuthorizerID, spenum.Active, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "stake pool digging error: %v", err)
-	}
-
-	if err = sp.save(zcn.ID, spr.AuthorizerID, ctx); err != nil {
-		return "", common.NewErrorf(code, "saving stake pool: %v", err)
-	}
-
-	// TO-DO: Update stake in eventDB
-
-	return out, err
+	return stakepool.StakePoolLock(t, input, balances, zcn.getStakePoolAdapter)
 }
 
 func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
-	t *transaction.Transaction,
-	input []byte,
-	ctx cstate.StateContextI,
-) (resp string, err error) {
-	const code = "stake_pool_unlock_failed"
-	var spr stakePoolRequest
+	t *transaction.Transaction, inputData []byte,
+	balances cstate.StateContextI) (resp string, err error) {
 
-	if err = spr.decode(input); err != nil {
-		return "", common.NewErrorf(code, "can't decode request: %v", err)
-	}
-	var sp *StakePool
-	if sp, err = zcn.getStakePool(spr.AuthorizerID, ctx); err != nil {
-		return "", common.NewErrorf(code, "can't get related stake pool: %v", err)
-	}
-
-	_, err = sp.empty(zcn.ID, t.ClientID, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "unlocking tokens: %v", err)
-	}
-
-	output, err := sp.UnlockPool(t.ClientID, spenum.Blobber, spr.AuthorizerID, ctx)
-	if err != nil {
-		return "", common.NewErrorf(code, "%v", err)
-	}
-
-	// save the pool
-	if err = sp.save(zcn.ID, spr.AuthorizerID, ctx); err != nil {
-		return "", common.NewErrorf(code, "saving stake pool: %v", err)
-	}
-
-	return output, nil
-}
-
-func toJson(val interface{}) string {
-	var b, err = json.Marshal(val)
-	if err != nil {
-		panic(err)
-	}
-	return string(b)
+	return stakepool.StakePoolUnlock(t, inputData, balances, zcn.getStakePoolAdapter)
 }

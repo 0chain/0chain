@@ -627,9 +627,6 @@ type StorageAllocation struct {
 	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
 
-	// Defines mutability of the files in the allocation, used by blobber on CommitWrite
-	IsImmutable bool `json:"is_immutable"`
-
 	// Flag to determine if anyone can extend this allocation
 	ThirdPartyExtendable bool `json:"third_party_extendable"`
 
@@ -642,7 +639,7 @@ type StorageAllocation struct {
 	// 00001000 - 8  - move
 	// 00010000 - 16 - copy
 	// 00100000 - 32 - rename
-	FileOptions uint8 `json:"file_options"`
+	FileOptions uint16 `json:"file_options"`
 
 	WritePool currency.Coin `json:"write_pool"`
 
@@ -675,8 +672,6 @@ type StorageAllocation struct {
 	TimeUnit time.Duration `json:"time_unit"`
 
 	Curators []string `json:"curators"`
-	// Name is the name of an allocation
-	Name string `json:"name"`
 }
 
 type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
@@ -1402,7 +1397,6 @@ type WriteMarker struct {
 
 	// file info
 	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name"`
 	ContentHash string `json:"content_hash"`
 }
 

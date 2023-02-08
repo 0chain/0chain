@@ -53,9 +53,6 @@ func TestGetMinerWithDelegatePools(t *testing.T) {
 	})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
-	miners, err := edb.GetMiners()
-	miners = miners
-
 	p, err := edb.GetDelegatePool("pool_id", minerIds[1])
 	require.NoError(t, err, "Error while retrieving DelegatePool from event Database")
 	require.Equal(t, p.PoolID, "pool_id")
@@ -70,11 +67,28 @@ func TestGetMinerWithDelegatePools(t *testing.T) {
 	require.Equal(t, minerIds[1], dps[0].ProviderID)
 }
 
+func TestGetMinerWithDelegatePoolsNoPools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	minerIds := createMiners(t, edb, 2)
+
+	s, dps, err := edb.GetMinerWithDelegatePools(minerIds[1])
+
+	require.NoError(t, err, "Error while getting miner with delegate pools")
+	require.Nil(t, dps, "there should be no delegate pools")
+	require.Equal(t, s.ID, minerIds[1])
+}
+
 func TestMinersBatchUpdate(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 	logging.InitLogging("development", "")
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 
 	type Stat struct {
 		// for miner (totals)
@@ -175,7 +189,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 		t.Error(err)
 	}
 	eventDb.AutoMigrate()
-	defer eventDb.Drop()
+	//defer eventDb.Drop()
 
 	// Miner - Add Event
 	mn := MinerNode{
@@ -278,7 +292,12 @@ func TestMiners(t *testing.T) {
 		SharderFees    currency.Coin `json:"sharder_fees,omitempty"`
 	}
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
+
 	type NodeType int
 
 	type SimpleNode struct {
@@ -546,8 +565,11 @@ func TestGetMiners(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
-
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 	assert.NoError(t, err, "error while migrating database")
 	_ = createMiners(t, eventDb, 10)
 
@@ -590,7 +612,11 @@ func TestGetMinerLocations(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 
 	assert.NoError(t, err, "error while migrating database")
 	createMinersWithLocation(t, eventDb, 12)
