@@ -142,23 +142,58 @@ func (edb *EventDb) updateUserPayedFees(users []User) error {
 }
 
 func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUpdateUserCollectedRewards, withUniqueEventOverwrite())
+	return newEventsMerger[User](TagUpdateUserCollectedRewards, withCollectedRewardsMerged())
+}
+
+func withCollectedRewardsMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *User) (*User, error) {
+		a.CollectedReward += b.CollectedReward
+		return a, nil
+	})
 }
 
 func mergeUpdateUserTotalStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
-	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withUniqueEventOverwrite())
+	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withTotalStakeMerged())
+}
+
+func withTotalStakeMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *User) (*User, error) {
+		a.TotalStake += b.TotalStake
+		return a, nil
+	})
 }
 
 func mergeUpdateUserReadPoolTotalEvents() *eventsMergerImpl[ReadPoolLock] {
-	return newEventsMerger[ReadPoolLock](TagLockReadPool, withUniqueEventOverwrite())
+	return newEventsMerger[ReadPoolLock](TagLockReadPool, withReadPoolMerged())
+}
+
+func withReadPoolMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *User) (*User, error) {
+		a.ReadPoolTotal += b.ReadPoolTotal
+		return a, nil
+	})
 }
 
 func mergeUpdateUserWritePoolTotalEvents() *eventsMergerImpl[WritePoolLock] {
-	return newEventsMerger[WritePoolLock](TagLockWritePool, withUniqueEventOverwrite())
+	return newEventsMerger[WritePoolLock](TagLockWritePool, withWritePoolMerged())
+}
+
+func withWritePoolMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *User) (*User, error) {
+		a.WritePoolTotal += b.WritePoolTotal
+		return a, nil
+	})
 }
 
 func mergeUpdateUserPayedFeesEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUpdateUserPayedFees, withUniqueEventOverwrite())
+	return newEventsMerger[User](TagUpdateUserPayedFees, withPayedFeesMerged())
+}
+
+func withPayedFeesMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *User) (*User, error) {
+		a.PayedFees += b.PayedFees
+		return a, nil
+	})
 }
 
 func mergeAddUsersEvents() *eventsMergerImpl[User] {
