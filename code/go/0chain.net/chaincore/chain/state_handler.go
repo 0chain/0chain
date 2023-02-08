@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	costate "0chain.net/chaincore/state"
+
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
@@ -63,6 +65,7 @@ func SetupScRestApiHandlers() {
 func SetupStateHandlers() {
 	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
+	http.HandleFunc("/v1/client/get/balance/mpt", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceFromMPTHandler))))
 	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
 	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
 	http.HandleFunc("/v1/screst/", common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
@@ -107,7 +110,6 @@ func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
-	scAddress := r.FormValue("sc_address")
 	key := r.FormValue("key")
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
@@ -118,7 +120,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	}
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
+	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(key)))
 	if err != nil {
 		return nil, err
 	}
@@ -153,6 +155,25 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	}
 
 	return userToState(user), nil
+}
+
+func (c *Chain) GetBalanceFromMPTHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	clientID := r.FormValue("client_id")
+	if c.GetEventDb() == nil {
+		return nil, common.NewError("get_balance_error", "event database not enabled")
+	}
+
+	lfb := c.GetLatestFinalizedBlock()
+	lfb = lfb.Clone()
+
+	s := &costate.State{}
+	path := util.Path(clientID)
+	err := lfb.ClientState.GetNodeValue(path, s)
+	if err != nil {
+		return nil, err
+	}
+	//TODO: should we apply the pending transfers?
+	return s, nil
 }
 
 func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {
