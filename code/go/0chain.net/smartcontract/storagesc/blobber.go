@@ -43,7 +43,6 @@ func getBlobber(
 		return nil, err
 	}
 	if blobber.ProviderType != spenum.Blobber {
-		logging.Logger.Info("piers getBlobber", zap.Any("blobber", blobber))
 		return nil, fmt.Errorf("provider is %s should be %s", blobber.ProviderType, spenum.Blobber)
 	}
 	return blobber, nil

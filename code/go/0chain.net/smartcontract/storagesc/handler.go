@@ -1003,8 +1003,6 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
 	}
-	logging.Logger.Info("piers getProviderStakePoolStats",
-		zap.Any("delegate pools", delegatePools))
 	spStat := &stakepool.StakePoolStat{}
 	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
 

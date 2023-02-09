@@ -5,9 +5,6 @@ import (
 
 	"0chain.net/smartcontract/provider"
 
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -116,7 +113,6 @@ func getValidator(
 		return nil, err
 	}
 	if validator.ProviderType != spenum.Validator {
-		logging.Logger.Info("piers getValidator", zap.Any("validator", validator))
 		return nil, fmt.Errorf("provider is %s should be %s", validator.ProviderType, spenum.Validator)
 	}
 	return validator, nil
