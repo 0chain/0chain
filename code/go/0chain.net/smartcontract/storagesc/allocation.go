@@ -1740,6 +1740,12 @@ func (sc *StorageSmartContract) finishAllocation(
 		cancellationCharge = alloc.WritePool
 		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
 	}
+
+	alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, cancellationCharge)
+	if err != nil {
+		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
+	}
+
 	reward, _, err := currency.DistributeCoin(cancellationCharge, int64(len(alloc.BlobberAllocs)))
 	if err != nil {
 		return fmt.Errorf("failed to distribute cancellation charge: %v", err)
