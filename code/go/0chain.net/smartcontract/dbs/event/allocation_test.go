@@ -3,16 +3,16 @@ package event
 import (
 	"context"
 	"encoding/json"
-	"os"
+	"fmt"
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
 	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -22,6 +22,65 @@ func init() {
 }
 
 const KB = 64 * 1024
+
+// createMockAllocations - Creates "count" mock allocations and overwrites the first "len(presetAllocs)" of them with 
+// allocation entered optionally by the user.
+func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs ...*Allocation) []string {
+	var (
+		ids []string
+		allocs []Allocation
+	)
+	i := 0
+	for _, alloc := range presetAllocs {
+		if alloc.AllocationID == "" {
+			alloc.AllocationID = fmt.Sprintf("586925180648cfbc969561cbeeca2c0dbd9b68b29c5ccbd9e185bbb962e4a5d%v", i)
+		}
+		ids = append(ids, alloc.AllocationID)
+		allocs = append(allocs, *alloc)
+		i++
+	}
+
+	// Complete count with mock allocations
+	for ; i < count; i++ {
+		id := fmt.Sprintf("586925180648cfbc969561cbeeca2c0dbd9b68b29c5ccbd9e185bbb962e4a5d%v", i)
+		allocs = append(allocs, Allocation{
+			AllocationID: id,
+			TransactionID: fmt.Sprintf("586925180648cfbc969561cbeeca2c0dbd9b68b29c5ccbd9e185bbb962e4a5d3%v", i),
+			DataShards: 1,
+			ParityShards: 1,
+			FileOptions: 63,
+			Size: 100 * 1024 * 1024, // 100 MB
+			Expiration: 9223372036854775807, // Never expire
+			Owner: "owner_id",
+			OwnerPublicKey: "owner_public_key",
+			ReadPriceMin: 10,
+			ReadPriceMax: 20,
+			WritePriceMin: 10,
+			WritePriceMax: 20,
+			StartTime: 10212,
+			Finalized: true,
+			Cancelled: false,
+			UsedSize: 50,
+			MovedToChallenge: currency.Coin(10),
+			MovedBack: currency.Coin(1),
+			MovedToValidators: currency.Coin(1),
+			WritePool: currency.Coin(1),
+			TimeUnit: 12453,
+			NumWrites: 5,
+			NumReads: 5,
+			TotalChallenges: 12,
+			OpenChallenges: 11,
+			SuccessfulChallenges: 1,
+			FailedChallenges: 0,
+			LatestClosedChallengeTxn: "latest_closed_challenge_txn",
+			ThirdPartyExtendable: false,
+		})
+		ids = append(ids, id)
+	}
+	err := edb.addAllocations(allocs)
+	assert.NoError(t, err, "inseting allocations failed")
+	return ids
+}
 
 func TestAllocations(t *testing.T) {
 
@@ -227,160 +286,431 @@ func TestAllocations(t *testing.T) {
 		}
 	}
 
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            "events_db",
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access, config.DbSettings{})
-	if err != nil {
-		return
-	}
-	defer eventDb.Close()
+	t.Run("test create/overwrite allocation event", func(t *testing.T) {
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+	
+		sa := StorageAllocation{
+			ID:           "storage_allocation_id",
+			Tx:           "txn1",
+			DataShards:   10,
+			ParityShards: 6,
+			Size:         100,
+			Expiration:   1512,
+			Blobbers: []*StorageNode{
+				{
+					ID:      "blobber_1",
+					BaseURL: "base_url",
+					Geolocation: StorageNodeGeolocation{
+						Latitude:  120,
+						Longitude: 141,
+					},
+					Terms: Terms{
+						ReadPrice:        10,
+						WritePrice:       10,
+						MinLockDemand:    2,
+						MaxOfferDuration: 100,
+					},
+					Capacity:        100,
+					Allocated:       50,
+					LastHealthCheck: 17456,
+					PublicKey:       "public_key",
+					StakePoolSettings: stakePoolSettings{
+						DelegateWallet: "delegate_wallet",
+						MinStake:       10,
+						MaxStake:       12,
+						NumDelegates:   2,
+						ServiceCharge:  0.5,
+					},
+				},
+			},
+			Owner:          "owner_id",
+			OwnerPublicKey: "owner_public_key",
+			Stats: &StorageAllocationStats{
+				UsedSize:                  20,
+				NumWrites:                 5,
+				ReadSize:                  5,
+				TotalChallenges:           12,
+				OpenChallenges:            11,
+				SuccessChallenges:         1,
+				FailedChallenges:          0,
+				LastestClosedChallengeTxn: "latest_closed_challenge_txn",
+			},
+			BlobberDetails: []*BlobberAllocation{
+				{
+					BlobberID:    "blobber_1",
+					AllocationID: "storage_allocation_id",
+					Terms: Terms{
+						ReadPrice:        10,
+						WritePrice:       10,
+						MinLockDemand:    2,
+						MaxOfferDuration: 100,
+					},
+				},
+			},
+			BlobberMap: map[string]*BlobberAllocation{
+				"hello": {
+					BlobberID:    "blobber_1",
+					AllocationID: "storage_allocation_id",
+					Terms: Terms{
+						ReadPrice:        10,
+						WritePrice:       10,
+						MinLockDemand:    2,
+						MaxOfferDuration: 100,
+					},
+				},
+			},
+			FileOptions: 63,
+			ReadPriceRange: PriceRange{
+				Min: 10,
+				Max: 20,
+			},
+			WritePriceRange: PriceRange{
+				Min: 10,
+				Max: 20,
+			},
+			ChallengeCompletionTime: 12,
+			StartTime:               10212,
+			Finalized:               true,
+			Canceled:                false,
+			UsedSize:                50,
+			MovedToChallenge:        10,
+			MovedBack:               1,
+			MovedToValidators:       1,
+			TimeUnit:                12453,
+			Curators:                []string{"curator1"},
+		}
+	
+		saAllocation := convertSa(sa)
+		data, err := json.Marshal(&saAllocation)
+		require.NoError(t, err)
+	
+		eventAddSa := Event{
+			BlockNumber: 1,
+			TxHash:      "txn_hash",
+			Type:        TypeStats,
+			Tag:         TagAddAllocation,
+			Index:       saAllocation.AllocationID,
+			Data:        string(data),
+		}
+		eventDb.ProcessEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10)
+		time.Sleep(100 * time.Millisecond)
+		alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
+		require.NoError(t, err)
+		require.EqualValues(t, alloc.DataShards, sa.DataShards)
+	
+		sa.Size = 271
+		saAllocation = convertSa(sa)
+		data, err = json.Marshal(&saAllocation)
+		require.NoError(t, err)
+	
+		eventOverwriteSa := Event{
+			BlockNumber: 2,
+			TxHash:      "txn_hash2",
+			Type:        TypeStats,
+			Tag:         TagAddAllocation,
+			Index:       saAllocation.AllocationID,
+			Data:        string(data),
+		}
+		eventDb.ProcessEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10)
+	
+		alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
+		require.NoError(t, err)
+		require.EqualValues(t, alloc.Size, sa.Size)
+	
+		allocs, err := eventDb.GetClientsAllocation(sa.Owner, common2.Pagination{Limit: 20, IsDescending: true})
+		require.NoError(t, err)
+		require.EqualValues(t, 1, len(allocs))
+		require.EqualValues(t, allocs[0].Size, sa.Size)
+	})
 
-	err = eventDb.Drop()
-	require.NoError(t, err)
-	err = eventDb.AutoMigrate()
-	require.NoError(t, err)
+	t.Run("test edb.updateAllocationStake", func(t *testing.T) {
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
 
-	sa := StorageAllocation{
-		ID:           "storage_allocation_id",
-		Tx:           "txn1",
-		DataShards:   10,
-		ParityShards: 6,
-		Size:         100,
-		Expiration:   1512,
-		Blobbers: []*StorageNode{
+		// Create 2 allocations
+		allocIds := createMockAllocations(t, eventDb, 2,
+			&Allocation{
+				WritePool: currency.Coin(10),
+				MovedToChallenge: currency.Coin(10),
+				MovedBack: currency.Coin(10),
+				MovedToValidators: currency.Coin(10),
+			},
+			&Allocation{
+				WritePool: currency.Coin(20),
+				MovedToChallenge: currency.Coin(20),
+				MovedBack: currency.Coin(20),
+				MovedToValidators: currency.Coin(20),
+			},
+		)
+
+		aid1, aid2 := allocIds[0], allocIds[1]
+
+		// Assert allocation entered successfuylly (1)
+		alloc, err := eventDb.GetAllocation(aid1)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid1))
+		require.Equal(t, alloc.WritePool, currency.Coin(10))
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(10))
+		require.Equal(t, alloc.MovedBack, currency.Coin(10))
+		require.Equal(t, alloc.MovedToValidators, currency.Coin(10))
+
+		// Assert allocation entered successfuylly (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
+		require.Equal(t, alloc.WritePool, currency.Coin(10))
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(10))
+		require.Equal(t, alloc.MovedBack, currency.Coin(10))
+		require.Equal(t, alloc.MovedToValidators, currency.Coin(10))
+		
+
+		// Update the 2 allocations doubling the amounts
+		err = eventDb.updateAllocationStakes([]Allocation{
 			{
-				ID:      "blobber_1",
-				BaseURL: "base_url",
-				Geolocation: StorageNodeGeolocation{
-					Latitude:  120,
-					Longitude: 141,
-				},
-				Terms: Terms{
-					ReadPrice:        10,
-					WritePrice:       10,
-					MinLockDemand:    2,
-					MaxOfferDuration: 100,
-				},
-				Capacity:        100,
-				Allocated:       50,
-				LastHealthCheck: 17456,
-				PublicKey:       "public_key",
-				StakePoolSettings: stakePoolSettings{
-					DelegateWallet: "delegate_wallet",
-					MinStake:       10,
-					MaxStake:       12,
-					NumDelegates:   2,
-					ServiceCharge:  0.5,
-				},
+				AllocationID: aid1,
+				WritePool: currency.Coin(20),
+				MovedToChallenge: currency.Coin(20),
+				MovedBack: currency.Coin(20),
+				MovedToValidators: currency.Coin(20),
 			},
-		},
-		Owner:          "owner_id",
-		OwnerPublicKey: "owner_public_key",
-		Stats: &StorageAllocationStats{
-			UsedSize:                  20,
-			NumWrites:                 5,
-			ReadSize:                  5,
-			TotalChallenges:           12,
-			OpenChallenges:            11,
-			SuccessChallenges:         1,
-			FailedChallenges:          0,
-			LastestClosedChallengeTxn: "latest_closed_challenge_txn",
-		},
-		BlobberDetails: []*BlobberAllocation{
 			{
-				BlobberID:    "blobber_1",
-				AllocationID: "storage_allocation_id",
-				Terms: Terms{
-					ReadPrice:        10,
-					WritePrice:       10,
-					MinLockDemand:    2,
-					MaxOfferDuration: 100,
-				},
+				AllocationID: aid2,
+				WritePool: currency.Coin(40),
+				MovedToChallenge: currency.Coin(40),
+				MovedBack: currency.Coin(40),
+				MovedToValidators: currency.Coin(40),
 			},
-		},
-		BlobberMap: map[string]*BlobberAllocation{
-			"hello": {
-				BlobberID:    "blobber_1",
-				AllocationID: "storage_allocation_id",
-				Terms: Terms{
-					ReadPrice:        10,
-					WritePrice:       10,
-					MinLockDemand:    2,
-					MaxOfferDuration: 100,
-				},
+		})
+
+		require.NoError(t, err, "couldn't update allocation stakes")
+		
+		// Test update was successful (1)
+		alloc, err = eventDb.GetAllocation(aid1)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		require.Equal(t, alloc.WritePool, currency.Coin(20))
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(20))
+		require.Equal(t, alloc.MovedBack, currency.Coin(20))
+		require.Equal(t, alloc.MovedToValidators, currency.Coin(20))
+
+		// Test update was successful (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
+		require.Equal(t, alloc.WritePool, currency.Coin(40))
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(40))
+		require.Equal(t, alloc.MovedBack, currency.Coin(40))
+		require.Equal(t, alloc.MovedToValidators, currency.Coin(40))
+	})
+
+	t.Run("test edb.updateAllocationsStats", func(t *testing.T) {
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+
+		allocIds := createMockAllocations(t, eventDb, 2, 
+			&Allocation{
+				UsedSize: 10000,
+				NumWrites: 10,
+				MovedToChallenge: currency.Coin(100),
+				MovedBack: currency.Coin(200),
+				WritePool: currency.Coin(100),
 			},
-		},
-		FileOptions: 63,
-		ReadPriceRange: PriceRange{
-			Min: 10,
-			Max: 20,
-		},
-		WritePriceRange: PriceRange{
-			Min: 10,
-			Max: 20,
-		},
-		ChallengeCompletionTime: 12,
-		StartTime:               10212,
-		Finalized:               true,
-		Canceled:                false,
-		UsedSize:                50,
-		MovedToChallenge:        10,
-		MovedBack:               1,
-		MovedToValidators:       1,
-		TimeUnit:                12453,
-		Curators:                []string{"curator1"},
-	}
+			&Allocation{
+				UsedSize: 20000,
+				NumWrites: 20,
+				MovedToChallenge: currency.Coin(200),
+				MovedBack: currency.Coin(400),
+				WritePool: currency.Coin(200),
+			},
+		)
 
-	saAllocation := convertSa(sa)
-	data, err := json.Marshal(&saAllocation)
-	require.NoError(t, err)
+		aid1, aid2 := allocIds[0], allocIds[1]
 
-	eventAddSa := Event{
-		BlockNumber: 1,
-		TxHash:      "txn_hash",
-		Type:        TypeStats,
-		Tag:         TagAddAllocation,
-		Index:       saAllocation.AllocationID,
-		Data:        string(data),
-	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10)
-	time.Sleep(100 * time.Millisecond)
-	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
-	require.NoError(t, err)
-	require.EqualValues(t, alloc.DataShards, sa.DataShards)
+		// Assert allocation entered successfuylly (1)
+		alloc, err := eventDb.GetAllocation(aid1)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid1))
+		require.Equal(t, alloc.UsedSize, 10000)
+		require.Equal(t, alloc.NumWrites, 10)
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(100))
+		require.Equal(t, alloc.MovedBack, currency.Coin(200))
+		require.Equal(t, alloc.WritePool, currency.Coin(100))
 
-	sa.Size = 271
-	saAllocation = convertSa(sa)
-	data, err = json.Marshal(&saAllocation)
-	require.NoError(t, err)
+		// Assert allocation entered successfuylly (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
+		require.Equal(t, alloc.UsedSize, 20000)
+		require.Equal(t, alloc.NumWrites, 20)
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(200))
+		require.Equal(t, alloc.MovedBack, currency.Coin(400))
+		require.Equal(t, alloc.WritePool, currency.Coin(200))
+		
 
-	eventOverwriteSa := Event{
-		BlockNumber: 2,
-		TxHash:      "txn_hash2",
-		Type:        TypeStats,
-		Tag:         TagAddAllocation,
-		Index:       saAllocation.AllocationID,
-		Data:        string(data),
-	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10)
+		// Update the 2 allocations doubling the amounts
+		err = eventDb.updateAllocationsStats([]Allocation{
+			{
+				AllocationID: aid1,
+				UsedSize: 10000,
+				NumWrites: 10,
+				MovedToChallenge: currency.Coin(100),
+				MovedBack: currency.Coin(200),
+			},
+			{
+				AllocationID: aid2,
+				UsedSize: 20000,
+				NumWrites: 20,
+				MovedToChallenge: currency.Coin(200),
+				MovedBack: currency.Coin(400),
+			},
+		})
 
-	alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
-	require.NoError(t, err)
-	require.EqualValues(t, alloc.Size, sa.Size)
+		require.NoError(t, err, "couldn't update allocation stats")
+		
+		// Test update was successful (1)
+		alloc, err = eventDb.GetAllocation(aid1)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		require.Equal(t, alloc.UsedSize, 20000)
+		require.Equal(t, alloc.NumWrites, 20)
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(200))
+		require.Equal(t, alloc.MovedBack, currency.Coin(400))
+		require.Equal(t, alloc.WritePool, currency.Coin(200))
 
-	allocs, err := eventDb.GetClientsAllocation(sa.Owner, common2.Pagination{Limit: 20, IsDescending: true})
-	require.NoError(t, err)
-	require.EqualValues(t, 1, len(allocs))
-	require.EqualValues(t, allocs[0].Size, sa.Size)
+		// Test update was successful (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
+		require.Equal(t, alloc.UsedSize, 40000)
+		require.Equal(t, alloc.NumWrites, 40)
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(400))
+		require.Equal(t, alloc.MovedBack, currency.Coin(800))
+		require.Equal(t, alloc.WritePool, currency.Coin(400))
+	})
 
+	t.Run("test edb.updateAllocationChallenges", func(t *testing.T) {
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+
+		allocIds := createMockAllocations(t, eventDb, 2, 
+			&Allocation{
+				OpenChallenges: 20,
+				LatestClosedChallengeTxn: "1001",
+				SuccessfulChallenges: 10,
+				FailedChallenges: 10,
+			},
+			&Allocation{
+				OpenChallenges: 40,
+				LatestClosedChallengeTxn: "2001",
+				SuccessfulChallenges: 20,
+				FailedChallenges: 20,
+			},
+		)
+
+		aid1, aid2 := allocIds[0], allocIds[1]
+
+		// Assert allocation entered successfuylly (1)
+		alloc, err := eventDb.GetAllocation(aid1)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid1))
+		require.Equal(t, alloc.OpenChallenges, 20)
+		require.Equal(t, alloc.LatestClosedChallengeTxn, "1001")
+		require.Equal(t, alloc.SuccessfulChallenges, 10)
+		require.Equal(t, alloc.FailedChallenges, 10)
+
+		// Assert allocation entered successfuylly (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
+		require.Equal(t, alloc.OpenChallenges, 40)
+		require.Equal(t, alloc.LatestClosedChallengeTxn, "2001")
+		require.Equal(t, alloc.SuccessfulChallenges, 20)
+		require.Equal(t, alloc.FailedChallenges, 20)
+		
+
+		// Update the 2 allocations changing the amounts
+		err = eventDb.updateAllocationChallenges([]Allocation{
+			{
+				AllocationID: aid1,
+				OpenChallenges: 10,
+				LatestClosedChallengeTxn: "1002",
+				SuccessfulChallenges: 5,
+				FailedChallenges: 5,
+			},
+			{
+				AllocationID: aid2,
+				OpenChallenges: 20,
+				LatestClosedChallengeTxn: "2002",
+				SuccessfulChallenges: 10,
+				FailedChallenges: 10,
+			},
+		})
+
+		require.NoError(t, err, "couldn't update allocation stats")
+		
+		// Test update was successful (1)
+		alloc, err = eventDb.GetAllocation(aid1)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		require.Equal(t, alloc.OpenChallenges, 10)
+		require.Equal(t, alloc.LatestClosedChallengeTxn, "1002")
+		require.Equal(t, alloc.SuccessfulChallenges, 15)
+		require.Equal(t, alloc.FailedChallenges, 15)
+
+		// Test update was successful (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
+		require.Equal(t, alloc.OpenChallenges, 20)
+		require.Equal(t, alloc.LatestClosedChallengeTxn, "2002")
+		require.Equal(t, alloc.SuccessfulChallenges, 30)
+		require.Equal(t, alloc.FailedChallenges, 30)
+	})
+
+	t.Run("test edb.addChallengesToAllocations", func(t *testing.T) {
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+
+		allocIds := createMockAllocations(t, eventDb, 2, 
+			&Allocation{
+				TotalChallenges: 20,
+				OpenChallenges: 10,
+			},
+			&Allocation{
+				TotalChallenges: 40,
+				OpenChallenges: 20,
+			},
+		)
+
+		aid1, aid2 := allocIds[0], allocIds[1]
+
+		// Assert allocation entered successfuylly (1)
+		alloc, err := eventDb.GetAllocation(aid1)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid1))
+		require.Equal(t, alloc.TotalChallenges, 20)
+		require.Equal(t, alloc.OpenChallenges, 10)
+
+		// Assert allocation entered successfuylly (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
+		require.Equal(t, alloc.TotalChallenges, 40)
+		require.Equal(t, alloc.OpenChallenges, 20)
+		
+		// Update the 2 allocations doubling the amounts
+		err = eventDb.addChallengesToAllocations([]Allocation{
+			{
+				AllocationID: aid1,
+				TotalChallenges: 20,
+				OpenChallenges: 10,
+			},
+			{
+				AllocationID: aid2,
+				TotalChallenges: 40,
+				OpenChallenges: 20,
+			},
+		})
+
+		require.NoError(t, err, "couldn't update allocation stats")
+		
+		// Test update was successful (1)
+		alloc, err = eventDb.GetAllocation(aid1)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		require.Equal(t, alloc.TotalChallenges, 40)
+		require.Equal(t, alloc.OpenChallenges, 20)
+
+		// Test update was successful (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
+		require.Equal(t, alloc.TotalChallenges, 80)
+		require.Equal(t, alloc.OpenChallenges, 40)
+	})
 }
