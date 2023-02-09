@@ -87,7 +87,7 @@ func (ssc *StorageSmartContract) writePoolLock(
 
 	allocation.WritePool, err = currency.AddCoin(allocation.WritePool, txn.Value)
 	i, _ := txn.Value.Int64()
-	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, txn.ClientID, event.WritePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, allocation.ID, event.WritePoolLock{
 		Client:       txn.ClientID,
 		AllocationId: allocation.ID,
 		Amount:       i,
@@ -140,7 +140,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 	}
 	alloc.WritePool = 0
 	i, _ := alloc.WritePool.Int64()
-	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, txn.ClientID, event.WritePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
 		Client:       txn.ClientID,
 		AllocationId: alloc.ID,
 		Amount:       i,
