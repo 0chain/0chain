@@ -21,7 +21,10 @@ func init() {
 	logging.Logger = zap.NewNop()
 }
 
-const KB = 64 * 1024
+const (
+	KB = 64 * 1024
+	OwnerId = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+)
 
 // createMockAllocations - Creates "count" mock allocations and overwrites the first "len(presetAllocs)" of them with 
 // allocation entered optionally by the user.
@@ -34,6 +37,9 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 	for _, alloc := range presetAllocs {
 		if alloc.AllocationID == "" {
 			alloc.AllocationID = fmt.Sprintf("586925180648cfbc969561cbeeca2c0dbd9b68b29c5ccbd9e185bbb962e4a5d%v", i)
+		}
+		if alloc.Owner == "" {
+			alloc.Owner = OwnerId
 		}
 		ids = append(ids, alloc.AllocationID)
 		allocs = append(allocs, *alloc)
@@ -289,6 +295,12 @@ func TestAllocations(t *testing.T) {
 	t.Run("test create/overwrite allocation event", func(t *testing.T) {
 		eventDb, clean := GetTestEventDB(t)
 		defer clean()
+
+		// Create the owner
+		err := eventDb.Get().Model(&User{}).Create(&User{
+			UserID: OwnerId,
+		}).Error
+		require.NoError(t, err, "owner couldn't be created")
 	
 		sa := StorageAllocation{
 			ID:           "storage_allocation_id",
@@ -324,7 +336,7 @@ func TestAllocations(t *testing.T) {
 					},
 				},
 			},
-			Owner:          "owner_id",
+			Owner:          OwnerId,
 			OwnerPublicKey: "owner_public_key",
 			Stats: &StorageAllocationStats{
 				UsedSize:                  20,
@@ -428,6 +440,12 @@ func TestAllocations(t *testing.T) {
 		eventDb, clean := GetTestEventDB(t)
 		defer clean()
 
+		// Create the owner
+		err := eventDb.Get().Model(&User{}).Create(&User{
+			UserID: OwnerId,
+		}).Error
+		require.NoError(t, err, "owner couldn't be created")
+		
 		// Create 2 allocations
 		allocIds := createMockAllocations(t, eventDb, 2,
 			&Allocation{
@@ -503,6 +521,13 @@ func TestAllocations(t *testing.T) {
 	t.Run("test edb.updateAllocationsStats", func(t *testing.T) {
 		eventDb, clean := GetTestEventDB(t)
 		defer clean()
+
+		// Create the owner
+		err := eventDb.Get().Model(&User{}).Create(&User{
+			UserID: OwnerId,
+		}).Error
+		require.NoError(t, err, "owner couldn't be created")
+		
 
 		allocIds := createMockAllocations(t, eventDb, 2, 
 			&Allocation{
@@ -585,6 +610,12 @@ func TestAllocations(t *testing.T) {
 		eventDb, clean := GetTestEventDB(t)
 		defer clean()
 
+		// Create the owner
+		err := eventDb.Get().Model(&User{}).Create(&User{
+			UserID: OwnerId,
+		}).Error
+		require.NoError(t, err, "owner couldn't be created")
+		
 		allocIds := createMockAllocations(t, eventDb, 2, 
 			&Allocation{
 				OpenChallenges: 20,
@@ -660,6 +691,12 @@ func TestAllocations(t *testing.T) {
 		eventDb, clean := GetTestEventDB(t)
 		defer clean()
 
+		// Create the owner
+		err := eventDb.Get().Model(&User{}).Create(&User{
+			UserID: OwnerId,
+		}).Error
+		require.NoError(t, err, "owner couldn't be created")
+		
 		allocIds := createMockAllocations(t, eventDb, 2, 
 			&Allocation{
 				TotalChallenges: 20,
