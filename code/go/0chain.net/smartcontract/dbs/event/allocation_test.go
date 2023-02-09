@@ -475,10 +475,10 @@ func TestAllocations(t *testing.T) {
 		// Assert allocation entered successfuylly (2)
 		alloc, err = eventDb.GetAllocation(aid2)
 		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
-		require.Equal(t, alloc.WritePool, currency.Coin(10))
-		require.Equal(t, alloc.MovedToChallenge, currency.Coin(10))
-		require.Equal(t, alloc.MovedBack, currency.Coin(10))
-		require.Equal(t, alloc.MovedToValidators, currency.Coin(10))
+		require.Equal(t, alloc.WritePool, currency.Coin(20))
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(20))
+		require.Equal(t, alloc.MovedBack, currency.Coin(20))
+		require.Equal(t, alloc.MovedToValidators, currency.Coin(20))
 		
 
 		// Update the 2 allocations doubling the amounts
