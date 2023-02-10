@@ -81,6 +81,7 @@ type newAllocationRequest struct {
 	ReadPriceRange       PriceRange       `json:"read_price_range"`
 	WritePriceRange      PriceRange       `json:"write_price_range"`
 	ThirdPartyExtendable bool             `json:"third_party_extendable"`
+	FileOptionsChanged   bool             `json:"file_options_changed"`
 	FileOptions          uint16           `json:"file_options"`
 }
 
@@ -433,6 +434,12 @@ func setupNewAllocation(
 	}
 	m.tick("add_offer")
 
+	if request.FileOptionsChanged {
+		sa.FileOptions = request.FileOptions
+	} else {
+		sa.FileOptions = 63
+	}
+
 	sa.StartTime = now
 	return sa, blobberNodes, nil
 }
@@ -534,6 +541,7 @@ type updateAllocationRequest struct {
 	AddBlobberId            string           `json:"add_blobber_id"`
 	RemoveBlobberId         string           `json:"remove_blobber_id"`
 	SetThirdPartyExtendable bool             `json:"set_third_party_extendable"`
+	FileOptionsChanged      bool             `json:"file_options_changed"`
 	FileOptions             uint16           `json:"file_options"`
 }
 
@@ -1250,7 +1258,9 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			alloc.ThirdPartyExtendable = true
 		}
 
-		alloc.FileOptions = request.FileOptions
+		if request.FileOptionsChanged {
+			alloc.FileOptions = request.FileOptions
+		}
 
 		if len(request.RemoveBlobberId) > 0 {
 			balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, []event.AllocationBlobberTerm{
