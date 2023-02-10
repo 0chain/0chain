@@ -57,7 +57,7 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 			FileOptions: 63,
 			Size: 100 * 1024 * 1024, // 100 MB
 			Expiration: 9223372036854775807, // Never expire
-			Owner: "owner_id",
+			Owner: OwnerId,
 			OwnerPublicKey: "owner_public_key",
 			ReadPriceMin: 10,
 			ReadPriceMax: 20,
