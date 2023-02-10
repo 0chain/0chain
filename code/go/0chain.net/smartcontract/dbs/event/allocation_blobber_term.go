@@ -90,7 +90,7 @@ func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 		readPriceList = append(readPriceList, t.ReadPrice)
 		writePriceList = append(writePriceList, t.WritePrice)
 		minLockDemandList = append(minLockDemandList, t.MinLockDemand)
-		maxOfferDurationList = append(maxOfferDurationList, t.MaxOfferDuration.Milliseconds())
+		maxOfferDurationList = append(maxOfferDurationList, int64(t.MaxOfferDuration))
 	}
 
 	return CreateBuilder("allocation_blobber_terms", "allocation_id", allocationIdList).

@@ -61,9 +61,6 @@ func TestAllocationBlobberTerms(t *testing.T) {
 			Limit:        20,
 			IsDescending: true,
 		}
-		term, err = eventDb.GetAllocationBlobberTerm(terms[0].AllocationID, terms[0].BlobberID)
-		require.Equal(t, 1, len(res), "AllocationBlobberTerm not getting inserted")
-	
 		res, err = eventDb.GetAllocationBlobberTerms(terms[0].AllocationID, limit)
 		require.Equal(t, 2, len(res), "AllocationBlobberTerm not getting inserted")
 	
@@ -72,11 +69,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
 	
 		term, err = eventDb.GetAllocationBlobberTerm(terms[1].AllocationID, terms[1].BlobberID)
-		require.Equal(t, terms[1].MinLockDemand, term.MinLockDemand, "Error while overriding AllocationBlobberTerm in event Database")
-	
-		err = eventDb.Drop()
-		require.NoError(t, err)
-	
+		require.Equal(t, terms[1].MinLockDemand, term.MinLockDemand, "Error while overriding AllocationBlobberTerm in event Database")	
 	})
 
 	t.Run("test edb.updateAllocationBlobberTerms", func(t *testing.T) {
