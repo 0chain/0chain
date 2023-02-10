@@ -292,7 +292,7 @@ func TestAllocations(t *testing.T) {
 		}
 	}
 
-	t.Run("test create/overwrite allocation event", func(t *testing.T) {
+	t.Run("test addAllocation", func(t *testing.T) {
 		eventDb, clean := GetTestEventDB(t)
 		defer clean()
 
@@ -393,38 +393,19 @@ func TestAllocations(t *testing.T) {
 			Curators:                []string{"curator1"},
 		}
 	
-		saAllocation := convertSa(sa)
-		data, err := json.Marshal(&saAllocation)
+		saAllocation := convertSa(sa)	
+		err = eventDb.addAllocations([]Allocation{saAllocation})
 		require.NoError(t, err)
-	
-		eventAddSa := Event{
-			BlockNumber: 1,
-			TxHash:      "txn_hash",
-			Type:        TypeStats,
-			Tag:         TagAddAllocation,
-			Index:       saAllocation.AllocationID,
-			Data:        string(data),
-		}
-		eventDb.ProcessEvents(context.TODO(), []Event{eventAddSa}, 100, "hash", 10)
 		time.Sleep(100 * time.Millisecond)
 		alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
 		require.NoError(t, err)
-		require.EqualValues(t, alloc.DataShards, sa.DataShards)
+		require.EqualValues(t, sa.DataShards, alloc.DataShards)
 	
+		// Overwrite
 		sa.Size = 271
 		saAllocation = convertSa(sa)
-		data, err = json.Marshal(&saAllocation)
+		err = eventDb.addAllocations([]Allocation{saAllocation})
 		require.NoError(t, err)
-	
-		eventOverwriteSa := Event{
-			BlockNumber: 2,
-			TxHash:      "txn_hash2",
-			Type:        TypeStats,
-			Tag:         TagAddAllocation,
-			Index:       saAllocation.AllocationID,
-			Data:        string(data),
-		}
-		eventDb.ProcessEvents(context.TODO(), []Event{eventOverwriteSa}, 100, "hash", 10)
 	
 		alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
 		require.NoError(t, err)
