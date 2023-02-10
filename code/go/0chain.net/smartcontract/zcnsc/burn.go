@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/smartcontract/entity"
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -13,6 +14,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
+
+var BurnTickets map[string][]entity.BurnTicketDetails
 
 // Burn inputData - is a BurnPayload.
 // EthereumAddress => required
@@ -93,6 +96,11 @@ func (zcn *ZCNSmartContract) Burn(
 	if err != nil {
 		return "", err
 	}
+
+	BurnTickets[trans.ClientID] = append(BurnTickets[trans.ClientID], entity.BurnTicketDetails{
+		Hash:  trans.Hash,
+		Nonce: trans.Nonce,
+	})
 
 	response := &BurnPayloadResponse{
 		TxnID:           trans.Hash,

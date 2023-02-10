@@ -1,14 +1,17 @@
 package chain
 
 import (
+	"0chain.net/smartcontract/entity"
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"0chain.net/smartcontract/faucetsc"
@@ -62,6 +65,7 @@ func SetupScRestApiHandlers() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
+	http.HandleFunc("/v1/client/get/burn_tickets", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBurnsHandler))))
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
 	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
 	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
@@ -138,6 +142,33 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 		return nil, err
 	}
 	return retObj, nil
+}
+
+// GetBurnsHandler returns not proofed burn tickets for a specific
+// nonce received from the bridge smart contract
+func (c *Chain) GetBurnsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	clientID := r.FormValue("client_id")
+	nonce := r.FormValue("nonce")
+
+	nonceInt, err := strconv.ParseInt(nonce, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	burnDetails, ok := zcnsc.BurnTickets[clientID]
+	if !ok {
+		return nil, errors.New("burn tickets not found")
+	}
+
+	var response []entity.BurnTicketDetails
+
+	for _, burnDetail := range burnDetails {
+		if burnDetail.Nonce > nonceInt {
+			response = append(response, burnDetail)
+		}
+	}
+
+	return response, nil
 }
 
 // GetBalanceHandler - get the balance of a client
