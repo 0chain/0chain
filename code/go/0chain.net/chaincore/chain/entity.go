@@ -655,8 +655,8 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 			ProviderID:   v.ProviderID,
 			DelegateID:   v.ClientID,
 			Balance:      v.Tokens,
-			RoundCreated: 0,
-			StakedAt:     gbCreationDate, // genesis round
+			RoundCreated: 0, // genesis round
+			StakedAt:     gbCreationDate,
 		})
 
 		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
