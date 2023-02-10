@@ -578,7 +578,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	stateCtx := cstate.NewStateContext(gb, pmt, nil, nil, nil, nil, nil, nil, nil)
 	mustInitPartitions(stateCtx)
 
-	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
+	if err := c.addInitialStakes(initStates.Stakes, stateCtx, gb.CreationDate); err != nil {
 		logging.Logger.Error("init stake failed", zap.Error(err))
 		panic(err)
 	}
@@ -620,7 +620,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	return pmt
 }
 
-func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {
+func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI, gbCreationDate common.Timestamp) error {
 	edbDelegatePools := make([]*event.DelegatePool, 0, len(stakes))
 	for _, v := range stakes {
 		providerType := spenum.ToProviderType(v.ProviderType)
@@ -655,7 +655,8 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 			ProviderID:   v.ProviderID,
 			DelegateID:   v.ClientID,
 			Balance:      v.Tokens,
-			RoundCreated: 0, // genesis round
+			RoundCreated: 0,
+			StakedAt:     gbCreationDate, // genesis round
 		})
 
 		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
