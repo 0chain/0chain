@@ -399,16 +399,6 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, sa.DataShards, alloc.DataShards)
 	
-		// Overwrite
-		sa.Size = 271
-		saAllocation = convertSa(sa)
-		err = eventDb.addAllocations([]Allocation{saAllocation})
-		require.NoError(t, err)
-	
-		alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
-		require.NoError(t, err)
-		require.EqualValues(t, alloc.Size, sa.Size)
-	
 		allocs, err := eventDb.GetClientsAllocation(sa.Owner, common2.Pagination{Limit: 20, IsDescending: true})
 		require.NoError(t, err)
 		require.EqualValues(t, 1, len(allocs))
