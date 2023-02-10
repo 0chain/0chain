@@ -62,10 +62,10 @@ func TestAllocationBlobberTerms(t *testing.T) {
 			IsDescending: true,
 		}
 		term, err = eventDb.GetAllocationBlobberTerm(terms[0].AllocationID, terms[0].BlobberID)
-		require.Equal(t, int64(1), len(res), "AllocationBlobberTerm not getting inserted")
+		require.Equal(t, 1, len(res), "AllocationBlobberTerm not getting inserted")
 	
 		res, err = eventDb.GetAllocationBlobberTerms(terms[0].AllocationID, limit)
-		require.Equal(t, int64(2), len(res), "AllocationBlobberTerm not getting inserted")
+		require.Equal(t, 2, len(res), "AllocationBlobberTerm not getting inserted")
 	
 		terms[1].MinLockDemand = 70.0
 		err = eventDb.addOrOverwriteAllocationBlobberTerms(terms)
@@ -122,14 +122,14 @@ func TestAllocationBlobberTerms(t *testing.T) {
 				ReadPrice:        int64(currency.Coin(59)),
 				WritePrice:       int64(currency.Coin(61)),
 				MinLockDemand:    57.0,
-				MaxOfferDuration: 59 * time.Minute,	
+				MaxOfferDuration: time.Duration(59 * time.Minute),	
 			},{
 				AllocationID:     allocId,
 				BlobberID:        blobber2Id,
 				ReadPrice:        int64(currency.Coin(61)),
 				WritePrice:       int64(currency.Coin(63)),
 				MinLockDemand:    67.0,
-				MaxOfferDuration: 69 * time.Minute,
+				MaxOfferDuration: time.Duration(69 * time.Minute),
 			},
 		})
 		require.NoError(t, err, "Error while updating Allocation's Blobber's AllocationBlobberTerm to event database")
@@ -137,17 +137,17 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		term, err := eventDb.GetAllocationBlobberTerm(allocId, blobber1Id)
 		require.NoError(t, err, "Error while reading Allocation Blobber Terms")
 
-		require.Equal(t, term.ReadPrice, int64(currency.Coin(59)))
-		require.Equal(t, term.WritePrice, int64(currency.Coin(61)))
-		require.Equal(t, term.MinLockDemand, float64(57.0))
-		require.Equal(t, term.MaxOfferDuration, time.Duration(59 * time.Minute))
+		require.Equal(t, int64(currency.Coin(59)), term.ReadPrice)
+		require.Equal(t, int64(currency.Coin(61)), term.WritePrice)
+		require.Equal(t, float64(57.0), term.MinLockDemand)
+		require.Equal(t, time.Duration(59 * time.Minute), term.MaxOfferDuration)
 
 		term, err = eventDb.GetAllocationBlobberTerm(allocId, blobber2Id)
 		require.NoError(t, err, "Error while reading Allocation Blobber Terms")
 
-		require.Equal(t, term.ReadPrice, int64(currency.Coin(61)))
-		require.Equal(t, term.WritePrice, int64(currency.Coin(63)))
-		require.Equal(t, term.MinLockDemand, float64(67.0))
-		require.Equal(t, term.MaxOfferDuration, time.Duration(69 * time.Minute))
+		require.Equal(t, int64(currency.Coin(61)), term.ReadPrice)
+		require.Equal(t, int64(currency.Coin(63)), term.WritePrice)
+		require.Equal(t, float64(67.0), term.MinLockDemand)
+		require.Equal(t, time.Duration(69 * time.Minute), term.MaxOfferDuration)
 	})
 }
