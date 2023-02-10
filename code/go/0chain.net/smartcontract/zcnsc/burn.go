@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var BurnTickets map[string][]entity.BurnTicketDetails
+var BurnTicketsPool map[string][]entity.BurnTicketDetails
 
 // Burn inputData - is a BurnPayload.
 // EthereumAddress => required
@@ -97,7 +97,7 @@ func (zcn *ZCNSmartContract) Burn(
 		return "", err
 	}
 
-	BurnTickets[trans.ClientID] = append(BurnTickets[trans.ClientID], entity.BurnTicketDetails{
+	BurnTicketsPool[trans.ClientID] = append(BurnTicketsPool[trans.ClientID], entity.BurnTicketDetails{
 		Hash:  trans.Hash,
 		Nonce: trans.Nonce,
 	})

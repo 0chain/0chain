@@ -155,7 +155,7 @@ func (c *Chain) GetBurnsHandler(ctx context.Context, r *http.Request) (interface
 		return nil, err
 	}
 
-	burnDetails, ok := zcnsc.BurnTickets[clientID]
+	burnDetails, ok := zcnsc.BurnTicketsPool[clientID]
 	if !ok {
 		return nil, errors.New("burn tickets not found")
 	}
