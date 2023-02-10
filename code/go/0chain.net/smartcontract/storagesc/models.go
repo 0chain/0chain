@@ -345,7 +345,6 @@ type StorageNode struct {
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
-
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
