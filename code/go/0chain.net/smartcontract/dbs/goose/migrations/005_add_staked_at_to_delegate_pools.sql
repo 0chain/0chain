@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-ALTER TABLE delegate_pools ADD COLUMN IF NOT EXISTS staked_at timestamp with time zone;
+ALTER TABLE delegate_pools ADD COLUMN IF NOT EXISTS staked_at bigint;
 -- +goose StatementEnd
 
 -- +goose Down
