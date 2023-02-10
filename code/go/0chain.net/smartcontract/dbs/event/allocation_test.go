@@ -1,8 +1,6 @@
 package event
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
