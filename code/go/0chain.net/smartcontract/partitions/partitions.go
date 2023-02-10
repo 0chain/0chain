@@ -303,7 +303,10 @@ func (p *Partitions) removeItem(
 
 	lastPart, err := p.getPartition(state, p.partitionsNum()-1)
 	if err != nil {
-		return err
+		logging.Logger.Error("load last partition failed",
+			zap.Error(err),
+			zap.Int("part number", p.partitionsNum()))
+		return fmt.Errorf("load last partition failed: %v", err)
 	}
 
 	if index == p.partitionsNum()-1 {
@@ -529,6 +532,11 @@ func (p *Partitions) getPartition(state state.StateContextI, i int) (*partition,
 	part := &partition{}
 	err := part.load(state, p.partitionKey(i))
 	if err != nil {
+		logging.Logger.Error("partition load failed",
+			zap.Error(err),
+			zap.Int("index", i),
+			zap.Int("partition num", p.partitionsNum()),
+			zap.String("partition key", p.partitionKey(i)))
 		return nil, err
 	}
 	p.Partitions[i] = part
