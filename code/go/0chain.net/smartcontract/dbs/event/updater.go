@@ -25,6 +25,7 @@ var typeToSQL = map[reflect.Type]string{
 	reflect.TypeOf([][]byte{}):  "bytea",
 	reflect.TypeOf([]float64{}): "decimal",
 	reflect.TypeOf([]float32{}): "decimal",
+	reflect.TypeOf([]bool{}):    "boolean",
 }
 
 // UpdateBuilder helps in building and execution batch updates for postgres sql dialect.
