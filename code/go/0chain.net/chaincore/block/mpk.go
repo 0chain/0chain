@@ -2,6 +2,7 @@ package block
 
 import (
 	"encoding/json"
+	"sync"
 
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/encryption"
@@ -17,7 +18,8 @@ type MPK struct {
 
 // swagger:model Mpks
 type Mpks struct {
-	Mpks map[string]*MPK
+	Mpks  map[string]*MPK
+	mutex sync.RWMutex
 }
 
 func NewMpks() *Mpks {
@@ -46,6 +48,8 @@ func (mpks *Mpks) GetHashBytes() []byte {
 }
 
 func (mpks *Mpks) GetMpkMap() (map[bls.PartyID][]bls.PublicKey, error) {
+	mpks.mutex.RLock()
+	defer mpks.mutex.RUnlock()
 	mpkMap := make(map[bls.PartyID][]bls.PublicKey)
 	for k, v := range mpks.Mpks {
 		mpk, err := bls.ConvertStringToMpk(v.Mpk)
@@ -59,6 +63,8 @@ func (mpks *Mpks) GetMpkMap() (map[bls.PartyID][]bls.PublicKey, error) {
 }
 
 func (mpks *Mpks) GetMpks() map[string]*MPK {
+	mpks.mutex.RLock()
+	defer mpks.mutex.RUnlock()
 	result := make(map[string]*MPK, len(mpks.Mpks))
 	for k, v := range mpks.Mpks {
 		result[k] = v
@@ -68,6 +74,8 @@ func (mpks *Mpks) GetMpks() map[string]*MPK {
 
 // Clone returns a clone of Mpks instance
 func (mpks *Mpks) Clone() *Mpks {
+	mpks.mutex.RLock()
+	defer mpks.mutex.RUnlock()
 	clone := &Mpks{Mpks: make(map[string]*MPK, len(mpks.Mpks))}
 	for k, v := range mpks.Mpks {
 		nv := *v
