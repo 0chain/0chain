@@ -46,7 +46,11 @@ import (
 const notifySyncLFRStateTimeout = 3 * time.Second
 
 // genesisRandomSeed is the geneisis block random seed
-const genesisRandomSeed = 839695260482366273
+const (
+	genesisRandomSeed = 839695260482366273
+	// genesisBlockCreationDate is the time when the genesis block was created.
+	genesisBlockCreationDate = 1676096659 // TODO: make it configurable
+)
 
 var (
 	ErrInsufficientChain = common.NewError("insufficient_chain",
@@ -701,6 +705,7 @@ func mustInitPartitions(state cstate.StateContextI) {
 func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, initStates *state.InitStates) (round.RoundI, *block.Block) {
 	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
+	gb.CreationDate = common.Timestamp(genesisBlockCreationDate)
 	gb.Hash = hash
 	gb.ClientState = c.setupInitialState(initStates, gb)
 	gb.SetStateStatus(block.StateSuccessful)
