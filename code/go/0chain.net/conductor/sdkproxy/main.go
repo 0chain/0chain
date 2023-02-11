@@ -277,6 +277,9 @@ func skipFormField(skip string, r *http.Request) (q *http.Request, err error) {
 }
 
 func copyHeader(dst, src http.Header) {
+	srcMutex := &sync.RWMutex{}
+	srcMutex.RLock()
+	defer srcMutex.RUnlock()
 	for k, vv := range src {
 		for _, v := range vv {
 			dst.Add(k, v)
