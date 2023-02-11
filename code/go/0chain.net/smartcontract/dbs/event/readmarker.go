@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	common2 "0chain.net/smartcontract/common"
-	"gorm.io/gorm"
+	"0chain.net/smartcontract/dbs/model"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -12,7 +12,7 @@ import (
 
 // swagger:model ReadMarker
 type ReadMarker struct {
-	gorm.Model
+	model.ImmutableModel
 	ClientID      string  `json:"client_id"`
 	BlobberID     string  `json:"blobber_id"`
 	AllocationID  string  `json:"allocation_id" gorm:"index:idx_ralloc_block,priority:1;index:idx_rauth_alloc,priority:2"` //used in alloc_read_size, used in readmarkers
@@ -29,14 +29,6 @@ type ReadMarker struct {
 	User       User       `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Owner      User       `gorm:"foreignKey:OwnerID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-}
-
-func (edb *EventDb) GetDataReadFromAllocationForLastNBlocks(blockNumber int64, allocationID string) (int64, error) {
-	var total int64
-	return total, edb.Store.Get().Model(&ReadMarker{}).
-		Select("sum(read_size)").
-		Where(&ReadMarker{AllocationID: allocationID, BlockNumber: blockNumber}).
-		Find(&total).Error
 }
 
 func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit common2.Pagination) ([]ReadMarker, error) {

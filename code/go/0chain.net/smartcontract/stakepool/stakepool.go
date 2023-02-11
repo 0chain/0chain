@@ -28,7 +28,7 @@ import (
 
 //go:generate msgp -v -io=false -tests=false
 
-func stakePoolKey(p spenum.Provider, id string) datastore.Key {
+func StakePoolKey(p spenum.Provider, id string) datastore.Key {
 	return p.String() + ":stakepool:" + id
 }
 
@@ -37,6 +37,7 @@ type AbstractStakePool interface {
 	HasStakePool(user string) bool
 	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) (string, error)
 	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
+	EmitUnStakeEvent(providerType spenum.Provider, providerID string, amount currency.Coin, balances cstate.StateContextI) error
 	Save(providerType spenum.Provider, providerID string,
 		balances cstate.StateContextI) error
 	GetSettings() Settings
@@ -82,13 +83,13 @@ type StakePoolStat struct {
 }
 
 type DelegatePoolStat struct {
-	ID           string        `json:"id"`            // blobber ID
-	Balance      currency.Coin `json:"balance"`       // current balance
-	DelegateID   string        `json:"delegate_id"`   // wallet
-	Rewards      currency.Coin `json:"rewards"`       // total for all time
-	UnStake      bool          `json:"unstake"`       // want to unstake
-	ProviderId   string        `json:"provider_id"`   // id
-	ProviderType int           `json:"provider_type"` // ype
+	ID           string          `json:"id"`            // blobber ID
+	Balance      currency.Coin   `json:"balance"`       // current balance
+	DelegateID   string          `json:"delegate_id"`   // wallet
+	Rewards      currency.Coin   `json:"rewards"`       // total for all time
+	UnStake      bool            `json:"unstake"`       // want to unstake
+	ProviderId   string          `json:"provider_id"`   // id
+	ProviderType spenum.Provider `json:"provider_type"` // ype
 
 	TotalReward  currency.Coin `json:"total_reward"`
 	TotalPenalty currency.Coin `json:"total_penalty"`
@@ -116,7 +117,7 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 	}
 	spStat.Rewards = provider.Rewards.TotalRewards
 	for _, dp := range delegatePools {
-		if spenum.PoolStatus(dp.Status) == spenum.Deleting || spenum.PoolStatus(dp.Status) == spenum.Deleted {
+		if spenum.PoolStatus(dp.Status) == spenum.Deleted {
 			continue
 		}
 		dpStats := DelegatePoolStat{
@@ -190,7 +191,7 @@ func (sp *StakePool) Save(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	_, err := balances.InsertTrieNode(stakePoolKey(p, id), sp)
+	_, err := balances.InsertTrieNode(StakePoolKey(p, id), sp)
 	return err
 }
 
@@ -199,7 +200,7 @@ func (sp *StakePool) Get(
 	id string,
 	balances cstate.StateContextI,
 ) error {
-	return balances.GetTrieNode(stakePoolKey(p, id), sp)
+	return balances.GetTrieNode(StakePoolKey(p, id), sp)
 }
 
 func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.Coin, error) {
@@ -262,22 +263,20 @@ func (sp *StakePool) MintRewards(
 			ProviderType: providerType.String(),
 			ProviderID:   providerId,
 		})
+
+		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.User{
+			CollectedReward: int64(dPool.Reward),
+			UserID:          clientId,
+		})
+
 		delegateReward = dPool.Reward
 		dPool.Reward = 0
 	}
 
 	var dpUpdate = newDelegatePoolUpdate(clientId, providerId, providerType)
 	dpUpdate.Updates["reward"] = 0
-
-	if dPool.Status == spenum.Deleting {
-		delete(sp.Pools, clientId)
-		dpUpdate.Updates["status"] = spenum.Deleted
-		dpUpdate.emitUpdate(balances)
-		return delegateReward + serviceCharge, nil
-	} else {
-		dpUpdate.emitUpdate(balances)
-		return delegateReward + serviceCharge, nil
-	}
+	dpUpdate.emitUpdate(balances)
+	return delegateReward + serviceCharge, nil
 }
 
 func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error {
@@ -296,7 +295,7 @@ func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.State
 	}
 
 	sp.Pools[poolID].Balance = 0
-	sp.Pools[poolID].Status = spenum.Deleting
+	sp.Pools[poolID].Status = spenum.Deleted
 
 	return nil
 }
@@ -612,19 +611,24 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 	return nil
 }
 
-type stakePoolRequest struct {
+type StakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
 	ProviderID   string          `json:"provider_id,omitempty"`
 }
 
-func (spr *stakePoolRequest) decode(p []byte) (err error) {
+func (spr *StakePoolRequest) Encode() []byte {
+	bytes, _ := json.Marshal(spr)
+	return bytes
+}
+
+func (spr *StakePoolRequest) decode(p []byte) (err error) {
 	return json.Unmarshal(p, spr)
 }
 
 func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
 
-	var spr stakePoolRequest
+	var spr StakePoolRequest
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"invalid request: %v", err)
@@ -672,11 +676,12 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	return out, err
 }
 
-// stake pool can return excess tokens from stake pool
+// StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
 func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
 ) (resp string, err error) {
-	var spr stakePoolRequest
+	var spr StakePoolRequest
+
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)

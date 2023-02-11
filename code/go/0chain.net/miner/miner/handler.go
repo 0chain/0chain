@@ -38,7 +38,7 @@ func ConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
 func ConfigUpdateAllHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		logging.Logger.Error("failed to parse update config form", zap.Any("error", err))
+		logging.Logger.Error("failed to parse update config form", zap.Error(err))
 		return
 	}
 	mb := chain.GetServerChain().GetCurrentMagicBlock()
@@ -48,7 +48,7 @@ func ConfigUpdateAllHandler(w http.ResponseWriter, r *http.Request) {
 			go func(miner *node.Node) {
 				resp, err := http.PostForm(miner.GetN2NURLBase()+updateConfigURL, r.Form)
 				if err != nil {
-					logging.Logger.Error("failed to update other miner's config", zap.Any("miner", miner.GetKey()), zap.Any("response", resp), zap.Any("error", err))
+					logging.Logger.Error("failed to update other miner's config", zap.String("miner", miner.GetKey()), zap.Any("response", resp), zap.Error(err))
 					return
 				}
 				defer resp.Body.Close()

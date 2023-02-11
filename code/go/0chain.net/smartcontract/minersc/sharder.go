@@ -4,12 +4,14 @@ import (
 	"errors"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
 
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	commonsc "0chain.net/smartcontract/common"
 )
 
 func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
@@ -60,15 +62,13 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	return string(sn.Encode()), nil
 }
 
-// AddSharder function to handle miner register
+// AddSharder function to handle sharder register
 func (msc *MinerSmartContract) AddSharder(
 	t *transaction.Transaction,
 	input []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-
-	logging.Logger.Info("add_sharder", zap.Any("txn", t))
 
 	var newSharder = NewMinerNode()
 	if err = newSharder.Decode(input); err != nil {
@@ -86,9 +86,16 @@ func (msc *MinerSmartContract) AddSharder(
 		return "", common.NewErrorf("add_sharder", "getting all sharders list: %v", err)
 	}
 
+	magicBlockSharders := balances.GetChainCurrentMagicBlock().Sharders
+	if !magicBlockSharders.HasNode(newSharder.ID) {
+		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Not in magic block", zap.String("SharderID", newSharder.ID))
+		return "", common.NewErrorf("add_sharder",
+			"failed to add new sharder: Not in magic block")
+	}
+
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
 
-	if newSharder.Settings.DelegateWallet == "" {
+	if config.Development() && newSharder.Settings.DelegateWallet == "" {
 		newSharder.Settings.DelegateWallet = newSharder.ID
 	}
 
@@ -98,14 +105,13 @@ func (msc *MinerSmartContract) AddSharder(
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
-		zap.Any("mscID", msc.ID),
+		zap.String("mscID", msc.ID),
 		zap.String("delegate_wallet", newSharder.Settings.DelegateWallet),
 		zap.Float64("service_charge", newSharder.Settings.ServiceChargeRatio),
 		zap.Int("number_of_delegates", newSharder.Settings.MaxNumDelegates),
 		zap.Int64("min_stake", int64(newSharder.Settings.MinStake)),
 		zap.Int64("max_stake", int64(newSharder.Settings.MaxStake)))
 
-	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
@@ -113,6 +119,11 @@ func (msc *MinerSmartContract) AddSharder(
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
+	// Check delegate wallet differs from operationl wallet
+	if err := commonsc.ValidateDelegateWallet(newSharder.PublicKey, newSharder.Settings.DelegateWallet); err != nil {
+		return "", err
+	}
+	
 	err = validateNodeSettings(newSharder, gn, "add_sharder")
 	if err != nil {
 		return "", common.NewErrorf("add_sharder", "validate node setting failed: %v", zap.Error(err))
@@ -149,7 +160,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	//err = emitAddSharder(newSharder, balances)
-	emitAddOrOverwriteSharder(newSharder, balances)
+	emitAddSharder(newSharder, balances)
 
 	// save all sharders list
 	if err = updateAllShardersList(balances, allSharders); err != nil {
@@ -329,11 +340,10 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
-		zap.Any("mscID", msc.ID),
+		zap.String("mscID", msc.ID),
 		zap.Int64("pn_start_round", pn.StartRound),
 		zap.String("phase", pn.Phase.String()))
 
-	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
 		return "", errors.New("PublicKey or the ID is empty. Cannot proceed")

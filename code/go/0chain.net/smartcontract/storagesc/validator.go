@@ -9,6 +9,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
+	commonsc "0chain.net/smartcontract/common"
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
@@ -19,6 +20,11 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
+
+	// Check delegate wallet and operational wallet are not the same
+	if err := commonsc.ValidateDelegateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
+		return "", err
+	}
 
 	tmp := &ValidationNode{}
 	err = balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
@@ -32,7 +38,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 				"Failed to get validator list."+err.Error())
 		}
 
-		_, err = validatorPartitions.AddItem(
+		err = validatorPartitions.Add(
 			balances,
 			&ValidationPartitionNode{
 				Id:  t.ClientID,

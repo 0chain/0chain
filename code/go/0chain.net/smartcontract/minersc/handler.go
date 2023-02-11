@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/core/datastore"
@@ -43,10 +44,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/getStakePoolStat", common.UserRateLimit(mrh.getStakePoolStat)),
 		rest.MakeEndpoint(miner+"/getMinerList", common.UserRateLimit(mrh.getMinerList)),
 		rest.MakeEndpoint(miner+"/get_miners_stats", common.UserRateLimit(mrh.getMinersStats)),
-		rest.MakeEndpoint(miner+"/get_miners_stake", common.UserRateLimit(mrh.getMinersStake)),
 		rest.MakeEndpoint(miner+"/getSharderList", common.UserRateLimit(mrh.getSharderList)),
 		rest.MakeEndpoint(miner+"/get_sharders_stats", common.UserRateLimit(mrh.getShardersStats)),
-		rest.MakeEndpoint(miner+"/get_sharders_stake", common.UserRateLimit(mrh.getShardersStake)),
 		rest.MakeEndpoint(miner+"/getSharderKeepList", common.UserRateLimit(mrh.getSharderKeepList)),
 		rest.MakeEndpoint(miner+"/getPhase", common.UserRateLimit(mrh.getPhase)),
 		rest.MakeEndpoint(miner+"/getDkgList", common.UserRateLimit(mrh.getDkgList)),
@@ -61,6 +60,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/get_sharder_geolocations", common.UserRateLimit(mrh.getSharderGeolocations)),
 		rest.MakeEndpoint(miner+"/provider-rewards", common.UserRateLimit(mrh.getProviderRewards)),
 		rest.MakeEndpoint(miner+"/delegate-rewards", common.UserRateLimit(mrh.getDelegateRewards)),
+
+		//test endpoints
+		rest.MakeEndpoint("/test/screst/nodeStat", common.UserRateLimit(mrh.testNodeStat)),
 	}
 }
 
@@ -187,12 +189,10 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 //	 description: offset
 //	 in: query
 //	 type: string
-//	 required: true
 //	+name: limit
 //	 description: limit
 //	 in: query
 //	 type: string
-//	 required: true
 //	+name: sort
 //	 description: desc or asc
 //	 in: query
@@ -201,7 +201,6 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 //	 description: active
 //	 in: query
 //	 type: string
-//	 required: true
 //
 // responses:
 //
@@ -252,12 +251,10 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 //	 description: offset
 //	 in: query
 //	 type: string
-//	 required: true
 //	+name: limit
 //	 description: limit
 //	 in: query
 //	 type: string
-//	 required: true
 //	+name: sort
 //	 description: desc or asc
 //	 in: query
@@ -266,7 +263,6 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 //	 description: active
 //	 in: query
 //	 type: string
-//	 required: true
 //
 // responses:
 //
@@ -326,52 +322,130 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat nodePoolStat
-// lists sharders
+// lists node pool stats for a given client
 //
 // parameters:
 //
 //	+name: id
-//	 description: id
+//	 description: miner node ID
 //	 in: query
 //	 type: string
 //	 required: true
+//	+name: pool_id
+//	 description: pool_id
+//	 in: query
+//	 type: string
 //
 // responses:
 //
-//	200:
+//	200: []NodePool
 //	400:
 //	484:
 func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		id     = r.URL.Query().Get("id")
 		poolID = r.URL.Query().Get("pool_id")
-		status = r.URL.Query().Get("status")
-		sn     *MinerNode
 		err    error
 	)
 
-	if sn, err = getMinerNode(id, mrh.GetQueryStateContext()); err != nil {
-		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true, "can't get miner node"))
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	if poolID == "" {
-		common.Respond(w, r, sn.GetNodePools(status), nil)
+	dp, err := edb.GetDelegatePool(poolID, id)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
 		return
 	}
 
-	if pool := sn.GetNodePool(poolID); pool != nil {
-		common.Respond(w, r, pool, nil)
-		return
+	res := NodePool{
+		PoolID: dp.PoolID,
+		DelegatePool: &stakepool.DelegatePool{
+			Balance:      dp.Balance,
+			Reward:       dp.Reward,
+			Status:       spenum.PoolStatus(dp.Status),
+			RoundCreated: dp.RoundCreated,
+			DelegateID:   dp.DelegateID,
+			StakedAt:     common.Timestamp(dp.CreatedAt.Unix()),
+		},
 	}
-	common.Respond(w, r, nil, common.NewErrNoResource("can't find pool stats"))
+
+	common.Respond(w, r, res, nil)
 }
 
 // swagger:model nodeStat
 type nodeStat struct {
-	MinerNode
-	Round       int64 `json:"round"`
+	NodeResponse
 	TotalReward int64 `json:"total_reward"`
+}
+
+// swagger:route GET /test/screst/nodeStat nodeStat
+// lists sharders
+//
+// parameters:
+//
+//	+name: id
+//	 description: miner or sharder ID
+//	 in: query
+//	 type: string
+//	 required: true
+//  +name: include_delegates
+//	 description: set to "true" if the delegate pools are required as well
+//	 in: query
+//	 type: string
+//	 required: false
+//
+// responses:
+//
+//	200: nodeStat
+//	400:
+//	484:
+func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request) {
+	var (
+		id               = r.URL.Query().Get("id")
+		includeDelegates = strings.ToLower(r.URL.Query().Get("include_delegates")) == "true"
+	)
+	if id == "" {
+		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
+		return
+	}
+	edb := mrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	var errMiner error
+	var miner event.Miner
+	var dps []event.DelegatePool
+	if includeDelegates {
+		miner, dps, errMiner = edb.GetMinerWithDelegatePools(id)
+	} else {
+		miner, errMiner = edb.GetMiner(id)
+	}
+	if errMiner == nil {
+		common.Respond(w, r, nodeStat{
+			NodeResponse: minerTableToMinerNode(miner, dps),
+			TotalReward:  int64(miner.Rewards.TotalRewards),
+		}, nil)
+		return
+	}
+	var errSharder error
+	var sharder event.Sharder
+	if includeDelegates {
+		sharder, dps, errSharder = edb.GetSharderWithDelegatePools(id)
+	} else {
+		sharder, errSharder = edb.GetSharder(id)
+	}
+	if errSharder != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(fmt.Sprintf(
+			"no matching provider for id %s, miner not found: %v, and sharder not found: %v", id, errMiner, errSharder)))
+		return
+	}
+	common.Respond(w, r, nodeStat{
+		NodeResponse: sharderTableToSharderNode(sharder, dps),
+		TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat nodeStat
@@ -380,7 +454,7 @@ type nodeStat struct {
 // parameters:
 //
 //	+name: id
-//	 description: id
+//	 description: miner or sharder ID
 //	 in: query
 //	 type: string
 //	 required: true
@@ -392,48 +466,36 @@ type nodeStat struct {
 //	484:
 func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
-		id               = r.URL.Query().Get("id")
-		includeDelegates = r.URL.Query().Get("include_delegates") == "true"
+		id = r.URL.Query().Get("id")
 	)
 	if id == "" {
 		common.Respond(w, r, nil, common.NewErrBadRequest("id parameter is compulsory"))
 		return
 	}
-	sCtx := mrh.GetQueryStateContext()
-	edb := sCtx.GetEventDB()
+	edb := mrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-
-	if sCtx.GetBlock() == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("cannot get latest finalised block"))
-		return
-	}
 	var err error
-	var delegates []event.DelegatePool
-	if includeDelegates {
-		delegates, err = edb.GetDelegatePools(id)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("getting delegates"+err.Error()))
-			return
-		}
-	}
-
-	if miner, err := edb.GetMiner(id); err == nil {
+	var miner event.Miner
+	miner, err = edb.GetMiner(id)
+	if err == nil {
 		common.Respond(w, r, nodeStat{
-			MinerNode: minerTableToMinerNode(miner, delegates), Round: sCtx.GetBlock().Round, TotalReward: int64(miner.Rewards.TotalRewards)}, nil)
+			NodeResponse: minerTableToMinerNode(miner, nil),
+			TotalReward:  int64(miner.Rewards.TotalRewards),
+		}, nil)
 		return
 	}
-	sharder, err := edb.GetSharder(id)
+	var sharder event.Sharder
+	sharder, err = edb.GetSharder(id)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("miner/sharder not found"))
 		return
 	}
 	common.Respond(w, r, nodeStat{
-		MinerNode:   sharderTableToSharderNode(sharder, delegates),
-		Round:       sCtx.GetBlock().Round,
-		TotalReward: int64(sharder.Rewards.TotalRewards)}, nil)
+		NodeResponse: sharderTableToSharderNode(sharder, nil),
+		TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents getEvents
@@ -620,31 +682,6 @@ func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, allShardersList, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake get_sharders_stake
-// get total sharder stake
-//
-// responses:
-//
-//	200: Int64Map
-//	404:
-func (mrh *MinerRestHandler) getShardersStake(w http.ResponseWriter, r *http.Request) {
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	ts, err := edb.GetShardersTotalStake()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
-		return
-	}
-
-	common.Respond(w, r, rest.Int64Map{
-		"sharders_total_stake": ts,
-	}, nil)
-
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats get_sharders_stats
 // get count of active and inactive miners
 //
@@ -738,39 +775,13 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	shardersArr := make([]nodeStat, len(sharders))
 	for i, sharder := range sharders {
 		shardersArr[i] = nodeStat{
-			MinerNode:   sharderTableToSharderNode(sharder, nil),
-			Round:       sCtx.GetBlock().Round,
-			TotalReward: int64(sharder.Rewards.TotalRewards),
+			NodeResponse: sharderTableToSharderNode(sharder, nil),
+			TotalReward:  int64(sharder.Rewards.TotalRewards),
 		}
 	}
 	common.Respond(w, r, rest.InterfaceMap{
 		"Nodes": shardersArr,
 	}, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake get_miners_stake
-// get total miner stake
-//
-// responses:
-//
-//	200: Int64Map
-//	404:
-func (mrh *MinerRestHandler) getMinersStake(w http.ResponseWriter, r *http.Request) {
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	ts, err := edb.GetMinersTotalStake()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrNoResource("db error", err.Error()))
-		return
-	}
-
-	common.Respond(w, r, rest.Int64Map{
-		"miners_total_stake": ts,
-	}, nil)
-
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats get_miners_stats
@@ -865,9 +876,8 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	minersArr := make([]nodeStat, len(miners))
 	for i, miner := range miners {
 		minersArr[i] = nodeStat{
-			MinerNode:   minerTableToMinerNode(miner, nil),
-			Round:       sCtx.GetBlock().Round,
-			TotalReward: int64(miner.Rewards.TotalRewards),
+			NodeResponse: minerTableToMinerNode(miner, nil),
+			TotalReward:  int64(miner.Rewards.TotalRewards),
 		}
 	}
 
@@ -903,13 +913,13 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Miner))
+	minerPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, spenum.Miner)
 	if err != nil {
 		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
 		return
 	}
 
-	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, int(spenum.Sharder))
+	sharderPools, err := balances.GetEventDB().GetUserDelegatePools(clientID, spenum.Sharder)
 	if err != nil {
 		common.Respond(w, r, nil, errors.New("blobber not found in event database"))
 		return

@@ -32,8 +32,7 @@ const blobberAllocationPartitionSize = 100
 // completeChallenge complete the challenge
 func (sc *StorageSmartContract) completeChallenge(
 	challenge *StorageChallenge,
-	allocChallenges *AllocationChallenges,
-	challengeResponse *ChallengeResponse) bool {
+	allocChallenges *AllocationChallenges) bool {
 
 	// TODO: do not remove the comments in case the blobber could not work
 	//found := false
@@ -46,10 +45,6 @@ func (sc *StorageSmartContract) completeChallenge(
 
 	if !allocChallenges.removeChallenge(challenge) {
 		return false
-	}
-
-	if challengeResponse != nil {
-		challenge.Responded = true
 	}
 
 	return true
@@ -424,66 +419,47 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
+	var (
+		challResp ChallengeResponse
+		errCode   = "verify_challenge"
+	)
 
-	var challResp ChallengeResponse
-	conf, err := sc.getConfig(balances, true)
-	if err != nil {
-		return "", common.NewError("verify_challenge",
-			"cannot get smart contract configurations: "+err.Error())
+	if err := json.Unmarshal(input, &challResp); err != nil {
+		return "", common.NewErrorf(errCode, "failed to decode txn input: %v", err)
 	}
 
-	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
-
-	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
-	if err != nil {
-		return "", common.NewError("verify_challenge",
-			"cannot get ongoing partition: "+err.Error())
-	}
-
-	if err = json.Unmarshal(input, &challResp); err != nil {
-		return
-	}
-
-	if len(challResp.ID) == 0 ||
-		len(challResp.ValidationTickets) == 0 {
-
-		return "", common.NewError("verify_challenge",
-			"Invalid parameters to challenge response")
+	if len(challResp.ID) == 0 || len(challResp.ValidationTickets) == 0 {
+		return "", common.NewError(errCode, "invalid parameters to challenge response")
 	}
 
 	// get challenge node
 	challenge, err := sc.getStorageChallenge(challResp.ID, balances)
 	if err != nil {
-		return "", common.NewErrorf("verify_challenge", "could not find challenge, %v", err)
+		return "", common.NewErrorf(errCode, "could not find challenge, %v", err)
+	}
+
+	if challenge.BlobberID != t.ClientID {
+		return "", errors.New("challenge blobber id does not match")
 	}
 
 	logging.Logger.Info("time_taken: receive challenge response",
 		zap.String("challenge_id", challenge.ID),
 		zap.Duration("delay", time.Since(common.ToTime(challenge.Created))))
 
-	for _, vn := range challResp.ValidationTickets {
-		if vn == nil {
-			continue
-		}
-
-		if _, ok := challenge.ValidatorIDMap[vn.ValidatorID]; !ok {
-			return "", common.NewError("verify_challenge",
-				"found invalid validator id in validation ticket")
-		}
+	result, err := verifyChallengeTickets(balances, t, challenge, &challResp)
+	if err != nil {
+		return "", common.NewError(errCode, err.Error())
 	}
 
-	if len(challResp.ValidationTickets) != len(challenge.ValidatorIDs) {
-		return "", common.NewError("verify_challenge",
-			"found invalid validation ticket count")
-	}
-
-	if challenge.BlobberID != t.ClientID {
-		return "", common.NewErrorf("verify_challenge", "challenge blobber id does not match")
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf(errCode,
+			"cannot get smart contract configurations: %v", err)
 	}
 
 	allocChallenges, err := sc.getAllocationChallenges(challenge.AllocationID, balances)
 	if err != nil {
-		return "", common.NewErrorf("verify_challenge", "could not find allocation challenges, %v", err)
+		return "", common.NewErrorf(errCode, "could not find allocation challenges, %v", err)
 	}
 
 	_, ok := allocChallenges.ChallengeMap[challResp.ID]
@@ -494,43 +470,20 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			return "challenge already redeemed", nil
 		}
 
-		return "", common.NewErrorf("verify_challenge",
+		return "", common.NewErrorf(errCode,
 			"could not find the challenge with ID %s", challResp.ID)
 	}
 
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(challenge.AllocationID, balances)
 	if err != nil {
-		return "", common.NewErrorf("verify_challenge",
+		return "", common.NewErrorf(errCode,
 			"can't get related allocation: %v", err)
 	}
 
 	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
 	if !ok {
-		return "", common.NewError("verify_challenge",
-			"Blobber is not part of the allocation")
-	}
-
-	var (
-		success, failure int
-		validators       []string // validators for rewards
-	)
-	for _, vt := range challResp.ValidationTickets {
-		if vt != nil {
-			if ok, err := vt.VerifySign(balances); !ok || err != nil {
-				continue
-			}
-
-			validators = append(validators, vt.ValidatorID)
-
-			if !vt.Result {
-				failure++
-				continue
-			}
-			success++
-		} else {
-			failure++
-		}
+		return "", common.NewError(errCode, "blobber is not part of the allocation")
 	}
 
 	// time of previous complete challenge (not the current one)
@@ -540,73 +493,126 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		latestCompletedChallTime = last.Created
 	}
 
+	challenge.Responded = true
+	cab := &challengeAllocBlobberPassResult{
+		verifyTicketsResult:      result,
+		alloc:                    alloc,
+		allocChallenges:          allocChallenges,
+		challenge:                challenge,
+		blobAlloc:                blobAlloc,
+		latestCompletedChallTime: latestCompletedChallTime,
+	}
+
+	if !(result.pass && result.fresh) {
+		return sc.challengeFailed(balances, t, cab)
+	}
+
+	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, cab)
+}
+
+type verifyTicketsResult struct {
+	pass       bool
+	fresh      bool
+	threshold  int
+	success    int
+	validators []string
+}
+
+// challengeAllocBlobberPassResult wraps all the data structs for processing a challenge
+type challengeAllocBlobberPassResult struct {
+	*verifyTicketsResult
+	alloc                    *StorageAllocation
+	allocChallenges          *AllocationChallenges
+	challenge                *StorageChallenge
+	blobAlloc                *BlobberAllocation
+	latestCompletedChallTime common.Timestamp
+}
+
+func verifyChallengeTickets(balances cstate.StateContextI,
+	t *transaction.Transaction,
+	challenge *StorageChallenge,
+	cr *ChallengeResponse) (*verifyTicketsResult, error) {
+	// get unique validation tickets map
+	vtsMap := make(map[string]struct{}, len(cr.ValidationTickets))
+	for _, vt := range cr.ValidationTickets {
+		if vt == nil {
+			return nil, errors.New("found nil validation tickets")
+		}
+
+		if _, ok := challenge.ValidatorIDMap[vt.ValidatorID]; !ok {
+			return nil, errors.New("found invalid validator id in validation ticket")
+		}
+
+		_, ok := vtsMap[vt.ValidatorID]
+		if ok {
+			return nil, errors.New("found duplicate validation tickets")
+		}
+		vtsMap[vt.ValidatorID] = struct{}{}
+	}
+
+	tksNum := len(cr.ValidationTickets)
+	threshold := challenge.TotalValidators / 2
+	if tksNum < threshold {
+		return nil, fmt.Errorf("validation tickets less than threshold: %d, tickets: %d", threshold, tksNum)
+	}
+
 	var (
-		threshold = challenge.TotalValidators / 2
-		pass      = success > threshold ||
-			(success > failure && success+failure < threshold)
+		success, failure int
+		validators       []string // validators for rewards
+	)
+
+	for _, vt := range cr.ValidationTickets {
+		if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
+			return nil, fmt.Errorf("invalid validation ticket: %v", err)
+		}
+
+		if ok, err := vt.VerifySign(balances); !ok || err != nil {
+			return nil, fmt.Errorf("invalid validation ticket: %v", err)
+		}
+
+		validators = append(validators, vt.ValidatorID)
+		if !vt.Result {
+			failure++
+			continue
+		}
+		success++
+	}
+
+	var (
+		pass  = success > threshold
 		cct   = toSeconds(getMaxChallengeCompletionTime())
 		fresh = challenge.Created+cct >= t.CreationDate
 	)
 
-	// verification, or partial verification
-	if pass && fresh {
-		return sc.challengePassed(t,
-			alloc,
-			allocChallenges,
-			challenge,
-			&challResp,
-			blobAlloc,
-			validators,
-			rewardRound,
-			success,
-			threshold,
-			ongoingParts,
-			latestCompletedChallTime,
-			balances)
-	}
-
-	var enoughFails = failure > (challenge.TotalValidators/2) ||
-		(success+failure) == challenge.TotalValidators
-
-	if enoughFails || (pass && !fresh) {
-		return sc.challengeFailed(t,
-			alloc,
-			allocChallenges,
-			challenge,
-			&challResp,
-			blobAlloc,
-			validators,
-			pass, fresh,
-			latestCompletedChallTime,
-			balances)
-	}
-
-	return "", common.NewError("not_enough_validations",
-		"Not enough validations, no successful validations")
+	return &verifyTicketsResult{
+		pass:       pass,
+		fresh:      fresh,
+		threshold:  threshold,
+		success:    success,
+		validators: validators,
+	}, nil
 }
 
 func (sc *StorageSmartContract) challengePassed(
+	balances cstate.StateContextI,
 	t *transaction.Transaction,
-	alloc *StorageAllocation,
-	allocChallenges *AllocationChallenges,
-	challenge *StorageChallenge,
-	challResp *ChallengeResponse,
-	blobAlloc *BlobberAllocation,
-	validators []string,
-	rewardRound int64,
-	success, threshold int,
-	ongoingParts *partitions.Partitions,
-	latestCompletedChallTime common.Timestamp,
-	balances cstate.StateContextI) (string, error) {
+	triggerPeriod int64,
+	cab *challengeAllocBlobberPassResult) (string, error) {
+	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, triggerPeriod)
+	if err != nil {
+		return "", common.NewError("verify_challenge",
+			"cannot get ongoing partition: "+err.Error())
+	}
+
 	blobber, err := sc.getBlobber(t.ClientID, balances)
 	if err != nil {
 		return "", common.NewError("verify_challenge",
 			"can't get blobber"+err.Error())
 	}
 
+	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, triggerPeriod)
 	// this expiry of blobber needs to be corrected once logic is finalized
-
-	if blobber.RewardPartition.StartRound != rewardRound ||
+	if blobber.RewardRound.StartRound != rewardRound ||
 		balances.GetBlock().Round == 0 {
 
 		var dataRead float64 = 0
@@ -614,7 +620,7 @@ func (sc *StorageSmartContract) challengePassed(
 			dataRead = blobber.DataReadLastRewardRound
 		}
 
-		partIndex, err := ongoingParts.AddItem(
+		err := ongoingParts.Add(
 			balances,
 			&BlobberRewardNode{
 				ID:                blobber.ID,
@@ -629,8 +635,7 @@ func (sc *StorageSmartContract) challengePassed(
 				"can't add to ongoing partition list "+err.Error())
 		}
 
-		blobber.RewardPartition = RewardPartitionLocation{
-			Index:      partIndex,
+		blobber.RewardRound = RewardRound{
 			StartRound: rewardRound,
 			Timestamp:  t.CreationDate,
 		}
@@ -643,33 +648,33 @@ func (sc *StorageSmartContract) challengePassed(
 	}
 
 	var brStats BlobberRewardNode
-	if err := ongoingParts.GetItem(balances, blobber.RewardPartition.Index, blobber.ID, &brStats); err != nil {
+	if err := ongoingParts.Get(balances, blobber.ID, &brStats); err != nil {
 		return "", common.NewError("verify_challenge",
 			"can't get blobber reward from partition list: "+err.Error())
 	}
 
 	brStats.SuccessChallenges++
 
-	if !sc.completeChallenge(challenge, allocChallenges, challResp) {
+	if !sc.completeChallenge(cab.challenge, cab.allocChallenges) {
 		return "", common.NewError("challenge_out_of_order",
 			"First challenge on the list is not same as the one"+
 				" attempted to redeem")
 	}
-	alloc.Stats.LastestClosedChallengeTxn = challenge.ID
-	alloc.Stats.SuccessChallenges++
-	alloc.Stats.OpenChallenges--
+	cab.alloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
+	cab.alloc.Stats.SuccessChallenges++
+	cab.alloc.Stats.OpenChallenges--
 
-	blobAlloc.Stats.LastestClosedChallengeTxn = challenge.ID
-	blobAlloc.Stats.SuccessChallenges++
-	blobAlloc.Stats.OpenChallenges--
+	cab.blobAlloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
+	cab.blobAlloc.Stats.SuccessChallenges++
+	cab.blobAlloc.Stats.OpenChallenges--
 
-	if err := challenge.Save(balances, sc.ID); err != nil {
+	if err := cab.challenge.Save(balances, sc.ID); err != nil {
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	emitUpdateChallenge(challenge, true, balances)
+	emitUpdateChallenge(cab.challenge, true, balances)
 
-	err = ongoingParts.UpdateItem(balances, blobber.RewardPartition.Index, &brStats)
+	err = ongoingParts.UpdateItem(balances, &brStats)
 	if err != nil {
 		return "", common.NewErrorf("verify_challenge",
 			"error updating blobber reward item: %v", err)
@@ -681,31 +686,31 @@ func (sc *StorageSmartContract) challengePassed(
 			"error saving ongoing blobber reward partition: %v", err)
 	}
 
-	if err := allocChallenges.Save(balances, sc.ID); err != nil {
+	if err := cab.allocChallenges.Save(balances, sc.ID); err != nil {
 		return "", common.NewError("verify_challenge", err.Error())
 	}
 
 	var partial = 1.0
-	if success < threshold {
-		partial = float64(success) / float64(threshold)
+	if cab.success < cab.threshold {
+		partial = float64(cab.success) / float64(cab.threshold)
 	}
 
-	err = sc.blobberReward(t, alloc, latestCompletedChallTime, allocChallenges, blobAlloc,
-		validators, partial, balances)
+	err = sc.blobberReward(t, cab.alloc, cab.latestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
+		cab.validators, partial, balances)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
-	// Save allocation object
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	// save allocation object
+	_, err = balances.InsertTrieNode(cab.alloc.GetKey(sc.ID), cab.alloc)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
-	if err := alloc.save(balances, sc.ID); err != nil {
+	if err := cab.alloc.save(balances, sc.ID); err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
-	if success < threshold {
+	if cab.success < cab.threshold {
 		return "challenge passed partially by blobber", nil
 	}
 
@@ -713,51 +718,44 @@ func (sc *StorageSmartContract) challengePassed(
 }
 
 func (sc *StorageSmartContract) challengeFailed(
+	balances cstate.StateContextI,
 	t *transaction.Transaction,
-	alloc *StorageAllocation,
-	allocChallenges *AllocationChallenges,
-	challenge *StorageChallenge,
-	challResp *ChallengeResponse,
-	blobAlloc *BlobberAllocation,
-	validators []string,
-	pass, fresh bool,
-	latestCompletedChallTime common.Timestamp,
-	balances cstate.StateContextI) (string, error) {
-	if !sc.completeChallenge(challenge, allocChallenges, challResp) {
+	cab *challengeAllocBlobberPassResult) (string, error) {
+	if !sc.completeChallenge(cab.challenge, cab.allocChallenges) {
 		return "", common.NewError("challenge_out_of_order",
 			"First challenge on the list is not same as the one"+
 				" attempted to redeem")
 	}
-	alloc.Stats.LastestClosedChallengeTxn = challenge.ID
-	alloc.Stats.FailedChallenges++
-	alloc.Stats.OpenChallenges--
+	cab.alloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
+	cab.alloc.Stats.FailedChallenges++
+	cab.alloc.Stats.OpenChallenges--
 
-	blobAlloc.Stats.LastestClosedChallengeTxn = challenge.ID
-	blobAlloc.Stats.FailedChallenges++
-	blobAlloc.Stats.OpenChallenges--
+	cab.blobAlloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
+	cab.blobAlloc.Stats.FailedChallenges++
+	cab.blobAlloc.Stats.OpenChallenges--
 
-	emitUpdateChallenge(challenge, false, balances)
+	emitUpdateChallenge(cab.challenge, false, balances)
 
-	if err := allocChallenges.Save(balances, sc.ID); err != nil {
+	if err := cab.allocChallenges.Save(balances, sc.ID); err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
 	}
 
-	logging.Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
+	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 
-	err := sc.blobberPenalty(t, alloc, latestCompletedChallTime, allocChallenges, blobAlloc,
-		validators, balances)
+	err := sc.blobberPenalty(t, cab.alloc, cab.latestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
+		cab.validators, balances)
 	if err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
 	}
 
-	// Save allocation object
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	// save allocation object
+	_, err = balances.InsertTrieNode(cab.alloc.GetKey(sc.ID), cab.alloc)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
 	//balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-	if pass && !fresh {
+	if cab.pass && !cab.fresh {
 		return "late challenge (failed)", nil
 	}
 
@@ -774,7 +772,7 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	case nil:
 	case util.ErrValueNotPresent:
 		logging.Logger.Error("client state has invalid allocations",
-			zap.Any("selected_allocation", allocID))
+			zap.String("selected_allocation", allocID))
 		return nil, common.NewErrorf("invalid_allocation",
 			"client state has invalid allocations")
 	default:
@@ -911,18 +909,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if alloc.Expiration >= txn.CreationDate {
 			foundAllocation = true
 			break
-		} else {
-			allocBlob, ok := alloc.BlobberAllocsMap[blobberID]
-			if !ok {
-				return nil, errors.New("invalid blobber for allocation")
-			}
-			if err := removeAllocationFromBlobber(sc,
-				allocBlob,
-				allocID,
-				balances); err != nil {
-				return nil, err
-			}
 		}
+
 		err = alloc.save(balances, sc.ID)
 		if err != nil {
 			return nil, common.NewErrorf("populate_challenge",
@@ -1107,17 +1095,25 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	expiredIDs, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created)
+	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}
 
+	// maps blobberID to count of its expiredIDs.
+	expiredCountMap := make(map[string]int)
+
 	// TODO: maybe delete them periodically later instead of remove immediately
-	for _, id := range expiredIDs {
-		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, id))
+	for challengeID, blobberID := range expiredIDsMap {
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
 			return common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
 		}
+
+		if _, ok := expiredCountMap[blobberID]; !ok {
+			expiredCountMap[blobberID] = 0
+		}
+		expiredCountMap[blobberID]++
 	}
 
 	// add the generated challenge to the open challenges list in the allocation
@@ -1151,7 +1147,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	beforeEmitAddChallenge(challInfo)
 
-	emitAddChallenge(challInfo, len(expiredIDs), balances)
+	emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances)
 	return nil
 }
 

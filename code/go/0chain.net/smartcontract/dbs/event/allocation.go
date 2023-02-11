@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/0chain/common/core/currency"
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
@@ -14,9 +15,8 @@ import (
 )
 
 type Allocation struct {
-	gorm.Model
+	model.UpdatableModel
 	AllocationID             string        `json:"allocation_id" gorm:"uniqueIndex"`
-	AllocationName           string        `json:"allocation_name" gorm:"column:allocation_name;size:64;"`
 	TransactionID            string        `json:"transaction_id"`
 	DataShards               int           `json:"data_shards"`
 	ParityShards             int           `json:"parity_shards"`
@@ -24,7 +24,6 @@ type Allocation struct {
 	Expiration               int64         `json:"expiration"`
 	Owner                    string        `json:"owner" gorm:"index:idx_aowner"`
 	OwnerPublicKey           string        `json:"owner_public_key"`
-	IsImmutable              bool          `json:"is_immutable"`
 	ReadPriceMin             currency.Coin `json:"read_price_min"`
 	ReadPriceMax             currency.Coin `json:"read_price_max"`
 	WritePriceMin            currency.Coin `json:"write_price_min"`
@@ -45,6 +44,9 @@ type Allocation struct {
 	FailedChallenges         int64         `json:"failed_challenges"`
 	LatestClosedChallengeTxn string        `json:"latest_closed_challenge_txn"`
 	WritePool                currency.Coin `json:"write_pool"`
+	ThirdPartyExtendable     bool          `json:"third_party_extendable"`
+	FileOptions              uint16        `json:"file_options"`
+
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:AllocationID"`
@@ -87,19 +89,6 @@ func (edb *EventDb) GetActiveAllocationsCount() (int64, error) {
 	return count, nil
 }
 
-func (edb *EventDb) GetActiveAllocsBlobberCount() (int64, error) {
-	var count int64
-	err := edb.Store.Get().
-		Raw("SELECT SUM(parity_shards) + SUM(data_shards) FROM allocations WHERE finalized = ? AND cancelled = ?",
-			false, false).
-		Scan(&count).Error
-	if err != nil {
-		return 0, fmt.Errorf("error retrieving blobber allocations count, error: %v", err)
-	}
-
-	return count, nil
-}
-
 func (edb *EventDb) addAllocations(allocs []Allocation) error {
 	return edb.Store.Get().Create(&allocs).Error
 }
@@ -119,7 +108,6 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"expiration",
 		"owner",
 		"owner_public_key",
-		"is_immutable",
 		"read_price_min",
 		"read_price_max",
 		"write_price_min",
@@ -140,6 +128,8 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"successful_challenges",
 		"failed_challenges",
 		"latest_closed_challenge_txn",
+		"third_party_extendable",
+		"file_options",
 	}
 
 	defer func() {
@@ -167,7 +157,7 @@ func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("event db - update allocation stakes slow",
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.Int("num", len(allocs)))
 		}
 	}()

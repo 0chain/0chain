@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/currency"
 
+	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,6 @@ func TestAuthorizers(t *testing.T) {
 		URL:             "http://localhost:8080",
 		Latitude:        0.0,
 		Longitude:       0.0,
-		LastHealthCheck: time.Now().Unix(),
 		Provider: Provider{
 			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 			DelegateWallet: "delegate wallet",
@@ -52,6 +52,7 @@ func TestAuthorizers(t *testing.T) {
 			MaxStake:       currency.Coin(57),
 			NumDelegates:   59,
 			ServiceCharge:  61.0,
+			LastHealthCheck: common.Timestamp(time.Now().Unix()),
 		},
 	}
 
@@ -59,7 +60,6 @@ func TestAuthorizers(t *testing.T) {
 		URL:             "http://localhost:8888",
 		Latitude:        1.0,
 		Longitude:       1.0,
-		LastHealthCheck: time.Now().Unix(),
 		Provider: Provider{
 			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 			DelegateWallet: "delegate wallet",
@@ -67,6 +67,7 @@ func TestAuthorizers(t *testing.T) {
 			MaxStake:       currency.Coin(57),
 			NumDelegates:   60,
 			ServiceCharge:  50.0,
+			LastHealthCheck: common.Timestamp(time.Now().Unix()),
 		},
 	}
 

@@ -72,14 +72,14 @@ func TestBlobbers(t *testing.T) {
 			MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
 			Capacity:         sn.Capacity,
 			Allocated:        sn.Allocated,
-			LastHealthCheck:  int64(sn.LastHealthCheck),
 			Provider: Provider{
-				ID:             sn.ID,
-				DelegateWallet: sn.StakePoolSettings.DelegateWallet,
-				MinStake:       sn.StakePoolSettings.MaxStake,
-				MaxStake:       sn.StakePoolSettings.MaxStake,
-				NumDelegates:   sn.StakePoolSettings.NumDelegates,
-				ServiceCharge:  sn.StakePoolSettings.ServiceCharge,
+				ID:              sn.ID,
+				DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
+				MinStake:        sn.StakePoolSettings.MaxStake,
+				MaxStake:        sn.StakePoolSettings.MaxStake,
+				NumDelegates:    sn.StakePoolSettings.NumDelegates,
+				ServiceCharge:   sn.StakePoolSettings.ServiceCharge,
+				LastHealthCheck: sn.LastHealthCheck,
 			},
 			SavedData: sn.SavedData,
 		}
@@ -131,6 +131,15 @@ func TestBlobbers(t *testing.T) {
 		},
 		SavedData: 10,
 	}
+	blobber1 := Blobber{
+		Provider: Provider{
+			ID:              "id1",
+			LastHealthCheck: 51,
+		},
+		Capacity:  43,
+		Allocated: 47,
+	}
+
 	SnBlobber := convertSn(sn)
 	data, err := json.Marshal(&SnBlobber)
 	require.NoError(t, err)
@@ -140,9 +149,26 @@ func TestBlobbers(t *testing.T) {
 		TxHash:      "tx hash",
 		Type:        TypeStats,
 		Tag:         TagAddBlobber,
-		Data:        string(data),
+		Data:        blobber1,
 	}
-	events := []Event{eventAddSn}
+
+	blobber2 := Blobber{
+		Provider: Provider{
+			ID:              "id2",
+			LastHealthCheck: 1,
+		},
+		Capacity:  3,
+		Allocated: 7,
+	}
+	eventAddSn2 := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash",
+		Type:        TypeStats,
+		Tag:         TagAddBlobber,
+		Data:        blobber2,
+	}
+
+	events := []Event{eventAddSn, eventAddSn2}
 	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
 
 	blobber, err := eventDb.GetBlobber(sn.ID)

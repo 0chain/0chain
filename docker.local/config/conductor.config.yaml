@@ -110,49 +110,49 @@ nodes:
     id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
     work_dir: "../blobber/docker.local/blobber1"
     env: BLOBBER=1
-    start_command: "docker-compose -p blobber1 -f ../b0docker-compose.yml up"
-    stop_command: "docker-compose -p blobber1 -f ../b0docker-compose.yml down"
+    start_command: "docker-compose -p blobber1 -f ../conductor-b0docker-compose.yml up"
+    stop_command: "docker-compose -p blobber1 -f ../conductor-b0docker-compose.yml down"
 
   - name: "blobber-2"
     id: 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
     work_dir: "../blobber/docker.local/blobber2"
     env: BLOBBER=2
-    start_command: "docker-compose -p blobber2 -f ../b0docker-compose.yml up"
-    stop_command: "docker-compose -p blobber2 -f ../b0docker-compose.yml down"
+    start_command: "docker-compose -p blobber2 -f ../conductor-b0docker-compose.yml up"
+    stop_command: "docker-compose -p blobber2 -f ../conductor-b0docker-compose.yml down"
 
   - name: "blobber-3"
     id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
     work_dir: "../blobber/docker.local/blobber3"
     env: BLOBBER=3
-    start_command: "docker-compose -p blobber3 -f ../b0docker-compose.yml up"
-    stop_command: "docker-compose -p blobber3 -f ../b0docker-compose.yml down"
+    start_command: "docker-compose -p blobber3 -f ../conductor-b0docker-compose.yml up"
+    stop_command: "docker-compose -p blobber3 -f ../conductor-b0docker-compose.yml down"
 
   - name: "blobber-4"
     id: 2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
     work_dir: "../blobber/docker.local/blobber4"
     env: BLOBBER=4
-    start_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml up"
-    stop_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml down"
+    start_command: "docker-compose -p blobber4 -f ../conductor-b0docker-compose.yml up"
+    stop_command: "docker-compose -p blobber4 -f ../conductor-b0docker-compose.yml down"
 
   # authorizer
   - name: "authorizer-1"
-    id: fb276b545a4c2f1d1771f2f9cdbf106f78ea1b2c7ea4ca763161145ec891aa26
+    id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     work_dir: "../token_bridge_authserver/docker.local/auth1"
-    env: AUTHORIZER=1,ETH_MNEMONIC=proud magnet gaze juice win budget tonight comfort swallow expire need start,ETH_UNLOCKPASSWORD=password123,ETH_ADDRESS=0xbcfcd404c50f0cd6fa1c1ac1e7f7f2826999fb8a,ETH_PK=0x2006940444fec70072bdaadb519d68b4c60b15880721d9d09921fef545bc1d0a
+    env: AUTHORIZER=1,ETH_MNEMONIC=symbol alley celery diesel donate moral almost opinion achieve since diamond page,ETH_UNLOCKPASSWORD="02289b9",ETH_ADDRESS=0xD8c9156e782C68EE671C09b6b92de76C97948432,ETH_PK=0x02289b950644fabe16066881320b4dcdfdad80143c5e07de6c737e9be8c7037f9e
     start_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
   - name: "authorizer-2"
-    id: 45ad4982464f7e47d1160b608fb9285a1d0a1e1f6242f00acb02118179224f13
+    id: 47c534abb2bcb33e9944aee9a0df0e0adc4c0b659b9499aa656920975c38a80a
     work_dir: "../token_bridge_authserver/docker.local/auth2"
-    env: AUTHORIZER=2,ETH_MNEMONIC=blame bubble mistake evolve oven ethics race fresh dinosaur woman love slam,ETH_UNLOCKPASSWORD=password123,ETH_ADDRESS=0x035E97Dd1DA12C35a5b4868C3853e7747C0B1237,ETH_PK=0xaa4d77fa8dbaebe4ac848e84514076919110dee2c85e7ac34d3e1c981f99a637
+    env: AUTHORIZER=2,ETH_MNEMONIC=office peanut sail help sword minor gospel shoot execute prosper flip know,ETH_UNLOCKPASSWORD="12345678",ETH_ADDRESS=0x557850520d8AcD3177B445CAaeD6410899Ef976a,ETH_PK=0xd6c937942ac3dcf36c8109aeadf0af1567b5d41a45d88924608dbb8857109396
     start_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
   - name: "authorizer-3"
-    id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    id: 7f2097074f678d08146e5585d6965b04307939fee0457ea18c4242bff197c65a
     work_dir: "../token_bridge_authserver/docker.local/auth3"
-    env: AUTHORIZER=3,ETH_MNEMONIC=whip figure access later easily either amazing menu spy exile pyramid identify,ETH_UNLOCKPASSWORD=password123,ETH_ADDRESS=0x84232D61d3a8f4Fca7d8f29893C43aE79D492ceB,ETH_PK=0x4fffe76ab041cec36f2017ba7437882366e36d508dc89bf08fe42fdcef8d939e
+    env: AUTHORIZER=3,ETH_MNEMONIC=acid dismiss fantasy already fossil material yellow present awkward debris rude oval,ETH_UNLOCKPASSWORD="12345678",ETH_ADDRESS=0xfa0204737fB21F565FcF5293FD1Efc0f89f2D158,ETH_PK=0xb9226048816807399cb8123a0216fb8b1f9b0e54020283609cc25ac4faae7284
     start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
@@ -301,4 +301,12 @@ commands:
   burn_zcn:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/burn_zcn.sh"
+    should_fail: false
+  mint_wzcn:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/mint_wzcn.sh"
+    should_fail: false
+  mint_zcn:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/mint_zcn.sh"
     should_fail: false

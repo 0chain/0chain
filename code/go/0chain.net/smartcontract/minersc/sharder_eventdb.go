@@ -10,40 +10,43 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.DelegatePool) MinerNode {
+func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.DelegatePool) NodeResponse {
 	var status = node.NodeStatusInactive
 	if edbSharder.Active {
 		status = node.NodeStatusActive
 	}
-	msn := SimpleNode{
-		ID:          edbSharder.ID,
-		N2NHost:     edbSharder.N2NHost,
-		Host:        edbSharder.Host,
-		Port:        edbSharder.Port,
-		Path:        edbSharder.Path,
-		PublicKey:   edbSharder.PublicKey,
-		ShortName:   edbSharder.ShortName,
-		BuildTag:    edbSharder.BuildTag,
-		TotalStaked: edbSharder.TotalStake,
-		Delete:      edbSharder.Delete,
+	msn := SimpleNodeResponse{
+		SimpleNode: SimpleNode{
+			ID:          edbSharder.ID,
+			N2NHost:     edbSharder.N2NHost,
+			Host:        edbSharder.Host,
+			Port:        edbSharder.Port,
+			Path:        edbSharder.Path,
+			PublicKey:   edbSharder.PublicKey,
+			ShortName:   edbSharder.ShortName,
+			BuildTag:    edbSharder.BuildTag,
+			TotalStaked: edbSharder.TotalStake,
+			Delete:      edbSharder.Delete,
 
-		LastHealthCheck: edbSharder.LastHealthCheck,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbSharder.Latitude,
-			Longitude: edbSharder.Longitude,
+			LastHealthCheck: edbSharder.LastHealthCheck,
+			Geolocation: SimpleNodeGeolocation{
+				Latitude:  edbSharder.Latitude,
+				Longitude: edbSharder.Longitude,
+			},
+			NodeType: NodeTypeSharder,
+			Status:   status,
 		},
-		NodeType: NodeTypeSharder,
-		Status:   status,
+		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
 	}
 
-	sn := MinerNode{
-		SimpleNode: &msn,
-		StakePool: &stakepool.StakePool{
+	sn := NodeResponse{
+		SimpleNodeResponse: &msn,
+		StakePoolResponse: &StakePoolResponse{
 			Reward: edbSharder.Rewards.Rewards,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbSharder.DelegateWallet,
 				ServiceChargeRatio: edbSharder.ServiceCharge,
-				MaxNumDelegates:    edbSharder.NumDelegates,
+				MaxNumDelegates:    edbSharder.Provider.NumDelegates,
 				MinStake:           edbSharder.MinStake,
 				MaxStake:           edbSharder.MaxStake,
 			},
@@ -52,14 +55,17 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 	if len(delegates) == 0 {
 		return sn
 	}
-	sn.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	sn.StakePoolResponse.Pools = make(map[string]*DelegatePoolResponse)
 	for _, delegate := range delegates {
-		sn.StakePool.Pools[delegate.PoolID] = &stakepool.DelegatePool{
-			Balance:      delegate.Balance,
-			Reward:       delegate.Reward,
-			Status:       spenum.PoolStatus(delegate.Status),
-			RoundCreated: delegate.RoundCreated,
-			DelegateID:   delegate.DelegateID,
+		sn.StakePoolResponse.Pools[delegate.PoolID] = &DelegatePoolResponse{
+			DelegatePool: stakepool.DelegatePool{
+				Balance:      delegate.Balance,
+				Reward:       delegate.Reward,
+				Status:       spenum.PoolStatus(delegate.Status),
+				RoundCreated: delegate.RoundCreated,
+				DelegateID:   delegate.DelegateID,
+			},
+			RoundPoolLastUpdated: delegate.RoundPoolLastUpdated,
 		}
 	}
 	return sn
@@ -67,7 +73,6 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 }
 
 func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
-
 	return event.Sharder{
 		N2NHost:   sn.N2NHost,
 		Host:      sn.Host,
@@ -90,8 +95,8 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 				Rewards:      sn.Reward,
 				TotalRewards: sn.Reward,
 			},
+			LastHealthCheck: sn.LastHealthCheck,
 		},
-		LastHealthCheck: sn.LastHealthCheck,
 
 		Active:    sn.Status == node.NodeStatusActive,
 		Longitude: sn.Geolocation.Longitude,
@@ -99,21 +104,22 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 	}
 }
 
-//func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) error {
-//
-//	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
-//
-//	logging.Logger.Warn("emit sharder - add sharder", zap.String("id", sn.ID))
-//	return nil
-//}
+func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
+}
 
-func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) error {
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sn.ID, sharderNodeToSharderTable(sn))
+func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
+	data := dbs.DbHealthCheck{
+		ID:              sn.ID,
+		LastHealthCheck: sn.LastHealthCheck,
+		Downtime:        downtime,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)
 	return nil
 }
 
 func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
-
 	dbUpdates := dbs.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
@@ -147,7 +153,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 }
 
 func emitDeleteSharder(id string, balances cstate.StateContextI) error {
-
 	balances.EmitEvent(event.TypeStats, event.TagDeleteSharder, id, id)
 	return nil
 }

@@ -9,7 +9,7 @@ on:
 jobs:
   CONDUCTOR_BLOBBERS_02_TESTS:
     name: CONDUCTOR-BLOBBERS-02-TESTS
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [self-hosted, conductor-test03]
 
     steps:
     - name: Go 1.18 setup.
@@ -43,6 +43,8 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         cd 0chain
         make install-mockery
         make build-mocks
@@ -120,6 +122,7 @@ jobs:
 
     - name: Init setup for blobbers
       run: |
+        chmod +x blobber/docker.local/bin/blobber.init.setup.sh
         cd blobber && ./docker.local/bin/blobber.init.setup.sh
 
     - name: Build blobber base
@@ -168,6 +171,10 @@ jobs:
       with:
         name: Conductor-test-logs
         path: ./con-tests-logs.tar.gz
+
+    - name: Cleanup
+      run: |
+        rm -rf *
 
     # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
     #   run: |

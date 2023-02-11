@@ -86,7 +86,7 @@ func (c *Chain) RegisterClient() {
 			if err != nil {
 				logging.Logger.Error("error in register client",
 					zap.Error(err),
-					zap.Any("body", body),
+					zap.ByteString("body", body),
 					zap.Int("registered", registered),
 					zap.Int("consensus", consensus))
 			} else {
@@ -149,7 +149,7 @@ func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.No
 
 		if err != nil {
 			logging.Logger.Error("failed to get block state node",
-				zap.Any("error", err), zap.String("path", sp))
+				zap.Error(err), zap.String("path", sp))
 			return false
 		}
 
@@ -165,7 +165,7 @@ func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.No
 		err = httpclientutil.MakeSCRestAPICall(ctx, minersc.ADDRESS, relPath, nil,
 			sharders, allNodesList, 1)
 		if err != nil {
-			logging.Logger.Error("is registered", zap.Any("error", err))
+			logging.Logger.Error("is registered", zap.Error(err))
 			return false
 		}
 	}
@@ -222,7 +222,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		} else {
 			blockSummary, err := httpclientutil.GetBlockSummaryCall(urls, 1, false)
 			if err != nil {
-				logging.Logger.Info("confirm transaction", zap.Any("confirmation", false))
+				logging.Logger.Info("confirm transaction", zap.Bool("confirmation", false))
 				return false
 			}
 			pastTime = blockSummary != nil && !common.WithinTime(int64(blockSummary.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
@@ -507,7 +507,7 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 
 	t := time.Now()
 	defer func() {
-		logging.Logger.Debug("GetFromSharders", zap.Any("duration", time.Since(t)))
+		logging.Logger.Debug("GetFromSharders", zap.Duration("duration", time.Since(t)))
 	}()
 
 	wg := &sync.WaitGroup{}

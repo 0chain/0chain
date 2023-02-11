@@ -19,6 +19,16 @@ import (
 	"0chain.net/core/datastore"
 )
 
+var (
+	stakeHandlers = map[spenum.Provider]func(ID string, totalStake currency.Coin) (tag event.EventTag, data interface{}){
+		spenum.Blobber:    event.NewUpdateBlobberTotalStakeEvent,
+		spenum.Validator:  event.NewUpdateValidatorTotalStakeEvent,
+		spenum.Miner:      event.NewUpdateMinerTotalStakeEvent,
+		spenum.Sharder:    event.NewUpdateSharderTotalStakeEvent,
+		spenum.Authorizer: event.NewUpdateAuthorizerTotalStakeEvent,
+	}
+)
+
 func CheckClientBalance(
 	clientId string,
 	toLock currency.Coin,
@@ -66,9 +76,8 @@ func (sp *StakePool) LockPool(
 			RoundCreated: balances.GetBlock().Round,
 			StakedAt:     txn.CreationDate,
 		}
-
 		sp.Pools[newPoolId] = dp
-
+		dp.EmitNew(newPoolId, providerId, providerType, balances)
 	} else {
 		// stake from the same clients
 		if dp.DelegateID != txn.ClientID {
@@ -87,6 +96,10 @@ func (sp *StakePool) LockPool(
 
 		dp.Balance = b
 		dp.StakedAt = txn.CreationDate
+
+		update := newDelegatePoolUpdate(newPoolId, providerId, providerType)
+		update.Updates["balance"] = dp.Balance
+		update.emitUpdate(balances)
 	}
 
 	i, _ := txn.Value.Int64()
@@ -97,6 +110,8 @@ func (sp *StakePool) LockPool(
 		ProviderId:   providerId,
 		ProviderType: providerType,
 		Amount:       i,
+		Reward:       currency.Coin(0),
+		Total:        i,
 	}
 	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, lock)
 
@@ -105,8 +120,6 @@ func (sp *StakePool) LockPool(
 	)); err != nil {
 		return "", err
 	}
-
-	dp.EmitNew(newPoolId, providerId, providerType, balances)
 
 	return toJson(lock), nil
 }
@@ -118,25 +131,13 @@ func (sp *StakePool) EmitStakeEvent(providerType spenum.Provider, providerID str
 	}
 
 	logging.Logger.Info("emitting stake event")
-	switch providerType {
-	case spenum.Blobber:
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Validator:
-		tag, data := event.NewUpdateValidatorTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Miner:
-		tag, data := event.NewUpdateMinerTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Sharder:
-		tag, data := event.NewUpdateSharderTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	case spenum.Authorizer:
-		tag, data := event.NewUpdateAuthorizerTotalStakeEvent(providerID, staked)
-		balances.EmitEvent(event.TypeStats, tag, providerID, data)
-	default:
-		logging.Logger.Error("unsupported providerType in stakepool StakeEvent")
+
+	h, ok := stakeHandlers[providerType]
+	if !ok {
+		return errors.New("unsupported providerType in stakepool StakeEvent")
 	}
 
+	tag, data := h(providerID, staked)
+	balances.EmitEvent(event.TypeStats, tag, providerID, data)
 	return nil
 }

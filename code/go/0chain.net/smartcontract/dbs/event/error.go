@@ -2,13 +2,13 @@ package event
 
 import (
 	"0chain.net/smartcontract/common"
-	"gorm.io/gorm"
+	"0chain.net/smartcontract/dbs/model"
 	"gorm.io/gorm/clause"
 )
 
 // swagger:model Error
 type Error struct {
-	gorm.Model
+	model.ImmutableModel
 	TransactionID string
 	Error         string
 }

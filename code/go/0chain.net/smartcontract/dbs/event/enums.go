@@ -13,12 +13,23 @@ const (
 	NumberOfTypes
 )
 
+// ProviderTable Table names of all providers in events_db, used in general provider handlers
+type ProviderTable string
+
+const (
+	MinerTable      ProviderTable = "miners"
+	SharderTable    ProviderTable = "sharders"
+	BlobberTable    ProviderTable = "blobbers"
+	AuthorizerTable ProviderTable = "authorizers"
+	ValidatorTable  ProviderTable = "validators"
+)
+
 func (t EventType) String() string {
-	if int(t) < len(TagString) && int(t) >= 0 {
-		return TagString[t]
+	if int(t) < len(TypeString) && int(t) >= 0 {
+		return TypeString[t]
 	}
 
-	return "unknown tag"
+	return "unknown type"
 }
 
 func (t EventType) Int() int {
@@ -31,6 +42,7 @@ const (
 	TagUpdateBlobber
 	TagUpdateBlobberAllocatedHealth
 	TagUpdateBlobberTotalStake
+	TagUpdateBlobberTotalUnStake
 	TagUpdateBlobberTotalOffers
 	TagDeleteBlobber
 	TagAddAuthorizer
@@ -44,16 +56,16 @@ const (
 	TagAddOrOverwiteValidator
 	TagUpdateValidator
 	TagAddReadMarker
-	TagAddOrOverwriteMiner
+	TagAddMiner
 	TagUpdateMiner
 	TagDeleteMiner
-	TagAddOrOverwriteSharder
+	TagAddSharder
 	TagUpdateSharder
 	TagDeleteSharder
 	TagAddOrOverwriteCurator
 	TagRemoveCurator
 	TagStakePoolReward
-	TagAddOrOverwriteDelegatePool
+	TagAddDelegatePool
 	TagUpdateDelegatePool
 	TagAddAllocation
 	TagUpdateAllocationStakes
@@ -71,8 +83,6 @@ const (
 	TagUpdateAllocationStat
 	TagUpdateBlobberStat
 	TagCollectProviderReward
-	TagSendTransfer
-	TagReceiveTransfer
 	TagLockStakePool
 	TagUnlockStakePool
 	TagLockWritePool
@@ -87,10 +97,21 @@ const (
 	TagAllocBlobberValueChange
 	TagUpdateBlobberOpenChallenges
 	TagUpdateValidatorStakeTotal
+	TagUpdateValidatorUnStakeTotal
 	TagUpdateMinerTotalStake
+	TagUpdateMinerTotalUnStake
 	TagUpdateSharderTotalStake
+	TagUpdateSharderTotalUnStake
 	TagUpdateAuthorizerTotalStake
+	TagUpdateAuthorizerTotalUnStake
 	TagUniqueAddress
+	TagMinerHealthCheck
+	TagSharderHealthCheck
+	TagBlobberHealthCheck
+	TagAuthorizerHealthCheck
+	TagValidatorHealthCheck
+	TagUpdateUserPayedFees
+	TagUpdateUserCollectedRewards
 	NumberOfTags
 )
 
@@ -120,6 +141,7 @@ func initTagString() {
 	TagString[TagUpdateBlobber] = "TagUpdateBlobber"
 	TagString[TagUpdateBlobberAllocatedHealth] = "TagUpdateBlobberAllocatedHealth"
 	TagString[TagUpdateBlobberTotalStake] = "TagUpdateBlobberTotalStake"
+	TagString[TagUpdateBlobberTotalUnStake] = "TagUpdateBlobberTotalUnStake"
 	TagString[TagUpdateBlobberTotalOffers] = "TagUpdateBlobberTotalOffers"
 	TagString[TagDeleteBlobber] = "TagDeleteBlobber"
 	TagString[TagAddAuthorizer] = "TagAddAuthorizer"
@@ -133,16 +155,16 @@ func initTagString() {
 	TagString[TagAddOrOverwiteValidator] = "TagAddOrOverwiteValidator"
 	TagString[TagUpdateValidator] = "TagUpdateValidator"
 	TagString[TagAddReadMarker] = "TagAddReadMarker"
-	TagString[TagAddOrOverwriteMiner] = "TagAddOrOverwriteMiner"
+	TagString[TagAddMiner] = "TagAddMiner"
 	TagString[TagUpdateMiner] = "TagUpdateMiner"
 	TagString[TagDeleteMiner] = "TagDeleteMiner"
-	TagString[TagAddOrOverwriteSharder] = "TagAddOrOverwriteSharder"
+	TagString[TagAddSharder] = "TagAddSharder"
 	TagString[TagUpdateSharder] = "TagUpdateSharder"
 	TagString[TagDeleteSharder] = "TagDeleteSharder"
 	TagString[TagAddOrOverwriteCurator] = "TagAddOrOverwriteCurator"
 	TagString[TagRemoveCurator] = "TagRemoveCurator"
 	TagString[TagStakePoolReward] = "TagStakePoolReward"
-	TagString[TagAddOrOverwriteDelegatePool] = "TagAddOrOverwriteDelegatePool"
+	TagString[TagAddDelegatePool] = "TagAddDelegatePool"
 	TagString[TagUpdateDelegatePool] = "TagUpdateDelegatePool"
 	TagString[TagAddAllocation] = "TagAddAllocation"
 	TagString[TagUpdateAllocationStakes] = "TagUpdateAllocationStakes"
@@ -160,8 +182,6 @@ func initTagString() {
 	TagString[TagUpdateAllocationStat] = "TagUpdateAllocationStat"
 	TagString[TagUpdateBlobberStat] = "TagUpdateBlobberStat"
 	TagString[TagCollectProviderReward] = "TagCollectProviderReward"
-	TagString[TagSendTransfer] = "TagSendTransfer"
-	TagString[TagReceiveTransfer] = "TagReceiveTransfer"
 	TagString[TagLockStakePool] = "TagLockStakePool"
 	TagString[TagUnlockStakePool] = "TagUnlockStakePool"
 	TagString[TagLockWritePool] = "TagLockWritePool"
@@ -176,10 +196,18 @@ func initTagString() {
 	TagString[TagAllocBlobberValueChange] = "TagAllocBlobberValueChange"
 	TagString[TagUpdateBlobberOpenChallenges] = "TagUpdateBlobberOpenChallenges"
 	TagString[TagUpdateValidatorStakeTotal] = "TagUpdateValidatorStakeTotal"
-	TagString[TagUpdateMinerTotalStake] = "TagUpdateMinerTotalStake"
-	TagString[TagUpdateSharderTotalStake] = "TagUpdateSharderTotalStake"
-	TagString[TagUpdateAuthorizerTotalStake] = "TagUpdateAuthorizerTotalStake"
+	TagString[TagUpdateValidatorUnStakeTotal] = "TagUpdateValidatorUnStakeTotal"
+	TagString[TagUpdateMinerTotalUnStake] = "TagUpdateMinerTotalUnStake"
+	TagString[TagUpdateSharderTotalUnStake] = "TagUpdateSharderTotalUnStake"
+	TagString[TagUpdateAuthorizerTotalUnStake] = "TagUpdateAuthorizerTotalUnStake"
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
+	TagString[TagMinerHealthCheck] = "TagMinerHealthCheck"
+	TagString[TagSharderHealthCheck] = "TagSharderHealthCheck"
+	TagString[TagBlobberHealthCheck] = "TagBlobberHealthCheck"
+	TagString[TagAuthorizerHealthCheck] = "TagAuthorizerHealthCheck"
+	TagString[TagValidatorHealthCheck] = "TagValidatorHealthCheck"
+	TagString[TagUpdateUserPayedFees] = "TagUpdateUserPayedFees"
+	TagString[TagUpdateUserCollectedRewards] = "TagUpdateUserCollectedRewards"
 	TagString[NumberOfTags] = "invalid"
 }
 

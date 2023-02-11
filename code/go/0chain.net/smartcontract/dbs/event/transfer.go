@@ -1,12 +1,17 @@
 package event
 
-import "0chain.net/smartcontract/stakepool/spenum"
+import (
+	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
+)
 
 type DelegatePoolLock struct {
 	Client       string          `json:"client"`
 	ProviderId   string          `json:"provider_id"`
 	ProviderType spenum.Provider `json:"provider_type"`
 	Amount       int64           `json:"amount"`
+	Reward		 currency.Coin   `json:"reward"`
+	Total		 int64			 `json:"total"`
 }
 
 type ReadPoolLock struct {

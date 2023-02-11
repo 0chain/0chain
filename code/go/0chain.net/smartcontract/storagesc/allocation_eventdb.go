@@ -95,7 +95,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	sa := &StorageAllocation{
 		ID:             alloc.AllocationID,
 		Tx:             alloc.TransactionID,
-		Name:           alloc.AllocationName,
 		DataShards:     alloc.DataShards,
 		ParityShards:   alloc.ParityShards,
 		Size:           alloc.Size,
@@ -103,6 +102,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		Owner:          alloc.Owner,
 		OwnerPublicKey: alloc.OwnerPublicKey,
 		WritePool:      alloc.WritePool,
+		ThirdPartyExtendable: alloc.ThirdPartyExtendable,
+		FileOptions: alloc.FileOptions,
 		Stats: &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
@@ -115,7 +116,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		},
 		BlobberAllocs:     blobberDetails,
 		BlobberAllocsMap:  blobberMap,
-		IsImmutable:       alloc.IsImmutable,
 		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
 		WritePriceRange:   PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
 		StartTime:         common.Timestamp(alloc.StartTime),
@@ -138,7 +138,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
 	alloc := &event.Allocation{
 		AllocationID:      sa.ID,
-		AllocationName:    sa.Name,
 		TransactionID:     sa.Tx,
 		DataShards:        sa.DataShards,
 		ParityShards:      sa.ParityShards,
@@ -147,7 +146,6 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		Terms:             sa.buildEventBlobberTerms(),
 		Owner:             sa.Owner,
 		OwnerPublicKey:    sa.OwnerPublicKey,
-		IsImmutable:       sa.IsImmutable,
 		ReadPriceMin:      sa.ReadPriceRange.Min,
 		ReadPriceMax:      sa.ReadPriceRange.Max,
 		WritePriceMin:     sa.WritePriceRange.Min,
@@ -161,6 +159,8 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		MovedToValidators: sa.MovedToValidators,
 		TimeUnit:          int64(sa.TimeUnit),
 		WritePool:         sa.WritePool,
+		ThirdPartyExtendable: sa.ThirdPartyExtendable,
+		FileOptions: sa.FileOptions,
 	}
 
 	if sa.Stats != nil {
@@ -195,7 +195,6 @@ func (sa *StorageAllocation) buildEventBlobberTerms() []event.AllocationBlobberT
 func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 	eAlloc := event.Allocation{
 		AllocationID:      sa.ID,
-		AllocationName:    sa.Name,
 		TransactionID:     sa.Tx,
 		DataShards:        sa.DataShards,
 		ParityShards:      sa.ParityShards,
@@ -203,7 +202,6 @@ func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 		Expiration:        int64(sa.Expiration),
 		Owner:             sa.Owner,
 		OwnerPublicKey:    sa.OwnerPublicKey,
-		IsImmutable:       sa.IsImmutable,
 		ReadPriceMin:      sa.ReadPriceRange.Min,
 		ReadPriceMax:      sa.ReadPriceRange.Max,
 		WritePriceMin:     sa.WritePriceRange.Min,
@@ -217,6 +215,8 @@ func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 		MovedToValidators: sa.MovedToValidators,
 		TimeUnit:          int64(sa.TimeUnit),
 		WritePool:         sa.WritePool,
+		ThirdPartyExtendable: sa.ThirdPartyExtendable,
+		FileOptions:	   sa.FileOptions,
 	}
 
 	if sa.Stats != nil {

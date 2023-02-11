@@ -41,6 +41,11 @@ func AddMockNodes(
 	balances cstate.StateContextI,
 	getIdAndPublicKey func() (string, string, error),
 ) ([]string, []string) {
+	const (
+		delegateReward      = 0.3 * 1e10
+		providerReward      = 0.1 * 1e10
+		delegatePoolBalance = 100 * 1e10
+	)
 	var (
 		err                error
 		nodes, publickKeys []string
@@ -79,17 +84,18 @@ func AddMockNodes(
 		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
+		newNode.Reward = providerReward
 		publickKeys = append(publickKeys, newNode.PublicKey)
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
+			poolId := getMinerDelegatePoolId(i, dId, nodeType)
 			pool := stakepool.DelegatePool{
-				Balance:      100 * 1e10,
-				Reward:       0.3 * 1e10,
-				DelegateID:   clients[dId],
+				Balance:      delegatePoolBalance,
+				Reward:       delegateReward,
+				DelegateID:   poolId,
 				RoundCreated: 1,
 				Status:       spenum.Active,
 			}
-			poolId := getMinerDelegatePoolId(i, dId, nodeType)
 			if i < numActive {
 				pool.Status = spenum.Active
 			} else {
@@ -119,15 +125,18 @@ func AddMockNodes(
 			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
 
-					LastHealthCheck: newNode.LastHealthCheck,
-					PublicKey:       newNode.PublicKey,
+					PublicKey: newNode.PublicKey,
 					Provider: event.Provider{
 						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
 						MinStake:      newNode.Settings.MinStake,
 						MaxStake:      newNode.Settings.MaxStake,
-						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+						Rewards: event.ProviderRewards{
+							ProviderID:                    newNode.ID,
+							RoundServiceChargeLastUpdated: 7,
+						},
+						LastHealthCheck: newNode.LastHealthCheck,
 					},
 				}
 				if err = eventDb.Store.Get().Create(&minerDb).Error; err != nil {
@@ -135,16 +144,18 @@ func AddMockNodes(
 				}
 			} else {
 				sharderDb := event.Sharder{
-
-					LastHealthCheck: newNode.LastHealthCheck,
-					PublicKey:       newNode.PublicKey,
+					PublicKey: newNode.PublicKey,
 					Provider: event.Provider{
-						ID:            newNode.ID,
-						ServiceCharge: newNode.Settings.ServiceChargeRatio,
-						NumDelegates:  newNode.Settings.MaxNumDelegates,
-						MinStake:      newNode.Settings.MinStake,
-						MaxStake:      newNode.Settings.MaxStake,
-						Rewards:       event.ProviderRewards{ProviderID: newNode.ID},
+						LastHealthCheck: newNode.LastHealthCheck,
+						ID:              newNode.ID,
+						ServiceCharge:   newNode.Settings.ServiceChargeRatio,
+						NumDelegates:    newNode.Settings.MaxNumDelegates,
+						MinStake:        newNode.Settings.MinStake,
+						MaxStake:        newNode.Settings.MaxStake,
+						Rewards: event.ProviderRewards{
+							ProviderID:                    newNode.ID,
+							RoundServiceChargeLastUpdated: 11,
+						},
 					},
 				}
 				if err := eventDb.Store.Get().Create(&sharderDb).Error; err != nil {
@@ -153,15 +164,16 @@ func AddMockNodes(
 			}
 			for id, pool := range newNode.Pools {
 				dps = append(dps, event.DelegatePool{
-					PoolID:       id,
-					ProviderType: int(nodeType),
-					ProviderID:   newNode.ID,
-					DelegateID:   pool.DelegateID,
-					Balance:      pool.Balance,
-					Reward:       pool.Reward,
-					TotalReward:  pool.Reward,
-					Status:       int(pool.Status),
-					RoundCreated: pool.RoundCreated,
+					PoolID:               id,
+					ProviderType:         nodeType,
+					ProviderID:           newNode.ID,
+					DelegateID:           pool.DelegateID,
+					Balance:              pool.Balance,
+					Reward:               pool.Reward,
+					TotalReward:          pool.Reward,
+					Status:               pool.Status,
+					RoundCreated:         pool.RoundCreated,
+					RoundPoolLastUpdated: viper.GetInt64(benchmark.NumBlocks),
 				})
 			}
 		}
@@ -210,6 +222,7 @@ func AddMockNodes(
 			log.Fatal(err)
 		}
 	}
+
 	return nodes, publickKeys
 }
 

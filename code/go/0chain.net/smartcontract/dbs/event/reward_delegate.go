@@ -3,23 +3,23 @@ package event
 import (
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/model"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type RewardDelegate struct {
-	gorm.Model
+	model.UpdatableModel
 	Amount      currency.Coin `json:"amount"`
-	BlockNumber int64         `json:"block_number" gorm:"index:idx_block,priority:1"`
-	PoolID      string        `json:"pool_id" gorm:"index:idx_pool,priority:2"`
-	RewardType  spenum.Reward `json:"reward_type" gorm:"index:idx_reward_type,priority:3"`
+	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_del_prov,priority:1"`
+	PoolID      string        `json:"pool_id" gorm:"index:idx_rew_del_prov,priority:2"`
+	RewardType  spenum.Reward `json:"reward_type"`
 }
 
-func (edb *EventDb) insertDelegateReward(updates []dbs.StakePoolReward, round int64) error {
+func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round int64) error {
 	var drs []RewardDelegate
-	for _, sp := range updates {
+	for _, sp := range inserts {
 		for poolId, amount := range sp.DelegateRewards {
 			dr := RewardDelegate{
 				Amount:      amount,
