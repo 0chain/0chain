@@ -37,30 +37,10 @@ func aggregateProviderRewards(
 		}
 
 		// merge delegate rewards and penalties
-		for k, v := range spus[i].DelegateRewards {
-			delegatePools = append(delegatePools, DelegatePool{
-				ProviderID:           sp.ProviderId,
-				ProviderType:         sp.ProviderType,
-				PoolID:               k,
-				Reward:               v,
-				TotalReward:          v,
-				TotalPenalty:         spus[i].DelegatePenalties[k],
-				RoundPoolLastUpdated: round,
-			})
-		}
+		delegatePools = getDelegateRewards(spus, i, delegatePools, sp, round)
 
 		// append remaining penalties if any
-		for k, v := range spus[i].DelegatePenalties {
-			if _, ok := sp.DelegateRewards[k]; !ok {
-				delegatePools = append(delegatePools, DelegatePool{
-					ProviderID:           sp.ProviderId,
-					ProviderType:         sp.ProviderType,
-					PoolID:               k,
-					TotalPenalty:         v,
-					RoundPoolLastUpdated: round,
-				})
-			}
-		}
+		delegatePools = getDelegatePenalties(spus, i, sp, delegatePools, round)
 	}
 
 	return &providerRewardsDelegates{
@@ -68,6 +48,40 @@ func aggregateProviderRewards(
 		delegatePools: delegatePools,
 		desc:          descs,
 	}, nil
+}
+
+func getDelegatePenalties(spus []dbs.StakePoolReward, i int, sp dbs.StakePoolReward, delegatePools []DelegatePool, round int64) []DelegatePool {
+	spus[i].DelegateRewardMutex.RLock()
+	defer spus[i].DelegateRewardMutex.RUnlock()
+	for k, v := range spus[i].DelegatePenalties {
+		if _, ok := sp.DelegateRewards[k]; !ok {
+			delegatePools = append(delegatePools, DelegatePool{
+				ProviderID:           sp.ProviderId,
+				ProviderType:         sp.ProviderType,
+				PoolID:               k,
+				TotalPenalty:         v,
+				RoundPoolLastUpdated: round,
+			})
+		}
+	}
+	return delegatePools
+}
+
+func getDelegateRewards(spus []dbs.StakePoolReward, i int, delegatePools []DelegatePool, sp dbs.StakePoolReward, round int64) []DelegatePool {
+	spus[i].DelegateRewardMutex.RLock()
+	defer spus[i].DelegateRewardMutex.RUnlock()
+	for k, v := range spus[i].DelegateRewards {
+		delegatePools = append(delegatePools, DelegatePool{
+			ProviderID:           sp.ProviderId,
+			ProviderType:         sp.ProviderType,
+			PoolID:               k,
+			Reward:               v,
+			TotalReward:          v,
+			TotalPenalty:         spus[i].DelegatePenalties[k],
+			RoundPoolLastUpdated: round,
+		})
+	}
+	return delegatePools
 }
 
 func mergeStakePoolRewardsEvents() *eventsMergerImpl[dbs.StakePoolReward] {
@@ -81,29 +95,41 @@ func withProviderRewardsPenaltiesAdded() eventMergeMiddleware {
 		a.Reward += b.Reward
 
 		// merge delegate pool rewards
-		for k, v := range b.DelegateRewards {
-			_, ok := a.DelegateRewards[k]
-			if !ok {
-				a.DelegateRewards[k] = v
-				continue
-			}
-
-			a.DelegateRewards[k] += v
-		}
+		getProviderDelegateRewards(b, a)
 
 		// merge delegate pool penalties
-		for k, v := range b.DelegatePenalties {
-			_, ok := a.DelegatePenalties[k]
-			if !ok {
-				a.DelegatePenalties[k] = v
-				continue
-			}
-
-			a.DelegatePenalties[k] += v
-		}
+		getProviderDelegatePenalties(b, a)
 
 		return a, nil
 	})
+}
+
+func getProviderDelegatePenalties(b *dbs.StakePoolReward, a *dbs.StakePoolReward) {
+	b.DelegateRewardMutex.RLock()
+	defer b.DelegateRewardMutex.Unlock()
+	for k, v := range b.DelegatePenalties {
+		_, ok := a.DelegatePenalties[k]
+		if !ok {
+			a.DelegatePenalties[k] = v
+			continue
+		}
+
+		a.DelegatePenalties[k] += v
+	}
+}
+
+func getProviderDelegateRewards(b *dbs.StakePoolReward, a *dbs.StakePoolReward) {
+	b.DelegateRewardMutex.RLock()
+	defer b.DelegateRewardMutex.Unlock()
+	for k, v := range b.DelegateRewards {
+		_, ok := a.DelegateRewards[k]
+		if !ok {
+			a.DelegateRewards[k] = v
+			continue
+		}
+
+		a.DelegateRewards[k] += v
+	}
 }
 
 func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error {
