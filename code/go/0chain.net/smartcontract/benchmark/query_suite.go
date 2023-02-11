@@ -1,6 +1,8 @@
 package benchmark
 
 import (
+	"sync"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/rest"
@@ -31,6 +33,7 @@ type QueryBenchTest struct {
 	shownResult bool
 	address     string
 	source      Source
+	mutex       *sync.RWMutex
 }
 
 func NewQueryBenchTest(
@@ -59,9 +62,11 @@ func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testin
 	rec := httptest.NewRecorder()
 	if len(qbt.Params) > 0 {
 		q := req.URL.Query()
+		qbt.mutex.RLock()
 		for k, v := range qbt.Params {
 			q.Add(k, v)
 		}
+		qbt.mutex.RUnlock()
 		req.URL.RawQuery = q.Encode()
 	}
 	b.StartTimer()

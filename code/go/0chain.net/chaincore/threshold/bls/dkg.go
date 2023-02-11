@@ -100,6 +100,7 @@ func SetDKG(t, n int, shares map[string]string, msk []string, mpks map[PartyID][
 		ID:                   PartyID{},
 		gmpkMutex:            &sync.RWMutex{},
 	}
+	var sharesMutex = &sync.RWMutex{}
 	dkg.ID = ComputeIDdkg(id)
 	for _, v := range msk {
 		var secretKey Key
@@ -113,7 +114,8 @@ func SetDKG(t, n int, shares map[string]string, msk []string, mpks map[PartyID][
 	if err := dkg.AggregatePublicKeyShares(mpks); err != nil {
 		panic(err)
 	}
-
+	sharesMutex.RLock()
+	defer sharesMutex.RUnlock()
 	for k, v := range shares {
 		var secreteShare Key
 		err := secreteShare.SetHexString(v)
@@ -256,12 +258,12 @@ func (dkg *DKG) HasSecretShare(key string) bool {
 	return ok
 }
 
-//Sign - sign using the group secret key share
+// Sign - sign using the group secret key share
 func (dkg *DKG) Sign(msg string) *Sign {
 	return dkg.Si.Sign(msg)
 }
 
-//VerifySignature - verify the signature using the group public key share
+// VerifySignature - verify the signature using the group public key share
 func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 	dkg.gmpkMutex.RLock()
 	defer dkg.gmpkMutex.RUnlock()
@@ -307,7 +309,7 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 	return dkg.RecoverGroupSig(idVec, signVec)
 }
 
-//AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
+// AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
 func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
 	dkg.gmpkMutex.Lock()
 	defer dkg.gmpkMutex.Unlock()
@@ -343,12 +345,12 @@ func (dkg *DKG) DeleteFromSet(nodes []string) {
 	}
 }
 
-//ValidateShare - validate Sij using Pj coefficients
+// ValidateShare - validate Sij using Pj coefficients
 func (dkg *DKG) ValidateShare(jpk []PublicKey, sij bls.SecretKey) bool {
 	return ValidateShare(jpk, sij, dkg.ID)
 }
 
-//ValidateShare - validate Sij using Pj coefficients
+// ValidateShare - validate Sij using Pj coefficients
 func ValidateShare(jpk []PublicKey, sij bls.SecretKey, id PartyID) bool {
 	var expectedSijPK PublicKey
 	if err := expectedSijPK.Set(jpk, &id); err != nil {
@@ -416,8 +418,11 @@ func (dkgSummary *DKGSummary) Delete(ctx context.Context) error {
 	return dkgSummary.GetEntityMetadata().GetStore().Delete(ctx, dkgSummary)
 }
 
-//Verify is used to verify a dkg summary with the mpks
+// Verify is used to verify a dkg summary with the mpks
 func (dkgSummary *DKGSummary) Verify(id PartyID, mpks map[PartyID][]PublicKey) error {
+	var mpksMutex = &sync.RWMutex{}
+	mpksMutex.RLock()
+	defer mpksMutex.Unlock()
 	for k, v := range mpks {
 		var sij Key
 		share := dkgSummary.SecretShares[k.GetHexString()]

@@ -387,13 +387,16 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 		wg.Add(1)
 		go func(sharderURL string) {
 			defer wg.Done()
+			var paramsMutex = &sync.RWMutex{}
 			urlString := fmt.Sprintf("%v/%v%v%v", sharderURL, scRestAPIURL, scAddress, relativePath)
 			logging.N2n.Info("Running SCRestAPI on", zap.String("urlString", urlString))
 			urlObj, _ := url.Parse(urlString)
 			q := urlObj.Query()
+			paramsMutex.RLock()
 			for k, v := range params {
 				q.Add(k, v)
 			}
+			paramsMutex.RUnlock()
 			urlObj.RawQuery = q.Encode()
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlObj.String(), nil)
 			if err != nil {

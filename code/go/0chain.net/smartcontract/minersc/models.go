@@ -800,7 +800,8 @@ type DKGMinerNodes struct {
 	Waited         map[string]bool `json:"waited"`
 
 	// StartRound used to filter responses from old MB where sharders comes up.
-	StartRound int64 `json:"start_round"`
+	StartRound         int64 `json:"start_round"`
+	DKGMinerNodesMutex *sync.RWMutex
 }
 
 func (dkgmn *DKGMinerNodes) setConfigs(gn *GlobalNode) {
@@ -855,6 +856,8 @@ func (dkgmn *DKGMinerNodes) reduceNodes(
 	}
 
 	if final {
+		dkgmn.DKGMinerNodesMutex.RLock()
+		defer dkgmn.DKGMinerNodesMutex.Unlock()
 		simpleNodes := make(SimpleNodes)
 		for k, v := range dkgmn.SimpleNodes {
 			simpleNodes[k] = v

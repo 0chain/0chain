@@ -661,6 +661,8 @@ func (r *Round) GetVRFShares() map[string]*VRFShare {
 }
 
 func (r *Round) getVRFShares() map[string]*VRFShare {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	result := make(map[string]*VRFShare, len(r.shares))
 	for k, v := range r.shares {
 		result[k] = v
