@@ -3001,7 +3001,7 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 	}
 	authorizers, err := edb.ReplicateAuthorizerAggregate(round, authorizerId)
 	if err != nil {
-		err := common.NewErrInternal("cannot get authorizer by rank" + err.Error())
+		err := common.NewErrInternal("cannot get authorizer aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
