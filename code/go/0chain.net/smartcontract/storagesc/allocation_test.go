@@ -1923,6 +1923,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	req = updateAllocationRequest{
 		ID:          alloc.ID,
 		FileOptions: 61,
+		FileOptionsChanged: true,
 	}
 	tp += 100
 	expectedFileOptions := alloc.FileOptions

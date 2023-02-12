@@ -81,6 +81,7 @@ type newAllocationRequest struct {
 	ReadPriceRange       PriceRange       `json:"read_price_range"`
 	WritePriceRange      PriceRange       `json:"write_price_range"`
 	ThirdPartyExtendable bool             `json:"third_party_extendable"`
+	FileOptionsChanged   bool             `json:"file_options_changed"`
 	FileOptions          uint16           `json:"file_options"`
 }
 
@@ -433,6 +434,12 @@ func setupNewAllocation(
 	}
 	m.tick("add_offer")
 
+	if request.FileOptionsChanged {
+		sa.FileOptions = request.FileOptions
+	} else {
+		sa.FileOptions = 63
+	}
+
 	sa.StartTime = now
 	return sa, blobberNodes, nil
 }
@@ -534,6 +541,7 @@ type updateAllocationRequest struct {
 	AddBlobberId            string           `json:"add_blobber_id"`
 	RemoveBlobberId         string           `json:"remove_blobber_id"`
 	SetThirdPartyExtendable bool             `json:"set_third_party_extendable"`
+	FileOptionsChanged      bool             `json:"file_options_changed"`
 	FileOptions             uint16           `json:"file_options"`
 }
 
@@ -551,7 +559,7 @@ func (uar *updateAllocationRequest) validate(
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
 		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) &&
-		uar.FileOptions == alloc.FileOptions {
+		(!uar.FileOptionsChanged || uar.FileOptions == alloc.FileOptions) {
 		return errors.New("update allocation changes nothing")
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
@@ -1250,7 +1258,9 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			alloc.ThirdPartyExtendable = true
 		}
 
-		alloc.FileOptions = request.FileOptions
+		if request.FileOptionsChanged {
+			alloc.FileOptions = request.FileOptions
+		}
 
 		if len(request.RemoveBlobberId) > 0 {
 			balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, []event.AllocationBlobberTerm{
@@ -1740,6 +1750,12 @@ func (sc *StorageSmartContract) finishAllocation(
 		cancellationCharge = alloc.WritePool
 		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
 	}
+
+	alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, cancellationCharge)
+	if err != nil {
+		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
+	}
+
 	reward, _, err := currency.DistributeCoin(cancellationCharge, int64(len(alloc.BlobberAllocs)))
 	if err != nil {
 		return fmt.Errorf("failed to distribute cancellation charge: %v", err)
