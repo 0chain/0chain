@@ -561,10 +561,15 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func getInitialState(tokens currency.Coin) *state.State {
-	balance := &state.State{}
-	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	balance.Balance = tokens
+func mustInitialState(tokens currency.Coin) *state.State {
+	balance := &state.State{
+		Balance: tokens,
+		Nonce:   1,
+	}
+	err := balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+	if err != nil {
+		panic(err)
+	}
 	return balance
 }
 
@@ -576,13 +581,13 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	mustInitPartitions(stateCtx)
 
 	for _, v := range initStates.States {
-		s := getInitialState(v.Tokens)
+		s := mustInitialState(v.Tokens)
 		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
 			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
 		}
 
 		c.emitUserEvent(stateCtx, stateToUser(v.ID, s))
-		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
+		logging.Logger.Debug("init state", zap.String("client ID", v.ID), zap.Any("tokens", v.Tokens))
 	}
 
 	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
@@ -692,7 +697,10 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances *cstate.Stat
 			return common.NewErrorf("stake_pool_lock_failed",
 				"init stake error: %v", err)
 		}
-		logging.Logger.Info("init stake", zap.String("sc ID", v.ProviderID), zap.Any("tokens", v.Tokens))
+		logging.Logger.Info("init stake",
+			zap.String("provider ID", v.ProviderID),
+			zap.String("stake client ID", v.ClientID),
+			zap.Any("tokens", v.Tokens))
 	}
 
 	return nil
