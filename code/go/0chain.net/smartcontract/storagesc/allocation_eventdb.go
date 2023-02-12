@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"0chain.net/chaincore/transaction"
+	"go.uber.org/zap"
 
 	common2 "0chain.net/smartcontract/common"
+	"github.com/0chain/0box/code/core/logging"
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -244,6 +246,7 @@ func (sa *StorageAllocation) buildStakeUpdateEvent() event.Allocation {
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
 	alloc := storageAllocationToAllocationTable(sa)
+	logging.Logger.Info("AllocEmitAdd", zap.Any("sa", sa))
 	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil
