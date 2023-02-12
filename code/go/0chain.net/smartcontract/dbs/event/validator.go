@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"0chain.net/core/common"
-	"0chain.net/core/util"
 	"github.com/0chain/common/core/currency"
 
 	common2 "0chain.net/smartcontract/common"
@@ -113,7 +112,7 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 	}
 
 	// Create column-based listing of the given data
-	columns, err := util.Columnize(validators)
+	columns, err := Columnize(validators)
 	if err != nil {
 		return err
 	}

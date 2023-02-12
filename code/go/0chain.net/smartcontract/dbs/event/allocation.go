@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/core/util"
 	corecommon "0chain.net/core/common" 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -132,7 +131,7 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"file_options",
 	}
 
-	columns, err := util.Columnize(allocs)
+	columns, err := Columnize(allocs)
 	if err != nil {
 		return err
 	}
