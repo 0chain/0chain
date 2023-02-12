@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	corecommon "0chain.net/core/common" 
+	corecommon "0chain.net/core/common"
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
@@ -181,13 +181,13 @@ func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
 	}()
 
 	var (
-		allocationIdList 	  	[]string
-		writePoolList 		  	[]int64
-		movedToChallengeList  	[]int64
-		movedBackList		  	[]int64
-		movedToValidatorsList 	[]int64
-		coinValue				int64
-		err						error
+		allocationIdList      []string
+		writePoolList         []int64
+		movedToChallengeList  []int64
+		movedBackList         []int64
+		movedToValidatorsList []int64
+		coinValue             int64
+		err                   error
 	)
 
 	for _, alloc := range allocs {
@@ -245,14 +245,14 @@ func withAllocStatsMerged() eventMergeMiddleware {
 
 func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
 	var (
-		allocationIdList	[]string
-		usedSizeList		[]int64
-		numWritesList		[]int64
+		allocationIdList     []string
+		usedSizeList         []int64
+		numWritesList        []int64
 		movedToChallengeList []int64
-		movedBackList		[]int64
-		writePoolList		[]int64			
-		coinValue			int64
-		err					error
+		movedBackList        []int64
+		writePoolList        []int64
+		coinValue            int64
+		err                  error
 	)
 
 	for _, alloc := range allocs {
@@ -340,11 +340,11 @@ func withAllocChallengesMerged() eventMergeMiddleware {
 
 func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 	var (
-		allocationIdList	[]string
-		openChallengesList  []int64
+		allocationIdList             []string
+		openChallengesList           []int64
 		latestClosedChallengeTxnList []string
-		successfulChallengesList []int64
-		failedChallengeList []int64
+		successfulChallengesList     []int64
+		failedChallengeList          []int64
 	)
 
 	for _, alloc := range allocs {
@@ -352,7 +352,7 @@ func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 		openChallengesList = append(openChallengesList, alloc.OpenChallenges)
 		latestClosedChallengeTxnList = append(latestClosedChallengeTxnList, alloc.LatestClosedChallengeTxn)
 		successfulChallengesList = append(successfulChallengesList, alloc.SuccessfulChallenges)
-		failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)		
+		failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
