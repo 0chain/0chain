@@ -3067,6 +3067,16 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 //	500:
 func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r *http.Request) {
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	roundStr := r.URL.Query().Get("round")
+	round, err := strconv.ParseInt(roundStr, 10, 16)
+
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	userId := r.URL.Query().Get("user_id")
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
@@ -3077,7 +3087,7 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	users, err := edb.ReplicateUserAggregate(limit)
+	users, err := edb.ReplicateUserAggregate(round, userId, limit.Limit)
 	if err != nil {
 		err := common.NewErrInternal("cannot get user aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
