@@ -561,7 +561,7 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
+func getInitialState(tokens currency.Coin) *state.State {
 	balance := &state.State{}
 	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 	balance.Balance = tokens
@@ -571,16 +571,19 @@ func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
 /*setupInitialState - set up the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
-	for _, v := range initStates.States {
-		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
-			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
-		}
-		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
-	}
-
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
 	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
+
+	for _, v := range initStates.States {
+		s := getInitialState(v.Tokens)
+		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
+			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
+		}
+
+		c.emitUserEvent(stateCtx, stateToUser(v.ID, s))
+		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
+	}
 
 	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
 		logging.Logger.Error("init stake failed", zap.Error(err))
