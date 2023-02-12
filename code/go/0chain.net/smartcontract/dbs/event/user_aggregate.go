@@ -4,10 +4,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm/clause"
 )
 
 type UserAggregate struct {
@@ -21,26 +19,17 @@ type UserAggregate struct {
 	CreatedAt       time.Time
 }
 
-func (edb *EventDb) ReplicateUserAggregate(p common.Pagination) ([]UserAggregate, error) {
+func (edb *EventDb) ReplicateUserAggregate(round int64, hash string, limit int) ([]UserAggregate, error) {
 	var snapshots []UserAggregate
-
-	queryBuilder := edb.Store.Get().
-		Model(&UserAggregate{}).Offset(p.Offset).Limit(p.Limit)
-	queryBuilder.Clauses(clause.OrderBy{
-		Columns: []clause.OrderByColumn{{
-			Column: clause.Column{Name: "round"},
-		}, {
-			Column: clause.Column{Name: "user_id"},
-		}},
-	})
-
-	result := queryBuilder.Scan(&snapshots)
+	result := edb.Store.Get().
+		Raw("SELECT * FROM blobber_aggregates WHERE round > ? AND hash > ? ORDER BY round, hash ASC LIMIT 20", round, hash, limit).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
 	return snapshots, nil
 }
+
 func (edb *EventDb) updateUserAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
@@ -73,7 +62,7 @@ func (edb *EventDb) calculateUserAggregate(gs *globalSnapshot, round, limit, off
 
 	var ids []string
 	r := edb.Store.Get().
-		Raw("select id from temp_user_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
+		Raw("select id from temp_user_ids ORDER BY id limit ? offset ?", limit, offset).Scan(&ids)
 	if r.Error != nil {
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
@@ -82,7 +71,7 @@ func (edb *EventDb) calculateUserAggregate(gs *globalSnapshot, round, limit, off
 
 	var currentUsers []User
 	result := edb.Store.Get().Model(&User{}).
-		Where("users.user_id in (select id from temp_user_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Where("users.user_id in (select id from temp_user_ids ORDER BY id limit ? offset ?)", limit, offset).
 		Find(&currentUsers)
 
 	if result.Error != nil {
