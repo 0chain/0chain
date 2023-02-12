@@ -2,12 +2,10 @@ package event
 
 import (
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm/clause"
 )
 
 type AuthorizerAggregate struct {
@@ -56,18 +54,10 @@ func (a *AuthorizerAggregate) SetTotalRewards(value currency.Coin) {
 	a.TotalRewards = value
 }
 
-func (edb *EventDb) ReplicateAuthorizerAggregate(p common.Pagination) ([]AuthorizerAggregate, error) {
+func (edb *EventDb) ReplicateAuthorizerAggregate(round int64, authorizerId string) ([]AuthorizerAggregate, error) {
 	var snapshots []AuthorizerAggregate
-
-	queryBuilder := edb.Store.Get().
-		Model(&AuthorizerAggregate{}).Offset(p.Offset).Limit(p.Limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   false,
-	})
-
-	result := queryBuilder.Scan(&snapshots)
+	result := edb.Store.Get().
+		Raw("SELECT * FROM authorizer_aggregates WHERE round > ? AND authorizer_id > ? ORDER BY round, authorizer_id ASC LIMIT 20", round, authorizerId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

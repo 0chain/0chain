@@ -4,12 +4,10 @@ import (
 	"math"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm/clause"
 )
 
 type BlobberAggregate struct {
@@ -35,20 +33,10 @@ type BlobberAggregate struct {
 	Downtime            uint64        `json:"downtime"`
 }
 
-func (edb *EventDb) ReplicateBlobberAggregate(p common.Pagination) ([]BlobberAggregate, error) {
+func (edb *EventDb) ReplicateBlobberAggregate(round int64, blobberId string) ([]BlobberAggregate, error) {
 	var snapshots []BlobberAggregate
-
-	queryBuilder := edb.Store.Get().
-		Model(&BlobberAggregate{}).Offset(p.Offset).Limit(p.Limit)
-	queryBuilder.Clauses(clause.OrderBy{
-		Columns: []clause.OrderByColumn{{
-			Column: clause.Column{Name: "round"},
-		}, {
-			Column: clause.Column{Name: "blobber_id"},
-		}},
-	})
-
-	result := queryBuilder.Scan(&snapshots)
+	result := edb.Store.Get().
+		Raw("SELECT * FROM blobber_aggregates WHERE round > ? AND blobber_id > ? ORDER BY round, blobber_id ASC LIMIT 20", round, blobberId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

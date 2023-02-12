@@ -2,12 +2,10 @@ package event
 
 import (
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm/clause"
 )
 
 type MinerAggregate struct {
@@ -54,18 +52,10 @@ func (m *MinerAggregate) SetTotalRewards(value currency.Coin) {
 	m.TotalRewards = value
 }
 
-func (edb *EventDb) ReplicateMinerAggregate(p common.Pagination) ([]MinerAggregate, error) {
+func (edb *EventDb) ReplicateMinerAggregate(round int64, minerId string) ([]MinerAggregate, error) {
 	var snapshots []MinerAggregate
-
-	queryBuilder := edb.Store.Get().
-		Model(&MinerAggregate{}).Offset(p.Offset).Limit(p.Limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   false,
-	})
-
-	result := queryBuilder.Scan(&snapshots)
+	result := edb.Store.Get().
+		Raw("SELECT * FROM miner_aggregates WHERE round > ? AND miner_id > ? ORDER BY round, miner_id ASC LIMIT 20", round, minerId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

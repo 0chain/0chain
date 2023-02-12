@@ -2,12 +2,10 @@ package event
 
 import (
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm/clause"
 )
 
 type SharderAggregate struct {
@@ -56,18 +54,10 @@ func (s *SharderAggregate) SetTotalRewards(value currency.Coin) {
 	s.TotalRewards = value
 }
 
-func (edb *EventDb) ReplicateSharderAggregate(p common.Pagination) ([]SharderAggregate, error) {
+func (edb *EventDb) ReplicateSharderAggregate(round int64, sharderId string) ([]SharderAggregate, error) {
 	var snapshots []SharderAggregate
-
-	queryBuilder := edb.Store.Get().
-		Model(&SharderAggregate{}).Offset(p.Offset).Limit(p.Limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   false,
-	})
-
-	result := queryBuilder.Scan(&snapshots)
+	result := edb.Store.Get().
+		Raw("SELECT * FROM sharder_aggregates WHERE round > ? AND sharder_id > ? ORDER BY round, sharder_id ASC LIMIT 20", round, sharderId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

@@ -2,12 +2,10 @@ package event
 
 import (
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm/clause"
 )
 
 type ValidatorAggregate struct {
@@ -55,18 +53,10 @@ func (v *ValidatorAggregate) SetTotalRewards(value currency.Coin) {
 	v.TotalRewards = value
 }
 
-func (edb *EventDb) ReplicateValidatorAggregate(p common.Pagination) ([]ValidatorAggregate, error) {
+func (edb *EventDb) ReplicateValidatorAggregate(round int64, validatorId string) ([]ValidatorAggregate, error) {
 	var snapshots []ValidatorAggregate
-
-	queryBuilder := edb.Store.Get().
-		Model(&ValidatorAggregate{}).Offset(p.Offset).Limit(p.Limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   false,
-	})
-
-	result := queryBuilder.Scan(&snapshots)
+	result := edb.Store.Get().
+		Raw("SELECT * FROM validator_aggregates WHERE round > ? AND validator_id > ? ORDER BY round, validator_id ASC LIMIT 20", round, validatorId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}
