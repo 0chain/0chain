@@ -55,7 +55,7 @@ func (m *MinerAggregate) SetTotalRewards(value currency.Coin) {
 func (edb *EventDb) ReplicateMinerAggregate(round int64, minerId string) ([]MinerAggregate, error) {
 	var snapshots []MinerAggregate
 	result := edb.Store.Get().
-		Raw("SELECT * FROM miner_aggregates WHERE round > ? AND miner_id > ? ORDER BY round, miner_id ASC LIMIT 20", round, minerId).Scan(&snapshots)
+		Raw("SELECT * FROM miner_aggregates WHERE round >= ? AND miner_id > ? ORDER BY round, miner_id ASC LIMIT 20", round, minerId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

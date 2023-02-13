@@ -36,7 +36,7 @@ type BlobberAggregate struct {
 func (edb *EventDb) ReplicateBlobberAggregate(round int64, blobberId string) ([]BlobberAggregate, error) {
 	var snapshots []BlobberAggregate
 	result := edb.Store.Get().
-		Raw("SELECT * FROM blobber_aggregates WHERE round > ? AND blobber_id > ? ORDER BY round, blobber_id ASC LIMIT 20", round, blobberId).Scan(&snapshots)
+		Raw("SELECT * FROM blobber_aggregates WHERE round >= ? AND blobber_id > ? ORDER BY round, blobber_id ASC LIMIT 20", round, blobberId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

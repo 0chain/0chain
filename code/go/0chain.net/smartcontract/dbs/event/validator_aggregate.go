@@ -56,7 +56,7 @@ func (v *ValidatorAggregate) SetTotalRewards(value currency.Coin) {
 func (edb *EventDb) ReplicateValidatorAggregate(round int64, validatorId string) ([]ValidatorAggregate, error) {
 	var snapshots []ValidatorAggregate
 	result := edb.Store.Get().
-		Raw("SELECT * FROM validator_aggregates WHERE round > ? AND validator_id > ? ORDER BY round, validator_id ASC LIMIT 20", round, validatorId).Scan(&snapshots)
+		Raw("SELECT * FROM validator_aggregates WHERE round >= ? AND validator_id > ? ORDER BY round, validator_id ASC LIMIT 20", round, validatorId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}
