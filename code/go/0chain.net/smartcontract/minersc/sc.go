@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"0chain.net/chaincore/smartcontract"
+	"github.com/0chain/common/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -87,6 +88,17 @@ func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName stri
 	if n.Cost == nil {
 		return math.MaxInt32, errors.New("can't get cost")
 	}
+
+	if balances.GetBlock().Round < 8243409+100000 {
+		switch funcName {
+		case "add_miner":
+			fallthrough
+		case "add_sharder":
+			logging.Logger.Info("Overwriting add_miner/add_sharder cost to 1500 ")
+			return 1500, nil
+		}
+	}
+
 	cost, ok := n.Cost[funcName]
 	if !ok {
 		return math.MaxInt32, errors.New("no cost given for " + funcName)
