@@ -149,61 +149,76 @@ func (gs *globalSnapshot) update(e []Event) {
 			logging.Logger.Info("snapshot update TagBurn",
 				zap.Int64("zcn_supply", gs.ZCNSupply))
 		case TagLockStakePool:
-			d, ok := fromEvent[DelegatePoolLock](event.Data)
+			ds, ok := fromEvent[[]DelegatePoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.TotalValueLocked += d.Amount
-			gs.TotalStaked += d.Amount
-			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", d.Amount),
+
+			var total int64
+			for _, d := range *ds {
+				total += d.Amount
+				gs.TotalValueLocked += d.Amount
+				gs.TotalStaked += d.Amount
+			}
+			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", total),
 				zap.Int64("total_amount", gs.TotalValueLocked))
 		case TagUnlockStakePool:
-			d, ok := fromEvent[DelegatePoolLock](event.Data)
+			ds, ok := fromEvent[[]DelegatePoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.TotalValueLocked -= d.Amount
-			gs.TotalStaked -= d.Amount
+			for _, d := range *ds {
+				gs.TotalValueLocked -= d.Amount
+				gs.TotalStaked -= d.Amount
+			}
 		case TagLockWritePool:
-			d, ok := fromEvent[WritePoolLock](event.Data)
+			ds, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.ClientLocks += d.Amount
-			gs.TotalValueLocked += d.Amount
+			for _, d := range *ds {
+				gs.ClientLocks += d.Amount
+				gs.TotalValueLocked += d.Amount
+			}
 		case TagUnlockWritePool:
-			d, ok := fromEvent[WritePoolLock](event.Data)
+			ds, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.ClientLocks -= d.Amount
-			gs.TotalValueLocked -= d.Amount
+			for _, d := range *ds {
+				gs.ClientLocks -= d.Amount
+				gs.TotalValueLocked -= d.Amount
+			}
 		case TagLockReadPool:
-			d, ok := fromEvent[ReadPoolLock](event.Data)
+			ds, ok := fromEvent[[]ReadPoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.ClientLocks += d.Amount
-			gs.TotalValueLocked += d.Amount
+			for _, d := range *ds {
+				gs.ClientLocks += d.Amount
+				gs.TotalValueLocked += d.Amount
+			}
 		case TagUnlockReadPool:
-			d, ok := fromEvent[ReadPoolLock](event.Data)
+			ds, ok := fromEvent[[]ReadPoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.ClientLocks -= d.Amount
-			gs.TotalValueLocked -= d.Amount
+			for _, d := range *ds {
+				gs.ClientLocks -= d.Amount
+				gs.TotalValueLocked -= d.Amount
+			}
 		case TagStakePoolReward:
 			spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 			if !ok {

@@ -935,6 +935,16 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 			Data:        transactionNodeToEventTransaction(txn, b.Hash, b.Round),
 		})
 
+		b.Events = append(b.Events, event.Event{
+			Type:  event.TypeStats,
+			Tag:   event.TagUpdateUserPayedFees,
+			Index: txn.ClientID,
+			Data: event.User{
+				UserID:    txn.ClientID,
+				PayedFees: int64(txn.Fee),
+			},
+		})
+
 		events, err := c.UpdateState(ctx, b, bState, txn, waitC...)
 		switch err {
 		case context.Canceled:
