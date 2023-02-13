@@ -44,7 +44,7 @@ require (
 
 require (
 	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
-	github.com/jackc/pgx/v5 v5.2.0
+	github.com/jackc/pgx/v5 v5.3.0
 	github.com/lib/pq v1.10.7
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/pressly/goose/v3 v3.9.0
