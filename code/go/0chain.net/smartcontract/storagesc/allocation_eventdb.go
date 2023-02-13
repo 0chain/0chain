@@ -8,8 +8,8 @@ import (
 	"go.uber.org/zap"
 
 	common2 "0chain.net/smartcontract/common"
-	"github.com/0chain/0box/code/core/logging"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
