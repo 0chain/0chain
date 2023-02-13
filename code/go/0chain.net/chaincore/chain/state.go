@@ -575,7 +575,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, err
 	}
 
-	return []*event.User{stateToUser(fromClient, fs, -amount), stateToUser(toClient, ts, amount)}, nil
+	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
 }
 
 func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
@@ -621,7 +621,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return nil, common.NewError("mint_amount - insert", err.Error())
 	}
 
-	return stateToUser(toClient, ts, amount), nil
+	return stateToUser(toClient, ts), nil
 }
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
@@ -669,7 +669,7 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 		zap.String("client", fromClient),
 		zap.Int64("new_nonce", s.Nonce))
 
-	return stateToUser(fromClient, s, 0), nil
+	return stateToUser(fromClient, s), nil
 }
 
 func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
@@ -736,7 +736,7 @@ func userToState(u *event.User) *state.State {
 	}
 }
 
-func stateToUser(clientID string, s *state.State, change currency.Coin) *event.User {
+func stateToUser(clientID string, s *state.State) *event.User {
 	return &event.User{
 		UserID:  clientID,
 		TxnHash: s.TxnHash,
