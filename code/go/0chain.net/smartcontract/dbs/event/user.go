@@ -142,23 +142,70 @@ func (edb *EventDb) updateUserPayedFees(users []User) error {
 }
 
 func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUpdateUserCollectedRewards, withUniqueEventOverwrite())
+	return newEventsMerger[User](TagUpdateUserCollectedRewards, withCollectedRewardsMerged())
 }
 
-func mergeUpdateUserTotalStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
-	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withUniqueEventOverwrite())
+func withCollectedRewardsMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *User) (*User, error) {
+		a.CollectedReward += b.CollectedReward
+		return a, nil
+	})
 }
 
-func mergeUpdateUserReadPoolTotalEvents() *eventsMergerImpl[ReadPoolLock] {
-	return newEventsMerger[ReadPoolLock](TagLockReadPool, withUniqueEventOverwrite())
+func mergeUserStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
+	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withTotalStakeMerged())
 }
 
-func mergeUpdateUserWritePoolTotalEvents() *eventsMergerImpl[WritePoolLock] {
-	return newEventsMerger[WritePoolLock](TagLockWritePool, withUniqueEventOverwrite())
+func mergeUserUnstakeEvents() *eventsMergerImpl[DelegatePoolLock] {
+	return newEventsMerger[DelegatePoolLock](TagUnlockStakePool, withTotalStakeMerged())
+}
+
+func withTotalStakeMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *DelegatePoolLock) (*DelegatePoolLock, error) {
+		a.Amount += b.Amount
+		return a, nil
+	})
+}
+
+func mergeUserReadPoolLockEvents() *eventsMergerImpl[ReadPoolLock] {
+	return newEventsMerger[ReadPoolLock](TagLockReadPool, withReadPoolMerged())
+}
+
+func mergeUserReadPoolUnlockEvents() *eventsMergerImpl[ReadPoolLock] {
+	return newEventsMerger[ReadPoolLock](TagUnlockReadPool, withReadPoolMerged())
+}
+
+func withReadPoolMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *ReadPoolLock) (*ReadPoolLock, error) {
+		a.Amount += b.Amount
+		return a, nil
+	})
+}
+
+func mergeUserWritePoolLockEvents() *eventsMergerImpl[WritePoolLock] {
+	return newEventsMerger[WritePoolLock](TagLockWritePool, withWritePoolMerged())
+}
+
+func mergeUserWritePoolUnlockEvents() *eventsMergerImpl[WritePoolLock] {
+	return newEventsMerger[WritePoolLock](TagUnlockWritePool, withWritePoolMerged())
+}
+
+func withWritePoolMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *WritePoolLock) (*WritePoolLock, error) {
+		a.Amount += b.Amount
+		return a, nil
+	})
 }
 
 func mergeUpdateUserPayedFeesEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUpdateUserPayedFees, withUniqueEventOverwrite())
+	return newEventsMerger[User](TagUpdateUserPayedFees, withPayedFeesMerged())
+}
+
+func withPayedFeesMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *User) (*User, error) {
+		a.PayedFees += b.PayedFees
+		return a, nil
+	})
 }
 
 func mergeAddUsersEvents() *eventsMergerImpl[User] {
