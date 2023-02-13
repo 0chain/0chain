@@ -21,7 +21,7 @@ func newDelegatePoolUpdate(poolID, pId string, pType spenum.Provider) *DelegateP
 	return &spu
 }
 
-func (dp DelegatePool) emitNew(
+func (dp DelegatePool) EmitNew(
 	poolId, providerId string,
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
