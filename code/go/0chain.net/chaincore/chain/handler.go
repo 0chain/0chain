@@ -39,13 +39,14 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-const (
-	GetBlockV1Pattern = "/v1/block/get"
-)
-
-// chainhandlersMap returns routes of associated with chain
-func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+func minerHandlers() map[string]func(http.ResponseWriter, *http.Request) {
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
+		"/v1/block/get": common.UserRateLimit(
+			common.ToJSONResponse(
+				GetBlockHandler,
+			),
+		),
 		"/v1/chain/get": common.Recover(
 			common.ToJSONResponse(
 				memorystore.WithConnectionHandler(
@@ -53,14 +54,32 @@ func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Requ
 				),
 			),
 		),
+		"/v1/block/get/fee_stats": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestBlockFeeStatsHandler,
+			),
+		)),
+		"/v1/estimate_tx_cost": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				SuggestedFeeHandler,
+			),
+		)),
+		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
+			datastore.ToJSONEntityReqResponse(
+				datastore.DoAsyncEntityJSONHandler(
+					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
+					transaction.TransactionEntityChannel,
+				),
+				transactionEntityMetadata,
+			),
+		)),
 	}
+
 	return m
 }
 
-func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
-	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+func sharderHandlers(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	m := map[string]func(http.ResponseWriter, *http.Request){
-
 		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
@@ -81,11 +100,19 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				RecentFinalizedBlockHandler,
 			),
 		)),
-		"/v1/block/get/fee_stats": common.WithCORS(common.UserRateLimit(
+		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
 			common.ToJSONResponse(
-				LatestBlockFeeStatsHandler,
+				LFBTicketHandler,
 			),
-		)),
+		),
+	}
+
+	return m
+}
+
+func commonHandlers(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	m := map[string]func(http.ResponseWriter, *http.Request){
+
 		"/": common.WithCORS(common.UserRateLimit(
 			HomePageAndNotFoundHandler,
 		)),
@@ -101,35 +128,9 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/round_info": common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
-		"/v1/estimate_tx_cost": common.WithCORS(common.UserRateLimit(
-			common.ToJSONResponse(
-				SuggestedFeeHandler,
-			),
-		)),
-		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
-			datastore.ToJSONEntityReqResponse(
-				datastore.DoAsyncEntityJSONHandler(
-					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
-					transaction.TransactionEntityChannel,
-				),
-				transactionEntityMetadata,
-			),
-		)),
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
-		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
-			common.ToJSONResponse(
-				LFBTicketHandler,
-			),
-		),
-	}
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		m[GetBlockV1Pattern] = common.UserRateLimit(
-			common.ToJSONResponse(
-				GetBlockHandler,
-			),
-		)
 	}
 
 	return m
@@ -1872,13 +1873,14 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 // SetupHandlers sets up the necessary API end points for miners
 func SetupMinerHandlers(c Chainer) {
-	setupHandlers(handlersMap(c))
-	setupHandlers(chainhandlersMap(c))
+	setupHandlers(commonHandlers(c))
+	setupHandlers(minerHandlers())
 }
 
 // SetupHandlers sets up the necessary API end points for sharders
 func SetupSharderHandlers(c Chainer) {
-	setupHandlers(handlersMap(c))
+	setupHandlers(commonHandlers(c))
+	setupHandlers(sharderHandlers(c))
 }
 
 func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
