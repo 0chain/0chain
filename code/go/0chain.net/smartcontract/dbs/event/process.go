@@ -307,8 +307,8 @@ func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, erro
 		return tx.updateSnapshots(es, gs)
 	}
 
-	if es.round == 1 {
-		return tx.updateSnapshots(es, &Snapshot{Round: 1})
+	if es.round == 0 {
+		return tx.updateSnapshots(es, &Snapshot{Round: 0})
 	}
 
 	g, err := tx.GetGlobal()
