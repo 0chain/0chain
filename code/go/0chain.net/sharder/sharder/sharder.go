@@ -224,11 +224,8 @@ func main() {
 	go sc.StartLFMBWorker(ctx)
 
 	setupBlockStorageProvider(mConf, workdir)
-	if sc.GetCurrentRound() == 0 {
-		sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-			magicBlock, initStates)
-	}
-	// Leaving this huge log bcz it's useful to show the initialized node and it's only logged once for every node
+	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock, initStates)
+
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()
@@ -294,7 +291,6 @@ func main() {
 			MaxHeaderBytes: 1 << 20,
 		}
 	}
-	// setupBlockStorageProvider()
 	sc.SetupHealthyRound()
 
 	common.ConfigRateLimits()
