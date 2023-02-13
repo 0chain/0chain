@@ -96,7 +96,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //
 // responses:
 //
-//	200: []WriteMarker
+//	200: []RewardDelegate
 //	400:
 //	500:
 func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.Request) {
@@ -151,7 +151,7 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 //
 // responses:
 //
-//	200: []WriteMarker
+//	200: []RewardProvider
 //	400:
 //	500:
 func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.Request) {
