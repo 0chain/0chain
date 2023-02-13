@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type AuthorizerAggregate struct {
@@ -56,8 +57,14 @@ func (a *AuthorizerAggregate) SetTotalRewards(value currency.Coin) {
 
 func (edb *EventDb) ReplicateAuthorizerAggregate(round int64, authorizerId string) ([]AuthorizerAggregate, error) {
 	var snapshots []AuthorizerAggregate
-	result := edb.Store.Get().
-		Raw("SELECT * FROM authorizer_aggregates WHERE round >= ? AND authorizer_id > ? ORDER BY round, authorizer_id ASC LIMIT 20", round, authorizerId).Scan(&snapshots)
+	var result *gorm.DB
+	if round == 1 {
+		result = edb.Store.Get().
+			Raw("SELECT * FROM authorizer_aggregates ORDER BY round, authorizer_id ASC LIMIT 20").Scan(&snapshots)
+	} else {
+		result = edb.Store.Get().
+			Raw("SELECT * FROM authorizer_aggregates WHERE round >= ? AND authorizer_id > ? ORDER BY round, authorizer_id ASC LIMIT 20", round, authorizerId).Scan(&snapshots)
+	}
 	if result.Error != nil {
 		return nil, result.Error
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type ValidatorAggregate struct {
@@ -55,8 +56,14 @@ func (v *ValidatorAggregate) SetTotalRewards(value currency.Coin) {
 
 func (edb *EventDb) ReplicateValidatorAggregate(round int64, validatorId string) ([]ValidatorAggregate, error) {
 	var snapshots []ValidatorAggregate
-	result := edb.Store.Get().
-		Raw("SELECT * FROM validator_aggregates WHERE round >= ? AND validator_id > ? ORDER BY round, validator_id ASC LIMIT 20", round, validatorId).Scan(&snapshots)
+	var result *gorm.DB
+	if round == 1 {
+		result = edb.Store.Get().
+			Raw("SELECT * FROM validator_aggregates ORDER BY round, validator_id ASC LIMIT 20").Scan(&snapshots)
+	} else {
+		result = edb.Store.Get().
+			Raw("SELECT * FROM validator_aggregates WHERE round >= ? AND validator_id > ? ORDER BY round, validator_id ASC LIMIT 20", round, validatorId).Scan(&snapshots)
+	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
