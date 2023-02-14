@@ -2793,24 +2793,32 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
+	roundStr := r.URL.Query().Get("prev_round")
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateSnapshots(limit.Offset, limit.Limit)
+	snapshots, err := edb.ReplicateSnapshots(round, pagination.Limit)
 	if err != nil {
 		err := common.NewErrInternal("cannot get snapshots" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 
-	common.Respond(w, r, blobbers, nil)
+	common.Respond(w, r, snapshots, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate replicateBlobberAggregates
@@ -2836,6 +2844,11 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 	blobberId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
@@ -2850,7 +2863,7 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateBlobberAggregate(round, blobberId)
+	blobbers, err := edb.ReplicateBlobberAggregate(round, pagination.Limit, blobberId)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -2885,6 +2898,11 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 	minerId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
@@ -2899,7 +2917,7 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	miners, err := edb.ReplicateMinerAggregate(round, minerId)
+	miners, err := edb.ReplicateMinerAggregate(round, pagination.Limit, minerId)
 	if err != nil {
 		err := common.NewErrInternal("cannot get miner aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -2934,6 +2952,11 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 	sharderId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
@@ -2949,7 +2972,7 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	sharders, err := edb.ReplicateSharderAggregate(round, sharderId)
+	sharders, err := edb.ReplicateSharderAggregate(round, pagination.Limit, sharderId)
 	if err != nil {
 		err := common.NewErrInternal("cannot get sharder aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -2984,6 +3007,11 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 	authorizerId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
@@ -2999,7 +3027,7 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	authorizers, err := edb.ReplicateAuthorizerAggregate(round, authorizerId)
+	authorizers, err := edb.ReplicateAuthorizerAggregate(round, pagination.Limit, authorizerId)
 	if err != nil {
 		err := common.NewErrInternal("cannot get authorizer aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -3034,6 +3062,11 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 	validatorId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
@@ -3049,7 +3082,7 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	validators, err := edb.ReplicateValidatorAggregate(round, validatorId)
+	validators, err := edb.ReplicateValidatorAggregate(round, pagination.Limit, validatorId)
 	if err != nil {
 		err := common.NewErrInternal("cannot get validator aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -3084,6 +3117,11 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 	userId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
@@ -3099,7 +3137,7 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	users, err := edb.ReplicateUserAggregate(round, userId)
+	users, err := edb.ReplicateUserAggregate(round, pagination.Limit, userId)
 	if err != nil {
 		err := common.NewErrInternal("cannot get user aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
