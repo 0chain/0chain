@@ -71,7 +71,7 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardMintQuery) ([]
 		WHERE r.r_max <= r.max_round + 1
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
-	`, query.DataPoints, query.StartDate, query.EndDate, "sum(amount)", query.ClientID)
+	`, query.DataPoints, query.StartDate.Unix(), query.EndDate.Unix(), "sum(amount)", query.ClientID)
 
 	return rewards, edb.Store.Get().Raw(rawQuery).Scan(&rewards).Error
 }
