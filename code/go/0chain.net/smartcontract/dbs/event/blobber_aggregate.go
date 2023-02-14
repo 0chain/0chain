@@ -40,9 +40,9 @@ func (edb *EventDb) ReplicateBlobberAggregate(round int64, limit int, blobberId 
 	if result.Error != nil {
 		return nil, result.Error
 	}
-
 	return snapshots, nil
 }
+
 func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
