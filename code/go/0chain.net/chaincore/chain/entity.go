@@ -15,6 +15,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"gorm.io/gorm/clause"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/faucetsc"
@@ -46,11 +47,7 @@ import (
 const notifySyncLFRStateTimeout = 3 * time.Second
 
 // genesisRandomSeed is the geneisis block random seed
-const (
-	genesisRandomSeed = 839695260482366273
-	// genesisBlockCreationDate is the time when the genesis block was created.
-	genesisBlockCreationDate = 1676096659 // TODO: make it configurable
-)
+const genesisRandomSeed = 839695260482366273
 
 var (
 	ErrInsufficientChain = common.NewError("insufficient_chain",
@@ -561,47 +558,29 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func mustInitialState(tokens currency.Coin) *state.State {
-	balance := &state.State{
-		Balance: tokens,
-		Nonce:   1,
-	}
-	err := balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	if err != nil {
-		panic(err)
-	}
+func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
+	balance := &state.State{}
+	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+	balance.Balance = tokens
 	return balance
 }
 
 /*setupInitialState - set up the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
-	memMPT := util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
-	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
-	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
-	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
-	mustInitPartitions(stateCtx)
+	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
-		s := mustInitialState(v.Tokens)
-		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
+		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
 			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
 		}
-
-		c.emitUserEvent(stateCtx, stateToUser(v.ID, s))
-		logging.Logger.Debug("init state", zap.String("client ID", v.ID), zap.Any("tokens", v.Tokens))
+		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
 	}
+
+	stateCtx := cstate.NewStateContext(gb, pmt, nil, nil, nil, nil, nil, nil, nil)
+	mustInitPartitions(stateCtx)
 
 	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
 		logging.Logger.Error("init stake failed", zap.Error(err))
 		panic(err)
-	}
-
-	eventDB := c.GetEventDb()
-	if eventDB != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1); err != nil {
-			panic(err)
-		}
 	}
 
 	err := faucetsc.InitConfig(stateCtx)
@@ -634,29 +613,21 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		panic(err)
 	}
 
-	gbInitedKey := encryption.RawHash("genesis block state init")
-	_, err = c.stateDB.GetNode(gbInitedKey)
-	switch err {
-	case nil:
-	case util.ErrNodeNotFound:
-		logging.Logger.Info("initialize genesis block state",
-			zap.Int("changes", pmt.GetChangeCount()), zap.String("root", util.ToHex(pmt.GetRoot())))
-		if err := pmt.SaveChanges(context.Background(), c.stateDB, false); err != nil {
-			logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
-		}
-
-		if err := stateDB.PutNode(gbInitedKey, util.NewValueNode()); err != nil {
-			logging.Logger.Panic("set gb initialized failed", zap.Error(err))
-		}
-	default:
-		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
+	err = minersc.InitGlobalSettings(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB minercs InitGlobalSettings failed", zap.Error(err))
+		panic(err)
 	}
 
-	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
+	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
+		logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
+	}
+	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
 
-func (c *Chain) addInitialStakes(stakes []state.InitStake, balances *cstate.StateContext) error {
+func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {
+	edbDelegatePools := make([]*event.DelegatePool, 0, len(stakes))
 	for _, v := range stakes {
 		providerType := spenum.ToProviderType(v.ProviderType)
 		sp := stakepool.StakePool{}
@@ -678,44 +649,43 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances *cstate.Stat
 				v.ProviderType, v.ProviderID, v.ClientID)
 		}
 
-		dp := &stakepool.DelegatePool{
+		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
 			Balance:      v.Tokens,
-			Status:       spenum.Active,
 			DelegateID:   v.ClientID,
-			RoundCreated: balances.GetBlock().Round,
-			StakedAt:     balances.GetBlock().CreationDate,
+			RoundCreated: 0, // genesis round
 		}
 
-		sp.Pools[v.ClientID] = dp
+		edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
+			PoolID:       v.ClientID,
+			ProviderType: providerType,
+			ProviderID:   v.ProviderID,
+			DelegateID:   v.ClientID,
+			Balance:      v.Tokens,
+			RoundCreated: 0, // genesis round
+		})
 
 		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
 			logging.Logger.Debug("init stake - save staking pool failed", zap.Error(err))
 			return err
 		}
 
-		if c.EventDb == nil {
-			continue
-		}
+		logging.Logger.Info("init stake", zap.String("sc ID", v.ProviderID), zap.Any("tokens", v.Tokens))
+	}
 
-		amount, _ := v.Tokens.Int64()
-		logging.Logger.Info("emmit TagLockStakePool", zap.String("client_id", v.ClientID), zap.String("provider_id", v.ProviderType))
-		lock := event.DelegatePoolLock{
-			Client:       v.ClientID,
-			ProviderId:   v.ProviderID,
-			ProviderType: providerType,
-			Amount:       amount,
-		}
-		balances.EmitEvent(event.TypeStats, event.TagLockStakePool, v.ClientID, lock)
+	if c.EventDb == nil {
+		return nil
+	}
 
-		dp.EmitNew(v.ClientID, v.ProviderID, providerType, balances)
-		if err := sp.EmitStakeEvent(lock.ProviderType, lock.ProviderId, balances); err != nil {
-			return common.NewErrorf("stake_pool_lock_failed",
-				"init stake error: %v", err)
-		}
-		logging.Logger.Info("init stake",
-			zap.String("provider ID", v.ProviderID),
-			zap.String("stake client ID", v.ClientID),
-			zap.Any("tokens", v.Tokens))
+	if len(edbDelegatePools) == 0 {
+		return nil
+	}
+
+	if err := c.EventDb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "pool_id"}, {Name: "provider_type"}, {Name: "provider_id"}},
+		UpdateAll: true,
+	}).Create(&edbDelegatePools).Error; err != nil {
+		logging.Logger.Debug("initial stake insert failed", zap.Error(err))
+		return fmt.Errorf("creating delegatePools in eventDB from initStakes failed: %s", err.Error())
 	}
 
 	return nil
@@ -731,7 +701,6 @@ func mustInitPartitions(state cstate.StateContextI) {
 func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, initStates *state.InitStates) (round.RoundI, *block.Block) {
 	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
-	gb.CreationDate = common.Timestamp(genesisBlockCreationDate)
 	gb.Hash = hash
 	gb.ClientState = c.setupInitialState(initStates, gb)
 	gb.SetStateStatus(block.StateSuccessful)
