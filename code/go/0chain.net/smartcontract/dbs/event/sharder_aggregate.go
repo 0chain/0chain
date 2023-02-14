@@ -6,7 +6,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type SharderAggregate struct {
@@ -57,18 +56,11 @@ func (s *SharderAggregate) SetTotalRewards(value currency.Coin) {
 
 func (edb *EventDb) ReplicateSharderAggregate(round int64, sharderId string) ([]SharderAggregate, error) {
 	var snapshots []SharderAggregate
-	var result *gorm.DB
-	if round == 1 {
-		result = edb.Store.Get().
-			Raw("SELECT * FROM sharder_aggregates ORDER BY round, sharder_id ASC LIMIT 20").Scan(&snapshots)
-	} else {
-		result = edb.Store.Get().
-			Raw("SELECT * FROM sharder_aggregates WHERE round >= ? AND sharder_id > ? ORDER BY round, sharder_id ASC LIMIT 20", round, sharderId).Scan(&snapshots)
-	}
+	result := edb.Store.Get().
+		Raw("SELECT * FROM sharder_aggregates WHERE round >= ? AND sharder_id > ? ORDER BY round, sharder_id ASC LIMIT 20", round, sharderId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-
 	return snapshots, nil
 }
 

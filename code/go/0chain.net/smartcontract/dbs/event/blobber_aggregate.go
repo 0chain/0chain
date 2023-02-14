@@ -8,7 +8,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type BlobberAggregate struct {
@@ -36,16 +35,8 @@ type BlobberAggregate struct {
 
 func (edb *EventDb) ReplicateBlobberAggregate(round int64, blobberId string) ([]BlobberAggregate, error) {
 	var snapshots []BlobberAggregate
-	var result *gorm.DB
-	if round == 1 {
-		result = edb.Store.Get().
-			Raw("SELECT * FROM blobber_aggregates ORDER BY round, blobber_id ASC LIMIT 20").Scan(&snapshots)
-
-	} else {
-		result = edb.Store.Get().
-			Raw("SELECT * FROM blobber_aggregates WHERE round >= ? AND blobber_id > ? ORDER BY round, blobber_id ASC LIMIT 20", round, blobberId).Scan(&snapshots)
-
-	}
+	result := edb.Store.Get().
+		Raw("SELECT * FROM blobber_aggregates WHERE round >= ? AND blobber_id > ? ORDER BY round, blobber_id ASC LIMIT 20", round, blobberId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

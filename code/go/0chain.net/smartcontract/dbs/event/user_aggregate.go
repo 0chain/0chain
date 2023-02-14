@@ -23,17 +23,11 @@ type UserAggregate struct {
 func (edb *EventDb) ReplicateUserAggregate(round int64, userId string) ([]UserAggregate, error) {
 	var snapshots []UserAggregate
 	var result *gorm.DB
-	if round == 1 {
-		result = edb.Store.Get().
-			Raw("SELECT * FROM user_aggregates ORDER BY round, user_id ASC LIMIT 20").Scan(&snapshots)
-	} else {
-		result = edb.Store.Get().
-			Raw("SELECT * FROM user_aggregates WHERE round >= ? AND user_id > ? ORDER BY round, user_id ASC LIMIT 20", round, userId).Scan(&snapshots)
-	}
+	result = edb.Store.Get().
+		Raw("SELECT * FROM user_aggregates WHERE round >= ? AND user_id > ? ORDER BY round, user_id ASC LIMIT 20", round, userId).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-
 	return snapshots, nil
 }
 
