@@ -613,6 +613,7 @@ func GetMockBlobberStakePools(
 					TotalPenalty: 0,
 					Status:       spenum.Active,
 					RoundCreated: 1,
+					StakedAt:     sp.Pools[id].StakedAt,
 				}
 				if err := eventDb.Store.Get().Create(&dp).Error; err != nil {
 					log.Fatal(err)
