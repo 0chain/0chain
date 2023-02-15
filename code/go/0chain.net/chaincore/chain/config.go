@@ -480,11 +480,11 @@ func (c *ConfigImpl) FromViper() error {
 	conf.RoundRange = viper.GetInt64("server_chain.round_range")
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
 	var err error
-	conf.MinTxnFee, err = currency.Int64ToCoin(viper.GetInt64("server_chain.transaction.min_fee"))
+	conf.MinTxnFee, err = currency.ParseZCN(viper.GetFloat64("server_chain.transaction.min_fee"))
 	if err != nil {
 		return err
 	}
-	conf.MaxTxnFee, err = currency.Int64ToCoin(viper.GetInt64("server_chain.transaction.max_fee"))
+	conf.MaxTxnFee, err = currency.ParseZCN(viper.GetFloat64("server_chain.transaction.max_fee"))
 	if err != nil {
 		return err
 	}
