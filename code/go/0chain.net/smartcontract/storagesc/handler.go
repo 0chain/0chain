@@ -2785,7 +2785,7 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 		common.Respond(w, r, nil, err)
 		return
 	}
-	roundStr := r.URL.Query().Get("prev_round")
+	roundStr := r.URL.Query().Get("round")
 	round, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
 		err := common.NewErrBadRequest("invalid round number" + err.Error())
@@ -2836,7 +2836,7 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, err)
 		return
 	}
-	roundStr := r.URL.Query().Get("prev_round")
+	roundStr := r.URL.Query().Get("round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
@@ -2889,7 +2889,7 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 		common.Respond(w, r, nil, err)
 		return
 	}
-	roundStr := r.URL.Query().Get("prev_round")
+	roundStr := r.URL.Query().Get("round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
@@ -2942,7 +2942,7 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, err)
 		return
 	}
-	roundStr := r.URL.Query().Get("prev_round")
+	roundStr := r.URL.Query().Get("round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
@@ -2996,7 +2996,7 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 		common.Respond(w, r, nil, err)
 		return
 	}
-	roundStr := r.URL.Query().Get("prev_round")
+	roundStr := r.URL.Query().Get("round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
@@ -3050,7 +3050,7 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		common.Respond(w, r, nil, err)
 		return
 	}
-	roundStr := r.URL.Query().Get("prev_round")
+	roundStr := r.URL.Query().Get("round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
@@ -3104,7 +3104,7 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, err)
 		return
 	}
-	roundStr := r.URL.Query().Get("prev_round")
+	roundStr := r.URL.Query().Get("round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
