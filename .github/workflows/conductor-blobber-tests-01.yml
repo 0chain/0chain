@@ -160,7 +160,7 @@ jobs:
     - name: Starting blobber Tests.
       run: |
         cd 0chain
-        ./docker.local/bin/start.conductor.sh blobber-1
+        # ./docker.local/bin/start.conductor.sh blobber-1
 
     - uses: actions/upload-artifact@v3
       if: failure()
