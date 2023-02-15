@@ -194,6 +194,7 @@ type ChainConfig interface {
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
 	MinTxnFee() currency.Coin
+	MaxTxnFee() currency.Coin
 	TxnTransferCost() int
 	TxnCostFeeCoeff() int
 }

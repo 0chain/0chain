@@ -74,6 +74,7 @@ server_chain:
       max_size: 98304 # bytes
     timeout: 30 # seconds
     min_fee: 0
+    max_fee: 1 # max fee per txn would be 1 ZCN, adjust later if needed
     transfer_cost: 10
     cost_fee_coeff: 1000 # 1000 unit cost per 1 ZCN
     exempt:

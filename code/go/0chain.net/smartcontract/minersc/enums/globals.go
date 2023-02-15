@@ -48,6 +48,7 @@ const (
 	TransactionPayloadMaxSize
 	TransactionTimeout // todo from global
 	TransactionMinFee  // todo from global
+	TransactionMaxFee
 	TransactionExempt
 
 	ClientSignatureScheme
@@ -180,6 +181,7 @@ func initGlobalSettingNames() {
 	GlobalSettingName[TransactionPayloadMaxSize] = "server_chain.transaction.payload.max_size"
 	GlobalSettingName[TransactionTimeout] = "server_chain.transaction.timeout"
 	GlobalSettingName[TransactionMinFee] = "server_chain.transaction.min_fee"
+	GlobalSettingName[TransactionMaxFee] = "server_chain.transaction.max_fee"
 	GlobalSettingName[TransactionExempt] = "server_chain.transaction.exempt"
 
 	GlobalSettingName[ClientSignatureScheme] = "server_chain.client.signature_scheme"

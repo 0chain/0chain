@@ -358,6 +358,13 @@ func (c *ConfigImpl) MinTxnFee() currency.Coin {
 	return c.conf.MinTxnFee
 }
 
+func (c *ConfigImpl) MaxTxnFee() currency.Coin {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.MaxTxnFee
+}
+
 func (c *ConfigImpl) TxnTransferCost() int {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
@@ -402,6 +409,7 @@ type ConfigData struct {
 	TxnTransferCost       int           `json:"transaction_transfer_cost"` // Transaction transfer cost
 	TxnCostFeeCoeff       int           `json:"txn_cost_fee_coeff"`        // Transaction cost fee coefficient
 	MinTxnFee             currency.Coin `json:"min_txn_fee"`               // Minimum txn fee allowed
+	MaxTxnFee             currency.Coin `json:"max_txn_fee"`               // Maximum txn fee allowed
 	PruneStateBelowCount  int           `json:"prune_state_below_count"`   // Prune state below these many rounds
 	RoundRange            int64         `json:"round_range"`               // blocks are stored in separate directory for each range of rounds
 
@@ -473,6 +481,10 @@ func (c *ConfigImpl) FromViper() error {
 	conf.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
 	var err error
 	conf.MinTxnFee, err = currency.Int64ToCoin(viper.GetInt64("server_chain.transaction.min_fee"))
+	if err != nil {
+		return err
+	}
+	conf.MaxTxnFee, err = currency.Int64ToCoin(viper.GetInt64("server_chain.transaction.max_fee"))
 	if err != nil {
 		return err
 	}
@@ -699,6 +711,10 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 		return err
 	}
 	conf.MinTxnFee, err = cf.GetCoin(enums.TransactionMinFee)
+	if err != nil {
+		return err
+	}
+	conf.MaxTxnFee, err = cf.GetCoin(enums.TransactionMaxFee)
 	if err != nil {
 		return err
 	}

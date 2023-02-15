@@ -260,6 +260,11 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 		return 0, 0, err
 	}
 
+	maxFee := c.ChainConfig.MaxTxnFee()
+	if currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > maxFee {
+		return cost, maxFee, nil
+	}
+
 	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
 }
 
