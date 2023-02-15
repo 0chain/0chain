@@ -36,6 +36,11 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 		if alloc.AllocationID == "" {
 			alloc.AllocationID = fmt.Sprintf("586925180648cfbc969561cbeeca2c0dbd9b68b29c5ccbd9e185bbb962e4a5d%v", i)
 		}
+
+		if alloc.TransactionID == "" {
+			alloc.TransactionID = fmt.Sprintf("586925180648cfbc969561cbeeca2c0dbd9b68b29c5ccbd9e185bbb962e4a5d%v", i)
+		}
+
 		if alloc.Owner == "" {
 			alloc.Owner = OwnerId
 		}
@@ -82,7 +87,7 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 		ids = append(ids, id)
 	}
 	err := edb.addAllocations(allocs)
-	assert.NoError(t, err, "inseting allocations failed")
+	assert.NoError(t, err, "inserting allocations failed")
 	return ids
 }
 
@@ -403,6 +408,167 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, len(allocs))
 		require.EqualValues(t, allocs[0].Size, sa.Size)
+	})
+
+	t.Run("test edb.updateAllocation", func(t *testing.T) {
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+
+		otherOwner := "2746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+
+		// Create the owners
+		err := eventDb.Get().Model(&User{}).Create(&User{
+			UserID: OwnerId,
+		}).Error
+		require.NoError(t, err, "owner couldn't be created")
+
+		err = eventDb.Get().Model(&User{}).Create(&User{
+			UserID: otherOwner,
+		}).Error
+		require.NoError(t, err, "owner couldn't be created")
+
+
+		// Create the allocations
+		allocIds := createMockAllocations(t, eventDb, 2)
+
+		// Assert allocation entered successfuylly (1)
+		alloc1, err := eventDb.GetAllocation(allocIds[0])
+		require.NoError(t, err)
+
+		alloc2, err := eventDb.GetAllocation(allocIds[1])
+		require.NoError(t, err)
+
+		// Update the allocations
+		err = eventDb.updateAllocations([]Allocation{
+			{
+				AllocationID: alloc1.AllocationID,
+				DataShards: 2,
+				ParityShards: 2,
+				FileOptions: 60,
+				Size: 200 * 1024 * 1024, // 100 MB
+				Expiration: 10000, // Never expire
+				Owner: otherOwner,
+				OwnerPublicKey: "owner_public_key2",
+				ReadPriceMin: currency.Coin(5),
+				ReadPriceMax: currency.Coin(40),
+				WritePriceMin: currency.Coin(5),
+				WritePriceMax: currency.Coin(40),
+				StartTime: 10215,
+				Finalized: false,
+				Cancelled: true,
+				UsedSize: 500,
+				MovedToChallenge: currency.Coin(20),
+				MovedBack: currency.Coin(2),
+				MovedToValidators: currency.Coin(2),
+				WritePool: currency.Coin(2),
+				TimeUnit: 22453,
+				NumWrites: 10,
+				NumReads: 10,
+				TotalChallenges: 24,
+				OpenChallenges: 20,
+				SuccessfulChallenges: 2,
+				FailedChallenges: 2,
+				LatestClosedChallengeTxn: "latest_closed_challenge_txn_updated",
+				ThirdPartyExtendable: true,
+			}, {
+				AllocationID: alloc2.AllocationID,
+				DataShards: 2,
+				ParityShards: 2,
+				FileOptions: 60,
+				Size: 200 * 1024 * 1024, // 100 MB
+				Expiration: 10000, // Never expire
+				Owner: otherOwner,
+				OwnerPublicKey: "owner_public_key2",
+				ReadPriceMin: 5,
+				ReadPriceMax: 40,
+				WritePriceMin: 5,
+				WritePriceMax: 40,
+				StartTime: 10215,
+				Finalized: false,
+				Cancelled: true,
+				UsedSize: 500,
+				MovedToChallenge: currency.Coin(20),
+				MovedBack: currency.Coin(2),
+				MovedToValidators: currency.Coin(2),
+				WritePool: currency.Coin(2),
+				TimeUnit: 22453,
+				NumWrites: 10,
+				NumReads: 10,
+				TotalChallenges: 24,
+				OpenChallenges: 20,
+				SuccessfulChallenges: 2,
+				FailedChallenges: 2,
+				LatestClosedChallengeTxn: "latest_closed_challenge_txn_updated",
+				ThirdPartyExtendable: true,
+			},
+		})
+		require.NoError(t, err, "update allocations failed")
+
+		// Assert allocations updated successfuylly (1)
+		alloc1, err = eventDb.GetAllocation(allocIds[0])
+		require.NoError(t, err)
+
+		alloc2, err = eventDb.GetAllocation(allocIds[1])
+		require.NoError(t, err)
+		
+		// Check values updated successfully
+		require.Equal(t, int(2), alloc1.DataShards)
+		require.Equal(t, int(2), alloc1.ParityShards)
+		require.Equal(t, uint16(60), alloc1.FileOptions)
+		require.Equal(t, int64(200 * 1024 * 1024), alloc1.Size)
+		require.Equal(t, int64(10000), alloc1.Expiration)
+		require.Equal(t, otherOwner, alloc1.Owner)
+		require.Equal(t, "owner_public_key2", alloc1.OwnerPublicKey)
+		require.Equal(t, uint64(5), uint64(alloc1.ReadPriceMin))
+		require.Equal(t, uint64(40), uint64(alloc1.ReadPriceMax))
+		require.Equal(t, uint64(5), uint64(alloc1.WritePriceMin))
+		require.Equal(t, uint64(40), uint64(alloc1.WritePriceMax))
+		require.Equal(t, int64(10215), alloc1.StartTime)
+		require.Equal(t, false, alloc1.Finalized)
+		require.Equal(t, true, alloc1.Cancelled)
+		require.Equal(t, int64(500), alloc1.UsedSize)
+		require.Equal(t, uint64(20), uint64(alloc1.MovedToChallenge))
+		require.Equal(t, uint64(2), uint64(alloc1.MovedBack))
+		require.Equal(t, uint64(2), uint64(alloc1.MovedToValidators))
+		require.Equal(t, uint64(2), uint64(alloc1.WritePool))
+		require.Equal(t, int64(22453), alloc1.TimeUnit)
+		require.Equal(t, int64(10), alloc1.NumWrites)
+		require.Equal(t, int64(10), alloc1.NumReads)
+		require.Equal(t, int64(24), alloc1.TotalChallenges)
+		require.Equal(t, int64(20), alloc1.OpenChallenges)
+		require.Equal(t, int64(2), alloc1.SuccessfulChallenges)
+		require.Equal(t, int64(2), alloc1.FailedChallenges)
+		require.Equal(t, "latest_closed_challenge_txn_updated", alloc1.LatestClosedChallengeTxn)
+		require.Equal(t, true, alloc1.ThirdPartyExtendable)
+
+		require.Equal(t, int(2), alloc2.DataShards)
+		require.Equal(t, int(2), alloc2.ParityShards)
+		require.Equal(t, uint16(60), alloc2.FileOptions)
+		require.Equal(t, int64(200 * 1024 * 1024), alloc2.Size)
+		require.Equal(t, int64(10000), alloc2.Expiration)
+		require.Equal(t, otherOwner, alloc2.Owner)
+		require.Equal(t, "owner_public_key2", alloc2.OwnerPublicKey)
+		require.Equal(t, uint64(5), uint64(alloc2.ReadPriceMin))
+		require.Equal(t, uint64(40), uint64(alloc2.ReadPriceMax))
+		require.Equal(t, uint64(5), uint64(alloc2.WritePriceMin))
+		require.Equal(t, uint64(40), uint64(alloc2.WritePriceMax))
+		require.Equal(t, int64(10215), alloc2.StartTime)
+		require.Equal(t, false, alloc2.Finalized)
+		require.Equal(t, true, alloc2.Cancelled)
+		require.Equal(t, int64(500), alloc2.UsedSize)
+		require.Equal(t, uint64(20), uint64(alloc2.MovedToChallenge))
+		require.Equal(t, uint64(2), uint64(alloc2.MovedBack))
+		require.Equal(t, uint64(2), uint64(alloc2.MovedToValidators))
+		require.Equal(t, uint64(2), uint64(alloc2.WritePool))
+		require.Equal(t, int64(22453), alloc2.TimeUnit)
+		require.Equal(t, int64(10), alloc2.NumWrites)
+		require.Equal(t, int64(10), alloc2.NumReads)
+		require.Equal(t, int64(24), alloc2.TotalChallenges)
+		require.Equal(t, int64(20), alloc2.OpenChallenges)
+		require.Equal(t, int64(2), alloc2.SuccessfulChallenges)
+		require.Equal(t, int64(2), alloc2.FailedChallenges)
+		require.Equal(t, "latest_closed_challenge_txn_updated", alloc2.LatestClosedChallengeTxn)
+		require.Equal(t, true, alloc2.ThirdPartyExtendable)
 	})
 
 	t.Run("test edb.updateAllocationStake", func(t *testing.T) {
