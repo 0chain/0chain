@@ -899,6 +899,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 			DelegateID:   pool.DelegateID,
 			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
+			StakedAt:     pool.StakedAt,
 		}
 		dps.Balance = pool.Balance
 
