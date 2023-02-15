@@ -23,6 +23,9 @@ const (
 	BlockProposalWaitStatic = 0
 	//BlockProposalWaitDynamic Dyanamic wait time for block proposals
 	BlockProposalWaitDynamic = iota
+
+	// DefaultMaxTxnFee represents the default max transaction fee
+	DefaultMaxTxnFee = 1e10
 )
 
 // HealthCheckScan - Set in 0chain.yaml
@@ -488,6 +491,10 @@ func (c *ConfigImpl) FromViper() error {
 	if err != nil {
 		return err
 	}
+	if conf.MaxTxnFee == 0 {
+		conf.MaxTxnFee = DefaultMaxTxnFee
+	}
+
 	conf.TxnTransferCost = viper.GetInt("server_chain.transaction.transfer_cost")
 	conf.TxnCostFeeCoeff = viper.GetInt("server_chain.transaction.cost_fee_coeff")
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
