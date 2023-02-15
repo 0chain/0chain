@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"testing"
 
 	"0chain.net/smartcontract/dbs"
@@ -248,11 +249,10 @@ func TestEventDb_rewardProviders(t *testing.T) {
 }
 
 func TestEventDb_rewardProviderDelegates(t *testing.T) {
-	t.Skip("piers")
-	db, clean := GetTestEventDB(t)
+	edb, clean := GetTestEventDB(t)
 	defer clean()
 
-	err := db.addDelegatePools([]DelegatePool{
+	err := edb.addDelegatePools([]DelegatePool{
 		{
 			PoolID:       "pool 1",
 			ProviderID:   "miner one",
@@ -264,21 +264,35 @@ func TestEventDb_rewardProviderDelegates(t *testing.T) {
 			PoolID:       "pool 2",
 			ProviderID:   "miner two",
 			ProviderType: spenum.Miner,
-			Reward:       0,
+			Reward:       4,
+			TotalReward:  0,
+		},
+		{
+			PoolID:       "pool 1",
+			ProviderID:   "miner two",
+			ProviderType: spenum.Miner,
+			Reward:       3,
 			TotalReward:  0,
 		},
 	})
 	require.NoError(t, err)
 
-	err = db.rewardProviderDelegates(
+	err = edb.rewardProviderDelegates(
 		map[string]map[string]currency.Coin{
-			"miner one": {"pool 1": 20},
 			"miner two": {"pool 2": 11},
+			"mienr two": {"pool 1": 17},
+			"miner one": {"pool 1": 20},
 		}, 7)
 	require.NoError(t, err)
 
-	requireDelegateRewards(t, db, "pool 1", "miner one", 20+5, 23+20, 7)
-	requireDelegateRewards(t, db, "pool 2", "miner two", 11+0, 11+0, 7)
+	var dps []DelegatePool
+	ret := edb.Get().Find(&dps)
+	require.NoError(t, ret.Error)
+	fmt.Println("dps", dps)
+
+	requireDelegateRewards(t, edb, "pool 1", "miner one", 20+5, 23+20, 7)
+	requireDelegateRewards(t, edb, "pool 2", "miner two", 11+4, 11+0, 7)
+	requireDelegateRewards(t, edb, "pool 1", "miner two", 17+3, 17+0, 7)
 }
 
 func requireDelegateRewards(

@@ -152,18 +152,20 @@ func (edb *EventDb) rewardProviders(prRewards map[string]currency.Coin, round in
 
 func (edb *EventDb) rewardProviderDelegates(dps map[string]map[string]currency.Coin, round int64) error {
 	var poolIds []string
+	var providerIds []string
 	var reward []uint64
 	var lastUpdated []uint64
 	for id, pools := range dps {
-		id = id
 		for poolId, r := range pools {
 			poolIds = append(poolIds, poolId)
+			providerIds = append(providerIds, id)
 			reward = append(reward, uint64(r))
 			lastUpdated = append(lastUpdated, uint64(round))
 		}
 	}
 
 	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
+		AddCompositeId("provider_id", providerIds).
 		AddUpdate("reward", reward, "delegate_pools.reward + t.reward").
 		AddUpdate("total_reward", reward, "delegate_pools.total_reward + t.reward").
 		AddUpdate("round_pool_last_updated", lastUpdated).
