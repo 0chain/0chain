@@ -3,6 +3,8 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/core/common"
+
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
@@ -26,6 +28,7 @@ type DelegatePool struct {
 	Status               spenum.PoolStatus `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3;index:idx_dp_total_staked,priority:2"`
 	RoundCreated         int64             `json:"round_created"`
 	RoundPoolLastUpdated int64             `json:"round_pool_last_updated"`
+	StakedAt             common.Timestamp  `json:"staked_at"`
 }
 
 func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {

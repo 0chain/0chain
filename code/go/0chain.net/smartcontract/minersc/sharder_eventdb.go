@@ -64,6 +64,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 				Status:       spenum.PoolStatus(delegate.Status),
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
+				StakedAt:     delegate.StakedAt,
 			},
 			RoundPoolLastUpdated: delegate.RoundPoolLastUpdated,
 		}
