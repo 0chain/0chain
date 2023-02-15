@@ -338,7 +338,7 @@ func (msc *MinerSmartContract) updateGlobals(
 	return "", nil
 }
 
-func InitGlobalSettings(balances cstate.CommonStateContextI) error {
+func initGlobalSettings(balances cstate.CommonStateContextI) error {
 	gs := newGlobalSettings()
 	err := balances.GetTrieNode(GLOBALS_KEY, gs)
 	if err != nil {

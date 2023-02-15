@@ -634,12 +634,6 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		panic(err)
 	}
 
-	err = minersc.InitGlobalSettings(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB minercs InitGlobalSettings failed", zap.Error(err))
-		panic(err)
-	}
-
 	gbInitedKey := encryption.RawHash("genesis block state init")
 	_, err = c.stateDB.GetNode(gbInitedKey)
 	switch err {
