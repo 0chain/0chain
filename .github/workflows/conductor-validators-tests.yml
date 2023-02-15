@@ -167,9 +167,9 @@ jobs:
       with:
         name: conductor-logs
         path: |
-          0chain/conductor/logs
-          0chain/docker.local
-          blobber/docker.local
+          0chain/conductor/logs/
+          0chain/docker.local/
+          blobber/docker.local/
 
     # - name: Creating Artifact con-tests-logs.tar.gz file.
     #   run: |

@@ -158,9 +158,9 @@ jobs:
       with:
         name: conductor-logs
         path: |
-          0chain/conductor/logs
-          0chain/docker.local
-          token_bridge_authserver/docker.local
+          0chain/conductor/logs/
+          0chain/docker.local/
+          token_bridge_authserver/docker.local/
           
 
     # - name: Creating Artifact con-tests-logs.tar.gz file.
