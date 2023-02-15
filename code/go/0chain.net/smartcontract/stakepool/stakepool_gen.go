@@ -122,9 +122,9 @@ func (z *DelegatePool) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *DelegatePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 11
+	// map header, size 12
 	// string "ID"
-	o = append(o, 0x8b, 0xa2, 0x49, 0x44)
+	o = append(o, 0x8c, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Balance"
 	o = append(o, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
@@ -176,6 +176,13 @@ func (z *DelegatePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "RoundCreated"
 	o = append(o, 0xac, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
 	o = msgp.AppendInt64(o, z.RoundCreated)
+	// string "StakedAt"
+	o = append(o, 0xa8, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x64, 0x41, 0x74)
+	o, err = z.StakedAt.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "StakedAt")
+		return
+	}
 	return
 }
 
@@ -263,6 +270,12 @@ func (z *DelegatePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "RoundCreated")
 				return
 			}
+		case "StakedAt":
+			bts, err = z.StakedAt.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "StakedAt")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -277,7 +290,7 @@ func (z *DelegatePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *DelegatePoolStat) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 8 + z.Rewards.Msgsize() + 8 + msgp.BoolSize + 11 + msgp.StringPrefixSize + len(z.ProviderId) + 13 + z.ProviderType.Msgsize() + 12 + z.TotalReward.Msgsize() + 13 + z.TotalPenalty.Msgsize() + 7 + msgp.StringPrefixSize + len(z.Status) + 13 + msgp.Int64Size
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 11 + msgp.StringPrefixSize + len(z.DelegateID) + 8 + z.Rewards.Msgsize() + 8 + msgp.BoolSize + 11 + msgp.StringPrefixSize + len(z.ProviderId) + 13 + z.ProviderType.Msgsize() + 12 + z.TotalReward.Msgsize() + 13 + z.TotalPenalty.Msgsize() + 7 + msgp.StringPrefixSize + len(z.Status) + 13 + msgp.Int64Size + 9 + z.StakedAt.Msgsize()
 	return
 }
 

@@ -35,6 +35,7 @@ func (dp DelegatePool) EmitNew(
 
 		Status:       dp.Status,
 		RoundCreated: balances.GetBlock().Round,
+		StakedAt:     dp.StakedAt,
 	}
 
 	balances.EmitEvent(

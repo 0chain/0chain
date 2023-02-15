@@ -91,10 +91,11 @@ type DelegatePoolStat struct {
 	ProviderId   string          `json:"provider_id"`   // id
 	ProviderType spenum.Provider `json:"provider_type"` // ype
 
-	TotalReward  currency.Coin `json:"total_reward"`
-	TotalPenalty currency.Coin `json:"total_penalty"`
-	Status       string        `json:"status"`
-	RoundCreated int64         `json:"round_created"`
+	TotalReward  currency.Coin    `json:"total_reward"`
+	TotalPenalty currency.Coin    `json:"total_penalty"`
+	Status       string           `json:"status"`
+	RoundCreated int64            `json:"round_created"`
+	StakedAt     common.Timestamp `json:"staked_at"`
 }
 
 // swagger:model userPoolStat
@@ -125,6 +126,7 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 			DelegateID:   dp.DelegateID,
 			Status:       spenum.PoolStatus(dp.Status).String(),
 			RoundCreated: dp.RoundCreated,
+			StakedAt:     dp.StakedAt,
 		}
 		dpStats.Balance = dp.Balance
 
