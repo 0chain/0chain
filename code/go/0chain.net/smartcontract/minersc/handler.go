@@ -71,32 +71,32 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //
 // parameters:
 //
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: is_descending
-//	 description: is descending
-//	 in: query
-//	 type: string
-//  +name: start
-//   description: start time of interval
-//   required: true
-//   in: query
-//   type: string
-//  +name: end
-//   description: end time of interval
-//   required: true
-//   in: query
-//   type: string
+//		+name: offset
+//		 description: offset
+//		 in: query
+//		 type: string
+//		+name: limit
+//		 description: limit
+//		 in: query
+//		 type: string
+//		+name: is_descending
+//		 description: is descending
+//		 in: query
+//		 type: string
+//	 +name: start
+//	  description: start time of interval
+//	  required: true
+//	  in: query
+//	  type: string
+//	 +name: end
+//	  description: end time of interval
+//	  required: true
+//	  in: query
+//	  type: string
 //
 // responses:
 //
-//	200: []WriteMarker
+//	200: []RewardDelegate
 //	400:
 //	500:
 func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.Request) {
@@ -126,32 +126,32 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 //
 // parameters:
 //
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: is_descending
-//	 description: is descending
-//	 in: query
-//	 type: string
-//  +name: start
-//   description: start time of interval
-//   required: true
-//   in: query
-//   type: string
-//  +name: end
-//   description: end time of interval
-//   required: true
-//   in: query
-//   type: string
+//		+name: offset
+//		 description: offset
+//		 in: query
+//		 type: string
+//		+name: limit
+//		 description: limit
+//		 in: query
+//		 type: string
+//		+name: is_descending
+//		 description: is descending
+//		 in: query
+//		 type: string
+//	 +name: start
+//	  description: start time of interval
+//	  required: true
+//	  in: query
+//	  type: string
+//	 +name: end
+//	  description: end time of interval
+//	  required: true
+//	  in: query
+//	  type: string
 //
 // responses:
 //
-//	200: []WriteMarker
+//	200: []RewardProvider
 //	400:
 //	500:
 func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.Request) {
@@ -386,16 +386,16 @@ type nodeStat struct {
 //
 // parameters:
 //
-//	+name: id
-//	 description: miner or sharder ID
-//	 in: query
-//	 type: string
-//	 required: true
-//  +name: include_delegates
-//	 description: set to "true" if the delegate pools are required as well
-//	 in: query
-//	 type: string
-//	 required: false
+//		+name: id
+//		 description: miner or sharder ID
+//		 in: query
+//		 type: string
+//		 required: true
+//	 +name: include_delegates
+//		 description: set to "true" if the delegate pools are required as well
+//		 in: query
+//		 type: string
+//		 required: false
 //
 // responses:
 //
@@ -954,6 +954,7 @@ func toUPS(pool event.DelegatePool) stakepool.DelegatePoolStat {
 	dp.DelegateID = pool.DelegateID
 	dp.ProviderType = pool.ProviderType
 	dp.ProviderId = pool.ProviderID
+	dp.StakedAt = pool.StakedAt
 
 	return dp
 }

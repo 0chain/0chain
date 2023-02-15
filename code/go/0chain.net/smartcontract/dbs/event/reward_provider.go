@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// swagger:model RewardProvider
 type RewardProvider struct {
 	model.UpdatableModel
 	Amount      currency.Coin `json:"amount"`
