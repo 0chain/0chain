@@ -162,19 +162,28 @@ jobs:
         cd 0chain
         ./docker.local/bin/start.conductor.sh blobber-1
 
-    - name: Creating Artifact con-tests-logs.tar.gz file.
-      run: |
-        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
-
-    - name: Uploading artifact con-tests-logs.tar.gz file.
-      uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
+      if: failure()
       with:
-        name: Conductor-test-logs
-        path: ./con-tests-logs.tar.gz
+        name: conductor-blobber-logs
+        path: |
+          0chain/conductor/logs
+          0chain/docker.local
+          blobber/docker.local
 
-    - name: Cleanup
-      run: |
-        rm -rf *
+    # - name: Creating Artifact con-tests-logs.tar.gz file.
+    #   run: |
+    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
+
+    # - name: Uploading artifact con-tests-logs.tar.gz file.
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: Conductor-test-logs
+    #     path: ./con-tests-logs.tar.gz
+
+    # - name: Cleanup
+    #   run: |
+    #     rm -rf *
 
     # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
     #   run: |
