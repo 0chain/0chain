@@ -20,11 +20,11 @@ type UserAggregate struct {
 	CreatedAt       time.Time
 }
 
-func (edb *EventDb) ReplicateUserAggregate(round int64, limit int, userId string) ([]UserAggregate, error) {
+func (edb *EventDb) ReplicateUserAggregate(round int64, limit int, offset int) ([]UserAggregate, error) {
 	var snapshots []UserAggregate
 	var result *gorm.DB
 	result = edb.Store.Get().
-		Raw("SELECT * FROM user_aggregates WHERE round >= ? AND user_id > ? ORDER BY round, user_id ASC LIMIT ?", round, userId, limit).Scan(&snapshots)
+		Raw("SELECT * FROM user_aggregates WHERE round = ? ORDER BY user_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

@@ -33,10 +33,10 @@ type BlobberAggregate struct {
 	Downtime            uint64        `json:"downtime"`
 }
 
-func (edb *EventDb) ReplicateBlobberAggregate(round int64, limit int, blobberId string) ([]BlobberAggregate, error) {
+func (edb *EventDb) ReplicateBlobberAggregate(round int64, limit int, offset int) ([]BlobberAggregate, error) {
 	var snapshots []BlobberAggregate
 	result := edb.Store.Get().
-		Raw("SELECT * FROM blobber_aggregates WHERE round >= ? AND blobber_id > ? ORDER BY round, blobber_id ASC LIMIT ?", round, blobberId, limit).Scan(&snapshots)
+		Raw("SELECT * FROM blobber_aggregates WHERE round = ? ORDER BY blobber_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

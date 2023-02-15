@@ -2849,7 +2849,6 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, err)
 		return
 	}
-	blobberId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
@@ -2863,7 +2862,7 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateBlobberAggregate(round, pagination.Limit, blobberId)
+	blobbers, err := edb.ReplicateBlobberAggregate(round, pagination.Limit, pagination.Offset)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -2903,7 +2902,6 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 		common.Respond(w, r, nil, err)
 		return
 	}
-	minerId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
@@ -2917,7 +2915,7 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	miners, err := edb.ReplicateMinerAggregate(round, pagination.Limit, minerId)
+	miners, err := edb.ReplicateMinerAggregate(round, pagination.Limit, pagination.Offset)
 	if err != nil {
 		err := common.NewErrInternal("cannot get miner aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -2957,7 +2955,6 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, err)
 		return
 	}
-	sharderId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
@@ -2972,7 +2969,7 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	sharders, err := edb.ReplicateSharderAggregate(round, pagination.Limit, sharderId)
+	sharders, err := edb.ReplicateSharderAggregate(round, pagination.Limit, pagination.Offset)
 	if err != nil {
 		err := common.NewErrInternal("cannot get sharder aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -3012,7 +3009,6 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 		common.Respond(w, r, nil, err)
 		return
 	}
-	authorizerId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
@@ -3027,7 +3023,7 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	authorizers, err := edb.ReplicateAuthorizerAggregate(round, pagination.Limit, authorizerId)
+	authorizers, err := edb.ReplicateAuthorizerAggregate(round, pagination.Limit, pagination.Offset)
 	if err != nil {
 		err := common.NewErrInternal("cannot get authorizer aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -3067,7 +3063,6 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		common.Respond(w, r, nil, err)
 		return
 	}
-	validatorId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
@@ -3082,7 +3077,7 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	validators, err := edb.ReplicateValidatorAggregate(round, pagination.Limit, validatorId)
+	validators, err := edb.ReplicateValidatorAggregate(round, pagination.Limit, pagination.Offset)
 	if err != nil {
 		err := common.NewErrInternal("cannot get validator aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -3122,7 +3117,6 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, err)
 		return
 	}
-	userId := r.URL.Query().Get("prev_hash")
 	roundStr := r.URL.Query().Get("prev_round")
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
@@ -3137,7 +3131,7 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	users, err := edb.ReplicateUserAggregate(round, pagination.Limit, userId)
+	users, err := edb.ReplicateUserAggregate(round, pagination.Limit, pagination.Offset)
 	if err != nil {
 		err := common.NewErrInternal("cannot get user aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
