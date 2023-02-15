@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
 
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
@@ -132,9 +133,10 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 
 		fieldList, ok := columns[fieldKey]
 		if !ok {
-			return common.NewErrorf("update_validators", "required field %v for update is not found in provided data", fieldKey)
+			logging.Logger.Warn("update_validator: required update field not found in event data", zap.String("field", fieldKey))
+		} else {
+			updater = updater.AddUpdate(fieldKey, fieldList)
 		}
-		updater = updater.AddUpdate(fieldKey, fieldList)
 	}
 
 	return updater.Exec(edb).Debug().Error

@@ -99,7 +99,6 @@ func mergeAddAllocationEvents() *eventsMergerImpl[Allocation] {
 func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 	ts := time.Now()
 	updateColumns := []string{
-		"allocation_name",
 		"transaction_id",
 		"data_shards",
 		"parity_shards",
@@ -148,9 +147,10 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 
 		fieldList, ok := columns[fieldKey]
 		if !ok {
-			return corecommon.NewErrorf("update_allocation", "required field %v for update is not found in provided data", fieldKey)
+			logging.Logger.Warn("update_allocation: required update field not found in event data", zap.String("field", fieldKey))
+		} else {
+			updater = updater.AddUpdate(fieldKey, fieldList)
 		}
-		updater = updater.AddUpdate(fieldKey, fieldList)
 	}
 
 	defer func() {
