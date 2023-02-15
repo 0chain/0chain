@@ -1961,7 +1961,10 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions transactions
-// Gets filtered list of transaction information
+// Gets filtered list of transaction information. The list is filtered on the first valid input,
+// or otherwise all the endpoint returns all translations.
+//
+// Filters processed in the order: client id, to client id, block hash and start, end blocks.
 //
 // parameters:
 //
@@ -1989,11 +1992,11 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //	 description: desc or asc
 //	 in: query
 //	 type: string
-//	+name: block-start
+//	+name: start
 //	 description: restrict to transactions in specified start block and endblock
 //	 in: query
 //	 type: string
-//	+name: block-end
+//	+name: end
 //	 description: restrict to transactions in specified start block and endblock
 //	 in: query
 //	 type: string
@@ -2005,11 +2008,9 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //	500:
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
 	var (
-		clientID      = r.URL.Query().Get("client_id")
-		toClientID    = r.URL.Query().Get("to_client_id")
-		blockHash     = r.URL.Query().Get("block_hash")
-		startBlockNum = r.URL.Query().Get("block-start")
-		endBlockNum   = r.URL.Query().Get("block-end")
+		clientID   = r.URL.Query().Get("client_id")
+		toClientID = r.URL.Query().Get("to_client_id")
+		blockHash  = r.URL.Query().Get("block_hash")
 	)
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2053,24 +2054,9 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
-	if startBlockNum != "" && endBlockNum != "" {
-		startBlockNumInt, err := strconv.ParseInt(r.URL.Query().Get("block-start"), 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
-			return
-		}
-		endBlockNumInt, err := strconv.ParseInt(r.URL.Query().Get("block-end"), 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("end_block_number is not valid"))
-			return
-		}
-
-		if startBlockNumInt > endBlockNumInt {
-			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is greater than end_block_number"))
-			return
-		}
-
-		rtv, err := edb.GetTransactionByBlockNumbers(startBlockNumInt, endBlockNumInt, limit)
+	start, end, err := common2.GetStartEndBlock(r.URL.Query())
+	if err != nil {
+		rtv, err := edb.GetTransactions(limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -2079,7 +2065,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
-	rtv, err := edb.GetTransactions(limit)
+	rtv, err := edb.GetTransactionByBlockNumbers(start, end, limit)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
