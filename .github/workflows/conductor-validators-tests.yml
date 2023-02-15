@@ -12,8 +12,12 @@ jobs:
     runs-on: [self-hosted, conductor-test03]
 
     steps:
+    - name: Cleanup before restarting conductor tests.
+      run: |
+        rm -rf *
+      
     - name: Go 1.18 setup.
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: '1.18'
 
@@ -22,6 +26,12 @@ jobs:
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Get Branch
       id: get_branch
@@ -152,19 +162,25 @@ jobs:
       run: |
         cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
 
-    - name: Creating Artifact con-tests-logs.tar.gz file.
-      run: |
-        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
-
-    - name: Uploading artifact con-tests-logs.tar.gz file.
-      uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
+      if: failure()
       with:
-        name: Conductor-test-logs
-        path: ./con-tests-logs.tar.gz
+        name: conductor-blobber-logs
+        path: |
+          0chain/conductor/logs
+          0chain/docker.local
+          blobber/docker.local
 
-    - name: Cleanup
-      run: |
-        rm -rf *
+    # - name: Creating Artifact con-tests-logs.tar.gz file.
+    #   run: |
+    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
+
+    # - name: Uploading artifact con-tests-logs.tar.gz file.
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: Conductor-test-logs
+    #     path: ./con-tests-logs.tar.gz
+
     # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
     #   run: |
     #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
