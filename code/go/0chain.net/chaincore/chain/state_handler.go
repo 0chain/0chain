@@ -110,6 +110,7 @@ func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
+	scAddress := r.FormValue("sc_address")
 	key := r.FormValue("key")
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
@@ -120,7 +121,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	}
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(key)))
+	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
 	if err != nil {
 		return nil, err
 	}
