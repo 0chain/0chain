@@ -5,6 +5,7 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
+	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 
@@ -94,6 +95,21 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 		Preload("Rewards").
 		Model(&Validator{}).
 		Offset(pg.Offset).Limit(pg.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pg.IsDescending,
+		}).Find(&validators)
+
+	return validators, result.Error
+}
+
+func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, error) {
+	now := common.Now()
+	var validators []Validator
+	result := edb.Store.Get().
+		Preload("Rewards").
+		Model(&Validator{}).Offset(pg.Offset).
+		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix()).Limit(pg.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "id"},
 			Desc:   pg.IsDescending,
