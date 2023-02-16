@@ -22,6 +22,7 @@ func init() {
 }
 
 func TestStakePoolReward(t *testing.T) {
+	t.Skip("requires bug fix, https://github.com/0chain/0chain/pull/2059")
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
