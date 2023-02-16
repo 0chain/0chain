@@ -3,9 +3,7 @@ package event
 import (
 	"strconv"
 	"testing"
-	"time"
 
-	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/encryption"
@@ -19,52 +17,90 @@ func init() {
 }
 
 func TestValidatorNode(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgres")
+	t.Run("test addOrOverwriteValidators", func(t *testing.T) {
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
 
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            "events_db",
-		User:            "zchain_user",
-		Password:        "zchian",
-		Host:            "localhost",
-		Port:            "5432",
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	eventDb, err := NewEventDb(access, config.DbSettings{})
-	require.NoError(t, err)
-	defer eventDb.Close()
-	err = eventDb.Drop()
-	require.NoError(t, err)
-	err = eventDb.AutoMigrate()
-	require.NoError(t, err)
+		vn := Validator{
+			BaseUrl: "http://localhost:8080",
+			Provider: Provider{
+				ID:         encryption.Hash("mockValidator_" + strconv.Itoa(0)),
+				TotalStake: 100,
+	
+				DelegateWallet: "delegate wallet",
+				MinStake:       currency.Coin(53),
+				MaxStake:       currency.Coin(57),
+				NumDelegates:   59,
+				ServiceCharge:  61.0,
+			},
+		}
+		err := eventDb.addOrOverwriteValidators([]Validator{vn})
+		require.NoError(t, err, "Error while inserting Validation Node to event Database")
+	
+		var count int64
+		eventDb.Get().Table("transactions").Count(&count)
+		require.Equal(t, int64(1), count, "Validator not getting inserted")
+	
+		vnFromDb, err := eventDb.GetValidatorByValidatorID(vn.ID)
+		require.NoError(t, err, "Error while getting Validation Node from event Database")
+		require.Equal(t, vn.BaseUrl, vnFromDb.BaseUrl)
+		require.Equal(t, vn.TotalStake, vnFromDb.TotalStake)
+		require.Equal(t, vn.DelegateWallet, vnFromDb.DelegateWallet)
+		require.Equal(t, vn.DelegateWallet, vnFromDb.DelegateWallet)
+		require.Equal(t, vn.MinStake, vnFromDb.MinStake)
+		require.Equal(t, vn.MaxStake, vnFromDb.MaxStake)
+		require.Equal(t, vn.MaxStake, vnFromDb.MaxStake)
+		require.Equal(t, vn.NumDelegates, vnFromDb.NumDelegates)
+		require.Equal(t, vn.ServiceCharge, vnFromDb.ServiceCharge)
+	})
 
-	vn := Validator{
-		BaseUrl: "http://localhost:8080",
-		Provider: Provider{
-			ID:         encryption.Hash("mockValidator_" + strconv.Itoa(0)),
-			TotalStake: 100,
+	t.Run("test updateValidators", func(t *testing.T) {
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
 
-			DelegateWallet: "delegate wallet",
-			MinStake:       currency.Coin(53),
-			MaxStake:       currency.Coin(57),
-			NumDelegates:   59,
-			ServiceCharge:  61.0,
-		},
-	}
+		vn := Validator{
+			BaseUrl: "http://localhost:8080",
+			Provider: Provider{
+				ID:         encryption.Hash("mockValidator_" + strconv.Itoa(0)),
+				TotalStake: 100,
+	
+				DelegateWallet: "delegate wallet",
+				MinStake:       currency.Coin(53),
+				MaxStake:       currency.Coin(57),
+				NumDelegates:   59,
+				ServiceCharge:  61.0,
+			},
+		}
+		err := eventDb.addOrOverwriteValidators([]Validator{vn})
+		require.NoError(t, err, "Error while inserting Validation Node to event Database")
 
-	err = eventDb.addOrOverwriteValidators([]Validator{vn})
-	require.NoError(t, err, "Error while inserting Validation Node to event Database")
+		vnUpdated := Validator{
+			BaseUrl: "http://localhost:8082",
+			Provider: Provider{
+				ID:         vn.ID,
+				TotalStake: 102,
+	
+				DelegateWallet: "delegate wallet edited",
+				MinStake:       currency.Coin(50),
+				MaxStake:       currency.Coin(51),
+				NumDelegates:   60,
+				ServiceCharge:  62.03,
+			},
+		}
 
-	var count int64
-	eventDb.Get().Table("transactions").Count(&count)
-	require.Equal(t, int64(1), count, "Validator not getting inserted")
+		err = eventDb.updateValidators([]Validator{ vnUpdated })
 
-	vn, err = eventDb.GetValidatorByValidatorID(vn.ID)
-	require.NoError(t, err, "Error while getting Validation Node from event Database")
+		require.NoError(t, err, "Error while updating Validation Node to event Database")
 
-	err = eventDb.Drop()
-	require.NoError(t, err)
+		vnFromDb, err := eventDb.GetValidatorByValidatorID(vn.ID)
+		require.NoError(t, err, "Error while getting Validation Node from event Database")
 
+		require.Equal(t, vnUpdated.BaseUrl, vnFromDb.BaseUrl)
+		require.Equal(t, vnUpdated.TotalStake, vnFromDb.TotalStake)
+		require.Equal(t, vnUpdated.DelegateWallet, vnFromDb.DelegateWallet)
+		require.Equal(t, vnUpdated.MinStake, vnFromDb.MinStake)
+		require.Equal(t, vnUpdated.MaxStake, vnFromDb.MaxStake)
+		require.Equal(t, vnUpdated.NumDelegates, vnFromDb.NumDelegates)
+		require.Equal(t, vnUpdated.ServiceCharge, vnFromDb.ServiceCharge)
+	})
 }
