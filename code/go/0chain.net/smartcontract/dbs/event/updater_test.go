@@ -132,6 +132,18 @@ func TestUpdateBuilder_build(t *testing.T) {
 			},
 			want: "UPDATE table SET column1 = t.column1 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1) AS t WHERE table.id = t.id AND table.column2 >= 100",
 		},
+		{
+			name: "Unnest []interface{} to correct elements type",
+			fields: fields{
+				ids: []string{"1", "2", "3"},
+				updates: []update{
+					{val: []interface{}{"c11", "c12", "c13"}, key: "column1"},
+					{val: []interface{}{true, false, true}, key: "column2"},
+					{val: []interface{}{int64(100), int64(120), int64(140)}, key: "column3"},
+				},
+			},
+			want: "UPDATE table SET column1 = t.column1, column2 = t.column2, column3 = t.column3 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::boolean[]) AS column2, unnest(?::bigint[]) AS column3) AS t WHERE table.id = t.id",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
