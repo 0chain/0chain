@@ -573,12 +573,8 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 
 	var selfNode = node.Self.Underlying()
 
-	tx = httpclientutil.NewTransactionEntity(selfNode.GetKey(), mc.ID,
-		selfNode.PublicKey)
-	tx.ToClientID = minersc.ADDRESS
-
-	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
+	tx = httpclientutil.NewSmartContractTxn(selfNode.GetKey(), mc.ID, selfNode.PublicKey, minersc.ADDRESS)
+	err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	return
 }
 

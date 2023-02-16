@@ -536,7 +536,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if fs.Balance < amount {
 		logging.Logger.Error("transfer amount - insufficient balance",
 			zap.Any("balance", fs.Balance),
-			zap.Any("transfer", amount))
+			zap.Any("transfer", amount),
+			zap.String("from", fromClient))
 		return nil, transaction.ErrInsufficientBalance
 	}
 

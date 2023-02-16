@@ -13,6 +13,7 @@ import (
 	"sync"
 	"testing"
 
+	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/currency"
 
 	"github.com/stretchr/testify/assert"
@@ -62,7 +63,7 @@ func getTestServerURL() string {
 func TestTransaction_ComputeHashAndSign(t *testing.T) {
 	t.Parallel()
 
-	txn := NewTransactionEntity("id", "chainID", "public key")
+	txn := NewSmartContractTxn("id", "chainID", "public key", minersc.ADDRESS)
 	txn.CreationDate = 0
 
 	_, prK, err := encryption.GenerateKeys()

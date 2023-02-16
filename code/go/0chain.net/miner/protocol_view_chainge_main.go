@@ -155,14 +155,11 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		logging.Logger.Error("failed to verify share or signs", zap.Any("mpks", mpks))
 	}
 
-	tx = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID,
-		selfNode.PublicKey)
-
 	var data = &httpclientutil.SmartContractTxnData{}
 	data.Name = scNamePublishShares
 	data.InputArgs = sos.Clone()
 
-	tx.ToClientID = minersc.ADDRESS
+	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
 
 	var minerUrls []string
 	for id := range dmn.SimpleNodes {
@@ -173,8 +170,8 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		}
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
-	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		minerUrls, mb.Sharders.N2NURLs())
+
+	err = mc.SendSmartContractTxn(tx, data, minerUrls, mb.Sharders.N2NURLs())
 	return
 }
 
@@ -227,12 +224,8 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	data.Name = scNameContributeMpk
 	data.InputArgs = mpk
 
-	tx = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID,
-		selfNode.PublicKey)
-	tx.ToClientID = minersc.ADDRESS
-
-	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
+	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
+	err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	return
 }
 

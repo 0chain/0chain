@@ -446,16 +446,13 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 			return
 		default:
 			selfNode := node.Self.Underlying()
-			txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(), sc.ID, selfNode.PublicKey)
+			txn := httpclientutil.NewSmartContractTxn(selfNode.GetKey(), sc.ID, selfNode.PublicKey, minersc.ADDRESS)
 			scData := &httpclientutil.SmartContractTxnData{}
 			scData.Name = minerScSharderHealthCheck
 
-			txn.ToClientID = minersc.ADDRESS
-			txn.PublicKey = selfNode.PublicKey
-
 			mb := sc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
+			if err := sc.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
 				logging.Logger.Warn("sharder health check failed, try again")
 			}
 

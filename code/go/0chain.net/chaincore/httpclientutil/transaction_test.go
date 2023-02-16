@@ -3,6 +3,8 @@ package httpclientutil
 import (
 	"reflect"
 	"testing"
+
+	"0chain.net/smartcontract/minersc"
 )
 
 func TestNewTransactionEntity(t *testing.T) {
@@ -44,10 +46,10 @@ func TestNewTransactionEntity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := NewTransactionEntity(tt.args.ID, tt.args.chainID, tt.args.pkey)
+			got := NewSmartContractTxn(tt.args.ID, tt.args.chainID, tt.args.pkey, minersc.ADDRESS)
 			got.CreationDate = 0
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewTransactionEntity() = %v, want %v", got, tt.want)
+				t.Errorf("NewSmartContractTxn() = %v, want %v", got, tt.want)
 			}
 		})
 	}
