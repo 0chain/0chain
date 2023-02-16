@@ -238,9 +238,6 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 
 func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	selfNode := node.Self.Underlying()
-	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		c.ID, selfNode.PublicKey)
-
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
 	mn.N2NHost = selfNode.N2NHost
@@ -278,14 +275,46 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 
 	scData.InputArgs = mn
 
+	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
+		c.ID, selfNode.PublicKey)
+
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = selfNode.PublicKey
+	txnSC, err := json.Marshal(scData)
+	if err != nil {
+		return nil, err
+	}
+
+	tTxn := &transaction.Transaction{
+		HashIDField:     datastore.HashIDField{Hash: txn.Hash},
+		VersionField:    datastore.VersionField{Version: txn.Version},
+		TransactionType: transaction.TxnTypeSmartContract,
+		TransactionData: string(txnSC),
+		CreationDate:    txn.CreationDate,
+		ToClientID:      minersc.ADDRESS,
+		PublicKey:       txn.PublicKey,
+	}
+
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		err := errors.New("could not get latest finalized block")
+		logging.Logger.Error("could not register miner", zap.Error(err))
+		return nil, err
+	}
+
+	_, fee, err := c.EstimateTransactionCostFee(common.GetRootContext(), lfb.ClientState, tTxn)
+	if err != nil {
+		logging.Logger.Error("estimate transaction cost fee failed", zap.Error(err))
+		return nil, err
+	}
+
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	logging.Logger.Debug("Register nodes to",
 		zap.Strings("urls", minerUrls),
-		zap.String("id", mn.ID))
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
+		zap.String("id", mn.ID),
+		zap.Any("fee", fee))
+	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, int64(fee), scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
 
@@ -477,14 +506,14 @@ func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder st
 // The GetFromSharders used to obtains an information from sharders using REST
 // API interface of a SC. About the arguments:
 //
-//     - address    -- SC address
-//     - relative   -- REST API relative path (e.g. handler name)
-//     - sharders   -- list of sharders to request from (N2N URLs)
-//     - newFunc    -- factory to create new value of type you want to request
-//     - rejectFunc -- filter to reject some values, can't be nil (feel free
-//                     to modify)
-//     - highFunc   -- function that returns value highness; used to choose
-//                     highest values
+//   - address    -- SC address
+//   - relative   -- REST API relative path (e.g. handler name)
+//   - sharders   -- list of sharders to request from (N2N URLs)
+//   - newFunc    -- factory to create new value of type you want to request
+//   - rejectFunc -- filter to reject some values, can't be nil (feel free
+//     to modify)
+//   - highFunc   -- function that returns value highness; used to choose
+//     highest values
 //
 // TODO (sfxdx): to trust or not to trust, that is the question
 //

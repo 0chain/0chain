@@ -1399,10 +1399,19 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		}
 
 		if err := txn.ValidateFee(sc.ChainConfig.TxnExempt(), minFee); err != nil {
+			logging.Logger.Error("invalid transaction fee",
+				zap.String("txn", txn.Hash),
+				zap.String("func", txn.FunctionName),
+				zap.Error(err))
 			return nil, err
 		}
 
 		if s.Balance < txn.Fee {
+			logging.Logger.Error("insufficient balance",
+				zap.String("txn", txn.Hash),
+				zap.String("func", txn.FunctionName),
+				zap.Any("balance", s.Balance),
+				zap.Any("fee", txn.Fee))
 			return nil, errors.New("insufficient balance to pay fee")
 		}
 	}
