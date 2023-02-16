@@ -20,6 +20,8 @@ func toSnakeCase(str string) string {
     return strings.ToLower(snake)
 }
 
+// Columnize converts a slice of objects into a map of columns. Only supports flat objects.
+// If the object has a gorm.column tag, it will use that as the column name. Otherwise, it will snake_case the field name.
 func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 	columns := make(map[string][]interface{})
 	

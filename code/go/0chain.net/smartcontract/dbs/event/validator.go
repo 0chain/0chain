@@ -3,10 +3,7 @@ package event
 import (
 	"fmt"
 
-	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
@@ -106,41 +103,42 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 }
 
 func (edb *EventDb) updateValidators(validators []Validator) error {
-	updateFields := []string{
-		"base_url", "public_key", "total_stake",
-		"unstake_total", "min_stake", "max_stake",
-		"delegate_wallet", "num_delegates",
-		"service_charge",
+	var (
+		ids             []string
+		baseUrls        []string
+		publicKeys      []string
+		totalStakes     []currency.Coin
+		unstakeTotals   []currency.Coin
+		minStakes       []currency.Coin
+		maxStakes       []currency.Coin
+		delegateWallets []string
+		numDelegates    []int
+		serviceCharges  []float64
+	)
+
+	for _, v := range validators {
+		ids = append(ids, v.ID)
+		baseUrls = append(baseUrls, v.BaseUrl)
+		publicKeys = append(publicKeys, v.PublicKey)
+		totalStakes = append(totalStakes, v.TotalStake)
+		unstakeTotals = append(unstakeTotals, v.UnstakeTotal)
+		minStakes = append(minStakes, v.MinStake)
+		maxStakes = append(maxStakes, v.MaxStake)
+		delegateWallets = append(delegateWallets, v.DelegateWallet)
+		numDelegates = append(numDelegates, v.NumDelegates)
+		serviceCharges = append(serviceCharges, v.ServiceCharge)
 	}
 
-	// Create column-based listing of the given data
-	columns, err := Columnize(validators)
-	if err != nil {
-		return err
-	}
-
-	// Create the updater
-	ids, ok := columns["id"]
-	if !ok {
-		return common.NewError("update_validators", "no id field provided in event Data")
-	}
-	updater := CreateBuilder("validators", "id", ids)
-
-	// Bind the required fields for update to the updater
-	for _, fieldKey := range updateFields {
-		if fieldKey == "id" {
-			continue
-		}
-
-		fieldList, ok := columns[fieldKey]
-		if !ok {
-			logging.Logger.Warn("update_validator: required update field not found in event data", zap.String("field", fieldKey))
-		} else {
-			updater = updater.AddUpdate(fieldKey, fieldList)
-		}
-	}
-
-	return updater.Exec(edb).Debug().Error
+	return CreateBuilder("validators", "id", ids).
+		AddUpdate("base_url", baseUrls).
+		AddUpdate("public_key", publicKeys).
+		AddUpdate("total_stake", totalStakes).
+		AddUpdate("unstake_total", unstakeTotals).
+		AddUpdate("min_stake", minStakes).
+		AddUpdate("max_stake", maxStakes).
+		AddUpdate("delegate_wallet", delegateWallets).
+		AddUpdate("num_delegates", numDelegates).
+		AddUpdate("service_charge", serviceCharges).Exec(edb).Error
 }
 
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
