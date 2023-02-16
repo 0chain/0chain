@@ -642,21 +642,11 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"can't get stake pool: %v", err)
 	}
 
-	if t.Value < sp.GetSettings().MinStake {
-		return "", common.NewError("stake_pool_lock_failed",
-			fmt.Sprintf("too small stake to lock: %v < %v", t.Value, sp.GetSettings().MinStake))
-	}
-	if t.Value > sp.GetSettings().MaxStake {
-		return "", common.NewError("stake_pool_lock_failed",
-			fmt.Sprintf("too large stake to lock: %v > %v", t.Value, sp.GetSettings().MaxStake))
+	if s, err2 := validateLockRequest(t, sp, err); err2 != nil {
+		return s, err2
 	}
 
 	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
-	if len(sp.GetPools()) >= sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"max_delegates reached: %v, no more stake pools allowed",
-			sp.GetSettings().MaxNumDelegates)
-	}
 
 	out, err := sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
 	if err != nil {
@@ -676,6 +666,35 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	}
 
 	return out, err
+}
+
+func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, err error) (string, error) {
+	if t.Value < sp.GetSettings().MinStake {
+		return "", common.NewError("stake_pool_lock_failed",
+			fmt.Sprintf("too small stake to lock: %v < %v", t.Value, sp.GetSettings().MinStake))
+	}
+	poolStakeBefore := currency.Coin(0)
+	pool, ok := sp.GetPools()[t.ClientID]
+	if ok {
+		poolStakeBefore = pool.Balance
+	}
+	poolStakeAfter, err := currency.AddCoin(poolStakeBefore, t.Value)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed", err.Error())
+	}
+
+	if poolStakeAfter > sp.GetSettings().MaxStake {
+		return "", common.NewError("stake_pool_lock_failed",
+			fmt.Sprintf("too large stake to lock: %v > %v", poolStakeAfter, sp.GetSettings().MaxStake))
+	}
+
+	if len(sp.GetPools()) >= sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"max_delegates reached: %v, no more stake pools allowed",
+			sp.GetSettings().MaxNumDelegates)
+	}
+
+	return "", nil
 }
 
 // StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
