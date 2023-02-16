@@ -886,6 +886,8 @@ func SetMockConfig(
 	if err != nil {
 		panic(err)
 	}
+	c.update(conf, err)
+
 	var mockCost = 100
 	conf.Cost = map[string]int{
 		"cost.update_settings":             mockCost,

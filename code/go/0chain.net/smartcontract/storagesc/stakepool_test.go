@@ -149,6 +149,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	}
 	_, err := ctx.InsertTrieNode(scConfigKey(ADDRESS), scYaml)
 	require.NoError(t, err)
+	c.update(scYaml, err)
 	var spr = &stakePoolRequest{
 		ProviderType: spenum.Blobber,
 		ProviderID:   blobberId,

@@ -278,6 +278,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		// init config
 		_, err := balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 		require.NoError(t, err)
+		c.update(conf, err)
 
 		_, err = balances.InsertTrieNode(freeStorageAssignerKey(ADDRESS, p.marker.Assigner), &p.assigner)
 		require.NoError(t, err)

@@ -634,20 +634,14 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 const cantGetConfigErrMsg = "can't get config"
 
 func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
-	var conf = &Config{}
-	err := balances.GetTrieNode(scConfigKey(ADDRESS), conf)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		} else {
-			conf, err = getConfiguredConfig()
-			if err != nil {
-				return nil, err
-			}
-			return conf, err
-		}
+	c.l.RLock()
+	if c.config == nil && c.err == nil {
+		c.l.RUnlock()
+		InitConfig(balances)
+		c.l.RLock()
 	}
-	return conf, nil
+	defer c.l.RUnlock()
+	return c.config, c.err
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config storage-config

@@ -55,14 +55,13 @@ func Test_FuzzyMintTest(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
 	payload, err := CreateMintPayload(ctx, defaultClient)
+
 	require.NoError(t, err)
 
 	for _, client := range clients {
 		transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
 		require.NoError(t, err)
-
 		response, err := contract.Mint(transaction, payload.Encode(), ctx)
-
 		require.NoError(t, err, "Testing authorizer: '%s'", client)
 		require.NotNil(t, response)
 		require.NotEmpty(t, response)
@@ -102,6 +101,7 @@ func Test_MaxFeeMint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := MakeMockStateContext()
 			ctx.globalNode.ZCNSConfig.MaxFee = tc.maxFee
+			UpdateConfigCache(ctx.globalNode)
 			contract := CreateZCNSmartContract()
 			payload, err := CreateMintPayload(ctx, defaultClient)
 			require.NoError(t, err)

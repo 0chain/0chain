@@ -984,6 +984,7 @@ func setupChallengeMocks(
 
 	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
+	c.update(&scYaml, err)
 
 	return txn, ssc, allocation, allocChallenges, details, ctx
 }
