@@ -16,7 +16,9 @@ jobs:
           go-version: '1.18'
 
       - name: Run Init
-        run: ./docker.local/bin/init.setup.sh
+        run: |
+          sudo apt update && sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
+          ./docker.local/bin/init.setup.sh
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh

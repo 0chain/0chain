@@ -4,14 +4,13 @@ import (
 	"errors"
 
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"golang.org/x/net/context"
 	"gorm.io/gorm/clause"
-
-	"gorm.io/gorm"
 )
 
 type Event struct {
-	gorm.Model
+	model.ImmutableModel
 	BlockNumber int64       `json:"block_number" gorm:"index:idx_event"`
 	TxHash      string      `json:"tx_hash" gorm:"index:idx_event"`
 	Type        EventType   `json:"type" gorm:"index:idx_event"`
@@ -38,10 +37,10 @@ func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagin
 	if len(search.TxHash) > 0 {
 		db = db.Where("tx_hash", search.TxHash).Find(eventTable)
 	}
-	if EventType(search.Type) != TypeNone {
+	if search.Type != TypeNone {
 		db = db.Where("type", search.Type).Find(eventTable)
 	}
-	if EventTag(search.Tag) != TagNone {
+	if search.Tag != TagNone {
 		db = db.Where("tag", search.Tag).Find(eventTable)
 	}
 
@@ -86,6 +85,11 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
+	err = edb.Store.Get().Migrator().DropTable(&ChallengePool{})
+	if err != nil {
+		return err
+	}
+
 	err = edb.Store.Get().Migrator().DropTable(&BlobberSnapshot{})
 	if err != nil {
 		return err
@@ -111,6 +115,31 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
+	err = edb.Store.Get().Migrator().DropTable(&ValidatorAggregate{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&ValidatorSnapshot{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&RewardProvider{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&ProviderRewards{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&RewardDelegate{})
+	if err != nil {
+		return err
+	}
+
 	err = edb.Store.Get().Migrator().DropTable(&Block{})
 	if err != nil {
 		return err
@@ -126,12 +155,32 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
+	err = edb.Store.Get().Migrator().DropTable(&MinerAggregate{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&MinerSnapshot{})
+	if err != nil {
+		return err
+	}
+
 	err = edb.Store.Get().Migrator().DropTable(&Curator{})
 	if err != nil {
 		return err
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&SharderAggregate{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&SharderSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -147,6 +196,16 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&User{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&UserAggregate{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&UserSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -167,6 +226,11 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&AllocationBlobberTerm{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&ProviderRewards{})
 	if err != nil {
 		return err
 	}

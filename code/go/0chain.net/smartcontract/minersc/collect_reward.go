@@ -1,8 +1,11 @@
 package minersc
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -20,11 +23,13 @@ func (ssc *MinerSmartContract) collectReward(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
+	var req stakepool.CollectRewardRequest
 	minted, err := stakepool.CollectReward(
 		input,
 		func(
 			crr stakepool.CollectRewardRequest, balances cstate.StateContextI,
 		) (currency.Coin, error) {
+			req = crr
 			var provider *MinerNode
 			var err error
 			switch crr.ProviderType {
@@ -67,5 +72,20 @@ func (ssc *MinerSmartContract) collectReward(
 				"saving global node: %v", err)
 		}
 	}
-	return "", nil
+
+	return toJson(&event.RewardMint{
+		Amount:       int64(minted),
+		BlockNumber:  balances.GetBlock().Round,
+		ClientID:     txn.ClientID,
+		ProviderType: strconv.Itoa(int(req.ProviderType)),
+		ProviderID:   req.ProviderId,
+	}), err
+}
+
+func toJson(val interface{}) string {
+	var b, err = json.Marshal(val)
+	if err != nil {
+		panic(err) // must not happen
+	}
+	return string(b)
 }

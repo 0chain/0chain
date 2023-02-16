@@ -61,7 +61,7 @@ func TestWriteMarker(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -117,7 +117,7 @@ func TestGetWriteMarkers(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -129,7 +129,7 @@ func TestGetWriteMarkers(t *testing.T) {
 		return
 	}
 	defer eventDb.Drop()
-	err = eventDb.addOrOverwriteBlobber([]Blobber{Blobber{BlobberID: "someHash"}})
+	err = eventDb.addOrOverwriteBlobber([]Blobber{{Provider: Provider{ID: "someHash"}}})
 	if !assert.NoError(t, err, "Error while writing blobber marker") {
 		return
 	}
@@ -176,11 +176,6 @@ func TestGetWriteMarkers(t *testing.T) {
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
 
-	t.Run("WriteMarkers size total", func(t *testing.T) {
-		gotWM, err := eventDb.GetAllocationWrittenSizeInLastNBlocks(5, "")
-		assert.NoError(t, err)
-		assert.Equal(t, int64(30), gotWM)
-	})
 	t.Run("writeMarker count", func(t *testing.T) {
 		gotCount, err := eventDb.GetWriteMarkerCount("allocation_id")
 		assert.NoError(t, err)

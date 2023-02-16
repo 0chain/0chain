@@ -3,7 +3,6 @@ package storagesc
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -30,7 +29,7 @@ type mptStore struct {
 func newMptStore(tb testing.TB) (mpts *mptStore) {
 	mpts = new(mptStore)
 
-	var dir, err = ioutil.TempDir("", "storage-mpt")
+	var dir, err = os.MkdirTemp("", "storage-mpt")
 	require.NoError(tb, err)
 
 	mpts.pndb, err = util.NewPNodeDB(filepath.Join(dir, "data"),
@@ -466,7 +465,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				}
 
 				// 6.3 keep for the benchmark
-				//blobberID = chall.BlobberID
+				//blobberID = chall.ID
 
 				// 6.4 prepare transaction
 				tp += 1

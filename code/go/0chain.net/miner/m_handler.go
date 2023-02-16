@@ -57,6 +57,7 @@ func SetupM2MSenders() {
 
 const (
 	vrfsShareRoundM2MV1Pattern = "/v1/_m2m/round/vrf_share"
+	blockNotarizationPattern   = "/v1/_m2m/block/notarization"
 )
 
 func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.Request) {
@@ -77,7 +78,7 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 				datastore.GetEntityMetadata("block")),
 			nil,
 		),
-		"/v1/_m2m/block/notarization": node.ToN2NReceiveEntityHandler(
+		blockNotarizationPattern: node.ToN2NReceiveEntityHandler(
 			NotarizationReceiptHandler,
 			nil,
 		),
@@ -447,8 +448,8 @@ func notarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	return nil, nil
 }
 
-// NotarizedBlockHandler - handles a notarized block.
-func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
+// notarizedBlockHandler - handles a notarized block.
+func notarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	resp interface{}, err error) {
 
 	var nb, ok = entity.(*block.Block)
@@ -461,7 +462,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	//reject cur_round -2 is a locked round, there can't be new notarization important for us
 	if nb.Round < mc.GetCurrentRound()-1 {
 		logging.Logger.Debug("notarized block handler (round older than the current round)",
-			zap.String("block", nb.Hash), zap.Any("round", nb.Round))
+			zap.String("block", nb.Hash), zap.Int64("round", nb.Round))
 		return
 	}
 

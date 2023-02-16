@@ -2,32 +2,93 @@ package event
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
-	common2 "0chain.net/smartcontract/common"
-	"github.com/0chain/common/core/currency"
+	"0chain.net/smartcontract/stakepool/spenum"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
+	"0chain.net/core/viper"
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 func init() {
-	logging.Logger = zap.NewNop()
+	viper.Set("logging.console", true)
+	viper.Set("logging.level", "debug")
 }
 
-func TestMiners(t *testing.T) {
+func TestGetMinerWithDelegatePools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	minerIds := createMiners(t, edb, 2)
+
+	err := edb.addDelegatePools([]DelegatePool{
+		{
+			PoolID:       "pool_id",
+			ProviderType: spenum.Miner,
+			ProviderID:   minerIds[1],
+			DelegateID:   "delegate_id",
+
+			Balance: 30,
+		},
+		{
+			PoolID:       "pool_id_2",
+			ProviderType: spenum.Miner,
+			ProviderID:   minerIds[1],
+			DelegateID:   "delegate_id_2",
+
+			Balance: 30,
+		},
+	})
+	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
+
+	p, err := edb.GetDelegatePool("pool_id", minerIds[1])
+	require.NoError(t, err, "Error while retrieving DelegatePool from event Database")
+	require.Equal(t, p.PoolID, "pool_id")
+	require.Equal(t, p.ProviderType, spenum.Miner)
+	require.Equal(t, p.ProviderID, minerIds[1])
+
+	s, dps, err := edb.GetMinerWithDelegatePools(minerIds[1])
+
+	require.NoError(t, err, "Error while getting sharder with delegate pools")
+	require.Equal(t, s.ID, minerIds[1])
+	require.Equal(t, 2, len(dps))
+	require.Equal(t, minerIds[1], dps[0].ProviderID)
+}
+
+func TestGetMinerWithDelegatePoolsNoPools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	minerIds := createMiners(t, edb, 2)
+
+	s, dps, err := edb.GetMinerWithDelegatePools(minerIds[1])
+
+	require.NoError(t, err, "Error while getting miner with delegate pools")
+	require.Nil(t, dps, "there should be no delegate pools")
+	require.Equal(t, s.ID, minerIds[1])
+}
+
+func TestMinersBatchUpdate(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
+	logging.InitLogging("development", "")
+
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 
 	type Stat struct {
 		// for miner (totals)
@@ -83,26 +144,29 @@ func TestMiners(t *testing.T) {
 
 	convertMn := func(mn MinerNode) Miner {
 		return Miner{
-			MinerID:           mn.ID,
-			N2NHost:           mn.N2NHost,
-			Host:              mn.Host,
-			Port:              mn.Port,
-			Path:              mn.Path,
-			PublicKey:         mn.PublicKey,
-			ShortName:         mn.ShortName,
-			BuildTag:          mn.BuildTag,
-			TotalStaked:       currency.Coin(mn.TotalStaked),
-			Delete:            mn.Delete,
-			DelegateWallet:    mn.DelegateWallet,
-			ServiceCharge:     mn.ServiceCharge,
-			NumberOfDelegates: mn.NumberOfDelegates,
-			MinStake:          mn.MinStake,
-			MaxStake:          mn.MaxStake,
-			LastHealthCheck:   mn.LastHealthCheck,
-			Rewards: ProviderRewards{
-				ProviderID: mn.ID,
-				Rewards:    mn.Stat.GeneratorRewards,
+			N2NHost:   mn.N2NHost,
+			Host:      mn.Host,
+			Port:      mn.Port,
+			Path:      mn.Path,
+			PublicKey: mn.PublicKey,
+			ShortName: mn.ShortName,
+			BuildTag:  mn.BuildTag,
+			Delete:    mn.Delete,
+			Provider: Provider{
+				ID:             mn.ID,
+				TotalStake:     currency.Coin(mn.TotalStaked),
+				DelegateWallet: mn.DelegateWallet,
+				ServiceCharge:  mn.ServiceCharge,
+				NumDelegates:   mn.NumberOfDelegates,
+				MinStake:       mn.MinStake,
+				MaxStake:       mn.MaxStake,
+				Rewards: ProviderRewards{
+					ProviderID: mn.ID,
+					Rewards:    mn.Stat.GeneratorRewards,
+				},
+				LastHealthCheck: mn.LastHealthCheck,
 			},
+
 			Fees:      mn.Stat.GeneratorFees,
 			Longitude: 0,
 			Latitude:  0,
@@ -111,17 +175,205 @@ func TestMiners(t *testing.T) {
 
 	access := config.DbAccess{
 		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
+		Name:            "events_db",
+		User:            "zchain_user",
+		Password:        "zchian",
+		Host:            "localhost",
+		Port:            "5432",
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
+	eventDb, err := NewEventDb(access, config.DbSettings{Debug: true})
+	if err != nil {
+		t.Error(err)
+	}
+	eventDb.AutoMigrate()
+	//defer eventDb.Drop()
 
-	eventDb, err := NewEventDb(access)
+	// Miner - Add Event
+	mn := MinerNode{
+		&SimpleNode{
+			ID:                "miner one",
+			N2NHost:           "n2n one host",
+			Host:              "miner one host",
+			Port:              1999,
+			Path:              "path miner one",
+			PublicKey:         "pub key",
+			ShortName:         "mo",
+			BuildTag:          "build tag",
+			TotalStaked:       51,
+			Delete:            false,
+			DelegateWallet:    "delegate wallet",
+			ServiceCharge:     10.6,
+			NumberOfDelegates: 6,
+			MinStake:          15,
+			MaxStake:          100,
+			Stat: Stat{
+				GeneratorRewards: 5,
+				GeneratorFees:    3,
+				SharderRewards:   10,
+				SharderFees:      5,
+			},
+			NodeType:        NodeType(1),
+			LastHealthCheck: common.Timestamp(51),
+		},
+	}
+	// Miner - Add Event
+	mn2 := MinerNode{
+		&SimpleNode{
+			ID:                "miner two",
+			N2NHost:           "n2n one host",
+			Host:              "miner one host",
+			Port:              1999,
+			Path:              "path miner one",
+			PublicKey:         "pub key",
+			ShortName:         "mo",
+			BuildTag:          "build tag",
+			TotalStaked:       51,
+			Delete:            false,
+			DelegateWallet:    "delegate wallet",
+			ServiceCharge:     10.6,
+			NumberOfDelegates: 6,
+			MinStake:          15,
+			MaxStake:          100,
+			Stat: Stat{
+				GeneratorRewards: 5,
+				GeneratorFees:    3,
+				SharderRewards:   10,
+				SharderFees:      5,
+			},
+			NodeType:        NodeType(1),
+			LastHealthCheck: common.Timestamp(51),
+		},
+	}
+
+	mnMiner1 := convertMn(mn)
+	mnMiner2 := convertMn(mn2)
+
+	if err := eventDb.addMiner([]Miner{mnMiner1, mnMiner2}); err != nil {
+		t.Error(err)
+	}
+
+	mnMiner1c := convertMn(mn)
+	mnMiner2c := convertMn(mn2)
+	mnMiner1c.TotalStake = currency.Coin(int64(10))
+	mnMiner2c.TotalStake = currency.Coin(int64(10))
+	if err := eventDb.updateMinersTotalStakes([]Miner{mnMiner1c, mnMiner2c}); err != nil {
+		t.Error(err)
+	}
+
+	miner, err := eventDb.GetMiner(mnMiner1.ID)
+	if err != nil {
+		t.Error(err)
+	}
+	i, _ := miner.TotalStake.Int64()
+	assert.Equal(t, int64(10), i)
+
+	miner2, err := eventDb.GetMiner(mnMiner2.ID)
+	if err != nil {
+		t.Error(err)
+	}
+	i, _ = miner2.TotalStake.Int64()
+	assert.Equal(t, int64(10), i)
+
+}
+
+func TestMiners(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
+	logging.InitLogging("development", "")
+
+	type Stat struct {
+		// for miner (totals)
+		GeneratorRewards currency.Coin `json:"generator_rewards,omitempty"`
+		GeneratorFees    currency.Coin `json:"generator_fees,omitempty"`
+		// for sharder (totals)
+		SharderRewards currency.Coin `json:"sharder_rewards,omitempty"`
+		SharderFees    currency.Coin `json:"sharder_fees,omitempty"`
+	}
+
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
+
+	type NodeType int
+
+	type SimpleNode struct {
+		ID          string `json:"id" validate:"hexadecimal,len=64"`
+		N2NHost     string `json:"n2n_host"`
+		Host        string `json:"host"`
+		Port        int    `json:"port"`
+		Path        string `json:"path"`
+		PublicKey   string `json:"public_key"`
+		ShortName   string `json:"short_name"`
+		BuildTag    string `json:"build_tag"`
+		TotalStaked int64  `json:"total_stake"`
+		Delete      bool   `json:"delete"`
+
+		// settings and statistic
+
+		// DelegateWallet grabs node rewards (excluding stake rewards) and
+		// controls the node setting. If the DelegateWallet hasn't been provided,
+		// then node ID used (for genesis nodes, for example).
+		DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
+		// ServiceChange is % that miner node grabs where it's generator.
+		ServiceCharge float64 `json:"service_charge"` // %
+		// NumberOfDelegates is max allowed number of delegate pools.
+		NumberOfDelegates int `json:"number_of_delegates"`
+		// MinStake allowed by node.
+		MinStake currency.Coin `json:"min_stake"`
+		// MaxStake allowed by node.
+		MaxStake currency.Coin `json:"max_stake"`
+
+		// Stat contains node statistic.
+		Stat Stat `json:"stat"`
+
+		// NodeType used for delegate pools statistic.
+		NodeType NodeType `json:"node_type,omitempty"`
+
+		// LastHealthCheck used to check for active node
+		LastHealthCheck common.Timestamp `json:"last_health_check"`
+	}
+
+	type MinerNode struct {
+		*SimpleNode
+	}
+
+	convertMn := func(mn MinerNode) Miner {
+		return Miner{
+
+			N2NHost:   mn.N2NHost,
+			Host:      mn.Host,
+			Port:      mn.Port,
+			Path:      mn.Path,
+			PublicKey: mn.PublicKey,
+			ShortName: mn.ShortName,
+			BuildTag:  mn.BuildTag,
+			Delete:    mn.Delete,
+			Provider: Provider{
+				ID:             mn.ID,
+				TotalStake:     currency.Coin(mn.TotalStaked),
+				DelegateWallet: mn.DelegateWallet,
+				ServiceCharge:  mn.ServiceCharge,
+				NumDelegates:   mn.NumberOfDelegates,
+				MinStake:       mn.MinStake,
+				MaxStake:       mn.MaxStake,
+				Rewards: ProviderRewards{
+					ProviderID: mn.ID,
+					Rewards:    mn.Stat.GeneratorRewards,
+				},
+			},
+			Fees:      mn.Stat.GeneratorFees,
+			Longitude: 0,
+			Latitude:  0,
+		}
+	}
+
+	access := config.DbAccess{}
+
+	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -157,20 +409,56 @@ func TestMiners(t *testing.T) {
 			LastHealthCheck: common.Timestamp(51),
 		},
 	}
+	// Miner - Add Event
+	mn2 := MinerNode{
+		&SimpleNode{
+			ID:                "miner two",
+			N2NHost:           "n2n one host",
+			Host:              "miner one host",
+			Port:              1999,
+			Path:              "path miner one",
+			PublicKey:         "pub key",
+			ShortName:         "mo",
+			BuildTag:          "build tag",
+			TotalStaked:       51,
+			Delete:            false,
+			DelegateWallet:    "delegate wallet",
+			ServiceCharge:     10.6,
+			NumberOfDelegates: 6,
+			MinStake:          15,
+			MaxStake:          100,
+			Stat: Stat{
+				GeneratorRewards: 5,
+				GeneratorFees:    3,
+				SharderRewards:   10,
+				SharderFees:      5,
+			},
+			NodeType:        NodeType(1),
+			LastHealthCheck: common.Timestamp(51),
+		},
+	}
 
 	mnMiner := convertMn(mn)
-	data, err := json.Marshal(&mnMiner)
-	require.NoError(t, err)
+	mnMiner2 := convertMn(mn2)
 
 	eventAddMn := Event{
-		BlockNumber: 2,
+		BlockNumber: 1,
 		TxHash:      "tx hash",
 		Type:        TypeStats,
-		Tag:         TagAddOrOverwriteMiner,
-		Data:        string(data),
+		Tag:         TagAddMiner,
+		Data:        mnMiner,
+		Index:       mnMiner.ID,
 	}
-	events := []Event{eventAddMn}
-	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
+	eventAddMnTwo := Event{
+		BlockNumber: 1,
+		TxHash:      "tx hash",
+		Type:        TypeStats,
+		Tag:         TagAddMiner,
+		Data:        mnMiner,
+		Index:       mnMiner2.ID,
+	}
+	events := []Event{eventAddMn, eventAddMnTwo}
+	eventDb.ProcessEvents(context.TODO(), events, 1, "hash", 10)
 	time.Sleep(100 * time.Millisecond)
 	miner, err := eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -179,47 +467,67 @@ func TestMiners(t *testing.T) {
 	// Miner - Overwrite event
 	mn.SimpleNode.Path = "path miner one - overwrite"
 
-	mnMiner2 := convertMn(mn)
-	data, err = json.Marshal(&mnMiner2)
-	require.NoError(t, err)
+	mnMiner1 := convertMn(mn)
 
 	eventAddOrOverwriteMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
 		Type:        TypeStats,
-		Tag:         TagAddOrOverwriteMiner,
-		Data:        string(data),
+		Tag:         TagAddMiner,
+		Data:        mnMiner1,
+		Index:       mnMiner1.ID,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn}, 100, "hash", 10)
+	eventAddOrOverwriteMn2 := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash2",
+		Type:        TypeStats,
+		Tag:         TagAddMiner,
+		Data:        mnMiner2,
+		Index:       mnMiner2.ID,
+	}
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn, eventAddOrOverwriteMn2}, 2, "hash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, miner.Path, mn.Path)
 
 	// Miner - Update event
-	update := dbs.DbUpdates{
+	update1 := dbs.DbUpdates{
 		Id: mn.ID,
 		Updates: map[string]interface{}{
 			"path":       "new path",
 			"short_name": "new short name",
 		},
 	}
-	data, err = json.Marshal(&update)
-	require.NoError(t, err)
+	// Miner - Update event
+	update2 := dbs.DbUpdates{
+		Id: mn2.ID,
+		Updates: map[string]interface{}{
+			"path":       "new path2",
+			"short_name": "new short name2",
+		},
+	}
 
 	eventUpdateMn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
 		Type:        TypeStats,
 		Tag:         TagUpdateMiner,
-		Data:        string(data),
+		Data:        update1,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateMn}, 100, "bhash", 10)
+	eventUpdateMn2 := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash3",
+		Type:        TypeStats,
+		Tag:         TagUpdateMiner,
+		Data:        update2,
+	}
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateMn, eventUpdateMn2}, 100, "bhash", 10)
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
-	require.EqualValues(t, miner.Path, update.Updates["path"])
-	require.EqualValues(t, miner.ShortName, update.Updates["short_name"])
+	require.EqualValues(t, miner.Path, update1.Updates["path"])
+	require.EqualValues(t, miner.ShortName, update1.Updates["short_name"])
 
 	// Miner - Delete Event
 	deleteEvent := Event{
@@ -249,15 +557,21 @@ func TestGetMiners(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
-	if err != nil {
-		return
-	}
+	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
+	require.NoError(t, err)
 	defer eventDb.Close()
+	err = eventDb.Drop()
+	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
-	defer eventDb.Drop()
+	require.NoError(t, err)
+
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 	assert.NoError(t, err, "error while migrating database")
-	createMiners(t, eventDb, 10)
+	_ = createMiners(t, eventDb, 10)
 
 	t.Run("Inactive miners should be returned", func(t *testing.T) {
 		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
@@ -290,20 +604,24 @@ func TestGetMinerLocations(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
-	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
-	}
+	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
+	require.NoError(t, err)
 	defer eventDb.Close()
+	err = eventDb.Drop()
+	require.NoError(t, err)
 	err = eventDb.AutoMigrate()
-	defer func() {
-		err = eventDb.Drop()
-		assert.NoError(t, err, "error while dropping database")
-	}()
+	require.NoError(t, err)
+
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
+
 	assert.NoError(t, err, "error while migrating database")
 	createMinersWithLocation(t, eventDb, 12)
 	t.Run("miner locations without any filters", func(t *testing.T) {
-		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, common2.Pagination{})
+		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, common2.Pagination{Limit: 20})
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 12, len(locations), "all miners should be returned")
 		for _, location := range locations {
@@ -337,38 +655,45 @@ func TestGetMinerLocations(t *testing.T) {
 	})
 }
 
-func createMiners(t *testing.T, eventDb *EventDb, count int) {
+func createMiners(t *testing.T, eventDb *EventDb, count int) []string {
+	var ids []string
 	for i := 0; i < count; i++ {
+		id := fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i)
 		m := Miner{
-			MinerID:           fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
-			N2NHost:           "198.18.0.73",
-			Host:              "198.18.0.73",
-			Port:              7073,
-			PublicKey:         "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12",
-			ShortName:         "localhost.m2",
-			BuildTag:          "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
-			Delete:            false,
-			DelegateWallet:    "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
-			ServiceCharge:     0.1,
-			NumberOfDelegates: 10,
-			MinStake:          0,
-			MaxStake:          1000000000000,
-			LastHealthCheck:   1644881505,
-			Rewards: ProviderRewards{
-				ProviderID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
-				Rewards:    9725520000000,
+			N2NHost:   "198.18.0.73",
+			Host:      "198.18.0.73",
+			Port:      7073,
+			PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12",
+			ShortName: "localhost.m2",
+			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
+			Delete:    false,
+			Provider: Provider{
+				ID:             id,
+				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
+				ServiceCharge:  0.1,
+				NumDelegates:   10,
+				MinStake:       0,
+				MaxStake:       1000000000000,
+				Rewards: ProviderRewards{
+					ProviderID: id,
+					Rewards:    9725520000000,
+				},
+				LastHealthCheck: 1644881505,
 			},
+
 			Active: i%2 == 0,
 		}
-		err := eventDb.addOrOverwriteMiner([]Miner{m})
+		err := eventDb.addMiner([]Miner{m})
+		ids = append(ids, id)
 		assert.NoError(t, err, "inserting miners failed")
 	}
+	return ids
 }
 
 func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Miner{Active: i%2 == 0, MinerID: fmt.Sprintf("%d", i), Longitude: float64(100 + i), Latitude: float64(100 - i)}
-		err := eventDb.addOrOverwriteMiner([]Miner{s})
+		s := Miner{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		err := eventDb.addMiner([]Miner{s})
 		assert.NoError(t, err, "There should be no error")
 	}
 }
@@ -376,24 +701,28 @@ func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 	for i := offset; i < offset+limit; i++ {
 		want := Miner{
-			MinerID:           fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
-			N2NHost:           "198.18.0.73",
-			Host:              "198.18.0.73",
-			Port:              7073,
-			PublicKey:         "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12",
-			ShortName:         "localhost.m2",
-			BuildTag:          "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
-			Delete:            false,
-			DelegateWallet:    "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
-			ServiceCharge:     0.1,
-			NumberOfDelegates: 10,
-			MinStake:          0,
-			MaxStake:          1000000000000,
-			LastHealthCheck:   1644881505,
-			Rewards: ProviderRewards{
-				ProviderID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
-				Rewards:    9725520000000,
+
+			N2NHost:   "198.18.0.73",
+			Host:      "198.18.0.73",
+			Port:      7073,
+			PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12",
+			ShortName: "localhost.m2",
+			BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
+			Delete:    false,
+			Provider: Provider{
+				ID:             fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
+				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
+				ServiceCharge:  0.1,
+				NumDelegates:   10,
+				MinStake:       0,
+				MaxStake:       1000000000000,
+				Rewards: ProviderRewards{
+					ProviderID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
+					Rewards:    9725520000000,
+				},
+				LastHealthCheck: 1644881505,
 			},
+
 			Active: i%2 == 0,
 		}
 		want.CreatedAt = miners[i].CreatedAt
@@ -406,7 +735,7 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 func BenchmarkReturnValueMiner(t *testing.B) {
 	for i := 0; i < t.N; i++ {
 		mi := ReturnValue()
-		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.MinerID)
+		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.ID)
 		t.Log("")
 	}
 }
@@ -414,7 +743,7 @@ func BenchmarkReturnValueMiner(t *testing.B) {
 func BenchmarkReturnPointerValueMiner(t *testing.B) {
 	for i := 0; i < t.N; i++ {
 		mi := ReturnPointer()
-		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.MinerID)
+		assert.Equal(t, "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d", mi.ID)
 		t.Log("")
 	}
 }
@@ -423,52 +752,60 @@ func (edb *EventDb) GetMinerPointer(id string) (*Miner, error) {
 	miner := &Miner{}
 	return miner, edb.Store.Get().
 		Model(&Miner{}).
-		Where(&Miner{MinerID: id}).
+		Where(&Miner{Provider: Provider{ID: id}}).
 		First(miner).Error
 }
 
 func ReturnValue() Miner {
 	return Miner{
-		MinerID:           "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
-		N2NHost:           "198.18.0.73",
-		Host:              "198.18.0.73",
-		Port:              7073,
-		PublicKey:         "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12",
-		ShortName:         "localhost.m2",
-		BuildTag:          "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
-		Delete:            false,
-		DelegateWallet:    "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
-		ServiceCharge:     0.1,
-		NumberOfDelegates: 10,
-		MinStake:          0,
-		MaxStake:          1000000000000,
-		LastHealthCheck:   1644881505,
-		Rewards: ProviderRewards{
-			ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
-			Rewards:    9725520000000,
+
+		N2NHost:   "198.18.0.73",
+		Host:      "198.18.0.73",
+		Port:      7073,
+		PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12",
+		ShortName: "localhost.m2",
+		BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
+		Delete:    false,
+		Provider: Provider{
+			ID:             "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
+			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
+			ServiceCharge:  0.1,
+			NumDelegates:   10,
+			MinStake:       0,
+			MaxStake:       1000000000000,
+			Rewards: ProviderRewards{
+				ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
+				Rewards:    9725520000000,
+			},
+			LastHealthCheck: 1644881505,
 		},
+
 		Active: true}
 }
 
 func ReturnPointer() *Miner {
 	return &Miner{
-		MinerID:           "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
-		N2NHost:           "198.18.0.73",
-		Host:              "198.18.0.73",
-		Port:              7073,
-		PublicKey:         "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12",
-		ShortName:         "localhost.m2",
-		BuildTag:          "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
-		Delete:            false,
-		DelegateWallet:    "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
-		ServiceCharge:     0.1,
-		NumberOfDelegates: 10,
-		MinStake:          0,
-		MaxStake:          1000000000000,
-		LastHealthCheck:   1644881505,
-		Rewards: ProviderRewards{
-			ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
-			Rewards:    9725520000000,
+
+		N2NHost:   "198.18.0.73",
+		Host:      "198.18.0.73",
+		Port:      7073,
+		PublicKey: "aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12",
+		ShortName: "localhost.m2",
+		BuildTag:  "d4b6b52f17b87d7c090d5cac29c6bfbf1051c820",
+		Delete:    false,
+		Provider: Provider{
+			ID:             "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
+			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
+			ServiceCharge:  0.1,
+			NumDelegates:   10,
+			MinStake:       0,
+			MaxStake:       1000000000000,
+			Rewards: ProviderRewards{
+				ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
+				Rewards:    9725520000000,
+			},
+			LastHealthCheck: 1644881505,
 		},
+
 		Active: true}
 }

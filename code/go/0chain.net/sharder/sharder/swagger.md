@@ -1,7 +1,8 @@
 
 
 
-# 0chain Api:
+# 0chain API
+# 0chain enables a limitless future with high-performance decentralized cloud storage
   
 
 ## Informations
@@ -24,93 +25,188 @@
 
 ## All endpoints
 
-###  operations
+###  allocation
 
 | Method  | URI     | Name   | Summary |
 |---------|---------|--------|---------|
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig | [get global config](#get-global-config) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocWrittenSizePerPeriod | [alloc written size per period](#alloc-written-size-per-period) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers | [alloc blobbers](#alloc-blobbers) | returns list of all blobbers alive that match the allocation request. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_read_size | [alloc read size](#alloc-read-size) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count | [alloc write marker count](#alloc-write-marker-count) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_written_size | [alloc written size](#alloc-written-size) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation | [allocation](#allocation) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_read_size | [alloc read size](#alloc-read-size) | Get Allocation Read Size by Allocation ID and Block Number |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count | [alloc write marker count](#alloc-write-marker-count) | Get Allocation Write Marker Count by Allocation ID |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation | [allocation](#allocation) | Get Allocation Object |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock | [allocation min lock](#allocation-min-lock) | Calculates the cost of a new allocation request. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations | [allocations](#allocations) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price | [average write price](#average-write-price) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges | [blobber challenges](#blobber-challenges) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank | [blobber rank](#blobber-rank) | Gets the rank of a blobber. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids | [blobber ids](#blobber-ids) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations | [allocations](#allocations) | List allocation information for allocations owned by the client |
+  
+
+
+###  authorizer
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizer | [get authorizer](#get-authorizer) | Get Authorizer Information |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes | [get authorizer nodes](#get-authorizer-nodes) | Get Authorizer Nodes |
+  
+
+
+###  blobber
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers | [alloc blobbers](#alloc-blobbers) | Returns list of all blobbers alive that matches the allocation request |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price | [average write price](#average-write-price) | Get Average Write Price |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges | [blobber challenges](#blobber-challenges) | Get Blobber Challenges by Challenge ID |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids | [blobber ids](#blobber-ids) | Get Blobber URL as ID |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation | [blobbers by geolocation](#blobbers-by-geolocation) | Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank | [blobbers by rank](#blobbers-by-rank) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block | [block](#block) |  |
-| GET | /v1/chain/get/stats | [chainstatus](#chainstatus) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank | [blobbers by rank](#blobbers-by-rank) | Get List of Blobbers by Rank |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers | [free alloc blobbers](#free-alloc-blobbers) | Returns list of all blobbers alive that match the free allocation request. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber | [get blobber](#get-blobber) | Get Blobber Info |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge | [get challenge](#get-challenge) | Get blobber challenge by challenge id |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_total_stakes | [get blobber total stakes](#get-blobber-total-stakes) | Get Blobber Stakes Combined |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers | [getblobbers](#getblobbers) | Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity). |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges | [openchallenges](#openchallenges) | Get Blobber Open Challenges |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate | [replicate blobber aggregates](#replicate-blobber-aggregates) | Get list of blobber aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data | [total stored data](#total-stored-data) | Gets the total data currently storage used across all blobbers. |
+  
+
+
+###  chain
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocWrittenSizePerPeriod | [alloc written size per period](#alloc-written-size-per-period) | Get the total amount of data added during given blocks |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block | [block](#block) | Get Block Information |
+| GET | /v1/chain/get/stats | [chainstatus](#chainstatus) | Get Chain Statistics |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents | [get events](#get-events) | Get Block Events |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock | [get magic block](#get-magic-block) | Get Magic Block |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks | [get blocks](#get-blocks) | Gets block information for all blocks. Todo: We need to add a filter to this. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round | [timestamps to rounds](#timestamps-to-rounds) | Get round(s) number for timestamp(s) |
+  
+
+
+###  markers
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers | [count readmarkers](#count-readmarkers) | Get read markers |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers | [get write markers](#get-write-markers) | Get Write Marker |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker | [latestreadmarker](#latestreadmarker) | Get Latest Read Marker |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers | [readmarkers](#readmarkers) | Get Read Markers |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers | [writemarkers](#writemarkers) | Get List of Write Markers |
+  
+
+
+###  miners
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList | [get dkg list](#get-dkg-list) | Get list of DKG Miners |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList | [get miner list](#get-miner-list) | Get Miner List |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList | [get mpks list](#get-mpks-list) | Get DKG Miners |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations | [get miner geolocations](#get-miner-geolocations) | Get Miner Geolocation |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake | [get miners stake](#get-miners-stake) | Get Miners Stake |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats | [get miners stats](#get-miners-stats) | Get Miners Stats |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats | [get sharders stats](#get-sharders-stats) | Get Active and Inactive Miners Count |
+  
+
+
+###  misc
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns | [get group share or signs](#get-group-share-or-signs) | Get Group Share or Signs |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase | [get phase](#get-phase) | Get Phase Nodes |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPoolInfo | [get pool info](#get-pool-info) | Get Vesting Config |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat | [node stat](#node-stat) | Get Node Stats |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots | [replicate snapshots](#replicate-snapshots) | Get list of snapshot records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search | [search](#search) | Search Endpoint |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config | [vesting config](#vesting-config) | Get Vesting Configuration |
+  
+
+
+###  pools
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_written_size | [alloc written size](#alloc-written-size) | Get stats for all locked tokens of a challenge pool |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term | [get alloc blobber terms](#get-alloc-blobber-terms) | Get stats for all locked tokens of a stake pool |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat | [get challenge pool stat](#get-challenge-pool-stat) | Get Challenge Pool Stats |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getClientPools | [get client pools](#get-client-pools) | Get Client Pools |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat | [get m s stake pool stat](#get-m-s-stake-pool-stat) | Get Stake Pool Stats |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool | [get nodepool](#get-nodepool) | Get Node Pool Info |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat | [get read pool stat](#get-read-pool-stat) | Get Read Pool Stats |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat | [get stake pool stat](#get-stake-pool-stat) | Get Stake Pool Stats |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal | [get user locked total](#get-user-locked-total) | Get Total Locked Tokens for a user |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools | [get user pools](#get-user-pools) | Get User Pools |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat | [get user stake pool stat](#get-user-stake-pool-stat) | Get Stake Pool Stats for a User |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat | [node pool stat](#node-pool-stat) | Get Node Pool Stats |
+  
+
+
+###  rewards
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward | [collected reward](#collected-reward) | Returns collected reward for a client_id.
 > Note: start-date and end-date resolves to the closest block number for those timestamps on the network. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs | [configs](#configs) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers | [count readmarkers](#count-readmarkers) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors | [errors](#errors) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/faucet_config | [faucet config](#faucet-config) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers | [free alloc blobbers](#free-alloc-blobbers) | returns list of all blobbers alive that match the free allocation request. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term | [get alloc blobber terms](#get-alloc-blobber-terms) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizer | [get authorizer](#get-authorizer) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes | [get authorizer nodes](#get-authorizer-nodes) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber | [get blobber](#get-blobber) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge | [get challenge](#get-challenge) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat | [get challenge pool stat](#get-challenge-pool-stat) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getClientPools | [get client pools](#get-client-pools) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList | [get dkg list](#get-dkg-list) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents | [get events](#get-events) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns | [get group share or signs](#get-group-share-or-signs) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock | [get magic block](#get-magic-block) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList | [get miner list](#get-miner-list) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList | [get mpks list](#get-mpks-list) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool | [get nodepool](#get-nodepool) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase | [get phase](#get-phase) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPoolInfo | [get pool info](#get-pool-info) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat | [get read pool stat](#get-read-pool-stat) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList | [get sharder keep list](#get-sharder-keep-list) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList | [get sharder list](#get-sharder-list) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat | [get stake pool stat](#get-stake-pool-stat) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools | [get user pools](#get-user-pools) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat | [get user stake pool stat](#get-user-stake-pool-stat) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers | [get write markers](#get-write-markers) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_total_stakes | [get blobber total stakes](#get-blobber-total-stakes) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks | [get blocks](#get-blocks) | Gets block information for all blocks. Todo: We need to add a filter to this. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations | [get miner geolocations](#get-miner-geolocations) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake | [get miners stake](#get-miners-stake) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats | [get miners stats](#get-miners-stats) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations | [get sharder geolocations](#get-sharder-geolocations) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake | [get sharders stake](#get-sharders-stake) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats | [get sharders stats](#get-sharders-stats) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator | [get validator](#get-validator) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers | [getblobbers](#getblobbers) | Gets list of all blobbers alive (e.g. excluding blobbers with zero capacity). |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/globalPeriodicLimit | [global periodic limit](#global-periodic-limit) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings | [global settings](#global-settings) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker | [latestreadmarker](#latestreadmarker) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat | [node pool stat](#node-pool-stat) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat | [node stat](#node-stat) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges | [openchallenges](#openchallenges) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/personalPeriodicLimit | [personal periodic limit](#personal-periodic-limit) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pourAmount | [pour amount](#pour-amount) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers | [readmarkers](#readmarkers) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate | [replicate blobber aggregates](#replicate-blobber-aggregates) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots | [replicate snapshots](#replicate-snapshots) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search | [search](#search) |  |
-| GET | /v1/sharder/get/stats | [sharderstats](#sharderstats) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config | [storage config](#storage-config) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round | [timestamps to rounds](#timestamps-to-rounds) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data | [total stored data](#total-stored-data) | Gets the total data currently storage used across all blobbers. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction | [transaction](#transaction) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions | [transactions](#transactions) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config | [vesting config](#vesting-config) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers | [writemarkers](#writemarkers) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/delegate-rewards | [delegate rewards](#delegate-rewards) | Get list of Delegate Awards |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/provider-rewards | [provider rewards](#provider-rewards) | Get List of Provider Rewards |
+  
+
+
+###  sharders
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList | [get sharder keep list](#get-sharder-keep-list) | Get Sharder Stake |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList | [get sharder list](#get-sharder-list) | Get Sharders List |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations | [get sharder geolocations](#get-sharder-geolocations) | Get Sharder Geolocation |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake | [get sharders stake](#get-sharders-stake) | Get Total Sharder Stake |
+| GET | /v1/sharder/get/stats | [sharderstats](#sharderstats) | Get Sharder Stats |
+  
+
+
+###  smart_contract
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs | [configs](#configs) | List MinerSC Config |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/faucet_config | [faucet config](#faucet-config) | Get Faucet Smart Contract Configuration |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/globalPeriodicLimit | [global periodic limit](#global-periodic-limit) | List Global Miner Smart Contract Configuration |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings | [global settings](#global-settings) | Get Global Object for Miner Smart Contracts |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/personalPeriodicLimit | [personal periodic limit](#personal-periodic-limit) | List Miner Smart Contract Configuration |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config | [storage config](#storage-config) | Get Storage Smart Contract Config Settings |
+  
+
+
+###  transactions
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors | [errors](#errors) | Get Errors returned by Transactions |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction | [transaction](#transaction) | Get Transaction Info |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes | [transaction hashes](#transaction-hashes) | Get List of Transaction Hash from File. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions | [transactions](#transactions) | Get Filtered List of Transaction Information |
+  
+
+
+###  validator
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator | [get validator](#get-validator) | Get Validator Info |
+  
+
+
+###  z_c_n
+
+| Method  | URI     | Name   | Summary |
+|---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig | [get global config](#get-global-config) | Get ZCN Configuration |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pourAmount | [pour amount](#pour-amount) | List ZCN Token Pour Amount |
   
 
 
 ## Paths
 
-### <span id="get-global-config"></span> get global config (*GetGlobalConfig*)
+### <span id="get-global-config"></span> Get ZCN Configuration (*GetGlobalConfig*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig
@@ -141,7 +237,7 @@ Status: Not Found
 
 ###### <span id="get-global-config-404-schema"></span> Schema
 
-### <span id="alloc-written-size-per-period"></span> alloc written size per period (*allocWrittenSizePerPeriod*)
+### <span id="alloc-written-size-per-period"></span> Get the total amount of data added during given blocks (*allocWrittenSizePerPeriod*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocWrittenSizePerPeriod
@@ -179,7 +275,7 @@ Status: Bad Request
 
 ###### <span id="alloc-written-size-per-period-400-schema"></span> Schema
 
-### <span id="alloc-blobbers"></span> returns list of all blobbers alive that match the allocation request. (*alloc_blobbers*)
+### <span id="alloc-blobbers"></span> Returns list of all blobbers alive that matches the allocation request (*alloc_blobbers*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers
@@ -213,7 +309,7 @@ Status: Bad Request
 
 ###### <span id="alloc-blobbers-400-schema"></span> Schema
 
-### <span id="alloc-read-size"></span> alloc read size (*alloc_read_size*)
+### <span id="alloc-read-size"></span> Get Allocation Read Size by Allocation ID and Block Number (*alloc_read_size*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_read_size
@@ -249,7 +345,7 @@ Status: Bad Request
 
 ###### <span id="alloc-read-size-400-schema"></span> Schema
 
-### <span id="alloc-write-marker-count"></span> alloc write marker count (*alloc_write_marker_count*)
+### <span id="alloc-write-marker-count"></span> Get Allocation Write Marker Count by Allocation ID (*alloc_write_marker_count*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count
@@ -284,7 +380,7 @@ Status: Bad Request
 
 ###### <span id="alloc-write-marker-count-400-schema"></span> Schema
 
-### <span id="alloc-written-size"></span> alloc written size (*alloc_written_size*)
+### <span id="alloc-written-size"></span> Get stats for all locked tokens of a challenge pool (*alloc_written_size*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_written_size
@@ -322,7 +418,7 @@ Status: Bad Request
 
 ###### <span id="alloc-written-size-400-schema"></span> Schema
 
-### <span id="allocation"></span> allocation (*allocation*)
+### <span id="allocation"></span> Get Allocation Object (*allocation*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation
@@ -406,7 +502,7 @@ Status: Internal Server Error
 
 ###### <span id="allocation-min-lock-500-schema"></span> Schema
 
-### <span id="allocations"></span> allocations (*allocations*)
+### <span id="allocations"></span> List allocation information for allocations owned by the client (*allocations*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations
@@ -452,7 +548,7 @@ Status: Internal Server Error
 
 ###### <span id="allocations-500-schema"></span> Schema
 
-### <span id="average-write-price"></span> average write price (*average-write-price*)
+### <span id="average-write-price"></span> Get Average Write Price (*average-write-price*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price
@@ -483,7 +579,7 @@ Status: Bad Request
 
 ###### <span id="average-write-price-400-schema"></span> Schema
 
-### <span id="blobber-challenges"></span> blobber challenges (*blobber-challenges*)
+### <span id="blobber-challenges"></span> Get Blobber Challenges by Challenge ID (*blobber-challenges*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges
@@ -535,44 +631,7 @@ Status: Internal Server Error
 
 ###### <span id="blobber-challenges-500-schema"></span> Schema
 
-### <span id="blobber-rank"></span> Gets the rank of a blobber. (*blobber-rank*)
-
-```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-rank
-```
-
-challenges passed / total challenges
-
-#### Parameters
-
-| Name | Source | Type | Go type | Separator | Required | Default | Description |
-|------|--------|------|---------|-----------| :------: |---------|-------------|
-| id | `query` | string | `string` |  | ✓ |  | id of blobber |
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#blobber-rank-200) | OK | Int64Map |  | [schema](#blobber-rank-200-schema) |
-| [400](#blobber-rank-400) | Bad Request |  |  | [schema](#blobber-rank-400-schema) |
-
-#### Responses
-
-
-##### <span id="blobber-rank-200"></span> 200 - Int64Map
-Status: OK
-
-###### <span id="blobber-rank-200-schema"></span> Schema
-   
-  
-
-[Int64Map](#int64-map)
-
-##### <span id="blobber-rank-400"></span> 400
-Status: Bad Request
-
-###### <span id="blobber-rank-400-schema"></span> Schema
-
-### <span id="blobber-ids"></span> blobber ids (*blobber_ids*)
+### <span id="blobber-ids"></span> Get Blobber URL as ID (*blobber_ids*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids
@@ -672,7 +731,7 @@ Status: Internal Server Error
 
 ###### <span id="blobbers-by-geolocation-500-schema"></span> Schema
 
-### <span id="blobbers-by-rank"></span> blobbers by rank (*blobbers-by-rank*)
+### <span id="blobbers-by-rank"></span> Get List of Blobbers by Rank (*blobbers-by-rank*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank
@@ -711,7 +770,7 @@ Status: Internal Server Error
 
 ###### <span id="blobbers-by-rank-500-schema"></span> Schema
 
-### <span id="block"></span> block (*block*)
+### <span id="block"></span> Get Block Information (*block*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block
@@ -756,7 +815,7 @@ Status: Internal Server Error
 
 ###### <span id="block-500-schema"></span> Schema
 
-### <span id="chainstatus"></span> chainstatus (*chainstatus*)
+### <span id="chainstatus"></span> Get Chain Statistics (*chainstatus*)
 
 ```
 GET /v1/chain/get/stats
@@ -826,7 +885,7 @@ Status: Bad Request
 
 ###### <span id="collected-reward-400-schema"></span> Schema
 
-### <span id="configs"></span> configs (*configs*)
+### <span id="configs"></span> List MinerSC Config (*configs*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs
@@ -863,7 +922,7 @@ Status: Status 484
 
 ###### <span id="configs-484-schema"></span> Schema
 
-### <span id="count-readmarkers"></span> count readmarkers (*count_readmarkers*)
+### <span id="count-readmarkers"></span> Get read markers (*count_readmarkers*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers
@@ -900,7 +959,54 @@ Status: Internal Server Error
 
 ###### <span id="count-readmarkers-500-schema"></span> Schema
 
-### <span id="errors"></span> errors (*errors*)
+### <span id="delegate-rewards"></span> Get list of Delegate Awards (*delegate-rewards*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/delegate-rewards
+```
+
+Gets list of delegate rewards satisfying filter
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| end | `query` | string | `string` |  | ✓ |  | end time of interval |
+| is_descending | `query` | string | `string` |  |  |  | is descending |
+| limit | `query` | string | `string` |  |  |  | limit |
+| offset | `query` | string | `string` |  |  |  | offset |
+| start | `query` | string | `string` |  | ✓ |  | start time of interval |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#delegate-rewards-200) | OK | WriteMarker |  | [schema](#delegate-rewards-200-schema) |
+| [400](#delegate-rewards-400) | Bad Request |  |  | [schema](#delegate-rewards-400-schema) |
+| [500](#delegate-rewards-500) | Internal Server Error |  |  | [schema](#delegate-rewards-500-schema) |
+
+#### Responses
+
+
+##### <span id="delegate-rewards-200"></span> 200 - WriteMarker
+Status: OK
+
+###### <span id="delegate-rewards-200-schema"></span> Schema
+   
+  
+
+[][WriteMarker](#write-marker)
+
+##### <span id="delegate-rewards-400"></span> 400
+Status: Bad Request
+
+###### <span id="delegate-rewards-400-schema"></span> Schema
+
+##### <span id="delegate-rewards-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="delegate-rewards-500-schema"></span> Schema
+
+### <span id="errors"></span> Get Errors returned by Transactions (*errors*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors
@@ -946,7 +1052,7 @@ Status: Internal Server Error
 
 ###### <span id="errors-500-schema"></span> Schema
 
-### <span id="faucet-config"></span> faucet config (*faucet_config*)
+### <span id="faucet-config"></span> Get Faucet Smart Contract Configuration (*faucet_config*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/faucet_config
@@ -977,7 +1083,7 @@ Status: Not Found
 
 ###### <span id="faucet-config-404-schema"></span> Schema
 
-### <span id="free-alloc-blobbers"></span> returns list of all blobbers alive that match the free allocation request. (*free_alloc_blobbers*)
+### <span id="free-alloc-blobbers"></span> Returns list of all blobbers alive that match the free allocation request. (*free_alloc_blobbers*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers
@@ -1011,7 +1117,7 @@ Status: Bad Request
 
 ###### <span id="free-alloc-blobbers-400-schema"></span> Schema
 
-### <span id="get-alloc-blobber-terms"></span> get alloc blobber terms (*getAllocBlobberTerms*)
+### <span id="get-alloc-blobber-terms"></span> Get stats for all locked tokens of a stake pool (*getAllocBlobberTerms*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term
@@ -1055,7 +1161,7 @@ Status: Internal Server Error
 
 ###### <span id="get-alloc-blobber-terms-500-schema"></span> Schema
 
-### <span id="get-authorizer"></span> get authorizer (*getAuthorizer*)
+### <span id="get-authorizer"></span> Get Authorizer Information (*getAuthorizer*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizer
@@ -1086,7 +1192,7 @@ Status: Not Found
 
 ###### <span id="get-authorizer-404-schema"></span> Schema
 
-### <span id="get-authorizer-nodes"></span> get authorizer nodes (*getAuthorizerNodes*)
+### <span id="get-authorizer-nodes"></span> Get Authorizer Nodes (*getAuthorizerNodes*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes
@@ -1117,7 +1223,7 @@ Status: Not Found
 
 ###### <span id="get-authorizer-nodes-404-schema"></span> Schema
 
-### <span id="get-blobber"></span> get blobber (*getBlobber*)
+### <span id="get-blobber"></span> Get Blobber Info (*getBlobber*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber
@@ -1160,7 +1266,7 @@ Status: Internal Server Error
 
 ###### <span id="get-blobber-500-schema"></span> Schema
 
-### <span id="get-challenge"></span> get challenge (*getChallenge*)
+### <span id="get-challenge"></span> Get blobber challenge by challenge id (*getChallenge*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge
@@ -1210,7 +1316,7 @@ Status: Internal Server Error
 
 ###### <span id="get-challenge-500-schema"></span> Schema
 
-### <span id="get-challenge-pool-stat"></span> get challenge pool stat (*getChallengePoolStat*)
+### <span id="get-challenge-pool-stat"></span> Get Challenge Pool Stats (*getChallengePoolStat*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat
@@ -1247,7 +1353,7 @@ Status: Bad Request
 
 ###### <span id="get-challenge-pool-stat-400-schema"></span> Schema
 
-### <span id="get-client-pools"></span> get client pools (*getClientPools*)
+### <span id="get-client-pools"></span> Get Client Pools (*getClientPools*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getClientPools
@@ -1278,7 +1384,7 @@ Status: Internal Server Error
 
 ###### <span id="get-client-pools-500-schema"></span> Schema
 
-### <span id="get-dkg-list"></span> get dkg list (*getDkgList*)
+### <span id="get-dkg-list"></span> Get list of DKG Miners (*getDkgList*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList
@@ -1309,7 +1415,7 @@ Status: Internal Server Error
 
 ###### <span id="get-dkg-list-500-schema"></span> Schema
 
-### <span id="get-events"></span> get events (*getEvents*)
+### <span id="get-events"></span> Get Block Events (*getEvents*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents
@@ -1352,7 +1458,7 @@ Status: Bad Request
 
 ###### <span id="get-events-400-schema"></span> Schema
 
-### <span id="get-group-share-or-signs"></span> get group share or signs (*getGroupShareOrSigns*)
+### <span id="get-group-share-or-signs"></span> Get Group Share or Signs (*getGroupShareOrSigns*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns
@@ -1383,7 +1489,51 @@ Status: Bad Request
 
 ###### <span id="get-group-share-or-signs-400-schema"></span> Schema
 
-### <span id="get-magic-block"></span> get magic block (*getMagicBlock*)
+### <span id="get-m-s-stake-pool-stat"></span> Get Stake Pool Stats (*getMSStakePoolStat*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat
+```
+
+Gets statistic for all locked tokens of a stake pool
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| provider_id | `query` | string | `string` |  | ✓ |  | id of a provider |
+| provider_type | `query` | string | `string` |  | ✓ |  | type of the provider, ie: miner. sharder |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#get-m-s-stake-pool-stat-200) | OK | stakePoolStat |  | [schema](#get-m-s-stake-pool-stat-200-schema) |
+| [400](#get-m-s-stake-pool-stat-400) | Bad Request |  |  | [schema](#get-m-s-stake-pool-stat-400-schema) |
+| [500](#get-m-s-stake-pool-stat-500) | Internal Server Error |  |  | [schema](#get-m-s-stake-pool-stat-500-schema) |
+
+#### Responses
+
+
+##### <span id="get-m-s-stake-pool-stat-200"></span> 200 - stakePoolStat
+Status: OK
+
+###### <span id="get-m-s-stake-pool-stat-200-schema"></span> Schema
+   
+  
+
+[StakePoolStat](#stake-pool-stat)
+
+##### <span id="get-m-s-stake-pool-stat-400"></span> 400
+Status: Bad Request
+
+###### <span id="get-m-s-stake-pool-stat-400-schema"></span> Schema
+
+##### <span id="get-m-s-stake-pool-stat-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="get-m-s-stake-pool-stat-500-schema"></span> Schema
+
+### <span id="get-magic-block"></span> Get Magic Block (*getMagicBlock*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock
@@ -1414,7 +1564,7 @@ Status: Bad Request
 
 ###### <span id="get-magic-block-400-schema"></span> Schema
 
-### <span id="get-miner-list"></span> get miner list (*getMinerList*)
+### <span id="get-miner-list"></span> Get Miner List (*getMinerList*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList
@@ -1460,7 +1610,7 @@ Status: Status 484
 
 ###### <span id="get-miner-list-484-schema"></span> Schema
 
-### <span id="get-mpks-list"></span> get mpks list (*getMpksList*)
+### <span id="get-mpks-list"></span> Get DKG Miners (*getMpksList*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList
@@ -1491,7 +1641,7 @@ Status: Bad Request
 
 ###### <span id="get-mpks-list-400-schema"></span> Schema
 
-### <span id="get-nodepool"></span> get nodepool (*getNodepool*)
+### <span id="get-nodepool"></span> Get Node Pool Info (*getNodepool*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool
@@ -1528,7 +1678,7 @@ Status: Status 484
 
 ###### <span id="get-nodepool-484-schema"></span> Schema
 
-### <span id="get-phase"></span> get phase (*getPhase*)
+### <span id="get-phase"></span> Get Phase Nodes (*getPhase*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase
@@ -1559,7 +1709,7 @@ Status: Bad Request
 
 ###### <span id="get-phase-400-schema"></span> Schema
 
-### <span id="get-pool-info"></span> get pool info (*getPoolInfo*)
+### <span id="get-pool-info"></span> Get Vesting Config (*getPoolInfo*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPoolInfo
@@ -1590,7 +1740,7 @@ Status: Internal Server Error
 
 ###### <span id="get-pool-info-500-schema"></span> Schema
 
-### <span id="get-read-pool-stat"></span> get read pool stat (*getReadPoolStat*)
+### <span id="get-read-pool-stat"></span> Get Read Pool Stats (*getReadPoolStat*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat
@@ -1627,7 +1777,7 @@ Status: Bad Request
 
 ###### <span id="get-read-pool-stat-400-schema"></span> Schema
 
-### <span id="get-sharder-keep-list"></span> get sharder keep list (*getSharderKeepList*)
+### <span id="get-sharder-keep-list"></span> Get Sharder Stake (*getSharderKeepList*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList
@@ -1658,7 +1808,7 @@ Status: Internal Server Error
 
 ###### <span id="get-sharder-keep-list-500-schema"></span> Schema
 
-### <span id="get-sharder-list"></span> get sharder list (*getSharderList*)
+### <span id="get-sharder-list"></span> Get Sharders List (*getSharderList*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList
@@ -1704,7 +1854,7 @@ Status: Status 484
 
 ###### <span id="get-sharder-list-484-schema"></span> Schema
 
-### <span id="get-stake-pool-stat"></span> get stake pool stat (*getStakePoolStat*)
+### <span id="get-stake-pool-stat"></span> Get Stake Pool Stats (*getStakePoolStat*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat
@@ -1748,7 +1898,44 @@ Status: Internal Server Error
 
 ###### <span id="get-stake-pool-stat-500-schema"></span> Schema
 
-### <span id="get-user-pools"></span> get user pools (*getUserPools*)
+### <span id="get-user-locked-total"></span> Get Total Locked Tokens for a user (*getUserLockedTotal*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal
+```
+
+Gets statistic for a user's stake pools
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| client_id | `query` | string | `string` |  | ✓ |  | client for which to get stake pool information |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#get-user-locked-total-200) | OK | userLockedTotalResponse |  | [schema](#get-user-locked-total-200-schema) |
+| [400](#get-user-locked-total-400) | Bad Request |  |  | [schema](#get-user-locked-total-400-schema) |
+
+#### Responses
+
+
+##### <span id="get-user-locked-total-200"></span> 200 - userLockedTotalResponse
+Status: OK
+
+###### <span id="get-user-locked-total-200-schema"></span> Schema
+   
+  
+
+[UserLockedTotalResponse](#user-locked-total-response)
+
+##### <span id="get-user-locked-total-400"></span> 400
+Status: Bad Request
+
+###### <span id="get-user-locked-total-400-schema"></span> Schema
+
+### <span id="get-user-pools"></span> Get User Pools (*getUserPools*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools
@@ -1765,21 +1952,21 @@ user oriented pools requests handler
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-user-pools-200) | OK | userPools |  | [schema](#get-user-pools-200-schema) |
+| [200](#get-user-pools-200) | OK | userPoolStat |  | [schema](#get-user-pools-200-schema) |
 | [400](#get-user-pools-400) | Bad Request |  |  | [schema](#get-user-pools-400-schema) |
 | [484](#get-user-pools-484) | Status 484 |  |  | [schema](#get-user-pools-484-schema) |
 
 #### Responses
 
 
-##### <span id="get-user-pools-200"></span> 200 - userPools
+##### <span id="get-user-pools-200"></span> 200 - userPoolStat
 Status: OK
 
 ###### <span id="get-user-pools-200-schema"></span> Schema
    
   
 
-[UserPools](#user-pools)
+[UserPoolStat](#user-pool-stat)
 
 ##### <span id="get-user-pools-400"></span> 400
 Status: Bad Request
@@ -1791,7 +1978,7 @@ Status: Status 484
 
 ###### <span id="get-user-pools-484-schema"></span> Schema
 
-### <span id="get-user-stake-pool-stat"></span> get user stake pool stat (*getUserStakePoolStat*)
+### <span id="get-user-stake-pool-stat"></span> Get Stake Pool Stats for a User (*getUserStakePoolStat*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat
@@ -1828,7 +2015,7 @@ Status: Bad Request
 
 ###### <span id="get-user-stake-pool-stat-400-schema"></span> Schema
 
-### <span id="get-write-markers"></span> get write markers (*getWriteMarkers*)
+### <span id="get-write-markers"></span> Get Write Marker (*getWriteMarkers*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers
@@ -1874,7 +2061,7 @@ Status: Internal Server Error
 
 ###### <span id="get-write-markers-500-schema"></span> Schema
 
-### <span id="get-blobber-total-stakes"></span> get blobber total stakes (*get_blobber_total_stakes*)
+### <span id="get-blobber-total-stakes"></span> Get Blobber Stakes Combined (*get_blobber_total_stakes*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_total_stakes
@@ -1949,7 +2136,7 @@ Status: Internal Server Error
 
 ###### <span id="get-blocks-500-schema"></span> Schema
 
-### <span id="get-miner-geolocations"></span> get miner geolocations (*get_miner_geolocations*)
+### <span id="get-miner-geolocations"></span> Get Miner Geolocation (*get_miner_geolocations*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations
@@ -1995,7 +2182,7 @@ Status: Status 484
 
 ###### <span id="get-miner-geolocations-484-schema"></span> Schema
 
-### <span id="get-miners-stake"></span> get miners stake (*get_miners_stake*)
+### <span id="get-miners-stake"></span> Get Miners Stake (*get_miners_stake*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake
@@ -2026,7 +2213,7 @@ Status: Not Found
 
 ###### <span id="get-miners-stake-404-schema"></span> Schema
 
-### <span id="get-miners-stats"></span> get miners stats (*get_miners_stats*)
+### <span id="get-miners-stats"></span> Get Miners Stats (*get_miners_stats*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats
@@ -2057,7 +2244,7 @@ Status: Not Found
 
 ###### <span id="get-miners-stats-404-schema"></span> Schema
 
-### <span id="get-sharder-geolocations"></span> get sharder geolocations (*get_sharder_geolocations*)
+### <span id="get-sharder-geolocations"></span> Get Sharder Geolocation (*get_sharder_geolocations*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations
@@ -2103,7 +2290,7 @@ Status: Status 484
 
 ###### <span id="get-sharder-geolocations-484-schema"></span> Schema
 
-### <span id="get-sharders-stake"></span> get sharders stake (*get_sharders_stake*)
+### <span id="get-sharders-stake"></span> Get Total Sharder Stake (*get_sharders_stake*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake
@@ -2134,7 +2321,7 @@ Status: Not Found
 
 ###### <span id="get-sharders-stake-404-schema"></span> Schema
 
-### <span id="get-sharders-stats"></span> get sharders stats (*get_sharders_stats*)
+### <span id="get-sharders-stats"></span> Get Active and Inactive Miners Count (*get_sharders_stats*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats
@@ -2165,7 +2352,7 @@ Status: Not Found
 
 ###### <span id="get-sharders-stats-404-schema"></span> Schema
 
-### <span id="get-validator"></span> get validator (*get_validator*)
+### <span id="get-validator"></span> Get Validator Info (*get_validator*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator
@@ -2245,7 +2432,7 @@ Status: Internal Server Error
 
 ###### <span id="getblobbers-500-schema"></span> Schema
 
-### <span id="global-periodic-limit"></span> global periodic limit (*globalPeriodicLimit*)
+### <span id="global-periodic-limit"></span> List Global Miner Smart Contract Configuration (*globalPeriodicLimit*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/globalPeriodicLimit
@@ -2276,7 +2463,7 @@ Status: Not Found
 
 ###### <span id="global-periodic-limit-404-schema"></span> Schema
 
-### <span id="global-settings"></span> global settings (*globalSettings*)
+### <span id="global-settings"></span> Get Global Object for Miner Smart Contracts (*globalSettings*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings
@@ -2307,7 +2494,7 @@ Status: Bad Request
 
 ###### <span id="global-settings-400-schema"></span> Schema
 
-### <span id="latestreadmarker"></span> latestreadmarker (*latestreadmarker*)
+### <span id="latestreadmarker"></span> Get Latest Read Marker (*latestreadmarker*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker
@@ -2345,7 +2532,7 @@ Status: Internal Server Error
 
 ###### <span id="latestreadmarker-500-schema"></span> Schema
 
-### <span id="node-pool-stat"></span> node pool stat (*nodePoolStat*)
+### <span id="node-pool-stat"></span> Get Node Pool Stats (*nodePoolStat*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat
@@ -2384,7 +2571,7 @@ Status: Status 484
 
 ###### <span id="node-pool-stat-484-schema"></span> Schema
 
-### <span id="node-stat"></span> node stat (*nodeStat*)
+### <span id="node-stat"></span> Get Node Stats (*nodeStat*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat
@@ -2427,7 +2614,7 @@ Status: Status 484
 
 ###### <span id="node-stat-484-schema"></span> Schema
 
-### <span id="openchallenges"></span> openchallenges (*openchallenges*)
+### <span id="openchallenges"></span> Get Blobber Open Challenges (*openchallenges*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges
@@ -2479,7 +2666,7 @@ Status: Internal Server Error
 
 ###### <span id="openchallenges-500-schema"></span> Schema
 
-### <span id="personal-periodic-limit"></span> personal periodic limit (*personalPeriodicLimit*)
+### <span id="personal-periodic-limit"></span> List Miner Smart Contract Configuration (*personalPeriodicLimit*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/personalPeriodicLimit
@@ -2510,7 +2697,7 @@ Status: Not Found
 
 ###### <span id="personal-periodic-limit-404-schema"></span> Schema
 
-### <span id="pour-amount"></span> pour amount (*pourAmount*)
+### <span id="pour-amount"></span> List ZCN Token Pour Amount (*pourAmount*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/pourAmount
@@ -2537,7 +2724,54 @@ Status: Not Found
 
 ###### <span id="pour-amount-404-schema"></span> Schema
 
-### <span id="readmarkers"></span> readmarkers (*readmarkers*)
+### <span id="provider-rewards"></span> Get List of Provider Rewards (*provider-rewards*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/provider-rewards
+```
+
+Gets list of provider rewards satisfying filter
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| end | `query` | string | `string` |  | ✓ |  | end time of interval |
+| is_descending | `query` | string | `string` |  |  |  | is descending |
+| limit | `query` | string | `string` |  |  |  | limit |
+| offset | `query` | string | `string` |  |  |  | offset |
+| start | `query` | string | `string` |  | ✓ |  | start time of interval |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#provider-rewards-200) | OK | WriteMarker |  | [schema](#provider-rewards-200-schema) |
+| [400](#provider-rewards-400) | Bad Request |  |  | [schema](#provider-rewards-400-schema) |
+| [500](#provider-rewards-500) | Internal Server Error |  |  | [schema](#provider-rewards-500-schema) |
+
+#### Responses
+
+
+##### <span id="provider-rewards-200"></span> 200 - WriteMarker
+Status: OK
+
+###### <span id="provider-rewards-200-schema"></span> Schema
+   
+  
+
+[][WriteMarker](#write-marker)
+
+##### <span id="provider-rewards-400"></span> 400
+Status: Bad Request
+
+###### <span id="provider-rewards-400-schema"></span> Schema
+
+##### <span id="provider-rewards-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="provider-rewards-500-schema"></span> Schema
+
+### <span id="readmarkers"></span> Get Read Markers (*readmarkers*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers
@@ -2578,7 +2812,7 @@ Status: Internal Server Error
 
 ###### <span id="readmarkers-500-schema"></span> Schema
 
-### <span id="replicate-blobber-aggregates"></span> replicate blobber aggregates (*replicateBlobberAggregates*)
+### <span id="replicate-blobber-aggregates"></span> Get list of blobber aggregate records (*replicateBlobberAggregates*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate
@@ -2617,7 +2851,7 @@ Status: Internal Server Error
 
 ###### <span id="replicate-blobber-aggregates-500-schema"></span> Schema
 
-### <span id="replicate-snapshots"></span> replicate snapshots (*replicateSnapshots*)
+### <span id="replicate-snapshots"></span> Get list of snapshot records (*replicateSnapshots*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots
@@ -2656,7 +2890,7 @@ Status: Internal Server Error
 
 ###### <span id="replicate-snapshots-500-schema"></span> Schema
 
-### <span id="search"></span> search (*search*)
+### <span id="search"></span> Search Endpoint (*search*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search
@@ -2695,7 +2929,7 @@ Status: Internal Server Error
 
 ###### <span id="search-500-schema"></span> Schema
 
-### <span id="sharderstats"></span> sharderstats (*sharderstats*)
+### <span id="sharderstats"></span> Get Sharder Stats (*sharderstats*)
 
 ```
 GET /v1/sharder/get/stats
@@ -2722,7 +2956,7 @@ Status: Not Found
 
 ###### <span id="sharderstats-404-schema"></span> Schema
 
-### <span id="storage-config"></span> storage config (*storage-config*)
+### <span id="storage-config"></span> Get Storage Smart Contract Config Settings (*storage-config*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config
@@ -2753,7 +2987,7 @@ Status: Bad Request
 
 ###### <span id="storage-config-400-schema"></span> Schema
 
-### <span id="timestamps-to-rounds"></span> timestamps to rounds (*timestampsToRounds*)
+### <span id="timestamps-to-rounds"></span> Get round(s) number for timestamp(s) (*timestampsToRounds*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/timestamp-to-round
@@ -2827,7 +3061,7 @@ Status: Bad Request
 
 ###### <span id="total-stored-data-400-schema"></span> Schema
 
-### <span id="transaction"></span> transaction (*transaction*)
+### <span id="transaction"></span> Get Transaction Info (*transaction*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction
@@ -2858,7 +3092,56 @@ Status: Internal Server Error
 
 ###### <span id="transaction-500-schema"></span> Schema
 
-### <span id="transactions"></span> transactions (*transactions*)
+### <span id="transaction-hashes"></span> Get List of Transaction Hash from File. (*transactionHashes*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactionHashes
+```
+
+Gets filtered list of transaction hashes from file information
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| content-hash | `query` | string | `string` |  |  |  | restrict to transactions by the specific content hash on write marker |
+| limit | `query` | string | `string` |  |  |  | limit |
+| look-up-hash | `query` | string | `string` |  |  |  | restrict to transactions by the specific look up hash on write marker |
+| name | `query` | string | `string` |  |  |  | restrict to transactions by the specific file name on write marker |
+| offset | `query` | string | `string` |  |  |  | offset |
+| sort | `query` | string | `string` |  |  |  | desc or asc |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#transaction-hashes-200) | OK | stringArray |  | [schema](#transaction-hashes-200-schema) |
+| [400](#transaction-hashes-400) | Bad Request |  |  | [schema](#transaction-hashes-400-schema) |
+| [500](#transaction-hashes-500) | Internal Server Error |  |  | [schema](#transaction-hashes-500-schema) |
+
+#### Responses
+
+
+##### <span id="transaction-hashes-200"></span> 200 - stringArray
+Status: OK
+
+###### <span id="transaction-hashes-200-schema"></span> Schema
+   
+  
+
+
+ [StringArray](#string-array)
+
+##### <span id="transaction-hashes-400"></span> 400
+Status: Bad Request
+
+###### <span id="transaction-hashes-400-schema"></span> Schema
+
+##### <span id="transaction-hashes-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="transaction-hashes-500-schema"></span> Schema
+
+### <span id="transactions"></span> Get Filtered List of Transaction Information (*transactions*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions
@@ -2908,7 +3191,7 @@ Status: Internal Server Error
 
 ###### <span id="transactions-500-schema"></span> Schema
 
-### <span id="vesting-config"></span> vesting config (*vesting_config*)
+### <span id="vesting-config"></span> Get Vesting Configuration (*vesting_config*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config
@@ -2939,7 +3222,7 @@ Status: Internal Server Error
 
 ###### <span id="vesting-config-500-schema"></span> Schema
 
-### <span id="writemarkers"></span> writemarkers (*writemarkers*)
+### <span id="writemarkers"></span> Get List of Write Markers (*writemarkers*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers
@@ -3117,7 +3400,6 @@ Status: Internal Server Error
 | ChallengesCompleted | uint64 (formatted integer)| `uint64` |  | |  |  |
 | ChallengesPassed | uint64 (formatted integer)| `uint64` |  | |  |  |
 | CreationRound | int64 (formatted integer)| `int64` |  | |  |  |
-| InactiveRounds | int64 (formatted integer)| `int64` |  | |  |  |
 | OpenChallenges | uint64 (formatted integer)| `uint64` |  | |  |  |
 | RankMetric | double (formatted number)| `float64` |  | |  |  |
 | ReadData | int64 (formatted integer)| `int64` |  | |  |  |
@@ -3333,6 +3615,31 @@ CreationDateField - Can be used to add a creation date functionality to an entit
 | reward | [Coin](#coin)| `Coin` |  | |  |  |
 | staked_at | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | status | [PoolStatus](#pool-status)| `PoolStatus` |  | |  |  |
+
+
+
+### <span id="delegate-pool-stat"></span> DelegatePoolStat
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| DelegateID | string| `string` |  | |  |  |
+| ID | string| `string` |  | |  |  |
+| ProviderId | string| `string` |  | |  |  |
+| ProviderType | int64 (formatted integer)| `int64` |  | |  |  |
+| RoundCreated | int64 (formatted integer)| `int64` |  | |  |  |
+| Status | string| `string` |  | |  |  |
+| UnStake | boolean| `bool` |  | |  |  |
+| balance | [Coin](#coin)| `Coin` |  | |  |  |
+| rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| total_penalty | [Coin](#coin)| `Coin` |  | |  |  |
+| total_reward | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 
@@ -3859,6 +4166,31 @@ it can be used as a scan destination, similar to NullString.
 
 
 
+### <span id="provider"></span> Provider
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| DelegateWallet | string| `string` |  | |  |  |
+| ID | string| `string` |  | |  |  |
+| NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| max_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| min_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| rewards | [ProviderRewards](#provider-rewards)| `ProviderRewards` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
 ### <span id="provider-rewards"></span> ProviderRewards
 
 
@@ -4057,6 +4389,28 @@ it can be used as a scan destination, similar to NullString.
 | minter | [ApprovedMinter](#approved-minter)| `ApprovedMinter` |  | |  |  |
 | rewards | [Coin](#coin)| `Coin` |  | |  |  |
 | settings | [Settings](#settings)| `Settings` |  | |  |  |
+
+
+
+### <span id="stake-pool-stat"></span> StakePoolStat
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Delegate | [][DelegatePoolStat](#delegate-pool-stat)| `[]*DelegatePoolStat` |  | |  |  |
+| ID | string| `string` |  | |  |  |
+| balance | [Coin](#coin)| `Coin` |  | |  |  |
+| penalty | [Coin](#coin)| `Coin` |  | |  |  |
+| rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| settings | [Settings](#settings)| `Settings` |  | |  |  |
+| stake_total | [Coin](#coin)| `Coin` |  | |  |  |
+| unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 
@@ -4301,7 +4655,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | ID | uint64 (formatted integer)| `uint64` |  | |  |  |
 | Nonce | int64 (formatted integer)| `int64` |  | |  |  |
 | OutputHash | string| `string` |  | |  |  |
-| ReadMarkers | [][ReadMarker](#read-marker)| `[]*ReadMarker` |  | | ref |  |
 | Round | int64 (formatted integer)| `int64` |  | |  |  |
 | Signature | string| `string` |  | |  |  |
 | Status | int64 (formatted integer)| `int64` |  | |  |  |
@@ -4311,7 +4664,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | TransactionType | int64 (formatted integer)| `int64` |  | |  |  |
 | UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | Version | string| `string` |  | |  |  |
-| WriteMarker | [][WriteMarker](#write-marker)| `[]*WriteMarker` |  | |  |  |
 | fee | [Coin](#coin)| `Coin` |  | |  |  |
 | value | [Coin](#coin)| `Coin` |  | |  |  |
 
@@ -4338,6 +4690,21 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | UserID | string| `string` |  | |  |  |
 | balance | [Coin](#coin)| `Coin` |  | |  |  |
 | change | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
+### <span id="user-pool-stat"></span> UserPoolStat
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Pools | map of [[]*DelegatePoolStat](#delegate-pool-stat)| `map[string][]DelegatePoolStat` |  | |  |  |
 
 
 
@@ -4372,17 +4739,15 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | BaseUrl | string| `string` |  | |  |  |
 | CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | DelegateWallet | string| `string` |  | |  |  |
-| DeletedAt | [DeletedAt](#deleted-at)| `DeletedAt` |  | |  |  |
-| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| ID | string| `string` |  | |  |  |
 | NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
 | PublicKey | string| `string` |  | |  |  |
 | ServiceCharge | double (formatted number)| `float64` |  | |  |  |
 | UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
-| ValidatorID | string| `string` |  | |  |  |
 | max_stake | [Coin](#coin)| `Coin` |  | |  |  |
 | min_stake | [Coin](#coin)| `Coin` |  | |  |  |
 | rewards | [ProviderRewards](#provider-rewards)| `ProviderRewards` |  | |  |  |
-| stake_total | [Coin](#coin)| `Coin` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
 | unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
 
 
@@ -4515,29 +4880,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
 | Pools | []string| `[]string` |  | |  |  |
-
-
-
-### <span id="delegate-pool-stat"></span> delegatePoolStat
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| DelegateID | string| `string` |  | |  |  |
-| ID | string| `string` |  | |  |  |
-| RoundCreated | int64 (formatted integer)| `int64` |  | |  |  |
-| Status | string| `string` |  | |  |  |
-| UnStake | boolean| `bool` |  | |  |  |
-| balance | [Coin](#coin)| `Coin` |  | |  |  |
-| rewards | [Coin](#coin)| `Coin` |  | |  |  |
-| total_penalty | [Coin](#coin)| `Coin` |  | |  |  |
-| total_reward | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 
@@ -4720,28 +5062,6 @@ and the other for the allocations that the client (client_id) doesn't own
 
 
 
-### <span id="stake-pool-stat"></span> stakePoolStat
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| Delegate | [][DelegatePoolStat](#delegate-pool-stat)| `[]*DelegatePoolStat` |  | |  |  |
-| ID | string| `string` |  | |  |  |
-| balance | [Coin](#coin)| `Coin` |  | |  |  |
-| penalty | [Coin](#coin)| `Coin` |  | |  |  |
-| rewards | [Coin](#coin)| `Coin` |  | |  |  |
-| settings | [Settings](#settings)| `Settings` |  | |  |  |
-| stake_total | [Coin](#coin)| `Coin` |  | |  |  |
-| unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
-
-
-
 ### <span id="storage-node-response"></span> storageNodeResponse
 
 
@@ -4812,7 +5132,7 @@ and the other for the allocations that the client (client_id) doesn't own
 
 
 
-### <span id="user-pool-stat"></span> userPoolStat
+### <span id="user-locked-total-response"></span> userLockedTotalResponse
 
 
   
@@ -4823,21 +5143,6 @@ and the other for the allocations that the client (client_id) doesn't own
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| Pools | map of [[]*DelegatePoolStat](#delegate-pool-stat)| `map[string][]DelegatePoolStat` |  | |  |  |
-
-
-
-### <span id="user-pools"></span> userPools
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| Pools | map of [[]*DelegatePoolStat](#delegate-pool-stat)| `map[string][]DelegatePoolStat` |  | |  |  |
+| Total | int64 (formatted integer)| `int64` |  | |  |  |
 
 

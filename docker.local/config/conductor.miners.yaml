@@ -33,6 +33,7 @@ sets:
       - "Group send no tickets to slow down or stall the chain"
       - "Send bad verification ticket with wrong key"
       - "Send bad verification ticket with wrong hash"
+      - "Miner is able to proceed to next round when it misses VRF and notarizations"
   - name: "Bad block"
     tests:
       - "Create competing block when not a generator"
@@ -271,7 +272,27 @@ tests:
       - wait_round:
           round: 20 # it keeps going
           timeout: "15s" # fast
-
+  - name: "Miner is able to proceed to next round when it misses VRF and notarizations"
+    flow:
+      - env:
+          DKG_CONFIG_PATH: "/3_miners_1_sharder"
+      - magic_block_config: config/b0magicBlock_3_miners_1_sharder.json
+      - set_monitor: "miner-3"
+      - cleanup_bc: {}
+      - wait_add:
+          sharders: ['sharder-1']
+          miners: ['miner-1', 'miner-2', 'miner-3']
+          start: true
+      - collect_verification_tickets_when_missing_vrf:
+          miner: bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8
+          round: 100
+      - round_has_finalized:
+          round: 120
+      - wait_round:
+          shift: 150 # it keeps going
+          timeout: "3m" # fast
+      - make_test_case_check:
+          wait_time: 10s
   # Bad block
   - name: "Create competing block when not a generator"
     flow:

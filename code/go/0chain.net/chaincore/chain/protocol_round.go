@@ -391,7 +391,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					if du > 3*time.Second {
 						logging.Logger.Debug("finalize round slow",
 							zap.Int64("round", roundNumber),
-							zap.Any("duration", time.Since(ts)))
+							zap.Duration("duration", time.Since(ts)))
 					}
 				}
 			case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable

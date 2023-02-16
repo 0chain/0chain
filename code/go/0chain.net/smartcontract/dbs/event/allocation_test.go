@@ -15,7 +15,6 @@ import (
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 func init() {
@@ -143,7 +142,6 @@ func TestAllocations(t *testing.T) {
 		PreferredBlobbers []string                      `json:"preferred_blobbers"`
 		BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 		BlobberMap        map[string]*BlobberAllocation `json:"-"`
-		IsImmutable       bool                          `json:"is_immutable"`
 
 		// Requested ranges.
 		ReadPriceRange  PriceRange `json:"read_price_range"`
@@ -179,6 +177,8 @@ func TestAllocations(t *testing.T) {
 		TimeUnit time.Duration `json:"time_unit"`
 
 		Curators []string `json:"curators"`
+
+		FileOptions uint16 `json:"file_options"`
 	}
 
 	convertSa := func(sa StorageAllocation) Allocation {
@@ -204,7 +204,6 @@ func TestAllocations(t *testing.T) {
 			Terms:                    allocationTerms,
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
-			IsImmutable:              sa.IsImmutable,
 			ReadPriceMin:             sa.ReadPriceRange.Min,
 			ReadPriceMax:             sa.ReadPriceRange.Max,
 			WritePriceMin:            sa.WritePriceRange.Min,
@@ -224,6 +223,7 @@ func TestAllocations(t *testing.T) {
 			SuccessfulChallenges:     sa.Stats.SuccessChallenges,
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
+			FileOptions: 			  sa.FileOptions,
 		}
 	}
 
@@ -239,7 +239,7 @@ func TestAllocations(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -320,7 +320,7 @@ func TestAllocations(t *testing.T) {
 				},
 			},
 		},
-		IsImmutable: false,
+		FileOptions: 63,
 		ReadPriceRange: PriceRange{
 			Min: 10,
 			Max: 20,
@@ -346,7 +346,6 @@ func TestAllocations(t *testing.T) {
 	require.NoError(t, err)
 
 	eventAddSa := Event{
-		Model:       gorm.Model{},
 		BlockNumber: 1,
 		TxHash:      "txn_hash",
 		Type:        TypeStats,
@@ -366,7 +365,6 @@ func TestAllocations(t *testing.T) {
 	require.NoError(t, err)
 
 	eventOverwriteSa := Event{
-		Model:       gorm.Model{},
 		BlockNumber: 2,
 		TxHash:      "txn_hash2",
 		Type:        TypeStats,

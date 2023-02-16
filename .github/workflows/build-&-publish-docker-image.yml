@@ -59,6 +59,8 @@ jobs:
 
     - name: Build & Push
       run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
         make build-mocks
 
@@ -67,6 +69,7 @@ jobs:
 
 
         docker tag miner:latest ${MINER_REGISTRY}:$TAG
+        docker tag miner:latest $MINER_REGISTRY:latest
         docker push ${MINER_REGISTRY}:$TAG
 
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
@@ -122,12 +125,15 @@ jobs:
 
     - name: Build & Push
       run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
         make build-mocks
 
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
 
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
+        docker tag sharder:latest $SHARDER_REGISTRY:latest
         docker push ${SHARDER_REGISTRY}:$TAG
 
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
@@ -153,7 +159,7 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: "Set PR status as pending"
-        uses: 0chain/actions/set-pr-status@feature/snapshots
+        uses: 0chain/actions/set-pr-status@master
         if: steps.findPr.outputs.number
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
@@ -180,7 +186,7 @@ jobs:
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
       - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@feature/snapshots
+        uses: 0chain/actions/deploy-0chain@master
         with:
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
@@ -199,7 +205,7 @@ jobs:
           custom_go_sdk_version: staging
 
       - name: "Run System tests"
-        uses: 0chain/actions/run-system-tests@feature/snapshots
+        uses: 0chain/actions/run-system-tests@master
         with:
           system_tests_branch: master
           network: ${{ env.NETWORK_URL }}
@@ -214,7 +220,7 @@ jobs:
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
-        uses: 0chain/actions/set-pr-status@feature/snapshots
+        uses: 0chain/actions/set-pr-status@master
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
           description: "System tests with default config"

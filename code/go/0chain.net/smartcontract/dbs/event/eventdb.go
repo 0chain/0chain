@@ -7,10 +7,13 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
+	"0chain.net/smartcontract/dbs/sqlite"
 )
 
-func NewEventDb(config config.DbAccess) (*EventDb, error) {
+func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+	goose.Init()
 	db, err := postgresql.GetPostgresSqlDb(config)
 	if err != nil {
 		return nil, err
@@ -19,6 +22,28 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan blockEvents, 1),
+		settings:      settings,
+	}
+	go eventDb.addEventsWorker(common.GetRootContext())
+	sqldb, err := eventDb.Store.Get().DB()
+	if err != nil {
+		return nil, err
+	}
+	goose.Migrate(sqldb)
+
+	return eventDb, nil
+}
+
+func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+	db, err := sqlite.GetSqliteDb()
+	if err != nil {
+		return nil, err
+	}
+	eventDb := &EventDb{
+		Store:         db,
+		dbConfig:      config,
+		eventsChannel: make(chan blockEvents, 1),
+		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
 	if err := eventDb.AutoMigrate(); err != nil {
@@ -29,7 +54,8 @@ func NewEventDb(config config.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
-	dbConfig      config.DbAccess
+	dbConfig      config.DbAccess   // depends on the sharder, change on restart
+	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan blockEvents
 }
 
@@ -44,6 +70,8 @@ func (edb *EventDb) Begin() (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
+		dbConfig: edb.dbConfig,
+		settings: edb.settings,
 	}
 	return &edbTx, nil
 }
@@ -62,6 +90,22 @@ func (edb *EventDb) Rollback() error {
 	return edb.Store.Get().Rollback().Error
 }
 
+func (edb *EventDb) UpdateSettings(updates map[string]string) error {
+	return edb.settings.Update(updates)
+}
+
+func (edb *EventDb) AggregatePeriod() int64 {
+	return edb.settings.AggregatePeriod
+}
+
+func (edb *EventDb) PageLimit() int64 {
+	return edb.settings.PageLimit
+}
+
+func (edb *EventDb) Debug() bool {
+	return edb.settings.Debug
+}
+
 type blockEvents struct {
 	block     string
 	blockSize int
@@ -75,6 +119,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&Event{},
 		&Blobber{},
 		&User{},
+		&UserAggregate{},
+		&UserSnapshot{},
 		&Transaction{},
 		&WriteMarker{},
 		&Validator{},
@@ -92,9 +138,19 @@ func (edb *EventDb) AutoMigrate() error {
 		&Snapshot{},
 		&BlobberSnapshot{},
 		&BlobberAggregate{},
+		&MinerSnapshot{},
+		&MinerAggregate{},
+		&SharderSnapshot{},
+		&SharderAggregate{},
+		&AuthorizerSnapshot{},
+		&AuthorizerAggregate{},
+		&ValidatorSnapshot{},
+		&ValidatorAggregate{},
 		&AllocationBlobberTerm{},
 		&ProviderRewards{},
 		&ChallengePool{},
+		&RewardDelegate{},
+		&RewardProvider{},
 	); err != nil {
 		return err
 	}

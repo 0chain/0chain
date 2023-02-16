@@ -61,13 +61,22 @@ func (tb *testBalances) setTransaction(t testing.TB,
 	}
 }
 
+func (tb *testBalances) setBlock(t testing.TB, block *block.Block) {
+	tb.block = block
+}
+
 func (tb *testBalances) GetTransaction() *transaction.Transaction {
 	return tb.txn
 }
 
 // stubs
-func (tb *testBalances) GetBlock() *block.Block                      { return &block.Block{} }
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI          { return nil }
+func (tb *testBalances) GetBlock() *block.Block { return tb.block }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI {
+	if tb.mpts == nil {
+		return nil
+	}
+	return tb.mpts.mpt
+}
 func (tb *testBalances) Validate() error                             { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                     { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error          { return nil }
@@ -117,12 +126,6 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 }
 
 func (tb *testBalances) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-
-	if encryption.IsHash(key) {
-		return common.NewError("failed to get trie node",
-			"key is too short")
-	}
-
 	if tb.mpts != nil {
 		return tb.mpts.mpt.GetNodeValue(util.Path(encryption.Hash(key)), v)
 	}
@@ -145,10 +148,6 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 	node util.MPTSerializable) (datastore.Key, error) {
 
 	if tb.mpts != nil {
-		if encryption.IsHash(key) {
-			return "", common.NewError("failed to get trie node",
-				"key is too short")
-		}
 		var btkey, err = tb.mpts.mpt.Insert(util.Path(encryption.Hash(key)), node)
 		return datastore.Key(btkey), err
 	}
@@ -177,6 +176,4 @@ func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (
 	return nil, nil
 }
 
-func (tb *testBalances) GetMissingNodesPath() util.Path {
-	return nil
-}
+func (tb *testBalances) GetMissingNodeKeys() []util.Key { return nil }

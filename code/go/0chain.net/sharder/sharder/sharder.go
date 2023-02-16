@@ -157,7 +157,14 @@ func main() {
 			rootContext := common.GetRootContext()
 			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
-			if err := serverChain.GetEventDb().ProcessEvents(ctx, []event.Event{ev}, b.Round, b.Hash, len(b.Txns)); err != nil {
+
+			if err := serverChain.GetEventDb().ProcessEvents(
+				ctx,
+				[]event.Event{ev},
+				b.Round,
+				b.Hash,
+				len(b.Txns),
+			); err != nil {
 				logging.Logger.Error("process block saving event failed",
 					zap.Error(err),
 					zap.Int64("round", b.Round),
@@ -184,7 +191,7 @@ func main() {
 	initStates := state.NewInitStates()
 	initStateErr := initStates.Read(*initialStatesFile)
 	if initStateErr != nil {
-		Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+		Logger.Panic("Failed to read initialStates", zap.Error(initStateErr))
 		return
 	}
 
@@ -217,8 +224,8 @@ func main() {
 	go sc.StartLFMBWorker(ctx)
 
 	setupBlockStorageProvider(mConf, workdir)
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock, initStates)
+	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock, initStates)
+
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()
@@ -241,7 +248,7 @@ func main() {
 		selfNode.Description = description
 	} else {
 		if initStateErr != nil {
-			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+			Logger.Panic("Failed to read initialStates", zap.Error(initStateErr))
 		}
 	}
 	if selfNode.Type != node.NodeTypeSharder {
@@ -263,8 +270,8 @@ func main() {
 		zap.String("port", address))
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()),
 		zap.String("mode", mode))
-	Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex),
-		zap.Any("id", selfNode.GetKey()))
+	Logger.Info("Self identity", zap.Int("set_index", selfNode.SetIndex),
+		zap.String("id", selfNode.GetKey()))
 
 	registerInConductor(node.Self.Underlying().GetKey())
 
@@ -284,7 +291,6 @@ func main() {
 			MaxHeaderBytes: 1 << 20,
 		}
 	}
-	// setupBlockStorageProvider()
 	sc.SetupHealthyRound()
 
 	common.ConfigRateLimits()
@@ -502,9 +508,9 @@ func setupBlockStorageProvider(mConf blockstore.MinioConfiguration, workdir stri
 			Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
 			exists, errBucketExists := mClient.BucketExists(mConf.BucketName)
 			if errBucketExists == nil && exists {
-				Logger.Info("We already own ", zap.Any("bucket_name", mConf.BucketName))
+				Logger.Info("We already own ", zap.String("bucket_name", mConf.BucketName))
 			} else {
-				Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", mConf.BucketName))
+				Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.String("bucket_name", mConf.BucketName))
 				panic(err)
 			}
 		} else {

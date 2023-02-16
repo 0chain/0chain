@@ -363,6 +363,10 @@ func (conf *Config) validateStakeRange(min, max currency.Coin) (err error) {
 	return
 }
 
+func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
+	return conf.validateStakeRange(min, max)
+}
+
 func (conf *Config) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(conf); err != nil {
@@ -453,6 +457,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.StakePool.MinLockPeriod = scc.GetDuration(pfx + "stakepool.min_lock_period")
 
 	conf.MaxTotalFreeAllocation, err = currency.MultFloat64(1e10, scc.GetFloat64(pfx+"max_total_free_allocation"))
 	if err != nil {

@@ -99,7 +99,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 	state := crpc.Client().State()
 
-	if isTestingOnUpdateFinalizedBlock(b.Round, state) || isTestingRoundHasFinalized(state, int(b.Round)) {
+	if isTestingOnUpdateFinalizedBlock(b.Round, state) {
 		if err := chain.AddRoundInfoResult(mc.GetRound(b.Round), b.Hash); err != nil {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
@@ -142,12 +142,9 @@ func addResultIfAdversarialValidatorTest(b *block.Block) {
 	}
 }
 
-func isTestingRoundHasFinalized(s *crpc.State, blockRound int) bool {
-	return s.RoundHasFinalizedConfig != nil && s.RoundHasFinalizedConfig.Round == blockRound && chain.IsSpamReceiver(s, int64(blockRound))
-}
-
 func isTestingOnUpdateFinalizedBlock(round int64, s *crpc.State) bool {
 	var isTestingFunc func(round int64, generator bool, typeRank int) bool
+
 	switch {
 	case s.ExtendNotNotarisedBlock != nil:
 		isTestingFunc = s.ExtendNotNotarisedBlock.IsTesting
@@ -185,6 +182,9 @@ func isTestingOnUpdateFinalizedBlock(round int64, s *crpc.State) bool {
 	case s.SendDifferentBlocksFromAllGenerators != nil:
 		isTestingFunc = s.SendDifferentBlocksFromAllGenerators.IsTesting
 
+	case s.RoundHasFinalizedConfig != nil && s.RoundHasFinalizedConfig.Round == int(round):
+		return true
+
 	default:
 		return false
 	}
@@ -193,13 +193,13 @@ func isTestingOnUpdateFinalizedBlock(round int64, s *crpc.State) bool {
 	return isTestingFunc(round, nodeType == generator, typeRank)
 }
 
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, _ chain.BlockStateHandler, waitOver bool) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, waitOver bool, waitC chan struct{}) error {
 	if isIgnoringGenerateBlock(b.Round) {
 		return nil
 	}
 
 	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
+		return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
 	})
 }
 

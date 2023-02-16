@@ -108,6 +108,7 @@ const (
 	VestingSc     = "vestingsc."
 	ZcnSc         = "zcnsc."
 	DbsEvents     = "dbs.Events."
+	DbSettings    = "dbs.settings."
 
 	BlockReward = "block_reward."
 
@@ -127,6 +128,7 @@ const (
 	MptRoot                 = Internal + "mpt_root"
 	ShowOutput              = Internal + "show_output"
 	MptCreationTime         = Internal + "mpt_creation_time"
+	BenchDataListLength     = Internal + "bench_data_list_length"
 
 	OptionVerbose          = Options + "verbose"
 	OptionTestSuites       = Options + "test_suites"
@@ -219,7 +221,12 @@ const (
 	EventDbMaxIdleConns    = DbsEvents + "max_idle_conns"
 	EventDbOpenConns       = DbsEvents + "max_open_conns"
 	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
-	EventDbAggregatePeriod = DbsEvents + "aggregate_period"
+
+	EventDbDebug                 = DbSettings + "debug"
+	EventDbAggregatePeriod       = DbSettings + "aggregate_period"
+	EventDbPartitionChangePeriod = DbSettings + "partition_change_period"
+	EventDbPartitionKeepCount    = DbSettings + "partition_keep_count"
+	EventDbPageLimit             = DbSettings + "page_limit"
 )
 
 func (s Source) String() string {

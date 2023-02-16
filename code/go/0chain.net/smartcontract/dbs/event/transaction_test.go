@@ -8,9 +8,9 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 )
 
 func TestAddTransaction(t *testing.T) {
@@ -26,7 +26,7 @@ func TestAddTransaction(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
@@ -55,7 +55,7 @@ func TestFindTransactionByHash(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -65,19 +65,18 @@ func TestFindTransactionByHash(t *testing.T) {
 	require.NoError(t, err)
 
 	tr := Transaction{
-		Model:     gorm.Model{ID: 1},
-		Hash:      "something_0",
-		ClientId:  "someClientID",
-		BlockHash: "blockHash",
+		ImmutableModel: model.ImmutableModel{ID: 1},
+		Hash:           "something_0",
+		ClientId:       "someClientID",
+		BlockHash:      "blockHash",
 	}
 	SetUpTransactionData(t, eventDb)
 	t.Run("GetTransactionByHash", func(t *testing.T) {
 		gotTr, err := eventDb.GetTransactionByHash("something_0")
 
 		// To ignore createdAt and updatedAt
-		tr.Model.ID = gotTr.ID
+		tr.ImmutableModel.ID = gotTr.ID
 		tr.CreatedAt = gotTr.CreatedAt
-		tr.UpdatedAt = gotTr.UpdatedAt
 		require.Equal(t, tr, gotTr, "Transaction not getting inserted")
 		gotTr, err = eventDb.GetTransactionByHash("some")
 		require.Error(t, err, "issue while getting the transaction by hash")
@@ -131,9 +130,8 @@ func compareTransactions(t *testing.T, gotTr []Transaction, offset, limit int) {
 			ClientId:  "someClientID",
 			BlockHash: "blockHash",
 		}
-		tr.Model.ID = gotTr[i].ID
+		tr.ImmutableModel.ID = gotTr[i].ID
 		tr.CreatedAt = gotTr[i].CreatedAt
-		tr.UpdatedAt = gotTr[i].UpdatedAt
 		require.Equal(t, tr, gotTr[i], "Transaction not matching")
 	}
 }

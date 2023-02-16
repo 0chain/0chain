@@ -263,7 +263,7 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 					errC <- c.finalizeBlockProcess(cctx, fbr.block, bsh)
 					logging.Logger.Debug("finalize block processed",
 						zap.Int64("round", fbr.block.Round),
-						zap.Any("duration", time.Since(ts)))
+						zap.Duration("duration", time.Since(ts)))
 				}()
 
 				select {
@@ -370,7 +370,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		}
 
 		prevBlockHash := pr.GetBlockHash()
-		if prevBlockHash == "" {
+		if prevBlockHash == "" || !pr.IsFinalized() {
 			logging.Logger.Error("finalize block - previous round not finalized",
 				zap.Int64("round", fb.Round))
 			return errors.New("previous round not finalized")
@@ -387,8 +387,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 	}
 	// finalize
-	c.finalizeBlock(ctx, fb, bsh)
-	return nil
+	return c.finalizeBlock(ctx, fb, bsh)
 }
 
 /*PruneClientStateWorker - a worker that prunes the client state */
@@ -417,16 +416,17 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 }
 
 // SyncMissingNodes notify the nodes sync process to sync missing nodes
-func (c *Chain) SyncMissingNodes(round int64, path util.Path) {
-	if len(path) == 0 {
+func (c *Chain) SyncMissingNodes(round int64, keys []util.Key, wc ...chan struct{}) {
+	if len(keys) == 0 {
 		return
 	}
 	go func() {
 		for {
 			select {
 			case c.syncMissingNodesC <- syncPathNodes{
-				round: round,
-				path:  path,
+				round:  round,
+				keys:   keys,
+				replyC: wc,
 			}:
 				return
 			case <-time.After(time.Second):
@@ -497,52 +497,46 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			logging.Logger.Debug("BC may get stuck",
 				zap.Int64("lastRound", lastRound.round),
 				zap.String("state_hash", util.ToHex(lastRound.stateHash)),
-				zap.Any("stuck time", ts))
+				zap.Duration("stuck time", ts))
 		case mns := <-c.syncMissingNodesC:
 			func() {
-				lfb := c.GetLatestFinalizedBlock()
-				if lfb == nil || lfb.ClientState == nil {
+				var synced bool
+				defer func() {
+					for _, ch := range mns.replyC {
+						if synced {
+							select {
+							case ch <- struct{}{}:
+							default:
+							}
+						} else {
+							close(ch)
+						}
+					}
+				}()
+
+				keysStr := make([]string, len(mns.keys))
+				for i := range mns.keys {
+					keysStr[i] = util.ToHex(mns.keys[i])
+				}
+
+				logging.Logger.Debug("sync missing nodes",
+					zap.Int64("round", mns.round),
+					zap.Strings("keys", keysStr))
+
+				if err := c.GetStateNodes(ctx, mns.keys); err != nil {
+					logging.Logger.Debug("sync missing nodes failed",
+						zap.Int64("round", mns.round),
+						zap.Strings("keys", keysStr),
+						zap.Error(err))
 					return
 				}
-
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					default:
-						// find missing nodes in the path
-						keys := c.findMissingNodesInPath(mns.path, mns.round, lfb.ClientStateHash)
-						if len(keys) == 0 {
-							return
-						}
-
-						logging.Logger.Debug("sync missing nodes",
-							zap.Int64("round", mns.round),
-							zap.String("path", string(mns.path)),
-							zap.Int("keys", len(keys)))
-						c.GetStateNodes(ctx, keys)
-					}
-				}
+				synced = true
 			}()
 		case <-ctx.Done():
 			logging.Logger.Info("Context done, stop SyncLFBStateWorker")
 			return
 		}
 	}
-}
-
-func (c *Chain) findMissingNodesInPath(path util.Path, round int64, root util.Key) []util.Key {
-	logging.Logger.Debug("Finding missing nodes in path", zap.Int64("round", round))
-	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round), root)
-	keys, err := mpt.FindMissingNodesInPath(path)
-	if err != nil {
-		logging.Logger.Error("error in finding missing nodes in path",
-			zap.Int64("round", round),
-			zap.Error(err))
-		// error could happen when timeout, but we can still sync those located missing nodes
-	}
-
-	return keys
 }
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
@@ -598,8 +592,8 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		}
 
 		logging.Logger.Info("verify chain history",
-			zap.Any("mb_sr", magicBlock.StartingRound),
-			zap.Any("mb_hash", magicBlock.Hash),
+			zap.Int64("mb_sr", magicBlock.StartingRound),
+			zap.String("mb_hash", magicBlock.Hash),
 			zap.Int64("mb_num", magicBlock.MagicBlockNumber))
 
 		if err = c.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
@@ -677,9 +671,9 @@ func (c *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
 	}
 
 	logging.Logger.Info("get magic lfmb from sharders",
-		zap.Any("number", lfmb.MagicBlockNumber),
-		zap.Any("sr", lfmb.StartingRound),
-		zap.Any("hash", lfmb.Hash),
+		zap.Int64("number", lfmb.MagicBlockNumber),
+		zap.Int64("sr", lfmb.StartingRound),
+		zap.String("hash", lfmb.Hash),
 		zap.Int64("local lfmb", lfmb.StartingRound))
 
 	if lfmb.MagicBlock.StartingRound <= cmb.StartingRound {
@@ -688,9 +682,9 @@ func (c *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
 			c.SetLatestFinalizedMagicBlock(lfmb)
 			logging.Logger.Debug(
 				"updated lfmb to add lfmb's parent lfmb to magicBlockStartRounds cache",
-				zap.Any("lfmb hash", lfmb.Hash),
-				zap.Any("lfmb round", lfmb.Round),
-				zap.Any("lfmb starting round", lfmb.StartingRound),
+				zap.String("lfmb hash", lfmb.Hash),
+				zap.Int64("lfmb round", lfmb.Round),
+				zap.Int64("lfmb starting round", lfmb.StartingRound),
 			)
 		}
 		return nil // earlier than the current one

@@ -12,8 +12,9 @@ import (
 
 	"0chain.net/core/viper"
 
-	"github.com/0chain/common/core/currency"
 	"encoding/json"
+
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -31,7 +32,6 @@ import (
 var TXN_TIME_TOLERANCE int64
 
 var transactionCount uint64 = 0
-var redis_txns string
 
 // ErrTxnMissingPublicKey is returned if the transaction does not have ClientID and public key
 var (
@@ -39,16 +39,12 @@ var (
 	ErrTxnInvalidPublicKey = errors.New("transaction public key is invalid")
 )
 
-func init() {
-	redis_txns = os.Getenv("REDIS_TXNS")
-}
-
 func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
 	if len(redisTxnsHost) > 0 && redisTxnsPort > 0 {
 		memorystore.AddPool("txndb", memorystore.NewPool(redisTxnsHost, redisTxnsPort))
 	} else {
 		//inside docker
-		memorystore.AddPool("txndb", memorystore.NewPool(redis_txns, 6479))
+		memorystore.AddPool("txndb", memorystore.NewPool(os.Getenv("REDIS_TXNS"), 6379))
 	}
 }
 
@@ -134,15 +130,15 @@ func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currenc
 
 /*ComputeClientID - compute the client id if there is a public key in the transaction */
 func (t *Transaction) ComputeClientID() error {
-	if t.ClientID != "" {
-		return nil
-	}
-
 	if t.PublicKey == "" {
 		logging.Logger.Error("invalid transaction",
 			zap.Error(ErrTxnMissingPublicKey),
 			zap.String("txn", datastore.ToJSON(t).String()))
 		return ErrTxnMissingPublicKey
+	}
+
+	if t.ClientID != "" {
+		return encryption.VerifyPublicKeyClientID(t.PublicKey, t.ClientID)
 	}
 
 	// Doing this is OK because the transaction signature has ClientID
@@ -314,7 +310,7 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 
 /*GetSignatureScheme - get the signature scheme associated with this transaction */
 func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
-	var err error
+
 	co, err := client.GetClientFromCache(t.ClientID)
 	if err != nil {
 		co = client.NewClient()
@@ -331,6 +327,7 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 		if t.PublicKey == "" {
 			return nil, errors.New("get signature scheme failed, empty public key in transaction")
 		}
+
 		co.ID = t.ClientID
 		if err := co.SetPublicKey(t.PublicKey); err != nil {
 			return nil, err
@@ -428,7 +425,7 @@ func (t *Transaction) ComputeOutputHash() string {
 /*VerifyOutputHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 	if t.OutputHash != t.ComputeOutputHash() {
-		logging.Logger.Info("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
+		logging.Logger.Error("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
 		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v %v", t.Hash, t.OutputHash, t.ComputeOutputHash(), t.TransactionOutput))
 	}
 	return nil

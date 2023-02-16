@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/smartcontract/common"
-	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
-
 	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddBlock(t *testing.T) {
@@ -26,7 +25,7 @@ func TestAddBlock(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
@@ -55,7 +54,7 @@ func TestFindBlock(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
@@ -65,8 +64,8 @@ func TestFindBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	block := Block{
-		Model: gorm.Model{ID: 1},
-		Hash:  "test",
+		UpdatableModel: model.UpdatableModel{ID: 1},
+		Hash:           "test",
 	}
 	err = eventDb.addOrUpdateBlock(block)
 	require.NoError(t, err, "Error while inserting Block to event Database")
@@ -78,8 +77,8 @@ func TestFindBlock(t *testing.T) {
 	require.Equal(t, block, gotBlock, "Block not getting inserted")
 
 	block2 := Block{
-		Model: gorm.Model{ID: 2},
-		Hash:  "test2",
+		UpdatableModel: model.UpdatableModel{ID: 2},
+		Hash:           "test2",
 	}
 	err = eventDb.addOrUpdateBlock(block2)
 	require.NoError(t, err, "Error while inserting Block to event Database")
@@ -102,15 +101,15 @@ func TestGetRoundFromTime(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access)
+	eventDb, err := NewEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
 	block := Block{
-		Model: gorm.Model{CreatedAt: time.Now()},
-		Hash:  "test",
+		UpdatableModel: model.UpdatableModel{CreatedAt: time.Now()},
+		Hash:           "test",
 	}
 	err = eventDb.addOrUpdateBlock(block)
 	require.NoError(t, err, "Error while inserting Block to event Database")

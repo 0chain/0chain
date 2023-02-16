@@ -9,6 +9,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
+	commonsc "0chain.net/smartcontract/common"
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
@@ -19,6 +20,11 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
+
+	// Check delegate wallet and operational wallet are not the same
+	if err := commonsc.ValidateDelegateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
+		return "", err
+	}
 
 	tmp := &ValidationNode{}
 	err = balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
@@ -32,7 +38,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 				"Failed to get validator list."+err.Error())
 		}
 
-		_, err = validatorPartitions.AddItem(
+		err = validatorPartitions.Add(
 			balances,
 			&ValidationPartitionNode{
 				Id:  t.ClientID,
@@ -72,7 +78,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
 	}
-	if err = sp.save(spenum.Validator, t.ClientID, balances); err != nil {
+	if err = sp.Save(spenum.Validator, t.ClientID, balances); err != nil {
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
@@ -145,7 +151,7 @@ func (sc *StorageSmartContract) updateValidatorSettings(t *transaction.Transacti
 		return "", common.NewError("update_validator_settings_failed", err.Error())
 	}
 
-	// save validator
+	// Save validator
 	_, err = balances.InsertTrieNode(validator.GetKey(sc.ID), validator)
 	if err != nil {
 		return "", common.NewError("update_validator_settings_failed",
@@ -190,7 +196,7 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 		if has {
 			return fmt.Errorf("invalid validator url update, already used")
 		}
-		// save url
+		// Save url
 		if inputValidator.BaseURL != "" {
 			_, err = balances.InsertTrieNode(inputValidator.GetUrlKey(sc.ID), &datastore.NOIDField{})
 			if err != nil {
@@ -226,8 +232,8 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 	sp.Settings.ServiceChargeRatio = inputValidator.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = inputValidator.StakePoolSettings.MaxNumDelegates
 
-	// save stake pool
-	if err = sp.save(spenum.Validator, inputValidator.ID, balances); err != nil {
+	// Save stake pool
+	if err = sp.Save(spenum.Validator, inputValidator.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 

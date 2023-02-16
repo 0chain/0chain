@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-
-	"0chain.net/smartcontract/dbs"
 )
 
 type providerRewardsDelegates struct {
@@ -21,31 +18,34 @@ type providerRewardsDelegates struct {
 	desc          [][]string
 }
 
-func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
+func aggregateProviderRewards(
+	spus []dbs.StakePoolReward, round int64,
+) (*providerRewardsDelegates, error) {
 	var (
 		rewards       = make([]ProviderRewards, 0, len(spus))
 		delegatePools = make([]DelegatePool, 0, len(spus))
 		descs         = make([][]string, 0, len(spus))
 	)
-
 	for i, sp := range spus {
 		if sp.Reward != 0 {
 			rewards = append(rewards, ProviderRewards{
-				ProviderID:   sp.ProviderId,
-				Rewards:      sp.Reward,
-				TotalRewards: sp.Reward,
+				ProviderID:                    sp.ProviderId,
+				Rewards:                       sp.Reward,
+				TotalRewards:                  sp.Reward,
+				RoundServiceChargeLastUpdated: round,
 			})
 		}
 
 		// merge delegate rewards and penalties
 		for k, v := range spus[i].DelegateRewards {
 			delegatePools = append(delegatePools, DelegatePool{
-				ProviderID:   sp.ProviderId,
-				ProviderType: sp.ProviderType,
-				PoolID:       k,
-				Reward:       currency.Coin(v),
-				TotalReward:  currency.Coin(v),
-				TotalPenalty: currency.Coin(spus[i].DelegatePenalties[k]),
+				ProviderID:           sp.ProviderId,
+				ProviderType:         sp.ProviderType,
+				PoolID:               k,
+				Reward:               v,
+				TotalReward:          v,
+				TotalPenalty:         spus[i].DelegatePenalties[k],
+				RoundPoolLastUpdated: round,
 			})
 		}
 
@@ -53,10 +53,11 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 		for k, v := range spus[i].DelegatePenalties {
 			if _, ok := sp.DelegateRewards[k]; !ok {
 				delegatePools = append(delegatePools, DelegatePool{
-					ProviderID:   sp.ProviderId,
-					ProviderType: sp.ProviderType,
-					PoolID:       k,
-					TotalPenalty: currency.Coin(v),
+					ProviderID:           sp.ProviderId,
+					ProviderType:         sp.ProviderType,
+					PoolID:               k,
+					TotalPenalty:         v,
+					RoundPoolLastUpdated: round,
 				})
 			}
 		}
@@ -111,7 +112,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	ts := time.Now()
-	rewards, err := aggregateProviderRewards(spus)
+	rewards, err := aggregateProviderRewards(spus, round)
 	if err != nil {
 		return err
 	}
@@ -122,7 +123,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		if du > 50*time.Millisecond {
 			logging.Logger.Debug("event db - update reward slow",
 				zap.Int64("round", round),
-				zap.Any("duration", du),
+				zap.Duration("duration", du),
 				zap.Int("total update items", n),
 				zap.Int("rewards num", len(rewards.rewards)),
 				zap.Int("delegate pools num", len(rewards.delegatePools)),
@@ -139,61 +140,61 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	rpdu := time.Since(ts)
 	if rpdu.Milliseconds() > 50 {
 		logging.Logger.Debug("event db - reward providers slow",
-			zap.Any("duration", rpdu),
+			zap.Duration("duration", rpdu),
 			zap.Int64("round", round))
 	}
 
 	if len(rewards.delegatePools) > 0 {
-		if err := rewardProviderDelegates(edb, rewards.delegatePools); err != nil {
+		if err := edb.rewardProviderDelegates(rewards.delegatePools); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
+		}
+	}
+
+	if edb.Debug() {
+		if err := edb.insertProviderReward(spus, round); err != nil {
+			return err
+		}
+		if err := edb.insertDelegateReward(spus, round); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func rewardProvider[T any](edb *EventDb, tableName, index string, providers []T) error { //nolint:unused
-	vs := map[string]interface{}{
-		"rewards":      gorm.Expr(fmt.Sprintf("%s.rewards + excluded.rewards", tableName)),
-		"total_reward": gorm.Expr(fmt.Sprintf("%s.total_reward + excluded.total_reward", tableName)),
+func (edb *EventDb) rewardProviders(prRewards []ProviderRewards) error {
+	var ids []string
+	var rewards []uint64
+	var lastUpdated []int64
+	for _, r := range prRewards {
+		ids = append(ids, r.ProviderID)
+		rewards = append(rewards, uint64(r.Rewards))
+		lastUpdated = append(lastUpdated, r.RoundServiceChargeLastUpdated)
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: index}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&providers).Error
+	return CreateBuilder("provider_rewards", "provider_id", ids).
+		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
+		AddUpdate("total_rewards", rewards, "provider_rewards.total_rewards + t.rewards").
+		AddUpdate("round_service_charge_last_updated", lastUpdated).
+		Exec(edb).Error
 }
 
-func (edb *EventDb) rewardProviders(rewards []ProviderRewards) error {
-	vs := map[string]interface{}{
-		"rewards":       gorm.Expr("provider_rewards.rewards + excluded.rewards"),
-		"total_rewards": gorm.Expr("provider_rewards.total_rewards + excluded.total_rewards"),
+func (edb *EventDb) rewardProviderDelegates(dps []DelegatePool) error {
+	var poolIds []string
+	var reward []uint64
+	var lastUpdated []uint64
+	for _, r := range dps {
+		poolIds = append(poolIds, r.PoolID)
+		reward = append(reward, uint64(r.Reward))
+		lastUpdated = append(lastUpdated, uint64(r.RoundPoolLastUpdated))
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "provider_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(rewards).Error
-}
-
-func rewardProviderDelegates(edb *EventDb, rewards []DelegatePool) error {
-	vs := map[string]interface{}{
-		"reward":        gorm.Expr("delegate_pools.reward + excluded.reward"),
-		"total_reward":  gorm.Expr("delegate_pools.total_reward + excluded.total_reward"),
-		"total_penalty": gorm.Expr("delegate_pools.total_penalty + excluded.total_penalty"),
-	}
-
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Where: clause.Where{
-			Exprs: []clause.Expression{gorm.Expr("delegate_pools.status != ?", spenum.Deleted)},
-		},
-		Columns: []clause.Column{
-			{Name: "provider_type"},
-			{Name: "provider_id"},
-			{Name: "pool_id"},
-		},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&rewards).Error
+	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
+		AddUpdate("reward", reward, "delegate_pools.reward + t.reward").
+		AddUpdate("total_reward", reward, "delegate_pools.total_reward + t.reward").
+		AddUpdate("round_pool_last_updated", lastUpdated).
+		Exec(edb)
+	return ret.Error
 }
 
 func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: unused
@@ -202,15 +203,15 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: un
 	}
 
 	var provider interface{}
-	switch spenum.Provider(spu.ProviderType) {
+	switch spu.ProviderType {
 	case spenum.Blobber:
-		provider = &Blobber{BlobberID: spu.ProviderId}
+		provider = &Blobber{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Validator:
-		provider = &Validator{ValidatorID: spu.ProviderId}
+		provider = &Validator{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Miner:
-		provider = &Miner{MinerID: spu.ProviderId}
+		provider = &Miner{Provider: Provider{ID: spu.ProviderId}}
 	case spenum.Sharder:
-		provider = &Sharder{SharderID: spu.ProviderId}
+		provider = &Sharder{Provider: Provider{ID: spu.ProviderId}}
 	default:
 		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
 	}
