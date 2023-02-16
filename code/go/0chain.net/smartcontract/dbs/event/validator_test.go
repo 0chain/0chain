@@ -38,7 +38,7 @@ func TestValidatorNode(t *testing.T) {
 		require.NoError(t, err, "Error while inserting Validation Node to event Database")
 	
 		var count int64
-		eventDb.Get().Table("transactions").Count(&count)
+		eventDb.Get().Table("validators").Count(&count)
 		require.Equal(t, int64(1), count, "Validator not getting inserted")
 	
 		vnFromDb, err := eventDb.GetValidatorByValidatorID(vn.ID)
