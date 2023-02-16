@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"0chain.net/core/common"
+	common2 "0chain.net/smartcontract/common"
 
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
@@ -65,7 +66,7 @@ func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
 	return res, err
 }
 
-func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider) ([]DelegatePool, error) {
+func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider, pagination common2.Pagination) ([]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
@@ -74,6 +75,10 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider) (
 			DelegateID:   userId,
 		}).
 		Not(&DelegatePool{Status: spenum.Deleted}).
+		Offset(pagination.Offset).Limit(pagination.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "ID"},
+		}).
 		Find(&dps)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error getting delegate pools, %v", result.Error)

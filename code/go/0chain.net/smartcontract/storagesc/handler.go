@@ -583,6 +583,12 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		allocationID = r.URL.Query().Get("allocation_id")
 	)
 
+	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
 	if allocationID == "" {
 		err := errors.New("missing allocation_id URL query parameter")
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
@@ -595,7 +601,7 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		return
 	}
 
-	cp, err := edb.GetChallengePool(allocationID)
+	cp, err := edb.GetChallengePool(allocationID, limit)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 	}
@@ -885,7 +891,14 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	pools, err := edb.GetUserDelegatePools(clientID, spenum.Blobber)
+
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	pools, err := edb.GetUserDelegatePools(clientID, spenum.Blobber, pagination)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
 		return
