@@ -22,7 +22,6 @@ func init() {
 }
 
 func TestStakePoolReward(t *testing.T) {
-	t.Skip("requires bug fix, https://github.com/0chain/0chain/pull/2059")
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
@@ -250,6 +249,7 @@ func TestEventDb_rewardProviders(t *testing.T) {
 }
 
 func TestEventDb_rewardProviderDelegates(t *testing.T) {
+	t.Skip("requires bug fix, https://github.com/0chain/0chain/pull/2059")
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
