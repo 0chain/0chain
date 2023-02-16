@@ -92,7 +92,7 @@ func TestColumnizer(t *testing.T) {
 
 		cols, err = Columnize(allocs)
 		require.NoError(t, err)
-		require.Equal(t, 8, len(cols))
+		require.Equal(t, 12, len(cols))
 
 		// test gorm field > snake field
 		colValues, ok := cols["allocation_id"]
