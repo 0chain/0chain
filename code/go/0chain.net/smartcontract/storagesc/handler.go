@@ -1860,12 +1860,6 @@ type WriteMarkerResponse struct {
 	Signature              string `json:"signature"`
 	BlockNumber            int64  `json:"block_number"` //used in alloc_written_size
 
-	// file info
-	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name"`
-	ContentHash string `json:"content_hash"`
-	Operation   string `json:"operation"`
-
 	// TODO: Decide which pieces of information are important to the response
 	// User       User       `model:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	// Allocation Allocation `model:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
@@ -1886,10 +1880,6 @@ func toWriteMarkerResponse(wm event.WriteMarker) WriteMarkerResponse {
 		Size:                   wm.Size,
 		Signature:              wm.Signature,
 		BlockNumber:            wm.BlockNumber,
-		LookupHash:             wm.LookupHash,
-		Name:                   wm.Name,
-		ContentHash:            wm.ContentHash,
-		Operation:              wm.Operation,
 
 		// TODO: Add sub-fields or relationships as needed
 	}
@@ -2551,7 +2541,7 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 //
 // Integer If the input can be converted to an integer, it is interpreted as a round number and information for the
 // matching block is returned. Otherwise, the input is treated as string and matched against block hash,
-// transaction hash, user id, write marker content hash or write marker filename.
+// transaction hash, user id.
 // If a match is found the matching object is returned.
 //
 // parameters:
