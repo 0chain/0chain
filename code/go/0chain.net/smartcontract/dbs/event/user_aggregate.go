@@ -24,7 +24,7 @@ func (edb *EventDb) ReplicateUserAggregate(round int64, limit int, offset int) (
 	var snapshots []UserAggregate
 	var result *gorm.DB
 	result = edb.Store.Get().
-		Raw("SELECT * FROM user_aggregates WHERE round = ? ORDER BY user_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
+		Raw("SELECT * FROM user_aggregates WHERE round >= ? ORDER BY round, user_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}

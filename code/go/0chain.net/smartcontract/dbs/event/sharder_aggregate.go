@@ -57,7 +57,7 @@ func (s *SharderAggregate) SetTotalRewards(value currency.Coin) {
 func (edb *EventDb) ReplicateSharderAggregate(round int64, limit int, offset int) ([]SharderAggregate, error) {
 	var snapshots []SharderAggregate
 	result := edb.Store.Get().
-		Raw("SELECT * FROM sharder_aggregates WHERE round = ? ORDER BY sharder_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
+		Raw("SELECT * FROM sharder_aggregates WHERE round >= ? ORDER BY round, sharder_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}
