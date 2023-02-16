@@ -24,6 +24,13 @@ func TestColumnizer(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "columnize error: type invalid", err.Error())
 
+		type AllocationHash struct {
+			Hash string
+			HashExpiration int64
+		}
+		type Provider struct {
+			ProviderID string
+		}
 		type Allocation struct {
 			AllocationID  string `gorm:"column:allocation_id_gorm;"`
 			ParityShards  int
@@ -33,6 +40,12 @@ func TestColumnizer(t *testing.T) {
 			WritePriceMax currency.Coin
 			Finalized     bool
 			FileOptions   uint16
+			Provider 	  *Provider
+			Hash		  AllocationHash
+			References	  []string
+			User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+			Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:AllocationID"`
+
 		}
 
 		allocs := []Allocation{
@@ -45,6 +58,9 @@ func TestColumnizer(t *testing.T) {
 				WritePriceMax: currency.Coin(100),
 				Finalized:     true,
 				FileOptions:   63,
+				References:   []string{"ref1", "ref2", "ref3"},
+				Provider: &Provider{ProviderID: "provider1"},
+				Hash: AllocationHash{Hash: "hash1", HashExpiration: 100},
 			},
 			{
 				AllocationID:  "allocation2",
@@ -55,6 +71,9 @@ func TestColumnizer(t *testing.T) {
 				WritePriceMax: currency.Coin(200),
 				Finalized:     false,
 				FileOptions:   60,
+				References:   []string{"ref4", "ref5", "ref6"},
+				Provider: &Provider{ProviderID: "provider2"},
+				Hash: AllocationHash{Hash: "hash2", HashExpiration: 200},
 			},
 			{
 				AllocationID:  "allocation3",
@@ -65,6 +84,9 @@ func TestColumnizer(t *testing.T) {
 				WritePriceMax: currency.Coin(300),
 				Finalized:     true,
 				FileOptions:   1,
+				References:   []string{"ref7", "ref8", "ref9"},
+				Provider: &Provider{ProviderID: "provider3"},
+				Hash: AllocationHash{Hash: "hash3", HashExpiration: 300},
 			},
 		}
 
@@ -109,5 +131,40 @@ func TestColumnizer(t *testing.T) {
 		colValues, ok = cols["file_options"]
 		require.True(t, ok)
 		require.Equal(t, []interface{}{uint16(63), uint16(60), uint16(1)}, colValues)
+
+		// slice field
+		colValues, ok = cols["references"]
+		require.True(t, ok)
+		require.Equal(t, []interface{}{[]string{"ref1", "ref2", "ref3"}, []string{"ref4", "ref5", "ref6"}, []string{"ref7", "ref8", "ref9"}}, colValues)
+		
+		// strcut field
+		colValues, ok = cols["provider"]
+		require.False(t, ok)
+		require.Nil(t, colValues)
+		colValues, ok = cols["provider_id"]
+		require.True(t, ok)
+		require.Equal(t, []interface{}{"provider1", "provider2", "provider3"}, colValues)
+		
+		// ptr field
+		colValues, ok = cols["allocation_hash"]
+		require.False(t, ok)
+		require.Nil(t, colValues)
+		colValues, ok = cols["hash"]
+		require.True(t, ok)
+		require.Equal(t, []interface{}{"hash1", "hash2", "hash3"}, colValues)
+		colValues, ok = cols["hash_expiration"]
+		require.True(t, ok)
+		require.Equal(t, []interface{}{int64(100), int64(200), int64(300)}, colValues)
+
+
+		// struct foreignKey
+		colValues, ok = cols["user"]
+		require.False(t, ok)
+		require.Nil(t, colValues)
+
+		// slice foreignKey
+		colValues, ok = cols["terms"]
+		require.False(t, ok)
+		require.Nil(t, colValues)
 	})
 }
