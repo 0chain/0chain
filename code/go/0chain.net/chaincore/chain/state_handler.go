@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"0chain.net/smartcontract/entity"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -13,6 +12,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"0chain.net/smartcontract/entity"
 
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
@@ -150,9 +151,13 @@ func (c *Chain) GetBurnsHandler(ctx context.Context, r *http.Request) (interface
 	clientID := r.FormValue("client_id")
 	nonce := r.FormValue("nonce")
 
-	nonceInt, err := strconv.ParseInt(nonce, 10, 64)
-	if err != nil {
-		return nil, err
+	var nonceInt int64
+	if nonce != "" {
+		var err error
+		nonceInt, err = strconv.ParseInt(nonce, 10, 64)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	burnDetails, ok := zcnsc.BurnTicketsPool[clientID]
