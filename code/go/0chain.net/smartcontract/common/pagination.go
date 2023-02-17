@@ -9,6 +9,7 @@ import (
 )
 
 const DefaultQueryLimit = 20
+const MaxQueryLimit = 20
 
 type Pagination struct {
 	Offset       int
@@ -41,9 +42,9 @@ func GetOffsetLimitOrderParam(values url.Values) (Pagination, error) {
 			return Pagination{Limit: DefaultQueryLimit}, common.NewErrBadRequest("limit parameter is not valid")
 		}
 
-		if limit > DefaultQueryLimit {
+		if limit > MaxQueryLimit {
 			msg := fmt.Sprintf("limit %d too high, cannot exceed %d", limit, DefaultQueryLimit)
-			return Pagination{Limit: DefaultQueryLimit}, common.NewErrBadRequest(msg)
+			return Pagination{Limit: MaxQueryLimit}, common.NewErrBadRequest(msg)
 		}
 	}
 
