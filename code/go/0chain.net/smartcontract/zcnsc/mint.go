@@ -93,6 +93,14 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	// // get user node
+	// un, err := GetUserNode(payload.EthereumAddress, ctx)
+	// if err != nil {
+	// 	err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
+	// 	logging.Logger.Error(err.Error(), zap.Error(err))
+	// 	return
+	// }
+
 	_, exists := gn.WZCNNonceMinted[payload.Nonce]
 	if exists { // global nonce from ETH SC has already been minted
 		err = common.NewError(
@@ -122,7 +130,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// record the global nonce from solidity smart contract
-	gn.WZCNNonceMinted[payload.Nonce] = true
+	// gn.WZCNNonceMinted[payload.Nonce] = true
+	// un.MintNonce++
 
 	var (
 		amount currency.Coin
@@ -144,6 +153,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share * len(signatures), %s", code, info))
 		return
 	}
+
 	payload.Amount = amount
 	for _, sig := range payload.Signatures {
 		err = ctx.AddMint(&state.Mint{
