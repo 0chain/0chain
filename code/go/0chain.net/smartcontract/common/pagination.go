@@ -9,7 +9,7 @@ import (
 )
 
 const DefaultQueryLimit = 20
-const MaxQueryLimit = 20
+const MaxQueryLimit = 50
 
 type Pagination struct {
 	Offset       int
