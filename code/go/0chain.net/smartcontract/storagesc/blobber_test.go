@@ -547,110 +547,21 @@ func Test_flow_reward(t *testing.T) {
 		}
 
 	})
-}
-
-func Test_flow_reward_for_less_than_64KB(t *testing.T) {
-
-	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		client         = newClient(100*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
-		err      error
-	)
-
-	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
-
-	// blobbers: stake 10k, balance 40k
-
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
-	require.NoError(t, err)
-
-	var b1 *Client
-	for _, b := range blobs {
-		if b.id == alloc.BlobberAllocs[0].BlobberID {
-			b1 = b
-			break
-		}
-	}
-	require.NotNil(t, b1)
-
-	restMinLock, err := alloc.restMinLockDemand()
-	require.NoError(t, err)
-	require.EqualValues(t, 202546280, restMinLock)
 
 	t.Run("write less than 64 KB", func(t *testing.T) {
-
 		var cp *challengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var blobb1 = balances.balances[b1.id]
-		var apb1, cpb1 = alloc.WritePool, cp.Balance
+		var blobb1 = balances.balances[b3.id]
+		var wpb1, cpb1 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 15*x10, apb1)
-		require.EqualValues(t, 0, cpb1)
+		require.EqualValues(t, 149901100442, wpb1)
+		require.EqualValues(t, 98221390, cpb1)
 		require.EqualValues(t, 40*x10, blobb1)
 
-		tp += 100
-		var cc = &BlobberCloseConnection{
-			AllocationRoot:     "alloc-root-1",
-			PrevAllocationRoot: "",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         "alloc-root-1",
-				PreviousAllocationRoot: "",
-				AllocationID:           allocID,
-				Size:                   10 * KB,
-				BlobberID:              b1.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
-		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
-		require.NoError(t, err)
-
-		// write
-		tp += 100
-		var tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		var resp string
-		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
-		require.NoError(t, err)
-		require.NotZero(t, resp)
-
-		// check out
-		cp, err = ssc.getChallengePool(allocID, balances)
-		require.NoError(t, err)
-
-		var blobb2 = balances.balances[b1.id]
-		var apb2, cpb2 = alloc.WritePool, cp.Balance
-
-		require.EqualValues(t, 15*x10, apb2)
-		require.EqualValues(t, 60046, cpb2) // reward for 1KB should be calculated as for 64KB
-		require.EqualValues(t, 40*x10, blobb2)
-
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-	})
-
-	t.Run("delete less than 64 KB", func(t *testing.T) {
-
-		var cp *challengePool
-		cp, err = ssc.getChallengePool(allocID, balances)
-		require.NoError(t, err)
-
-		var blobb1 = balances.balances[b1.id]
-		var apb1, cpb1 = alloc.WritePool, cp.Balance
-
-		require.EqualValues(t, 149999939954, apb1)
-		require.EqualValues(t, 60046, cpb1)
-		require.EqualValues(t, 40*x10, blobb1)
-
-		tp += 100
+		// write 10 KB
+		tp = 200
 		var cc = &BlobberCloseConnection{
 			AllocationRoot:     "alloc-root-2",
 			PrevAllocationRoot: "alloc-root-1",
@@ -658,8 +569,8 @@ func Test_flow_reward_for_less_than_64KB(t *testing.T) {
 				AllocationRoot:         "alloc-root-2",
 				PreviousAllocationRoot: "alloc-root-1",
 				AllocationID:           allocID,
-				Size:                   -10 * KB,
-				BlobberID:              b1.id,
+				Size:                   10 * KB,
+				BlobberID:              b3.id,
 				Timestamp:              common.Timestamp(tp),
 				ClientID:               client.id,
 			},
@@ -670,7 +581,7 @@ func Test_flow_reward_for_less_than_64KB(t *testing.T) {
 
 		// write
 		tp += 100
-		var tx = newTransaction(b1.id, ssc.ID, 0, tp)
+		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
@@ -678,21 +589,76 @@ func Test_flow_reward_for_less_than_64KB(t *testing.T) {
 		require.NoError(t, err)
 		require.NotZero(t, resp)
 
-		// check out
+		// balances
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var blobb2 = balances.balances[b1.id]
+		var blobb2 = balances.balances[b3.id]
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149999939954, apb2)
-		require.EqualValues(t, 60046, cpb2) // balance should not change
+		require.EqualValues(t, 149901100442, apb2)
+		require.EqualValues(t, 98281436, cpb2) // reward for >64 KB should be calculated as for 64KB
 		require.EqualValues(t, 40*x10, blobb2)
 
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
 	})
 
+	t.Run("delete less than 64 KB", func(t *testing.T) {
+		var cp *challengePool
+		cp, err = ssc.getChallengePool(allocID, balances)
+		require.NoError(t, err)
+
+		var blobb1 = balances.balances[b3.id]
+		var wpb1, cpb1 = alloc.WritePool, cp.Balance
+
+		require.EqualValues(t, 149901040396, wpb1)
+		require.EqualValues(t, 98281436, cpb1)
+		require.EqualValues(t, 40*x10, blobb1)
+
+		// delete 10 KB
+		tp += 100
+		var cc = &BlobberCloseConnection{
+			AllocationRoot:     "alloc-root-3",
+			PrevAllocationRoot: "alloc-root-2",
+			WriteMarker: &WriteMarker{
+				AllocationRoot:         "alloc-root-3",
+				PreviousAllocationRoot: "alloc-root-2",
+				AllocationID:           allocID,
+				Size:                   -10 * KB,
+				BlobberID:              b3.id,
+				Timestamp:              common.Timestamp(tp),
+				ClientID:               client.id,
+			},
+		}
+		cc.WriteMarker.Signature, err = client.scheme.Sign(
+			encryption.Hash(cc.WriteMarker.GetHashData()))
+		require.NoError(t, err)
+
+		// write
+		tp += 100
+		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
+		balances.setTransaction(t, tx)
+		var resp string
+		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+			balances)
+		require.NoError(t, err)
+		require.NotZero(t, resp)
+
+		// balances
+		cp, err = ssc.getChallengePool(allocID, balances)
+		require.NoError(t, err)
+
+		var blobb2 = balances.balances[b3.id]
+		var apb2, cpb2 = alloc.WritePool, cp.Balance
+
+		require.EqualValues(t, 149901040396, apb2)
+		require.EqualValues(t, 98281436, cpb2) // balance should not change
+		require.EqualValues(t, 40*x10, blobb2)
+
+		alloc, err = ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+	})
 }
 
 func inspectCPIV(t *testing.T, ssc *StorageSmartContract, allocID string, balances *testBalances) {

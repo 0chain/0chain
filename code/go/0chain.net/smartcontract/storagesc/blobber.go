@@ -557,9 +557,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
-
 	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
-
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
 	}
@@ -733,7 +731,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	if commitConnection.WriteMarker.Timestamp > alloc.Expiration {
-
 		return "", common.NewError("commit_connection_failed",
 			"write marker time is after allocation expires")
 	}
