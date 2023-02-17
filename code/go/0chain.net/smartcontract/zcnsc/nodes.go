@@ -37,9 +37,9 @@ type ZCNSConfig struct {
 }
 
 type GlobalNode struct {
-	*ZCNSConfig     `json:"zcnsc_config"`
-	ID              string         `json:"id"`
-	WZCNNonceMinted map[int64]bool `json:"user_nonce_minted"`
+	*ZCNSConfig `json:"zcnsc_config"`
+	ID          string `json:"id"`
+	MintNonce   int64  `json:"mint_nonce"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
