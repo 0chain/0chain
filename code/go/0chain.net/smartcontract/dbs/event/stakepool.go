@@ -33,7 +33,8 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 			}
 			dpRewardsMap[sp.ProviderId][poolId] = dpRewardsMap[sp.ProviderId][poolId] + spus[i].DelegateRewards[poolId]
 		}
-
+		// todo https://github.com/0chain/0chain/issues/2122
+		// slash charges are no longer taken from rewards, but the stake pool. So related code has been removed.
 	}
 
 	return &providerRewardsDelegates{
