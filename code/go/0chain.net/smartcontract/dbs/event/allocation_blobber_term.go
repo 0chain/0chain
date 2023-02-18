@@ -75,7 +75,30 @@ func (edb *EventDb) deleteAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 }
 
 func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
-	return edb.addOrOverwriteAllocationBlobberTerms(terms)
+	var (
+		allocationIdList     []string
+		blobberIdList        []string
+		readPriceList        []int64
+		writePriceList       []int64
+		minLockDemandList    []float64
+		maxOfferDurationList []int64
+	)
+
+	for _, t := range terms {
+		allocationIdList = append(allocationIdList, t.AllocationID)
+		blobberIdList = append(blobberIdList, t.BlobberID)
+		readPriceList = append(readPriceList, t.ReadPrice)
+		writePriceList = append(writePriceList, t.WritePrice)
+		minLockDemandList = append(minLockDemandList, t.MinLockDemand)
+		maxOfferDurationList = append(maxOfferDurationList, int64(t.MaxOfferDuration))
+	}
+
+	return CreateBuilder("allocation_blobber_terms", "allocation_id", allocationIdList).
+		AddCompositeId("blobber_id", blobberIdList).
+		AddUpdate("read_price", readPriceList).
+		AddUpdate("write_price", writePriceList).
+		AddUpdate("min_lock_demand", minLockDemandList).
+		AddUpdate("max_offer_duration", maxOfferDurationList).Exec(edb).Error
 }
 
 func (edb *EventDb) addOrOverwriteAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
