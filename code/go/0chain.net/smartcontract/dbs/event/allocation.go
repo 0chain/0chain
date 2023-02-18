@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"time"
 
+	corecommon "0chain.net/core/common"
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
-
-	"gorm.io/gorm"
 )
 
 type Allocation struct {
@@ -100,7 +99,6 @@ func mergeAddAllocationEvents() *eventsMergerImpl[Allocation] {
 func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 	ts := time.Now()
 	updateColumns := []string{
-		"allocation_name",
 		"transaction_id",
 		"data_shards",
 		"parity_shards",
@@ -132,6 +130,29 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"file_options",
 	}
 
+	columns, err := Columnize(allocs)
+	if err != nil {
+		return err
+	}
+	ids, ok := columns["allocation_id"]
+	if !ok {
+		return corecommon.NewError("update_allocation", "no id field provided in event Data")
+	}
+
+	updater := CreateBuilder("allocations", "allocation_id", ids)
+	for _, fieldKey := range updateColumns {
+		if fieldKey == "allocation_id" {
+			continue
+		}
+
+		fieldList, ok := columns[fieldKey]
+		if !ok {
+			logging.Logger.Warn("update_allocation: required update field not found in event data", zap.String("field", fieldKey))
+		} else {
+			updater = updater.AddUpdate(fieldKey, fieldList)
+		}
+	}
+
 	defer func() {
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
@@ -141,10 +162,7 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		}
 	}()
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "allocation_id"}},
-		DoUpdates: clause.AssignmentColumns(updateColumns),
-	}).Create(&allocs).Error
+	return updater.Exec(edb).Debug().Error
 }
 
 func mergeUpdateAllocEvents() *eventsMergerImpl[Allocation] {
@@ -162,17 +180,49 @@ func (edb *EventDb) updateAllocationStakes(allocs []Allocation) error {
 		}
 	}()
 
-	updateColumns := []string{
-		"write_pool",
-		"moved_to_challenge",
-		"moved_back",
-		"moved_to_validators",
+	var (
+		allocationIdList      []string
+		writePoolList         []int64
+		movedToChallengeList  []int64
+		movedBackList         []int64
+		movedToValidatorsList []int64
+		coinValue             int64
+		err                   error
+	)
+
+	for _, alloc := range allocs {
+		allocationIdList = append(allocationIdList, alloc.AllocationID)
+
+		coinValue, err = alloc.WritePool.Int64()
+		if err != nil {
+			return err
+		}
+		writePoolList = append(writePoolList, coinValue)
+
+		coinValue, err = alloc.MovedToChallenge.Int64()
+		if err != nil {
+			return err
+		}
+		movedToChallengeList = append(movedToChallengeList, coinValue)
+
+		coinValue, err = alloc.MovedBack.Int64()
+		if err != nil {
+			return err
+		}
+		movedBackList = append(movedBackList, coinValue)
+
+		coinValue, err = alloc.MovedToValidators.Int64()
+		if err != nil {
+			return err
+		}
+		movedToValidatorsList = append(movedToValidatorsList, coinValue)
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "allocation_id"}},
-		DoUpdates: clause.AssignmentColumns(updateColumns),
-	}).Create(&allocs).Error
+	return CreateBuilder("allocations", "allocation_id", allocationIdList).
+		AddUpdate("write_pool", writePoolList).
+		AddUpdate("moved_to_challenge", movedToChallengeList).
+		AddUpdate("moved_back", movedBackList).
+		AddUpdate("moved_to_validators", movedToValidatorsList).Exec(edb).Error
 }
 
 func mergeUpdateAllocStatsEvents() *eventsMergerImpl[Allocation] {
@@ -194,19 +244,47 @@ func withAllocStatsMerged() eventMergeMiddleware {
 }
 
 func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
-	// update allocation stat
-	vs := map[string]interface{}{
-		"used_size":          gorm.Expr("allocations.used_size + excluded.used_size"),
-		"num_writes":         gorm.Expr("allocations.num_writes + excluded.num_writes"),
-		"moved_to_challenge": gorm.Expr("allocations.moved_to_challenge + excluded.moved_to_challenge"),
-		"moved_back":         gorm.Expr("allocations.moved_back + excluded.moved_back"),
-		"write_pool":         gorm.Expr("allocations.write_pool - excluded.moved_to_challenge + excluded.moved_back"),
+	var (
+		allocationIdList     []string
+		usedSizeList         []int64
+		numWritesList        []int64
+		movedToChallengeList []int64
+		movedBackList        []int64
+		writePoolList        []int64
+		coinValue            int64
+		err                  error
+	)
+
+	for _, alloc := range allocs {
+		allocationIdList = append(allocationIdList, alloc.AllocationID)
+		usedSizeList = append(usedSizeList, alloc.UsedSize)
+		numWritesList = append(numWritesList, alloc.NumWrites)
+
+		coinValue, err = alloc.WritePool.Int64()
+		if err != nil {
+			return err
+		}
+		writePoolList = append(writePoolList, coinValue)
+
+		coinValue, err = alloc.MovedToChallenge.Int64()
+		if err != nil {
+			return err
+		}
+		movedToChallengeList = append(movedToChallengeList, coinValue)
+
+		coinValue, err = alloc.MovedBack.Int64()
+		if err != nil {
+			return err
+		}
+		movedBackList = append(movedBackList, coinValue)
 	}
 
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "allocation_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&allocs).Error
+	return CreateBuilder("allocations", "allocation_id", allocationIdList).
+		AddUpdate("used_size", usedSizeList, "allocations.used_size + t.used_size").
+		AddUpdate("num_writes", numWritesList, "allocations.num_writes + t.num_writes").
+		AddUpdate("moved_to_challenge", movedToChallengeList, "allocations.moved_to_challenge + t.moved_to_challenge").
+		AddUpdate("moved_back", movedBackList, "allocations.moved_back + t.moved_back").
+		AddUpdate("write_pool", writePoolList, "allocations.write_pool - t.moved_to_challenge + t.moved_back").Exec(edb).Error
 }
 
 func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
@@ -261,29 +339,45 @@ func withAllocChallengesMerged() eventMergeMiddleware {
 }
 
 func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
-	vs := map[string]interface{}{
-		"open_challenges":             gorm.Expr("allocations.open_challenges - excluded.open_challenges"),
-		"latest_closed_challenge_txn": gorm.Expr("excluded.latest_closed_challenge_txn"),
-		"successful_challenges":       gorm.Expr("allocations.successful_challenges + excluded.successful_challenges"),
-		"failed_challenges":           gorm.Expr("allocations.failed_challenges + excluded.failed_challenges"),
+	var (
+		allocationIdList             []string
+		openChallengesList           []int64
+		latestClosedChallengeTxnList []string
+		successfulChallengesList     []int64
+		failedChallengeList          []int64
+	)
+
+	for _, alloc := range allocs {
+		allocationIdList = append(allocationIdList, alloc.AllocationID)
+		openChallengesList = append(openChallengesList, alloc.OpenChallenges)
+		latestClosedChallengeTxnList = append(latestClosedChallengeTxnList, alloc.LatestClosedChallengeTxn)
+		successfulChallengesList = append(successfulChallengesList, alloc.SuccessfulChallenges)
+		failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)
 	}
 
-	return edb.Store.Get().Model(&Allocation{}).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "allocation_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&allocs).Error
+	return CreateBuilder("allocations", "allocation_id", allocationIdList).
+		AddUpdate("open_challenges", openChallengesList, "allocations.open_challenges - t.open_challenges").
+		AddUpdate("latest_closed_challenge_txn", latestClosedChallengeTxnList).
+		AddUpdate("successful_challenges", successfulChallengesList, "allocations.successful_challenges + t.successful_challenges").
+		AddUpdate("failed_challenges", failedChallengeList, "allocations.failed_challenges + t.failed_challenges").Exec(edb).Error
 }
 
 func (edb *EventDb) addChallengesToAllocations(allocs []Allocation) error {
-	vs := map[string]interface{}{
-		"total_challenges": gorm.Expr("allocations.total_challenges + excluded.total_challenges"),
-		"open_challenges":  gorm.Expr("allocations.open_challenges + excluded.open_challenges"),
+	var (
+		allocationIdList    []string
+		totalChallengesList []int64
+		openChallengesList  []int64
+	)
+
+	for _, alloc := range allocs {
+		allocationIdList = append(allocationIdList, alloc.AllocationID)
+		totalChallengesList = append(totalChallengesList, alloc.TotalChallenges)
+		openChallengesList = append(openChallengesList, alloc.OpenChallenges)
 	}
 
-	return edb.Store.Get().Model(&Allocation{}).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "allocation_id"}},
-		DoUpdates: clause.Assignments(vs),
-	}).Create(&allocs).Error
+	return CreateBuilder("allocations", "allocation_id", allocationIdList).
+		AddUpdate("total_challenges", totalChallengesList, "allocations.total_challenges + t.total_challenges").
+		AddUpdate("open_challenges", openChallengesList, "allocations.open_challenges + t.open_challenges").Exec(edb).Error
 }
 
 func mergeAddChallengesToAllocsEvents() *eventsMergerImpl[Allocation] {
