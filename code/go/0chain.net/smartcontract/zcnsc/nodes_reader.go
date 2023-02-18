@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/entity"
 	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/chain/state"
@@ -28,6 +29,9 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	switch err {
 	case nil, util.ErrValueNotPresent:
+		if node.BurnTickets == nil {
+			node.BurnTickets = make(map[string][]entity.BurnTicketDetails)
+		}
 		return node, nil
 	default:
 		return nil, err

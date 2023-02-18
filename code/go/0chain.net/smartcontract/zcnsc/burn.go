@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var BurnTicketsPool = make(map[string][]entity.BurnTicketDetails)
+// var BurnTicketsPool = make(map[string][]entity.BurnTicketDetails)
 
 // Burn inputData - is a BurnPayload.
 // EthereumAddress => required
@@ -85,6 +85,11 @@ func (zcn *ZCNSmartContract) Burn(
 	// increase the nonce
 	un.BurnNonce++
 
+	un.BurnTickets[trans.ClientID] = append(un.BurnTickets[trans.ClientID], entity.BurnTicketDetails{
+		Hash:  trans.Hash,
+		Nonce: trans.Nonce,
+	})
+
 	// Save the user node
 	err = un.Save(ctx)
 	if err != nil {
@@ -97,11 +102,6 @@ func (zcn *ZCNSmartContract) Burn(
 	if err != nil {
 		return "", err
 	}
-
-	BurnTicketsPool[trans.ClientID] = append(BurnTicketsPool[trans.ClientID], entity.BurnTicketDetails{
-		Hash:  trans.Hash,
-		Nonce: trans.Nonce,
-	})
 
 	response := &BurnPayloadResponse{
 		TxnID:           trans.Hash,

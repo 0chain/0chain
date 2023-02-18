@@ -15,6 +15,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/entity"
 	"github.com/0chain/common/core/util"
 )
 
@@ -341,9 +342,9 @@ func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 // ----- UserNode ------------------
 
 type UserNode struct {
-	ID        string `json:"id"`
-	BurnNonce int64  `json:"burn_nonce"`
-	MintNonce int64  `json:"mint_nonce"`
+	ID          string                                `json:"id"`
+	BurnNonce   int64                                 `json:"burn_nonce"`
+	BurnTickets map[string][]entity.BurnTicketDetails `json:"burn_tickets"`
 }
 
 func NewUserNode(id string) *UserNode {

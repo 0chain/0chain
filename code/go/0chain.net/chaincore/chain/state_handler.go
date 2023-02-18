@@ -145,10 +145,17 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	return retObj, nil
 }
 
-// GetBurnsHandler returns not proofed burn tickets for a specific
-// nonce received from the bridge smart contract
+// GetBurnsHandler returns ZCN burn tickets for the given ethereum address and client id
 func (c *Chain) GetBurnsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	ethereumAddress := r.FormValue("ethereum_address")
+	if ethereumAddress == "" {
+		return nil, errors.New("Argument 'ethereumAddress' should not be empty")
+	}
 	clientID := r.FormValue("client_id")
+	if ethereumAddress == "" {
+		return nil, errors.New("Argument 'client_id' should not be empty")
+	}
+
 	nonce := r.FormValue("nonce")
 
 	var nonceInt int64
@@ -160,9 +167,15 @@ func (c *Chain) GetBurnsHandler(ctx context.Context, r *http.Request) (interface
 		}
 	}
 
-	burnDetails, ok := zcnsc.BurnTicketsPool[clientID]
+	un, err := zcnsc.GetUserNode(ethereumAddress, c.GetStateContextI())
+	if err != nil {
+		return nil, err
+	}
+
+	burnDetails, ok := un.BurnTickets[clientID]
 	if !ok {
-		return nil, errors.New("burn tickets not found")
+		return nil, errors.New(fmt.Sprintf(
+			"given user %s doesn't have any burn tickets performed for such ethereum address as %s", clientID, ethereumAddress))
 	}
 
 	var response []entity.BurnTicketDetails
