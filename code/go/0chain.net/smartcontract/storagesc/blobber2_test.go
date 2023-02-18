@@ -25,7 +25,6 @@ import (
 )
 
 const (
-	CHUNK_SIZE           = 64 * KB
 	allocationId         = "my allocation id"
 	delegateWallet       = "my wallet"
 	errCommitBlobber     = "commit_blobber_read"

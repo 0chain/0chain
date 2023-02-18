@@ -30,7 +30,10 @@ import (
 	"0chain.net/core/common"
 )
 
-const mockMinLockDemand = 1
+const (
+	mockMinLockDemand            = 1
+	mockFinalizedAllocationIndex = 2
+)
 
 func AddMockAllocations(
 	clients, publicKeys []string,
@@ -85,9 +88,8 @@ func addMockAllocation(
 			FailedChallenges:          1,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
-		TimeUnit: 1 * time.Hour,
-		// make last allocation finalised
-		Finalized: i == viper.GetInt(sc.NumAllocations)-1,
+		TimeUnit:  1 * time.Hour,
+		Finalized: i == mockFinalizedAllocationIndex,
 		WritePool: mockWriePoolSize,
 	}
 	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
