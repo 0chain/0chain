@@ -642,7 +642,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"can't get stake pool: %v", err)
 	}
 
-	if s, err2 := validateLockRequest(t, sp, err); err2 != nil {
+	if s, err2 := validateLockRequest(t, sp); err2 != nil {
 		return s, err2
 	}
 
@@ -668,7 +668,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	return out, err
 }
 
-func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, err error) (string, error) {
+func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool) (string, error) {
 	if t.Value < sp.GetSettings().MinStake {
 		return "", common.NewError("stake_pool_lock_failed",
 			fmt.Sprintf("too small stake to lock: %v < %v", t.Value, sp.GetSettings().MinStake))
