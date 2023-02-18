@@ -342,15 +342,42 @@ func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 // ----- UserNode ------------------
 
 type UserNode struct {
-	ID          string                                `json:"id"`
-	BurnNonce   int64                                 `json:"burn_nonce"`
-	BurnTickets map[string][]entity.BurnTicketDetails `json:"burn_tickets"`
+	ID          string              `json:"id"`
+	BurnNonce   int64               `json:"burn_nonce"`
+	BurnTickets map[string][][]byte `json:"burn_tickets"`
 }
 
 func NewUserNode(id string) *UserNode {
 	return &UserNode{
 		ID: id,
 	}
+}
+
+func (un *UserNode) AddBurnTicket(clientId string, hash string, nonce int64) error {
+	burnTicketRaw := entity.BurnTicket{Hash: hash, Nonce: nonce}
+	burnTicket, err := json.Marshal(burnTicketRaw)
+	if err != nil {
+		return err
+	}
+	un.BurnTickets[clientId] = append(un.BurnTickets[clientId], burnTicket)
+	return nil
+}
+
+func (un *UserNode) GetBurnTickets(clientId string) ([]entity.BurnTicket, error) {
+	var result []entity.BurnTicket
+	burnTickets, ok := un.BurnTickets[clientId]
+	if !ok {
+		return result, nil
+	}
+
+	for _, burnTicket := range burnTickets {
+		var dst entity.BurnTicket
+		if err := json.Unmarshal(burnTicket, dst); err != nil {
+			return nil, err
+		}
+		result = append(result, dst)
+	}
+	return result, nil
 }
 
 func (un *UserNode) GetKey() datastore.Key {

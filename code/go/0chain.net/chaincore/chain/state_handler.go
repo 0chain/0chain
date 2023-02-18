@@ -152,7 +152,7 @@ func (c *Chain) GetBurnsHandler(ctx context.Context, r *http.Request) (interface
 		return nil, errors.New("Argument 'ethereumAddress' should not be empty")
 	}
 	clientID := r.FormValue("client_id")
-	if ethereumAddress == "" {
+	if clientID == "" {
 		return nil, errors.New("Argument 'client_id' should not be empty")
 	}
 
@@ -172,7 +172,6 @@ func (c *Chain) GetBurnsHandler(ctx context.Context, r *http.Request) (interface
 		return nil, err
 	}
 
-	burnDetails, ok := un.BurnTickets[clientID]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf(
 			"given user %s doesn't have any burn tickets performed for such ethereum address as %s", clientID, ethereumAddress))
