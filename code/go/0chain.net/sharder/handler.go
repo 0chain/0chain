@@ -19,7 +19,6 @@ import (
 
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
-		"/v1/block/get/latest_finalized":   common.WithCORS(common.UserRateLimit(common.ToJSONResponse(LatestFinalizedBlockHandler))),
 		"/v1/block/get":                    common.ToJSONResponse(BlockHandler),
 		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
 		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
