@@ -3,7 +3,10 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
@@ -125,10 +128,35 @@ func (edb *EventDb) updateValidators(validators []Validator) error {
 		"delegate_wallet", "num_delegates",
 		"service_charge",
 	}
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns(updateFields),
-	}).Create(&validators).Error
+
+	// Create column-based listing of the given data
+	columns, err := Columnize(validators)
+	if err != nil {
+		return err
+	}
+
+	// Create the updater
+	ids, ok := columns["id"]
+	if !ok {
+		return common.NewError("update_validators", "no id field provided in event Data")
+	}
+	updater := CreateBuilder("validators", "id", ids)
+
+	// Bind the required fields for update to the updater
+	for _, fieldKey := range updateFields {
+		if fieldKey == "id" {
+			continue
+		}
+
+		fieldList, ok := columns[fieldKey]
+		if !ok {
+			logging.Logger.Warn("update_validator: required update field not found in event data", zap.String("field", fieldKey))
+		} else {
+			updater = updater.AddUpdate(fieldKey, fieldList)
+		}
+	}
+
+	return updater.Exec(edb).Debug().Error
 }
 
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
