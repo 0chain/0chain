@@ -3,8 +3,6 @@ package zcnsc
 import (
 	"fmt"
 
-	"0chain.net/smartcontract/entity"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -85,10 +83,10 @@ func (zcn *ZCNSmartContract) Burn(
 	// increase the nonce
 	un.BurnNonce++
 
-	un.BurnTickets[trans.ClientID] = append(un.BurnTickets[trans.ClientID], entity.BurnTicketDetails{
-		Hash:  trans.Hash,
-		Nonce: trans.Nonce,
-	})
+	err = un.AddBurnTicket(trans.ClientID, trans.Hash, trans.Nonce)
+	if err != nil {
+		return "", err
+	}
 
 	// Save the user node
 	err = un.Save(ctx)

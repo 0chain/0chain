@@ -365,6 +365,8 @@ func (un *UserNode) AddBurnTicket(clientId string, hash string, nonce int64) err
 
 func (un *UserNode) GetBurnTickets(clientId string) ([]entity.BurnTicket, error) {
 	var result []entity.BurnTicket
+
+	fmt.Println(clientId, un.BurnNonce, un.BurnTickets)
 	burnTickets, ok := un.BurnTickets[clientId]
 	if !ok {
 		return result, nil
@@ -372,7 +374,7 @@ func (un *UserNode) GetBurnTickets(clientId string) ([]entity.BurnTicket, error)
 
 	for _, burnTicket := range burnTickets {
 		var dst entity.BurnTicket
-		if err := json.Unmarshal(burnTicket, dst); err != nil {
+		if err := json.Unmarshal(burnTicket, &dst); err != nil {
 			return nil, err
 		}
 		result = append(result, dst)

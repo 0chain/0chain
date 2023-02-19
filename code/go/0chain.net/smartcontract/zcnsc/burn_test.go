@@ -205,3 +205,24 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 	require.Equal(t, transfer.ClientID, tr.ClientID)
 	require.Equal(t, transfer.ToClientID, gn.BurnAddress)
 }
+
+func Test_Should_Have_Added_BurnTicketAfter_Burn(t *testing.T) {
+	payload := createBurnPayload()
+	tr := CreateDefaultTransactionToZcnsc()
+	contract := CreateZCNSmartContract()
+	ctx := MakeMockStateContext()
+
+	resp, err := contract.Burn(tr, payload.Encode(), ctx)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp)
+
+	gn, err := GetUserNode(payload.EthereumAddress, ctx)
+	require.Nil(t, err)
+	require.NotNil(t, gn)
+
+	burnTickets, err := gn.GetBurnTickets(tr.ClientID)
+	require.Nil(t, err, err)
+
+	require.Equal(t, 1, len(burnTickets))
+}
