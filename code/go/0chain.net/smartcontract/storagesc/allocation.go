@@ -1150,7 +1150,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if (t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner) {
-		if !alloc.ThirdPartyExtendable || (request.Size == 0 && request.Expiration == 0) {
+		if !alloc.ThirdPartyExtendable || (request.Size <= 0 && request.Expiration <= 0) {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
 		}
