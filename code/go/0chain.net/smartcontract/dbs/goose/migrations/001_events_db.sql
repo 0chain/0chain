@@ -1200,11 +1200,7 @@ CREATE TABLE public.write_markers (
                                       size bigint,
                                       "timestamp" bigint,
                                       signature text,
-                                      block_number bigint,
-                                      lookup_hash text,
-                                      name text,
-                                      content_hash text,
-                                      operation text
+                                      block_number bigint
 );
 
 
@@ -2013,27 +2009,6 @@ CREATE INDEX idx_walloc_file ON public.write_markers USING btree (allocation_id)
 --
 
 CREATE INDEX idx_wblocknum ON public.write_markers USING btree (block_number);
-
-
---
--- Name: idx_wcontent; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wcontent ON public.write_markers USING btree (content_hash);
-
-
---
--- Name: idx_wlookup; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wlookup ON public.write_markers USING btree (lookup_hash);
-
-
---
--- Name: idx_wname; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wname ON public.write_markers USING btree (name);
 
 
 --
