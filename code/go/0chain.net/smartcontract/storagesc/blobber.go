@@ -3,24 +3,25 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
-	commonsc "0chain.net/smartcontract/common"
-
 )
 
 const (
 	blobberHealthTime = 60 * 60 // 1 Hour
+	CHUNK_SIZE        = 64 * KB
 )
 
 func getBlobber(
@@ -324,9 +325,9 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI,
 ) (string, error) {
 	var (
-		blobber *StorageNode
+		blobber  *StorageNode
 		downtime uint64
-		err     error
+		err      error
 	)
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -428,8 +429,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"error fetching blobber object: %v", err)
 	}
-
-	const CHUNK_SIZE = 64 * KB
 
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
@@ -558,6 +557,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
+	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
 	}
@@ -731,7 +731,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	if commitConnection.WriteMarker.Timestamp > alloc.Expiration {
-
 		return "", common.NewError("commit_connection_failed",
 			"write marker time is after allocation expires")
 	}

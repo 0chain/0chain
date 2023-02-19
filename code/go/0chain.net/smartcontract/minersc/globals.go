@@ -337,3 +337,17 @@ func (msc *MinerSmartContract) updateGlobals(
 
 	return "", nil
 }
+
+func initGlobalSettings(balances cstate.CommonStateContextI) error {
+	gs := newGlobalSettings()
+	err := balances.GetTrieNode(GLOBALS_KEY, gs)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return err
+		}
+		gs.Fields = getStringMapFromViper()
+		_, err = balances.InsertTrieNode(GLOBALS_KEY, gs)
+		return err
+	}
+	return nil
+}

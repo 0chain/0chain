@@ -1277,7 +1277,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	emitUpdateAllocationBlobberTerms(alloc, balances, t)
+	emitAddOrOverwriteAllocationBlobberTerms(alloc, balances, t)
 
 	return string(alloc.Encode()), nil
 }

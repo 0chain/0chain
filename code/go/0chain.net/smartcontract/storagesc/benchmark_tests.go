@@ -231,7 +231,7 @@ func BenchmarkTests(
 					Expiration:      common.Timestamp(50 * 60 * 60),
 					RemoveBlobberId: getMockBlobberId(0),
 					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
-					FileOptions: 	 63,
+					FileOptions:     63,
 				}
 				bytes, _ := json.Marshal(&uar)
 				return bytes
@@ -244,9 +244,8 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				//CreationDate: common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
 				CreationDate: creationTime + benchAllocationExpire(creationTime) + 1,
-				ClientID:     data.Clients[0],
+				ClientID:     data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
@@ -599,12 +598,12 @@ func BenchmarkTests(
 				},
 				Value: rpMinLock,
 				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
-					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
+					mockFinalizedAllocationIndex, viper.GetInt(bk.NumActiveClients))],
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
-					AllocationID: getMockAllocationId(viper.GetInt(bk.NumAllocations) - 1),
+					AllocationID: getMockAllocationId(mockFinalizedAllocationIndex),
 				})
 				return bytes
 			}(),
