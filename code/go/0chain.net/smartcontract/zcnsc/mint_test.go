@@ -176,8 +176,7 @@ func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
 	require.Equal(t, common.NewError("failed to mint", "no authorizers found"), err)
 }
 
-// TBD
-func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
+func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 	ctx := MakeMockStateContext()
 	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
@@ -185,13 +184,24 @@ func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
 
-	payload.Nonce = 1
-	node, err := GetUserNode(defaultClient, ctx)
+	gn, err := GetGlobalNode(ctx)
 	require.NoError(t, err)
-	require.NotNil(t, node)
-	require.NoError(t, node.Save(ctx))
+	require.NotNil(t, gn)
+
+	un, err := GetUserNode(tr.ClientID, ctx)
+	require.NoError(t, err)
+	require.NotNil(t, un)
+
+	payload.Nonce = 1
 
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
-	require.NotNil(t, resp)
+	require.NotZero(t, resp)
+
+	require.Len(t, un.MintNonces, 1)
+	require.Equal(t, un.MintNonces[0], payload.Nonce)
+
+	resp, err = contract.Mint(tr, payload.Encode(), ctx)
+	require.Error(t, err)
+	require.Zero(t, resp)
 }

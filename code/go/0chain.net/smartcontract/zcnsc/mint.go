@@ -33,6 +33,12 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return "", common.NewError(code, msg)
 	}
 
+	un, err := GetUserNode(trans.ClientID, ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get user node error: %v, %s", err, info)
+		return "", common.NewError(code, msg)
+	}
+
 	payload := &MintPayload{}
 	err = payload.Decode(inputData)
 	if err != nil {
@@ -93,7 +99,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	if payload.Nonce <= gn.MintNonce {
+	_, exists := gn.WZCNNonceMinted[payload.Nonce]
+	if exists { // global nonce from ETH SC has already been minted
 		err = common.NewError(
 			code,
 			fmt.Sprintf(
@@ -120,7 +127,10 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// record the global nonce from solidity smart contract
-	gn.MintNonce++
+	gn.WZCNNonceMinted[payload.Nonce] = true
+
+	// record mint nonce for a certain user
+	un.AddMintNonce(payload.Nonce)
 
 	var (
 		amount currency.Coin
@@ -167,10 +177,17 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// Save the user node
+	// Save the global node
 	err = gn.Save(ctx)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
+		return
+	}
+
+	// Save the user node
+	err = un.Save(ctx)
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("%s, user node failed to be saved, %s", code, info))
 		return
 	}
 

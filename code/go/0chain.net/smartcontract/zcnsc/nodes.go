@@ -38,9 +38,9 @@ type ZCNSConfig struct {
 }
 
 type GlobalNode struct {
-	*ZCNSConfig `json:"zcnsc_config"`
-	ID          string `json:"id"`
-	MintNonce   int64  `json:"mint_nonce"`
+	*ZCNSConfig     `json:"zcnsc_config"`
+	ID              string         `json:"id"`
+	WZCNNonceMinted map[int64]bool `json:"user_nonce_minted"`
 }
 
 func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
@@ -344,6 +344,7 @@ func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 type UserNode struct {
 	ID          string              `json:"id"`
 	BurnNonce   int64               `json:"burn_nonce"`
+	MintNonces  []int64             `json:"mint_nonces"`
 	BurnTickets map[string][][]byte `json:"burn_tickets"`
 }
 
@@ -353,21 +354,24 @@ func NewUserNode(id string) *UserNode {
 	}
 }
 
-func (un *UserNode) AddBurnTicket(clientId string, hash string, nonce int64) error {
+func (un *UserNode) AddMintNonce(nonce int64) {
+	un.MintNonces = append(un.MintNonces, nonce)
+}
+
+func (un *UserNode) AddBurnTicket(ethereumAddress string, hash string, nonce int64) error {
 	burnTicketRaw := entity.BurnTicket{Hash: hash, Nonce: nonce}
 	burnTicket, err := json.Marshal(burnTicketRaw)
 	if err != nil {
 		return err
 	}
-	un.BurnTickets[clientId] = append(un.BurnTickets[clientId], burnTicket)
+	un.BurnTickets[ethereumAddress] = append(un.BurnTickets[ethereumAddress], burnTicket)
 	return nil
 }
 
-func (un *UserNode) GetBurnTickets(clientId string) ([]entity.BurnTicket, error) {
+func (un *UserNode) GetBurnTickets(ethereumAddress string) ([]entity.BurnTicket, error) {
 	var result []entity.BurnTicket
 
-	fmt.Println(clientId, un.BurnNonce, un.BurnTickets)
-	burnTickets, ok := un.BurnTickets[clientId]
+	burnTickets, ok := un.BurnTickets[ethereumAddress]
 	if !ok {
 		return result, nil
 	}

@@ -73,7 +73,7 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// get user node
-	un, err := GetUserNode(payload.EthereumAddress, ctx)
+	un, err := GetUserNode(trans.ClientID, ctx)
 	if err != nil {
 		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
 		logging.Logger.Error(err.Error(), zap.Error(err))
@@ -83,7 +83,7 @@ func (zcn *ZCNSmartContract) Burn(
 	// increase the nonce
 	un.BurnNonce++
 
-	err = un.AddBurnTicket(trans.ClientID, trans.Hash, trans.Nonce)
+	err = un.AddBurnTicket(payload.EthereumAddress, trans.Hash, trans.Nonce)
 	if err != nil {
 		return "", err
 	}

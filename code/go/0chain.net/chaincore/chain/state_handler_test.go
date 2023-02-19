@@ -1,6 +1,7 @@
 package chain_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -19,6 +20,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/viper"
+	"0chain.net/smartcontract/entity"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/setupsc"
@@ -46,6 +48,35 @@ func init() {
 	logging.InitLogging("development", "")
 	common.ConfigRateLimits()
 	block.SetupEntity(memorystore.GetStorageProvider())
+}
+
+func Test_Handle_Burn_Tickets(t *testing.T) {
+	const (
+		clientID     = "client id"
+		blobberID    = "blobber_id"
+		allocationID = "allocation_id"
+	)
+
+	lfb := block.NewBlock("", 1)
+	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
+	serverChain := chain.NewChainFromConfig()
+	serverChain.LatestFinalizedBlock = lfb
+
+	target := url.URL{
+		Path: "/v1/client/get/burn_tickets",
+	}
+	target.Query().Add("ethereum_address")
+
+	tar := fmt.Sprintf("%v%v%v", "/v1/client/get/burn_tickets?ethereum_address=", faucetsc.ADDRESS, "/personalPeriodicLimit")
+	req := httptest.NewRequest(http.MethodGet, tar, nil)
+
+	respRaw, err := serverChain.GetBurnTicketsHandler(context.Background(), req)
+	require.NoError(t, err)
+	require.NotNil(t, respRaw)
+
+	resp, ok := respRaw.([]entity.BurnTicket)
+	require.True(t, ok)
+
 }
 
 func TestChain_HandleSCRest_Status(t *testing.T) {
