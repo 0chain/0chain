@@ -2849,14 +2849,15 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, event.BlobberTable)
+	blobbers := []event.BlobberAggregate{}
+	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "blobber", &blobbers)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 	if len(blobbers) == 0 {
-		blobbers = []event.ProviderAggregate{}
+		blobbers = []event.BlobberAggregate{}
 	}
 	common.Respond(w, r, blobbers, nil)
 }
@@ -2902,14 +2903,15 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	miners, err := edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, event.MinerTable)
+	miners := []event.MinerAggregate{}
+	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "miner", &miners)
 	if err != nil {
 		err := common.NewErrInternal("cannot get miner aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 	if len(miners) == 0 {
-		miners = []event.ProviderAggregate{}
+		miners = []event.MinerAggregate{}
 	}
 	common.Respond(w, r, miners, nil)
 }
@@ -2956,14 +2958,15 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	sharders, err := edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, event.SharderTable)
+	sharders := []event.SharderAggregate{}
+	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "miner", &sharders)
 	if err != nil {
 		err := common.NewErrInternal("cannot get sharder aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 	if len(sharders) == 0 {
-		sharders = []event.ProviderAggregate{}
+		sharders = []event.SharderAggregate{}
 	}
 	common.Respond(w, r, sharders, nil)
 }
@@ -3010,14 +3013,15 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	authorizers, err := edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, event.AuthorizerTable)
+	authorizers := []event.AuthorizerAggregate{}
+	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "authorizer", &authorizers)
 	if err != nil {
 		err := common.NewErrInternal("cannot get authorizer aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 	if len(authorizers) == 0 {
-		authorizers = []event.ProviderAggregate{}
+		authorizers = []event.AuthorizerAggregate{}
 	}
 	common.Respond(w, r, authorizers, nil)
 }
@@ -3064,14 +3068,15 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	validators, err := edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, event.ValidatorTable)
+	validators := []event.ValidatorAggregate{}
+	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "validator", &validators)
 	if err != nil {
 		err := common.NewErrInternal("cannot get validator aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 	if len(validators) == 0 {
-		validators = []event.ProviderAggregate{}
+		validators = []event.ValidatorAggregate{}
 	}
 	common.Respond(w, r, validators, nil)
 }
@@ -3118,14 +3123,15 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	users, err := edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, event.UserTable)
+	var users []event.UserAggregate
+	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "user", &users)
 	if err != nil {
 		err := common.NewErrInternal("cannot get user aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 	if len(users) == 0 {
-		users = []event.ProviderAggregate{}
+		users = []event.UserAggregate{}
 	}
 	common.Respond(w, r, users, nil)
 }

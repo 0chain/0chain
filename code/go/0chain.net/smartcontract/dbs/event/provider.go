@@ -3,7 +3,6 @@ package event
 import (
 	"fmt"
 	"math/big"
-	"strings"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -109,14 +108,12 @@ func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tabl
 		AddUpdate("last_health_check", lastHealthCheck).Exec(edb).Error
 }
 
-func (edb *EventDb) ReplicateProviderAggregate(round int64, limit int, offset int, provider ProviderTable) ([]ProviderAggregate, error) {
-	var snapshots []ProviderAggregate
-	providerType := strings.TrimSuffix(string(provider), "s")
-	query := fmt.Sprintf("SELECT * FROM %v_aggregates WHERE round >= %v ORDER BY round, %v_id ASC LIMIT %v OFFSET %v", providerType, round, providerType, limit, offset)
+func (edb *EventDb) ReplicateProviderAggregate(round int64, limit int, offset int, provider string, scanInto interface{}) error {
+	query := fmt.Sprintf("SELECT * FROM %v_aggregates WHERE round >= %v ORDER BY round, %v_id ASC LIMIT %v OFFSET %v", provider, round, provider, limit, offset)
 	result := edb.Store.Get().
-		Raw(query).Scan(&snapshots)
+		Raw(query).Scan(&scanInto)
 	if result.Error != nil {
-		return nil, result.Error
+		return result.Error
 	}
-	return snapshots, nil
+	return nil
 }
