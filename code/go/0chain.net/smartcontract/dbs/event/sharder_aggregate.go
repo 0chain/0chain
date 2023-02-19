@@ -54,16 +54,6 @@ func (s *SharderAggregate) SetTotalRewards(value currency.Coin) {
 	s.TotalRewards = value
 }
 
-func (edb *EventDb) ReplicateSharderAggregate(round int64, limit int, offset int) ([]SharderAggregate, error) {
-	var snapshots []SharderAggregate
-	result := edb.Store.Get().
-		Raw("SELECT * FROM sharder_aggregates WHERE round >= ? ORDER BY round, sharder_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return snapshots, nil
-}
-
 func (edb *EventDb) updateSharderAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 

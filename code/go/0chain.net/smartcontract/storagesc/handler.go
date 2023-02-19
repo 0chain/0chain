@@ -2850,7 +2850,7 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		return
 	}
 	blobbers := []event.BlobberAggregate{}
-	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "blobber", &blobbers)
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "blobber", &blobbers)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -2904,7 +2904,7 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 		return
 	}
 	miners := []event.MinerAggregate{}
-	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "miner", &miners)
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "miner", &miners)
 	if err != nil {
 		err := common.NewErrInternal("cannot get miner aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -2959,7 +2959,7 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 		return
 	}
 	sharders := []event.SharderAggregate{}
-	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "miner", &sharders)
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "miner", &sharders)
 	if err != nil {
 		err := common.NewErrInternal("cannot get sharder aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -3014,7 +3014,7 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 		return
 	}
 	authorizers := []event.AuthorizerAggregate{}
-	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "authorizer", &authorizers)
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "authorizer", &authorizers)
 	if err != nil {
 		err := common.NewErrInternal("cannot get authorizer aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -3069,7 +3069,7 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		return
 	}
 	validators := []event.ValidatorAggregate{}
-	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "validator", &validators)
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "validator", &validators)
 	if err != nil {
 		err := common.NewErrInternal("cannot get validator aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
@@ -3124,7 +3124,7 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		return
 	}
 	var users []event.UserAggregate
-	err = edb.ReplicateProviderAggregate(round, pagination.Limit, pagination.Offset, "user", &users)
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "user", &users)
 	if err != nil {
 		err := common.NewErrInternal("cannot get user aggregates" + err.Error())
 		common.Respond(w, r, nil, err)

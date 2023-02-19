@@ -53,17 +53,6 @@ func (v *ValidatorAggregate) SetTotalRewards(value currency.Coin) {
 	v.TotalRewards = value
 }
 
-func (edb *EventDb) ReplicateValidatorAggregate(round int64, limit int, offset int) ([]ValidatorAggregate, error) {
-	var snapshots []ValidatorAggregate
-	result := edb.Store.Get().
-		Raw("SELECT * FROM validator_aggregates WHERE round >= ? ORDER BY round, validator_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return snapshots, nil
-}
-
 func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 

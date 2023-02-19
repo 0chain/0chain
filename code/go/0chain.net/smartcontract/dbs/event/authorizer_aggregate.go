@@ -54,17 +54,6 @@ func (a *AuthorizerAggregate) SetTotalRewards(value currency.Coin) {
 	a.TotalRewards = value
 }
 
-func (edb *EventDb) ReplicateAuthorizerAggregate(round int64, limit int, offset int) ([]AuthorizerAggregate, error) {
-	var snapshots []AuthorizerAggregate
-	result := edb.Store.Get().
-		Raw("SELECT * FROM authorizer_aggregates WHERE round >= ? ORDER BY round, authorizer_id ASC LIMIT ? OFFSET ?", round, limit, offset).Scan(&snapshots)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return snapshots, nil
-}
-
 func (edb *EventDb) updateAuthorizerAggregate(round, pageAmount int64, gs *globalSnapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
