@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
@@ -22,10 +23,12 @@ var typeToSQL = map[reflect.Type]string{
 	reflect.TypeOf([]int64{}):   "bigint",
 	reflect.TypeOf([]uint64{}):  "bigint",
 	reflect.TypeOf([]int{}):     "bigint",
+	reflect.TypeOf([]uint16{}):  "smallint",
 	reflect.TypeOf([][]byte{}):  "bytea",
 	reflect.TypeOf([]float64{}): "decimal",
 	reflect.TypeOf([]float32{}): "decimal",
 	reflect.TypeOf([]bool{}):    "boolean",
+	reflect.TypeOf([]currency.Coin{}): "bigint",
 }
 
 // UpdateBuilder helps in building and execution batch updates for postgres sql dialect.
@@ -109,7 +112,13 @@ func (b *UpdateBuilder) addToSets(column string, values interface{}, expr ...str
 }
 
 func (b *UpdateBuilder) addToUnnests(column string, values interface{}) *UpdateBuilder {
-	atype, ok := typeToSQL[reflect.TypeOf(values)]
+	
+	goArrType  := reflect.TypeOf(values)
+	if goArrType == reflect.TypeOf([]interface{}{}) {
+		goArrType = reflect.SliceOf(reflect.TypeOf(values.([]interface{})[0]))
+	}
+
+	atype, ok := typeToSQL[goArrType]
 
 	if !ok {
 		atype = typeToSQL[reflect.TypeOf([]string{})]

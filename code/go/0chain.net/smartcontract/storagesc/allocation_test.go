@@ -1919,7 +1919,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	assert.Equal(t, expectedSize, alloc.Size)
 	assert.Equal(t, expectedExpiration, alloc.Expiration)
 
-	// Other cannot perform any other action than extending. No error returned but the value is unchanged.
+	// Other cannot perform any other action than extending.
 	req = updateAllocationRequest{
 		ID:          alloc.ID,
 		FileOptions: 61,
@@ -1928,7 +1928,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	tp += 100
 	expectedFileOptions := alloc.FileOptions
 	resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
-	require.NoError(t, err)
+	require.Error(t, err)
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
