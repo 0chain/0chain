@@ -199,6 +199,7 @@ type ValidationNode struct {
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	LastHealthCheck   common.Timestamp   `json:"last_health_check"`
 }
 
 // validate the validator configurations

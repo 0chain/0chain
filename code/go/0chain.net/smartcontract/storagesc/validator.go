@@ -3,13 +3,14 @@ package storagesc
 import (
 	"fmt"
 
+	cstate "0chain.net/chaincore/chain/state"
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
-	commonsc "0chain.net/smartcontract/common"
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
@@ -242,4 +243,34 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 	}
 
 	return
+}
+
+func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
+	_ []byte, balances cstate.StateContextI,
+) (string, error) {
+
+	var (
+		validator *ValidationNode
+		downtime  uint64
+		err       error
+	)
+
+	if validator, err = sc.getValidator(t.ClientID, balances); err != nil {
+		return "", common.NewError("validator_health_check_failed",
+			"can't get the validator "+t.ClientID+": "+err.Error())
+	}
+
+	downtime = common.Downtime(validator.LastHealthCheck, t.CreationDate)
+	validator.LastHealthCheck = t.CreationDate
+
+	emitValidatorHealthCheck(validator, downtime, balances)
+
+	_, err = balances.InsertTrieNode(validator.GetKey(sc.ID), validator)
+
+	if err != nil {
+		return "", common.NewError("validator_health_check_failed",
+			"can't Save validator: "+err.Error())
+	}
+
+	return (string(validator.Encode())), nil
 }

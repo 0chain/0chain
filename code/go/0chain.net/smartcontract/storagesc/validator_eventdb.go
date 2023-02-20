@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/logging"
 
@@ -85,5 +86,16 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwiteValidator, vn.ID, data)
+	return nil
+}
+
+func emitValidatorHealthCheck(vn *ValidationNode, downtime uint64, balances cstate.StateContextI) error {
+	data := dbs.DbHealthCheck{
+		ID:              vn.ID,
+		LastHealthCheck: vn.LastHealthCheck,
+		Downtime:        downtime,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagValidatorHealthCheck, vn.ID, data)
 	return nil
 }
