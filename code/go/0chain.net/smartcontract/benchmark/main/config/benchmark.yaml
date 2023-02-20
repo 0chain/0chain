@@ -57,6 +57,8 @@ dbs:
   settings:
     debug: true
     aggregate_period: 10
+    partition_change_period: 100
+    partition_keep_count: 10
     page_limit: 50
 
 smart_contracts:
