@@ -33,7 +33,7 @@ func (edb *EventDb) GetChallengePool(allocationID string, pagination common.Pagi
 		Where("allocation_id = ?", allocationID).
 		Offset(pagination.Offset).Limit(pagination.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "ID"},
+			Column: clause.Column{Name: "id"},
 		}).
 		Take(&cp).Error
 }
