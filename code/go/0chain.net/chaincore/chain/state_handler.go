@@ -89,6 +89,7 @@ func (c *Chain) GetStateContextI() state.StateContextI {
 		logging.Logger.Error("empty latest finalized block or state")
 		return nil
 	}
+	fmt.Println(lfb.ClientState.GetChangeCount(), "IN")
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
 }
@@ -192,8 +193,6 @@ func (c *Chain) GetNotProcessedBurnTicketsHandler(ctx context.Context, r *http.R
 	if err != nil {
 		return nil, fmt.Errorf("failed to retreive burn tickets: %w", err)
 	}
-
-	fmt.Println(un.ID, ethereumAddress, un.BurnNonce, burnTickets)
 
 	var response []entity.BurnTicket
 

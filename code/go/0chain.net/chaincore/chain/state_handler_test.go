@@ -20,7 +20,6 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/viper"
-	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/entity"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
@@ -30,6 +29,14 @@ import (
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+)
+
+const (
+	clientID        = "client_id"
+	ethereumAddress = "ethereum_address"
+	hash            = "hash"
+	blobberID       = "blobber_id"
+	allocationID    = "allocation_id"
 )
 
 func init() {
@@ -53,25 +60,14 @@ func init() {
 }
 
 func TestChain_GetProcessedMintNoncesHandler(t *testing.T) {
-
-}
-
-func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
-	const (
-		clientID        = "client_id"
-		ethereumAddress = "ethereum_address"
-		hash            = "hash"
-		nonce           = 0
-		blobberID       = "blobber_id"
-		allocationID    = "allocation_id"
-	)
-
 	lfb := block.NewBlock("", 1)
 	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	serverChain := chain.NewChainFromConfig()
 	serverChain.LatestFinalizedBlock = lfb
 
 	sctx := serverChain.GetStateContextI()
+	lfb.ClientState = sctx.GetState()
+
 	un, err := zcnsc.GetUserNode(clientID, sctx)
 	require.NoError(t, err)
 	require.NotNil(t, un)
@@ -81,27 +77,200 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 		body func(t *testing.T)
 	}{
 		{
-			name: "Get burn tickets of the client, which hasn't performed any burn operations, should work",
+			name: "Get processed mint nonces of the client, which hasn't performed any mint operations, should work",
 			body: func(t *testing.T) {
-				un.BurnNonce++
+				target := url.URL{Path: "/v1/client/get/processed_mint_nonces"}
 
-				err = un.AddBurnTicket(ethereumAddress, hash, 0)
+				query := target.Query()
+
+				query.Add("client_id", clientID)
+
+				target.RawQuery = query.Encode()
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				respRaw, err := serverChain.GetProcessedMintNoncesHandler(context.Background(), req)
+				require.NoError(t, err)
+
+				resp, ok := respRaw.([]int64)
+				require.True(t, ok)
+				require.Len(t, resp, 0)
+			},
+		},
+		{
+			name: "Get mint nonces of the client, which has performed mint operation, should work",
+			body: func(t *testing.T) {
+				un.AddMintNonce(1)
+
+				err = un.Save(sctx)
+				require.NoError(t, err)
+
+				target := url.URL{Path: "/v1/client/get/processed_mint_nonces"}
+
+				query := target.Query()
+
+				query.Add("client_id", clientID)
+
+				target.RawQuery = query.Encode()
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				respRaw, err := serverChain.GetProcessedMintNoncesHandler(context.Background(), req)
+				require.NoError(t, err)
+
+				resp, ok := respRaw.([]int64)
+				require.True(t, ok)
+				require.Len(t, resp, 1)
+
+				_, err = sctx.DeleteTrieNode(un.GetKey())
+				require.NoError(t, err)
+
+				err = un.Save(sctx)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "Get processed mint nonces not providing client id, should not work",
+			body: func(t *testing.T) {
+				target := url.URL{Path: "/v1/client/get/processed_mint_nonces"}
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				resp, err := serverChain.GetProcessedMintNoncesHandler(context.Background(), req)
+				require.Error(t, err)
+				require.Nil(t, resp)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, test.body)
+	}
+}
+
+func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
+	lfb := block.NewBlock("", 1)
+	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
+	serverChain := chain.NewChainFromConfig()
+	serverChain.LatestFinalizedBlock = lfb
+
+	sctx := serverChain.GetStateContextI()
+	lfb.ClientState = sctx.GetState()
+
+	un, err := zcnsc.GetUserNode(clientID, sctx)
+	require.NoError(t, err)
+	require.NotNil(t, un)
+
+	tests := []struct {
+		name string
+		body func(t *testing.T)
+	}{
+		{
+			name: "Get not processed burn tickets of the client, which hasn't performed any burn operations, should work",
+			body: func(t *testing.T) {
+				target := url.URL{Path: "/v1/client/get/not_processed_burn_tickets"}
+
+				query := target.Query()
+
+				query.Add("ethereum_address", ethereumAddress)
+				query.Add("client_id", clientID)
+				query.Add("nonce", "0")
+
+				target.RawQuery = query.Encode()
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				respRaw, err := serverChain.GetNotProcessedBurnTicketsHandler(context.Background(), req)
+				require.NoError(t, err)
+
+				resp, ok := respRaw.([]entity.BurnTicket)
+				require.True(t, ok)
+				require.Len(t, resp, 0)
+			},
+		},
+		{
+			name: "Get not processed burn tickets of the client, which has performed burn operation, should work",
+			body: func(t *testing.T) {
+				err = un.AddBurnTicket(ethereumAddress, hash, 1)
 				require.NoError(t, err)
 
 				err = un.Save(sctx)
 				require.NoError(t, err)
 
-				// err = sctx.AddTransfer(state.NewTransfer(clientID, ethereumAddress, 1))
-				// require.NoError(t, err)
-
-				sctx.EmitEvent(event.TypeStats, event.TagBurn, clientID, 1)
-
-				// fmt.Println(sctx.GetBlock())
 				target := url.URL{Path: "/v1/client/get/not_processed_burn_tickets"}
 
-				sctx.GetState()
+				query := target.Query()
 
-				serverChain.SetLatestFinalizedBlock(sctx.GetBlock())
+				query.Add("ethereum_address", ethereumAddress)
+				query.Add("client_id", clientID)
+				query.Add("nonce", "0")
+
+				target.RawQuery = query.Encode()
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				respRaw, err := serverChain.GetNotProcessedBurnTicketsHandler(context.Background(), req)
+				require.NoError(t, err)
+
+				resp, ok := respRaw.([]entity.BurnTicket)
+				require.True(t, ok)
+				require.Len(t, resp, 1)
+
+				_, err = sctx.DeleteTrieNode(un.GetKey())
+				require.NoError(t, err)
+
+				err = un.Save(sctx)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "Get not processed burn tickets not providing client id, should not work",
+			body: func(t *testing.T) {
+				target := url.URL{Path: "/v1/client/get/not_processed_burn_tickets"}
+
+				query := target.Query()
+
+				query.Add("ethereum_address", ethereumAddress)
+				query.Add("nonce", "0")
+
+				target.RawQuery = query.Encode()
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				resp, err := serverChain.GetNotProcessedBurnTicketsHandler(context.Background(), req)
+				require.Error(t, err)
+				require.Nil(t, resp)
+			},
+		},
+		{
+			name: "Get not processed burn tickets not providing ethereum address, should not work",
+			body: func(t *testing.T) {
+				target := url.URL{Path: "/v1/client/get/not_processed_burn_tickets"}
+
+				query := target.Query()
+
+				query.Add("client_id", clientID)
+				query.Add("nonce", "0")
+
+				target.RawQuery = query.Encode()
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				resp, err := serverChain.GetNotProcessedBurnTicketsHandler(context.Background(), req)
+				require.Error(t, err)
+				require.Nil(t, resp)
+			},
+		},
+		{
+			name: "Get not processed burn tickets not providing nonce, should work",
+			body: func(t *testing.T) {
+				err = un.AddBurnTicket(ethereumAddress, hash, 1)
+				require.NoError(t, err)
+
+				err = un.Save(sctx)
+				require.NoError(t, err)
+
+				target := url.URL{Path: "/v1/client/get/not_processed_burn_tickets"}
 
 				query := target.Query()
 
@@ -115,39 +284,15 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 				respRaw, err := serverChain.GetNotProcessedBurnTicketsHandler(context.Background(), req)
 				require.NoError(t, err)
 
-				q, err := un.GetBurnTickets(ethereumAddress)
-				fmt.Println(respRaw, q, err)
-
 				resp, ok := respRaw.([]entity.BurnTicket)
 				require.True(t, ok)
 				require.Len(t, resp, 1)
 
 				_, err = sctx.DeleteTrieNode(un.GetKey())
 				require.NoError(t, err)
-			},
-		},
-		{
-			name: "Get burn tickets of the client, which has performed burn operation, should work",
-			body: func(t *testing.T) {
 
-			},
-		},
-		{
-			name: "Get burn tickets not providing client id, should not work",
-			body: func(t *testing.T) {
-
-			},
-		},
-		{
-			name: "Get burn tickets not providing ethereum address, should not work",
-			body: func(t *testing.T) {
-
-			},
-		},
-		{
-			name: "Get burn tickets of the client, which does not exist, should work",
-			body: func(t *testing.T) {
-
+				err = un.Save(sctx)
+				require.NoError(t, err)
 			},
 		},
 	}
@@ -159,11 +304,6 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 
 func TestChain_HandleSCRest_Status(t *testing.T) {
 	t.Skip("need to be reworked to work with new handler setup")
-	const (
-		clientID     = "client id"
-		blobberID    = "blobber_id"
-		allocationID = "allocation_id"
-	)
 
 	lfb := block.NewBlock("", 1)
 	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
