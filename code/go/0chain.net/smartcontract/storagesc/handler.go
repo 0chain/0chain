@@ -3009,7 +3009,7 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 		return
 	}
 	sharders := []event.SharderAggregate{}
-	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "miner", &sharders)
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "sharder", &sharders)
 	if err != nil {
 		err := common.NewErrInternal("cannot get sharder aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
