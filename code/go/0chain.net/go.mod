@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/tinylib/msgp v1.1.6
-	github.com/valyala/gozstd v1.16.0
+	github.com/valyala/gozstd v1.18.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.24.0
