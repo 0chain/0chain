@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/config/mocks"
 	"github.com/0chain/common/core/currency"
@@ -25,15 +28,12 @@ import (
 )
 
 const (
-	blockHash = datastore.Key("myHash")
-	//minerId   = datastore.Key("myMiner")
-	//minerId = datastore.Key("3f9028edfcc1f1a09c71139dadedbb25565389b8df13ba011a9a325dd42a335a")
+	blockHash           = datastore.Key("myHash")
 	signatureSchemeType = encryption.SignatureSchemeEd25519
 	minerPk             = datastore.Key("25206bf74fb1afa8045acd269ef76890d8a1e34d89eb681c042ac58dbc080e30")
 	selfId              = datastore.Key("mySelfId")
 	delegateId          = "delegate"
 	maxDelegates        = 1000
-	errDelta            = 4 // for testing values with rounding errors
 	errEpsilon          = 0.1
 	errPayFee           = "pay_fee"
 	errJumpedBackInTime = "jumped back in time"
@@ -311,17 +311,18 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	_, err := ctx.InsertTrieNode(phaseNode.GetKey(), phaseNode)
 	require.NoError(t, err)
 
-	var self = &MinerNode{
-		SimpleNode: &SimpleNode{
-			ID: selfId,
-		},
-	}
+	var self = NewMinerNode()
+	self.ID = selfId
+	self.ProviderType = spenum.Miner
 	_, err = ctx.InsertTrieNode(self.GetKey(), self)
 	require.NoError(t, err)
 
 	var miner = &MinerNode{
 		SimpleNode: &SimpleNode{
-			ID:          minerID,
+			Provider: provider.Provider{
+				ID:           minerID,
+				ProviderType: spenum.Miner,
+			},
 			TotalStaked: 100,
 		},
 		StakePool: stakepool.NewStakePool(),
@@ -340,7 +341,10 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	for i := 0; i < numberOfSharders; i++ {
 		sharder := &MinerNode{
 			SimpleNode: &SimpleNode{
-				ID:          sharderIDs[i],
+				Provider: provider.Provider{
+					ID:           sharderIDs[i],
+					ProviderType: spenum.Sharder,
+				},
 				TotalStaked: 100,
 			},
 			StakePool: stakepool.NewStakePool(),
@@ -353,6 +357,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	populateDelegates(t, append([]*MinerNode{miner}, sharders...), minerStakes, sharderStakes)
 	_, err = ctx.InsertTrieNode(miner.GetKey(), miner)
+
 	require.NoError(t, err)
 	for i := 0; i < numberOfSharders; i++ {
 		_, err = ctx.InsertTrieNode(sharders[i].GetKey(), sharders[i])
@@ -365,7 +370,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	require.NoError(t, err)
 
 	mockChainConfig := mocks.NewChainConfig(t)
-	mockChainConfig.On("IsViewChangeEnabled").Return(true)
+	mockChainConfig.On("IsViewChangeEnabled").Return(false)
 	// Add information only relevant to view change rounds
 	config.Configuration().ChainConfig = mockChainConfig
 

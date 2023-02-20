@@ -7,6 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -222,7 +226,7 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 
 // AuthorizerNode used in `UpdateAuthorizerConfig` functions
 type AuthorizerNode struct {
-	ID        string            `json:"id"`
+	provider.Provider
 	PublicKey string            `json:"public_key"`
 	URL       string            `json:"url"`
 	Config    *AuthorizerConfig `json:"config"`
@@ -233,14 +237,16 @@ type AuthorizerNode struct {
 // ID = authorizer node public id = Client ID
 func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 	a := &AuthorizerNode{
-		ID:        ID,
+		Provider: provider.Provider{
+			ID:           ID,
+			ProviderType: spenum.Authorizer,
+		},
 		PublicKey: PK,
 		URL:       URL,
 		Config: &AuthorizerConfig{
 			Fee: 0,
 		},
 	}
-
 	return a
 }
 
@@ -255,7 +261,7 @@ func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) error {
 }
 
 func (an *AuthorizerNode) GetKey() string {
-	return fmt.Sprintf("%s:%s:%s", ADDRESS, AuthorizerNodeType, an.ID)
+	return provider.GetKey(an.ID)
 }
 
 func (an *AuthorizerNode) Encode() []byte {
