@@ -44,7 +44,7 @@ var (
 	}
 )
 
-//MinerSmartContract Smartcontract that takes care of all miner related requests
+// MinerSmartContract Smartcontract that takes care of all miner related requests
 type MinerSmartContract struct {
 	*sci.SmartContract
 	bcContext sci.BCContextI
@@ -94,7 +94,7 @@ func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName stri
 	return cost, nil
 }
 
-//setSC setting up smartcontract. implementing the interface
+// setSC setting up smartcontract. implementing the interface
 func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
 
@@ -112,7 +112,7 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterCounter("mintedTokens", nil)
 }
 
-//Execute implementing the interface
+// Execute implementing the interface
 func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances cstate.StateContextI) (
 	string, error) {
@@ -162,6 +162,10 @@ func InitConfig(
 		}
 		_, err = balances.InsertTrieNode(GlobalNodeKey, gn)
 		return err
+	}
+	err = initGlobalSettings(balances)
+	if err != nil {
+		return fmt.Errorf("initGlobalSettings failed: %v", err)
 	}
 	return nil
 }
