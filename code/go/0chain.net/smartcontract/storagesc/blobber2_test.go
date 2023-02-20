@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -303,14 +305,17 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 
 	blobber := &StorageNode{
-		ID: blobberId,
+		Provider: provider.Provider{
+			ID:           blobberId,
+			ProviderType: spenum.Blobber,
+		},
 		Terms: Terms{
 			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
 	}
 
-	_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	_, err = ctx.InsertTrieNode(blobber.GetKey(), blobber)
 
 	var rPool = readPool{readPoolIn.Balance}
 

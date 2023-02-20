@@ -269,11 +269,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		if err != nil {
 			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber %s: %v", blobbers[i].ID, err)
 		}
-		sns = append(sns, &storageNodeResponse{
-			StorageNode: blobbers[i],
-			TotalOffers: spMap[blobbers[i].ID].TotalOffers,
-			TotalStake:  stake,
-		})
+		snr := StoragNodeToStorageNodeResponse(*blobbers[i])
+		snr.TotalOffers = spMap[blobbers[i].ID].TotalOffers
+		snr.TotalStake = stake
+		sns = append(sns, &snr)
 	}
 
 	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn.CreationDate, conf, txn.Hash)
@@ -282,7 +281,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	for _, b := range blobberNodes {
-		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		_, err = balances.InsertTrieNode(b.GetKey(), b)
 		if err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
 				zap.String("txn", txn.Hash),
@@ -717,7 +716,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 	balances chainstate.StateContextI,
 ) (err error) {
 	for _, b := range blobbers {
-		if _, err = balances.InsertTrieNode(b.GetKey(ADDRESS), b); err != nil {
+		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
 		emitUpdateBlobber(b, balances)
@@ -1715,7 +1714,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			})
 		}
 		// update the blobber
-		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
+		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return fmt.Errorf("failed to save blobber: %s, err: %v", d.BlobberID, err)
 		}
 

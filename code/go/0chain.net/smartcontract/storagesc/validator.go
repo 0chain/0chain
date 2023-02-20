@@ -3,34 +3,37 @@ package storagesc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
-	commonsc "0chain.net/smartcontract/common"
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
-	newValidator := &ValidationNode{}
+	newValidator := newValidator("")
 	err := newValidator.Decode(input) //json.Unmarshal(input, &newValidator)
 	if err != nil {
 		return "", err
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
+	newValidator.ProviderType = spenum.Validator
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
 		return "", err
 	}
 
-	tmp := &ValidationNode{}
-	err = balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
+	_, err = getValidator(t.ClientID, balances)
 	switch err {
 	case nil:
-		sc.statIncr(statUpdateValidator)
+		return "", common.NewError("add_validator_failed",
+			"provider already exist at id:"+t.ClientID)
 	case util.ErrValueNotPresent:
 		validatorPartitions, err := getValidatorsList(balances)
 		if err != nil {
@@ -61,7 +64,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		sc.statIncr(statNumberOfValidators)
 	default:
 		return "", common.NewError("add_validator_failed",
-			"Failed to get validator."+err.Error())
+			"Failed to get validator. "+err.Error())
 	}
 
 	var conf *Config
@@ -91,15 +94,26 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	return string(buff), nil
 }
 
+func newValidator(id string) *ValidationNode {
+	return &ValidationNode{
+		Provider: provider.Provider{
+			ID:           id,
+			ProviderType: spenum.Validator,
+		},
+	}
+}
+
 func getValidator(
 	validatorID string,
 	balances state.CommonStateContextI,
 ) (*ValidationNode, error) {
-	validator := new(ValidationNode)
-	validator.ID = validatorID
+	validator := newValidator(validatorID)
 	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
 	if err != nil {
 		return nil, err
+	}
+	if validator.ProviderType != spenum.Validator {
+		return nil, fmt.Errorf("provider is %s should be %s", validator.ProviderType, spenum.Validator)
 	}
 	return validator, nil
 }
