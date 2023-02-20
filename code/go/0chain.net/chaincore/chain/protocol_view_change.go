@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"context"
 	"encoding/json"
 	"errors"
@@ -271,8 +272,10 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
+		mn.ProviderType = spenum.Miner
 		scData.Name = scNameAddMiner
 	} else if selfNode.Type == node.NodeTypeSharder {
+		mn.ProviderType = spenum.Sharder
 		scData.Name = scNameAddSharder
 	}
 

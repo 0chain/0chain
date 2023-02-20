@@ -2,7 +2,9 @@ package storagesc
 
 import (
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -11,7 +13,10 @@ import (
 
 func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
-		ID:        v.ID,
+		Provider: provider.Provider{
+			ID:           v.ID,
+			ProviderType: spenum.Validator,
+		},
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
 		StakePoolSettings: stakepool.Settings{
