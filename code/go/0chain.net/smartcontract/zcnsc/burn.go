@@ -14,8 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// var BurnTicketsPool = make(map[string][]entity.BurnTicketDetails)
-
 // Burn inputData - is a BurnPayload.
 // EthereumAddress => required
 // Nonce => required
