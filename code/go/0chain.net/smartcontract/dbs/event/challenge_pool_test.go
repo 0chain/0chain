@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/smartcontract/common"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,7 +57,7 @@ func TestChallengePoolEvent(t *testing.T) {
 	eventDb.Get().Model(&ChallengePool{}).Count(&count)
 	require.Equal(t, int64(1), count, "ChallengePool not getting updated")
 
-	cp, err := eventDb.GetChallengePool(AllocationID, common.Pagination{0, 20, true})
+	cp, err := eventDb.GetChallengePool(AllocationID)
 	require.NoError(t, err, "Error while getting challengePools for allocation ID")
 	require.Equal(t, int64(11223344), cp.Balance, "ChallengePool balance is not getting updated")
 

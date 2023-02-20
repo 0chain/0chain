@@ -1,7 +1,6 @@
 package event
 
 import (
-	"0chain.net/smartcontract/common"
 	"gorm.io/gorm/clause"
 )
 
@@ -27,13 +26,9 @@ func mergeAddChallengePoolsEvents() *eventsMergerImpl[ChallengePool] {
 	return newEventsMerger[ChallengePool](TagAddOrUpdateChallengePool, withUniqueEventOverwrite())
 }
 
-func (edb *EventDb) GetChallengePool(allocationID string, pagination common.Pagination) (*ChallengePool, error) {
+func (edb *EventDb) GetChallengePool(allocationID string) (*ChallengePool, error) {
 	var cp ChallengePool
 	return &cp, edb.Store.Get().Model(&ChallengePool{}).
 		Where("allocation_id = ?", allocationID).
-		Offset(pagination.Offset).Limit(pagination.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
-		}).
 		Take(&cp).Error
 }

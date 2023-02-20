@@ -580,12 +580,6 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		allocationID = r.URL.Query().Get("allocation_id")
 	)
 
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
 	if allocationID == "" {
 		err := errors.New("missing allocation_id URL query parameter")
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
@@ -598,7 +592,7 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 		return
 	}
 
-	cp, err := edb.GetChallengePool(allocationID, limit)
+	cp, err := edb.GetChallengePool(allocationID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 	}
