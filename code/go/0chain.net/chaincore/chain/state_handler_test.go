@@ -68,10 +68,6 @@ func TestChain_GetProcessedMintNoncesHandler(t *testing.T) {
 	sctx := serverChain.GetStateContextI()
 	lfb.ClientState = sctx.GetState()
 
-	un, err := zcnsc.GetUserNode(clientID, sctx)
-	require.NoError(t, err)
-	require.NotNil(t, un)
-
 	tests := []struct {
 		name string
 		body func(t *testing.T)
@@ -100,6 +96,10 @@ func TestChain_GetProcessedMintNoncesHandler(t *testing.T) {
 		{
 			name: "Get mint nonces of the client, which has performed mint operation, should work",
 			body: func(t *testing.T) {
+				un, err := zcnsc.GetUserNode(clientID, sctx)
+				require.NoError(t, err)
+				require.NotNil(t, un)
+
 				un.AddMintNonce(1)
 
 				err = un.Save(sctx)
@@ -157,10 +157,6 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 	sctx := serverChain.GetStateContextI()
 	lfb.ClientState = sctx.GetState()
 
-	un, err := zcnsc.GetUserNode(clientID, sctx)
-	require.NoError(t, err)
-	require.NotNil(t, un)
-
 	tests := []struct {
 		name string
 		body func(t *testing.T)
@@ -191,6 +187,10 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 		{
 			name: "Get not processed burn tickets of the client, which has performed burn operation, should work",
 			body: func(t *testing.T) {
+				un, err := zcnsc.GetUserNode(clientID, sctx)
+				require.NoError(t, err)
+				require.NotNil(t, un)
+
 				err = un.AddBurnTicket(ethereumAddress, hash, 1)
 				require.NoError(t, err)
 
@@ -217,9 +217,6 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 				require.Len(t, resp, 1)
 
 				_, err = sctx.DeleteTrieNode(un.GetKey())
-				require.NoError(t, err)
-
-				err = un.Save(sctx)
 				require.NoError(t, err)
 			},
 		},
@@ -264,6 +261,10 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 		{
 			name: "Get not processed burn tickets not providing nonce, should work",
 			body: func(t *testing.T) {
+				un, err := zcnsc.GetUserNode(clientID, sctx)
+				require.NoError(t, err)
+				require.NotNil(t, un)
+
 				err = un.AddBurnTicket(ethereumAddress, hash, 1)
 				require.NoError(t, err)
 
@@ -289,9 +290,6 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 				require.Len(t, resp, 1)
 
 				_, err = sctx.DeleteTrieNode(un.GetKey())
-				require.NoError(t, err)
-
-				err = un.Save(sctx)
 				require.NoError(t, err)
 			},
 		},
