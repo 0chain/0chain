@@ -3,6 +3,7 @@ package storagesc
 import (
 	"fmt"
 
+	cstate "0chain.net/chaincore/chain/state"
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -245,7 +246,7 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 }
 
 func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
-	_ []byte, balances state.StateContextI,
+	_ []byte, balances cstate.StateContextI,
 ) (string, error) {
 
 	var (
