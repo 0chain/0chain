@@ -1148,9 +1148,11 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
-	if (t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner) && !alloc.ThirdPartyExtendable {
-		return "", common.NewError("allocation_updating_failed",
-			"only owner can update the allocation")
+	if (t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner) {
+		if !alloc.ThirdPartyExtendable || (request.Size <= 0 && request.Expiration <= 0) {
+			return "", common.NewError("allocation_updating_failed",
+				"only owner can update the allocation")
+		}
 	}
 
 	if err = request.validate(conf, alloc); err != nil {
@@ -1276,7 +1278,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	emitUpdateAllocationBlobberTerms(alloc, balances, t)
+	emitAddOrOverwriteAllocationBlobberTerms(alloc, balances, t)
 
 	return string(alloc.Encode()), nil
 }
