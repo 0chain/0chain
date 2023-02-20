@@ -6,6 +6,8 @@ import (
 	"math"
 	"math/big"
 
+	"0chain.net/smartcontract/provider"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -24,15 +26,26 @@ const (
 	CHUNK_SIZE        = 64 * KB
 )
 
+func newBlobber(id string) *StorageNode {
+	return &StorageNode{
+		Provider: provider.Provider{
+			ID:           id,
+			ProviderType: spenum.Blobber,
+		},
+	}
+}
+
 func getBlobber(
 	blobberID string,
 	balances cstate.CommonStateContextI,
 ) (*StorageNode, error) {
-	blobber := new(StorageNode)
-	blobber.ID = blobberID
-	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
+	blobber := newBlobber(blobberID)
+	err := balances.GetTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return nil, err
+	}
+	if blobber.ProviderType != spenum.Blobber {
+		return nil, fmt.Errorf("provider is %s should be %s", blobber.ProviderType, spenum.Blobber)
 	}
 	return blobber, nil
 }
@@ -46,7 +59,7 @@ func (_ *StorageSmartContract) getBlobber(
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	balances cstate.StateContextI) (bool, error) {
-	blobber := new(StorageNode)
+	blobber := newBlobber("")
 	blobber.BaseURL = blobberURL
 	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 	switch err {
@@ -144,7 +157,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			stakedCapacity, blobber.Capacity)
 	}
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
@@ -214,7 +227,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var blobber = new(StorageNode)
+	var blobber = newBlobber(t.ClientID)
 	if err = blobber.Decode(input); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"malformed request: "+err.Error())
@@ -223,6 +236,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
+	blobber.ProviderType = spenum.Blobber
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
@@ -235,7 +249,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	// Save the blobber
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"saving blobber: "+err.Error())
@@ -271,7 +285,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"can't get config: "+err.Error())
 	}
 
-	var updatedBlobber = new(StorageNode)
+	var updatedBlobber = newBlobber("")
 	if err = updatedBlobber.Decode(input); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())
@@ -339,7 +353,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 	emitBlobberHealthCheck(blobber, downtime, balances)
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
+	_, err = balances.InsertTrieNode(blobber.GetKey(),
 		blobber)
 	if err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -522,7 +536,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't Save read pool: %v", err)
 	}
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't Save blobber: %v", err)
@@ -789,7 +803,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	// Save blobber
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving blobber object: %v", err)
