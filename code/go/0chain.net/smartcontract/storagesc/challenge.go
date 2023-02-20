@@ -27,7 +27,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const blobberAllocationPartitionSize = 100
+// TODO: add back after fixing the chain stuck
+//const blobberAllocationPartitionSize = 100
+
+const blobberAllocationPartitionSize = 10
 
 // completeChallenge complete the challenge
 func (sc *StorageSmartContract) completeChallenge(
