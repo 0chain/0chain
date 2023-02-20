@@ -193,6 +193,8 @@ func (c *Chain) GetNotProcessedBurnTicketsHandler(ctx context.Context, r *http.R
 		return nil, fmt.Errorf("failed to retreive burn tickets: %w", err)
 	}
 
+	fmt.Println(un.ID, ethereumAddress, un.BurnNonce, burnTickets)
+
 	var response []entity.BurnTicket
 
 	for _, burnTicket := range burnTickets {

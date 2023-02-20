@@ -217,11 +217,11 @@ func Test_Should_Have_Added_BurnTicketAfter_Burn(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp)
 
-	gn, err := GetUserNode(payload.EthereumAddress, ctx)
+	gn, err := GetUserNode(tr.ClientID, ctx)
 	require.Nil(t, err)
 	require.NotNil(t, gn)
 
-	burnTickets, err := gn.GetBurnTickets(tr.ClientID)
+	burnTickets, err := gn.GetBurnTickets(payload.EthereumAddress)
 	require.Nil(t, err, err)
 
 	require.Equal(t, 1, len(burnTickets))
