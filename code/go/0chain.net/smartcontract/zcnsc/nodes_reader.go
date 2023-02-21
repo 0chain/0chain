@@ -47,6 +47,9 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 		if node.BurnTickets == nil {
 			node.BurnTickets = make(map[string][][]byte)
 		}
+		if len(node.MintNonces) == 0 {
+			node.MintNonces = make([]int64, 0)
+		}
 		return node, nil
 	default:
 		return nil, err
