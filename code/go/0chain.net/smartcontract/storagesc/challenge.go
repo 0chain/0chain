@@ -123,20 +123,29 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
+
+	// log value of validatorsReward
+	logging.Logger.Info("jayashvalidatorsReward1", zap.Any("jayashvalidatorsReward1", validatorsReward))
 	if err != nil {
 		return err
 	}
 	move, err = currency.MinusCoin(move, validatorsReward)
+	// log value of move
+	logging.Logger.Info("jayashmove1", zap.Any("jayashmove1", move))
 	if err != nil {
 		return err
 	}
 
 	// for a case of a partial verification
 	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
+	// log value of blobberReward
+	logging.Logger.Info("jayashblobberReward1", zap.Any("jayashblobberReward1", blobberReward))
 	if err != nil {
 		return err
 	}
 	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
+	// log value of back
+	logging.Logger.Info("jayashback1", zap.Any("jayashback1", back))
 	if err != nil {
 		return err
 	}
