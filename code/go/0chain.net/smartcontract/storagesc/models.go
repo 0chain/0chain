@@ -584,9 +584,20 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 // challenge (doesn't matter rewards or penalty). The RDTU should be based on
 // previous challenge time. And the DTU should be based on previous - current
 // challenge time.
-func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin) {
+func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin, err error) {
 	move = currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
-	d.ChallengePoolIntegralValue -= move
+	cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, move)
+	if err != nil {
+		logging.Logger.Warn("challenge minus failed",
+			zap.Error(err),
+			zap.Any("dtu", dtu),
+			zap.Any("rdtu", rdtu),
+			zap.Any("challenge value", d.ChallengePoolIntegralValue),
+			zap.Any("move", move))
+		err = fmt.Errorf("minus challenge pool value failed: %v", err)
+		return
+	}
+	d.ChallengePoolIntegralValue = cv
 	return
 }
 

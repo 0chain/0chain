@@ -113,8 +113,12 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	var (
 		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
 		dtu  = alloc.durationInTimeUnits(tp-latestCompletedChallTime, conf.TimeUnit)
-		move = blobAlloc.challenge(dtu, rdtu)
 	)
+
+	move, err := blobAlloc.challenge(dtu, rdtu)
+	if err != nil {
+		return err
+	}
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
@@ -303,8 +307,12 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	var (
 		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
 		dtu  = alloc.durationInTimeUnits(tp-prev, conf.TimeUnit)
-		move = blobAlloc.challenge(dtu, rdtu)
 	)
+
+	move, err := blobAlloc.challenge(dtu, rdtu)
+	if err != nil {
+		return err
+	}
 
 	// part of the tokens goes to related validators
 	validatorsReward, err := currency.MultFloat64(move, conf.ValidatorReward)
