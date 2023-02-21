@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -89,7 +91,10 @@ func TestDeleteMiner(t *testing.T) {
 
 		mnInput := &MinerNode{
 			SimpleNode: &SimpleNode{
-				ID: mockDeletedMinerId,
+				Provider: provider.Provider{
+					ID:           mockDeletedMinerId,
+					ProviderType: spenum.Miner,
+				},
 			},
 		}
 		return args{

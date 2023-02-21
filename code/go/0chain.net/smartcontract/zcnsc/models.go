@@ -27,6 +27,7 @@ const (
 	GlobalNodeType        = "globalnode"
 	StakePoolNodeType     = "stakepool"
 	UserNodeType          = "usernode"
+	Porvider              = "provider"
 )
 
 type (

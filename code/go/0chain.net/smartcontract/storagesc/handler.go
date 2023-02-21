@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 
@@ -899,6 +901,7 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 			DelegateID:   pool.DelegateID,
 			Status:       spenum.PoolStatus(pool.Status).String(),
 			RoundCreated: pool.RoundCreated,
+			StakedAt:     pool.StakedAt,
 		}
 		dps.Balance = pool.Balance
 
@@ -1001,7 +1004,6 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
 	}
-
 	spStat := &stakepool.StakePoolStat{}
 	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
 
@@ -1960,7 +1962,10 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions transactions
-// Gets filtered list of transaction information
+// Gets filtered list of transaction information. The list is filtered on the first valid input,
+// or otherwise all the endpoint returns all translations.
+//
+// Filters processed in the order: client id, to client id, block hash and start, end blocks.
 //
 // parameters:
 //
@@ -1988,11 +1993,11 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //	 description: desc or asc
 //	 in: query
 //	 type: string
-//	+name: block-start
+//	+name: start
 //	 description: restrict to transactions in specified start block and endblock
 //	 in: query
 //	 type: string
-//	+name: block-end
+//	+name: end
 //	 description: restrict to transactions in specified start block and endblock
 //	 in: query
 //	 type: string
@@ -2004,11 +2009,9 @@ func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Req
 //	500:
 func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *http.Request) {
 	var (
-		clientID      = r.URL.Query().Get("client_id")
-		toClientID    = r.URL.Query().Get("to_client_id")
-		blockHash     = r.URL.Query().Get("block_hash")
-		startBlockNum = r.URL.Query().Get("block-start")
-		endBlockNum   = r.URL.Query().Get("block-end")
+		clientID   = r.URL.Query().Get("client_id")
+		toClientID = r.URL.Query().Get("to_client_id")
+		blockHash  = r.URL.Query().Get("block_hash")
 	)
 
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2052,24 +2055,9 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
-	if startBlockNum != "" && endBlockNum != "" {
-		startBlockNumInt, err := strconv.ParseInt(r.URL.Query().Get("block-start"), 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is not valid"))
-			return
-		}
-		endBlockNumInt, err := strconv.ParseInt(r.URL.Query().Get("block-end"), 10, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("end_block_number is not valid"))
-			return
-		}
-
-		if startBlockNumInt > endBlockNumInt {
-			common.Respond(w, r, nil, common.NewErrInternal("start_block_number is greater than end_block_number"))
-			return
-		}
-
-		rtv, err := edb.GetTransactionByBlockNumbers(startBlockNumInt, endBlockNumInt, limit)
+	start, end, err := common2.GetStartEndBlock(r.URL.Query())
+	if err != nil {
+		rtv, err := edb.GetTransactions(limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -2078,7 +2066,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		return
 	}
 
-	rtv, err := edb.GetTransactions(limit)
+	rtv, err := edb.GetTransactionByBlockNumbers(start, end, limit)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -2210,7 +2198,20 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 // swagger:model storageNodeResponse
 type storageNodeResponse struct {
-	*StorageNode
+	ID                      string                 `json:"id" validate:"hexadecimal,len=64"`
+	BaseURL                 string                 `json:"url"`
+	Geolocation             StorageNodeGeolocation `json:"geolocation"`
+	Terms                   Terms                  `json:"terms"`     // terms
+	Capacity                int64                  `json:"capacity"`  // total blobber capacity
+	Allocated               int64                  `json:"allocated"` // allocated capacity
+	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
+	PublicKey               string                 `json:"-"`
+	SavedData               int64                  `json:"saved_data"`
+	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
+	StakePoolSettings       stakepool.Settings     `json:"stake_pool_settings"`
+	RewardRound             RewardRound            `json:"reward_round"`
+
 	TotalStake               currency.Coin `json:"total_stake"`
 	CreationRound            int64         `json:"creation_round"`
 	ReadData                 int64         `json:"read_data"`
@@ -2220,38 +2221,74 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 }
 
+func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
+	return storageNodeResponse{
+		ID:                      sn.ID,
+		BaseURL:                 sn.BaseURL,
+		Geolocation:             sn.Geolocation,
+		Terms:                   sn.Terms,
+		Capacity:                sn.Capacity,
+		Allocated:               sn.Allocated,
+		LastHealthCheck:         sn.LastHealthCheck,
+		PublicKey:               sn.PublicKey,
+		SavedData:               sn.SavedData,
+		DataReadLastRewardRound: sn.DataReadLastRewardRound,
+		LastRewardDataReadRound: sn.LastRewardDataReadRound,
+		StakePoolSettings:       sn.StakePoolSettings,
+		RewardRound:             sn.RewardRound,
+	}
+}
+
+func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
+	return StorageNode{
+		Provider: provider.Provider{
+			ID:           snr.ID,
+			ProviderType: spenum.Blobber,
+		},
+		BaseURL:                 snr.BaseURL,
+		Geolocation:             snr.Geolocation,
+		Terms:                   snr.Terms,
+		Capacity:                snr.Capacity,
+		Allocated:               snr.Allocated,
+		LastHealthCheck:         snr.LastHealthCheck,
+		PublicKey:               snr.PublicKey,
+		SavedData:               snr.SavedData,
+		DataReadLastRewardRound: snr.DataReadLastRewardRound,
+		LastRewardDataReadRound: snr.LastRewardDataReadRound,
+		StakePoolSettings:       snr.StakePoolSettings,
+		RewardRound:             snr.RewardRound,
+	}
+}
+
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
-		StorageNode: &StorageNode{
-			ID:      blobber.ID,
-			BaseURL: blobber.BaseURL,
-			Geolocation: StorageNodeGeolocation{
-				Latitude:  blobber.Latitude,
-				Longitude: blobber.Longitude,
-			},
-			Terms: Terms{
-				ReadPrice:        blobber.ReadPrice,
-				WritePrice:       blobber.WritePrice,
-				MinLockDemand:    blobber.MinLockDemand,
-				MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
-			},
-			Capacity:        blobber.Capacity,
-			Allocated:       blobber.Allocated,
-			LastHealthCheck: common.Timestamp(blobber.LastHealthCheck),
-			StakePoolSettings: stakepool.Settings{
-				DelegateWallet:     blobber.DelegateWallet,
-				MinStake:           blobber.MinStake,
-				MaxStake:           blobber.MaxStake,
-				MaxNumDelegates:    blobber.NumDelegates,
-				ServiceChargeRatio: blobber.ServiceCharge,
-			},
+		ID:      blobber.ID,
+		BaseURL: blobber.BaseURL,
+		Geolocation: StorageNodeGeolocation{
+			Latitude:  blobber.Latitude,
+			Longitude: blobber.Longitude,
 		},
-		TotalStake:     blobber.TotalStake,
-		CreationRound:  blobber.CreationRound,
-		ReadData:       blobber.ReadData,
-		UsedAllocation: blobber.Used,
-		TotalOffers:    blobber.OffersTotal,
-
+		Terms: Terms{
+			ReadPrice:        blobber.ReadPrice,
+			WritePrice:       blobber.WritePrice,
+			MinLockDemand:    blobber.MinLockDemand,
+			MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
+		},
+		Capacity:        blobber.Capacity,
+		Allocated:       blobber.Allocated,
+		LastHealthCheck: blobber.LastHealthCheck,
+		StakePoolSettings: stakepool.Settings{
+			DelegateWallet:     blobber.DelegateWallet,
+			MinStake:           blobber.MinStake,
+			MaxStake:           blobber.MaxStake,
+			MaxNumDelegates:    blobber.NumDelegates,
+			ServiceChargeRatio: blobber.ServiceCharge,
+		},
+		TotalStake:               blobber.TotalStake,
+		CreationRound:            blobber.CreationRound,
+		ReadData:                 blobber.ReadData,
+		UsedAllocation:           blobber.Used,
+		TotalOffers:              blobber.OffersTotal,
 		TotalServiceCharge:       blobber.Rewards.TotalRewards,
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
 	}
@@ -2793,24 +2830,32 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
+	roundStr := r.URL.Query().Get("round")
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateSnapshots(limit.Offset, limit.Limit)
+	snapshots, err := edb.ReplicateSnapshots(round, pagination.Limit)
 	if err != nil {
 		err := common.NewErrInternal("cannot get snapshots" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
 
-	common.Respond(w, r, blobbers, nil)
+	common.Respond(w, r, snapshots, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate replicateBlobberAggregates
@@ -2836,20 +2881,28 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
+	roundStr := r.URL.Query().Get("round")
 
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobbers, err := edb.ReplicateBlobberAggregate(limit)
+	blobbers := []event.BlobberAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "blobber", &blobbers)
 	if err != nil {
-		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
+		err := common.NewErrInternal("cannot get blobber aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -2882,20 +2935,28 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
+	roundStr := r.URL.Query().Get("round")
 
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	miners, err := edb.ReplicateMinerAggregate(limit)
+	miners := []event.MinerAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "miner", &miners)
 	if err != nil {
-		err := common.NewErrInternal("cannot get miner by rank" + err.Error())
+		err := common.NewErrInternal("cannot get miner aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -2928,8 +2989,16 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -2939,9 +3008,10 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	sharders, err := edb.ReplicateSharderAggregate(limit)
+	sharders := []event.SharderAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "sharder", &sharders)
 	if err != nil {
-		err := common.NewErrInternal("cannot get sharder by rank" + err.Error())
+		err := common.NewErrInternal("cannot get sharder aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -2974,8 +3044,16 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -2985,9 +3063,10 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	authorizers, err := edb.ReplicateAuthorizerAggregate(limit)
+	authorizers := []event.AuthorizerAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "authorizer", &authorizers)
 	if err != nil {
-		err := common.NewErrInternal("cannot get authorizer by rank" + err.Error())
+		err := common.NewErrInternal("cannot get authorizer aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -3020,8 +3099,16 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -3031,9 +3118,10 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	validators, err := edb.ReplicateValidatorAggregate(limit)
+	validators := []event.ValidatorAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "validator", &validators)
 	if err != nil {
-		err := common.NewErrInternal("cannot get validator by rank" + err.Error())
+		err := common.NewErrInternal("cannot get validator aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -3066,8 +3154,16 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 //	200: StringMap
 //	500:
 func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -3077,7 +3173,8 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	users, err := edb.ReplicateUserAggregate(limit)
+	var users []event.UserAggregate
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "user", &users)
 	if err != nil {
 		err := common.NewErrInternal("cannot get user aggregates" + err.Error())
 		common.Respond(w, r, nil, err)

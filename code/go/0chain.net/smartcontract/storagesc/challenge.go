@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 
@@ -643,7 +645,7 @@ func (sc *StorageSmartContract) challengePassed(
 			Timestamp:  t.CreationDate,
 		}
 
-		_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			return "", common.NewError("verify_challenge",
 				"error inserting blobber to chain"+err.Error())
@@ -948,7 +950,10 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if randValidator.Id != blobberID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
-					ID:      randValidator.Id,
+					Provider: provider.Provider{
+						ID:           randValidator.Id,
+						ProviderType: spenum.Validator,
+					},
 					BaseURL: randValidator.Url,
 				})
 		}
