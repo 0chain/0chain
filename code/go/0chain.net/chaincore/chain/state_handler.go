@@ -89,7 +89,6 @@ func (c *Chain) GetStateContextI() state.StateContextI {
 		logging.Logger.Error("empty latest finalized block or state")
 		return nil
 	}
-	fmt.Println(lfb.ClientState.GetChangeCount(), "IN")
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
 }
