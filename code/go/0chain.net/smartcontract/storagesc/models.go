@@ -594,7 +594,7 @@ func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin, er
 			zap.Any("rdtu", rdtu),
 			zap.Any("challenge value", d.ChallengePoolIntegralValue),
 			zap.Any("move", move))
-		err = fmt.Errorf("minus challenge pool value failed: %v", err)
+		err = fmt.Errorf("J:S: minus challenge pool value failed: %v, dtu: %v, rdtu: %v, challenge_value: %v, move: %v", err, dtu, rdtu, d.ChallengePoolIntegralValue, move)
 		return
 	}
 	d.ChallengePoolIntegralValue = cv
