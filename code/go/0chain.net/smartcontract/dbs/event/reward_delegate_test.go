@@ -41,7 +41,7 @@ func TestInsertDelegateReward(t *testing.T) {
 	dps = dps
 
 	spr1 := dbs.StakePoolReward{
-		StakePoolId: dbs.StakePoolId{
+		Provider: dbs.Provider{
 			ProviderId:   minerIds[0],
 			ProviderType: spenum.Miner,
 		},
@@ -53,7 +53,7 @@ func TestInsertDelegateReward(t *testing.T) {
 		},
 	}
 	spr2 := dbs.StakePoolReward{
-		StakePoolId: dbs.StakePoolId{
+		Provider: dbs.Provider{
 			ProviderId:   minerIds[1],
 			ProviderType: spenum.Miner,
 		},

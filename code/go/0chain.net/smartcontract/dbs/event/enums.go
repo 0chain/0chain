@@ -113,6 +113,8 @@ const (
 	TagValidatorHealthCheck
 	TagUpdateUserPayedFees
 	TagUpdateUserCollectedRewards
+	TagUpdateProvider
+	TagProviderHealthCheck
 	NumberOfTags
 )
 
@@ -209,6 +211,8 @@ func initTagString() {
 	TagString[TagValidatorHealthCheck] = "TagValidatorHealthCheck"
 	TagString[TagUpdateUserPayedFees] = "TagUpdateUserPayedFees"
 	TagString[TagUpdateUserCollectedRewards] = "TagUpdateUserCollectedRewards"
+	TagString[TagUpdateProvider] = "TagUpdateProvider"
+	TagString[TagProviderHealthCheck] = "TagProviderHealthCheck"
 	TagString[NumberOfTags] = "invalid"
 }
 

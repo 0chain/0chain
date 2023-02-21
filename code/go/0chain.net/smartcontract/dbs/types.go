@@ -1,15 +1,17 @@
 package dbs
 
 import (
+	"time"
+
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 )
 
 type DbHealthCheck struct {
-	ID				string			 `json:"id"`
+	ID              string           `json:"id"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
-	Downtime		uint64			 `json:"downtime"`
+	Downtime        uint64           `json:"downtime"`
 }
 
 type DbUpdates struct {
@@ -17,20 +19,29 @@ type DbUpdates struct {
 	Updates map[string]interface{} `json:"updates"`
 }
 
-func NewDbUpdates(id string) *DbUpdates {
-	return &DbUpdates{
-		Id:      id,
-		Updates: make(map[string]interface{}),
-	}
+type DbUpdateProvider struct {
+	DbUpdates
+	Type spenum.Provider `json:"type"`
 }
 
-type StakePoolId struct {
+func NewDbUpdateProvider(id string, typ spenum.Provider) *DbUpdateProvider {
+	return &DbUpdateProvider{
+		DbUpdates: DbUpdates{
+			Id:      id,
+			Updates: make(map[string]interface{}),
+		},
+		Type: typ,
+	}
+
+}
+
+type Provider struct {
 	ProviderId   string          `json:"provider_id"`
 	ProviderType spenum.Provider `json:"provider_type"`
 }
 
 type StakePoolReward struct {
-	StakePoolId
+	Provider
 	Reward     currency.Coin `json:"reward"`
 	RewardType spenum.Reward `json:"reward_type"`
 	// rewards delegate pools
@@ -40,7 +51,7 @@ type StakePoolReward struct {
 }
 
 type DelegatePoolId struct {
-	StakePoolId
+	Provider
 	PoolId string `json:"pool_id"`
 }
 
@@ -59,13 +70,13 @@ func NewDelegatePoolUpdate(pool, provider string, pType spenum.Provider) *Delega
 }
 
 type SpBalance struct {
-	StakePoolId
+	Provider
 	Balance         int64            `json:"sp_reward"`
 	DelegateBalance map[string]int64 `json:"delegate_reward"`
 }
 
 type SpReward struct {
-	StakePoolId
+	Provider
 	SpReward       int64            `json:"sp_reward"`
 	DelegateReward map[string]int64 `json:"delegate_reward"`
 }
@@ -73,4 +84,11 @@ type SpReward struct {
 type ChallengeResult struct {
 	BlobberId string `json:"blobberId"`
 	Passed    bool   `json:"passed"`
+}
+
+type HealthCheck struct {
+	Provider
+	LastHealthCheck   common.Timestamp `json:"last_heath_check"`
+	Now               common.Timestamp `json:"now"`
+	HealthCheckPeriod time.Duration    `json:"healch_check_period"`
 }
