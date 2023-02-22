@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/core/datastore"
@@ -370,7 +372,10 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
 		blobber := &StorageNode{
-			ID:      id,
+			Provider: provider.Provider{
+				ID:           id,
+				ProviderType: spenum.Blobber,
+			},
 			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
@@ -379,14 +384,13 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
-			LastHealthCheck:   balances.GetTransaction().CreationDate, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
+			LastHealthCheck:   balances.GetTransaction().CreationDate,
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
-			//TotalStake: viper.GetInt64(sc.StorageMaxStake), todo missing field
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
-		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
+		_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			log.Fatal("insert blobber into mpt", err)
 		}
@@ -529,7 +533,10 @@ func AddMockValidators(
 		id := getMockValidatorId(i)
 		url := getMockValidatorUrl(i)
 		validator := &ValidationNode{
-			ID:                id,
+			Provider: provider.Provider{
+				ID:           id,
+				ProviderType: spenum.Validator,
+			},
 			BaseURL:           url,
 			PublicKey:         publicKeys[i%len(publicKeys)],
 			StakePoolSettings: getMockStakePoolSettings(id),
