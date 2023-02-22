@@ -14,6 +14,11 @@ type ProviderRequest struct {
 	ID string `json:"id"`
 }
 
+func (pr *ProviderRequest) Encode() []byte {
+	b, _ := json.Marshal(pr)
+	return b
+}
+
 func (pr *ProviderRequest) decode(p []byte) error {
 	return json.Unmarshal(p, pr)
 }

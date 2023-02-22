@@ -732,7 +732,22 @@ func BenchmarkTests(
 			endpoint: ssc.commitSettingChanges,
 			txn:      &transaction.Transaction{},
 		},
-
+		{
+			name: "storage.kill_blobber",
+			input: (&provider.ProviderRequest{
+				ID: getMockBlobberId(0),
+			}).Encode(),
+			endpoint: ssc.killBlobber,
+			txn:      &transaction.Transaction{},
+		},
+		{
+			name: "storage.kill_validator",
+			input: (&provider.ProviderRequest{
+				ID: getMockValidatorId(0),
+			}).Encode(),
+			endpoint: ssc.killValidator,
+			txn:      &transaction.Transaction{},
+		},
 		{
 			name:     "storage.update_settings",
 			endpoint: ssc.updateSettings,
