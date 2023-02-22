@@ -680,9 +680,9 @@ func TestExtendAllocation(t *testing.T) {
 				for _, blobber := range sa.BlobberAllocs {
 					size += blobber.Stats.UsedSize
 				}
-				newFunds := sizeInGB(size) *
-					float64(mockWritePrice) *
-					sa.durationInTimeUnits(args.request.Expiration, confTimeUnit)
+				dtu, err := sa.durationInTimeUnits(args.request.Expiration, confTimeUnit)
+				require.NoError(t, err)
+				newFunds := sizeInGB(size) * float64(mockWritePrice) * dtu
 				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
@@ -1934,8 +1934,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// Other cannot perform any other action than extending.
 	req = updateAllocationRequest{
-		ID:          alloc.ID,
-		FileOptions: 61,
+		ID:                 alloc.ID,
+		FileOptions:        61,
 		FileOptionsChanged: true,
 	}
 	tp += 100

@@ -100,6 +100,13 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return errors.New("late challenge response")
 	}
 
+	if tp < latestCompletedChallTime {
+		logging.Logger.Debug("old challenge response - blobber reward",
+			zap.Int64("latestCompletedChallTime", int64(latestCompletedChallTime)),
+			zap.Int64("challenge time", int64(tp)))
+		return errors.New("old challenge response on blobber rewarding")
+	}
+
 	if tp > alloc.Expiration {
 		tp = alloc.Expiration // last challenge
 	}
@@ -110,10 +117,15 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var (
-		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
-		dtu  = alloc.durationInTimeUnits(tp-latestCompletedChallTime, conf.TimeUnit)
-	)
+	rdtu, err := alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
+	if err != nil {
+		return fmt.Errorf("blobber reward failed: %v", err)
+	}
+
+	dtu, err := alloc.durationInTimeUnits(tp-latestCompletedChallTime, conf.TimeUnit)
+	if err != nil {
+		return fmt.Errorf("blobber reward failed: %v", err)
+	}
 
 	move, err := blobAlloc.challenge(dtu, rdtu)
 	if err != nil {
@@ -294,6 +306,13 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return errors.New("late challenge response")
 	}
 
+	if tp < prev {
+		logging.Logger.Debug("old challenge response - blobber penalty",
+			zap.Int64("latestCompletedChallTime", int64(prev)),
+			zap.Int64("challenge time", int64(tp)))
+		return errors.New("old challenge response on blobber penalty")
+	}
+
 	if tp > alloc.Expiration {
 		tp = alloc.Expiration // last challenge
 	}
@@ -304,10 +323,15 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var (
-		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
-		dtu  = alloc.durationInTimeUnits(tp-prev, conf.TimeUnit)
-	)
+	rdtu, err := alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
+	if err != nil {
+		return fmt.Errorf("blobber penalty failed: %v", err)
+	}
+
+	dtu, err := alloc.durationInTimeUnits(tp-prev, conf.TimeUnit)
+	if err != nil {
+		return fmt.Errorf("blobber penalty failed: %v", err)
+	}
 
 	move, err := blobAlloc.challenge(dtu, rdtu)
 	if err != nil {

@@ -583,8 +583,12 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 
 	var move currency.Coin
 	if size > 0 {
-		move, err = details.upload(size, wmTime,
-			alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
+		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
+		if err != nil {
+			return 0, fmt.Errorf("could not move tokens to challenge pool: %v", err)
+		}
+
+		move, err = details.upload(size, wmTime, rdtu)
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
@@ -612,7 +616,12 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		}
 		details.Spent = spent
 	} else {
-		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
+		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
+		if err != nil {
+			return 0, fmt.Errorf("could not move tokens from pool: %v", err)
+		}
+
+		move = details.delete(-size, wmTime, rdtu)
 		err = alloc.moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
