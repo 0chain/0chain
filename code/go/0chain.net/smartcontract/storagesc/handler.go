@@ -2060,7 +2060,7 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 	}
 
 	start, end, err := common2.GetStartEndBlock(r.URL.Query())
-	if err != nil {
+	if err != nil || end == 0 {
 		rtv, err := edb.GetTransactions(limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
