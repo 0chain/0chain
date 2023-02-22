@@ -33,6 +33,7 @@ type freeAllocationSettings struct {
 type stakePoolConfig struct {
 	MinLock       currency.Coin `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
+	KillSlash     float64       `json:"kill_slash"`
 }
 
 type readPoolConfig struct {
@@ -243,6 +244,9 @@ func (conf *Config) validate() (err error) {
 	if conf.StakePool.MinLock <= 1 {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
 			conf.StakePool.MinLock)
+	}
+	if conf.StakePool.KillSlash < 0 || conf.StakePool.KillSlash > 1 {
+		return fmt.Errorf("stakepool.kill_slash, %v must be in interval [0.1]", conf.StakePool.KillSlash)
 	}
 
 	if conf.FreeAllocationSettings.DataShards < 0 {
@@ -458,6 +462,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.StakePool.MinLockPeriod = scc.GetDuration(pfx + "stakepool.min_lock_period")
+	conf.StakePool.KillSlash = scc.GetFloat64(pfx + "stakepool.kill_slash")
 
 	conf.MaxTotalFreeAllocation, err = currency.MultFloat64(1e10, scc.GetFloat64(pfx+"max_total_free_allocation"))
 	if err != nil {

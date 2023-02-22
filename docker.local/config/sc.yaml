@@ -134,6 +134,8 @@ smart_contracts:
       interest_interval: 1m
       # min_lock_period is min lock period. Default lock period is 3 years worth of blocks.
       min_lock_period: 36m
+      # the amount to slash stakeholders if a blobber or validator is killed
+      kill_slash: 0.5
     # following settings are for free storage rewards
     #
     # largest value you can have for the total allowed free storage

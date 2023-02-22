@@ -43,14 +43,18 @@ type AbstractStakePool interface {
 	GetSettings() Settings
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
+	Kill()
+	IsDead() bool
+	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
 }
 
 // StakePool holds delegate information for an 0chain providers
 type StakePool struct {
-	Pools    map[string]*DelegatePool `json:"pools"`
-	Reward   currency.Coin            `json:"rewards"`
-	Settings Settings                 `json:"settings"`
-	Minter   cstate.ApprovedMinter    `json:"minter"`
+	Pools         map[string]*DelegatePool `json:"pools"`
+	Reward        currency.Coin            `json:"rewards"`
+	Settings      Settings                 `json:"settings"`
+	Minter        cstate.ApprovedMinter    `json:"minter"`
+	HasBeenKilled bool                     `json:"is_dead"`
 }
 
 type Settings struct {
@@ -170,6 +174,14 @@ func (sp *StakePool) GetSettings() Settings {
 }
 func (sp *StakePool) GetPools() map[string]*DelegatePool {
 	return sp.Pools
+}
+
+func (sp *StakePool) IsDead() bool {
+	return sp.HasBeenKilled
+}
+
+func (sp *StakePool) Kill() {
+	sp.HasBeenKilled = true
 }
 
 func (sp *StakePool) OrderedPoolIds() []string {
@@ -299,6 +311,31 @@ func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.State
 	sp.Pools[poolID].Balance = 0
 	sp.Pools[poolID].Status = spenum.Deleted
 
+	return nil
+}
+
+// SlashFraction
+// slash stake pools funds, if a provider is killed
+func (sp *StakePool) SlashFraction(
+	fraction float64,
+	providerId string,
+	providerType spenum.Provider,
+	balances cstate.StateContextI,
+) error {
+	if fraction == 0.0 {
+		return nil
+	}
+	for _, dp := range sp.Pools {
+		dpSlash, err := currency.Float64ToCoin(float64(dp.Balance) * fraction)
+		if err != nil {
+			return err
+		}
+		dp.Balance, err = currency.MinusCoin(dp.Balance, dpSlash)
+		if err != nil {
+			return err
+		}
+	}
+	sp.EmitStakePoolBalanceUpdate(providerId, providerType, balances)
 	return nil
 }
 

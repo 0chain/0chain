@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
@@ -27,6 +29,8 @@ type Provider struct {
 	Rewards         ProviderRewards  `json:"rewards" gorm:"foreignKey:ProviderID"`
 	Downtime        uint64           `json:"downtime"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	IsKilled        bool             `json:"is_killed"`
+	IsShutDown      bool             `json:"is_shut_down"`
 }
 
 type ProviderAggregate interface {
@@ -116,4 +120,35 @@ func (edb *EventDb) ReplicateProviderAggregates(round int64, limit int, offset i
 		return result.Error
 	}
 	return nil
+}
+
+// todo piers rewrite using updater
+func (edb *EventDb) updateProvider(
+	updates dbs.DbUpdateProvider,
+) error {
+	model, err := providerModel(updates.Type)
+	if err != nil {
+		return err
+	}
+	return edb.Store.Get().
+		Model(&model).
+		Where(updates.Type.String()+"_id = ?", updates.Id).
+		Updates(updates.Updates).Error
+}
+
+func providerModel(pType spenum.Provider) (interface{}, error) {
+	switch pType {
+	case spenum.Blobber:
+		return Blobber{}, nil
+	case spenum.Validator:
+		return Validator{}, nil
+	case spenum.Miner:
+		return Miner{}, nil
+	case spenum.Sharder:
+		return Sharder{}, nil
+	case spenum.Authorizer:
+		return &Authorizer{}, nil
+	default:
+		return nil, fmt.Errorf("unrecognised provider type %v", pType)
+	}
 }

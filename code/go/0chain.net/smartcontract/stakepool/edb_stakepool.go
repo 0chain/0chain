@@ -12,6 +12,18 @@ import (
 
 type StakePoolReward dbs.StakePoolReward
 
+func (sp *StakePool) EmitStakePoolBalanceUpdate(
+	pId string,
+	pType spenum.Provider,
+	balances cstate.StateContextI,
+) {
+	for id, dp := range sp.Pools {
+		dpu := dbs.NewDelegatePoolUpdate(id, pId, pType)
+		dpu.Updates["balance"] = dp.Balance
+		balances.EmitEvent(event.TypeStats, event.TagUpdateDelegatePool, id, *dpu)
+	}
+}
+
 func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ProviderId = pId
