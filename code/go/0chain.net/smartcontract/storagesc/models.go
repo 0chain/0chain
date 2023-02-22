@@ -1077,6 +1077,8 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error)
 
 type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
+type filterValidatorFunc func(validator *ValidationNode) (kick bool, err error)
+
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
 	filtered []*StorageNode, err error) {

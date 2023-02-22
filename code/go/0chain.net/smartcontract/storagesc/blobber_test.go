@@ -1318,7 +1318,7 @@ func TestBlobberHealthCheck(t *testing.T) {
 	require.NoError(t, err)
 
 	// check health
-	_, err = healthCheck(t, b, 0, tp, ssc, balances)
+	_, err = healthCheckBlobber(t, b, 0, tp, ssc, balances)
 	require.NoError(t, err)
 
 }

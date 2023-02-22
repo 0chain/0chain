@@ -171,7 +171,7 @@ func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int
 	return ssc.addBlobber(tx, input, balances)
 }
 
-func healthCheck(t testing.TB, blob *StorageNode, value currency.Coin, now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (
+func healthCheckBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (
 	resp string, err error) {
 
 	var (
@@ -184,6 +184,22 @@ func healthCheck(t testing.TB, blob *StorageNode, value currency.Coin, now int64
 	b, err := ssc.getBlobber(blob.ID, balances)
 	require.NoError(t, err)
 	require.Equal(t, b.LastHealthCheck, tx.CreationDate)
+	return resp, err
+}
+
+func healthCheckValidator(t testing.TB, validator *ValidationNode, value currency.Coin, now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = validator.Encode()
+		tx    = newTransaction(validator.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).setTransaction(t, tx)
+	resp, err = ssc.validatorHealthCheck(tx, input, balances)
+	require.NoError(t, err)
+	v, err := ssc.getValidator(validator.ID, balances)
+	require.NoError(t, err)
+	require.Equal(t, v.LastHealthCheck, tx.CreationDate)
 	return resp, err
 }
 

@@ -53,14 +53,15 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 	data := &event.Validator{
 		BaseUrl: vn.BaseURL,
 		Provider: event.Provider{
-			ID:             vn.ID,
-			TotalStake:     staked,
-			UnstakeTotal:   sp.TotalUnStake,
-			DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-			MinStake:       vn.StakePoolSettings.MinStake,
-			MaxStake:       vn.StakePoolSettings.MaxStake,
-			NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+			ID:              vn.ID,
+			TotalStake:      staked,
+			UnstakeTotal:    sp.TotalUnStake,
+			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
+			MinStake:        vn.StakePoolSettings.MinStake,
+			MaxStake:        vn.StakePoolSettings.MaxStake,
+			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
+			LastHealthCheck: vn.LastHealthCheck,
 		},
 	}
 
@@ -78,15 +79,16 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 	data := &event.Validator{
 		BaseUrl: vn.BaseURL,
 		Provider: event.Provider{
-			ID:             vn.ID,
-			TotalStake:     staked,
-			UnstakeTotal:   sp.TotalUnStake,
-			DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-			MinStake:       vn.StakePoolSettings.MinStake,
-			MaxStake:       vn.StakePoolSettings.MaxStake,
-			NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
-			Rewards:        event.ProviderRewards{ProviderID: vn.ID},
+			ID:              vn.ID,
+			TotalStake:      staked,
+			UnstakeTotal:    sp.TotalUnStake,
+			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
+			MinStake:        vn.StakePoolSettings.MinStake,
+			MaxStake:        vn.StakePoolSettings.MaxStake,
+			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
+			Rewards:         event.ProviderRewards{ProviderID: vn.ID},
+			LastHealthCheck: vn.LastHealthCheck,
 		},
 	}
 
