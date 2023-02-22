@@ -3,6 +3,7 @@ package event
 import (
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 
 	"go.uber.org/zap"
@@ -44,6 +45,58 @@ type Snapshot struct {
 	BlockCount           int64 `json:"block_count"`                      // Total number of blocks currently
 	AverageTxnFee        int64 `json:"avg_txn_fee"`                      // Average transaction fee per block
 	CreatedAt            int64 `gorm:"autoCreateTime" json:"created_at"` // Snapshot creation date
+	BlobberCount		 int64 `json:"blobber_count"`                    // Total number of blobbers
+	MinerCount			 int64 `json:"miner_count"`                      // Total number of miners
+	SharderCount		 int64 `json:"sharder_count"`                    // Total number of sharders
+	ValidatorCount		 int64 `json:"validator_count"`                  // Total number of validators
+	AuthorizerCount		 int64 `json:"authorizer_count"`                  // Total number of authorizers
+}
+
+func (s *Snapshot) ProviderCount(provider spenum.Provider) int64 {
+	switch provider {
+	case spenum.Blobber:
+		return s.BlobberCount
+	case spenum.Miner:
+		return s.MinerCount
+	case spenum.Sharder:
+		return s.SharderCount
+	case spenum.Validator:
+		return s.ValidatorCount
+	case spenum.Authorizer:
+		return s.AuthorizerCount
+	default:
+		return 0
+	}
+}
+
+func (s *Snapshot) ApplyDelta(delta Snapshot, provider spenum.Provider) {	
+	s.TotalMint += delta.TotalMint
+	s.TotalChallengePools += delta.TotalChallengePools
+	s.ActiveAllocatedDelta += delta.ActiveAllocatedDelta
+	s.ZCNSupply += delta.ZCNSupply
+	s.TotalValueLocked += delta.TotalValueLocked
+	s.ClientLocks += delta.ClientLocks
+	s.MinedTotal += delta.MinedTotal
+	s.TotalStaked += delta.TotalStaked
+	s.TotalRewards += delta.TotalRewards
+	s.SuccessfulChallenges += delta.SuccessfulChallenges
+	s.TotalChallenges += delta.TotalChallenges
+	s.AllocatedStorage += delta.AllocatedStorage
+	s.MaxCapacityStorage += delta.MaxCapacityStorage
+	s.StakedStorage += delta.StakedStorage
+	s.UsedStorage += delta.UsedStorage
+	s.TransactionsCount += delta.TransactionsCount
+	s.UniqueAddresses += delta.UniqueAddresses
+	s.BlockCount += delta.BlockCount
+
+	if s.TransactionsCount > 0 {
+		s.AverageTxnFee += delta.AverageTxnFee / s.TransactionsCount
+	}
+
+	providerCount := s.ProviderCount(provider)
+	if providerCount > 0 {
+		s.AverageWritePrice += delta.AverageWritePrice / providerCount
+	}
 }
 
 type FieldType int
@@ -251,6 +304,24 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			averageFee = averageFee / len(*txns)
 			gs.AverageTxnFee = int64(averageFee)
+		case TagAddBlobber:
+			gs.BlobberCount += 1
+		case TagDeleteBlobber:
+			gs.BlobberCount -= 1
+		case TagAddAuthorizer:
+			gs.AuthorizerCount += 1
+		case TagDeleteAuthorizer:
+			gs.AuthorizerCount -= 1
+		case TagAddMiner:
+			gs.MinerCount += 1
+		case TagDeleteMiner:
+			gs.MinerCount -= 1
+		case TagAddSharder:
+			gs.SharderCount += 1
+		case TagDeleteSharder:
+			gs.SharderCount -= 1
+		case TagAddOrOverwiteValidator:
+			gs.ValidatorCount += 1
 		}
 
 	}
