@@ -23,6 +23,7 @@ type User struct {
 	Change          currency.Coin `json:"change"`
 	Round           int64         `json:"round"`
 	Nonce           int64         `json:"nonce"`
+	MintNonce       int64         `json:"mint_nonce"`
 	CollectedReward int64         `json:"collected_reward"`
 	TotalStake      int64         `json:"total_stake"`
 	ReadPoolTotal   int64         `json:"read_pool_total"`

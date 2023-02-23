@@ -350,7 +350,6 @@ func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 type UserNode struct {
 	ID          string              `json:"id"`
 	BurnNonce   int64               `json:"burn_nonce"`
-	MintNonces  []int64             `json:"mint_nonces"`
 	BurnTickets map[string][][]byte `json:"burn_tickets"`
 }
 
@@ -358,10 +357,6 @@ func NewUserNode(id string) *UserNode {
 	return &UserNode{
 		ID: id,
 	}
-}
-
-func (un *UserNode) AddMintNonce(nonce int64) {
-	un.MintNonces = append(un.MintNonces, nonce)
 }
 
 func (un *UserNode) AddBurnTicket(ethereumAddress string, hash string, nonce int64) error {

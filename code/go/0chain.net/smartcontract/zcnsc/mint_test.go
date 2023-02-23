@@ -188,9 +188,8 @@ func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, gn)
 
-	un, err := GetUserNode(tr.ClientID, ctx)
+	user, err := ctx.GetEventDB().GetUser(tr.ClientID)
 	require.NoError(t, err)
-	require.NotNil(t, un)
 
 	payload.Nonce = 1
 
@@ -198,8 +197,7 @@ func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, resp)
 
-	require.Len(t, un.MintNonces, 1)
-	require.Equal(t, un.MintNonces[0], payload.Nonce)
+	require.Equal(t, user.MintNonce, payload.Nonce)
 
 	resp, err = contract.Mint(tr, payload.Encode(), ctx)
 	require.Error(t, err)

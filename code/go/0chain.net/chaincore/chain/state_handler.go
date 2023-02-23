@@ -65,7 +65,7 @@ func SetupScRestApiHandlers() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
-	http.HandleFunc("/v1/client/get/processed_mint_nonces", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetProcessedMintNoncesHandler))))
+	http.HandleFunc("/v1/client/get/mint_nonce", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetMintNonceHandler))))
 	http.HandleFunc("/v1/client/get/not_processed_burn_tickets", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNotProcessedBurnTicketsHandler))))
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
 	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
@@ -89,7 +89,6 @@ func (c *Chain) GetStateContextI() state.StateContextI {
 		logging.Logger.Error("empty latest finalized block or state")
 		return nil
 	}
-	fmt.Println(lfb.ClientState.GetChangeCount(), "IN")
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
 }
@@ -146,19 +145,19 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	return retObj, nil
 }
 
-// GetProcessedMintNoncesHandler returns processed ZCN mint nonces for the given client id
-func (c *Chain) GetProcessedMintNoncesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// GetMintNonceHandler returns last ZCN mint nonce for the given client id
+func (c *Chain) GetMintNonceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
 	if clientID == "" {
 		return nil, errors.New("Argument 'client_id' should not be empty")
 	}
 
-	un, err := zcnsc.GetUserNode(clientID, c.GetStateContextI())
+	user, err := c.GetEventDb().GetUser(clientID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retreive user node: %w", err)
+		return nil, fmt.Errorf("failed to retrieve user: %w", err)
 	}
 
-	return un.MintNonces, nil
+	return user.MintNonce, nil
 }
 
 // GetNotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
@@ -184,14 +183,9 @@ func (c *Chain) GetNotProcessedBurnTicketsHandler(ctx context.Context, r *http.R
 		}
 	}
 
-	un, err := zcnsc.GetUserNode(clientId, c.GetStateContextI())
+	burnTickets, err := c.GetEventDb().GetBurnTickets(clientID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retreive user node: %w", err)
-	}
-
-	burnTickets, err := un.GetBurnTickets(ethereumAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retreive burn tickets: %w", err)
+		return nil, fmt.Errorf("failed to retrieve user: %w", err)
 	}
 
 	var response []entity.BurnTicket
@@ -201,6 +195,10 @@ func (c *Chain) GetNotProcessedBurnTicketsHandler(ctx context.Context, r *http.R
 			response = append(response, burnTicket)
 		}
 	}
+
+	sort.Slice(response, func(i, j int) bool {
+		return response[i].Nonce < response[j].Nonce
+	})
 
 	return response, nil
 }

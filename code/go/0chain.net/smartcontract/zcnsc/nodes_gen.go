@@ -284,33 +284,27 @@ func (z *GlobalNode) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *UserNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 3
 	// string "ID"
-	o = append(o, 0x84, 0xa2, 0x49, 0x44)
+	o = append(o, 0x83, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "BurnNonce"
 	o = append(o, 0xa9, 0x42, 0x75, 0x72, 0x6e, 0x4e, 0x6f, 0x6e, 0x63, 0x65)
 	o = msgp.AppendInt64(o, z.BurnNonce)
-	// string "MintNonces"
-	o = append(o, 0xaa, 0x4d, 0x69, 0x6e, 0x74, 0x4e, 0x6f, 0x6e, 0x63, 0x65, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.MintNonces)))
-	for za0001 := range z.MintNonces {
-		o = msgp.AppendInt64(o, z.MintNonces[za0001])
-	}
 	// string "BurnTickets"
 	o = append(o, 0xab, 0x42, 0x75, 0x72, 0x6e, 0x54, 0x69, 0x63, 0x6b, 0x65, 0x74, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.BurnTickets)))
-	keys_za0002 := make([]string, 0, len(z.BurnTickets))
+	keys_za0001 := make([]string, 0, len(z.BurnTickets))
 	for k := range z.BurnTickets {
-		keys_za0002 = append(keys_za0002, k)
+		keys_za0001 = append(keys_za0001, k)
 	}
-	msgp.Sort(keys_za0002)
-	for _, k := range keys_za0002 {
-		za0003 := z.BurnTickets[k]
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.BurnTickets[k]
 		o = msgp.AppendString(o, k)
-		o = msgp.AppendArrayHeader(o, uint32(len(za0003)))
-		for za0004 := range za0003 {
-			o = msgp.AppendBytes(o, za0003[za0004])
+		o = msgp.AppendArrayHeader(o, uint32(len(za0002)))
+		for za0003 := range za0002 {
+			o = msgp.AppendBytes(o, za0002[za0003])
 		}
 	}
 	return
@@ -346,67 +340,48 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BurnNonce")
 				return
 			}
-		case "MintNonces":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MintNonces")
-				return
-			}
-			if cap(z.MintNonces) >= int(zb0002) {
-				z.MintNonces = (z.MintNonces)[:zb0002]
-			} else {
-				z.MintNonces = make([]int64, zb0002)
-			}
-			for za0001 := range z.MintNonces {
-				z.MintNonces[za0001], bts, err = msgp.ReadInt64Bytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "MintNonces", za0001)
-					return
-				}
-			}
 		case "BurnTickets":
-			var zb0003 uint32
-			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "BurnTickets")
 				return
 			}
 			if z.BurnTickets == nil {
-				z.BurnTickets = make(map[string][][]byte, zb0003)
+				z.BurnTickets = make(map[string][][]byte, zb0002)
 			} else if len(z.BurnTickets) > 0 {
 				for key := range z.BurnTickets {
 					delete(z.BurnTickets, key)
 				}
 			}
-			for zb0003 > 0 {
-				var za0002 string
-				var za0003 [][]byte
-				zb0003--
-				za0002, bts, err = msgp.ReadStringBytes(bts)
+			for zb0002 > 0 {
+				var za0001 string
+				var za0002 [][]byte
+				zb0002--
+				za0001, bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "BurnTickets")
 					return
 				}
-				var zb0004 uint32
-				zb0004, bts, err = msgp.ReadArrayHeaderBytes(bts)
+				var zb0003 uint32
+				zb0003, bts, err = msgp.ReadArrayHeaderBytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "BurnTickets", za0002)
+					err = msgp.WrapError(err, "BurnTickets", za0001)
 					return
 				}
-				if cap(za0003) >= int(zb0004) {
-					za0003 = (za0003)[:zb0004]
+				if cap(za0002) >= int(zb0003) {
+					za0002 = (za0002)[:zb0003]
 				} else {
-					za0003 = make([][]byte, zb0004)
+					za0002 = make([][]byte, zb0003)
 				}
-				for za0004 := range za0003 {
-					za0003[za0004], bts, err = msgp.ReadBytesBytes(bts, za0003[za0004])
+				for za0003 := range za0002 {
+					za0002[za0003], bts, err = msgp.ReadBytesBytes(bts, za0002[za0003])
 					if err != nil {
-						err = msgp.WrapError(err, "BurnTickets", za0002, za0004)
+						err = msgp.WrapError(err, "BurnTickets", za0001, za0003)
 						return
 					}
 				}
-				z.BurnTickets[za0002] = za0003
+				z.BurnTickets[za0001] = za0002
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -422,13 +397,13 @@ func (z *UserNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *UserNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 10 + msgp.Int64Size + 11 + msgp.ArrayHeaderSize + (len(z.MintNonces) * (msgp.Int64Size)) + 12 + msgp.MapHeaderSize
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 10 + msgp.Int64Size + 12 + msgp.MapHeaderSize
 	if z.BurnTickets != nil {
-		for za0002, za0003 := range z.BurnTickets {
-			_ = za0003
-			s += msgp.StringPrefixSize + len(za0002) + msgp.ArrayHeaderSize
-			for za0004 := range za0003 {
-				s += msgp.BytesPrefixSize + len(za0003[za0004])
+		for za0001, za0002 := range z.BurnTickets {
+			_ = za0002
+			s += msgp.StringPrefixSize + len(za0001) + msgp.ArrayHeaderSize
+			for za0003 := range za0002 {
+				s += msgp.BytesPrefixSize + len(za0002[za0003])
 			}
 		}
 	}

@@ -27,15 +27,16 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		string(inputData),
 	)
 
+	user, err := ctx.GetEventDB().GetUser(trans.ClientID)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get user by client id: %v, %s", err, info)
+		err = common.NewError(code, msg)
+		return
+	}
+
 	gn, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node error: %v, %s", err, info)
-		return "", common.NewError(code, msg)
-	}
-
-	un, err := GetUserNode(trans.ClientID, ctx)
-	if err != nil {
-		msg := fmt.Sprintf("failed to get user node error: %v, %s", err, info)
 		return "", common.NewError(code, msg)
 	}
 
@@ -108,6 +109,16 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 				payload.Nonce, payload.ReceivingClientID, trans.ClientID, info))
 		return
 	}
+
+	if payload.Nonce <= user.MintNonce {
+		err = common.NewError(
+			code,
+			fmt.Sprintf(
+				"nonce given (%v) for receiving client (%s) is not sequential for Node.ID: '%s', %s",
+				payload.Nonce, payload.ReceivingClientID, trans.ClientID, info))
+		return
+	}
+
 	uniqueSignatures := payload.getUniqueSignatures()
 
 	// verify signatures of authorizers
@@ -130,7 +141,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	gn.WZCNNonceMinted[payload.Nonce] = true
 
 	// record mint nonce for a certain user
-	un.AddMintNonce(payload.Nonce)
+	user.MintNonce = payload.Nonce
 
 	var (
 		amount currency.Coin
@@ -181,13 +192,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	err = gn.Save(ctx)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
-		return
-	}
-
-	// Save the user node
-	err = un.Save(ctx)
-	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, user node failed to be saved, %s", code, info))
 		return
 	}
 
