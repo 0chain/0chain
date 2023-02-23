@@ -17,11 +17,11 @@ import (
 
 type StorageAllocationBlobbers struct {
 	StorageAllocation `json:",inline"`
-	Blobbers          []*StorageNode `json:"blobbers"`
+	Blobbers          []*storageNodeResponse `json:"blobbers"`
 }
 
 func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
-	storageNodes := make([]*StorageNode, 0)
+	storageNodes := make([]*storageNodeResponse, 0)
 	blobberDetails := make([]*BlobberAllocation, 0)
 	blobberIDs := make([]string, 0)
 	blobberTermsMap := make(map[string]Terms)
@@ -52,7 +52,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
 
 	for _, b := range blobbers {
-		storageNodes = append(storageNodes, &StorageNode{
+		storageNodes = append(storageNodes, &storageNodeResponse{
 			ID:      b.ID,
 			BaseURL: b.BaseURL,
 			Geolocation: StorageNodeGeolocation{
@@ -63,11 +63,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			Capacity:        b.Capacity,
 			Allocated:       b.Allocated,
 			SavedData:       b.SavedData,
-			LastHealthCheck: common.Timestamp(b.LastHealthCheck),
+			LastHealthCheck: b.LastHealthCheck,
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     b.DelegateWallet,
-				MinStake:           currency.Coin(b.MinStake),
-				MaxStake:           currency.Coin(b.MaxStake),
+				MinStake:           b.MinStake,
+				MaxStake:           b.MaxStake,
 				MaxNumDelegates:    b.NumDelegates,
 				ServiceChargeRatio: b.ServiceCharge,
 			},

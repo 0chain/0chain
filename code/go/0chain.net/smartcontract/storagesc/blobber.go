@@ -3,35 +3,49 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
+
+	"0chain.net/smartcontract/provider"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
-	commonsc "0chain.net/smartcontract/common"
-
 )
 
 const (
 	blobberHealthTime = 60 * 60 // 1 Hour
+	CHUNK_SIZE        = 64 * KB
 )
+
+func newBlobber(id string) *StorageNode {
+	return &StorageNode{
+		Provider: provider.Provider{
+			ID:           id,
+			ProviderType: spenum.Blobber,
+		},
+	}
+}
 
 func getBlobber(
 	blobberID string,
 	balances cstate.CommonStateContextI,
 ) (*StorageNode, error) {
-	blobber := new(StorageNode)
-	blobber.ID = blobberID
-	err := balances.GetTrieNode(blobber.GetKey(ADDRESS), blobber)
+	blobber := newBlobber(blobberID)
+	err := balances.GetTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return nil, err
+	}
+	if blobber.ProviderType != spenum.Blobber {
+		return nil, fmt.Errorf("provider is %s should be %s", blobber.ProviderType, spenum.Blobber)
 	}
 	return blobber, nil
 }
@@ -45,7 +59,7 @@ func (_ *StorageSmartContract) getBlobber(
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	balances cstate.StateContextI) (bool, error) {
-	blobber := new(StorageNode)
+	blobber := newBlobber("")
 	blobber.BaseURL = blobberURL
 	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 	switch err {
@@ -143,7 +157,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			stakedCapacity, blobber.Capacity)
 	}
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
@@ -213,7 +227,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var blobber = new(StorageNode)
+	var blobber = newBlobber(t.ClientID)
 	if err = blobber.Decode(input); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"malformed request: "+err.Error())
@@ -222,6 +236,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
+	blobber.ProviderType = spenum.Blobber
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
@@ -234,7 +249,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	// Save the blobber
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"saving blobber: "+err.Error())
@@ -270,7 +285,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"can't get config: "+err.Error())
 	}
 
-	var updatedBlobber = new(StorageNode)
+	var updatedBlobber = newBlobber("")
 	if err = updatedBlobber.Decode(input); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())
@@ -324,9 +339,9 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	_ []byte, balances cstate.StateContextI,
 ) (string, error) {
 	var (
-		blobber *StorageNode
+		blobber  *StorageNode
 		downtime uint64
-		err     error
+		err      error
 	)
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -338,7 +353,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 	emitBlobberHealthCheck(blobber, downtime, balances)
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
+	_, err = balances.InsertTrieNode(blobber.GetKey(),
 		blobber)
 	if err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -428,8 +443,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"error fetching blobber object: %v", err)
 	}
-
-	const CHUNK_SIZE = 64 * KB
 
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
@@ -523,7 +536,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't Save read pool: %v", err)
 	}
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't Save blobber: %v", err)
@@ -558,6 +571,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
+	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
 	}
@@ -731,7 +745,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	if commitConnection.WriteMarker.Timestamp > alloc.Expiration {
-
 		return "", common.NewError("commit_connection_failed",
 			"write marker time is after allocation expires")
 	}
@@ -790,7 +803,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	// Save blobber
-	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving blobber object: %v", err)

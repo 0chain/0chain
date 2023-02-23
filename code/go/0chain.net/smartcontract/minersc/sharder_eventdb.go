@@ -16,26 +16,23 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNodeResponse{
-		SimpleNode: SimpleNode{
-			ID:          edbSharder.ID,
-			N2NHost:     edbSharder.N2NHost,
-			Host:        edbSharder.Host,
-			Port:        edbSharder.Port,
-			Path:        edbSharder.Path,
-			PublicKey:   edbSharder.PublicKey,
-			ShortName:   edbSharder.ShortName,
-			BuildTag:    edbSharder.BuildTag,
-			TotalStaked: edbSharder.TotalStake,
-			Delete:      edbSharder.Delete,
-
-			LastHealthCheck: edbSharder.LastHealthCheck,
-			Geolocation: SimpleNodeGeolocation{
-				Latitude:  edbSharder.Latitude,
-				Longitude: edbSharder.Longitude,
-			},
-			NodeType: NodeTypeSharder,
-			Status:   status,
+		ID:              edbSharder.ID,
+		N2NHost:         edbSharder.N2NHost,
+		Host:            edbSharder.Host,
+		Port:            edbSharder.Port,
+		Path:            edbSharder.Path,
+		PublicKey:       edbSharder.PublicKey,
+		ShortName:       edbSharder.ShortName,
+		BuildTag:        edbSharder.BuildTag,
+		TotalStaked:     edbSharder.TotalStake,
+		Delete:          edbSharder.Delete,
+		LastHealthCheck: edbSharder.LastHealthCheck,
+		Geolocation: SimpleNodeGeolocation{
+			Latitude:  edbSharder.Latitude,
+			Longitude: edbSharder.Longitude,
 		},
+		NodeType:                      NodeTypeSharder,
+		Status:                        status,
 		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
 	}
 
@@ -64,6 +61,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 				Status:       spenum.PoolStatus(delegate.Status),
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
+				StakedAt:     delegate.StakedAt,
 			},
 			RoundPoolLastUpdated: delegate.RoundPoolLastUpdated,
 		}

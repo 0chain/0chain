@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/chaincore/transaction"
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/chain/state"
@@ -197,4 +198,198 @@ func TestGetOrderedPools(t *testing.T) {
 	require.Equal(t, "p1", ps[0].DelegateID)
 	require.Equal(t, "p2", ps[1].DelegateID)
 	require.Equal(t, "p3", ps[2].DelegateID)
+}
+
+func Test_validateLockRequest(t *testing.T) {
+	type args struct {
+		t   *transaction.Transaction
+		sp  AbstractStakePool
+		err error
+	}
+	clientId := "randomHash"
+	clientId2 := "randomHash2"
+	clientId3 := "randomHash3"
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "first stake should pass",
+			args: args{
+				t: &transaction.Transaction{
+					ClientID: clientId,
+					Value:    10,
+				},
+				sp: &StakePool{
+					Pools: map[string]*DelegatePool{
+						clientId: {
+							Balance: 10,
+						},
+						clientId2: {
+							Balance: 20,
+						},
+					},
+					Settings: Settings{
+						MinStake:           0,
+						MaxStake:           50,
+						MaxNumDelegates:    2,
+						ServiceChargeRatio: 0,
+					},
+				},
+				err: nil,
+			},
+			want:    "",
+			wantErr: false,
+		}, {
+			name: "second stake should pass",
+			args: args{
+				t: &transaction.Transaction{
+					ClientID: clientId,
+					Value:    20,
+				},
+				sp: &StakePool{
+					Pools: map[string]*DelegatePool{
+						clientId: {
+							Balance: 30,
+						},
+						clientId2: {
+							Balance: 20,
+						},
+					},
+					Settings: Settings{
+						MinStake:           0,
+						MaxStake:           50,
+						MaxNumDelegates:    2,
+						ServiceChargeRatio: 0,
+					},
+				},
+				err: nil,
+			},
+			want:    "",
+			wantErr: false,
+		},
+		{
+			name: "first stake should fail on max limit",
+			args: args{
+				t: &transaction.Transaction{
+					ClientID: clientId,
+					Value:    60,
+				},
+				sp: &StakePool{
+					Pools: map[string]*DelegatePool{
+						clientId: {
+							Balance: 0,
+						},
+						clientId2: {
+							Balance: 20,
+						},
+					},
+					Settings: Settings{
+						MinStake:           0,
+						MaxStake:           50,
+						MaxNumDelegates:    2,
+						ServiceChargeRatio: 0,
+					},
+				},
+				err: nil,
+			},
+			want:    "",
+			wantErr: true,
+		}, {
+			name: "second stake should fail on max limit",
+			args: args{
+				t: &transaction.Transaction{
+					ClientID: clientId,
+					Value:    20,
+				},
+				sp: &StakePool{
+					Pools: map[string]*DelegatePool{
+						clientId: {
+							Balance: 40,
+						},
+						clientId2: {
+							Balance: 20,
+						},
+					},
+					Settings: Settings{
+						MinStake:           0,
+						MaxStake:           50,
+						MaxNumDelegates:    2,
+						ServiceChargeRatio: 0,
+					},
+				},
+				err: nil,
+			},
+			want:    "",
+			wantErr: true,
+		}, {
+			name: "stake should fail on min limit",
+			args: args{
+				t: &transaction.Transaction{
+					ClientID: clientId,
+					Value:    10,
+				},
+				sp: &StakePool{
+					Pools: map[string]*DelegatePool{
+						clientId: {
+							Balance: 30,
+						},
+						clientId2: {
+							Balance: 20,
+						},
+					},
+					Settings: Settings{
+						MinStake:           20,
+						MaxStake:           50,
+						MaxNumDelegates:    2,
+						ServiceChargeRatio: 0,
+					},
+				},
+				err: nil,
+			},
+			want:    "",
+			wantErr: true,
+		}, {
+			name: "stake should fail on delegates limit",
+			args: args{
+				t: &transaction.Transaction{
+					ClientID: clientId3,
+					Value:    10,
+				},
+				sp: &StakePool{
+					Pools: map[string]*DelegatePool{
+						clientId: {
+							Balance: 30,
+						},
+						clientId2: {
+							Balance: 20,
+						},
+					},
+					Settings: Settings{
+						MinStake:           0,
+						MaxStake:           50,
+						MaxNumDelegates:    2,
+						ServiceChargeRatio: 0,
+					},
+				},
+				err: nil,
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := validateLockRequest(tt.args.t, tt.args.sp)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateLockRequest() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("validateLockRequest() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

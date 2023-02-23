@@ -269,11 +269,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		if err != nil {
 			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber %s: %v", blobbers[i].ID, err)
 		}
-		sns = append(sns, &storageNodeResponse{
-			StorageNode: blobbers[i],
-			TotalOffers: spMap[blobbers[i].ID].TotalOffers,
-			TotalStake:  stake,
-		})
+		snr := StoragNodeToStorageNodeResponse(*blobbers[i])
+		snr.TotalOffers = spMap[blobbers[i].ID].TotalOffers
+		snr.TotalStake = stake
+		sns = append(sns, &snr)
 	}
 
 	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn.CreationDate, conf, txn.Hash)
@@ -286,7 +285,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		zap.String("txn", txn.Hash))
 
 	for _, b := range blobberNodes {
-		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		_, err = balances.InsertTrieNode(b.GetKey(), b)
 		if err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
 				zap.String("txn", txn.Hash),
@@ -738,7 +737,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 	balances chainstate.StateContextI,
 ) (err error) {
 	for _, b := range blobbers {
-		if _, err = balances.InsertTrieNode(b.GetKey(ADDRESS), b); err != nil {
+		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
 		emitUpdateBlobber(b, balances)
@@ -1170,9 +1169,11 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
-	if (t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner) && !alloc.ThirdPartyExtendable {
-		return "", common.NewError("allocation_updating_failed",
-			"only owner can update the allocation")
+	if (t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner) {
+		if !alloc.ThirdPartyExtendable || (request.Size <= 0 && request.Expiration <= 0) {
+			return "", common.NewError("allocation_updating_failed",
+				"only owner can update the allocation")
+		}
 	}
 
 	if err = request.validate(conf, alloc); err != nil {
@@ -1298,7 +1299,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	emitUpdateAllocationBlobberTerms(alloc, balances, t)
+	emitAddOrOverwriteAllocationBlobberTerms(alloc, balances, t)
 
 	return string(alloc.Encode()), nil
 }
@@ -1734,7 +1735,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			})
 		}
 		// update the blobber
-		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
+		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return fmt.Errorf("failed to save blobber: %s, err: %v", d.BlobberID, err)
 		}
 
