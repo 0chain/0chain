@@ -1,10 +1,8 @@
 package provider
 
 import (
-	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -22,7 +20,6 @@ type Abstract interface {
 	IsKilled() bool
 	IsShutDown() bool
 	Id() string
-	Save(state.StateContextI) error
 	Type() spenum.Provider
 	ShutDown()
 	EmitUpdate(stakepool.AbstractStakePool, cstate.StateContextI)
@@ -71,10 +68,6 @@ func (p *Provider) ShutDown() {
 
 func (p *Provider) Kill() {
 	p.HasBeenKilled = true
-}
-
-func (p *Provider) Save(i state.StateContextI) error {
-	return errors.New("save should be called from main provider object")
 }
 
 func (p *Provider) Type() spenum.Provider {

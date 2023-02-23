@@ -23,6 +23,7 @@ func (_ *StorageSmartContract) killBlobber(
 		return "", common.NewError("can't get config", err.Error())
 	}
 
+	var blobber = newBlobber("")
 	err = provider.Kill(
 		input,
 		t.ClientID,
@@ -30,7 +31,6 @@ func (_ *StorageSmartContract) killBlobber(
 		conf.StakePool.KillSlash,
 		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
-			var blobber *StorageNode
 			if blobber, err = getBlobber(req.ID, balances); err != nil {
 				return nil, nil, common.NewError("kill_blobber_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())
@@ -52,6 +52,10 @@ func (_ *StorageSmartContract) killBlobber(
 	if err != nil {
 		return "", common.NewError("kill_blobber_failed", err.Error())
 	}
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+	if err != nil {
+		return "", common.NewError("kill_blobber_failed", "saving blobber: "+err.Error())
+	}
 	return "", nil
 }
 
@@ -65,6 +69,7 @@ func (_ *StorageSmartContract) killValidator(
 		return "", common.NewError("can't get config", err.Error())
 	}
 
+	var validator = newValidator("")
 	err = provider.Kill(
 		input,
 		t.ClientID,
@@ -72,7 +77,6 @@ func (_ *StorageSmartContract) killValidator(
 		conf.StakePool.KillSlash,
 		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
-			var validator = newValidator(req.ID)
 			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
 				return nil, nil, common.NewError("kill_validator_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())
@@ -97,9 +101,12 @@ func (_ *StorageSmartContract) killValidator(
 		},
 		balances,
 	)
-
 	if err != nil {
 		return "", common.NewError("kill_validator_failed", err.Error())
+	}
+	_, err = balances.InsertTrieNode(validator.GetKey(""), validator)
+	if err != nil {
+		return "", common.NewError("kill_validator_failed", "saving validator: "+err.Error())
 	}
 	return "", nil
 }

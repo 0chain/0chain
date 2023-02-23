@@ -54,9 +54,6 @@ func Kill(
 		return fmt.Errorf("already killed")
 	}
 	p.Kill()
-	if err := p.Save(balances); err != nil {
-		return err
-	}
 
 	sp.Kill()
 	if err := sp.SlashFraction(

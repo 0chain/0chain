@@ -18,14 +18,13 @@ func (_ *StorageSmartContract) shutdownBlobber(
 	if err != nil {
 		return "", common.NewError("shutdown_blobber_failed", "can't get config, "+err.Error())
 	}
-
+	var blobber = newBlobber("")
 	err = provider.ShutDown(
 		input,
 		t.ClientID,
 		conf.OwnerId,
 		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
-			var blobber *StorageNode
 			if blobber, err = getBlobber(req.ID, balances); err != nil {
 				return nil, nil, common.NewError("shutdown_blobber_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())
@@ -45,7 +44,11 @@ func (_ *StorageSmartContract) shutdownBlobber(
 		balances,
 	)
 	if err != nil {
-		return "", common.NewError("kill_blobber_failed", err.Error())
+		return "", common.NewError("shutdown_blobber_failed", err.Error())
+	}
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+	if err != nil {
+		return "", common.NewError("shutdown_blobber_failed", "saving blobber: "+err.Error())
 	}
 	return "", nil
 }
@@ -59,14 +62,13 @@ func (_ *StorageSmartContract) shutdownValidator(
 	if err != nil {
 		return "", common.NewError("shutdown_validator_failed", "can't get config, "+err.Error())
 	}
-
+	var validator = newValidator("")
 	err = provider.ShutDown(
 		input,
 		t.ClientID,
 		conf.OwnerId,
 		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
-			var validator = newValidator(req.ID)
 			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
 				return nil, nil, common.NewError("shutdown_validator_failed",
 					"can't get the blobber "+req.ID+": "+err.Error())
@@ -93,7 +95,11 @@ func (_ *StorageSmartContract) shutdownValidator(
 	)
 
 	if err != nil {
-		return "", common.NewError("kill_validator_failed", err.Error())
+		return "", common.NewError("shutdown_validator_failed", err.Error())
+	}
+	_, err = balances.InsertTrieNode(validator.GetKey(""), validator)
+	if err != nil {
+		return "", common.NewError("shutdown_validator_failed", "saving validator: "+err.Error())
 	}
 	return "", nil
 }

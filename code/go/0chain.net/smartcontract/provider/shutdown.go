@@ -39,9 +39,6 @@ func ShutDown(
 	}
 
 	p.ShutDown()
-	if err := p.Save(balances); err != nil {
-		return err
-	}
 
 	if err = sp.Save(p.Type(), req.ID, balances); err != nil {
 		return err
