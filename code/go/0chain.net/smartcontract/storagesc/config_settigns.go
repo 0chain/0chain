@@ -61,6 +61,7 @@ const (
 
 	ValidatorReward
 	BlobberSlash
+	HealthCheckPeriod
 	MaxBlobbersPerAllocation
 	MaxReadPrice
 	MaxWritePrice
@@ -168,6 +169,7 @@ func initSettingName() {
 	SettingName[FreeAllocationReadPoolFraction] = "free_allocation_settings.read_pool_fraction"
 	SettingName[ValidatorReward] = "validator_reward"
 	SettingName[BlobberSlash] = "blobber_slash"
+	SettingName[HealthCheckPeriod] = "health_check_period"
 	SettingName[MaxBlobbersPerAllocation] = "max_blobbers_per_allocation"
 	SettingName[MaxReadPrice] = "max_read_price"
 	SettingName[MaxWritePrice] = "max_write_price"
@@ -255,6 +257,7 @@ func initSettings() {
 		FreeAllocationReadPoolFraction.String():   {FreeAllocationReadPoolFraction, smartcontract.Float64},
 		ValidatorReward.String():                  {ValidatorReward, smartcontract.Float64},
 		BlobberSlash.String():                     {BlobberSlash, smartcontract.Float64},
+		HealthCheckPeriod.String():                {HealthCheckPeriod, smartcontract.Duration},
 		MaxBlobbersPerAllocation.String():         {MaxBlobbersPerAllocation, smartcontract.Int},
 		MaxReadPrice.String():                     {MaxReadPrice, smartcontract.CurrencyCoin},
 		MaxWritePrice.String():                    {MaxWritePrice, smartcontract.CurrencyCoin},
@@ -542,6 +545,8 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.StakePool.MinLockPeriod = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
+	case HealthCheckPeriod:
+		conf.HealthCheckPeriod = change
 	default:
 		return fmt.Errorf("key: %v not implemented as duration", key)
 	}
@@ -688,6 +693,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.FreeAllocationSettings.Size
 	case FreeAllocationDuration:
 		return conf.FreeAllocationSettings.Duration
+	case HealthCheckPeriod:
+		return conf.HealthCheckPeriod
 	case FreeAllocationReadPriceRangeMin:
 		return conf.FreeAllocationSettings.ReadPriceRange.Min
 	case FreeAllocationReadPriceRangeMax:
