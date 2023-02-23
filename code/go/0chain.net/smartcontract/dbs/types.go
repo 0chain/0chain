@@ -1,8 +1,6 @@
 package dbs
 
 import (
-	"time"
-
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -84,11 +82,4 @@ type SpReward struct {
 type ChallengeResult struct {
 	BlobberId string `json:"blobberId"`
 	Passed    bool   `json:"passed"`
-}
-
-type HealthCheck struct {
-	Provider
-	LastHealthCheck   common.Timestamp `json:"last_heath_check"`
-	Now               common.Timestamp `json:"now"`
-	HealthCheckPeriod time.Duration    `json:"healch_check_period"`
 }

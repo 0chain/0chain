@@ -100,25 +100,3 @@ func (p *Provider) EmitUpdate(sp stakepool.AbstractStakePool, balances cstate.St
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUpdateProvider, p.ID, updates)
 }
-
-func (p *Provider) HealthCheck(
-	now common.Timestamp,
-	healthCheckPeriod time.Duration,
-	balances cstate.StateContextI,
-) {
-	balances.EmitEvent(
-		event.TypeStats,
-		event.TagProviderHealthCheck,
-		p.Id(),
-		dbs.HealthCheck{
-			Provider: dbs.Provider{
-				ProviderId:   p.Id(),
-				ProviderType: p.Type(),
-			},
-			Now:               now,
-			LastHealthCheck:   p.LastHealthCheck,
-			HealthCheckPeriod: healthCheckPeriod,
-		})
-
-	p.LastHealthCheck = now
-}

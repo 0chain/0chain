@@ -30,7 +30,7 @@ type Provider struct {
 	Downtime        uint64           `json:"downtime"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	IsKilled        bool             `json:"is_killed"`
-	IsShutDown      bool             `json:"is_shut_down"`
+	IsShutdown      bool             `json:"is_shutdown"`
 }
 
 type ProviderAggregate interface {
