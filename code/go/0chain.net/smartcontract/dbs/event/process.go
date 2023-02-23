@@ -406,11 +406,8 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	if len(events) == 0 {
 		return s, nil
 	}
-	gs := &globalSnapshot{
-		Snapshot: *s,
-	}
 
-	logging.Logger.Debug("getting blobber aggregate ids", zap.Any("snapshot_before", gs))
+	logging.Logger.Debug("getting blobber aggregate ids", zap.Any("snapshot_before", s))
 
 	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateUserAggregate(round, edb.AggregatePeriod(), s)
@@ -418,14 +415,14 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	edb.updateSharderAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), s)
-	gs.update(events)
+	s.update(events)
 
-	gs.Round = round
-	if err := edb.addSnapshot(gs.Snapshot); err != nil {
-		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
+	s.Round = round
+	if err := edb.addSnapshot(*s); err != nil {
+		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", s, round), zap.Error(err))
 	}
 
-	return &gs.Snapshot, nil
+	return s, nil
 }
 
 func (edb *EventDb) addStat(event Event) (err error) {

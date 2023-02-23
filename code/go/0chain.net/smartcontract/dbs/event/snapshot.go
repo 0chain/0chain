@@ -7,8 +7,6 @@ import (
 	"github.com/0chain/common/core/logging"
 
 	"go.uber.org/zap"
-
-	"github.com/0chain/common/core/currency"
 )
 
 //max_capacity - maybe change it max capacity in blobber config and everywhere else to be less confusing.
@@ -135,14 +133,6 @@ func (edb *EventDb) ReplicateSnapshots(round int64, limit int) ([]Snapshot, erro
 	return snapshots, nil
 }
 
-type globalSnapshot struct {
-	Snapshot
-	totalWritePricePeriod currency.Coin
-	blobberCount          int
-
-	totalTxnFees currency.Coin
-}
-
 func (edb *EventDb) addSnapshot(s Snapshot) error {
 	return edb.Store.Get().Create(&s).Error
 }
@@ -153,7 +143,7 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 	return s, res.Error
 }
 
-func (gs *globalSnapshot) update(e []Event) {
+func (gs *Snapshot) update(e []Event) {
 	for _, event := range e {
 		logging.Logger.Debug("update snapshot",
 			zap.String("tag", event.Tag.String()),
