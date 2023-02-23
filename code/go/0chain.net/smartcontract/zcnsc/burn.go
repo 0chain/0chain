@@ -81,11 +81,6 @@ func (zcn *ZCNSmartContract) Burn(
 	// increase the nonce
 	un.BurnNonce++
 
-	err = un.AddBurnTicket(payload.EthereumAddress, trans.Hash, trans.Nonce)
-	if err != nil {
-		return "", err
-	}
-
 	// Save the user node
 	err = un.Save(ctx)
 	if err != nil {
@@ -107,6 +102,13 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	ctx.EmitEvent(event.TypeStats, event.TagBurn, trans.ClientID, trans.Value)
+
+	ctx.EmitEvent(event.TypeStats, event.TagAddOrUpdateBurnTicket, trans.ClientID, &event.BurnTicket{
+		UserID:          trans.ClientID,
+		EthereumAddress: payload.EthereumAddress,
+		Hash:            trans.Hash,
+		Nonce:           trans.Nonce,
+	})
 
 	resp = string(response.Encode())
 	return

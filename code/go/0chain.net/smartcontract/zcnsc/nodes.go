@@ -19,7 +19,6 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/entity"
 	"github.com/0chain/common/core/util"
 )
 
@@ -348,43 +347,14 @@ func AuthorizerFromEvent(ev *event.Authorizer) (*AuthorizerNode, error) {
 // ----- UserNode ------------------
 
 type UserNode struct {
-	ID          string              `json:"id"`
-	BurnNonce   int64               `json:"burn_nonce"`
-	BurnTickets map[string][][]byte `json:"burn_tickets"`
+	ID        string `json:"id"`
+	BurnNonce int64  `json:"burn_nonce"`
 }
 
 func NewUserNode(id string) *UserNode {
 	return &UserNode{
 		ID: id,
 	}
-}
-
-func (un *UserNode) AddBurnTicket(ethereumAddress string, hash string, nonce int64) error {
-	burnTicketRaw := entity.BurnTicket{Hash: hash, Nonce: nonce}
-	burnTicket, err := json.Marshal(burnTicketRaw)
-	if err != nil {
-		return err
-	}
-	un.BurnTickets[ethereumAddress] = append(un.BurnTickets[ethereumAddress], burnTicket)
-	return nil
-}
-
-func (un *UserNode) GetBurnTickets(ethereumAddress string) ([]entity.BurnTicket, error) {
-	var result []entity.BurnTicket
-
-	burnTickets, ok := un.BurnTickets[ethereumAddress]
-	if !ok {
-		return result, nil
-	}
-
-	for _, burnTicket := range burnTickets {
-		var dst entity.BurnTicket
-		if err := json.Unmarshal(burnTicket, &dst); err != nil {
-			return nil, err
-		}
-		result = append(result, dst)
-	}
-	return result, nil
 }
 
 func (un *UserNode) GetKey() datastore.Key {

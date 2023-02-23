@@ -210,6 +210,7 @@ func initTagString() {
 	TagString[TagValidatorHealthCheck] = "TagValidatorHealthCheck"
 	TagString[TagUpdateUserPayedFees] = "TagUpdateUserPayedFees"
 	TagString[TagUpdateUserCollectedRewards] = "TagUpdateUserCollectedRewards"
+	TagString[TagAddOrUpdateBurnTicket] = "TagAddOrUpdateBurnTicket"
 	TagString[NumberOfTags] = "invalid"
 }
 

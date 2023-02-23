@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/smartcontract/entity"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
@@ -183,12 +183,12 @@ func (c *Chain) GetNotProcessedBurnTicketsHandler(ctx context.Context, r *http.R
 		}
 	}
 
-	burnTickets, err := c.GetEventDb().GetBurnTickets(clientID)
+	burnTickets, err := c.GetEventDb().GetBurnTickets(clientId, ethereumAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve user: %w", err)
+		return nil, fmt.Errorf("failed to retrieve burn tickets: %w", err)
 	}
 
-	var response []entity.BurnTicket
+	var response []event.BurnTicket
 
 	for _, burnTicket := range burnTickets {
 		if burnTicket.Nonce > nonceInt {

@@ -94,7 +94,8 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 	var mints []*state.Mint
 
 	// EventsDB
-	events = make(map[string]*AuthorizerNode, 100)
+	addAuthorizerEvents = make(map[string]*AuthorizerNode, 100)
+	burnTicketEvents = make(map[string][]*event.BurnTicket, 100)
 
 	/// GetClientBalance
 
@@ -227,7 +228,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			if authorizerNode.ID != id {
 				panic("authorizerID must be equal to ID")
 			}
-			events[id] = authorizerNode
+			addAuthorizerEvents[id] = authorizerNode
 		})
 
 	ctx.On("EmitEvent",
@@ -244,7 +245,21 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			if authorizerNode.ID != id {
 				panic("authorizerID must be equal to ID")
 			}
-			events[id] = authorizerNode
+			addAuthorizerEvents[id] = authorizerNode
+		})
+
+	ctx.On("EmitEvent",
+		event.TypeStats,
+		event.TagAddOrUpdateBurnTicket,
+		mock.AnythingOfType("string"),
+		mock.AnythingOfType("event.BurnTicket"),
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, ev *event.BurnTicket) {
+			fmt.Println("Tjfdk")
+			if ev.UserID != id {
+				panic("burn ticket user id must be equal to the id given as a param")
+			}
+			// burnTicketEvents[id] = append(burnTicketEvents[id], /ev)
 		})
 
 	return ctx
