@@ -336,6 +336,7 @@ type Info struct {
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
 	provider.Provider
+	Info
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
