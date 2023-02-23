@@ -1321,7 +1321,18 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	validators, err := edb.GetValidators(pagination)
+
+	values := r.URL.Query()
+	active := values.Get("active")
+
+	var validators []event.Validator
+
+	if active == "true" {
+		validators, err = edb.GetActiveValidators(pagination)
+	} else {
+		validators, err = edb.GetValidators(pagination)
+	}
+
 	if err != nil {
 		err := common.NewErrInternal("cannot get validator list" + err.Error())
 		common.Respond(w, r, nil, err)
