@@ -20,6 +20,10 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		WritePrice:       sn.Terms.WritePrice,
 		MinLockDemand:    sn.Terms.MinLockDemand,
 		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
+		Name:             sn.Name,
+		Description:      sn.Description,
+		WebsiteUrl:       sn.WebsiteUrl,
+		LogoUrl:          sn.LogoUrl,
 
 		Capacity:  sn.Capacity,
 		Allocated: sn.Allocated,
