@@ -16,17 +16,17 @@ func TestSnapshotFunctions(t *testing.T) {
 		s, err := eventDb.GetGlobal()
 		require.NoError(t, err)
 
-		s.BlobberCount = 1
-		s.MinerCount = 2
-		s.SharderCount = 3
-		s.AuthorizerCount = 4
-		s.ValidatorCount = 5
+		s.BlobberCount = int64(1)
+		s.MinerCount = int64(2)
+		s.SharderCount = int64(3)
+		s.AuthorizerCount = int64(4)
+		s.ValidatorCount = int64(5)
 
-		require.Equal(t, 1, s.providerCount(spenum.Blobber))
-		require.Equal(t, 2, s.providerCount(spenum.Miner))
-		require.Equal(t, 3, s.providerCount(spenum.Sharder))
-		require.Equal(t, 4, s.providerCount(spenum.Authorizer))
-		require.Equal(t, 5, s.providerCount(spenum.Validator))
+		require.Equal(t, int64(1), s.providerCount(spenum.Blobber))
+		require.Equal(t, int64(2), s.providerCount(spenum.Miner))
+		require.Equal(t, int64(3), s.providerCount(spenum.Sharder))
+		require.Equal(t, int64(4), s.providerCount(spenum.Authorizer))
+		require.Equal(t, int64(5), s.providerCount(spenum.Validator))
 	})
 
 	t.Run("test ApplyDiff", func(t *testing.T) {
