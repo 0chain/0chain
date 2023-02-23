@@ -29,7 +29,7 @@ type Abstract interface {
 }
 
 type Provider struct {
-	ID              string           `json:"id"`
+	ID              string           `json:"id" validate:"hexadecimal,len=64"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	HasBeenShutDown bool             `json:"is_shut_down"`
 	HasBeenKilled   bool             `json:"is_killed"`
