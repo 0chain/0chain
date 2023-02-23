@@ -3,6 +3,7 @@ package event
 import (
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/model"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -53,7 +54,7 @@ func (v *ValidatorAggregate) SetTotalRewards(value currency.Coin) {
 	v.TotalRewards = value
 }
 
-func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *globalSnapshot) {
+func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *Snapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS validator_temp_ids "+
@@ -81,7 +82,7 @@ func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *global
 
 }
 
-func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit, offset int64) {
+func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offset int64) {
 
 	var ids []string
 	r := edb.Store.Get().
@@ -116,7 +117,10 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 	}
 	logging.Logger.Debug("Validator_snapshot", zap.Int("total_old_Validators", len(oldValidators)))
 
-	var aggregates []ValidatorAggregate
+	var (
+		aggregates []ValidatorAggregate
+		gsDiff     Snapshot
+	)
 	for _, current := range currentValidators {
 		old, found := oldValidators[current.ID]
 		if !found {
@@ -133,9 +137,10 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 
 		aggregates = append(aggregates, aggregate)
 
-		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
+		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 
 	}
+	gs.ApplyDiff(&gsDiff, spenum.Validator)
 
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
@@ -151,13 +156,4 @@ func (edb *EventDb) calculateValidatorAggregate(gs *globalSnapshot, round, limit
 	}
 
 	logging.Logger.Debug("Validator_snapshot", zap.Int("current_Validators", len(currentValidators)))
-
-	// update global snapshot object
-
-	//ttf, err := gs.totalTxnFees.Int64()
-	//if err != nil {
-	//	logging.Logger.Error("converting write price to coin", zap.Error(err))
-	//	return
-	//}
-	//gs.AverageTxnFee = ttf / gs.TransactionsCount
 }

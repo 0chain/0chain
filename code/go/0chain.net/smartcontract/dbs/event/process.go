@@ -413,11 +413,11 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	logging.Logger.Debug("getting blobber aggregate ids", zap.Any("snapshot_before", gs))
 
 	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), s)
-	edb.updateUserAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateMinerAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateSharderAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateUserAggregate(round, edb.AggregatePeriod(), s)
+	edb.updateMinerAggregate(round, edb.AggregatePeriod(), s)
+	edb.updateSharderAggregate(round, edb.AggregatePeriod(), s)
+	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), s)
+	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), s)
 	gs.update(events)
 
 	gs.Round = round

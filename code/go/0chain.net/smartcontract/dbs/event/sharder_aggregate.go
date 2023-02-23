@@ -3,6 +3,7 @@ package event
 import (
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/model"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -54,7 +55,7 @@ func (s *SharderAggregate) SetTotalRewards(value currency.Coin) {
 	s.TotalRewards = value
 }
 
-func (edb *EventDb) updateSharderAggregate(round, pageAmount int64, gs *globalSnapshot) {
+func (edb *EventDb) updateSharderAggregate(round, pageAmount int64, gs *Snapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS sharder_temp_ids "+
@@ -82,7 +83,7 @@ func (edb *EventDb) updateSharderAggregate(round, pageAmount int64, gs *globalSn
 
 }
 
-func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, offset int64) {
+func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset int64) {
 
 	var ids []string
 	r := edb.Store.Get().
@@ -119,7 +120,10 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 	}
 	logging.Logger.Debug("sharder_snapshot", zap.Int("total_old_sharders", len(oldSharders)))
 
-	var aggregates []SharderAggregate
+	var (
+		aggregates []SharderAggregate
+		gsDiff     Snapshot
+	)
 	for _, current := range currentSharders {
 		old, found := oldSharders[current.ID]
 		if !found {
@@ -137,10 +141,14 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 		aggregate.Fees = (old.Fees + current.Fees) / 2
 		aggregates = append(aggregates, aggregate)
 
-		gs.totalTxnFees += aggregate.Fees
-		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
-		gs.TransactionsCount++
+		fees, err := aggregate.Fees.Int64()
+		if err != nil {
+			logging.Logger.Error("sharder aggregate fees failed to convert", zap.Error(err))
+		}
+		gsDiff.AverageTxnFee += fees
+		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 	}
+	gs.ApplyDiff(&gsDiff, spenum.Sharder)
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
@@ -155,13 +163,4 @@ func (edb *EventDb) calculateSharderAggregate(gs *globalSnapshot, round, limit, 
 	}
 
 	logging.Logger.Debug("sharder_snapshot", zap.Int("current_sharders", len(currentSharders)))
-
-	// update global snapshot object
-
-	ttf, err := gs.totalTxnFees.Int64()
-	if err != nil {
-		logging.Logger.Error("converting write price to coin", zap.Error(err))
-		return
-	}
-	gs.AverageTxnFee = ttf / gs.TransactionsCount
 }

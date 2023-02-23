@@ -145,13 +145,13 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		//aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 
-		gsDiff.SuccessfulChallenges = int64(aggregate.ChallengesPassed - old.ChallengesPassed)
-		gsDiff.TotalChallenges = int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
-		gsDiff.AllocatedStorage = aggregate.Allocated - old.Allocated
-		gsDiff.MaxCapacityStorage = aggregate.Capacity - old.Capacity
-		gsDiff.UsedStorage = aggregate.SavedData - old.SavedData
-		gsDiff.TotalRewards = int64(aggregate.TotalRewards - old.TotalRewards)
-		gsDiff.AverageWritePrice = int64(aggregate.WritePrice - old.WritePrice)
+		gsDiff.SuccessfulChallenges += int64(aggregate.ChallengesPassed - old.ChallengesPassed)
+		gsDiff.TotalChallenges += int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
+		gsDiff.AllocatedStorage += aggregate.Allocated - old.Allocated
+		gsDiff.MaxCapacityStorage += aggregate.Capacity - old.Capacity
+		gsDiff.UsedStorage += aggregate.SavedData - old.SavedData
+		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
+		gsDiff.AverageWritePrice += int64(aggregate.WritePrice - old.WritePrice)
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
 		if aggregate.WritePrice == 0 {
@@ -161,7 +161,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 			if err != nil {
 				logging.Logger.Error("converting coin to int64", zap.Error(err))
 			}
-			gsDiff.StakedStorage = ss
+			gsDiff.StakedStorage += ss
 		}
 	}
 	gs.ApplyDiff(&gsDiff, spenum.Blobber)

@@ -3,6 +3,7 @@ package event
 import (
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/model"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -54,7 +55,7 @@ func (a *AuthorizerAggregate) SetTotalRewards(value currency.Coin) {
 	a.TotalRewards = value
 }
 
-func (edb *EventDb) updateAuthorizerAggregate(round, pageAmount int64, gs *globalSnapshot) {
+func (edb *EventDb) updateAuthorizerAggregate(round, pageAmount int64, gs *Snapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS authorizer_temp_ids "+
@@ -82,7 +83,7 @@ func (edb *EventDb) updateAuthorizerAggregate(round, pageAmount int64, gs *globa
 
 }
 
-func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limit, offset int64) {
+func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, offset int64) {
 
 	var ids []string
 	r := edb.Store.Get().
@@ -117,7 +118,10 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 	}
 	logging.Logger.Debug("Authorizer_snapshot", zap.Int("total_old_Authorizers", len(oldAuthorizers)))
 
-	var aggregates []AuthorizerAggregate
+	var (
+		aggregates []AuthorizerAggregate
+		gsDiff     Snapshot
+	)
 	for _, current := range currentAuthorizers {
 		old, found := oldAuthorizers[current.ID]
 		if !found {
@@ -136,10 +140,14 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 
 		aggregate.Fee = (old.Fee + current.Fee) / 2
 		aggregates = append(aggregates, aggregate)
-
-		gs.totalTxnFees += aggregate.Fee
-		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
+		fees, err := aggregate.Fee.Int64()
+		if err != nil {
+			logging.Logger.Error("authorizer aggregate fees failed to convert", zap.Error(err))
+		}
+		gsDiff.AverageTxnFee += fees
+		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 	}
+	gs.ApplyDiff(&gsDiff, spenum.Authorizer)
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
@@ -154,13 +162,4 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *globalSnapshot, round, limi
 	}
 
 	logging.Logger.Debug("Authorizer_snapshot", zap.Int("current_Authorizers", len(currentAuthorizers)))
-
-	// update global snapshot object
-
-	ttf, err := gs.totalTxnFees.Int64()
-	if err != nil {
-		logging.Logger.Error("converting write price to coin", zap.Error(err))
-		return
-	}
-	gs.AverageTxnFee = ttf / gs.TransactionsCount
 }

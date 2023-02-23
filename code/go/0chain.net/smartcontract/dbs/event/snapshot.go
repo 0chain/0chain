@@ -311,22 +311,31 @@ func (gs *globalSnapshot) update(e []Event) {
 			gs.AverageTxnFee = int64(averageFee)
 		case TagAddBlobber:
 			gs.BlobberCount += 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddBlobber"), zap.Any("snapshot", gs))
 		case TagDeleteBlobber:
 			gs.BlobberCount -= 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteBlobber"), zap.Any("snapshot", gs))
 		case TagAddAuthorizer:
 			gs.AuthorizerCount += 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddAuthorizer"), zap.Any("snapshot", gs))
 		case TagDeleteAuthorizer:
 			gs.AuthorizerCount -= 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteAuthorizer"), zap.Any("snapshot", gs))
 		case TagAddMiner:
 			gs.MinerCount += 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddMiner"), zap.Any("snapshot", gs))
 		case TagDeleteMiner:
 			gs.MinerCount -= 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteMiner"), zap.Any("snapshot", gs))
 		case TagAddSharder:
 			gs.SharderCount += 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddSharder"), zap.Any("snapshot", gs))
 		case TagDeleteSharder:
 			gs.SharderCount -= 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteSharder"), zap.Any("snapshot", gs))
 		case TagAddOrOverwiteValidator:
 			gs.ValidatorCount += 1
+			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddValidator"), zap.Any("snapshot", gs))
 		}
 
 	}

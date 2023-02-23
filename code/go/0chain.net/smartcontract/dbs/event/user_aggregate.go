@@ -19,7 +19,7 @@ type UserAggregate struct {
 	CreatedAt       time.Time
 }
 
-func (edb *EventDb) updateUserAggregate(round, pageAmount int64, gs *globalSnapshot) {
+func (edb *EventDb) updateUserAggregate(round, pageAmount int64, gs *Snapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_user_ids "+
@@ -47,7 +47,7 @@ func (edb *EventDb) updateUserAggregate(round, pageAmount int64, gs *globalSnaps
 
 }
 
-func (edb *EventDb) calculateUserAggregate(gs *globalSnapshot, round, limit, offset int64) {
+func (edb *EventDb) calculateUserAggregate(gs *Snapshot, round, limit, offset int64) {
 
 	var ids []string
 	r := edb.Store.Get().
