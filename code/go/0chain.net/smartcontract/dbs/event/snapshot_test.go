@@ -84,14 +84,14 @@ func TestSnapshotFunctions(t *testing.T) {
 func TestProviderCountInSnapshot(t *testing.T) {
 	eventDb, clean := GetTestEventDB(t)
 	defer clean()
-	initialSnapshot := fillSnapshot(t, eventDb)
-
+	fillSnapshot(t, eventDb)
+	
 	t.Run("test blobber count", func(t *testing.T) {
 		s, err := eventDb.GetGlobal()
 		require.NoError(t, err)
 		blobberCountBefore := s.BlobberCount
 		
-		expectedAvgWritePriceAfterIncrement := s.AverageWritePrice * s.BlobberCount / (s.BlobberCount + 1)
+		expectedAvgWritePrice := s.AverageWritePrice * s.BlobberCount / (s.BlobberCount + 1)
 		s.update([]Event{
 			{
 				Type: TypeStats,
@@ -99,8 +99,9 @@ func TestProviderCountInSnapshot(t *testing.T) {
 			},
 		})
 		require.Equal(t, blobberCountBefore+1, s.BlobberCount)
-		require.Equal(t, expectedAvgWritePriceAfterIncrement, s.AverageWritePrice)
+		require.Equal(t, expectedAvgWritePrice, s.AverageWritePrice)
 		
+		expectedAvgWritePrice = s.AverageWritePrice * s.BlobberCount / (s.BlobberCount - 1)
 		s.update([]Event{
 			{
 				Type: TypeStats,
@@ -108,7 +109,7 @@ func TestProviderCountInSnapshot(t *testing.T) {
 			},
 		})
 		require.Equal(t, blobberCountBefore, s.BlobberCount)
-		require.Equal(t, initialSnapshot.AverageWritePrice, s.AverageWritePrice)
+		require.Equal(t, expectedAvgWritePrice, s.AverageWritePrice)
 	})
 
 	t.Run("test miner count", func(t *testing.T) {
