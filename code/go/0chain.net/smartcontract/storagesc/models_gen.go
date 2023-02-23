@@ -2188,9 +2188,9 @@ func (z *Terms) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *ValidationNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 4
 	// string "Provider"
-	o = append(o, 0x83, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o = append(o, 0x84, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
 	o, err = z.Provider.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Provider")
@@ -2204,6 +2204,13 @@ func (z *ValidationNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.StakePoolSettings.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "StakePoolSettings")
+		return
+	}
+	// string "LastHealthCheck"
+	o = append(o, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
+	o, err = z.LastHealthCheck.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "LastHealthCheck")
 		return
 	}
 	return
@@ -2245,6 +2252,12 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "StakePoolSettings")
 				return
 			}
+		case "LastHealthCheck":
+			bts, err = z.LastHealthCheck.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "LastHealthCheck")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -2259,7 +2272,7 @@ func (z *ValidationNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *ValidationNode) Msgsize() (s int) {
-	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 18 + z.StakePoolSettings.Msgsize()
+	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 18 + z.StakePoolSettings.Msgsize() + 16 + z.LastHealthCheck.Msgsize()
 	return
 }
 
@@ -2402,22 +2415,9 @@ func (z *ValidatorNodes) MarshalMsg(b []byte) (o []byte, err error) {
 		if z.Nodes[za0001] == nil {
 			o = msgp.AppendNil(o)
 		} else {
-			// map header, size 3
-			// string "Provider"
-			o = append(o, 0x83, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
-			o, err = z.Nodes[za0001].Provider.MarshalMsg(o)
+			o, err = z.Nodes[za0001].MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "Nodes", za0001, "Provider")
-				return
-			}
-			// string "BaseURL"
-			o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
-			o = msgp.AppendString(o, z.Nodes[za0001].BaseURL)
-			// string "StakePoolSettings"
-			o = append(o, 0xb1, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73)
-			o, err = z.Nodes[za0001].StakePoolSettings.MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, "Nodes", za0001, "StakePoolSettings")
+				err = msgp.WrapError(err, "Nodes", za0001)
 				return
 			}
 		}
@@ -2466,45 +2466,10 @@ func (z *ValidatorNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					if z.Nodes[za0001] == nil {
 						z.Nodes[za0001] = new(ValidationNode)
 					}
-					var zb0003 uint32
-					zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
+					bts, err = z.Nodes[za0001].UnmarshalMsg(bts)
 					if err != nil {
 						err = msgp.WrapError(err, "Nodes", za0001)
 						return
-					}
-					for zb0003 > 0 {
-						zb0003--
-						field, bts, err = msgp.ReadMapKeyZC(bts)
-						if err != nil {
-							err = msgp.WrapError(err, "Nodes", za0001)
-							return
-						}
-						switch msgp.UnsafeString(field) {
-						case "Provider":
-							bts, err = z.Nodes[za0001].Provider.UnmarshalMsg(bts)
-							if err != nil {
-								err = msgp.WrapError(err, "Nodes", za0001, "Provider")
-								return
-							}
-						case "BaseURL":
-							z.Nodes[za0001].BaseURL, bts, err = msgp.ReadStringBytes(bts)
-							if err != nil {
-								err = msgp.WrapError(err, "Nodes", za0001, "BaseURL")
-								return
-							}
-						case "StakePoolSettings":
-							bts, err = z.Nodes[za0001].StakePoolSettings.UnmarshalMsg(bts)
-							if err != nil {
-								err = msgp.WrapError(err, "Nodes", za0001, "StakePoolSettings")
-								return
-							}
-						default:
-							bts, err = msgp.Skip(bts)
-							if err != nil {
-								err = msgp.WrapError(err, "Nodes", za0001)
-								return
-							}
-						}
 					}
 				}
 			}
@@ -2527,7 +2492,7 @@ func (z *ValidatorNodes) Msgsize() (s int) {
 		if z.Nodes[za0001] == nil {
 			s += msgp.NilSize
 		} else {
-			s += 1 + 9 + z.Nodes[za0001].Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.Nodes[za0001].BaseURL) + 18 + z.Nodes[za0001].StakePoolSettings.Msgsize()
+			s += z.Nodes[za0001].Msgsize()
 		}
 	}
 	return
