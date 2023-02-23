@@ -28,10 +28,10 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		}).Error
 		require.NoError(t, err, "owner couldn't be created")
 
-		allocId := createMockAllocations(t, eventDb, 1)[0];
+		allocId := createMockAllocations(t, eventDb, 1)[0]
 		blobber1Id := encryption.Hash("mockBlobber_" + strconv.Itoa(0))
 		blobber2Id := encryption.Hash("mockBlobber_" + strconv.Itoa(1))
-		
+
 		terms := []AllocationBlobberTerm{
 			{
 				AllocationID:     allocId,
@@ -50,10 +50,10 @@ func TestAllocationBlobberTerms(t *testing.T) {
 				MaxOfferDuration: 49 * time.Minute,
 			},
 		}
-	
+
 		err = eventDb.addOrOverwriteAllocationBlobberTerms(terms)
 		require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
-	
+
 		var term *AllocationBlobberTerm
 		var res []AllocationBlobberTerm
 		limit := common2.Pagination{
@@ -63,29 +63,29 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		}
 		res, err = eventDb.GetAllocationBlobberTerms(terms[0].AllocationID, limit)
 		require.Equal(t, 2, len(res), "AllocationBlobberTerm not getting inserted")
-	
+
 		terms[1].MinLockDemand = 70.0
 		err = eventDb.addOrOverwriteAllocationBlobberTerms(terms)
 		require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
-	
+
 		term, err = eventDb.GetAllocationBlobberTerm(terms[1].AllocationID, terms[1].BlobberID)
-		require.Equal(t, terms[1].MinLockDemand, term.MinLockDemand, "Error while overriding AllocationBlobberTerm in event Database")	
+		require.Equal(t, terms[1].MinLockDemand, term.MinLockDemand, "Error while overriding AllocationBlobberTerm in event Database")
 	})
 
 	t.Run("test edb.updateAllocationBlobberTerms", func(t *testing.T) {
 		eventDb, clean := GetTestEventDB(t)
 		defer clean()
-		
+
 		// Create owner and allocation
 		err := eventDb.Get().Model(&User{}).Create(&User{
 			UserID: OwnerId,
 		}).Error
 		require.NoError(t, err, "owner couldn't be created")
 
-		allocId := createMockAllocations(t, eventDb, 1)[0];
+		allocId := createMockAllocations(t, eventDb, 1)[0]
 		blobber1Id := encryption.Hash("mockBlobber_" + strconv.Itoa(0))
 		blobber2Id := encryption.Hash("mockBlobber_" + strconv.Itoa(1))
-		
+
 		terms := []AllocationBlobberTerm{
 			{
 				AllocationID:     allocId,
@@ -104,7 +104,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 				MaxOfferDuration: 49 * time.Minute,
 			},
 		}
-	
+
 		err = eventDb.addOrOverwriteAllocationBlobberTerms(terms)
 		require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
 
@@ -115,8 +115,8 @@ func TestAllocationBlobberTerms(t *testing.T) {
 				ReadPrice:        int64(currency.Coin(59)),
 				WritePrice:       int64(currency.Coin(61)),
 				MinLockDemand:    57.0,
-				MaxOfferDuration: time.Duration(59 * time.Minute),	
-			},{
+				MaxOfferDuration: time.Duration(59 * time.Minute),
+			}, {
 				AllocationID:     allocId,
 				BlobberID:        blobber2Id,
 				ReadPrice:        int64(currency.Coin(61)),
@@ -133,7 +133,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		require.Equal(t, int64(currency.Coin(59)), term.ReadPrice)
 		require.Equal(t, int64(currency.Coin(61)), term.WritePrice)
 		require.Equal(t, float64(57.0), term.MinLockDemand)
-		require.Equal(t, time.Duration(59 * time.Minute), term.MaxOfferDuration)
+		require.Equal(t, time.Duration(59*time.Minute), term.MaxOfferDuration)
 
 		term, err = eventDb.GetAllocationBlobberTerm(allocId, blobber2Id)
 		require.NoError(t, err, "Error while reading Allocation Blobber Terms")
@@ -141,6 +141,6 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		require.Equal(t, int64(currency.Coin(61)), term.ReadPrice)
 		require.Equal(t, int64(currency.Coin(63)), term.WritePrice)
 		require.Equal(t, float64(67.0), term.MinLockDemand)
-		require.Equal(t, time.Duration(69 * time.Minute), term.MaxOfferDuration)
+		require.Equal(t, time.Duration(69*time.Minute), term.MaxOfferDuration)
 	})
 }

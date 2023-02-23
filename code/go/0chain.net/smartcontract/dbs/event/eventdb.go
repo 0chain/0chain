@@ -121,6 +121,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&User{},
 		&UserAggregate{},
 		&UserSnapshot{},
+		&BurnTicket{},
 		&Transaction{},
 		&WriteMarker{},
 		&Validator{},
