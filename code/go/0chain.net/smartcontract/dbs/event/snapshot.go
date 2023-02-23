@@ -67,6 +67,22 @@ func (s *Snapshot) providerCount(provider spenum.Provider) int64 {
 	}
 }
 
+// updateAveragesAfterIncrement updates average fields before incrementing the count of the provider.
+func (s *Snapshot) updateAveragesBeforeIncrement(provider spenum.Provider) {
+	providerCount := s.providerCount(provider)
+	if providerCount > 0 {
+		s.AverageWritePrice = (s.AverageWritePrice * providerCount) / (providerCount + 1)
+	}
+}
+
+// updateAveragesAfterDecrement updates average fields after decrementing the count of the provider.
+func (s *Snapshot) updateAveragesBeforeDecrement(provider spenum.Provider) {
+	providerCount := s.providerCount(provider)
+	if providerCount > 0 {
+		s.AverageWritePrice = (s.AverageWritePrice * providerCount) / (providerCount - 1)
+	}
+}
+
 // ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
 // For some fields, the count of the providers may be needed so a provider parameter is added.
 func (s *Snapshot) ApplyDiff(diff *Snapshot, provider spenum.Provider) {
@@ -300,30 +316,39 @@ func (gs *Snapshot) update(e []Event) {
 			averageFee = averageFee / len(*txns)
 			gs.AverageTxnFee = int64(averageFee)
 		case TagAddBlobber:
+			gs.updateAveragesBeforeIncrement(spenum.Blobber)
 			gs.BlobberCount += 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddBlobber"), zap.Any("snapshot", gs))
 		case TagDeleteBlobber:
+			gs.updateAveragesBeforeDecrement(spenum.Blobber)
 			gs.BlobberCount -= 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteBlobber"), zap.Any("snapshot", gs))
 		case TagAddAuthorizer:
+			gs.updateAveragesBeforeIncrement(spenum.Authorizer)
 			gs.AuthorizerCount += 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddAuthorizer"), zap.Any("snapshot", gs))
 		case TagDeleteAuthorizer:
+			gs.updateAveragesBeforeDecrement(spenum.Authorizer)
 			gs.AuthorizerCount -= 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteAuthorizer"), zap.Any("snapshot", gs))
 		case TagAddMiner:
+			gs.updateAveragesBeforeIncrement(spenum.Miner)
 			gs.MinerCount += 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddMiner"), zap.Any("snapshot", gs))
 		case TagDeleteMiner:
+			gs.updateAveragesBeforeDecrement(spenum.Miner)
 			gs.MinerCount -= 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteMiner"), zap.Any("snapshot", gs))
 		case TagAddSharder:
+			gs.updateAveragesBeforeIncrement(spenum.Sharder)
 			gs.SharderCount += 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddSharder"), zap.Any("snapshot", gs))
 		case TagDeleteSharder:
+			gs.updateAveragesBeforeDecrement(spenum.Sharder)
 			gs.SharderCount -= 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteSharder"), zap.Any("snapshot", gs))
 		case TagAddOrOverwiteValidator:
+			gs.updateAveragesBeforeIncrement(spenum.Validator)
 			gs.ValidatorCount += 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddValidator"), zap.Any("snapshot", gs))
 		}
