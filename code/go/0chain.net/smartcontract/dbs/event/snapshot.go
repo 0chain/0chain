@@ -52,7 +52,7 @@ type Snapshot struct {
 	AuthorizerCount		 int64 `json:"authorizer_count"`                  // Total number of authorizers
 }
 
-func (s *Snapshot) ProviderCount(provider spenum.Provider) int64 {
+func (s *Snapshot) providerCount(provider spenum.Provider) int64 {
 	switch provider {
 	case spenum.Blobber:
 		return s.BlobberCount
@@ -69,34 +69,39 @@ func (s *Snapshot) ProviderCount(provider spenum.Provider) int64 {
 	}
 }
 
-func (s *Snapshot) ApplyDelta(delta Snapshot, provider spenum.Provider) {	
-	s.TotalMint += delta.TotalMint
-	s.TotalChallengePools += delta.TotalChallengePools
-	s.ActiveAllocatedDelta += delta.ActiveAllocatedDelta
-	s.ZCNSupply += delta.ZCNSupply
-	s.TotalValueLocked += delta.TotalValueLocked
-	s.ClientLocks += delta.ClientLocks
-	s.MinedTotal += delta.MinedTotal
-	s.TotalStaked += delta.TotalStaked
-	s.TotalRewards += delta.TotalRewards
-	s.SuccessfulChallenges += delta.SuccessfulChallenges
-	s.TotalChallenges += delta.TotalChallenges
-	s.AllocatedStorage += delta.AllocatedStorage
-	s.MaxCapacityStorage += delta.MaxCapacityStorage
-	s.StakedStorage += delta.StakedStorage
-	s.UsedStorage += delta.UsedStorage
-	s.TransactionsCount += delta.TransactionsCount
-	s.UniqueAddresses += delta.UniqueAddresses
-	s.BlockCount += delta.BlockCount
+// ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
+// For some fields, the count of the providers may be needed so a provider parameter is added.
+func (s *Snapshot) ApplyDiff(diff *Snapshot, provider spenum.Provider) {
+	logging.Logger.Debug("SnapshotDiff", zap.Any("provider", provider), zap.Any("diff", diff), zap.Any("snapshot_before", s))
+	s.TotalMint += diff.TotalMint
+	s.TotalChallengePools += diff.TotalChallengePools
+	s.ActiveAllocatedDelta += diff.ActiveAllocatedDelta
+	s.ZCNSupply += diff.ZCNSupply
+	s.TotalValueLocked += diff.TotalValueLocked
+	s.ClientLocks += diff.ClientLocks
+	s.MinedTotal += diff.MinedTotal
+	s.TotalStaked += diff.TotalStaked
+	s.TotalRewards += diff.TotalRewards
+	s.SuccessfulChallenges += diff.SuccessfulChallenges
+	s.TotalChallenges += diff.TotalChallenges
+	s.AllocatedStorage += diff.AllocatedStorage
+	s.MaxCapacityStorage += diff.MaxCapacityStorage
+	s.StakedStorage += diff.StakedStorage
+	s.UsedStorage += diff.UsedStorage
+	s.TransactionsCount += diff.TransactionsCount
+	s.UniqueAddresses += diff.UniqueAddresses
+	s.BlockCount += diff.BlockCount
 
 	if s.TransactionsCount > 0 {
-		s.AverageTxnFee += delta.AverageTxnFee / s.TransactionsCount
+		s.AverageTxnFee += diff.AverageTxnFee / s.TransactionsCount
 	}
 
-	providerCount := s.ProviderCount(provider)
+	providerCount := s.providerCount(provider)
 	if providerCount > 0 {
-		s.AverageWritePrice += delta.AverageWritePrice / providerCount
+		s.AverageWritePrice += diff.AverageWritePrice / providerCount
 	}
+
+	logging.Logger.Debug("SnapshotDiff", zap.Any("snapshot_after", s))
 }
 
 type FieldType int

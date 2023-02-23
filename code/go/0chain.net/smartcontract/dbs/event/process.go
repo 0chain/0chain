@@ -410,7 +410,9 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 		Snapshot: *s,
 	}
 
-	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), gs)
+	logging.Logger.Debug("getting blobber aggregate ids", zap.Any("snapshot_before", gs))
+
+	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateUserAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateMinerAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateSharderAggregate(round, edb.AggregatePeriod(), gs)

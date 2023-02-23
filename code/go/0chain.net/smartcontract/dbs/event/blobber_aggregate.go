@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/model"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -33,7 +34,7 @@ type BlobberAggregate struct {
 	Downtime            uint64        `json:"downtime"`
 }
 
-func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSnapshot) {
+func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *Snapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
@@ -76,7 +77,7 @@ func paginate(round, pageAmount, count, pageLimit int64) (int64, int64, int) {
 	return size, currentPageNumber, subpageCount
 }
 
-func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, offset int64) {
+func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset int64) {
 
 	var ids []string
 	r := edb.Store.Get().
@@ -112,7 +113,10 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 	}
 	logging.Logger.Debug("blobber_snapshot", zap.Int("total_old_blobbers", len(oldBlobbers)))
 
-	var aggregates []BlobberAggregate
+	var (
+		aggregates []BlobberAggregate
+		gsDiff	   Snapshot
+	)
 	for _, current := range currentBlobbers {
 		old, found := oldBlobbers[current.ID]
 		if !found {
@@ -141,28 +145,27 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		//aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 
-		gs.totalWritePricePeriod += aggregate.WritePrice
-
-		gs.SuccessfulChallenges += int64(aggregate.ChallengesPassed - old.ChallengesPassed)
-		gs.TotalChallenges += int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
-		gs.AllocatedStorage += aggregate.Allocated - old.Allocated
-		gs.MaxCapacityStorage += aggregate.Capacity - old.Capacity
-		gs.UsedStorage += aggregate.SavedData - old.SavedData
-		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
+		gsDiff.SuccessfulChallenges = int64(aggregate.ChallengesPassed - old.ChallengesPassed)
+		gsDiff.TotalChallenges = int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
+		gsDiff.AllocatedStorage = aggregate.Allocated - old.Allocated
+		gsDiff.MaxCapacityStorage = aggregate.Capacity - old.Capacity
+		gsDiff.UsedStorage = aggregate.SavedData - old.SavedData
+		gsDiff.TotalRewards = int64(aggregate.TotalRewards - old.TotalRewards)
+		gsDiff.AverageWritePrice = int64(aggregate.WritePrice - old.WritePrice)
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
 		if aggregate.WritePrice == 0 {
-			gs.StakedStorage = gs.MaxCapacityStorage
+			gs.StakedStorage = gs.MaxCapacityStorage	// chosed not to use gsDiff here not to over-complicate the calculation
 		} else {
 			ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
 			if err != nil {
 				logging.Logger.Error("converting coin to int64", zap.Error(err))
 			}
-			gs.StakedStorage += ss
+			gsDiff.StakedStorage = ss
 		}
-
-		gs.blobberCount++ //todo figure out why we increment blobberCount on every update
 	}
+	gs.ApplyDiff(&gsDiff, spenum.Blobber)
+
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
@@ -177,15 +180,4 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 	}
 
 	logging.Logger.Debug("blobber_snapshot", zap.Int("current_blobebrs", len(currentBlobbers)))
-
-	// update global snapshot object
-	if gs.blobberCount != 0 {
-
-		twp, err := gs.totalWritePricePeriod.Int64()
-		if err != nil {
-			logging.Logger.Error("converting write price to coin", zap.Error(err))
-			return
-		}
-		gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
-	}
 }
