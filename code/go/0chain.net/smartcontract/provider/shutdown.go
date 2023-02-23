@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"0chain.net/smartcontract/stakepool"
@@ -10,23 +9,9 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 )
 
-type ProviderRequest struct {
-	ID string `json:"id"`
-}
-
-func (pr *ProviderRequest) Encode() []byte {
-	b, _ := json.Marshal(pr)
-	return b
-}
-
-func (pr *ProviderRequest) decode(p []byte) error {
-	return json.Unmarshal(p, pr)
-}
-
-func Kill(
+func ShutDown(
 	input []byte,
 	clientID, ownerId string,
-	killSlash float64,
 	providerSpecific func(ProviderRequest) (Abstract, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
@@ -40,31 +25,21 @@ func Kill(
 		return err
 	}
 
-	var errCode = "kill_" + p.Type().String() + "_failed"
+	var errCode = "shutdown_" + p.Type().String() + "_failed"
 	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
 		return ownerId == clientID
 	}); err != nil {
 		return err
 	}
-
 	if p.IsShutDown() {
 		return fmt.Errorf("already shutdown")
 	}
 	if p.IsKilled() {
 		return fmt.Errorf("already killed")
 	}
-	p.Kill()
-	if err := p.Save(balances); err != nil {
-		return err
-	}
 
-	sp.Kill()
-	if err := sp.SlashFraction(
-		killSlash,
-		req.ID,
-		p.Type(),
-		balances,
-	); err != nil {
+	p.ShutDown()
+	if err := p.Save(balances); err != nil {
 		return err
 	}
 

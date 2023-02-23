@@ -17,31 +17,8 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
-// swagger:enum Status
-type Status int
-
-const (
-	Active Status = iota + 1
-	Inactive
-	ShutDown
-	Killed
-	NonExistent
-)
-
-var statusString = []string{"unknown", "active", "inactive", "shut_down", "killed", "non_existent"}
-
-func (p Status) String() string {
-	return statusString[p]
-}
-
-// swagger:model StatusInfo
-type StatusInfo struct {
-	Status Status `json:"status"`
-	Reason string `json:"reason"`
-}
-
 type Abstract interface {
-	Status(common.Timestamp, common.Timestamp) (Status, string)
+	IsActive(common.Timestamp, common.Timestamp) (bool, string)
 	Kill()
 	IsKilled() bool
 	IsShutDown() bool
@@ -69,17 +46,17 @@ func (p *Provider) Id() string {
 	return p.ID
 }
 
-func (p *Provider) Status(now, healthCheckPeriod common.Timestamp) (Status, string) {
+func (p *Provider) IsActive(now, healthCheckPeriod common.Timestamp) (bool, string) {
 	if p.IsKilled() {
-		return Killed, Killed.String()
+		return false, "provider was killed"
 	}
 	if p.IsShutDown() {
-		return ShutDown, ShutDown.String()
+		return false, "provider was shutdown"
 	}
 	if p.LastHealthCheck < (now - healthCheckPeriod) {
-		return Inactive, fmt.Sprintf(" failed health check, last check %v.", p.LastHealthCheck)
+		return false, fmt.Sprintf(" failed health check, last check %v.", p.LastHealthCheck)
 	}
-	return Active, ""
+	return true, ""
 }
 
 func (p *Provider) IsShutDown() bool {

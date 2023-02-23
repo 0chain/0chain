@@ -340,7 +340,6 @@ type StorageNode struct {
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
 	Allocated               int64                  `json:"allocated"` // allocated capacity
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
@@ -348,30 +347,6 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
-}
-
-func (sn *StorageNode) BlobberStatus(now common.Timestamp, conf *Config) (provider.Status, string) {
-	status, reason := sn.Provider.Status(now, common.Timestamp(conf.HealthCheckPeriod.Seconds()))
-	if status == provider.Killed || status == provider.ShutDown {
-		return status, reason
-	}
-	if sn.Terms.WritePrice > conf.MaxWritePrice {
-		status = provider.Inactive
-		reason += fmt.Sprintf(" write price %v, max write prive %v.",
-			sn.Terms.WritePrice, conf.MaxWritePrice)
-	}
-	if sn.Terms.ReadPrice > conf.MaxReadPrice {
-		status = provider.Inactive
-		reason += fmt.Sprintf(" read price %v, max read prive %v.",
-			sn.Terms.ReadPrice, conf.MaxReadPrice)
-	}
-	if sn.Capacity < conf.MinBlobberCapacity {
-		status = provider.Inactive
-		reason += fmt.Sprintf(" capacity %v, lsess than minimum blobber capcaity %v",
-			sn.Capacity, conf.MinBlobberCapacity)
-	}
-
-	return status, reason
 }
 
 // validate the blobber configurations
@@ -813,14 +788,18 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	return nil
 }
 
-func (sa *StorageAllocation) validateAllocationBlobber(
+func (sa *StorageAllocation) isActive(
 	blobber *StorageNode,
 	total, offers currency.Coin,
+	conf *Config,
 	now common.Timestamp,
 ) error {
-	bSize := sa.bSize()
-	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+	active, reason := blobber.Provider.IsActive(now, common.ToSeconds(conf.HealthCheckPeriod))
+	if !active {
+		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
+	}
 
+	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 	// filter by max offer duration
 	if blobber.Terms.MaxOfferDuration < duration {
 		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
@@ -836,14 +815,12 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 		return fmt.Errorf("read price range %v does not match blobber %s write price %v",
 			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
 	}
+
+	bSize := sa.bSize()
 	// filter by blobber's capacity left
 	if blobber.Capacity-blobber.Allocated < bSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
 			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
-	}
-
-	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
-		return fmt.Errorf("blobber %s failed health check", blobber.ID)
 	}
 
 	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, total, offers)
@@ -1022,7 +999,7 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
-	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now); err != nil {
+	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
 		return nil, err
 	}
 
@@ -1149,6 +1126,7 @@ List:
 func (sa *StorageAllocation) validateEachBlobber(
 	blobbers []*storageNodeResponse,
 	creationDate common.Timestamp,
+	conf *Config,
 ) ([]*StorageNode, []string) {
 	var (
 		errs     = make([]string, 0, len(blobbers))
@@ -1156,7 +1134,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 	)
 	for _, b := range blobbers {
 		sn := StoragNodeResponseToStorageNode(*b)
-		err := sa.validateAllocationBlobber(&sn, b.TotalStake, b.TotalOffers, creationDate)
+		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, conf, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errs = append(errs, err.Error())

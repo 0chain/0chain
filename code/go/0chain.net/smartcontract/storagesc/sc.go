@@ -237,11 +237,11 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		err = sc.blobberBlockRewards(balances)
 
 	case "shut-down-blobber":
-		// todo piers _, err = sc.shutDownBlobber(t, input, balances)
+		_, err = sc.shutdownBlobber(t, input, balances)
 	case "kill-blobber":
 		_, err = sc.killBlobber(t, input, balances)
 	case "shut-down-validator":
-		// todo piers _, err = sc.shutDownValidator(t, input, balances)
+		_, err = sc.shutdownValidator(t, input, balances)
 	case "kill-validator":
 		_, err = sc.killValidator(t, input, balances)
 
