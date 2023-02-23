@@ -228,7 +228,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "add_validator":
 		resp, err = sc.addValidator(t, input, balances)
 	case "blobber_health_check":
-		resp, err = sc.blobberHeaelthCheck(t, input, balances)
+		resp, err = sc.blobberHealthCheck(t, input, balances)
 	case "validator_health_check":
 		resp, err = sc.validatorHealthCheck(t, input, balances)
 	case "update_blobber_settings":
@@ -238,13 +238,13 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "blobber_block_rewards":
 		err = sc.blobberBlockRewards(balances)
 
-	case "shut-down-blobber":
+	case "shut_down_blobber":
 		_, err = sc.shutdownBlobber(t, input, balances)
-	case "kill-blobber":
+	case "kill_blobber":
 		_, err = sc.killBlobber(t, input, balances)
-	case "shut-down-validator":
+	case "shut_down_validator":
 		_, err = sc.shutdownValidator(t, input, balances)
-	case "kill-validator":
+	case "kill_validator":
 		_, err = sc.killValidator(t, input, balances)
 
 	// read_pool

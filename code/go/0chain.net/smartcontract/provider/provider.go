@@ -3,7 +3,6 @@ package provider
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
@@ -25,7 +24,6 @@ type Abstract interface {
 	Id() string
 	Save(state.StateContextI) error
 	Type() spenum.Provider
-	HealthCheck(common.Timestamp, time.Duration, cstate.StateContextI)
 	ShutDown()
 	EmitUpdate(stakepool.AbstractStakePool, cstate.StateContextI)
 }

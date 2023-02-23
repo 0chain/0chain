@@ -373,8 +373,9 @@ func AddMockBlobbers(
 		const mockUsedData = 1000
 		blobber := &StorageNode{
 			Provider: provider.Provider{
-				ID:           id,
-				ProviderType: spenum.Blobber,
+				ID:              id,
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: balances.GetTransaction().CreationDate,
 			},
 			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
@@ -384,7 +385,6 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
-			LastHealthCheck:   balances.GetTransaction().CreationDate,
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}

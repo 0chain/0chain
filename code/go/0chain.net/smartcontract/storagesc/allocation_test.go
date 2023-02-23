@@ -75,12 +75,12 @@ func TestSelectBlobbers(t *testing.T) {
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
 			Provider: provider.Provider{
-				ID:           mockBlobberId + strconv.Itoa(index),
-				ProviderType: spenum.Blobber,
+				ID:              mockBlobberId + strconv.Itoa(index),
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: common.Timestamp(now.Unix()),
 			},
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: common.Timestamp(now.Unix()),
+			BaseURL:  mockURL + strconv.Itoa(index),
+			Capacity: mockBlobberCapacity,
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -335,8 +335,9 @@ func TestChangeBlobbers(t *testing.T) {
 
 			blobber := &StorageNode{
 				Provider: provider.Provider{
-					ID:           ba.BlobberID,
-					ProviderType: spenum.Blobber,
+					ID:              ba.BlobberID,
+					ProviderType:    spenum.Blobber,
+					LastHealthCheck: now,
 				},
 				Capacity: mockBlobberCapacity,
 				Terms: Terms{
@@ -344,7 +345,6 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:        mockReadPrice,
 					WritePrice:       mockWritePrice,
 				},
-				LastHealthCheck: now,
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
@@ -564,12 +564,12 @@ func TestExtendAllocation(t *testing.T) {
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
 			Provider: provider.Provider{
-				ID:           mockBlobberId + strconv.Itoa(index),
-				ProviderType: spenum.Blobber,
+				ID:              mockBlobberId + strconv.Itoa(index),
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: now - blobberHealthTime + 1,
 			},
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: now - blobberHealthTime + 1,
+			BaseURL:  mockURL + strconv.Itoa(index),
+			Capacity: mockBlobberCapacity,
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -1027,8 +1027,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 	all.Nodes = []*StorageNode{
 		{
 			Provider: provider.Provider{
-				ID:           "b1",
-				ProviderType: spenum.Blobber,
+				ID:              "b1",
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: 0,
 			},
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
@@ -1037,14 +1038,14 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.1,
 				MaxOfferDuration: 200 * time.Second,
 			},
-			Capacity:        25 * GB, // 20 GB
-			Allocated:       5 * GB,  //  5 GB
-			LastHealthCheck: 0,
+			Capacity:  25 * GB, // 20 GB
+			Allocated: 5 * GB,  //  5 GB
 		},
 		{
 			Provider: provider.Provider{
-				ID:           "b2",
-				ProviderType: spenum.Blobber,
+				ID:              "b2",
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: 0,
 			},
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
@@ -1053,9 +1054,8 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.05,
 				MaxOfferDuration: 250 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
-			Allocated:       10 * GB, // 10 GB
-			LastHealthCheck: 0,
+			Capacity:  20 * GB, // 20 GB
+			Allocated: 10 * GB, // 10 GB
 		},
 	}
 	return
@@ -1934,8 +1934,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// Other cannot perform any other action than extending.
 	req = updateAllocationRequest{
-		ID:          alloc.ID,
-		FileOptions: 61,
+		ID:                 alloc.ID,
+		FileOptions:        61,
 		FileOptionsChanged: true,
 	}
 	tp += 100

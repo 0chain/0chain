@@ -738,7 +738,10 @@ func BenchmarkTests(
 				ID: getMockBlobberId(0),
 			}).Encode(),
 			endpoint: ssc.killBlobber,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.StorageOwner),
+				CreationDate: creationTime,
+			},
 		},
 		{
 			name: "storage.kill_validator",
@@ -746,7 +749,34 @@ func BenchmarkTests(
 				ID: getMockValidatorId(0),
 			}).Encode(),
 			endpoint: ssc.killValidator,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.StorageOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
+			name: "storage.shutdown_blobber",
+			input: (&provider.ProviderRequest{
+				ID: getMockBlobberId(0),
+			}).Encode(),
+			endpoint: ssc.shutdownBlobber,
+			txn: &transaction.Transaction{
+				CreationDate: creationTime + 1,
+				ClientID:     getMockBlobberId(0),
+				ToClientID:   ADDRESS,
+			},
+		},
+		{
+			name: "storage.shutdown_validator",
+			input: (&provider.ProviderRequest{
+				ID: getMockValidatorId(0),
+			}).Encode(),
+			endpoint: ssc.shutdownValidator,
+			txn: &transaction.Transaction{
+				CreationDate: creationTime + 1,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
 		},
 		{
 			name:     "storage.update_settings",
