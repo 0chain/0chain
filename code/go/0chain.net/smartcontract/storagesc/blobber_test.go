@@ -1299,3 +1299,26 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	})
 
 }
+
+func TestBlobberHealthCheck(t *testing.T) {
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+
+		tp int64 = 100
+	)
+
+	setConfig(t, balances)
+
+	var (
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		b, err = ssc.getBlobber(blob.id, balances)
+	)
+	require.NoError(t, err)
+
+	// check health
+	_, err = healthCheckBlobber(t, b, 0, tp, ssc, balances)
+	require.NoError(t, err)
+
+}
