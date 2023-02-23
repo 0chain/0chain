@@ -2216,6 +2216,8 @@ type storageNodeResponse struct {
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
 	Allocated               int64                  `json:"allocated"` // allocated capacity
 	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
+	IsKilled                bool                   `json:"is_killed"`
+	IsShutdown              bool                   `json:"is_shutdown"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
@@ -2247,21 +2249,25 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		LastRewardDataReadRound: sn.LastRewardDataReadRound,
 		StakePoolSettings:       sn.StakePoolSettings,
 		RewardRound:             sn.RewardRound,
+		IsKilled:                sn.IsKilled(),
+		IsShutdown:              sn.IsShutDown(),
 	}
 }
 
 func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 	return StorageNode{
 		Provider: provider.Provider{
-			ID:           snr.ID,
-			ProviderType: spenum.Blobber,
+			ID:              snr.ID,
+			ProviderType:    spenum.Blobber,
+			LastHealthCheck: snr.LastHealthCheck,
+			HasBeenKilled:   snr.IsKilled,
+			HasBeenShutDown: snr.IsShutdown,
 		},
 		BaseURL:                 snr.BaseURL,
 		Geolocation:             snr.Geolocation,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
 		Allocated:               snr.Allocated,
-		LastHealthCheck:         snr.LastHealthCheck,
 		PublicKey:               snr.PublicKey,
 		SavedData:               snr.SavedData,
 		DataReadLastRewardRound: snr.DataReadLastRewardRound,
@@ -2302,6 +2308,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		TotalOffers:              blobber.OffersTotal,
 		TotalServiceCharge:       blobber.Rewards.TotalRewards,
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
+		IsKilled:                 blobber.IsKilled,
+		IsShutdown:               blobber.IsShutdown,
 	}
 }
 
