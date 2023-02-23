@@ -14,6 +14,10 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
+const (
+	validatorHealthTime = 60 * 60 // 1 hour
+)
+
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
 	newValidator := newValidator("")
 	err := newValidator.Decode(input) //json.Unmarshal(input, &newValidator)
@@ -85,6 +89,8 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
+
+	newValidator.LastHealthCheck = t.CreationDate
 
 	if err = newValidator.emitAddOrOverwrite(sp, balances); err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
@@ -251,9 +257,47 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
+	inputValidator.LastHealthCheck = t.CreationDate
+
 	if err := inputValidator.emitUpdate(sp, balances); err != nil {
 		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
 	}
 
 	return
+}
+
+func filterHealthyValidators(now common.Timestamp) filterValidatorFunc {
+	return filterValidatorFunc(func(v *ValidationNode) (kick bool, err error) {
+		return v.LastHealthCheck <= (now - validatorHealthTime), nil
+	})
+}
+
+func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
+	_ []byte, balances state.StateContextI,
+) (string, error) {
+
+	var (
+		validator *ValidationNode
+		downtime  uint64
+		err       error
+	)
+
+	if validator, err = sc.getValidator(t.ClientID, balances); err != nil {
+		return "", common.NewError("validator_health_check_failed",
+			"can't get the validator "+t.ClientID+": "+err.Error())
+	}
+
+	downtime = common.Downtime(validator.LastHealthCheck, t.CreationDate)
+	validator.LastHealthCheck = t.CreationDate
+
+	emitValidatorHealthCheck(validator, downtime, balances)
+
+	_, err = balances.InsertTrieNode(validator.GetKey(sc.ID), validator)
+
+	if err != nil {
+		return "", common.NewError("validator_health_check_failed",
+			"can't Save validator: "+err.Error())
+	}
+
+	return string(validator.Encode()), nil
 }
