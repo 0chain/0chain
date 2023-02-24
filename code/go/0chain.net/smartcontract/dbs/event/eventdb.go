@@ -19,9 +19,6 @@ func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, e
 		return nil, err
 	}
 
-	if settings.PartitionChangePeriod == 0 {
-		settings.PartitionChangePeriod = 1
-	}
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
@@ -125,7 +122,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&User{},
 		&UserAggregate{},
 		&UserSnapshot{},
-		// &BurnTicket{},
+		&BurnTicket{},
 		&Transaction{},
 		&WriteMarker{},
 		&Validator{},

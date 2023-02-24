@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"time"
 
 	"0chain.net/smartcontract/dbs/model"
@@ -8,14 +9,13 @@ import (
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type BurnTicket struct {
 	model.UpdatableModel
 	UserID          string `json:"user_id" gorm:"not null"`
 	EthereumAddress string `json:"ethereum_address" gorm:"not null"`
-	Hash            string `json:"hash" gorm:"not null"`
+	Hash            string `json:"hash" gorm:"unique"`
 	Nonce           int64  `json:"nonce" gorm:"not null"`
 }
 
@@ -36,9 +36,22 @@ func (edb *EventDb) addBurnTicket(burnTicket BurnTicket) error {
 	defer func() {
 		logging.Logger.Debug("event db - upsert burn ticket", zap.Duration("duration", time.Since(ts)))
 	}()
-	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true,
-		Columns: []clause.Column{{Name: "user_id"}, {Name: "ethereum_address"}, {Name: "hash"}, {Name: "nonce"}},
-	}).Create(&burnTicket).Error
+
+	result := edb.Store.Get().Model(&BurnTicket{}).
+		Where("ethereum_address = ?",
+			burnTicket.EthereumAddress).
+		Where("nonce = ?",
+			burnTicket.Nonce).
+		FirstOrCreate(&burnTicket)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("burn ticket with the given ethereum address and nonce already exists")
+	}
+	return nil
 }
 
 func mergeAddBurnTicket() *eventsMergerImpl[BurnTicket] {
