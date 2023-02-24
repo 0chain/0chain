@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -69,10 +72,10 @@ func Kill(
 		return err
 	}
 
-	// todo piers
-	//if err := emitUpdateProvider(p, sp, balances); err != nil {
-	//	return common.NewError(errCode, fmt.Sprintf("emitting event: %v", err))
-	//}
+	balances.EmitEvent(event.TypeStats, event.TagKillProvider, p.Id(), dbs.Provider{
+		ProviderId:   p.Id(),
+		ProviderType: p.Type(),
+	})
 
 	return nil
 }

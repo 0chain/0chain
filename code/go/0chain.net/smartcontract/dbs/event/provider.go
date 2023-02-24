@@ -5,6 +5,9 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/config"
@@ -122,33 +125,46 @@ func (edb *EventDb) ReplicateProviderAggregates(round int64, limit int, offset i
 	return nil
 }
 
-// todo piers rewrite using updater
-func (edb *EventDb) updateProvider(
-	updates dbs.DbUpdateProvider,
-) error {
-	model, err := providerModel(updates.Type)
-	if err != nil {
-		return err
-	}
-	return edb.Store.Get().
-		Model(&model).
-		Where(updates.Type.String()+"_id = ?", updates.Id).
-		Updates(updates.Updates).Error
+func providerToTableName(pType spenum.Provider) string {
+	return pType.String() + "s"
 }
 
-func providerModel(pType spenum.Provider) (interface{}, error) {
-	switch pType {
-	case spenum.Blobber:
-		return Blobber{}, nil
-	case spenum.Validator:
-		return Validator{}, nil
-	case spenum.Miner:
-		return Miner{}, nil
-	case spenum.Sharder:
-		return Sharder{}, nil
-	case spenum.Authorizer:
-		return &Authorizer{}, nil
-	default:
-		return nil, fmt.Errorf("unrecognised provider type %v", pType)
+func splitProviders(
+	providers []dbs.Provider,
+) map[spenum.Provider][]string {
+	idSlices := make(map[spenum.Provider][]string, 5)
+	for _, provider := range providers {
+		var ids []string
+		ids, _ = idSlices[provider.ProviderType]
+		ids = append(ids, provider.ProviderId)
+		idSlices[provider.ProviderType] = ids
 	}
+	return idSlices
+}
+
+func (edb *EventDb) providersSetBoolean(providers []dbs.Provider, field string, value bool) error {
+	splitProviders := splitProviders(providers)
+	for pType, ids := range splitProviders {
+		table := providerToTableName(pType)
+		var values []bool
+		for i := 0; i < len(ids); i++ {
+			values = append(values, value)
+		}
+		if err := edb.setBoolean(table, ids, field, values); err != nil {
+			logging.Logger.Error("updating boolean field "+table+"."+field,
+				zap.Error(err))
+		}
+	}
+	return nil
+}
+
+func (edb *EventDb) setBoolean(
+	table string,
+	ids []string,
+	column string,
+	values []bool,
+) error {
+	return CreateBuilder(table, "id", ids).
+		AddUpdate(column, values).
+		Exec(edb).Error
 }

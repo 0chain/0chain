@@ -3,12 +3,8 @@ package provider
 import (
 	"fmt"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
 
@@ -22,7 +18,6 @@ type Abstract interface {
 	Id() string
 	Type() spenum.Provider
 	ShutDown()
-	EmitUpdate(stakepool.AbstractStakePool, cstate.StateContextI)
 }
 
 type Provider struct {
@@ -72,22 +67,4 @@ func (p *Provider) Kill() {
 
 func (p *Provider) Type() spenum.Provider {
 	return p.ProviderType
-}
-
-func (p *Provider) EmitUpdate(sp stakepool.AbstractStakePool, balances cstate.StateContextI) {
-	updates := dbs.NewDbUpdateProvider(p.Id(), p.Type())
-	updates.Updates = map[string]interface{}{
-		"primaryKey":        p.Id(),
-		"last_health_check": p.LastHealthCheck,
-		"is_killed":         p.IsKilled(),
-		"is_shut_down":      p.IsShutDown(),
-	}
-	if sp != nil {
-		updates.Updates["delegate_wallet"] = sp.GetSettings().DelegateWallet
-		updates.Updates["min_stake"] = sp.GetSettings().MinStake
-		updates.Updates["max_stake"] = sp.GetSettings().MaxStake
-		updates.Updates["num_delegates"] = sp.GetSettings().MaxNumDelegates
-		updates.Updates["service_charge"] = sp.GetSettings().ServiceChargeRatio
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateProvider, p.ID, updates)
 }
