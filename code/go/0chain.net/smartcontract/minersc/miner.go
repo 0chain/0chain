@@ -116,7 +116,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	nodeIDs, err := getNodeIDs(balances, AllMinersKey)
 	if err != nil {
-		return "", common.NewErrorf("add_miner", "could not get miner ids", err)
+		return "", common.NewErrorf("add_miner", "could not get miner ids: %v", err)
 	}
 
 	nodeIDs = append(nodeIDs, newMiner.ID)

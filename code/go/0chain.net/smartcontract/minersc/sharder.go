@@ -141,7 +141,7 @@ func (msc *MinerSmartContract) AddSharder(
 
 	nodeIDs, err := getNodeIDs(balances, AllShardersKey)
 	if err != nil {
-		return "", common.NewErrorf("add_sharder", "could not get sharder ids", err)
+		return "", common.NewErrorf("add_sharder", "could not get sharder ids: %v", err)
 	}
 
 	nodeIDs = append(nodeIDs, newSharder.ID)

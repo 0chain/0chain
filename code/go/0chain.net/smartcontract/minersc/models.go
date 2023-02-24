@@ -1050,10 +1050,14 @@ type NodeIDs []string
 func getNodeIDs(state cstate.CommonStateContextI, key string) (NodeIDs, error) {
 	var nIDs NodeIDs
 	err := state.GetTrieNode(key, &nIDs)
-	if err != nil {
+	switch err {
+	case nil:
+		return nIDs, nil
+	case util.ErrValueNotPresent:
+		return NodeIDs{}, nil
+	default:
 		return nil, err
 	}
-	return nIDs, nil
 }
 
 func (n *NodeIDs) save(state cstate.StateContextI, key string) error {
