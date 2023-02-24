@@ -389,34 +389,34 @@ func TestExecuteSmartContract(t *testing.T) {
 		args    args
 		want    string
 		wantErr bool
-	}{ /*
-			{
-				name: "Invalid_Address_ERR",
-				args: args{
-					t: &transaction.Transaction{
-						ToClientID: "unknown",
-					},
-					td: &sci.SmartContractTransactionData{
-						FunctionName: "miner_health_check",
-						InputData:    json.RawMessage{},
-					},
+	}{
+		{
+			name: "Invalid_Address_ERR",
+			args: args{
+				t: &transaction.Transaction{
+					ToClientID: "unknown",
 				},
-				wantErr: true,
+				td: &sci.SmartContractTransactionData{
+					FunctionName: "miner_health_check",
+					InputData:    json.RawMessage{},
+				},
 			},
-			{
-				name: "Invalid_JSON_Data_ERR",
-				args: args{
-					balances: stateContextIMock,
-					t: &transaction.Transaction{
-						ToClientID: faucetsc.ADDRESS,
-					},
-					td: &sci.SmartContractTransactionData{
-						FunctionName: "update-settings",
-						InputData:    json.RawMessage("}{"),
-					},
+			wantErr: true,
+		},
+		{
+			name: "Invalid_JSON_Data_ERR",
+			args: args{
+				balances: stateContextIMock,
+				t: &transaction.Transaction{
+					ToClientID: faucetsc.ADDRESS,
 				},
-				wantErr: true,
-			},*/
+				td: &sci.SmartContractTransactionData{
+					FunctionName: "update-settings",
+					InputData:    json.RawMessage("}{"),
+				},
+			},
+			wantErr: true,
+		},
 		{
 			name: "OK",
 			args: args{
