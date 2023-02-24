@@ -103,6 +103,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
 	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
+	sn.StakePoolSettings.DelegateWallet = c.id
 	return mustEncode(t, &sn)
 }
 
@@ -159,7 +160,7 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	return ssc.addValidator(tx, input, balances)
 }
 
-func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
+func updateBlobberAdd(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
 	ssc *StorageSmartContract, balances chainState.StateContextI) (
 	resp string, err error) {
 
@@ -169,6 +170,18 @@ func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int
 	)
 	balances.(*testBalances).setTransaction(t, tx)
 	return ssc.addBlobber(tx, input, balances)
+}
+
+func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
+	ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = blob.Encode()
+		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).setTransaction(t, tx)
+	return ssc.updateBlobberSettings(tx, input, balances)
 }
 
 func healthCheckBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (

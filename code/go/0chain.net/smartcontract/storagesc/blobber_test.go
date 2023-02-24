@@ -1322,3 +1322,26 @@ func TestBlobberHealthCheck(t *testing.T) {
 	require.NoError(t, err)
 
 }
+
+func TestOnlyAdd(t *testing.T) {
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+
+		tp int64 = 100
+	)
+
+	setConfig(t, balances)
+
+	var (
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		b, err = ssc.getBlobber(blob.id, balances)
+	)
+	require.NoError(t, err)
+
+	b.BaseURL = "https://newabcurl.com"
+	_, err = updateBlobberAdd(t, b, 0, tp, ssc, balances)
+	require.Error(t, err)
+
+}

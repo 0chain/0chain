@@ -217,6 +217,8 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // tokens left will be moved to unlocked part of related stake pool;
 // the part can be moved back to the blobber anytime or used to
 // increase blobber's capacity or write_price next time
+
+//only use this function to add blobber(for update call updateBlobberSettings)
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
@@ -243,7 +245,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return "", err
 	}
 
-	// insert, update or remove blobber
+	// insert blobber
 	if err = sc.insertBlobber(t, conf, blobber, balances); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed", err.Error())
 	}
@@ -850,10 +852,10 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
-	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
+	_, err = sc.getBlobber(blobber.ID, balances)
 	if err == nil {
-		// already exist, update it
-		return sc.updateBlobber(t, conf, blobber, savedBlobber, balances)
+		// already exists with same id
+		return fmt.Errorf("blobber already exists,with id: %s ", blobber.ID)
 	}
 
 	if err != util.ErrValueNotPresent {
@@ -878,7 +880,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, spenum.Blobber, blobber.ID,
+	sp, err = sc.createStakePool(conf, spenum.Blobber, blobber.ID,
 		blobber.StakePoolSettings, balances)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
