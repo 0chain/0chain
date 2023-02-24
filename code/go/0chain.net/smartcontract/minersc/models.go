@@ -707,6 +707,10 @@ func (smn *SimpleNode) Validate() error {
 	return validate.Struct(smn)
 }
 
+func (smn *SimpleNode) GetN2NHostKey(scAddress string) string {
+	return scAddress + encryption.Hash(fmt.Sprintf("node_n2n_host_port:%s:%d", smn.N2NHost, smn.Port))
+}
+
 type ViewChangeLock struct {
 	DeleteViewChangeSet bool   `json:"delete_view_change_set"`
 	DeleteVC            int64  `json:"delete_after_view_change"`
@@ -1120,4 +1124,33 @@ func quickFixDuplicateHosts(nn *MinerNode, allNodes []*MinerNode) error {
 	}
 	nn.Host, nn.N2NHost, nn.Port = host, n2nhost, port
 	return nil
+}
+
+func insertNodeN2NHost(balances cstate.StateContextI, scAddress string, nn *MinerNode) error {
+	localhost := regexp.MustCompile(`^(?:(?:https|http)\:\/\/)?(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:\/.*)?$`)
+	host := strings.TrimSpace(nn.Host)
+	n2nhost := strings.TrimSpace(nn.N2NHost)
+	port := nn.Port
+	if n2nhost == "" || localhost.MatchString(n2nhost) {
+		return fmt.Errorf("invalid n2nhost: '%v'", n2nhost)
+	}
+	if host == "" || localhost.MatchString(host) {
+		host = n2nhost
+	}
+
+	nn.Host, nn.N2NHost, nn.Port = host, n2nhost, port
+	key := nn.GetN2NHostKey(scAddress)
+	err := balances.GetTrieNode(key, &datastore.NOIDField{})
+	switch err {
+	case nil:
+		return fmt.Errorf("n2nhost:port already exists: '%v:%v'", n2nhost, port)
+	case util.ErrValueNotPresent:
+		_, err = balances.InsertTrieNode(key, &datastore.NOIDField{})
+		if err != nil {
+			return fmt.Errorf("insert node n2nhost:port failed: %v", err)
+		}
+		return nil
+	default:
+		return err
+	}
 }

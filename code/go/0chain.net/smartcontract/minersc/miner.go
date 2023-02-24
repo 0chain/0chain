@@ -109,11 +109,9 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		return string(newMiner.Encode()), nil
 	}
 
-	// miner does not exist
-	// TODO: do miner host and port checking
-	//if err = quickFixDuplicateHosts(newMiner, allMiners.Nodes); err != nil {
-	//	return "", common.NewError("add_miner", err.Error())
-	//}
+	if err = insertNodeN2NHost(balances, ADDRESS, newMiner); err != nil {
+		return "", common.NewError("add_miner", err.Error())
+	}
 
 	nodeIDs, err := getNodeIDs(balances, AllMinersKey)
 	if err != nil {

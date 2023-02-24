@@ -135,10 +135,9 @@ func (msc *MinerSmartContract) AddSharder(
 		return string(newSharder.Encode()), nil
 	}
 
-	// TODO: duplicate host and port checking
-	//if err = quickFixDuplicateHosts(newSharder, allSharders.Nodes); err != nil {
-	//	return "", common.NewError("add_sharder", err.Error())
-	//}
+	if err = insertNodeN2NHost(balances, ADDRESS, newSharder); err != nil {
+		return "", common.NewError("add_sharder", err.Error())
+	}
 
 	nodeIDs, err := getNodeIDs(balances, AllShardersKey)
 	if err != nil {

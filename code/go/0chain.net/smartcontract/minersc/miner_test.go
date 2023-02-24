@@ -160,13 +160,12 @@ func TestAddMiner(t *testing.T) {
 		now      int64
 
 		miners []*miner
-		//sharders []*sharder
 	)
 
 	setConfig(t, balances)
 
 	for i := 0; i < 10; i++ {
-		mn, err := newMiner(msc, now, stakeHolders, stakeVal, true, balances)
+		mn, err := addMiner(t, msc, now, true, balances)
 		require.NoError(t, err)
 		miners = append(miners, mn)
 		now += 10
@@ -181,13 +180,20 @@ func TestAddMiner(t *testing.T) {
 	}
 
 	t.Run("add miner not in magic block", func(t *testing.T) {
-		_, err = newMiner(msc, now, stakeHolders, stakeVal, false, balances)
+		_, err = addMiner(t, msc, now, false, balances)
 		require.EqualError(t, err, "add_miner: failed to add new miner: Not in magic block")
 	})
 
 	t.Run("add miner already exist", func(t *testing.T) {
 		m := miners[0]
-		_, _, err := m.miner.callAddMiner(msc, now, m.delegate.id, balances)
+		_, err := m.execAddMinerTxn(msc, now, balances)
 		require.NoError(t, err) // no error expected
+	})
+
+	t.Run("duplicate n2n host", func(t *testing.T) {
+		m := newMiner(t, true, balances)
+		m.node.N2NHost = miners[0].node.N2NHost
+		_, err := m.execAddMinerTxn(msc, now, balances)
+		require.ErrorContains(t, err, "add_miner: n2nhost:port already exists") // no error expected
 	})
 }

@@ -164,7 +164,7 @@ func TestAddSharder(t *testing.T) {
 	setConfig(t, balances)
 
 	for i := 0; i < 10; i++ {
-		sn, err := newSharder(msc, now, stakeHolders, stakeVal, true, balances)
+		sn, err := addSharder(t, msc, now, true, balances)
 		require.NoError(t, err)
 		sharders = append(sharders, sn)
 		now += 10
@@ -179,13 +179,20 @@ func TestAddSharder(t *testing.T) {
 	}
 
 	t.Run("add sharder not in magic block", func(t *testing.T) {
-		_, err = newSharder(msc, now, stakeHolders, stakeVal, false, balances)
+		_, err = addSharder(t, msc, now, false, balances)
 		require.EqualError(t, err, "add_sharder: failed to add new sharder: Not in magic block")
 	})
 
 	t.Run("add sharder already exist", func(t *testing.T) {
 		s := sharders[0]
-		_, _, err := s.sharder.callAddSharder(msc, now, s.delegate.id, balances)
+		_, err := s.execAddSharderTxn(msc, now, balances)
 		require.NoError(t, err) // no error expected
+	})
+
+	t.Run("duplicate n2n host", func(t *testing.T) {
+		m := newSharder(t, true, balances)
+		m.node.N2NHost = sharders[0].node.N2NHost
+		_, err := m.execAddSharderTxn(msc, now, balances)
+		require.ErrorContains(t, err, "add_sharder: n2nhost:port already exists") // no error expected
 	})
 }
