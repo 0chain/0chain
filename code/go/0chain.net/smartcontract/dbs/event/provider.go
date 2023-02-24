@@ -135,7 +135,7 @@ func splitProviders(
 	idSlices := make(map[spenum.Provider][]string, 5)
 	for _, provider := range providers {
 		var ids []string
-		ids, _ = idSlices[provider.ProviderType]
+		ids = idSlices[provider.ProviderType]
 		ids = append(ids, provider.ProviderId)
 		idSlices[provider.ProviderType] = ids
 	}
