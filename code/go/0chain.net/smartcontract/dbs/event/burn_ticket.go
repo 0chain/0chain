@@ -31,17 +31,16 @@ func (edb *EventDb) GetBurnTickets(userID, ethereumAddress string) ([]BurnTicket
 	return burnTickets, nil
 }
 
-func (edb *EventDb) addOrUpdateBurnTicket(burnTicket BurnTicket) error {
+func (edb *EventDb) addBurnTicket(burnTicket BurnTicket) error {
 	ts := time.Now()
 	defer func() {
 		logging.Logger.Debug("event db - upsert burn ticket", zap.Duration("duration", time.Since(ts)))
 	}()
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "ethereum_address"}},
-		UpdateAll: true,
+	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true,
+		Columns: []clause.Column{{Name: "user_id"}, {Name: "ethereum_address"}, {Name: "hash"}, {Name: "nonce"}},
 	}).Create(&burnTicket).Error
 }
 
-func mergeAddOrUpdateBurnTicket() *eventsMergerImpl[BurnTicket] {
-	return newEventsMerger[BurnTicket](TagAddOrUpdateBurnTicket, withUniqueEventOverwrite())
+func mergeAddBurnTicket() *eventsMergerImpl[BurnTicket] {
+	return newEventsMerger[BurnTicket](TagAddBurnTicket, withUniqueEventOverwrite())
 }

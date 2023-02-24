@@ -130,6 +130,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAuthorizerHealthCheckEvents(),
 			mergeValidatorHealthCheckEvents(),
 
+			mergeAddBurnTicket(),
+
 			mergeUpdateUserCollectedRewardsEvents(),
 			mergeUserStakeEvents(),
 			mergeUserUnstakeEvents(),
@@ -852,12 +854,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateUserCollectedRewards(*u)
-	case TagAddOrUpdateBurnTicket:
+	case TagAddBurnTicket:
 		bt, ok := fromEvent[BurnTicket](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrUpdateBurnTicket(*bt)
+		return edb.addBurnTicket(*bt)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

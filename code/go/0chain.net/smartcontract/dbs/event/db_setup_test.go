@@ -66,6 +66,7 @@ func TestMain(m *testing.M) {
 	}
 
 	hostAndPort := getHostPort(resource, "5432/tcp")
+	// hostAndPort := "0.0.0.0:49195"
 	databaseUrl := fmt.Sprintf("postgres://zchain_user:zchian@%s/events_db?sslmode=disable", hostAndPort)
 
 	log.Println("Connecting to database on url:", databaseUrl)

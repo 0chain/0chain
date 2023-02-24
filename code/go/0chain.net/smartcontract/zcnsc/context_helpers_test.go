@@ -281,7 +281,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 
 	ctx.On("EmitEvent",
 		event.TypeStats,
-		event.TagAddOrUpdateBurnTicket,
+		event.TagAddBurnTicket,
 		mock.AnythingOfType("string"),
 		mock.AnythingOfType("*event.BurnTicket"),
 	).Run(
