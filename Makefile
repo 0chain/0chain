@@ -76,5 +76,5 @@ build-benchmark:
 	./docker.local/bin/build.benchmark.sh
 
 benchmark:
-	$cd $(root_path)/docker.local/benchmarks \
+	@cd $(root_path)/docker.local/benchmarks \
 	&& ../bin/start.benchmarks.sh
