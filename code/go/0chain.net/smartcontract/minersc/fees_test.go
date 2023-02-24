@@ -39,10 +39,8 @@ func newMiner(msc *MinerSmartContract, now, ns int64,
 
 // create and add sharder, create stake holders, don't stake
 func newSharder(msc *MinerSmartContract, now, ns int64,
-	val currency.Coin, balances cstate.StateContextI) (sh *sharder, err error) {
-
-	sh = new(sharder)
-	sh.sharder, sh.node, err = addSharder(msc, now, true, balances)
+	val currency.Coin, saveToMB bool, balances cstate.StateContextI) (sh *sharder, err error) {
+	sh, err = addSharder(msc, now, saveToMB, balances)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +200,7 @@ func Test_payFees(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		sn, err := newSharder(msc, now, stakeHolders, stakeVal, balances)
+		sn, err := newSharder(msc, now, stakeHolders, stakeVal, true, balances)
 		require.NoError(t, err)
 		sharders = append(sharders, sn)
 		now += 10

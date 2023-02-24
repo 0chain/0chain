@@ -190,24 +190,27 @@ func addMiner(msc *MinerSmartContract, now int64, saveToMB bool,
 }
 
 func addSharder(msc *MinerSmartContract, now int64, saveToMB bool,
-	balances cstate.StateContextI) (sharder *Client, sn *MinerNode, err error) {
-	sharder, delegate := newClient(0, balances), newClient(0, balances)
+	balances cstate.StateContextI) (s *sharder, err error) {
+	s = new(sharder)
+	s.sharder, s.delegate = newClient(0, balances), newClient(0, balances)
 	if saveToMB {
 		nd := node.Node{}
-		nd.ID = sharder.id
+		nd.ID = s.sharder.id
 		nd.Type = node.NodeTypeSharder
-		nd.PublicKey = sharder.pk
+		nd.PublicKey = s.sharder.pk
 		err := balances.(*testBalances).magicBlock.Sharders.AddNode(&nd)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	_, sn, err = sharder.callAddSharder(msc, now, delegate.id, balances)
+	_, sn, err := s.sharder.callAddSharder(msc, now, s.delegate.id, balances)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return sharder, sn, nil
+	s.node = sn
+
+	return s, nil
 }
 
 func (c *Client) addToDelegatePoolRequest(t *testing.T, nodeID string) []byte {

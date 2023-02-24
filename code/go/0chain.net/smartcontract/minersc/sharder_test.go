@@ -1,4 +1,4 @@
-package minersc_test
+package minersc
 
 import (
 	"strconv"
@@ -17,7 +17,6 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	. "0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -149,4 +148,44 @@ func TestDeleteSharder(t *testing.T) {
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
+}
+
+func TestAddSharder(t *testing.T) {
+	const stakeVal, stakeHolders = 10e10, 5
+
+	var (
+		balances = newTestBalances()
+		msc      = newTestMinerSC()
+		now      int64
+
+		sharders []*sharder
+	)
+
+	setConfig(t, balances)
+
+	for i := 0; i < 10; i++ {
+		sn, err := newSharder(msc, now, stakeHolders, stakeVal, true, balances)
+		require.NoError(t, err)
+		sharders = append(sharders, sn)
+		now += 10
+	}
+
+	// check miners are added successfully
+	ids, err := getNodeIDs(balances, AllShardersKey)
+	require.NoError(t, err)
+
+	for i := 0; i < len(sharders); i++ {
+		require.Equal(t, ids[i], sharders[i].sharder.id)
+	}
+
+	t.Run("add sharder not in magic block", func(t *testing.T) {
+		_, err = newSharder(msc, now, stakeHolders, stakeVal, false, balances)
+		require.EqualError(t, err, "add_sharder: failed to add new sharder: Not in magic block")
+	})
+
+	t.Run("add sharder already exist", func(t *testing.T) {
+		s := sharders[0]
+		_, _, err := s.sharder.callAddSharder(msc, now, s.delegate.id, balances)
+		require.NoError(t, err) // no error expected
+	})
 }
