@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -35,6 +36,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const blobberHealthTime = 60 * 60 // 1 Hour
 
 func TestSelectBlobbers(t *testing.T) {
 	const (
@@ -224,6 +227,63 @@ func TestSelectBlobbers(t *testing.T) {
 			}
 		})
 	}
+}
+
+func (sc *StorageSmartContract) selectBlobbers(
+	creationDate time.Time,
+	allBlobbersList StorageNodes,
+	sa *StorageAllocation,
+	randomSeed int64,
+	balances chainState.CommonStateContextI,
+) ([]*StorageNode, int64, error) {
+	var err error
+	var conf *Config
+	if conf, err = getConfig(balances); err != nil {
+		return nil, 0, fmt.Errorf("can't get config: %v", err)
+	}
+
+	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
+
+	// number of blobbers required
+	var size = sa.DataShards + sa.ParityShards
+	// size of allocation for a blobber
+	var bSize = sa.bSize()
+	timestamp := common.Timestamp(creationDate.Unix())
+
+	list, err := sa.filterBlobbers(allBlobbersList.Nodes.copy(), timestamp,
+		bSize, filterHealthyBlobbers(timestamp),
+		sc.filterBlobbersByFreeSpace(timestamp, bSize, balances))
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not filter blobbers: %v", err)
+	}
+
+	if len(list) < size {
+		return nil, 0, errors.New("not enough blobbers to honor the allocation")
+	}
+
+	sa.BlobberAllocs = make([]*BlobberAllocation, 0)
+	sa.Stats = &StorageAllocationStats{}
+
+	var blobberNodes []*StorageNode
+	if len(sa.PreferredBlobbers) > 0 {
+		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
+		if err != nil {
+			return nil, 0, common.NewError("allocation_creation_failed",
+				err.Error())
+		}
+	}
+
+	if len(blobberNodes) < size {
+		blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
+	}
+
+	return blobberNodes[:size], bSize, nil
+}
+
+func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
+	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
+		return b.LastHealthCheck <= (now - blobberHealthTime), nil
+	})
 }
 
 func TestChangeBlobbers(t *testing.T) {
