@@ -18,16 +18,19 @@ import (
 
 type miner struct {
 	miner    *Client
+	node     *MinerNode
 	delegate *Client
 	stakers  []*Client
 }
 
 // create and add miner, create stake holders, don't stake
-func newMiner(t *testing.T, msc *MinerSmartContract, now, ns int64,
-	val currency.Coin, balances cstate.StateContextI) (mn *miner) {
+func newMiner(msc *MinerSmartContract, now, ns int64,
+	val currency.Coin, saveToMB bool, balances cstate.StateContextI) (mn *miner, err error) {
+	mn, err = addMiner(msc, now, saveToMB, balances)
+	if err != nil {
+		return nil, err
+	}
 
-	mn = new(miner)
-	mn.miner, mn.delegate = addMiner(t, msc, now, balances)
 	for i := int64(0); i < ns; i++ {
 		mn.stakers = append(mn.stakers, newClient(val, balances))
 	}
@@ -35,11 +38,15 @@ func newMiner(t *testing.T, msc *MinerSmartContract, now, ns int64,
 }
 
 // create and add sharder, create stake holders, don't stake
-func newSharder(t *testing.T, msc *MinerSmartContract, now, ns int64,
-	val currency.Coin, balances cstate.StateContextI) (sh *sharder) {
+func newSharder(msc *MinerSmartContract, now, ns int64,
+	val currency.Coin, balances cstate.StateContextI) (sh *sharder, err error) {
 
 	sh = new(sharder)
-	sh.sharder, sh.delegate = addSharder(t, msc, now, balances)
+	sh.sharder, sh.node, err = addSharder(msc, now, true, balances)
+	if err != nil {
+		return nil, err
+	}
+
 	for i := int64(0); i < ns; i++ {
 		sh.stakers = append(sh.stakers, newClient(val, balances))
 	}
@@ -48,6 +55,7 @@ func newSharder(t *testing.T, msc *MinerSmartContract, now, ns int64,
 
 type sharder struct {
 	sharder  *Client
+	node     *MinerNode
 	delegate *Client
 	stakers  []*Client
 }
@@ -187,14 +195,16 @@ func Test_payFees(t *testing.T) {
 	setConfig(t, balances)
 
 	for i := 0; i < 10; i++ {
-		miners = append(miners, newMiner(t, msc, now, stakeHolders,
-			stakeVal, balances))
+		mn, err := newMiner(msc, now, stakeHolders, stakeVal, true, balances)
+		require.NoError(t, err)
+		miners = append(miners, mn)
 		now += 10
 	}
 
 	for i := 0; i < 10; i++ {
-		sharders = append(sharders, newSharder(t, msc, now, stakeHolders,
-			stakeVal, balances))
+		sn, err := newSharder(msc, now, stakeHolders, stakeVal, balances)
+		require.NoError(t, err)
+		sharders = append(sharders, sn)
 		now += 10
 	}
 

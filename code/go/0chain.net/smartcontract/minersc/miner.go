@@ -97,6 +97,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	newMiner.NodeType = NodeTypeMiner // set node type
+	newMiner.ProviderType = spenum.Miner
 
 	exist, err := getMinerNode(newMiner.ID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
