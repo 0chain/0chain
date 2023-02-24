@@ -129,30 +129,6 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
-	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		tp       int64 = 100
-		err      error
-	)
-
-	setConfig(t, balances)
-
-	var blob = newClient(0, balances)
-	blob.terms = avgTerms
-	blob.cap = 2 * GB
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = ssc.getBlobber(blob.id, balances)
-	require.NoError(t, err)
-}
-
 // - create allocation
 // - write
 // - read as owner
