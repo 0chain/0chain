@@ -138,14 +138,6 @@ func TestUpdateProvidersHealthCheck(t *testing.T) {
 		},
 	})
 
-	a, err := edb.GetBlobberCount()
-	a = a
-	var blobbers0 []Blobber
-	edb.Get().Find(&blobbers0)
-	res := edb.Get().Model(Blobber{}).Find(&blobbers0)
-	res = res
-	require.Equal(t, len(blobbers0), 2)
-
 	updates := []dbs.DbHealthCheck{
 		{
 			ID:              "one",
