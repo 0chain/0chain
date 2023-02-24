@@ -105,6 +105,21 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 	return validators, result.Error
 }
 
+func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, error) {
+	now := common.Now()
+	var validators []Validator
+	result := edb.Store.Get().
+		Preload("Rewards").
+		Model(&Validator{}).
+		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix()).Limit(pg.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pg.IsDescending,
+		}).Find(&validators)
+
+	return validators, result.Error
+}
+
 func (edb *EventDb) updateValidators(validators []Validator) error {
 	updateFields := []string{
 		"base_url", "public_key", "total_stake",
