@@ -361,6 +361,28 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	return sp, nil
 }
 
+func (ssc *StorageSmartContract) createStakePool(
+	conf *Config,
+	providerType spenum.Provider,
+	providerId datastore.Key,
+	settings stakepool.Settings,
+	balances chainstate.StateContextI,
+) (*stakePool, error) {
+	if err := validateStakePoolSettings(settings, conf); err != nil {
+		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
+	}
+
+	sp := newStakePool()
+	sp.Settings.DelegateWallet = settings.DelegateWallet
+	sp.Minter = chainstate.MinterStorage
+	sp.Settings.MinStake = settings.MinStake
+	sp.Settings.MaxStake = settings.MaxStake
+	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
+	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+
+	return sp, nil
+}
+
 type stakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
 	ProviderID   string          `json:"provider_id,omitempty"`
