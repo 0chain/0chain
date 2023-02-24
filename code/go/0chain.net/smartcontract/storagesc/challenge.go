@@ -1015,13 +1015,17 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 	// Check if the length of the list of validators is higher than the lower bound of validators
 	minValidators := conf.ValidatorsPerChallenge
 	currentValidatorsCount, err := validators.Size(balances)
-
 	if err != nil {
 		return fmt.Errorf("can't get validators partition size: %v", err.Error())
 	}
+
 	if currentValidatorsCount < minValidators {
+		err := errors.New("validators number does not meet minimum challenge requirement")
+		logging.Logger.Error("generate_challenge", zap.Error(err),
+			zap.Int("validator num", currentValidatorsCount),
+			zap.Int("minimum required", minValidators))
 		return common.NewError("generate_challenge",
-			"Validators length is less than minimum validators specified in sc.yaml->validators_per_challenge")
+			"validators number does not meet minimum challenge requirement")
 	}
 
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)
