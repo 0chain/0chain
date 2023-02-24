@@ -37,6 +37,7 @@ func TestState_GetHash(t *testing.T) {
 		Round        int64
 		Balance      currency.Coin
 		Nonce        int64
+		MintNonce    int64
 	}
 	tests := []struct {
 		name   string
@@ -79,6 +80,7 @@ func TestState_GetHashBytes(t *testing.T) {
 		Round        int64
 		Balance      currency.Coin
 		Nonce        int64
+		MintNonce    int64
 	}
 	tests := []struct {
 		name   string
@@ -121,6 +123,7 @@ func TestState_Encode(t *testing.T) {
 		Round        int64
 		Balance      currency.Coin
 		Nonce        int64
+		MintNonce    int64
 	}
 	tests := []struct {
 		name   string

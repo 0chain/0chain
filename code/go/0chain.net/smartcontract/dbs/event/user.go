@@ -23,6 +23,7 @@ type User struct {
 	Change          currency.Coin `json:"change"`
 	Round           int64         `json:"round"`
 	Nonce           int64         `json:"nonce"`
+	MintNonce       int64         `json:"mint_nonce"`
 	CollectedReward int64         `json:"collected_reward"`
 	TotalStake      int64         `json:"total_stake"`
 	ReadPoolTotal   int64         `json:"read_pool_total"`
@@ -64,7 +65,7 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 	}()
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce"}),
+		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce", "mint_nonce"}),
 	}).Create(&users).Error
 }
 

@@ -846,6 +846,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateUserCollectedRewards(*u)
+	case TagAddOrUpdateBurnTicket:
+		bt, ok := fromEvent[BurnTicket](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateBurnTicket(*bt)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

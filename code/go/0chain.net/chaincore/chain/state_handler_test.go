@@ -16,17 +16,17 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/viper"
-	"0chain.net/smartcontract/entity"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 )
@@ -59,11 +59,23 @@ func init() {
 	block.SetupEntity(memorystore.GetStorageProvider())
 }
 
-func TestChain_GetProcessedMintNoncesHandler(t *testing.T) {
+func TestChain_GetBalanceHandler(t *testing.T) {
 	lfb := block.NewBlock("", 1)
 	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	serverChain := chain.NewChainFromConfig()
 	serverChain.LatestFinalizedBlock = lfb
+
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	serverChain.EventDb = eventDb
 
 	sctx := serverChain.GetStateContextI()
 	lfb.ClientState = sctx.GetState()
@@ -75,7 +87,12 @@ func TestChain_GetProcessedMintNoncesHandler(t *testing.T) {
 		{
 			name: "Get processed mint nonces of the client, which hasn't performed any mint operations, should work",
 			body: func(t *testing.T) {
-				target := url.URL{Path: "/v1/client/get/processed_mint_nonces"}
+				err := eventDb.Get().Model(&event.User{}).Create(&event.User{
+					UserID: clientID,
+				}).Error
+				require.NoError(t, err)
+
+				target := url.URL{Path: "/v1/client/get/balance"}
 
 				query := target.Query()
 
@@ -85,27 +102,27 @@ func TestChain_GetProcessedMintNoncesHandler(t *testing.T) {
 
 				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
 
-				respRaw, err := serverChain.GetProcessedMintNoncesHandler(context.Background(), req)
+				respRaw, err := serverChain.GetBalanceHandler(context.Background(), req)
 				require.NoError(t, err)
 
-				resp, ok := respRaw.([]int64)
+				resp, ok := respRaw.(*state.State)
 				require.True(t, ok)
-				require.Len(t, resp, 0)
+				require.Equal(t, int64(0), resp.MintNonce)
+
+				err = eventDb.Get().Model(&event.User{}).Where("user_id = ?", clientID).Delete(&event.User{}).Error
+				require.NoError(t, err)
 			},
 		},
 		{
 			name: "Get mint nonces of the client, which has performed mint operation, should work",
 			body: func(t *testing.T) {
-				un, err := zcnsc.GetUserNode(clientID, sctx)
-				require.NoError(t, err)
-				require.NotNil(t, un)
-
-				un.AddMintNonce(1)
-
-				err = un.Save(sctx)
+				err := eventDb.Get().Model(&event.User{}).Create(&event.User{
+					UserID:    clientID,
+					MintNonce: 1,
+				}).Error
 				require.NoError(t, err)
 
-				target := url.URL{Path: "/v1/client/get/processed_mint_nonces"}
+				target := url.URL{Path: "/v1/client/get/balance"}
 
 				query := target.Query()
 
@@ -115,30 +132,45 @@ func TestChain_GetProcessedMintNoncesHandler(t *testing.T) {
 
 				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
 
-				respRaw, err := serverChain.GetProcessedMintNoncesHandler(context.Background(), req)
+				respRaw, err := serverChain.GetBalanceHandler(context.Background(), req)
 				require.NoError(t, err)
 
-				resp, ok := respRaw.([]int64)
+				resp, ok := respRaw.(*state.State)
 				require.True(t, ok)
-				require.Len(t, resp, 1)
+				require.Equal(t, int64(1), resp.MintNonce)
 
-				_, err = sctx.DeleteTrieNode(un.GetKey())
-				require.NoError(t, err)
-
-				err = un.Save(sctx)
+				err = eventDb.Get().Model(&event.User{}).Where("user_id = ?", clientID).Delete(&event.User{}).Error
 				require.NoError(t, err)
 			},
 		},
 		{
 			name: "Get processed mint nonces not providing client id, should not work",
 			body: func(t *testing.T) {
-				target := url.URL{Path: "/v1/client/get/processed_mint_nonces"}
+				target := url.URL{Path: "/v1/client/get/balance"}
 
 				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
 
-				resp, err := serverChain.GetProcessedMintNoncesHandler(context.Background(), req)
+				resp, err := serverChain.GetBalanceHandler(context.Background(), req)
 				require.Error(t, err)
 				require.Nil(t, resp)
+			},
+		},
+		{
+			name: "Get processed mint nonces for the client, which does not exist, should not work",
+			body: func(t *testing.T) {
+				target := url.URL{Path: "/v1/client/get/balance"}
+
+				query := target.Query()
+
+				query.Add("client_id", clientID)
+
+				target.RawQuery = query.Encode()
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				respRaw, err := serverChain.GetBalanceHandler(context.Background(), req)
+				require.Error(t, err)
+				require.Nil(t, respRaw)
 			},
 		},
 	}
@@ -153,6 +185,20 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	serverChain := chain.NewChainFromConfig()
 	serverChain.LatestFinalizedBlock = lfb
+
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug: true,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	serverChain.EventDb = eventDb
 
 	sctx := serverChain.GetStateContextI()
 	lfb.ClientState = sctx.GetState()
@@ -179,7 +225,7 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 				respRaw, err := serverChain.GetNotProcessedBurnTicketsHandler(context.Background(), req)
 				require.NoError(t, err)
 
-				resp, ok := respRaw.([]entity.BurnTicket)
+				resp, ok := respRaw.([]event.BurnTicket)
 				require.True(t, ok)
 				require.Len(t, resp, 0)
 			},
@@ -187,14 +233,12 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 		{
 			name: "Get not processed burn tickets of the client, which has performed burn operation, should work",
 			body: func(t *testing.T) {
-				un, err := zcnsc.GetUserNode(clientID, sctx)
-				require.NoError(t, err)
-				require.NotNil(t, un)
-
-				err = un.AddBurnTicket(ethereumAddress, hash, 1)
-				require.NoError(t, err)
-
-				err = un.Save(sctx)
+				err := eventDb.Get().Model(&event.BurnTicket{}).Create(&event.BurnTicket{
+					UserID:          clientID,
+					EthereumAddress: ethereumAddress,
+					Hash:            hash,
+					Nonce:           1,
+				}).Error
 				require.NoError(t, err)
 
 				target := url.URL{Path: "/v1/client/get/not_processed_burn_tickets"}
@@ -212,11 +256,11 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 				respRaw, err := serverChain.GetNotProcessedBurnTicketsHandler(context.Background(), req)
 				require.NoError(t, err)
 
-				resp, ok := respRaw.([]entity.BurnTicket)
+				resp, ok := respRaw.([]event.BurnTicket)
 				require.True(t, ok)
 				require.Len(t, resp, 1)
 
-				_, err = sctx.DeleteTrieNode(un.GetKey())
+				err = eventDb.Get().Model(&event.BurnTicket{}).Where("user_id = ?", clientID).Delete(&event.BurnTicket{}).Error
 				require.NoError(t, err)
 			},
 		},
@@ -261,16 +305,6 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 		{
 			name: "Get not processed burn tickets not providing nonce, should work",
 			body: func(t *testing.T) {
-				un, err := zcnsc.GetUserNode(clientID, sctx)
-				require.NoError(t, err)
-				require.NotNil(t, un)
-
-				err = un.AddBurnTicket(ethereumAddress, hash, 1)
-				require.NoError(t, err)
-
-				err = un.Save(sctx)
-				require.NoError(t, err)
-
 				target := url.URL{Path: "/v1/client/get/not_processed_burn_tickets"}
 
 				query := target.Query()
@@ -285,12 +319,9 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 				respRaw, err := serverChain.GetNotProcessedBurnTicketsHandler(context.Background(), req)
 				require.NoError(t, err)
 
-				resp, ok := respRaw.([]entity.BurnTicket)
+				resp, ok := respRaw.([]event.BurnTicket)
 				require.True(t, ok)
 				require.Len(t, resp, 1)
-
-				_, err = sctx.DeleteTrieNode(un.GetKey())
-				require.NoError(t, err)
 			},
 		},
 	}

@@ -44,9 +44,6 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	switch err {
 	case nil, util.ErrValueNotPresent:
-		if node.BurnTickets == nil {
-			node.BurnTickets = make(map[string][][]byte)
-		}
 		return node, nil
 	default:
 		return nil, err

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/dbs/event"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -207,22 +209,38 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 }
 
 func Test_Should_Have_Added_BurnTicketAfter_Burn(t *testing.T) {
-	payload := createBurnPayload()
-	tr := CreateDefaultTransactionToZcnsc()
-	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
+	tr := CreateDefaultTransactionToZcnsc()
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug: true,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
+	payload := createBurnPayload()
+	contract := CreateZCNSmartContract()
 
 	resp, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp)
 
-	gn, err := GetUserNode(tr.ClientID, ctx)
-	require.Nil(t, err)
-	require.NotNil(t, gn)
+	require.Equal(t, 1, len(burnTicketEvents))
 
-	burnTickets, err := gn.GetBurnTickets(payload.EthereumAddress)
-	require.Nil(t, err, err)
+	burnTicketEvent, ok := burnTicketEvents[tr.ClientID]
+	require.True(t, ok)
 
-	require.Equal(t, 1, len(burnTickets))
+	burnTicket := burnTicketEvent[0]
+	require.Equal(t, tr.ClientID, burnTicket.UserID)
+	require.Equal(t, payload.EthereumAddress, burnTicket.EthereumAddress)
+	require.Equal(t, tr.Hash, burnTicket.Hash)
+	require.Equal(t, tr.Nonce, burnTicket.Nonce)
 }

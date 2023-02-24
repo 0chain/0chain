@@ -36,8 +36,9 @@ func SetupClientDB() {
 	memorystore.AddPool("clientdb", memorystore.DefaultPool)
 }
 
-//go:generate msgp -io=false -tests=false -v
 // Client - data structure that holds the client data
+//
+//go:generate msgp -io=false -tests=false -v
 type Client struct {
 	datastore.CollectionMemberField `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	datastore.IDField               `yaml:",inline"`

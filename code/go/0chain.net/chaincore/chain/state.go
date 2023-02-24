@@ -729,10 +729,11 @@ func isValid(err error) bool {
 
 func userToState(u *event.User) *state.State {
 	return &state.State{
-		TxnHash: u.TxnHash,
-		Balance: u.Balance,
-		Round:   u.Round,
-		Nonce:   u.Nonce,
+		TxnHash:   u.TxnHash,
+		Balance:   u.Balance,
+		Round:     u.Round,
+		Nonce:     u.Nonce,
+		MintNonce: u.MintNonce,
 	}
 }
 

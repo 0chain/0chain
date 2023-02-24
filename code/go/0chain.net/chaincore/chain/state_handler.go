@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/smartcontract/entity"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
@@ -65,7 +65,6 @@ func SetupScRestApiHandlers() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
-	http.HandleFunc("/v1/client/get/processed_mint_nonces", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetProcessedMintNoncesHandler))))
 	http.HandleFunc("/v1/client/get/not_processed_burn_tickets", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNotProcessedBurnTicketsHandler))))
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
 	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
@@ -145,20 +144,20 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	return retObj, nil
 }
 
-// GetProcessedMintNoncesHandler returns processed ZCN mint nonces for the given client id
-func (c *Chain) GetProcessedMintNoncesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	clientID := r.FormValue("client_id")
-	if clientID == "" {
-		return nil, errors.New("Argument 'client_id' should not be empty")
-	}
+// // GetMintNonceHandler returns last ZCN mint nonce for the given client id
+// func (c *Chain) GetMintNonceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+// 	clientID := r.FormValue("client_id")
+// 	if clientID == "" {
+// 		return nil, errors.New("Argument 'client_id' should not be empty")
+// 	}
 
-	un, err := zcnsc.GetUserNode(clientID, c.GetStateContextI())
-	if err != nil {
-		return nil, fmt.Errorf("failed to retreive user node: %w", err)
-	}
+// 	user, err := c.GetEventDb().GetUser(clientID)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to retrieve user: %w", err)
+// 	}
 
-	return un.MintNonces, nil
-}
+// 	return user.MintNonce, nil
+// }
 
 // GetNotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
 // with a help of offset nonce
@@ -183,23 +182,22 @@ func (c *Chain) GetNotProcessedBurnTicketsHandler(ctx context.Context, r *http.R
 		}
 	}
 
-	un, err := zcnsc.GetUserNode(clientId, c.GetStateContextI())
+	burnTickets, err := c.GetEventDb().GetBurnTickets(clientId, ethereumAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retreive user node: %w", err)
+		return nil, fmt.Errorf("failed to retrieve burn tickets: %w", err)
 	}
 
-	burnTickets, err := un.GetBurnTickets(ethereumAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retreive burn tickets: %w", err)
-	}
-
-	var response []entity.BurnTicket
+	var response []event.BurnTicket
 
 	for _, burnTicket := range burnTickets {
 		if burnTicket.Nonce > nonceInt {
 			response = append(response, burnTicket)
 		}
 	}
+
+	sort.Slice(response, func(i, j int) bool {
+		return response[i].Nonce < response[j].Nonce
+	})
 
 	return response, nil
 }
