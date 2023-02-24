@@ -13,8 +13,11 @@ func kill() {
 
 }
 
+// killBlobber
+// punitively disables a blobber. it will no longer be used for new allocations
+// or receive further rewards. Stakeholders will have their stakes slashed.
 func (_ *StorageSmartContract) killBlobber(
-	t *transaction.Transaction,
+	tx *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
@@ -26,7 +29,7 @@ func (_ *StorageSmartContract) killBlobber(
 	var blobber = newBlobber("")
 	err = provider.Kill(
 		input,
-		t.ClientID,
+		tx.ClientID,
 		conf.OwnerId,
 		conf.StakePool.KillSlash,
 		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
@@ -59,8 +62,11 @@ func (_ *StorageSmartContract) killBlobber(
 	return "", nil
 }
 
+// killValidator
+// punitively disables a validator. it will no longer be used for new validations
+// or receive further rewards. Stakeholders will have their stakes slashed.
 func (_ *StorageSmartContract) killValidator(
-	t *transaction.Transaction,
+	tx *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
@@ -72,7 +78,7 @@ func (_ *StorageSmartContract) killValidator(
 	var validator = newValidator("")
 	err = provider.Kill(
 		input,
-		t.ClientID,
+		tx.ClientID,
 		conf.OwnerId,
 		conf.StakePool.KillSlash,
 		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {

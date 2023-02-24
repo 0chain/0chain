@@ -755,27 +755,17 @@ func BenchmarkTests(
 			},
 		},
 		{
-			name: "storage.shutdown_blobber",
-			input: (&provider.ProviderRequest{
-				ID: getMockBlobberId(0),
-			}).Encode(),
+			name:     "storage.shutdown_blobber",
 			endpoint: ssc.shutdownBlobber,
 			txn: &transaction.Transaction{
-				CreationDate: creationTime + 1,
-				ClientID:     getMockBlobberId(0),
-				ToClientID:   ADDRESS,
+				ClientID: getMockBlobberId(0),
 			},
 		},
 		{
-			name: "storage.shutdown_validator",
-			input: (&provider.ProviderRequest{
-				ID: getMockValidatorId(0),
-			}).Encode(),
+			name:     "storage.shutdown_validator",
 			endpoint: ssc.shutdownValidator,
 			txn: &transaction.Transaction{
-				CreationDate: creationTime + 1,
-				ClientID:     getMockValidatorId(0),
-				ToClientID:   ADDRESS,
+				ClientID: getMockValidatorId(0),
 			},
 		},
 		{

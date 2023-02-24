@@ -6,31 +6,18 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontractinterface"
 )
 
 func ShutDown(
-	input []byte,
-	clientID, ownerId string,
-	providerSpecific func(ProviderRequest) (Abstract, stakepool.AbstractStakePool, error),
+	id string,
+	providerSpecific func() (Abstract, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
-	var req ProviderRequest
-	if err := req.decode(input); err != nil {
-		return err
-	}
-
-	p, sp, err := providerSpecific(req)
+	p, sp, err := providerSpecific()
 	if err != nil {
 		return err
 	}
 
-	var errCode = "shutdown_" + p.Type().String() + "_failed"
-	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
-		return ownerId == clientID
-	}); err != nil {
-		return err
-	}
 	if p.IsShutDown() {
 		return fmt.Errorf("already shutdown")
 	}
@@ -40,7 +27,7 @@ func ShutDown(
 
 	p.ShutDown()
 
-	if err = sp.Save(p.Type(), req.ID, balances); err != nil {
+	if err = sp.Save(p.Type(), id, balances); err != nil {
 		return err
 	}
 

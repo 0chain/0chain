@@ -9,25 +9,22 @@ import (
 	"0chain.net/core/common"
 )
 
+// shutdownBlobber
+// shuts down the blobber: It is no longer available for new allocations
+// but its existing commitments will still be upheld.
 func (_ *StorageSmartContract) shutdownBlobber(
-	t *transaction.Transaction,
-	input []byte,
+	tx *transaction.Transaction,
+	_ []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	conf, err := getConfig(balances)
-	if err != nil {
-		return "", common.NewError("shutdown_blobber_failed", "can't get config, "+err.Error())
-	}
 	var blobber = newBlobber("")
-	err = provider.ShutDown(
-		input,
-		t.ClientID,
-		conf.OwnerId,
-		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
+	err := provider.ShutDown(
+		tx.ClientID,
+		func() (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
-			if blobber, err = getBlobber(req.ID, balances); err != nil {
+			if blobber, err = getBlobber(tx.ClientID, balances); err != nil {
 				return nil, nil, common.NewError("shutdown_blobber_failed",
-					"can't get the blobber "+req.ID+": "+err.Error())
+					"can't get the blobber "+tx.ClientID+": "+err.Error())
 			}
 
 			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
@@ -53,25 +50,22 @@ func (_ *StorageSmartContract) shutdownBlobber(
 	return "", nil
 }
 
+// shutdownValidator
+// shuts down the blobber: It is no longer available for validating any new challenges
+// but its existing commitments will still be upheld.
 func (_ *StorageSmartContract) shutdownValidator(
-	t *transaction.Transaction,
-	input []byte,
+	tx *transaction.Transaction,
+	_ []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	conf, err := getConfig(balances)
-	if err != nil {
-		return "", common.NewError("shutdown_validator_failed", "can't get config, "+err.Error())
-	}
 	var validator = newValidator("")
-	err = provider.ShutDown(
-		input,
-		t.ClientID,
-		conf.OwnerId,
-		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
+	err := provider.ShutDown(
+		tx.ClientID,
+		func() (provider.Abstract, stakepool.AbstractStakePool, error) {
 			var err error
-			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
+			if err = balances.GetTrieNode(provider.GetKey(tx.ClientID), validator); err != nil {
 				return nil, nil, common.NewError("shutdown_validator_failed",
-					"can't get the blobber "+req.ID+": "+err.Error())
+					"can't get the blobber "+tx.ClientID+": "+err.Error())
 			}
 
 			validatorPartitions, err := getValidatorsList(balances)
