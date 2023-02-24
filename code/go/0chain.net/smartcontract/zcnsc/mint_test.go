@@ -5,8 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs/event"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -17,6 +20,13 @@ import (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	logging.Logger = zap.NewNop()
+
+	config.SetupDefaultConfig()
+
+	chainConfig := chain.NewConfigImpl(&chain.ConfigData{})
+	chainConfig.FromViper() //nolint: errcheck
+
+	config.Configuration().ChainConfig = chainConfig
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
@@ -178,24 +188,40 @@ func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
 
 func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 	ctx := MakeMockStateContext()
+	tr := CreateDefaultTransactionToZcnsc()
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug: true,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    tr.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 
-	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-
-	gn, err := GetGlobalNode(ctx)
-	require.NoError(t, err)
-	require.NotNil(t, gn)
-
-	user, err := ctx.GetEventDB().GetUser(tr.ClientID)
-	require.NoError(t, err)
 
 	payload.Nonce = 1
 
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotZero(t, resp)
+
+	user, err := ctx.GetEventDB().GetUser(tr.ClientID)
+	require.NoError(t, err)
 
 	require.Equal(t, user.MintNonce, payload.Nonce)
 

@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
@@ -141,7 +142,10 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	gn.WZCNNonceMinted[payload.Nonce] = true
 
 	// record mint nonce for a certain user
-	user.MintNonce = payload.Nonce
+	ctx.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, trans.ClientID, &event.User{
+		UserID:    trans.ClientID,
+		MintNonce: payload.Nonce,
+	})
 
 	var (
 		amount currency.Coin

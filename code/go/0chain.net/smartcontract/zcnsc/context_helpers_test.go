@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/block"
+	"gorm.io/gorm/clause"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
@@ -37,11 +38,16 @@ type mockStateContext struct {
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
 	authCount    *AuthCount
+	eventDb      *event.EventDb
 }
 
 func (ctx *mockStateContext) GetLatestFinalizedBlock() *block.Block {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (ctx *mockStateContext) SetEventDb(eventDb *event.EventDb) {
+	ctx.eventDb = eventDb
 }
 
 func MakeMockStateContext() *mockStateContext {
@@ -96,6 +102,12 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 	// EventsDB
 	addAuthorizerEvents = make(map[string]*AuthorizerNode, 100)
 	burnTicketEvents = make(map[string][]*event.BurnTicket, 100)
+
+	ctx.On("GetEventDB").Return(
+		func() *event.EventDb {
+			return ctx.eventDb
+		},
+	)
 
 	/// GetClientBalance
 
@@ -205,16 +217,6 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 	// EventsDB
 
 	ctx.On("EmitEvent",
-		mock.AnythingOfType("event.EventType"),
-		mock.AnythingOfType("event.EventTag"),
-		mock.AnythingOfType("string"), // authorizerID
-		mock.Anything,                 // authorizer payload
-	).Return(
-		func(_ event.EventType, _ event.EventTag, id string, body string) {
-			fmt.Println(".")
-		})
-
-	ctx.On("EmitEvent",
 		event.TypeStats,
 		event.TagAddAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID
@@ -250,16 +252,62 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 
 	ctx.On("EmitEvent",
 		event.TypeStats,
+		event.TagAddOrOverwriteUser,
+		mock.AnythingOfType("string"),
+		mock.AnythingOfType("*event.User"),
+	).Run(
+		func(args mock.Arguments) {
+			userId, ok := args.Get(2).(string)
+			if !ok {
+				panic("failed to convert to user id")
+			}
+			user, ok := args.Get(3).(*event.User)
+			if !ok {
+				panic("failed to convert to get user")
+			}
+			if user.UserID != userId {
+				panic("user id must be equal to the id given as a param")
+			}
+
+			err := ctx.eventDb.Get().Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "user_id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce", "mint_nonce"}),
+			}).Create(user).Error
+			if err != nil {
+				panic(err)
+			}
+		},
+	)
+
+	ctx.On("EmitEvent",
+		event.TypeStats,
 		event.TagAddOrUpdateBurnTicket,
 		mock.AnythingOfType("string"),
-		mock.AnythingOfType("event.BurnTicket"),
-	).Return(
-		func(_ event.EventType, _ event.EventTag, id string, ev *event.BurnTicket) {
-			fmt.Println("Tjfdk")
-			if ev.UserID != id {
+		mock.AnythingOfType("*event.BurnTicket"),
+	).Run(
+		func(args mock.Arguments) {
+			userId, ok := args.Get(2).(string)
+			if !ok {
+				panic("failed to convert to user id")
+			}
+			burnTicket, ok := args.Get(3).(*event.BurnTicket)
+			if !ok {
+				panic("failed to convert to get user")
+			}
+			if burnTicket.UserID != userId {
 				panic("burn ticket user id must be equal to the id given as a param")
 			}
-			// burnTicketEvents[id] = append(burnTicketEvents[id], /ev)
+			burnTicketEvents[userId] = append(burnTicketEvents[userId], burnTicket)
+		})
+
+	ctx.On("EmitEvent",
+		mock.AnythingOfType("event.EventType"),
+		mock.AnythingOfType("event.EventTag"),
+		mock.AnythingOfType("string"), // authorizerID
+		mock.Anything,                 // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, body string) {
+			fmt.Println(".")
 		})
 
 	return ctx

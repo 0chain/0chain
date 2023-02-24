@@ -305,14 +305,6 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 		{
 			name: "Get not processed burn tickets not providing nonce, should work",
 			body: func(t *testing.T) {
-				err := eventDb.Get().Model(&event.BurnTicket{}).Create(&event.BurnTicket{
-					UserID:          clientID,
-					EthereumAddress: ethereumAddress,
-					Hash:            hash,
-					Nonce:           1,
-				}).Error
-				require.NoError(t, err)
-
 				target := url.URL{Path: "/v1/client/get/not_processed_burn_tickets"}
 
 				query := target.Query()
@@ -330,9 +322,6 @@ func TestChain_GetNotProcessedBurnTicketsHandler(t *testing.T) {
 				resp, ok := respRaw.([]event.BurnTicket)
 				require.True(t, ok)
 				require.Len(t, resp, 1)
-
-				err = eventDb.Get().Model(&event.BurnTicket{}).Where("user_id = ?", clientID).Delete(&event.BurnTicket{}).Error
-				require.NoError(t, err)
 			},
 		},
 	}
