@@ -1074,7 +1074,8 @@ CREATE TABLE public.users (
                               balance bigint,
                               change bigint,
                               round bigint,
-                              nonce bigint
+                              nonce bigint,
+                              mint_nonce bigint
 );
 
 
