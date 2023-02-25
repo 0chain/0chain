@@ -2,6 +2,9 @@ package minersc
 
 import (
 	"errors"
+	"fmt"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -9,9 +12,9 @@ import (
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
 
+	commonsc "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
-	commonsc "0chain.net/smartcontract/common"
 )
 
 func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
@@ -123,7 +126,7 @@ func (msc *MinerSmartContract) AddSharder(
 	if err := commonsc.ValidateDelegateWallet(newSharder.PublicKey, newSharder.Settings.DelegateWallet); err != nil {
 		return "", err
 	}
-	
+
 	err = validateNodeSettings(newSharder, gn, "add_sharder")
 	if err != nil {
 		return "", common.NewErrorf("add_sharder", "validate node setting failed: %v", zap.Error(err))
@@ -300,6 +303,9 @@ func getSharderNode(
 	err := balances.GetTrieNode(sn.GetKey(), sn)
 	if err != nil {
 		return nil, err
+	}
+	if sn.ProviderType != spenum.Sharder {
+		return nil, fmt.Errorf("provider is %s should be %s", sn.ProviderType, spenum.Blobber)
 	}
 	return sn, nil
 }
