@@ -1060,6 +1060,40 @@ ALTER TABLE public.transactions_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 
+--
+-- Name: burn_tickets; Type: TABLE; Schema: public; Owner: zchain_user
+--
+
+CREATE TABLE public.burn_tickets (
+                              id bigint NOT NULL,
+                              user_id text,
+                              ethereum_address text,
+                              hash text,
+                              nonce bigint
+);
+
+
+ALTER TABLE public.burn_tickets OWNER TO zchain_user;
+
+--
+-- Name: burn_ticket_id_seq; Type: SEQUENCE; Schema: public; Owner: zchain_user
+--
+
+CREATE SEQUENCE public.burn_tickets_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.burn_tickets_id_seq OWNER TO zchain_user;
+
+--
+-- Name: burn_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: zchain_user
+--
+
+ALTER SEQUENCE public.burn_tickets_id_seq OWNED BY public.burn_tickets.id;
 
 --
 -- Name: users; Type: TABLE; Schema: public; Owner: zchain_user
