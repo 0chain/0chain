@@ -131,7 +131,6 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 			Round:        round,
 			MinerID:      current.ID,
 			BucketID:     current.BucketId,
-			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
