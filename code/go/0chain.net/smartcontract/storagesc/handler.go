@@ -17,7 +17,6 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/maths"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -52,11 +51,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	srh := NewStorageRestHandler(rh)
 	storage := "/v1/screst/" + ADDRESS
 	return []rest.Endpoint{
-		rest.MakeEndpoint(storage+"/get_blobber_count", common.UserRateLimit(srh.getBlobberCount)),
 		rest.MakeEndpoint(storage+"/getBlobber", common.UserRateLimit(srh.getBlobber)),
 		rest.MakeEndpoint(storage+"/getblobbers", common.UserRateLimit(srh.getBlobbers)),
 		rest.MakeEndpoint(storage+"/blobbers-by-rank", common.UserRateLimit(srh.getBlobbersByRank)),
-		rest.MakeEndpoint(storage+"/get_blobber_total_stakes", common.UserRateLimit(srh.getBlobberTotalStakes)), //todo limit sorting
 		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", common.UserRateLimit(srh.getBlobbersByGeoLocation)),
 		rest.MakeEndpoint(storage+"/transaction", common.UserRateLimit(srh.getTransactionByHash)),
 		rest.MakeEndpoint(storage+"/transactions", common.UserRateLimit(srh.getTransactionByFilter)),
@@ -81,7 +78,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getUserLockedTotal", common.UserRateLimit(srh.getUserLockedTotal)),
 		rest.MakeEndpoint(storage+"/block", common.UserRateLimit(srh.getBlock)),
 		rest.MakeEndpoint(storage+"/get_blocks", common.UserRateLimit(srh.getBlocks)),
-		rest.MakeEndpoint(storage+"/total-stored-data", common.UserRateLimit(srh.getTotalData)),
 		rest.MakeEndpoint(storage+"/storage-config", common.UserRateLimit(srh.getConfig)),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", common.UserRateLimit(srh.getReadPoolStat)),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", common.UserRateLimit(srh.getChallengePoolStat)),
@@ -675,30 +671,6 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
-// Gets the total data currently storage used across all blobbers.
-//
-// this endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
-//
-// responses:
-//
-//	200: StringMap
-//	400:
-func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	global, err := edb.GetGlobal()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
-		return
-	}
-	common.Respond(w, r, global.UsedStorage, nil)
-}
-
 // swagger:model fullBlock
 type fullBlock struct {
 	event.Block
@@ -887,7 +859,14 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	pools, err := edb.GetUserDelegatePools(clientID, spenum.Blobber)
+
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	pools, err := edb.GetUserDelegatePools(clientID, spenum.Blobber, pagination)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
 		return
@@ -2531,79 +2510,6 @@ func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r
 	}
 
 	common.Respond(w, r, blobbers, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blobber_total_stakes get_blobber_total_stakes
-// Gets total stake of all blobbers combined
-//
-// responses:
-//
-//	200: Int64Map
-//	500:
-func (srh *StorageRestHandler) getBlobberTotalStakes(w http.ResponseWriter, r *http.Request) {
-	sctx := srh.GetQueryStateContext()
-	edb := sctx.GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	blobbers, err := edb.GetAllBlobberId()
-	if err != nil {
-		err := common.NewErrInternal("cannot get blobber list" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-	var total int64
-	for _, blobber := range blobbers {
-		var sp *stakePool
-		sp, err := getStakePool(spenum.Blobber, blobber, sctx)
-		if err != nil {
-			err := common.NewErrInternal("cannot get stake pool" + err.Error())
-			common.Respond(w, r, nil, err)
-			return
-		}
-		staked, err := sp.stake()
-		if err != nil {
-			err := common.NewErrInternal("cannot get stake" + err.Error())
-			common.Respond(w, r, nil, err)
-			return
-		}
-
-		total, err = maths.SafeAddInt64(total, int64(staked))
-		if err != nil {
-			err := common.NewErrInternal("cannot get total stake" + err.Error())
-			common.Respond(w, r, nil, err)
-			return
-		}
-	}
-	common.Respond(w, r, rest.Int64Map{
-		"total": total,
-	}, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber getBlobber
-// Get count of blobber
-//
-// responses:
-//
-//	200: Int64Map
-//	400:
-func (srh *StorageRestHandler) getBlobberCount(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	blobberCount, err := edb.GetBlobberCount()
-	if err != nil {
-		err := common.NewErrInternal("getting blobber count:" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, rest.Int64Map{
-		"count": blobberCount,
-	}, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber getBlobber
