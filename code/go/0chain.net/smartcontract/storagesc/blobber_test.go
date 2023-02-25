@@ -124,6 +124,7 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
 	require.Error(t, err)
+	require.EqualError(t, err, fmt.Sprintf("add_or_update_blobber_failed: blobber already exists,with id: %s ", blob.id))
 
 	_, err = ssc.getBlobber(blob.id, balances)
 	require.NoError(t, err)
