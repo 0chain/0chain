@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
@@ -23,6 +22,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
+	bcstate "0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -172,11 +172,18 @@ func (c *Chain) GetNotProcessedBurnTicketsHandler(ctx context.Context, r *http.R
 		return nil, fmt.Errorf("failed to retrieve burn tickets: %w", err)
 	}
 
-	var response []event.BurnTicket
+	response := make([]*bcstate.BurnTicket, 0)
 
 	for _, burnTicket := range burnTickets {
 		if burnTicket.Nonce > nonceInt {
-			response = append(response, burnTicket)
+			response = append(
+				response,
+				bcstate.NewBurnTicket(
+					burnTicket.UserID,
+					burnTicket.EthereumAddress,
+					burnTicket.Hash,
+					burnTicket.Nonce,
+				))
 		}
 	}
 

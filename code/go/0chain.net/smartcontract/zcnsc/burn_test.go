@@ -212,7 +212,8 @@ func Test_Should_Have_Added_BurnTicketAfter_Burn(t *testing.T) {
 	ctx := MakeMockStateContext()
 	tr := CreateDefaultTransactionToZcnsc()
 	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
-		Debug: true,
+		Debug:                 true,
+		PartitionChangePeriod: 1,
 	})
 	require.NoError(t, err)
 

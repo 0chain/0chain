@@ -190,7 +190,8 @@ func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 	ctx := MakeMockStateContext()
 	tr := CreateDefaultTransactionToZcnsc()
 	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
-		Debug: true,
+		Debug:                 true,
+		PartitionChangePeriod: 1,
 	})
 	require.NoError(t, err)
 

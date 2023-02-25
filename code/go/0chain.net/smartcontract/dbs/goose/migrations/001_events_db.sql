@@ -1393,6 +1393,11 @@ ALTER TABLE ONLY public.sharder_aggregates ALTER COLUMN id SET DEFAULT nextval('
 
 ALTER TABLE ONLY public.transactions ALTER COLUMN id SET DEFAULT nextval('public.transactions_id_seq'::regclass);
 
+--
+-- Name: burn tickets id; Type: DEFAULT; Schema: public; Owner: zchain_user
+--
+
+ALTER TABLE ONLY public.burn_tickets ALTER COLUMN id SET DEFAULT nextval('public.burn_tickets_id_seq'::regclass);
 
 --
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: zchain_user
