@@ -1066,6 +1066,8 @@ ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 
 CREATE TABLE public.burn_tickets (
                               id bigint NOT NULL,
+                              created_at timestamp with time zone,
+                              updated_at timestamp with time zone,
                               user_id text,
                               ethereum_address text,
                               hash text,
@@ -1076,7 +1078,7 @@ CREATE TABLE public.burn_tickets (
 ALTER TABLE public.burn_tickets OWNER TO zchain_user;
 
 --
--- Name: burn_ticket_id_seq; Type: SEQUENCE; Schema: public; Owner: zchain_user
+-- Name: burn_tickets_id_seq; Type: SEQUENCE; Schema: public; Owner: zchain_user
 --
 
 CREATE SEQUENCE public.burn_tickets_id_seq
@@ -1090,7 +1092,7 @@ CREATE SEQUENCE public.burn_tickets_id_seq
 ALTER TABLE public.burn_tickets_id_seq OWNER TO zchain_user;
 
 --
--- Name: burn_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: zchain_user
+-- Name: burn_tickets_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: zchain_user
 --
 
 ALTER SEQUENCE public.burn_tickets_id_seq OWNED BY public.burn_tickets.id;
