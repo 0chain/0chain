@@ -774,14 +774,14 @@ func (sc *StorageSmartContract) adjustChallengePool(
 	oterms []Terms,
 	timeUnit time.Duration,
 	balances chainstate.StateContextI,
-) (err error) {
+) error {
+	changes, err := alloc.challengePoolChanges(odr, ndr, timeUnit, oterms)
+	if err != nil {
+		return fmt.Errorf("adjust_challenge_pool: %v", err)
+	}
 
-	var (
-		changes = alloc.challengePoolChanges(odr, ndr, timeUnit, oterms)
-		cp      *challengePool
-	)
-
-	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
+	cp, err := sc.getChallengePool(alloc.ID, balances)
+	if err != nil {
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
 	}
 
@@ -811,7 +811,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 			i := int64(0)
 			i, err = sum.Int64()
 			if err != nil {
-				return
+				return err
 			}
 			balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
 				Client:       alloc.Owner,
@@ -821,7 +821,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		}
 	}
 
-	return
+	return nil
 }
 
 // extendAllocation extends size or/and expiration (one of them can be reduced);
@@ -907,8 +907,12 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		// new blobber's min lock demand (alloc.Expiration is already updated
 		// and we can use restDurationInTimeUnits method here)
-		nbmld, err := details.Terms.minLockDemand(gbSize,
-			alloc.restDurationInTimeUnits(alloc.StartTime, conf.TimeUnit))
+		rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, conf.TimeUnit)
+		if err != nil {
+			return common.NewError("allocation_extending_failed", err.Error())
+		}
+
+		nbmld, err := details.Terms.minLockDemand(gbSize, rdtu)
 		if err != nil {
 			return err
 		}

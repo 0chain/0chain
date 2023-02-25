@@ -740,9 +740,9 @@ func TestExtendAllocation(t *testing.T) {
 				for _, blobber := range sa.BlobberAllocs {
 					size += blobber.Stats.UsedSize
 				}
-				newFunds := sizeInGB(size) *
-					float64(mockWritePrice) *
-					sa.durationInTimeUnits(args.request.Expiration, confTimeUnit)
+				dtu, err := sa.durationInTimeUnits(args.request.Expiration, confTimeUnit)
+				require.NoError(t, err)
+				newFunds := sizeInGB(size) * float64(mockWritePrice) * dtu
 				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
