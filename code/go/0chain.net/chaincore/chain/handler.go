@@ -42,11 +42,7 @@ import (
 func minerHandlers() map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
-		"/v1/block/get": common.UserRateLimit(
-			common.ToJSONResponse(
-				GetBlockHandler,
-			),
-		),
+
 		"/v1/chain/get": common.Recover(
 			common.ToJSONResponse(
 				memorystore.WithConnectionHandler(
@@ -131,6 +127,12 @@ func commonHandlers(c Chainer) map[string]func(http.ResponseWriter, *http.Reques
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
+
+		"/v1/block/get": common.UserRateLimit(
+			common.ToJSONResponse(
+				GetBlockHandler,
+			),
+		), // This should be miner only in theory unless i'm wrong, but gosdk calls this endpoint on both sharders and miners
 	}
 
 	return m
