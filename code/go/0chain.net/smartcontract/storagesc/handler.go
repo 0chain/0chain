@@ -78,7 +78,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getUserLockedTotal", common.UserRateLimit(srh.getUserLockedTotal)),
 		rest.MakeEndpoint(storage+"/block", common.UserRateLimit(srh.getBlock)),
 		rest.MakeEndpoint(storage+"/get_blocks", common.UserRateLimit(srh.getBlocks)),
-		rest.MakeEndpoint(storage+"/total-stored-data", common.UserRateLimit(srh.getTotalData)),
 		rest.MakeEndpoint(storage+"/storage-config", common.UserRateLimit(srh.getConfig)),
 		rest.MakeEndpoint(storage+"/getReadPoolStat", common.UserRateLimit(srh.getReadPoolStat)),
 		rest.MakeEndpoint(storage+"/getChallengePoolStat", common.UserRateLimit(srh.getChallengePoolStat)),
@@ -670,30 +669,6 @@ func (srh *StorageRestHandler) getConfig(w http.ResponseWriter, r *http.Request)
 	}
 
 	common.Respond(w, r, rtv, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/total-stored-data total-stored-data
-// Gets the total data currently storage used across all blobbers.
-//
-// this endpoint returns the summation of all the Size fields in all the WriteMarkers sent to 0chain by blobbers
-//
-// responses:
-//
-//	200: StringMap
-//	400:
-func (srh *StorageRestHandler) getTotalData(w http.ResponseWriter, r *http.Request) {
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	global, err := edb.GetGlobal()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("getting data utilization failed, Error: "+err.Error()))
-		return
-	}
-	common.Respond(w, r, global.UsedStorage, nil)
 }
 
 // swagger:model fullBlock
