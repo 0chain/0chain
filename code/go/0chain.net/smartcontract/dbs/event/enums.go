@@ -113,6 +113,7 @@ const (
 	TagValidatorHealthCheck
 	TagUpdateUserPayedFees
 	TagUpdateUserCollectedRewards
+	TagInsertValidatorRewardHistory
 	NumberOfTags
 )
 

@@ -852,6 +852,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateUserCollectedRewards(*u)
+	case TagInsertValidatorRewardHistory:
+		validatorHistory, ok := fromEvent[ValidatorRewardHistory](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.InsertValidatorRewardHistory(*validatorHistory)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil

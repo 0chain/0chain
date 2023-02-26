@@ -211,6 +211,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
 
+	// TODO: add validators and their reward amount to the history with challenge id by using TagInsertValidatorRewardHistory
+
 	moveToValidators, err := currency.AddCoin(alloc.MovedToValidators, validatorsReward)
 	if err != nil {
 		return err
