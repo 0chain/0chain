@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"testing"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/chaincore/chain"
 
 	"github.com/0chain/common/core/currency"
@@ -133,7 +135,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 45,
+			restpoints: 43,
 		},
 		{
 			name:       "multisig",
@@ -332,8 +334,8 @@ func TestExecuteSmartContract(t *testing.T) {
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.MinerNode) bool {
-			mn := &minersc.MinerNode{SimpleNode: &minersc.SimpleNode{}}
-			blob, err := mn.MarshalMsg(nil)
+			v.ProviderType = spenum.Miner
+			blob, err := v.MarshalMsg(nil)
 			require.NoError(t, err)
 
 			_, err = v.UnmarshalMsg(blob)
@@ -427,7 +429,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					InputData:    scData,
 				},
 			},
-			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":null}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"provider_type\":1,\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":{\"pools\":{},\"rewards\":0,\"settings\":{\"delegate_wallet\":\"\",\"min_stake\":0,\"max_stake\":0,\"num_delegates\":0,\"service_charge\":0},\"minter\":0}}",
 			wantErr: false,
 		},
 	}

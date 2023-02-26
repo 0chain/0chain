@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 
@@ -98,6 +100,13 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return errors.New("late challenge response")
 	}
 
+	if tp < latestCompletedChallTime {
+		logging.Logger.Debug("old challenge response - blobber reward",
+			zap.Int64("latestCompletedChallTime", int64(latestCompletedChallTime)),
+			zap.Int64("challenge time", int64(tp)))
+		return errors.New("old challenge response on blobber rewarding")
+	}
+
 	if tp > alloc.Expiration {
 		tp = alloc.Expiration // last challenge
 	}
@@ -108,11 +117,20 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var (
-		rdtu = alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
-		dtu  = alloc.durationInTimeUnits(tp-latestCompletedChallTime, conf.TimeUnit)
-		move = blobAlloc.challenge(dtu, rdtu)
-	)
+	rdtu, err := alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
+	if err != nil {
+		return fmt.Errorf("blobber reward failed: %v", err)
+	}
+
+	dtu, err := alloc.durationInTimeUnits(tp-latestCompletedChallTime, conf.TimeUnit)
+	if err != nil {
+		return fmt.Errorf("blobber reward failed: %v", err)
+	}
+
+	move, err := blobAlloc.challenge(dtu, rdtu)
+	if err != nil {
+		return err
+	}
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
@@ -288,6 +306,13 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return errors.New("late challenge response")
 	}
 
+	if tp < prev {
+		logging.Logger.Debug("old challenge response - blobber penalty",
+			zap.Int64("latestCompletedChallTime", int64(prev)),
+			zap.Int64("challenge time", int64(tp)))
+		return errors.New("old challenge response on blobber penalty")
+	}
+
 	if tp > alloc.Expiration {
 		tp = alloc.Expiration // last challenge
 	}
@@ -298,11 +323,20 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var (
-		rdtu = alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
-		dtu  = alloc.durationInTimeUnits(tp-prev, conf.TimeUnit)
-		move = blobAlloc.challenge(dtu, rdtu)
-	)
+	rdtu, err := alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
+	if err != nil {
+		return fmt.Errorf("blobber penalty failed: %v", err)
+	}
+
+	dtu, err := alloc.durationInTimeUnits(tp-prev, conf.TimeUnit)
+	if err != nil {
+		return fmt.Errorf("blobber penalty failed: %v", err)
+	}
+
+	move, err := blobAlloc.challenge(dtu, rdtu)
+	if err != nil {
+		return err
+	}
 
 	// part of the tokens goes to related validators
 	validatorsReward, err := currency.MultFloat64(move, conf.ValidatorReward)
@@ -640,7 +674,7 @@ func (sc *StorageSmartContract) challengePassed(
 			Timestamp:  t.CreationDate,
 		}
 
-		_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			return "", common.NewError("verify_challenge",
 				"error inserting blobber to chain"+err.Error())
@@ -945,7 +979,10 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if randValidator.Id != blobberID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
-					ID:      randValidator.Id,
+					Provider: provider.Provider{
+						ID:           randValidator.Id,
+						ProviderType: spenum.Validator,
+					},
 					BaseURL: randValidator.Url,
 				})
 		}

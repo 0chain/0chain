@@ -4171,23 +4171,9 @@ it can be used as a scan destination, similar to NullString.
 
   
 
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
-| DelegateWallet | string| `string` |  | |  |  |
-| ID | string| `string` |  | |  |  |
-| NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
-| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
-| UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
-| max_stake | [Coin](#coin)| `Coin` |  | |  |  |
-| min_stake | [Coin](#coin)| `Coin` |  | |  |  |
-| rewards | [ProviderRewards](#provider-rewards)| `ProviderRewards` |  | |  |  |
-| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
-| unstake_total | [Coin](#coin)| `Coin` |  | |  |  |
+| Name | Type | Go type | Default | Description | Example |
+|------|------|---------| ------- |-------------|---------|
+| Provider | int64 (formatted integer)| int64 | |  |  |
 
 
 
@@ -4553,6 +4539,7 @@ which the allocation has created. |  |
 | SavedData | int64 (formatted integer)| `int64` |  | |  |  |
 | geolocation | [StorageNodeGeolocation](#storage-node-geolocation)| `StorageNodeGeolocation` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| provider_type | [Provider](#provider)| `Provider` |  | |  |  |
 | reward_partition | [RewardPartitionLocation](#reward-partition-location)| `RewardPartitionLocation` |  | |  |  |
 | stake_pool_settings | [Settings](#settings)| `Settings` |  | |  |  |
 | terms | [Terms](#terms)| `Terms` |  | |  |  |
@@ -4721,6 +4708,7 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 |------|------|---------|:--------:| ------- |-------------|---------|
 | BaseURL | string| `string` |  | |  |  |
 | ID | string| `string` |  | |  |  |
+| provider_type | [Provider](#provider)| `Provider` |  | |  |  |
 | stake_pool_settings | [Settings](#settings)| `Settings` |  | |  |  |
 
 
@@ -5085,6 +5073,7 @@ and the other for the allocations that the client (client_id) doesn't own
 | UsedAllocation | int64 (formatted integer)| `int64` |  | |  |  |
 | geolocation | [StorageNodeGeolocation](#storage-node-geolocation)| `StorageNodeGeolocation` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| provider_type | [Provider](#provider)| `Provider` |  | |  |  |
 | reward_partition | [RewardPartitionLocation](#reward-partition-location)| `RewardPartitionLocation` |  | |  |  |
 | stake_pool_settings | [Settings](#settings)| `Settings` |  | |  |  |
 | terms | [Terms](#terms)| `Terms` |  | |  |  |

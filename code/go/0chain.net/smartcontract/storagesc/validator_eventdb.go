@@ -1,7 +1,10 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -10,7 +13,10 @@ import (
 
 func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	return &ValidationNode{
-		ID:        v.ID,
+		Provider: provider.Provider{
+			ID:           v.ID,
+			ProviderType: spenum.Validator,
+		},
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
 		StakePoolSettings: stakepool.Settings{
@@ -47,14 +53,15 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 	data := &event.Validator{
 		BaseUrl: vn.BaseURL,
 		Provider: event.Provider{
-			ID:             vn.ID,
-			TotalStake:     staked,
-			UnstakeTotal:   sp.TotalUnStake,
-			DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-			MinStake:       vn.StakePoolSettings.MinStake,
-			MaxStake:       vn.StakePoolSettings.MaxStake,
-			NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
+			ID:              vn.ID,
+			TotalStake:      staked,
+			UnstakeTotal:    sp.TotalUnStake,
+			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
+			MinStake:        vn.StakePoolSettings.MinStake,
+			MaxStake:        vn.StakePoolSettings.MaxStake,
+			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
+			LastHealthCheck: vn.LastHealthCheck,
 		},
 	}
 
@@ -72,18 +79,30 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 	data := &event.Validator{
 		BaseUrl: vn.BaseURL,
 		Provider: event.Provider{
-			ID:             vn.ID,
-			TotalStake:     staked,
-			UnstakeTotal:   sp.TotalUnStake,
-			DelegateWallet: vn.StakePoolSettings.DelegateWallet,
-			MinStake:       vn.StakePoolSettings.MinStake,
-			MaxStake:       vn.StakePoolSettings.MaxStake,
-			NumDelegates:   vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:  vn.StakePoolSettings.ServiceChargeRatio,
-			Rewards:        event.ProviderRewards{ProviderID: vn.ID},
+			ID:              vn.ID,
+			TotalStake:      staked,
+			UnstakeTotal:    sp.TotalUnStake,
+			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
+			MinStake:        vn.StakePoolSettings.MinStake,
+			MaxStake:        vn.StakePoolSettings.MaxStake,
+			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
+			Rewards:         event.ProviderRewards{ProviderID: vn.ID},
+			LastHealthCheck: vn.LastHealthCheck,
 		},
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwiteValidator, vn.ID, data)
+	return nil
+}
+
+func emitValidatorHealthCheck(vn *ValidationNode, downtime uint64, balances cstate.StateContextI) error {
+	data := dbs.DbHealthCheck{
+		ID:              vn.ID,
+		LastHealthCheck: vn.LastHealthCheck,
+		Downtime:        downtime,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagValidatorHealthCheck, vn.ID, data)
 	return nil
 }
