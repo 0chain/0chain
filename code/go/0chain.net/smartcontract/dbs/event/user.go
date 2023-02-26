@@ -16,18 +16,23 @@ import (
 
 type User struct {
 	model.UpdatableModel
-	UserID          string        `json:"user_id" gorm:"uniqueIndex"`
-	BucketID        int64         `json:"bucket_id" gorm:"not null,default:0"`
-	TxnHash         string        `json:"txn_hash"`
-	Balance         currency.Coin `json:"balance"`
-	Change          currency.Coin `json:"change"`
-	Round           int64         `json:"round"`
-	Nonce           int64         `json:"nonce"`
-	CollectedReward int64         `json:"collected_reward"`
-	TotalStake      int64         `json:"total_stake"`
-	ReadPoolTotal   int64         `json:"read_pool_total"`
-	WritePoolTotal  int64         `json:"write_pool_total"`
-	PayedFees       int64         `json:"payed_fees"`
+	UserID   string        `json:"user_id" gorm:"uniqueIndex"`
+	BucketID int64         `json:"bucket_id" gorm:"not null,default:0"`
+	TxnHash  string        `json:"txn_hash"`
+	Round    int64         `json:"round"`
+	Nonce    int64         `json:"nonce"`
+	Change   currency.Coin `json:"change"`
+	Balance  currency.Coin `json:"balance"`
+	AggregateValues
+}
+
+type AggregateValues struct {
+	UserID          string `json:"user_id" gorm:"uniqueIndex"`
+	CollectedReward int64  `json:"collected_reward"`
+	TotalStake      int64  `json:"total_stake"`
+	ReadPoolTotal   int64  `json:"read_pool_total"`
+	WritePoolTotal  int64  `json:"write_pool_total"`
+	PayedFees       int64  `json:"payed_fees"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {

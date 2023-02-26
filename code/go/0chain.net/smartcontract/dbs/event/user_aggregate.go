@@ -1,6 +1,7 @@
 package event
 
 import (
+	"reflect"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -9,14 +10,9 @@ import (
 )
 
 type UserAggregate struct {
-	UserID          string `json:"user_id" gorm:"uniqueIndex"`
-	Round           int64  `json:"round"`
-	CollectedReward int64  `json:"collected_reward"`
-	TotalStake      int64  `json:"total_stake"`
-	ReadPoolTotal   int64  `json:"read_pool_total"`
-	WritePoolTotal  int64  `json:"write_pool_total"`
-	PayedFees       int64  `json:"payed_fees"`
-	CreatedAt       time.Time
+	Round     int64 `json:"round"`
+	CreatedAt time.Time
+	AggregateValues
 }
 
 func (edb *EventDb) updateUserAggregate(round, pageAmount int64, gs *globalSnapshot) {
@@ -89,16 +85,19 @@ func (edb *EventDb) calculateUserAggregate(gs *globalSnapshot, round, limit, off
 			continue
 		}
 		aggregate := UserAggregate{
-			Round:  round,
-			UserID: current.UserID,
+			Round: round,
 		}
+		aggregate.UserID = current.UserID
 		aggregate.CollectedReward = (old.CollectedReward + current.CollectedReward) / 2
 		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 		aggregate.ReadPoolTotal = (old.ReadPoolTotal + current.ReadPoolTotal) / 2
 		aggregate.WritePoolTotal = (old.WritePoolTotal + current.WritePoolTotal) / 2
 		aggregate.PayedFees = (old.PayedFees + current.PayedFees) / 2
 
-		aggregates = append(aggregates, aggregate)
+		if !reflect.DeepEqual(old.AggregateValues, current.AggregateValues) {
+			aggregates = append(aggregates, aggregate)
+		}
+
 	}
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {

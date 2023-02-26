@@ -7,13 +7,8 @@ import (
 
 // swagger:model UserSnapshot
 type UserSnapshot struct {
-	UserID          string `json:"user_id" gorm:"uniqueIndex"`
-	Round           int64  `json:"round"`
-	CollectedReward int64  `json:"collected_reward"`
-	TotalStake      int64  `json:"total_stake"`
-	ReadPoolTotal   int64  `json:"read_pool_total"`
-	WritePoolTotal  int64  `json:"write_pool_total"`
-	PayedFees       int64  `json:"payed_fees"`
+	Round int64 `json:"round"`
+	AggregateValues
 }
 
 func (edb *EventDb) getUserSnapshots(limit, offset int64) (map[string]UserSnapshot, error) {
@@ -41,15 +36,18 @@ func (edb *EventDb) getUserSnapshots(limit, offset int64) (map[string]UserSnapsh
 func (edb *EventDb) addUserSnapshot(users []User) error {
 	var snapshots []UserSnapshot
 	for _, user := range users {
-		snapshots = append(snapshots, UserSnapshot{
-			UserID:          user.UserID,
-			Round:           user.Round,
-			CollectedReward: user.CollectedReward,
-			TotalStake:      user.TotalStake,
-			ReadPoolTotal:   user.ReadPoolTotal,
-			WritePoolTotal:  user.WritePoolTotal,
-			PayedFees:       user.PayedFees,
-		})
+		snap := UserSnapshot{
+			Round: user.Round,
+			AggregateValues: AggregateValues{
+				UserID:          user.UserID,
+				CollectedReward: user.CollectedReward,
+				TotalStake:      user.TotalStake,
+				ReadPoolTotal:   user.ReadPoolTotal,
+				WritePoolTotal:  user.WritePoolTotal,
+				PayedFees:       user.PayedFees,
+			},
+		}
+		snapshots = append(snapshots, snap)
 	}
 
 	return edb.Store.Get().Create(&snapshots).Error
