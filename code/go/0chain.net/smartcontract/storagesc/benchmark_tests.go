@@ -447,6 +447,19 @@ func BenchmarkTests(
 			input: []byte{},
 		},
 		{
+			name:     "storage.validator_health_check",
+			endpoint: ssc.validatorHealthCheck,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: creationTime + 1,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: []byte{},
+		},
+		{
 			name:     "storage.update_blobber_settings",
 			endpoint: ssc.updateBlobberSettings,
 			txn: &transaction.Transaction{
