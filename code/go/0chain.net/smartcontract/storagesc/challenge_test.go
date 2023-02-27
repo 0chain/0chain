@@ -364,6 +364,15 @@ func TestBlobberReward(t *testing.T) {
 		require.EqualValues(t, err.Error(), errLate)
 	})
 
+	t.Run("test old challenge", func(t *testing.T) {
+		var thisChallenge = previousChallenge - 1
+		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+		require.Error(t, err)
+		require.EqualValues(t, err.Error(), "old challenge response on blobber rewarding")
+	})
+
 	t.Run(errTokensChallengePool, func(t *testing.T) {
 		var challengePoolBalance = currency.Coin(0)
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
@@ -396,7 +405,7 @@ func TestBlobberPenalty(t *testing.T) {
 	var challengePoolIntegralValue = currency.Coin(73000000)
 	var challengePoolBalance = currency.Coin(700000)
 	var partial = 0.9
-	var preiviousChallenge = common.Timestamp(3)
+	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
 	var thisExpires = common.Timestamp(222)
 	var now = common.Timestamp(101)
@@ -424,7 +433,7 @@ func TestBlobberPenalty(t *testing.T) {
 	t.Run("test blobberPenalty ", func(t *testing.T) {
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -432,7 +441,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var size = int64(10000)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -440,16 +449,25 @@ func TestBlobberPenalty(t *testing.T) {
 		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLate)
+	})
+
+	t.Run("old challenge", func(t *testing.T) {
+		var thisChallenge = previousChallenge - 1
+		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
+		require.Error(t, err)
+		require.EqualValues(t, err.Error(), "old challenge response on blobber penalty")
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {
 		var validatorStakes = [][]int64{{45, 666, 4533}, {}, {10}}
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -457,7 +475,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var challengePoolBalance = currency.Coin(0)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errTokensChallengePool))
 	})
