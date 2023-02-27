@@ -1196,6 +1196,7 @@ CREATE TABLE public.write_markers (
                                       allocation_id text,
                                       transaction_id text,
                                       allocation_root text,
+                                      file_meta_root character(64),
                                       previous_allocation_root text,
                                       size bigint,
                                       "timestamp" bigint,
