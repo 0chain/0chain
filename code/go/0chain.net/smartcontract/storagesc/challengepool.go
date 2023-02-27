@@ -95,7 +95,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	validators []datastore.Key,
 	vSPs []*stakePool,
 	balances cstate.StateContextI,
-) error {
+	options ...string) (err error) {
 	if len(validators) == 0 || reward == 0 {
 		return nil // nothing to move, or nothing to move to
 	}
@@ -110,7 +110,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	}
 
 	for i, sp := range vSPs {
-		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, spenum.ValidationReward, balances)
+		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, spenum.ValidationReward, balances, options[0])
 		if err != nil {
 			return fmt.Errorf("moving to validator %s: %v",
 				validators[i], err)
@@ -118,7 +118,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	}
 	if bal > 0 {
 		for i := 0; i < int(bal); i++ {
-			err := vSPs[i].DistributeRewards(1, validators[i], spenum.Validator, spenum.ValidationReward, balances)
+			err := vSPs[i].DistributeRewards(1, validators[i], spenum.Validator, spenum.ValidationReward, balances, options[0])
 			if err != nil {
 				return fmt.Errorf("moving to validator %s: %v",
 					validators[i], err)
