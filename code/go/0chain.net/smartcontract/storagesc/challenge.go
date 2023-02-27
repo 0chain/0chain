@@ -526,15 +526,14 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if last := allocChallenges.LatestCompletedChallenge; last != nil {
 		latestCompletedChallTime = last.Created
 	}
-
+	blobAlloc.LatestCompletedChallTime = latestCompletedChallTime
 	challenge.Responded = true
 	cab := &challengeAllocBlobberPassResult{
-		verifyTicketsResult:      result,
-		alloc:                    alloc,
-		allocChallenges:          allocChallenges,
-		challenge:                challenge,
-		blobAlloc:                blobAlloc,
-		latestCompletedChallTime: latestCompletedChallTime,
+		verifyTicketsResult: result,
+		alloc:               alloc,
+		allocChallenges:     allocChallenges,
+		challenge:           challenge,
+		blobAlloc:           blobAlloc,
 	}
 
 	if !(result.pass && result.fresh) {
@@ -555,11 +554,10 @@ type verifyTicketsResult struct {
 // challengeAllocBlobberPassResult wraps all the data structs for processing a challenge
 type challengeAllocBlobberPassResult struct {
 	*verifyTicketsResult
-	alloc                    *StorageAllocation
-	allocChallenges          *AllocationChallenges
-	challenge                *StorageChallenge
-	blobAlloc                *BlobberAllocation
-	latestCompletedChallTime common.Timestamp
+	alloc           *StorageAllocation
+	allocChallenges *AllocationChallenges
+	challenge       *StorageChallenge
+	blobAlloc       *BlobberAllocation
 }
 
 func verifyChallengeTickets(balances cstate.StateContextI,
@@ -729,7 +727,7 @@ func (sc *StorageSmartContract) challengePassed(
 		partial = float64(cab.success) / float64(cab.threshold)
 	}
 
-	err = sc.blobberReward(t, cab.alloc, cab.latestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
+	err = sc.blobberReward(t, cab.alloc, cab.blobAlloc.LatestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
 		cab.validators, partial, balances)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
@@ -776,7 +774,7 @@ func (sc *StorageSmartContract) challengeFailed(
 
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 
-	err := sc.blobberPenalty(t, cab.alloc, cab.latestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
+	err := sc.blobberPenalty(t, cab.alloc, cab.blobAlloc.LatestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
 		cab.validators, balances)
 	if err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
