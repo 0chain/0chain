@@ -46,11 +46,11 @@ func TestUserEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	user1 := User{
-		UserID:  clientID,
-		TxnHash: txnHash,
-		Balance: currency.Coin(initialBalance),
-		Nonce:   1,
-		Round:   3,
+		AggregateValues: AggregateValues{UserID: clientID},
+		TxnHash:         txnHash,
+		Balance:         currency.Coin(initialBalance),
+		Nonce:           1,
+		Round:           3,
 	}
 
 	err = eventDb.addOrUpdateUsers([]User{user1})
@@ -83,11 +83,11 @@ func TestUserEvent(t *testing.T) {
 
 	//clientID2 := u.UserID + " 2"
 	user2 := User{
-		UserID:  clientID2,
-		TxnHash: txnHash + " 2",
-		Balance: currency.Coin(initialBalance) - 1,
-		Nonce:   1,
-		Round:   10,
+		AggregateValues: AggregateValues{UserID: clientID2},
+		TxnHash:         txnHash + " 2",
+		Balance:         currency.Coin(initialBalance) - 1,
+		Nonce:           1,
+		Round:           10,
 	}
 	err = eventDb.addOrUpdateUsers([]User{user2})
 	require.NoError(t, err, "Error while inserting User to event Database")
@@ -137,11 +137,11 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 	users := make([]User, 10)
 	for i := 0; i < 10; i++ {
 		users[i] = User{
-			UserID:  fmt.Sprintf("u_%v", i),
-			TxnHash: fmt.Sprintf("hash_%v", i),
-			Balance: currency.Coin(i),
-			Nonce:   int64(i),
-			Round:   int64(i),
+			AggregateValues: AggregateValues{UserID: fmt.Sprintf("u_%v", i)},
+			TxnHash:         fmt.Sprintf("hash_%v", i),
+			Balance:         currency.Coin(i),
+			Nonce:           int64(i),
+			Round:           int64(i),
 		}
 	}
 
@@ -160,11 +160,11 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 	// update users
 	for i := 0; i < 10; i++ {
 		users[i] = User{
-			UserID:  fmt.Sprintf("u_%v", i),
-			TxnHash: fmt.Sprintf("hash_%v", i),
-			Balance: currency.Coin(i * 100),
-			Nonce:   int64(i + 100),
-			Round:   int64(i + 100),
+			AggregateValues: AggregateValues{UserID: fmt.Sprintf("u_%v", i)},
+			TxnHash:         fmt.Sprintf("hash_%v", i),
+			Balance:         currency.Coin(i * 100),
+			Nonce:           int64(i + 100),
+			Round:           int64(i + 100),
 		}
 	}
 
@@ -185,11 +185,11 @@ func TestAddAndUpdateUsersEvent(t *testing.T) {
 	// add and update
 	for i := 5; i < 15; i++ {
 		users[i-5] = User{
-			UserID:  fmt.Sprintf("u_%v", i),
-			TxnHash: fmt.Sprintf("hash_%v", i),
-			Balance: currency.Coin(i * 150),
-			Nonce:   int64(i + 150),
-			Round:   int64(i + 150),
+			AggregateValues: AggregateValues{UserID: fmt.Sprintf("u_%v", i)},
+			TxnHash:         fmt.Sprintf("hash_%v", i),
+			Balance:         currency.Coin(i * 150),
+			Nonce:           int64(i + 150),
+			Round:           int64(i + 150),
 		}
 	}
 
@@ -212,8 +212,8 @@ func makeUserCollectedRewardsEvent(id string, reward int64) Event {
 		Tag:   TagUpdateUserCollectedRewards,
 		Index: id,
 		Data: User{
-			UserID: id,
 			AggregateValues: AggregateValues{
+				UserID:          id,
 				CollectedReward: reward,
 			},
 		},
@@ -262,9 +262,9 @@ func makeUserPayedFeesEvent(id string, fee int64) Event {
 		Tag:   TagUpdateUserPayedFees,
 		Index: id,
 		Data: User{
-			UserID: id,
 			AggregateValues: AggregateValues{
 				PayedFees: fee,
+				UserID:    id,
 			},
 		},
 	}
@@ -291,8 +291,8 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 			},
 			expect: expect{
 				users: map[string]User{
-					"u_1": {UserID: "u_1", AggregateValues: AggregateValues{CollectedReward: 100}},
-					"u_2": {UserID: "u_2", AggregateValues: AggregateValues{CollectedReward: 200}},
+					"u_1": {AggregateValues: AggregateValues{UserID: "u_1", CollectedReward: 100}},
+					"u_2": {AggregateValues: AggregateValues{UserID: "u_2", CollectedReward: 200}},
 				},
 			},
 		},
@@ -304,7 +304,7 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 			},
 			expect: expect{
 				users: map[string]User{
-					"u_1": {UserID: "u_1", AggregateValues: AggregateValues{CollectedReward: 300}},
+					"u_1": {AggregateValues: AggregateValues{CollectedReward: 300, UserID: "u_1"}},
 				},
 			},
 		},
@@ -583,8 +583,8 @@ func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
 			},
 			expect: expect{
 				pools: map[string]User{
-					"c_1": {UserID: "c_1", AggregateValues: AggregateValues{PayedFees: 100}},
-					"c_2": {UserID: "c_2", AggregateValues: AggregateValues{PayedFees: 100}},
+					"c_1": {AggregateValues: AggregateValues{UserID: "c_1", PayedFees: 100}},
+					"c_2": {AggregateValues: AggregateValues{UserID: "c_2", PayedFees: 100}},
 				},
 			},
 		},
@@ -596,7 +596,7 @@ func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
 			},
 			expect: expect{
 				pools: map[string]User{
-					"c_1": {UserID: "c_1", AggregateValues: AggregateValues{PayedFees: 100}},
+					"c_1": {AggregateValues: AggregateValues{UserID: "c_1", PayedFees: 100}},
 				},
 			},
 		},

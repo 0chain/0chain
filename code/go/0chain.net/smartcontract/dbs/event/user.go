@@ -16,7 +16,6 @@ import (
 
 type User struct {
 	model.UpdatableModel
-	UserID   string        `json:"user_id" gorm:"uniqueIndex"`
 	BucketID int64         `json:"bucket_id" gorm:"not null,default:0"`
 	TxnHash  string        `json:"txn_hash"`
 	Round    int64         `json:"round"`

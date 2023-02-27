@@ -14,8 +14,8 @@ func makeUserEvent(id string, balance currency.Coin) Event {
 		Tag:   TagAddOrOverwriteUser,
 		Index: id,
 		Data: User{
-			UserID:  id,
-			Balance: balance,
+			AggregateValues: AggregateValues{UserID: id},
+			Balance:         balance,
 		},
 	}
 }
@@ -71,7 +71,7 @@ func TestMergeUserEvents(t *testing.T) {
 			events: []Event{makeUserEvent("user_1", 100)},
 			expect: expect{
 				users: map[string]User{
-					"user_1": {UserID: "user_1", Balance: 100},
+					"user_1": {AggregateValues: AggregateValues{UserID: "user_1"}, Balance: 100},
 				},
 			},
 		},
@@ -83,8 +83,8 @@ func TestMergeUserEvents(t *testing.T) {
 			},
 			expect: expect{
 				users: map[string]User{
-					"user_1": {UserID: "user_1", Balance: 100},
-					"user_2": {UserID: "user_2", Balance: 200},
+					"user_1": {AggregateValues: AggregateValues{UserID: "user_1"}, Balance: 100},
+					"user_2": {AggregateValues: AggregateValues{UserID: "user_2"}, Balance: 200},
 				},
 			},
 		},
@@ -96,7 +96,7 @@ func TestMergeUserEvents(t *testing.T) {
 			},
 			expect: expect{
 				users: map[string]User{
-					"user_1": {UserID: "user_1", Balance: 200},
+					"user_1": {AggregateValues: AggregateValues{UserID: "user_1"}, Balance: 200},
 				},
 			},
 		},
@@ -110,9 +110,9 @@ func TestMergeUserEvents(t *testing.T) {
 			},
 			expect: expect{
 				users: map[string]User{
-					"user_1": {UserID: "user_1", Balance: 200},
-					"user_2": {UserID: "user_2", Balance: 200},
-					"user_3": {UserID: "user_3", Balance: 300},
+					"user_1": {AggregateValues: AggregateValues{UserID: "user_1"}, Balance: 200},
+					"user_2": {AggregateValues: AggregateValues{UserID: "user_2"}, Balance: 200},
+					"user_3": {AggregateValues: AggregateValues{UserID: "user_3"}, Balance: 300},
 				},
 			},
 		},
@@ -128,9 +128,9 @@ func TestMergeUserEvents(t *testing.T) {
 			},
 			expect: expect{
 				users: map[string]User{
-					"user_1": {UserID: "user_1", Balance: 200},
-					"user_2": {UserID: "user_2", Balance: 200},
-					"user_3": {UserID: "user_3", Balance: 300},
+					"user_1": {AggregateValues: AggregateValues{UserID: "user_1"}, Balance: 200},
+					"user_2": {AggregateValues: AggregateValues{UserID: "user_2"}, Balance: 200},
+					"user_3": {AggregateValues: AggregateValues{UserID: "user_3"}, Balance: 300},
 				},
 			},
 		},

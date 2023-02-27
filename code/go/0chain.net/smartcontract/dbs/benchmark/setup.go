@@ -133,8 +133,8 @@ func AddMockUsers(
 	}
 	for _, client := range clients {
 		user := event.User{
-			UserID:  client,
-			Balance: 100,
+			AggregateValues: event.AggregateValues{UserID: client},
+			Balance:         100,
 		}
 		_ = eventDb.Store.Get().Create(&user)
 	}

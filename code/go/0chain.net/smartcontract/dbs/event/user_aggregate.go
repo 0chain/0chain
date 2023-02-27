@@ -94,9 +94,10 @@ func (edb *EventDb) calculateUserAggregate(gs *globalSnapshot, round, limit, off
 		aggregate.WritePoolTotal = (old.WritePoolTotal + current.WritePoolTotal) / 2
 		aggregate.PayedFees = (old.PayedFees + current.PayedFees) / 2
 
-		if !reflect.DeepEqual(old.AggregateValues, current.AggregateValues) {
-			aggregates = append(aggregates, aggregate)
+		if reflect.DeepEqual(old.AggregateValues, current.AggregateValues) {
+			continue
 		}
+		aggregates = append(aggregates, aggregate)
 
 	}
 	if len(aggregates) > 0 {
