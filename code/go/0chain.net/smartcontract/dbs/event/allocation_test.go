@@ -301,7 +301,7 @@ func TestAllocations(t *testing.T) {
 
 		// Create the owner
 		err := eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: OwnerId,
 			},
 		}).Error
@@ -420,14 +420,14 @@ func TestAllocations(t *testing.T) {
 
 		// Create the owners
 		err := eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: OwnerId,
 			},
 		}).Error
 		require.NoError(t, err, "owner couldn't be created")
 
 		err = eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: otherOwner,
 			},
 		}).Error
@@ -582,7 +582,7 @@ func TestAllocations(t *testing.T) {
 
 		// Create the owner
 		err := eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: OwnerId,
 			},
 		}).Error
@@ -665,7 +665,7 @@ func TestAllocations(t *testing.T) {
 
 		// Create the owner
 		err := eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: OwnerId,
 			},
 		}).Error
@@ -753,7 +753,7 @@ func TestAllocations(t *testing.T) {
 
 		// Create the owner
 		err := eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: OwnerId,
 			},
 		}).Error
@@ -835,7 +835,7 @@ func TestAllocations(t *testing.T) {
 
 		// Create the owner
 		err := eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: OwnerId,
 			},
 		}).Error

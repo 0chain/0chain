@@ -738,7 +738,7 @@ func userToState(u *event.User) *state.State {
 
 func stateToUser(clientID string, s *state.State) *event.User {
 	return &event.User{
-		AggregateValues: event.AggregateValues{
+		UserMetrics: event.UserMetrics{
 			UserID: clientID,
 		},
 		TxnHash: s.TxnHash,

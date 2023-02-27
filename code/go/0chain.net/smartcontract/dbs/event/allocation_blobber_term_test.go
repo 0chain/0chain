@@ -24,7 +24,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		// Create owner and allocation
 		err := eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: OwnerId,
 			},
 		}).Error
@@ -80,7 +80,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		// Create owner and allocation
 		err := eventDb.Get().Model(&User{}).Create(&User{
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID: OwnerId,
 			},
 		}).Error

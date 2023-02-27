@@ -940,7 +940,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 			Tag:   event.TagUpdateUserPayedFees,
 			Index: txn.ClientID,
 			Data: event.User{
-				AggregateValues: event.AggregateValues{
+				UserMetrics: event.UserMetrics{
 					UserID:    txn.ClientID,
 					PayedFees: int64(txn.Fee),
 				},

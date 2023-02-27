@@ -12,7 +12,7 @@ import (
 type UserAggregate struct {
 	Round     int64 `json:"round"`
 	CreatedAt time.Time
-	AggregateValues
+	UserMetrics
 }
 
 func (edb *EventDb) updateUserAggregate(round, pageAmount int64, gs *globalSnapshot) {
@@ -94,7 +94,7 @@ func (edb *EventDb) calculateUserAggregate(gs *globalSnapshot, round, limit, off
 		aggregate.WritePoolTotal = (old.WritePoolTotal + current.WritePoolTotal) / 2
 		aggregate.PayedFees = (old.PayedFees + current.PayedFees) / 2
 
-		if reflect.DeepEqual(old.AggregateValues, current.AggregateValues) {
+		if reflect.DeepEqual(old.UserMetrics, current.UserMetrics) {
 			continue
 		}
 		aggregates = append(aggregates, aggregate)

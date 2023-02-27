@@ -22,10 +22,10 @@ type User struct {
 	Nonce    int64         `json:"nonce"`
 	Change   currency.Coin `json:"change"`
 	Balance  currency.Coin `json:"balance"`
-	AggregateValues
+	UserMetrics
 }
 
-type AggregateValues struct {
+type UserMetrics struct {
 	UserID          string `json:"user_id" gorm:"uniqueIndex"`
 	CollectedReward int64  `json:"collected_reward"`
 	TotalStake      int64  `json:"total_stake"`

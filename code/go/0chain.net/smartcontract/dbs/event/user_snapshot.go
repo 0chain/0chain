@@ -8,7 +8,7 @@ import (
 // swagger:model UserSnapshot
 type UserSnapshot struct {
 	Round int64 `json:"round"`
-	AggregateValues
+	UserMetrics
 }
 
 func (edb *EventDb) getUserSnapshots(limit, offset int64) (map[string]UserSnapshot, error) {
@@ -38,7 +38,7 @@ func (edb *EventDb) addUserSnapshot(users []User) error {
 	for _, user := range users {
 		snap := UserSnapshot{
 			Round: user.Round,
-			AggregateValues: AggregateValues{
+			UserMetrics: UserMetrics{
 				UserID:          user.UserID,
 				CollectedReward: user.CollectedReward,
 				TotalStake:      user.TotalStake,
