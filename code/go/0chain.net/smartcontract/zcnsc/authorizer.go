@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	commonsc "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/storagesc"
@@ -385,6 +386,68 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 	}
 
 	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, authorizer.ID, authorizer.ToEvent())
+
+	return string(authorizer.Encode()), nil
+}
+
+func (zcn *ZCNSmartContract) AuthorizerHealthCheck(
+	t *transaction.Transaction,
+	input []byte,
+	ctx cstate.StateContextI,
+) (string, error) {
+	const (
+		code = "authorizer_health_check"
+	)
+
+	var (
+		errorCode    = "failed to process authorizer health check authorizer"
+		err          error
+		authorizerID string
+	)
+
+	payload := AuthorizerHealthCheckPayload{}
+	err = payload.Decode(input)
+	if err != nil {
+		err = common.NewError(errorCode, "failed to decode AuthorizerHealthCheckPayload")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+
+	authorizerID = payload.ID
+
+	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get authorizer (authorizerID: %v), err: %v", authorizerID, err)
+		err = common.NewError(errorCode, msg)
+		Logger.Error("get authorizer node", zap.Error(err))
+		return "", err
+	}
+
+	if authorizer == nil {
+		msg := fmt.Sprintf("authorizer (authorizerID: %v) not found, err: %v", authorizerID, err)
+		err = common.NewError(errorCode, msg)
+		Logger.Error("authorizer node not found", zap.Error(err))
+		return "", err
+	}
+
+	downtime := common.Downtime(authorizer.LastHealthCheck, t.CreationDate)
+	authorizer.LastHealthCheck = t.CreationDate
+
+	data := dbs.DbHealthCheck{
+		ID:              authorizer.ID,
+		LastHealthCheck: authorizer.LastHealthCheck,
+		Downtime:        downtime,
+	}
+
+	ctx.EmitEvent(event.TypeStats, event.TagAuthorizerHealthCheck, authorizer.ID, data)
+
+	err = authorizer.Save(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizer.ID, err)
+		err = common.NewError(code, msg)
+		Logger.Error("saving authorizer node", zap.Error(err))
+		return "", err
+	}
 
 	return string(authorizer.Encode()), nil
 }

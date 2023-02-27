@@ -23,6 +23,7 @@ const (
 	NAME                          = "zcnsc"
 	AddAuthorizerFunc             = "add-authorizer"
 	DeleteAuthorizerFunc          = "delete-authorizer"
+	AuthorizerHealthCheckFunc     = "authorizer-health-check"
 	UpdateGlobalConfigFunc        = "update-global-config"
 	UpdateAuthorizerConfigFunc    = "update-authorizer-config"
 	MintFunc                      = "mint"
@@ -62,6 +63,8 @@ func (zcn *ZCNSmartContract) InitSC() {
 	// Authorizer
 	zcn.smartContractFunctions[AddAuthorizerFunc] = zcn.AddAuthorizer
 	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
+	zcn.smartContractFunctions[AuthorizerHealthCheckFunc] = zcn.AuthorizerHealthCheck
+
 	// Provider
 	zcn.smartContractFunctions[UpdateAuthorizerStakePoolFunc] = zcn.UpdateAuthorizerStakePool
 	// Rewards

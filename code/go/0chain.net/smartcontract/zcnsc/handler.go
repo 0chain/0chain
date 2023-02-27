@@ -45,27 +45,35 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //	200: authorizerNodesResponse
 //	404:
 func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Request) {
-	var (
-		err    error
-		events []event.Authorizer
-	)
+	values := r.URL.Query()
+	active := values.Get("active")
 	edb := zrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	events, err = edb.GetAuthorizers()
+
+	var (
+		authorizers []event.Authorizer
+		err         error
+	)
+	if active == "true" {
+		authorizers, err = edb.GetActiveAuthorizers()
+	} else {
+		authorizers, err = edb.GetAuthorizers()
+	}
+
 	if err != nil {
 		common.Respond(w, r, nil, errors.Wrap(err, "getAuthorizerNodes DB error"))
 		return
 	}
 
-	if events == nil {
+	if len(authorizers) == 0 {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list"))
 		return
 	}
 
-	common.Respond(w, r, toNodeResponse(events), nil)
+	common.Respond(w, r, toNodeResponse(authorizers), nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig GetGlobalConfig

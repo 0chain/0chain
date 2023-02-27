@@ -65,9 +65,9 @@ func (z *AuthorizerConfig) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *AuthorizerNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 5
 	// string "Provider"
-	o = append(o, 0x84, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o = append(o, 0x85, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
 	o, err = z.Provider.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Provider")
@@ -92,6 +92,13 @@ func (z *AuthorizerNode) MarshalMsg(b []byte) (o []byte, err error) {
 			err = msgp.WrapError(err, "Config", "Fee")
 			return
 		}
+	}
+	// string "LastHealthCheck"
+	o = append(o, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
+	o, err = z.LastHealthCheck.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "LastHealthCheck")
+		return
 	}
 	return
 }
@@ -172,6 +179,12 @@ func (z *AuthorizerNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					}
 				}
 			}
+		case "LastHealthCheck":
+			bts, err = z.LastHealthCheck.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "LastHealthCheck")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -192,6 +205,7 @@ func (z *AuthorizerNode) Msgsize() (s int) {
 	} else {
 		s += 1 + 4 + z.Config.Fee.Msgsize()
 	}
+	s += 16 + z.LastHealthCheck.Msgsize()
 	return
 }
 

@@ -226,9 +226,10 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 // AuthorizerNode used in `UpdateAuthorizerConfig` functions
 type AuthorizerNode struct {
 	provider.Provider
-	PublicKey string            `json:"public_key"`
-	URL       string            `json:"url"`
-	Config    *AuthorizerConfig `json:"config"`
+	PublicKey       string            `json:"public_key"`
+	URL             string            `json:"url"`
+	Config          *AuthorizerConfig `json:"config"`
+	LastHealthCheck common.Timestamp  `json:"last_health_check"`
 }
 
 // NewAuthorizer To review: tokenLock init values
