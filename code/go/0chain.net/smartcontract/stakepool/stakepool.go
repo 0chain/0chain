@@ -455,11 +455,19 @@ func (sp *StakePool) DistributeRewards(
 	providerType spenum.Provider,
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
+	optional ...string,
 ) (err error) {
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+
+	var spUpdate *StakePoolReward
+
+	if len(optional) > 0 {
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, optional[0])
+	} else {
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+	}
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {

@@ -7,9 +7,9 @@ import (
 )
 
 type DbHealthCheck struct {
-	ID				string			 `json:"id"`
+	ID              string           `json:"id"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
-	Downtime		uint64			 `json:"downtime"`
+	Downtime        uint64           `json:"downtime"`
 }
 
 type DbUpdates struct {
@@ -37,6 +37,8 @@ type StakePoolReward struct {
 	DelegateRewards map[string]currency.Coin `json:"delegate_rewards"`
 	// penalties delegate pools
 	DelegatePenalties map[string]currency.Coin `json:"delegate_penalties"`
+
+	ChallengeID string `json:"challenge_id"`
 }
 
 type DelegatePoolId struct {

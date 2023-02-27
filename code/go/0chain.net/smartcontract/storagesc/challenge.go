@@ -29,6 +29,24 @@ import (
 	"go.uber.org/zap"
 )
 
+type TransactionData struct {
+	Name  string `json:"name"`
+	Input struct {
+		ChallengeId       string `json:"challenge_id"`
+		ValidationTickets []struct {
+			ChallengeId  string `json:"challenge_id"`
+			BlobberId    string `json:"blobber_id"`
+			ValidatorId  string `json:"validator_id"`
+			ValidatorKey string `json:"validator_key"`
+			Success      bool   `json:"success"`
+			Message      string `json:"message"`
+			MessageCode  string `json:"message_code"`
+			Timestamp    int    `json:"timestamp"`
+			Signature    string `json:"signature"`
+		} `json:"validation_tickets"`
+	} `json:"input"`
+}
+
 const blobberAllocationPartitionSize = 100
 
 // completeChallenge complete the challenge
@@ -119,6 +137,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
+	transactionData := &TransactionData{}
+	err = json.Unmarshal([]byte(t.TransactionData), transactionData)
+
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
@@ -193,7 +214,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, transactionData.Input.ChallengeId)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -337,8 +358,11 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 		return
 	}
 
+	transactionData := &TransactionData{}
+	err = json.Unmarshal([]byte(t.TransactionData), transactionData)
+
 	// validators reward
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances, transactionData.Input.ChallengeId)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
