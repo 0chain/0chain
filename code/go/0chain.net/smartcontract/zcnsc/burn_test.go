@@ -33,6 +33,21 @@ func Test_FuzzyBurnTest(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotNil(t, burn)
@@ -44,6 +59,21 @@ func Test_BurnPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
+
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
 
 	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
@@ -60,6 +90,21 @@ func Test_BurnNonceShouldIncrementBurnNonceBy1(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
+
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
 
 	// Save initial user node
 	node, err := GetUserNode(ETH_ADDRESS, ctx)
@@ -98,6 +143,21 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "ethereum address is required")
@@ -123,6 +183,21 @@ func Test_BurnNonceShouldIncrementDuringBurn(t *testing.T) {
 	payload := createBurnPayload()
 	contract := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(defaultClient, ctx)
+
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
 
 	node, err := GetUserNode(tr.ClientID, ctx)
 	require.NoError(t, err)
@@ -175,6 +250,21 @@ func Test_Burn_should_return_encoded_payload(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	resp, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -190,6 +280,21 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
+
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
 
 	resp, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)

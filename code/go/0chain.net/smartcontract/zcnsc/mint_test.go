@@ -123,6 +123,27 @@ func Test_MaxFeeMint(t *testing.T) {
 			transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
 			require.NoError(t, err)
 
+			eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+				Debug:                 true,
+				PartitionChangePeriod: 1,
+			})
+			require.NoError(t, err)
+
+			err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+				UserID:    transaction.ClientID,
+				MintNonce: 0,
+			}).Error
+			require.NoError(t, err)
+
+			t.Cleanup(func() {
+				err = eventDb.Drop()
+				require.NoError(t, err)
+
+				eventDb.Close()
+			})
+
+			ctx.SetEventDb(eventDb)
+
 			response, err := contract.Mint(transaction, payload.Encode(), ctx)
 			require.NoError(t, err, "Testing authorizer: '%s'", defaultClient)
 			require.NotNil(t, response)
@@ -164,6 +185,27 @@ func Test_EmptySignaturesShouldFail(t *testing.T) {
 	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
 	require.NoError(t, err)
 
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    transaction.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "signatures entry is missing in payload")
@@ -185,6 +227,27 @@ func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
 
 	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
 	require.NoError(t, err)
+
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    transaction.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
 
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
 	require.Equal(t, common.NewError("failed to mint", "no authorizers found"), err)
