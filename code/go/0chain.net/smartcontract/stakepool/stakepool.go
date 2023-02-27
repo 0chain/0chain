@@ -349,7 +349,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
-	if value == 0 {
+	if value == 0 || sp.HasBeenKilled {
 		return nil // nothing to move
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
@@ -493,7 +493,7 @@ func (sp *StakePool) DistributeRewards(
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
-	if value == 0 {
+	if value == 0 || sp.HasBeenKilled {
 		return nil // nothing to move
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
