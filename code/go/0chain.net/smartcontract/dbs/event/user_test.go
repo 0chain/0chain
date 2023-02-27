@@ -584,7 +584,7 @@ func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
 			expect: expect{
 				pools: map[string]User{
 					"c_1": {UserMetrics: UserMetrics{UserID: "c_1", PayedFees: 100}},
-					"c_2": {UserMetrics: UserMetrics{UserID: "c_2", PayedFees: 100}},
+					"c_2": {UserMetrics: UserMetrics{UserID: "c_2", PayedFees: 200}},
 				},
 			},
 		},
@@ -596,7 +596,7 @@ func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
 			},
 			expect: expect{
 				pools: map[string]User{
-					"c_1": {UserMetrics: UserMetrics{UserID: "c_1", PayedFees: 100}},
+					"c_1": {UserMetrics: UserMetrics{UserID: "c_1", PayedFees: 300}},
 				},
 			},
 		},
