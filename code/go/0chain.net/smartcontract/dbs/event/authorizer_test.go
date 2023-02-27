@@ -42,31 +42,31 @@ func TestAuthorizers(t *testing.T) {
 	require.NoError(t, err)
 
 	authorizer_1 := Authorizer{
-		URL:             "http://localhost:8080",
-		Latitude:        0.0,
-		Longitude:       0.0,
+		URL:       "http://localhost:8080",
+		Latitude:  0.0,
+		Longitude: 0.0,
 		Provider: Provider{
-			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
-			DelegateWallet: "delegate wallet",
-			MinStake:       currency.Coin(53),
-			MaxStake:       currency.Coin(57),
-			NumDelegates:   59,
-			ServiceCharge:  61.0,
+			ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
+			DelegateWallet:  "delegate wallet",
+			MinStake:        currency.Coin(53),
+			MaxStake:        currency.Coin(57),
+			NumDelegates:    59,
+			ServiceCharge:   61.0,
 			LastHealthCheck: common.Timestamp(time.Now().Unix()),
 		},
 	}
 
 	authorizer_2 := Authorizer{
-		URL:             "http://localhost:8888",
-		Latitude:        1.0,
-		Longitude:       1.0,
+		URL:       "http://localhost:8888",
+		Latitude:  1.0,
+		Longitude: 1.0,
 		Provider: Provider{
-			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
-			DelegateWallet: "delegate wallet",
-			MinStake:       currency.Coin(52),
-			MaxStake:       currency.Coin(57),
-			NumDelegates:   60,
-			ServiceCharge:  50.0,
+			ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
+			DelegateWallet:  "delegate wallet",
+			MinStake:        currency.Coin(52),
+			MaxStake:        currency.Coin(57),
+			NumDelegates:    60,
+			ServiceCharge:   50.0,
 			LastHealthCheck: common.Timestamp(time.Now().Unix()),
 		},
 	}
@@ -89,6 +89,13 @@ func TestAuthorizers(t *testing.T) {
 
 	_, err = authorizer_2.exists(eventDb)
 	require.NoError(t, err, "Error while checking if Authorizer exists in event Database")
+
+	activeAuthorizers, err := eventDb.GetActiveAuthorizers()
+	require.NoError(t, err, "Error while active Authorizer retrieval")
+	require.Len(t, activeAuthorizers, 2)
+
+	require.Equal(t, authorizer_1.ID, activeAuthorizers[0].ID)
+	require.Equal(t, authorizer_2.ID, activeAuthorizers[1].ID)
 
 	err = eventDb.Drop()
 	require.NoError(t, err)

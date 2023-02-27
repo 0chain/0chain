@@ -230,6 +230,43 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	require.Equal(t, currency.Coin(111), node.Config.Fee)
 }
 
+func Test_AuthorizerHealthCheck(t *testing.T) {
+	ctx := MakeMockStateContext()
+
+	tr := CreateDefaultTransactionToZcnsc()
+	sc := CreateZCNSmartContract()
+
+	globalNode, err := GetGlobalNode(ctx)
+	require.NoError(t, err)
+
+	tr.ClientID = globalNode.ZCNSConfig.OwnerId
+
+	addAuthorizerPayload := CreateAuthorizerParam(tr.ClientID, tr.PublicKey)
+	data, err := json.Marshal(addAuthorizerPayload)
+	require.NoError(t, err)
+
+	_, err = sc.AddAuthorizer(tr, data, ctx)
+	require.NoError(t, err)
+
+	node1 := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
+	require.NotNil(t, node1)
+	require.Zero(t, node1.LastHealthCheck)
+
+	authorizerHealthCheckPayload := AuthorizerHealthCheckPayload{
+		ID: defaultAuthorizer,
+	}
+	data, err = json.Marshal(authorizerHealthCheckPayload)
+	require.NoError(t, err)
+
+	_, err = sc.AuthorizerHealthCheck(tr, data, ctx)
+	require.NoError(t, err)
+
+	node2 := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
+	require.NotNil(t, node2)
+	require.NotEqual(t, node2.LastHealthCheck, node1.LastHealthCheck)
+	require.Equal(t, tr.CreationDate, node2.LastHealthCheck)
+}
+
 func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string) *AuthorizerNode {
 	node, err := GetAuthorizerNode(key, ctx)
 	require.NoError(t, err)
