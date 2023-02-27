@@ -527,8 +527,9 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin    `json:"challenge_pool_integral_value"`
-	LatestCompletedChallTime   common.Timestamp `json:"latest_complete_chall_time"`
+	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
+	LatestCompletedChallTime   common.Timestamp  `json:"latest_complete_chall_time"`
+	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
 }
 
 func newBlobberAllocation(

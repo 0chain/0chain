@@ -33,8 +33,7 @@ const blobberAllocationPartitionSize = 100
 
 // completeChallenge complete the challenge
 func (sc *StorageSmartContract) completeChallenge(
-	challenge *StorageChallenge,
-	allocChallenges *AllocationChallenges) bool {
+	cab *challengeAllocBlobberPassResult) bool {
 
 	// TODO: do not remove the comments in case the blobber could not work
 	//found := false
@@ -45,9 +44,12 @@ func (sc *StorageSmartContract) completeChallenge(
 	//	}
 	//}
 
-	if !allocChallenges.removeChallenge(challenge) {
+	if !cab.allocChallenges.removeChallenge(cab.challenge) {
 		return false
 	}
+
+	cab.blobAlloc.LatestCompletedChallenge = cab.challenge
+	cab.blobAlloc.LatestCompletedChallTime = cab.latestCompletedChallTime
 
 	return true
 }
@@ -523,17 +525,18 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	// time of previous complete challenge (not the current one)
 	// or allocation start time if no challenges
 	var latestCompletedChallTime = alloc.StartTime
-	if last := allocChallenges.LatestCompletedChallenge; last != nil {
-		latestCompletedChallTime = last.Created
+	if last := blobAlloc.LatestCompletedChallenge; last != nil {
+		latestCompletedChallTime = blobAlloc.LatestCompletedChallTime
 	}
-	blobAlloc.LatestCompletedChallTime = latestCompletedChallTime
+
 	challenge.Responded = true
 	cab := &challengeAllocBlobberPassResult{
-		verifyTicketsResult: result,
-		alloc:               alloc,
-		allocChallenges:     allocChallenges,
-		challenge:           challenge,
-		blobAlloc:           blobAlloc,
+		verifyTicketsResult:      result,
+		alloc:                    alloc,
+		allocChallenges:          allocChallenges,
+		challenge:                challenge,
+		blobAlloc:                blobAlloc,
+		latestCompletedChallTime: latestCompletedChallTime,
 	}
 
 	if !(result.pass && result.fresh) {
@@ -554,10 +557,11 @@ type verifyTicketsResult struct {
 // challengeAllocBlobberPassResult wraps all the data structs for processing a challenge
 type challengeAllocBlobberPassResult struct {
 	*verifyTicketsResult
-	alloc           *StorageAllocation
-	allocChallenges *AllocationChallenges
-	challenge       *StorageChallenge
-	blobAlloc       *BlobberAllocation
+	alloc                    *StorageAllocation
+	allocChallenges          *AllocationChallenges
+	challenge                *StorageChallenge
+	blobAlloc                *BlobberAllocation
+	latestCompletedChallTime common.Timestamp
 }
 
 func verifyChallengeTickets(balances cstate.StateContextI,
@@ -687,7 +691,7 @@ func (sc *StorageSmartContract) challengePassed(
 
 	brStats.SuccessChallenges++
 
-	if !sc.completeChallenge(cab.challenge, cab.allocChallenges) {
+	if !sc.completeChallenge(cab) {
 		return "", common.NewError("challenge_out_of_order",
 			"First challenge on the list is not same as the one"+
 				" attempted to redeem")
@@ -727,7 +731,7 @@ func (sc *StorageSmartContract) challengePassed(
 		partial = float64(cab.success) / float64(cab.threshold)
 	}
 
-	err = sc.blobberReward(t, cab.alloc, cab.blobAlloc.LatestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
+	err = sc.blobberReward(t, cab.alloc, cab.latestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
 		cab.validators, partial, balances)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
@@ -753,7 +757,7 @@ func (sc *StorageSmartContract) challengeFailed(
 	balances cstate.StateContextI,
 	t *transaction.Transaction,
 	cab *challengeAllocBlobberPassResult) (string, error) {
-	if !sc.completeChallenge(cab.challenge, cab.allocChallenges) {
+	if !sc.completeChallenge(cab) {
 		return "", common.NewError("challenge_out_of_order",
 			"First challenge on the list is not same as the one"+
 				" attempted to redeem")
@@ -774,7 +778,7 @@ func (sc *StorageSmartContract) challengeFailed(
 
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 
-	err := sc.blobberPenalty(t, cab.alloc, cab.blobAlloc.LatestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
+	err := sc.blobberPenalty(t, cab.alloc, cab.latestCompletedChallTime, cab.allocChallenges, cab.blobAlloc,
 		cab.validators, balances)
 	if err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
