@@ -974,9 +974,24 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		perm               = r.Perm(len(randValidators))
 	)
 
+	now := txn.CreationDate
+	filterValidator := filterHealthyValidators(now)
+
 	for i := 0; i < needValidNum; i++ {
 		randValidator := randValidators[perm[i]]
 		if randValidator.Id != blobberID {
+			validator, err := getValidator(randValidator.Id, balances)
+
+			if err != nil {
+				continue
+			}
+
+			kick, err := filterValidator(validator)
+
+			if kick || err != nil {
+				continue
+			}
+
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
 					Provider: provider.Provider{
