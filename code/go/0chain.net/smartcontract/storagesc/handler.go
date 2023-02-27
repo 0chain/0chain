@@ -95,6 +95,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-authorizer-aggregates", srh.replicateAuthorizerAggregates),
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
+		rest.MakeEndpoint(storage+"/reward-providers", srh.rewardProviders),
 	}
 }
 
@@ -3101,4 +3102,29 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		users = []event.UserAggregate{}
 	}
 	common.Respond(w, r, users, nil)
+}
+
+func (srh *StorageRestHandler) rewardProviders(w http.ResponseWriter, r *http.Request) {
+	// read all data from reward_providers table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	challengeID := r.URL.Query().Get("challenge_id")
+	providerID := r.URL.Query().Get("provider_id")
+
+	var rps []event.RewardProvider
+
+	if challengeID != "" {
+		rps = edb.GetChallengeRewardsByChallengeID(challengeID)
+	} else if providerID != "" {
+		rps = edb.GetChallengeRewardsByProviderID(providerID)
+	} else {
+		rps = edb.GetAllChallengeRewards()
+	}
+
+	// return the list of reward providers
+	common.Respond(w, r, rps, nil)
 }

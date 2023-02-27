@@ -59,3 +59,27 @@ func (edb *EventDb) GetProviderRewards(limit common.Pagination, id string, start
 			Desc:   limit.IsDescending,
 		}).Scan(&rps).Error
 }
+
+func (edb *EventDb) GetChallengeRewardsByChallengeID(challengeID string) []RewardProvider {
+
+	var rps []RewardProvider
+	edb.Get().Where("challenge_id = ?", challengeID).Find(&rps)
+
+	return rps
+}
+
+func (edb *EventDb) GetChallengeRewardsByProviderID(providerID string) []RewardProvider {
+
+	var rps []RewardProvider
+	edb.Get().Where("provider_id = ?", providerID).Find(&rps)
+
+	return rps
+}
+
+func (edb *EventDb) GetAllChallengeRewards() []RewardProvider {
+
+	var rps []RewardProvider
+	edb.Get().Find(&rps)
+
+	return rps
+}
