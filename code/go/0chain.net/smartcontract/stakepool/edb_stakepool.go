@@ -13,6 +13,11 @@ import (
 type StakePoolReward dbs.StakePoolReward
 
 func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, optional ...string) *StakePoolReward {
+
+	if len(optional) == 0 {
+		optional = append(optional, "")
+	}
+
 	var spu StakePoolReward
 	spu.ProviderId = pId
 	spu.ProviderType = pType
