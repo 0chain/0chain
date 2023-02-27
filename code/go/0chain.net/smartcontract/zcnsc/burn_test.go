@@ -74,7 +74,7 @@ func Test_BurnNonceShouldIncrementBurnNonceBy1(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, burn)
 
-	node, err = GetUserNode(ETH_ADDRESS, ctx)
+	node, err = GetUserNode(tr.ClientID, ctx)
 	require.Equal(t, int64(1), node.BurnNonce, "Nonce should be incremented to 1")
 	require.NoError(t, err)
 	require.NotNil(t, node)
@@ -84,7 +84,7 @@ func Test_BurnNonceShouldIncrementBurnNonceBy1(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, burn)
 	require.Contains(t, burn, "\"nonce\":2")
-	node, err = GetUserNode(ETH_ADDRESS, ctx)
+	node, err = GetUserNode(tr.ClientID, ctx)
 	require.Equal(t, int64(2), node.BurnNonce, "Nonce should be incremented to 2")
 }
 
@@ -124,7 +124,7 @@ func Test_BurnNonceShouldIncrementDuringBurn(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(defaultClient, ctx)
 
-	node, err := GetUserNode(ETH_ADDRESS, ctx)
+	node, err := GetUserNode(tr.ClientID, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
@@ -135,7 +135,7 @@ func Test_BurnNonceShouldIncrementDuringBurn(t *testing.T) {
 	require.NotNil(t, burn)
 	require.NotEmpty(t, burn)
 
-	node, err = GetUserNode(ETH_ADDRESS, ctx)
+	node, err = GetUserNode(tr.ClientID, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 

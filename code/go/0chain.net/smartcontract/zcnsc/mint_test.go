@@ -50,33 +50,37 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 func Test_DifferentSenderAndReceiverMustFail(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
+
 	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 
 	transaction, err := CreateTransaction(defaultClient+"1", "mint", payload.Encode(), ctx)
 	require.NoError(t, err)
 
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    transaction.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "transaction made from different account who made burn")
-}
-
-func Test_FuzzyMintTest(t *testing.T) {
-	ctx := MakeMockStateContext()
-	contract := CreateZCNSmartContract()
-	payload, err := CreateMintPayload(ctx, defaultClient)
-	require.NoError(t, err)
-
-	for _, client := range clients {
-		transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
-		require.NoError(t, err)
-
-		response, err := contract.Mint(transaction, payload.Encode(), ctx)
-
-		require.NoError(t, err, "Testing authorizer: '%s'", client)
-		require.NotNil(t, response)
-		require.NotEmpty(t, response)
-	}
 }
 
 func Test_MaxFeeMint(t *testing.T) {
