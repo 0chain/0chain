@@ -107,7 +107,7 @@ func (zcn *ZCNSmartContract) Burn(
 		UserID:          trans.ClientID,
 		EthereumAddress: payload.EthereumAddress,
 		Hash:            trans.Hash,
-		Nonce:           trans.Nonce,
+		Nonce:           un.BurnNonce,
 	})
 
 	resp = string(response.Encode())

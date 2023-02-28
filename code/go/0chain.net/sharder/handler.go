@@ -81,7 +81,7 @@ func NotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (inter
 
 	ethereumAddress := r.FormValue("ethereum_address")
 	if ethereumAddress == "" {
-		return nil, errors.New("Argument 'ethereumAddress' should not be empty")
+		return nil, errors.New("Argument 'ethereum_address' should not be empty")
 	}
 	clientId := r.FormValue("client_id")
 	if clientId == "" {

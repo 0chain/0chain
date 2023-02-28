@@ -348,5 +348,5 @@ func Test_Should_Have_Added_BurnTicketAfter_Burn(t *testing.T) {
 	require.Equal(t, tr.ClientID, burnTicket.UserID)
 	require.Equal(t, payload.EthereumAddress, burnTicket.EthereumAddress)
 	require.Equal(t, tr.Hash, burnTicket.Hash)
-	require.Equal(t, tr.Nonce, burnTicket.Nonce)
+	require.Equal(t, int64(1), burnTicket.Nonce)
 }
