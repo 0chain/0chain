@@ -3114,6 +3114,8 @@ func (srh *StorageRestHandler) rewardProviders(w http.ResponseWriter, r *http.Re
 
 	challengeID := r.URL.Query().Get("challenge_id")
 	providerID := r.URL.Query().Get("provider_id")
+	rewardType := r.URL.Query().Get("reward_type")
+	sumKey := r.URL.Query().Get("sum_key")
 
 	var rps []event.RewardProvider
 
@@ -3121,6 +3123,11 @@ func (srh *StorageRestHandler) rewardProviders(w http.ResponseWriter, r *http.Re
 		rps = edb.GetChallengeRewardsByChallengeID(challengeID)
 	} else if providerID != "" {
 		rps = edb.GetChallengeRewardsByProviderID(providerID)
+	} else if sumKey != "" {
+		sum := edb.GetSumOfRewardsByRewardType(rewardType)
+		common.Respond(w, r, sum, nil)
+	} else if rewardType != "" {
+		rps = edb.GetAllChallengeRewardsByRewardType(rewardType)
 	} else {
 		rps = edb.GetAllChallengeRewards()
 	}
