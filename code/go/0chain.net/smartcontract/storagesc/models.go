@@ -92,11 +92,9 @@ type AllocOpenChallenge struct {
 }
 
 type AllocationChallenges struct {
-	AllocationID   string                `json:"allocation_id"`
-	OpenChallenges []*AllocOpenChallenge `json:"open_challenges"`
-	//OpenChallenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*AllocOpenChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge              `json:"latest_completed_challenge"`
+	AllocationID   string                         `json:"allocation_id"`
+	OpenChallenges []*AllocOpenChallenge          `json:"open_challenges"`
+	ChallengeMap   map[string]*AllocOpenChallenge `json:"-" msg:"-"`
 }
 
 func (acs *AllocationChallenges) GetKey(globalKey string) datastore.Key {
@@ -159,8 +157,6 @@ func (acs *AllocationChallenges) removeChallenge(challenge *StorageChallenge) bo
 		if acs.OpenChallenges[i].ID == challenge.ID {
 			acs.OpenChallenges = append(
 				acs.OpenChallenges[:i], acs.OpenChallenges[i+1:]...)
-
-			acs.LatestCompletedChallenge = challenge
 			return true
 		}
 	}
@@ -528,7 +524,6 @@ type BlobberAllocation struct {
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
 	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
-	LatestCompletedChallTime   common.Timestamp  `json:"latest_complete_chall_time"`
 	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
 }
 

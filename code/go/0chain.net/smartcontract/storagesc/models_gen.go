@@ -139,9 +139,9 @@ func (z *Allocations) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *BlobberAllocation) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 16
+	// map header, size 15
 	// string "BlobberID"
-	o = append(o, 0xde, 0x0, 0x10, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
+	o = append(o, 0x8f, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.BlobberID)
 	// string "AllocationID"
 	o = append(o, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
@@ -228,13 +228,6 @@ func (z *BlobberAllocation) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.ChallengePoolIntegralValue.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "ChallengePoolIntegralValue")
-		return
-	}
-	// string "LatestCompletedChallTime"
-	o = append(o, 0xb8, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x54, 0x69, 0x6d, 0x65)
-	o, err = z.LatestCompletedChallTime.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "LatestCompletedChallTime")
 		return
 	}
 	// string "LatestCompletedChallenge"
@@ -375,12 +368,6 @@ func (z *BlobberAllocation) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "ChallengePoolIntegralValue")
 				return
 			}
-		case "LatestCompletedChallTime":
-			bts, err = z.LatestCompletedChallTime.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "LatestCompletedChallTime")
-				return
-			}
 		case "LatestCompletedChallenge":
 			if msgp.IsNil(bts) {
 				bts, err = msgp.ReadNilBytes(bts)
@@ -412,7 +399,7 @@ func (z *BlobberAllocation) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *BlobberAllocation) Msgsize() (s int) {
-	s = 3 + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 5 + msgp.Int64Size + 15 + msgp.StringPrefixSize + len(z.AllocationRoot) + 16
+	s = 1 + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 5 + msgp.Int64Size + 15 + msgp.StringPrefixSize + len(z.AllocationRoot) + 16
 	if z.LastWriteMarker == nil {
 		s += msgp.NilSize
 	} else {
@@ -424,7 +411,7 @@ func (z *BlobberAllocation) Msgsize() (s int) {
 	} else {
 		s += z.Stats.Msgsize()
 	}
-	s += 6 + z.Terms.Msgsize() + 14 + z.MinLockDemand.Msgsize() + 6 + z.Spent.Msgsize() + 8 + z.Penalty.Msgsize() + 11 + z.ReadReward.Msgsize() + 9 + z.Returned.Msgsize() + 16 + z.ChallengeReward.Msgsize() + 27 + z.ChallengePoolIntegralValue.Msgsize() + 25 + z.LatestCompletedChallTime.Msgsize() + 25
+	s += 6 + z.Terms.Msgsize() + 14 + z.MinLockDemand.Msgsize() + 6 + z.Spent.Msgsize() + 8 + z.Penalty.Msgsize() + 11 + z.ReadReward.Msgsize() + 9 + z.Returned.Msgsize() + 16 + z.ChallengeReward.Msgsize() + 27 + z.ChallengePoolIntegralValue.Msgsize() + 25
 	if z.LatestCompletedChallenge == nil {
 		s += msgp.NilSize
 	} else {
@@ -2693,9 +2680,9 @@ func (z *WriteMarker) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *allocationChallengesDecoder) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 2
 	// string "AllocationID"
-	o = append(o, 0x83, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
+	o = append(o, 0x82, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
 	o = msgp.AppendString(o, z.AllocationID)
 	// string "OpenChallenges"
 	o = append(o, 0xae, 0x4f, 0x70, 0x65, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73)
@@ -2718,17 +2705,6 @@ func (z *allocationChallengesDecoder) MarshalMsg(b []byte) (o []byte, err error)
 			// string "BlobberID"
 			o = append(o, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 			o = msgp.AppendString(o, z.OpenChallenges[za0001].BlobberID)
-		}
-	}
-	// string "LatestCompletedChallenge"
-	o = append(o, 0xb8, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65)
-	if z.LatestCompletedChallenge == nil {
-		o = msgp.AppendNil(o)
-	} else {
-		o, err = z.LatestCompletedChallenge.MarshalMsg(o)
-		if err != nil {
-			err = msgp.WrapError(err, "LatestCompletedChallenge")
-			return
 		}
 	}
 	return
@@ -2823,23 +2799,6 @@ func (z *allocationChallengesDecoder) UnmarshalMsg(bts []byte) (o []byte, err er
 					}
 				}
 			}
-		case "LatestCompletedChallenge":
-			if msgp.IsNil(bts) {
-				bts, err = msgp.ReadNilBytes(bts)
-				if err != nil {
-					return
-				}
-				z.LatestCompletedChallenge = nil
-			} else {
-				if z.LatestCompletedChallenge == nil {
-					z.LatestCompletedChallenge = new(StorageChallenge)
-				}
-				bts, err = z.LatestCompletedChallenge.UnmarshalMsg(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "LatestCompletedChallenge")
-					return
-				}
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -2861,12 +2820,6 @@ func (z *allocationChallengesDecoder) Msgsize() (s int) {
 		} else {
 			s += 1 + 3 + msgp.StringPrefixSize + len(z.OpenChallenges[za0001].ID) + 10 + z.OpenChallenges[za0001].CreatedAt.Msgsize() + 10 + msgp.StringPrefixSize + len(z.OpenChallenges[za0001].BlobberID)
 		}
-	}
-	s += 25
-	if z.LatestCompletedChallenge == nil {
-		s += msgp.NilSize
-	} else {
-		s += z.LatestCompletedChallenge.Msgsize()
 	}
 	return
 }

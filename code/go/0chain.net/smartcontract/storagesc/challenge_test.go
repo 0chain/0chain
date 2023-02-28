@@ -816,11 +816,10 @@ func testBlobberPenalty(
 		now:                        now,
 	}
 
-	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-		wpBalance, challengePoolIntegralValue,
-		challengePoolBalance, thisChallange, thisExpires, now, size)
+	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
+		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(txn, allocation, previous, challenge, details, validators, ctx)
+	err = ssc.blobberPenalty(allocation, previous, details, validators, ctx)
 	if err != nil {
 		return err
 	}
@@ -871,11 +870,10 @@ func testBlobberReward(
 		now:                        now,
 	}
 
-	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-		wpBalance, challengePoolIntegralValue,
-		challengePoolBalance, thisChallange, thisExpires, now, 0)
+	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
+		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(txn, allocation, previous, challenge, details, validators, partial, ctx)
+	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx)
 	if err != nil {
 		return err
 	}
@@ -905,8 +903,7 @@ func setupChallengeMocks(
 	challengePoolIntegralValue, challengePoolBalance currency.Coin,
 	thisChallange, thisExpires, now common.Timestamp,
 	size int64,
-) (*transaction.Transaction, *StorageSmartContract, *StorageAllocation,
-	*AllocationChallenges, *BlobberAllocation, *mockStateContext) {
+) (*StorageSmartContract, *StorageAllocation, *BlobberAllocation, *mockStateContext) {
 	require.Len(t, validatorStakes, len(validators))
 
 	var err error
@@ -918,12 +915,6 @@ func setupChallengeMocks(
 		WritePool:  currency.Coin(wpBalance),
 	}
 
-	var allocChallenges = &AllocationChallenges{
-		AllocationID: encryption.Hash("alloc_challenges_id"),
-		LatestCompletedChallenge: &StorageChallenge{
-			Created: thisChallange,
-		},
-	}
 	var details = &BlobberAllocation{
 		BlobberID:                  blobberId,
 		ChallengePoolIntegralValue: challengePoolIntegralValue,
@@ -931,6 +922,9 @@ func setupChallengeMocks(
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
 		Size: size,
+		LatestCompletedChallenge: &StorageChallenge{
+			Created: thisChallange,
+		},
 	}
 
 	var txn = &transaction.Transaction{
@@ -1003,7 +997,7 @@ func setupChallengeMocks(
 	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
-	return txn, ssc, allocation, allocChallenges, details, ctx
+	return ssc, allocation, details, ctx
 }
 
 type formulaeBlobberReward struct {
