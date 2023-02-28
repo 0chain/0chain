@@ -983,12 +983,21 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			validator, err := getValidator(randValidator.Id, balances)
 
 			if err != nil {
+				if cstate.ErrInvalidState(err) {
+					return nil, common.NewError("add_challenge",
+						"mismatched state: "+err.Error())
+				}
 				continue
 			}
 
 			kick, err := filterValidator(validator)
 
-			if kick || err != nil {
+			if err != nil {
+				return nil, common.NewError("add_challenge", "failed to filter validator: "+
+					err.Error())
+			}
+
+			if kick {
 				continue
 			}
 
