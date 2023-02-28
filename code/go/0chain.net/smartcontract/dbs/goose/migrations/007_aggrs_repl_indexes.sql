@@ -1,8 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
 
-CREATE INDEX idx_snapshots_repl ON public.user_snapshots USING btree (round);
-
 CREATE INDEX idx_blobber_aggregates_repl ON public.blobber_aggregates USING btree (round, blobber_id);
 
 CREATE INDEX idx_authorizer_aggregates_repl ON public.authorizer_aggregates USING btree (round, authorizer_id);
@@ -18,8 +16,6 @@ CREATE INDEX idx_validator_aggregates_repl ON public.validator_aggregates USING 
 
 -- +goose Down
 -- +goose StatementBegin
-
-DROP INDEX idx_snapshots_repl;
 
 DROP INDEX idx_blobber_aggregates_repl;
 
