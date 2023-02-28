@@ -71,7 +71,7 @@ func (zcn *ZCNSmartContract) Burn(
 	}
 
 	// get user node
-	un, err := GetUserNode(trans.ClientID, ctx)
+	un, err := GetUserNode(payload.EthereumAddress, ctx)
 	if err != nil {
 		err = common.NewError(code, fmt.Sprintf("get user node error (%v), %s", err, info))
 		logging.Logger.Error(err.Error(), zap.Error(err))
