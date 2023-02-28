@@ -3116,10 +3116,13 @@ func (srh *StorageRestHandler) rewardProviders(w http.ResponseWriter, r *http.Re
 	providerID := r.URL.Query().Get("provider_id")
 	rewardType := r.URL.Query().Get("reward_type")
 	sumKey := r.URL.Query().Get("sum_key")
+	query := r.URL.Query().Get("query")
 
 	var rps []event.RewardProvider
 
-	if challengeID != "" {
+	if query != "" {
+		rps = edb.RunWhereQuery(query)
+	} else if challengeID != "" {
 		rps = edb.GetChallengeRewardsByChallengeID(challengeID)
 	} else if providerID != "" {
 		rps = edb.GetChallengeRewardsByProviderID(providerID)
