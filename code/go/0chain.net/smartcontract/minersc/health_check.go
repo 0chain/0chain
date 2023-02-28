@@ -8,110 +8,52 @@ import (
 )
 
 func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-	all, err := getMinersList(balances)
-	if err != nil {
-		return "", common.NewError("miner_health_check_failed",
-			"Failed to get miner list: "+err.Error())
-	}
-
-	var (
-		existingMiner *MinerNode
-		downtime 	  uint64
-	)
-
-	existingMiner, err = getMinerNode(t.ClientID, balances)
+	_ []byte, _ *GlobalNode, balances cstate.StateContextI) (resp string, err error) {
+	mn, err := getMinerNode(t.ClientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("miner_health_check_failed",
 			"can't get the miner "+t.ClientID+": "+err.Error())
 	}
 
-	// update the last health check time
-	for _, nd := range all.Nodes {
-		if nd.ID == t.ClientID {
-			downtime = common.Downtime(nd.LastHealthCheck, t.CreationDate)
-			nd.LastHealthCheck = t.CreationDate
-			// miner does not exist, use the one in the list
-			if existingMiner == nil {
-				existingMiner = nd
-			}
-			break
-		}
-	}
-
-	if existingMiner == nil {
+	if mn == nil {
 		return "", common.NewError("miner_health_check_failed",
 			"can't get the miner "+t.ClientID+": "+err.Error())
 	}
 
-	existingMiner.LastHealthCheck = t.CreationDate
+	downtime := common.Downtime(mn.LastHealthCheck, t.CreationDate)
+	mn.LastHealthCheck = t.CreationDate
+	emitMinerHealthCheck(mn, downtime, balances)
 
-	if err = updateMinersList(balances, all); err != nil {
-		return "", common.NewError("miner_health_check_failed",
-			"can't save all miners list: "+err.Error())
-	}
-
-	err = existingMiner.save(balances)
-	if err != nil {
+	if err := mn.save(balances); err != nil {
 		return "", common.NewError("miner_health_check_failed",
 			"can't save miner: "+err.Error())
 	}
 
-	emitMinerHealthCheck(existingMiner, downtime, balances)
-
-	return string(existingMiner.Encode()), nil
+	return string(mn.Encode()), nil
 }
 
 func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	_ []byte, _ *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
-	all, err := getAllShardersList(balances)
-	if err != nil {
-		return "", common.NewError("sharder_health_check_failed",
-			"Failed to get sharder list: "+err.Error())
-	}
-
-	var (
-		existingSharder *MinerNode
-		downtime		uint64
-	)
-	existingSharder, err = msc.getSharderNode(t.ClientID, balances)
+	sn, err := msc.getSharderNode(t.ClientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("sharder_health_check_failed",
 			"can't get the sharder "+t.ClientID+": "+err.Error())
 	}
 
-	for _, nd := range all.Nodes {
-		if nd.ID == t.ClientID {
-			downtime = common.Downtime(nd.LastHealthCheck, t.CreationDate)
-			nd.LastHealthCheck = t.CreationDate
-			if existingSharder == nil {
-				existingSharder = nd
-			}
-			break
-		}
-	}
-
-	if existingSharder == nil {
+	if sn == nil {
 		return "", common.NewError("sharder_health_check_failed",
 			"can't get the sharder "+t.ClientID+": "+err.Error())
 	}
 
-	existingSharder.LastHealthCheck = t.CreationDate
+	downtime := common.Downtime(sn.LastHealthCheck, t.CreationDate)
+	sn.LastHealthCheck = t.CreationDate
+	emitSharderHealthCheck(sn, downtime, balances)
 
-	if err = updateAllShardersList(balances, all); err != nil {
-		return "", common.NewError("sharder_health_check_failed",
-			"can't save all sharders list: "+err.Error())
-	}
-
-	err = existingSharder.save(balances)
-	if err != nil {
+	if err := sn.save(balances); err != nil {
 		return "", common.NewError("sharder_health_check_failed",
 			"can't save sharder: "+err.Error())
 	}
 
-	emitSharderHealthCheck(existingSharder, downtime, balances)
-
-	return string(existingSharder.Encode()), nil
+	return string(sn.Encode()), nil
 }

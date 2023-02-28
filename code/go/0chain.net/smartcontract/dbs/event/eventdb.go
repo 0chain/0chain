@@ -104,6 +104,9 @@ func (edb *EventDb) PageLimit() int64 {
 }
 
 func (edb *EventDb) Debug() bool {
+	if edb == nil {
+		return false
+	}
 	return edb.settings.Debug
 }
 
