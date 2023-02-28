@@ -838,6 +838,7 @@ func SetMockConfig(
 	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
 	conf.ValidatorReward = 0.025
+
 	conf.HealthCheckPeriod = 1 * time.Hour
 	conf.BlobberSlash = 0.1
 	conf.CancellationCharge = 0.2
@@ -867,6 +868,7 @@ func SetMockConfig(
 	if err != nil {
 		panic(err)
 	}
+	conf.StakePool.KillSlash = 0.5
 	conf.FreeAllocationSettings = freeAllocationSettings{
 		DataShards:   viper.GetInt(sc.StorageFasDataShards),
 		ParityShards: viper.GetInt(sc.StorageFasParityShards),
@@ -936,6 +938,10 @@ func SetMockConfig(
 		"cost.stake_pool_pay_interests":    mockCost,
 		"cost.commit_settings_changes":     mockCost,
 		"cost.collect_reward":              mockCost,
+		"cost.kill_blobber":                mockCost,
+		"cost.kill_validator":              mockCost,
+		"cost.shutdown_blobber":            mockCost,
+		"cost.shutdown_validator":          mockCost,
 	}
 	return
 }
