@@ -411,11 +411,11 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	}
 
 	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateUserAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateMinerAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateSharderAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), gs)
 	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), gs)
+	edb.updateUserAggregate(round, events)
 	gs.update(events)
 
 	gs.Round = round
