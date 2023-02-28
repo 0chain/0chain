@@ -63,8 +63,8 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 	}).Create(&users).Error
 }
 
-func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUpdateUserCollectedRewards, withCollectedRewardsMerged())
+func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[UserAggregate] {
+	return newEventsMerger[UserAggregate](TagUpdateUserCollectedRewards, withCollectedRewardsMerged())
 }
 
 func withCollectedRewardsMerged() eventMergeMiddleware {
@@ -119,8 +119,8 @@ func withWritePoolMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateUserPayedFeesEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagUpdateUserPayedFees, withPayedFeesMerged())
+func mergeUpdateUserPayedFeesEvents() *eventsMergerImpl[UserAggregate] {
+	return newEventsMerger[UserAggregate](TagUpdateUserPayedFees, withPayedFeesMerged())
 }
 
 func withPayedFeesMerged() eventMergeMiddleware {
@@ -130,6 +130,6 @@ func withPayedFeesMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeAddUsersEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
+func mergeAddUsersEvents() *eventsMergerImpl[UserAggregate] {
+	return newEventsMerger[UserAggregate](TagAddOrOverwriteUser, withUniqueEventOverwrite())
 }
