@@ -85,3 +85,26 @@ func (edb *EventDb) GetAllChallengeRewards() []RewardProvider {
 
 	return rps
 }
+
+func (edb *EventDb) GetAllChallengeRewardsByRewardType(rewardType string) []RewardProvider {
+
+	var rps []RewardProvider
+	edb.Get().Where("reward_type = ?", rewardType).Find(&rps)
+
+	return rps
+}
+
+func (edb *EventDb) GetSumOfRewardsByRewardType(rewardType string) int64 {
+
+	var rps []RewardProvider
+
+	var sum int64
+	edb.Get().Where("reward_type = ?", rewardType).Find(&rps)
+
+	for _, rp := range rps {
+		f, _ := rp.Amount.Int64()
+		sum += f
+	}
+
+	return sum
+}
