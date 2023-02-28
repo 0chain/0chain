@@ -14,7 +14,7 @@ import (
 )
 
 type ProviderRequest struct {
-	ID string `json:"id"`
+	ID string `json:"provider_id"`
 }
 
 func (pr *ProviderRequest) Encode() []byte {

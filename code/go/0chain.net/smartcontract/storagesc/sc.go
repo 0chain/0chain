@@ -240,14 +240,18 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "blobber_block_rewards":
 		err = sc.blobberBlockRewards(balances)
 
-	case "shut_down_blobber":
+	case "shutdown_blobber":
 		_, err = sc.shutdownBlobber(t, input, balances)
+		logging.Logger.Info("piers shutdownBlobber", zap.Error(err))
 	case "kill_blobber":
 		_, err = sc.killBlobber(t, input, balances)
-	case "shut_down_validator":
+		logging.Logger.Info("piers killBlobber", zap.Error(err))
+	case "shutdown_validator":
 		_, err = sc.shutdownValidator(t, input, balances)
+		logging.Logger.Info("piers shutdownValidator", zap.Error(err))
 	case "kill_validator":
 		_, err = sc.killValidator(t, input, balances)
+		logging.Logger.Info("piers killValidator", zap.Error(err))
 
 	// read_pool
 
