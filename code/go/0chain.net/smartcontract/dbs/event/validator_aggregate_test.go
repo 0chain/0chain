@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
@@ -65,9 +64,6 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 			validatorSnapsMap[validatorSnap.ValidatorID] = &validatorSnaps[i]
 		}
 
-		t.Logf("validatorsInBucket: %v", validatorsInBucket)
-		t.Logf("validatorSnaps: %v", validatorSnaps)
-		
 		for _, validator := range validatorsInBucket {
 			snap, ok := validatorSnapsMap[validator.ID]
 			require.True(t, ok)
@@ -137,13 +133,11 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 				validatorsInBucket = append(validatorsInBucket, validatorsBeforeUpdate[i].ID)
 			}
 		}
-		t.Logf("validatorsInBucket = %v", validatorsInBucket)
 		err = eventDb.Store.Get().Model(&Validator{}).Where("id IN ?", validatorsInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
 
 		// Get validators again with correct bucket_id
 		err = eventDb.Get().Model(&Validator{}).Where("id IN ?", validatorIds).Find(&validatorsBeforeUpdate).Error
-		printValidators("bobberBeforeUpdate", &validatorsBeforeUpdate)
 		require.NoError(t, err)
 
 		// Update the validators
@@ -151,7 +145,6 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 			"total_stake": gorm.Expr("total_stake * ?", 2),
 			"unstake_total": gorm.Expr("unstake_total * ?", 2),
 			"service_charge": gorm.Expr("service_charge * ?", 2),
-			"fees": gorm.Expr("fees * ?", 2),
 		}
 		
 		err = eventDb.Store.Get().Model(&Validator{}).Where("1=1").Updates(updates).Error
@@ -163,7 +156,6 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 
 		// Get validators after update
 		err = eventDb.Get().Model(&Validator{}).Where("id IN ?", validatorIds).Find(&validatorsAfterUpdate).Error
-		printValidators("validatorsAfterUpdate", &validatorsAfterUpdate)
 		require.NoError(t, err)
 		
 		for _, oldValidator := range validatorsBeforeUpdate {
@@ -182,9 +174,7 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, oldValidator.ServiceCharge * 2, curValidator.ServiceCharge)
 			require.Equal(t, oldValidator.Rewards.TotalRewards * 2, curValidator.Rewards.TotalRewards)
 
-			t.Logf("test validator %v with bucket_id %v", curValidator.ID, curValidator.BucketId)
 			if oldValidator.BucketId == expectedBucketId {
-				t.Log("take validator")
 				ag := &ValidatorAggregate{
 					Round: round,
 					ValidatorID: oldValidator.ID,
@@ -196,10 +186,8 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 				}
 				expectedAggregates[oldValidator.ID] = ag
 				expectedAggregateCount++
-				t.Logf("validator %v expectedAggregates %v", oldValidator.ID, expectedAggregates[oldValidator.ID])
 			}
 		}
-		t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
 
 		updatedSnapshot, err := eventDb.GetGlobal()
 		require.NoError(t, err)
@@ -215,7 +203,6 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, expectedBucketId, actualAggregate.BucketID)
 			expectedAggregate, ok := expectedAggregates[actualAggregate.ValidatorID]
 			require.True(t, ok)
-			t.Logf("validator %v actualAggregate %v", actualAggregate.ValidatorID, actualAggregate)
 			require.Equal(t, expectedAggregate.TotalStake, actualAggregate.TotalStake)
 			require.Equal(t, expectedAggregate.UnstakeTotal, actualAggregate.UnstakeTotal)
 			require.Equal(t, expectedAggregate.ServiceCharge, actualAggregate.ServiceCharge)
@@ -250,7 +237,6 @@ func createMockValidators(t *testing.T, eventDb *EventDb, n int, targetBucket in
 		validators = append(validators, curValidator)
 		ids = append(ids, curValidator.ID)
 	}
-	printValidatorsBucketId("before creation", validators)
 
 	q := eventDb.Store.Get().Omit(clause.Associations).Create(&validators)
 	require.NoError(t, q.Error)
@@ -280,21 +266,4 @@ func validatorToSnapshot(validator *Validator) ValidatorSnapshot {
 		CreationRound: validator.CreationRound,
 	}
 	return snapshot
-}
-
-func printValidatorsBucketId(tag string, validators []Validator) {
-	fmt.Printf("%v: ", tag)
-	for _, validator := range validators {
-		fmt.Printf("%v => %v ", validator.ID, validator.BucketId)
-	}
-	fmt.Println()
-}
-
-func printValidators(tag string, validators *[]Validator) {
-	fmt.Printf("%v :-\n", tag)
-	for _, b := range *validators {
-		fmt.Printf("%v { bucket_id: %v, total_stake: %v, unstake_total: %v, service_charge: %v, total_rewards: %v }\n",
-		b.ID, b.BucketId, b.TotalStake, b.UnstakeTotal, b.ServiceCharge, b.Rewards.TotalRewards)
-	}
-	fmt.Println()
 }

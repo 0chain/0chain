@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
@@ -65,9 +64,6 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 			authorizerSnapsMap[authorizerSnap.AuthorizerID] = &authorizerSnaps[i]
 		}
 
-		t.Logf("authorizersInBucket: %v", authorizersInBucket)
-		t.Logf("authorizerSnaps: %v", authorizerSnaps)
-		
 		for _, authorizer := range authorizersInBucket {
 			snap, ok := authorizerSnapsMap[authorizer.ID]
 			require.True(t, ok)
@@ -140,13 +136,11 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 				authorizersInBucket = append(authorizersInBucket, authorizersBeforeUpdate[i].ID)
 			}
 		}
-		t.Logf("authorizersInBucket = %v", authorizersInBucket)
 		err = eventDb.Store.Get().Model(&Authorizer{}).Where("id IN ?", authorizersInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
 
 		// Get authorizers again with correct bucket_id
 		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersBeforeUpdate).Error
-		printAuthorizers("bobberBeforeUpdate", &authorizersBeforeUpdate)
 		require.NoError(t, err)
 
 		// Update the authorizers
@@ -166,7 +160,6 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 
 		// Get authorizers after update
 		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersAfterUpdate).Error
-		printAuthorizers("authorizersAfterUpdate", &authorizersAfterUpdate)
 		require.NoError(t, err)
 		
 		for _, oldAuthorizer := range authorizersBeforeUpdate {
@@ -186,7 +179,6 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, oldAuthorizer.Fee * 2, curAuthorizer.Fee)
 			require.Equal(t, oldAuthorizer.Rewards.TotalRewards * 2, curAuthorizer.Rewards.TotalRewards)
 
-			t.Logf("test authorizer %v with bucket_id %v", curAuthorizer.ID, curAuthorizer.BucketId)
 			if oldAuthorizer.BucketId == expectedBucketId {
 				t.Log("take authorizer")
 				ag := &AuthorizerAggregate{
@@ -205,11 +197,8 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 				fees, err := ag.Fee.Int64()
 				require.NoError(t, err)
 				gsDiff.AverageTxnFee += fees
-				t.Logf("authorizer %v expectedAggregates %v", oldAuthorizer.ID, expectedAggregates[oldAuthorizer.ID])
 			}
 		}
-		t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
-		t.Logf("gsDiff = %v", gsDiff)
 
 		updatedSnapshot, err := eventDb.GetGlobal()
 		require.NoError(t, err)
@@ -225,7 +214,6 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, expectedBucketId, actualAggregate.BucketID)
 			expectedAggregate, ok := expectedAggregates[actualAggregate.AuthorizerID]
 			require.True(t, ok)
-			t.Logf("authorizer %v actualAggregate %v", actualAggregate.AuthorizerID, actualAggregate)
 			require.Equal(t, expectedAggregate.TotalStake, actualAggregate.TotalStake)
 			require.Equal(t, expectedAggregate.UnstakeTotal, actualAggregate.UnstakeTotal)
 			require.Equal(t, expectedAggregate.ServiceCharge, actualAggregate.ServiceCharge)
@@ -265,7 +253,6 @@ func createAuthorizers(t *testing.T, eventDb *EventDb, n int, targetBucket int64
 		authorizers = append(authorizers, curAuthorizer)
 		ids = append(ids, curAuthorizer.ID)
 	}
-	printAuthorizersBucketId("before creation", authorizers)
 
 	q := eventDb.Store.Get().Omit(clause.Associations).Create(&authorizers)
 	require.NoError(t, q.Error)
@@ -296,21 +283,4 @@ func authorizerToSnapshot(authorizer *Authorizer) AuthorizerSnapshot {
 		CreationRound: authorizer.CreationRound,
 	}
 	return snapshot
-}
-
-func printAuthorizersBucketId(tag string, authorizers []Authorizer) {
-	fmt.Printf("%v: ", tag)
-	for _, authorizer := range authorizers {
-		fmt.Printf("%v => %v ", authorizer.ID, authorizer.BucketId)
-	}
-	fmt.Println()
-}
-
-func printAuthorizers(tag string, authorizers *[]Authorizer) {
-	fmt.Printf("%v :-\n", tag)
-	for _, b := range *authorizers {
-		fmt.Printf("%v { bucket_id: %v, total_stake: %v, unstake_total: %v, service_charge: %v, total_rewards: %v }\n",
-		b.ID, b.BucketId, b.TotalStake, b.UnstakeTotal, b.ServiceCharge, b.Rewards.TotalRewards)
-	}
-	fmt.Println()
 }

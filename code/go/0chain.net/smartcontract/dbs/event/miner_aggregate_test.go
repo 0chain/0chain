@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
@@ -65,9 +64,6 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 			minerSnapsMap[minerSnap.MinerID] = &minerSnaps[i]
 		}
 
-		t.Logf("minersInBucket: %v", minersInBucket)
-		t.Logf("minerSnaps: %v", minerSnaps)
-		
 		for _, miner := range minersInBucket {
 			snap, ok := minerSnapsMap[miner.ID]
 			require.True(t, ok)
@@ -140,13 +136,11 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 				minersInBucket = append(minersInBucket, minersBeforeUpdate[i].ID)
 			}
 		}
-		t.Logf("minersInBucket = %v", minersInBucket)
 		err = eventDb.Store.Get().Model(&Miner{}).Where("id IN ?", minersInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
 
 		// Get miners again with correct bucket_id
 		err = eventDb.Get().Model(&Miner{}).Where("id IN ?", minerIds).Find(&minersBeforeUpdate).Error
-		printMiners("bobberBeforeUpdate", &minersBeforeUpdate)
 		require.NoError(t, err)
 
 		// Update the miners
@@ -166,7 +160,6 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 
 		// Get miners after update
 		err = eventDb.Get().Model(&Miner{}).Where("id IN ?", minerIds).Find(&minersAfterUpdate).Error
-		printMiners("minersAfterUpdate", &minersAfterUpdate)
 		require.NoError(t, err)
 		
 		for _, oldMiner := range minersBeforeUpdate {
@@ -186,9 +179,7 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, oldMiner.Fees * 2, curMiner.Fees)
 			require.Equal(t, oldMiner.Rewards.TotalRewards * 2, curMiner.Rewards.TotalRewards)
 
-			t.Logf("test miner %v with bucket_id %v", curMiner.ID, curMiner.BucketId)
 			if oldMiner.BucketId == expectedBucketId {
-				t.Log("take miner")
 				ag := &MinerAggregate{
 					Round: round,
 					MinerID: oldMiner.ID,
@@ -205,11 +196,8 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 				fees, err := ag.Fees.Int64()
 				require.NoError(t, err)
 				gsDiff.AverageTxnFee += fees
-				t.Logf("miner %v expectedAggregates %v", oldMiner.ID, expectedAggregates[oldMiner.ID])
 			}
 		}
-		t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
-		t.Logf("gsDiff = %v", gsDiff)
 
 		updatedSnapshot, err := eventDb.GetGlobal()
 		require.NoError(t, err)
@@ -225,7 +213,6 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, expectedBucketId, actualAggregate.BucketID)
 			expectedAggregate, ok := expectedAggregates[actualAggregate.MinerID]
 			require.True(t, ok)
-			t.Logf("miner %v actualAggregate %v", actualAggregate.MinerID, actualAggregate)
 			require.Equal(t, expectedAggregate.TotalStake, actualAggregate.TotalStake)
 			require.Equal(t, expectedAggregate.UnstakeTotal, actualAggregate.UnstakeTotal)
 			require.Equal(t, expectedAggregate.ServiceCharge, actualAggregate.ServiceCharge)
@@ -265,7 +252,6 @@ func createMockMiners(t *testing.T, eventDb *EventDb, n int, targetBucket int64,
 		miners = append(miners, curMiner)
 		ids = append(ids, curMiner.ID)
 	}
-	printMinersBucketId("before creation", miners)
 
 	q := eventDb.Store.Get().Omit(clause.Associations).Create(&miners)
 	require.NoError(t, q.Error)
@@ -296,21 +282,4 @@ func minerToSnapshot(miner *Miner) MinerSnapshot {
 		CreationRound: miner.CreationRound,
 	}
 	return snapshot
-}
-
-func printMinersBucketId(tag string, miners []Miner) {
-	fmt.Printf("%v: ", tag)
-	for _, miner := range miners {
-		fmt.Printf("%v => %v ", miner.ID, miner.BucketId)
-	}
-	fmt.Println()
-}
-
-func printMiners(tag string, miners *[]Miner) {
-	fmt.Printf("%v :-\n", tag)
-	for _, b := range *miners {
-		fmt.Printf("%v { bucket_id: %v, total_stake: %v, unstake_total: %v, service_charge: %v, total_rewards: %v }\n",
-		b.ID, b.BucketId, b.TotalStake, b.UnstakeTotal, b.ServiceCharge, b.Rewards.TotalRewards)
-	}
-	fmt.Println()
 }

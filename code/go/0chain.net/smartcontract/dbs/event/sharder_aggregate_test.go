@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
@@ -65,9 +64,6 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 			sharderSnapsMap[sharderSnap.SharderID] = &sharderSnaps[i]
 		}
 
-		t.Logf("shardersInBucket: %v", shardersInBucket)
-		t.Logf("sharderSnaps: %v", sharderSnaps)
-		
 		for _, sharder := range shardersInBucket {
 			snap, ok := sharderSnapsMap[sharder.ID]
 			require.True(t, ok)
@@ -140,13 +136,11 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 				shardersInBucket = append(shardersInBucket, shardersBeforeUpdate[i].ID)
 			}
 		}
-		t.Logf("shardersInBucket = %v", shardersInBucket)
 		err = eventDb.Store.Get().Model(&Sharder{}).Where("id IN ?", shardersInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
 
 		// Get sharders again with correct bucket_id
 		err = eventDb.Get().Model(&Sharder{}).Where("id IN ?", sharderIds).Find(&shardersBeforeUpdate).Error
-		printSharders("bobberBeforeUpdate", &shardersBeforeUpdate)
 		require.NoError(t, err)
 
 		// Update the sharders
@@ -166,7 +160,6 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 
 		// Get sharders after update
 		err = eventDb.Get().Model(&Sharder{}).Where("id IN ?", sharderIds).Find(&shardersAfterUpdate).Error
-		printSharders("shardersAfterUpdate", &shardersAfterUpdate)
 		require.NoError(t, err)
 		
 		for _, oldSharder := range shardersBeforeUpdate {
@@ -186,9 +179,7 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, oldSharder.Fees * 2, curSharder.Fees)
 			require.Equal(t, oldSharder.Rewards.TotalRewards * 2, curSharder.Rewards.TotalRewards)
 
-			t.Logf("test sharder %v with bucket_id %v", curSharder.ID, curSharder.BucketId)
 			if oldSharder.BucketId == expectedBucketId {
-				t.Log("take sharder")
 				ag := &SharderAggregate{
 					Round: round,
 					SharderID: oldSharder.ID,
@@ -205,11 +196,8 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 				fees, err := ag.Fees.Int64()
 				require.NoError(t, err)
 				gsDiff.AverageTxnFee += fees
-				t.Logf("sharder %v expectedAggregates %v", oldSharder.ID, expectedAggregates[oldSharder.ID])
 			}
 		}
-		t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
-		t.Logf("gsDiff = %v", gsDiff)
 
 		updatedSnapshot, err := eventDb.GetGlobal()
 		require.NoError(t, err)
@@ -225,7 +213,6 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, expectedBucketId, actualAggregate.BucketID)
 			expectedAggregate, ok := expectedAggregates[actualAggregate.SharderID]
 			require.True(t, ok)
-			t.Logf("sharder %v actualAggregate %v", actualAggregate.SharderID, actualAggregate)
 			require.Equal(t, expectedAggregate.TotalStake, actualAggregate.TotalStake)
 			require.Equal(t, expectedAggregate.UnstakeTotal, actualAggregate.UnstakeTotal)
 			require.Equal(t, expectedAggregate.ServiceCharge, actualAggregate.ServiceCharge)
@@ -265,7 +252,6 @@ func createMockSharders(t *testing.T, eventDb *EventDb, n int, targetBucket int6
 		sharders = append(sharders, curSharder)
 		ids = append(ids, curSharder.ID)
 	}
-	printShardersBucketId("before creation", sharders)
 
 	q := eventDb.Store.Get().Omit(clause.Associations).Create(&sharders)
 	require.NoError(t, q.Error)
@@ -296,21 +282,4 @@ func sharderToSnapshot(sharder *Sharder) SharderSnapshot {
 		CreationRound: sharder.CreationRound,
 	}
 	return snapshot
-}
-
-func printShardersBucketId(tag string, sharders []Sharder) {
-	fmt.Printf("%v: ", tag)
-	for _, sharder := range sharders {
-		fmt.Printf("%v => %v ", sharder.ID, sharder.BucketId)
-	}
-	fmt.Println()
-}
-
-func printSharders(tag string, sharders *[]Sharder) {
-	fmt.Printf("%v :-\n", tag)
-	for _, b := range *sharders {
-		fmt.Printf("%v { bucket_id: %v, total_stake: %v, unstake_total: %v, service_charge: %v, total_rewards: %v }\n",
-		b.ID, b.BucketId, b.TotalStake, b.UnstakeTotal, b.ServiceCharge, b.Rewards.TotalRewards)
-	}
-	fmt.Println()
 }

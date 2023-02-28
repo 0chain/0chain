@@ -131,9 +131,6 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		for i, blobberSnap := range blobberSnaps {
 			blobberSnapsMap[blobberSnap.BlobberID] = &blobberSnaps[i]
 		}
-
-		t.Logf("blobbersInBucket: %v", blobbersInBucket)
-		t.Logf("blobberSnaps: %v", blobberSnaps)
 		
 		for _, blobber := range blobbersInBucket {
 			snap, ok := blobberSnapsMap[blobber.ID]
@@ -221,13 +218,11 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 				blobbersInBucket = append(blobbersInBucket, blobbersBeforeUpdate[i].ID)
 			}
 		}
-		t.Logf("blobbersInBucket = %v", blobbersInBucket)
 		err = eventDb.Store.Get().Model(&Blobber{}).Where("id IN ?", blobbersInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
 
 		// Get blobbers again with correct bucket_id
 		err = eventDb.Get().Model(&Blobber{}).Where("id IN ?", blobberIds).Find(&blobbersBeforeUpdate).Error
-		printBlobbers("bobberBeforeUpdate", &blobbersBeforeUpdate)
 		require.NoError(t, err)
 
 		// Update the blobbers
@@ -256,7 +251,6 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 
 		// Get blobbers after update
 		err = eventDb.Get().Model(&Blobber{}).Where("id IN ?", blobberIds).Find(&blobbersAfterUpdate).Error
-		printBlobbers("blobbersAfterUpdate", &blobbersAfterUpdate)
 		require.NoError(t, err)
 		
 		for _, oldBlobber := range blobbersBeforeUpdate {
@@ -285,9 +279,7 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, oldBlobber.ChallengesCompleted * 2, curBlobber.ChallengesCompleted)
 			require.Equal(t, oldBlobber.Rewards.TotalRewards * 2, curBlobber.Rewards.TotalRewards)
 
-			t.Logf("test blobber %v with bucket_id %v", curBlobber.ID, curBlobber.BucketId)
 			if oldBlobber.BucketId == expectedBucketId {
-				t.Log("take blobber")
 				ag := &BlobberAggregate{
 					Round: round,
 					BlobberID: oldBlobber.ID,
@@ -316,11 +308,8 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 				gsDiff.UsedStorage += ag.SavedData - oldBlobber.SavedData
 				gsDiff.AverageWritePrice += int64(ag.WritePrice - oldBlobber.WritePrice)
 				gsDiff.TotalRewards += int64(ag.TotalRewards - oldBlobber.Rewards.TotalRewards)
-				t.Logf("blobber %v expectedAggregates %v", oldBlobber.ID, expectedAggregates[oldBlobber.ID])
 			}
 		}
-		t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
-		t.Logf("gsDiff = %v", gsDiff)
 
 		updatedSnapshot, err := eventDb.GetGlobal()
 		require.NoError(t, err)
@@ -336,7 +325,6 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 			require.Equal(t, expectedBucketId, actualAggregate.BucketID)
 			expectedAggregate, ok := expectedAggregates[actualAggregate.BlobberID]
 			require.True(t, ok)
-			t.Logf("blobber %v actualAggregate %v", actualAggregate.BlobberID, actualAggregate)
 			require.Equal(t, expectedAggregate.WritePrice, actualAggregate.WritePrice)
 			require.Equal(t, expectedAggregate.Capacity, actualAggregate.Capacity)
 			require.Equal(t, expectedAggregate.Allocated, actualAggregate.Allocated)
@@ -391,7 +379,6 @@ func createBlobbers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, s
 		blobbers = append(blobbers, curBlobber)
 		ids = append(ids, curBlobber.ID)
 	}
-	printBlobbersBucketId("before creation", blobbers)
 
 	q := eventDb.Store.Get().Omit(clause.Associations).Create(&blobbers)
 	t.Logf("creation query: %v", q.Statement.SQL.String())
@@ -431,21 +418,4 @@ func blobberToSnapshot(blobber *Blobber) BlobberSnapshot {
 		RankMetric: blobber.RankMetric,
 	}
 	return snapshot
-}
-
-func printBlobbersBucketId(tag string, blobbers []Blobber) {
-	fmt.Printf("%v: ", tag)
-	for _, blobber := range blobbers {
-		fmt.Printf("%v => %v ", blobber.ID, blobber.BucketId)
-	}
-	fmt.Println()
-}
-
-func printBlobbers(tag string, blobbers *[]Blobber) {
-	fmt.Printf("%v :-\n", tag)
-	for _, b := range *blobbers {
-		fmt.Printf("%v { bucket_id: %v, write_price: %v, total_stake: %v, capacity: %v, allocated: %v, saved_data: %v, read_data: %v, offers_total: %v, unstake_total: %v, open_challenges: %v, challenges_passed: %v, challenges_completed: %v, rank_metric: %v }\n",
-		b.ID, b.BucketId, b.WritePrice, b.TotalStake, b.Capacity, b.Allocated, b.SavedData, b.ReadData, b.OffersTotal, b.UnstakeTotal, b.OpenChallenges, b.ChallengesPassed, b.ChallengesCompleted, b.RankMetric)
-	}
-	fmt.Println()
 }
