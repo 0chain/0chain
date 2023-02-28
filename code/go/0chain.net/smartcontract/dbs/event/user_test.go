@@ -325,7 +325,7 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 				return
 			}
 
-			users, ok := fromEvent[[]User](mergedEvent.Data)
+			users, ok := fromEvent[[]UserAggregate](mergedEvent.Data)
 			require.True(t, ok)
 
 			require.Equal(t, len(tc.expect.users), len(*users))
@@ -617,7 +617,7 @@ func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
 				return
 			}
 
-			users, ok := fromEvent[[]User](mergedEvent.Data)
+			users, ok := fromEvent[[]UserAggregate](mergedEvent.Data)
 			require.True(t, ok)
 
 			require.Equal(t, len(tc.expect.pools), len(*users))
