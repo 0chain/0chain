@@ -14,13 +14,12 @@ import (
 
 type User struct {
 	model.UpdatableModel
-	UserID   string        `json:"user_id" gorm:"uniqueIndex"`
-	BucketID int64         `json:"bucket_id" gorm:"not null,default:0"`
-	TxnHash  string        `json:"txn_hash"`
-	Balance  currency.Coin `json:"balance"`
-	Change   currency.Coin `json:"change"`
-	Round    int64         `json:"round"`
-	Nonce    int64         `json:"nonce"`
+	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
+	TxnHash string        `json:"txn_hash"`
+	Balance currency.Coin `json:"balance"`
+	Change  currency.Coin `json:"change"`
+	Round   int64         `json:"round"`
+	Nonce   int64         `json:"nonce"`
 }
 
 func (edb *EventDb) GetUser(userID string) (*User, error) {
