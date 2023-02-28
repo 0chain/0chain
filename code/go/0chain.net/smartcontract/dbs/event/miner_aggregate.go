@@ -145,7 +145,6 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 		}
 		gsDiff.AverageTxnFee += fees
 		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
-		gsDiff.TransactionsCount++
 	}
 	gs.ApplyDiff(&gsDiff, spenum.Miner)
 	if len(aggregates) > 0 {

@@ -1,118 +1,275 @@
 package event
 
 import (
+	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
 	"github.com/go-faker/faker/v4"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
+
 func TestMinerAggregateAndSnapshot(t *testing.T) {
-	eventDb, clean := GetTestEventDB(t)
-	defer clean()
-	round := int64(5)
-	expectedBucketId := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
-	initialSnapshot := fillSnapshot(t, eventDb)
-	initialMiners := createMockMiners(t, eventDb, 5, expectedBucketId)
-	snapshotCurrentMiners(t, eventDb)
-	initialSnapshot.MinerCount = 5
+	t.Run("should create snapshots if round < AggregatePeriod", func(t *testing.T) {
+		// PartitionKeepCount = 10
+		// PartitionChangePeriod = 100
+		// For round 0 => miner_aggregate_0 is created for round from 0 to 100
+		const round = int64(5)
 
-	var updatedMiners []Miner
-
-	for _, miner := range initialMiners {
-		updatedMiners = append(updatedMiners, Miner{
-			Provider: Provider{
-				ID: miner.ID,
-				TotalStake: miner.TotalStake * 2,
-				UnstakeTotal: miner.UnstakeTotal * 2,
-				ServiceCharge: miner.ServiceCharge * 2,
-			},
-			Fees: miner.Fees * 2,
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+		eventDb.settings.Update(map[string]string{
+			"server_chain.dbs.settings.aggregate_period": "10",
+			"server_chain.dbs.settings.partition_change_period": "100",
+			"server_chain.dbs.settings.partition_keep_count": "10",
 		})
-	}
-	err := eventDb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake", "unstake_total", "service_charge", "fees"}),
-	}).Create(&updatedMiners).Error
-	require.NoError(t, err)
+		require.Equal(t, int64(10), config.Configuration().ChainConfig.DbSettings().AggregatePeriod)
 
-	var expectedAggregateCount int = 0
-	expectedAggregates := make(map[string]*MinerAggregate)
-	var gsDiff Snapshot
-	var updatedMiner Miner
-	for i, oldMiner := range initialMiners {
-		updatedMiner = updatedMiners[i]
-		if oldMiner.BucketId == expectedBucketId {
-			ag := &MinerAggregate{
-				Round: round,
-				MinerID: oldMiner.ID,
-				BucketID: oldMiner.BucketId,
-				TotalStake: (oldMiner.TotalStake + updatedMiner.TotalStake) / 2,
-				UnstakeTotal: (oldMiner.UnstakeTotal + updatedMiner.UnstakeTotal) / 2,
-				ServiceCharge: (oldMiner.ServiceCharge + updatedMiner.ServiceCharge) / 2,
-				Fees: (oldMiner.Fees + updatedMiner.Fees) / 2,
+		var (
+			expectedBucketId = round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
+			initialSnapshot = fillSnapshot(t, eventDb)
+			minerIds = createMockMiners(t, eventDb, 5, expectedBucketId)
+			minerSnaps []MinerSnapshot
+			minersBeforeUpdate []Miner
+			minerSnapsMap map[string]*MinerSnapshot = make(map[string]*MinerSnapshot)
+			err error
+		)
+
+		// Assert miners snapshots
+		err = eventDb.Get().Model(&Miner{}).Where("id IN ?", minerIds).Find(&minersBeforeUpdate).Error
+		require.NoError(t, err)
+		
+		// force bucket_id using an update query
+		minersInBucket := make([]Miner, 0, len(minersBeforeUpdate))
+		bucketMinersIds := make([]string, 0, len(minersBeforeUpdate))
+		for i := range minersBeforeUpdate {
+			if i&1 == 0 {
+				minersInBucket = append(minersInBucket, minersBeforeUpdate[i])
+				bucketMinersIds = append(bucketMinersIds, minersBeforeUpdate[i].ID)
 			}
-			expectedAggregates[oldMiner.ID] = ag
-			expectedAggregateCount++
-			gsDiff.AverageTxnFee += int64(ag.Fees)
-			gsDiff.TransactionsCount++
 		}
-	}
+		err = eventDb.Store.Get().Model(&Miner{}).Where("id IN ?", bucketMinersIds).Update("bucket_id", expectedBucketId).Error
+		require.NoError(t, err)
+		
+		eventDb.updateMinerAggregate(round, 10, initialSnapshot)
 
-	t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
-	updatedSnapshot, err := eventDb.GetGlobal()
-	require.NoError(t, err)
-	eventDb.updateMinerAggregate(round, 10, &updatedSnapshot)
+		err = eventDb.Get().Model(&Miner{}).Where("id IN ?", minerIds).Find(&minersBeforeUpdate).Error
+		require.NoError(t, err)
+				
+		err = eventDb.Get().Model(&MinerSnapshot{}).Find(&minerSnaps).Error
+		require.NoError(t, err)
+		for i, minerSnap := range minerSnaps {
+			minerSnapsMap[minerSnap.MinerID] = &minerSnaps[i]
+		}
 
-	// test updated aggregates
-	var actualAggregates []*MinerAggregate
-	err = eventDb.Store.Get().Model(&actualAggregates).Where("round = ?", round).Error
-	require.NoError(t, err)
-	require.Len(t, actualAggregates, expectedAggregateCount)
+		t.Logf("minersInBucket: %v", minersInBucket)
+		t.Logf("minerSnaps: %v", minerSnaps)
+		
+		for _, miner := range minersInBucket {
+			snap, ok := minerSnapsMap[miner.ID]
+			require.True(t, ok)
+			require.Equal(t, miner.ID, snap.MinerID)
+			require.Equal(t, miner.Fees, snap.Fees)
+			require.Equal(t, miner.TotalStake, snap.TotalStake)
+			require.Equal(t, miner.UnstakeTotal, snap.UnstakeTotal)
+			require.Equal(t, miner.ServiceCharge, snap.ServiceCharge)
+			require.Equal(t, miner.Rewards.TotalRewards, snap.TotalRewards)
+			require.Equal(t, miner.CreationRound, snap.CreationRound)
+		}
+	})
 
-	for _, actualAggregate := range actualAggregates {
-		require.Equal(t, expectedBucketId, actualAggregate.BucketID)
-		expectedAggregate, ok := expectedAggregates[actualAggregate.MinerID]
-		require.True(t, ok)
-		require.Equal(t, expectedAggregate.TotalStake, actualAggregate.TotalStake)
-		require.Equal(t, expectedAggregate.UnstakeTotal, actualAggregate.UnstakeTotal)
-		require.Equal(t, expectedAggregate.ServiceCharge, actualAggregate.ServiceCharge)
-		require.Equal(t, expectedAggregate.Fees, actualAggregate.Fees)
-	}
+	t.Run("should compute aggregates and snapshots correctly", func(t *testing.T) {
+		// PartitionKeepCount = 10
+		// PartitionChangePeriod = 100
+		// For round 0 => miner_aggregate_0 is created for round from 0 to 100
+		const round = int64(15)
+		
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+		eventDb.settings.Update(map[string]string{
+			"server_chain.dbs.settings.aggregate_period": "10",
+			"server_chain.dbs.settings.partition_change_period": "100",
+			"server_chain.dbs.settings.partition_keep_count": "10",
+		})
 
-	// test updated snapshot
-	require.Equal(t, initialSnapshot.TransactionsCount + gsDiff.TransactionsCount, updatedSnapshot.TransactionsCount)
-	require.Equal(t, initialSnapshot.AverageTxnFee + (gsDiff.SuccessfulChallenges / updatedSnapshot.TransactionsCount), updatedSnapshot.AverageTxnFee)
+		var (
+			expectedBucketId = round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
+			initialSnapshot = fillSnapshot(t, eventDb)
+			minerIds = createMockMiners(t, eventDb, 5, expectedBucketId)
+			minerSnaps []MinerSnapshot
+			minersBeforeUpdate []Miner
+			minersAfterUpdate []Miner
+			minerSnapsMap map[string]*MinerSnapshot = make(map[string]*MinerSnapshot)
+			expectedAggregates map[string]*MinerAggregate = make(map[string]*MinerAggregate)
+			gsDiff Snapshot
+			expectedAggregateCount = 0
+			err error
+		)
+		snapshotCurrentMiners(t, eventDb)
+		initialSnapshot.MinerCount = 5
+
+		// Assert miners snapshots
+		err = eventDb.Get().Model(&Miner{}).Where("id IN ?", minerIds).Find(&minersBeforeUpdate).Error
+		require.NoError(t, err)
+		err = eventDb.Get().Model(&MinerSnapshot{}).Find(&minerSnaps).Error
+		require.NoError(t, err)
+		require.Equal(t, len(minersBeforeUpdate), len(minerSnaps))
+
+		for i, minerSnap := range minerSnaps {
+			minerSnapsMap[minerSnap.MinerID] = &minerSnaps[i]
+		}
+		for _, miner := range minersBeforeUpdate {
+			snap, ok := minerSnapsMap[miner.ID]
+			require.True(t, ok)
+			require.Equal(t, miner.ID, snap.MinerID)
+			require.Equal(t, miner.Fees, snap.Fees)
+			require.Equal(t, miner.TotalStake, snap.TotalStake)
+			require.Equal(t, miner.UnstakeTotal, snap.UnstakeTotal)
+			require.Equal(t, miner.ServiceCharge, snap.ServiceCharge)
+			require.Equal(t, miner.Rewards.TotalRewards, snap.TotalRewards)
+			require.Equal(t, miner.CreationRound, snap.CreationRound)
+		}
+
+		// force bucket_id using an update query
+		minersInBucket := make([]string, 0, len(minersBeforeUpdate))
+		for i := range minersBeforeUpdate {
+			if i&1 == 0 {
+				minersInBucket = append(minersInBucket, minersBeforeUpdate[i].ID)
+			}
+		}
+		t.Logf("minersInBucket = %v", minersInBucket)
+		err = eventDb.Store.Get().Model(&Miner{}).Where("id IN ?", minersInBucket).Update("bucket_id", expectedBucketId).Error
+		require.NoError(t, err)
+
+		// Get miners again with correct bucket_id
+		err = eventDb.Get().Model(&Miner{}).Where("id IN ?", minerIds).Find(&minersBeforeUpdate).Error
+		printMiners("bobberBeforeUpdate", &minersBeforeUpdate)
+		require.NoError(t, err)
+
+		// Update the miners
+		updates := map[string]interface{}{
+			"total_stake": gorm.Expr("total_stake * ?", 2),
+			"unstake_total": gorm.Expr("unstake_total * ?", 2),
+			"service_charge": gorm.Expr("service_charge * ?", 2),
+			"fees": gorm.Expr("fees * ?", 2),
+		}
+		
+		err = eventDb.Store.Get().Model(&Miner{}).Where("1=1").Updates(updates).Error
+		require.NoError(t, err)
+
+		// Update miner rewards
+		err = eventDb.Store.Get().Model(&ProviderRewards{}).Where("provider_id IN ?", minerIds).UpdateColumn("total_rewards", gorm.Expr("total_rewards * ?", 2)).Error
+		require.NoError(t, err)
+
+		// Get miners after update
+		err = eventDb.Get().Model(&Miner{}).Where("id IN ?", minerIds).Find(&minersAfterUpdate).Error
+		printMiners("minersAfterUpdate", &minersAfterUpdate)
+		require.NoError(t, err)
+		
+		for _, oldMiner := range minersBeforeUpdate {
+			var curMiner *Miner
+			for _, miner := range minersAfterUpdate {
+				if miner.ID == oldMiner.ID {
+					curMiner = &miner
+					break
+				}
+			}
+			require.NotNil(t, curMiner)
+
+			// Check miner is updated
+			require.Equal(t, oldMiner.TotalStake * 2, curMiner.TotalStake)
+			require.Equal(t, oldMiner.UnstakeTotal * 2, curMiner.UnstakeTotal)
+			require.Equal(t, oldMiner.ServiceCharge * 2, curMiner.ServiceCharge)
+			require.Equal(t, oldMiner.Fees * 2, curMiner.Fees)
+			require.Equal(t, oldMiner.Rewards.TotalRewards * 2, curMiner.Rewards.TotalRewards)
+
+			t.Logf("test miner %v with bucket_id %v", curMiner.ID, curMiner.BucketId)
+			if oldMiner.BucketId == expectedBucketId {
+				t.Log("take miner")
+				ag := &MinerAggregate{
+					Round: round,
+					MinerID: oldMiner.ID,
+					BucketID: oldMiner.BucketId,
+					TotalStake: (oldMiner.TotalStake + curMiner.TotalStake) / 2,
+					Fees: (oldMiner.Fees + curMiner.Fees) / 2,
+					UnstakeTotal: (oldMiner.UnstakeTotal + curMiner.UnstakeTotal) / 2,
+					TotalRewards: (oldMiner.Rewards.TotalRewards + curMiner.Rewards.TotalRewards) / 2,
+					ServiceCharge: (oldMiner.ServiceCharge + curMiner.ServiceCharge) / 2,
+				}
+				expectedAggregates[oldMiner.ID] = ag
+				expectedAggregateCount++
+				gsDiff.TotalRewards += int64(ag.TotalRewards - oldMiner.Rewards.TotalRewards)
+				fees, err := ag.Fees.Int64()
+				require.NoError(t, err)
+				gsDiff.AverageTxnFee += fees
+				t.Logf("miner %v expectedAggregates %v", oldMiner.ID, expectedAggregates[oldMiner.ID])
+			}
+		}
+		t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
+		t.Logf("gsDiff = %v", gsDiff)
+
+		updatedSnapshot, err := eventDb.GetGlobal()
+		require.NoError(t, err)
+		eventDb.updateMinerAggregate(round, 10, &updatedSnapshot)
+
+		// test updated aggregates
+		var actualAggregates []MinerAggregate
+		err = eventDb.Store.Get().Model(&MinerAggregate{}).Where("round = ?", round).Find(&actualAggregates).Error
+		require.NoError(t, err)
+		require.Len(t, actualAggregates, expectedAggregateCount)
+
+		for _, actualAggregate := range actualAggregates {
+			require.Equal(t, expectedBucketId, actualAggregate.BucketID)
+			expectedAggregate, ok := expectedAggregates[actualAggregate.MinerID]
+			require.True(t, ok)
+			t.Logf("miner %v actualAggregate %v", actualAggregate.MinerID, actualAggregate)
+			require.Equal(t, expectedAggregate.TotalStake, actualAggregate.TotalStake)
+			require.Equal(t, expectedAggregate.UnstakeTotal, actualAggregate.UnstakeTotal)
+			require.Equal(t, expectedAggregate.ServiceCharge, actualAggregate.ServiceCharge)
+			require.Equal(t, expectedAggregate.Fees, actualAggregate.Fees)
+			require.Equal(t, expectedAggregate.TotalRewards, actualAggregate.TotalRewards)
+		}
+
+		// test updated snapshot
+		require.Equal(t, initialSnapshot.TotalRewards + gsDiff.TotalRewards, updatedSnapshot.TotalRewards)
+		require.Equal(t, initialSnapshot.AverageTxnFee + (gsDiff.AverageTxnFee / updatedSnapshot.TransactionsCount), updatedSnapshot.AverageTxnFee)
+	})
 }
 
-func createMockMiners(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Miner) []Miner {
+func createMockMiners(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Miner) []string {
 	var (
-		miners []Miner
+		ids []string
 		curMiner Miner
 		err error
+		miners []Miner
+		i = 0
 	)
 
-	for i := 0; i < len(seed) && i < n; i++ {
+	for ; i < len(seed) && i < n; i++ {
 		curMiner = seed[i]
 		if curMiner.ID == "" {
 			curMiner.ID = faker.UUIDHyphenated()
 		}
 		miners = append(miners, seed[i])
+		ids = append(ids, curMiner.ID)
 	}
 	
-	for i := len(miners); i < n; i++ {
+	for ; i < n; i++ {
 		err = faker.FakeData(&curMiner)
 		require.NoError(t, err)
+		curMiner.DelegateWallet = OwnerId
 		curMiner.BucketId = int64((i%2)) * targetBucket
 		miners = append(miners, curMiner)
+		ids = append(ids, curMiner.ID)
 	}
+	printMinersBucketId("before creation", miners)
 
-	err = eventDb.Store.Get().Omit(clause.Associations).Create(&miners).Error
-	require.NoError(t, err)
-
-	return miners
+	q := eventDb.Store.Get().Omit(clause.Associations).Create(&miners)
+	require.NoError(t, q.Error)
+	return ids
 }
 
 func snapshotCurrentMiners(t *testing.T, edb *EventDb) {
@@ -133,10 +290,27 @@ func minerToSnapshot(miner *Miner) MinerSnapshot {
 		MinerID: miner.ID,
 		Fees: miner.Fees,
 		UnstakeTotal: miner.UnstakeTotal,
-		TotalRewards: miner.Rewards.TotalRewards,
 		TotalStake: miner.TotalStake,
-		CreationRound: miner.CreationRound,
+		TotalRewards: miner.Rewards.TotalRewards,
 		ServiceCharge: miner.ServiceCharge,
+		CreationRound: miner.CreationRound,
 	}
 	return snapshot
+}
+
+func printMinersBucketId(tag string, miners []Miner) {
+	fmt.Printf("%v: ", tag)
+	for _, miner := range miners {
+		fmt.Printf("%v => %v ", miner.ID, miner.BucketId)
+	}
+	fmt.Println()
+}
+
+func printMiners(tag string, miners *[]Miner) {
+	fmt.Printf("%v :-\n", tag)
+	for _, b := range *miners {
+		fmt.Printf("%v { bucket_id: %v, total_stake: %v, unstake_total: %v, service_charge: %v, total_rewards: %v }\n",
+		b.ID, b.BucketId, b.TotalStake, b.UnstakeTotal, b.ServiceCharge, b.Rewards.TotalRewards)
+	}
+	fmt.Println()
 }
