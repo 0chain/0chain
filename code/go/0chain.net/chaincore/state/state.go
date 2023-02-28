@@ -28,7 +28,6 @@ type State struct {
 	Round        int64         `json:"round" msgpack:"r"`
 	Balance      currency.Coin `json:"balance" msgpack:"b"`
 	Nonce        int64         `json:"nonce" msgpack:"n"`
-	MintNonce    int64         `json:"mint_nonce" msgpack:"n"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */

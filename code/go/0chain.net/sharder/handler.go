@@ -22,6 +22,7 @@ import (
 
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
+		"/v1/mint_nonce":                   common.ToJSONResponse(MintNonceHandler),
 		"/v1/not_processed_burn_tickets":   common.ToJSONResponse(NotProcessedBurnTicketsHandler),
 		"/v1/block/get":                    common.ToJSONResponse(BlockHandler),
 		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
@@ -51,9 +52,33 @@ type ChainInfo struct {
 	LatestFinalizedBlock *block.BlockSummary `json:"latest_finalized_block"`
 }
 
-// GetNotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
+// MintNonceHandler returns the latest mint nonce for the client with the help of the given client id
+func MintNonceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	sc := chain.GetServerChain()
+
+	if sc.GetEventDb() == nil {
+		return nil, common.NewError("get_balance_error", "event database not enabled")
+	}
+
+	clientID := r.FormValue("client_id")
+
+	user, err := sc.GetEventDb().GetUser(clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	return user.MintNonce, nil
+}
+
+// NotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
 // with a help of offset nonce
 func NotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	sc := chain.GetServerChain()
+
+	if sc.GetEventDb() == nil {
+		return nil, common.NewError("get_balance_error", "event database not enabled")
+	}
+
 	ethereumAddress := r.FormValue("ethereum_address")
 	if ethereumAddress == "" {
 		return nil, errors.New("Argument 'ethereumAddress' should not be empty")
@@ -74,7 +99,7 @@ func NotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (inter
 		}
 	}
 
-	burnTickets, err := chain.GetServerChain().GetEventDb().GetBurnTickets(clientId, ethereumAddress)
+	burnTickets, err := sc.GetEventDb().GetBurnTickets(clientId, ethereumAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve burn tickets: %w", err)
 	}

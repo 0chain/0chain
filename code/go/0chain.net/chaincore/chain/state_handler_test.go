@@ -1,7 +1,6 @@
 package chain_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -16,12 +15,10 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/viper"
-	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/setupsc"
@@ -57,130 +54,6 @@ func init() {
 	logging.InitLogging("development", "")
 	common.ConfigRateLimits()
 	block.SetupEntity(memorystore.GetStorageProvider())
-}
-
-func TestChain_GetBalanceHandler(t *testing.T) {
-	lfb := block.NewBlock("", 1)
-	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-	serverChain := chain.NewChainFromConfig()
-	serverChain.LatestFinalizedBlock = lfb
-
-	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
-		Debug:                 true,
-		PartitionChangePeriod: 1,
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		err = eventDb.Drop()
-		require.NoError(t, err)
-
-		eventDb.Close()
-	})
-
-	serverChain.EventDb = eventDb
-
-	sctx := serverChain.GetStateContextI()
-	lfb.ClientState = sctx.GetState()
-
-	tests := []struct {
-		name string
-		body func(t *testing.T)
-	}{
-		{
-			name: "Get processed mint nonces of the client, which hasn't performed any mint operations, should work",
-			body: func(t *testing.T) {
-				err := eventDb.Get().Model(&event.User{}).Create(&event.User{
-					UserID: clientID,
-				}).Error
-				require.NoError(t, err)
-
-				target := url.URL{Path: "/v1/client/get/balance"}
-
-				query := target.Query()
-
-				query.Add("client_id", clientID)
-
-				target.RawQuery = query.Encode()
-
-				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
-
-				respRaw, err := serverChain.GetBalanceHandler(context.Background(), req)
-				require.NoError(t, err)
-
-				resp, ok := respRaw.(*state.State)
-				require.True(t, ok)
-				require.Equal(t, int64(0), resp.MintNonce)
-
-				err = eventDb.Get().Model(&event.User{}).Where("user_id = ?", clientID).Delete(&event.User{}).Error
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "Get mint nonces of the client, which has performed mint operation, should work",
-			body: func(t *testing.T) {
-				err := eventDb.Get().Model(&event.User{}).Create(&event.User{
-					UserID:    clientID,
-					MintNonce: 1,
-				}).Error
-				require.NoError(t, err)
-
-				target := url.URL{Path: "/v1/client/get/balance"}
-
-				query := target.Query()
-
-				query.Add("client_id", clientID)
-
-				target.RawQuery = query.Encode()
-
-				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
-
-				respRaw, err := serverChain.GetBalanceHandler(context.Background(), req)
-				require.NoError(t, err)
-
-				resp, ok := respRaw.(*state.State)
-				require.True(t, ok)
-				require.Equal(t, int64(1), resp.MintNonce)
-
-				err = eventDb.Get().Model(&event.User{}).Where("user_id = ?", clientID).Delete(&event.User{}).Error
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "Get processed mint nonces not providing client id, should not work",
-			body: func(t *testing.T) {
-				target := url.URL{Path: "/v1/client/get/balance"}
-
-				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
-
-				resp, err := serverChain.GetBalanceHandler(context.Background(), req)
-				require.Error(t, err)
-				require.Nil(t, resp)
-			},
-		},
-		{
-			name: "Get processed mint nonces for the client, which does not exist, should not work",
-			body: func(t *testing.T) {
-				target := url.URL{Path: "/v1/client/get/balance"}
-
-				query := target.Query()
-
-				query.Add("client_id", clientID)
-
-				target.RawQuery = query.Encode()
-
-				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
-
-				respRaw, err := serverChain.GetBalanceHandler(context.Background(), req)
-				require.Error(t, err)
-				require.Nil(t, respRaw)
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, test.body)
-	}
 }
 
 func TestChain_HandleSCRest_Status(t *testing.T) {
