@@ -13,16 +13,15 @@ import (
 
 type BurnTicket struct {
 	model.UpdatableModel
-	UserID          string `json:"user_id" gorm:"not null"`
 	EthereumAddress string `json:"ethereum_address" gorm:"not null"`
 	Hash            string `json:"hash" gorm:"unique"`
 	Nonce           int64  `json:"nonce" gorm:"not null"`
 }
 
-func (edb *EventDb) GetBurnTickets(userID, ethereumAddress string) ([]BurnTicket, error) {
+func (edb *EventDb) GetBurnTickets(ethereumAddress string) ([]BurnTicket, error) {
 	var burnTickets []BurnTicket
 	err := edb.Store.Get().Model(&BurnTicket{}).
-		Where(&BurnTicket{UserID: userID, EthereumAddress: ethereumAddress}).Find(&burnTickets).Error
+		Where(&BurnTicket{EthereumAddress: ethereumAddress}).Find(&burnTickets).Error
 
 	if err != nil && err == gorm.ErrRecordNotFound {
 		return nil, util.ErrValueNotPresent

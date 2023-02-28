@@ -286,7 +286,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		mock.AnythingOfType("*event.BurnTicket"),
 	).Run(
 		func(args mock.Arguments) {
-			userId, ok := args.Get(2).(string)
+			ethereumAdress, ok := args.Get(2).(string)
 			if !ok {
 				panic("failed to convert to user id")
 			}
@@ -294,10 +294,10 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			if !ok {
 				panic("failed to convert to get user")
 			}
-			if burnTicket.UserID != userId {
-				panic("burn ticket user id must be equal to the id given as a param")
+			if burnTicket.EthereumAddress != ethereumAdress {
+				panic("given ethereum address as index should be equal to the one given as a payload")
 			}
-			burnTicketEvents[userId] = append(burnTicketEvents[userId], burnTicket)
+			burnTicketEvents[ethereumAdress] = append(burnTicketEvents[ethereumAdress], burnTicket)
 		})
 
 	ctx.On("EmitEvent",

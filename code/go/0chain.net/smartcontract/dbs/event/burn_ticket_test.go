@@ -2,8 +2,8 @@ package event
 
 import (
 	"os"
-	"time"
 	"testing"
+	"time"
 
 	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/logging"
@@ -42,7 +42,6 @@ func TestBurnTicketEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	burnTicket1 := BurnTicket{
-		UserID:          clientID,
 		EthereumAddress: ethereumAddress,
 		Hash:            hash,
 		Nonce:           nonce,
@@ -54,18 +53,16 @@ func TestBurnTicketEvent(t *testing.T) {
 	eventDb.Get().Table("burn_tickets").Count(&count)
 	require.Equal(t, int64(1), count, "BurnTicket not getting inserted")
 
-	burnTickets, err := eventDb.GetBurnTickets(clientID, ethereumAddress)
-	require.NoError(t, err, "Error while fetching burn tickets by clientID and ethereumAddress")
+	burnTickets, err := eventDb.GetBurnTickets(ethereumAddress)
+	require.NoError(t, err, "Error while fetching burn tickets by ethereumAddress")
 	require.Len(t, burnTickets, 1)
 
 	burnTicket := burnTickets[0]
-	require.Equal(t, clientID, burnTicket.UserID, "Fetched invalid BurnTicket")
 	require.Equal(t, ethereumAddress, burnTicket.EthereumAddress, "Fetched invalid BurnTicket")
 	require.Equal(t, hash, burnTicket.Hash, "Fetched invalid BurnTicket")
 	require.Equal(t, nonce, burnTicket.Nonce, "Fetched invalid BurnTicket")
 
 	burnTicket2 := BurnTicket{
-		UserID:          clientID,
 		EthereumAddress: ethereumAddress,
 		Hash:            hash,
 		Nonce:           nonce + 1,
@@ -78,7 +75,6 @@ func TestBurnTicketEvent(t *testing.T) {
 	require.Equal(t, int64(1), count, "BurnTicket gets inserted")
 
 	burnTicket3 := BurnTicket{
-		UserID:          clientID,
 		EthereumAddress: ethereumAddress,
 		Hash:            hash + hash,
 		Nonce:           nonce + 1,
@@ -90,18 +86,16 @@ func TestBurnTicketEvent(t *testing.T) {
 	eventDb.Get().Table("burn_tickets").Count(&count)
 	require.Equal(t, int64(2), count, "BurnTicket not getting inserted")
 
-	burnTickets, err = eventDb.GetBurnTickets(clientID, ethereumAddress)
-	require.NoError(t, err, "Error while fetching burn tickets by clientID and ethereumAddress")
+	burnTickets, err = eventDb.GetBurnTickets(ethereumAddress)
+	require.NoError(t, err, "Error while fetching burn tickets by ethereumAddress")
 	require.Len(t, burnTickets, 2)
 
 	burnTicket = burnTickets[1]
-	require.Equal(t, clientID, burnTicket.UserID, "Fetched invalid BurnTicket")
 	require.Equal(t, ethereumAddress, burnTicket.EthereumAddress, "Fetched invalid BurnTicket")
 	require.Equal(t, hash+hash, burnTicket.Hash, "Fetched invalid BurnTicket")
 	require.Equal(t, nonce+1, burnTicket.Nonce, "Fetched invalid BurnTicket")
 
 	burnTicket4 := BurnTicket{
-		UserID:          clientID,
 		EthereumAddress: ethereumAddress,
 		Hash:            hash + hash + hash,
 		Nonce:           nonce + 1,

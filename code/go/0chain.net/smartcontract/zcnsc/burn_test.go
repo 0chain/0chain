@@ -341,11 +341,10 @@ func Test_Should_Have_Added_BurnTicketAfter_Burn(t *testing.T) {
 
 	require.Equal(t, 1, len(burnTicketEvents))
 
-	burnTicketEvent, ok := burnTicketEvents[tr.ClientID]
+	burnTicketEvent, ok := burnTicketEvents[payload.EthereumAddress]
 	require.True(t, ok)
 
 	burnTicket := burnTicketEvent[0]
-	require.Equal(t, tr.ClientID, burnTicket.UserID)
 	require.Equal(t, payload.EthereumAddress, burnTicket.EthereumAddress)
 	require.Equal(t, tr.Hash, burnTicket.Hash)
 	require.Equal(t, int64(1), burnTicket.Nonce)

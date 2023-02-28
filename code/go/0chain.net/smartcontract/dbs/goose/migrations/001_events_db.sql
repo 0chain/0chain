@@ -1068,7 +1068,6 @@ CREATE TABLE public.burn_tickets (
                               id bigint NOT NULL,
                               created_at timestamp with time zone,
                               updated_at timestamp with time zone,
-                              user_id text,
                               ethereum_address text,
                               hash text,
                               nonce bigint

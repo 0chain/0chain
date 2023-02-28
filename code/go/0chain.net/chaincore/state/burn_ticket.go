@@ -5,15 +5,13 @@ import (
 )
 
 type BurnTicket struct {
-	UserID          string `json:"user_id"`
 	EthereumAddress string `json:"ethereum_address"`
 	Hash            string `json:"hash"`
 	Nonce           int64  `json:"nonce"`
 }
 
-func NewBurnTicket(userID, ethereumAddress, hash string, nonce int64) *BurnTicket {
+func NewBurnTicket(ethereumAddress, hash string, nonce int64) *BurnTicket {
 	m := &BurnTicket{
-		UserID:          userID,
 		EthereumAddress: ethereumAddress,
 		Hash:            hash,
 		Nonce:           nonce,

@@ -83,10 +83,6 @@ func NotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (inter
 	if ethereumAddress == "" {
 		return nil, errors.New("Argument 'ethereum_address' should not be empty")
 	}
-	clientId := r.FormValue("client_id")
-	if clientId == "" {
-		return nil, errors.New("Argument 'client_id' should not be empty")
-	}
 
 	nonce := r.FormValue("nonce")
 
@@ -99,7 +95,7 @@ func NotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (inter
 		}
 	}
 
-	burnTickets, err := sc.GetEventDb().GetBurnTickets(clientId, ethereumAddress)
+	burnTickets, err := sc.GetEventDb().GetBurnTickets(ethereumAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve burn tickets: %w", err)
 	}
@@ -111,7 +107,6 @@ func NotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (inter
 			response = append(
 				response,
 				bcstate.NewBurnTicket(
-					burnTicket.UserID,
 					burnTicket.EthereumAddress,
 					burnTicket.Hash,
 					burnTicket.Nonce,

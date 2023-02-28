@@ -205,7 +205,6 @@ func TestNotProcessedBurnTicketsHandler(t *testing.T) {
 				query := target.Query()
 
 				query.Add("ethereum_address", ethereumAddress)
-				query.Add("client_id", clientID)
 				query.Add("nonce", "0")
 
 				target.RawQuery = query.Encode()
@@ -224,7 +223,6 @@ func TestNotProcessedBurnTicketsHandler(t *testing.T) {
 			name: "Get not processed burn tickets of the client, which has performed burn operation, should work",
 			body: func(t *testing.T) {
 				err := eventDb.Get().Model(&event.BurnTicket{}).Create(&event.BurnTicket{
-					UserID:          clientID,
 					EthereumAddress: ethereumAddress,
 					Hash:            hash,
 					Nonce:           1,
@@ -236,7 +234,6 @@ func TestNotProcessedBurnTicketsHandler(t *testing.T) {
 				query := target.Query()
 
 				query.Add("ethereum_address", ethereumAddress)
-				query.Add("client_id", clientID)
 				query.Add("nonce", "0")
 
 				target.RawQuery = query.Encode()
@@ -250,27 +247,8 @@ func TestNotProcessedBurnTicketsHandler(t *testing.T) {
 				require.True(t, ok)
 				require.Len(t, resp, 1)
 
-				err = eventDb.Get().Model(&event.BurnTicket{}).Where("user_id = ?", clientID).Delete(&event.BurnTicket{}).Error
+				err = eventDb.Get().Model(&event.BurnTicket{}).Where("ethereum_address = ?", ethereumAddress).Delete(&event.BurnTicket{}).Error
 				require.NoError(t, err)
-			},
-		},
-		{
-			name: "Get not processed burn tickets not providing client id, should not work",
-			body: func(t *testing.T) {
-				target := url.URL{Path: baseUrl}
-
-				query := target.Query()
-
-				query.Add("ethereum_address", ethereumAddress)
-				query.Add("nonce", "0")
-
-				target.RawQuery = query.Encode()
-
-				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
-
-				resp, err := NotProcessedBurnTicketsHandler(context.Background(), req)
-				require.Error(t, err)
-				require.Nil(t, resp)
 			},
 		},
 		{
@@ -280,7 +258,6 @@ func TestNotProcessedBurnTicketsHandler(t *testing.T) {
 
 				query := target.Query()
 
-				query.Add("client_id", clientID)
 				query.Add("nonce", "0")
 
 				target.RawQuery = query.Encode()
@@ -296,7 +273,6 @@ func TestNotProcessedBurnTicketsHandler(t *testing.T) {
 			name: "Get not processed burn tickets not providing nonce, should work",
 			body: func(t *testing.T) {
 				err := eventDb.Get().Model(&event.BurnTicket{}).Create(&event.BurnTicket{
-					UserID:          clientID,
 					EthereumAddress: ethereumAddress,
 					Hash:            hash,
 					Nonce:           1,
@@ -308,7 +284,6 @@ func TestNotProcessedBurnTicketsHandler(t *testing.T) {
 				query := target.Query()
 
 				query.Add("ethereum_address", ethereumAddress)
-				query.Add("client_id", clientID)
 
 				target.RawQuery = query.Encode()
 
@@ -321,7 +296,7 @@ func TestNotProcessedBurnTicketsHandler(t *testing.T) {
 				require.True(t, ok)
 				require.Len(t, resp, 1)
 
-				err = eventDb.Get().Model(&event.BurnTicket{}).Where("user_id = ?", clientID).Delete(&event.BurnTicket{}).Error
+				err = eventDb.Get().Model(&event.BurnTicket{}).Where("ethereum_address = ?", ethereumAddress).Delete(&event.BurnTicket{}).Error
 				require.NoError(t, err)
 			},
 		},
