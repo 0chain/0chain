@@ -2,8 +2,10 @@ package sharder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -13,12 +15,14 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
 	"0chain.net/chaincore/node"
+	bcstate "0chain.net/chaincore/state"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
 )
 
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
+		"/v1/not_processed_burn_tickets":   common.ToJSONResponse(NotProcessedBurnTicketsHandler),
 		"/v1/block/get":                    common.ToJSONResponse(BlockHandler),
 		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
 		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
@@ -45,6 +49,56 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 
 type ChainInfo struct {
 	LatestFinalizedBlock *block.BlockSummary `json:"latest_finalized_block"`
+}
+
+// GetNotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
+// with a help of offset nonce
+func NotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	ethereumAddress := r.FormValue("ethereum_address")
+	if ethereumAddress == "" {
+		return nil, errors.New("Argument 'ethereumAddress' should not be empty")
+	}
+	clientId := r.FormValue("client_id")
+	if clientId == "" {
+		return nil, errors.New("Argument 'client_id' should not be empty")
+	}
+
+	nonce := r.FormValue("nonce")
+
+	var nonceInt int64
+	if nonce != "" {
+		var err error
+		nonceInt, err = strconv.ParseInt(nonce, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	burnTickets, err := chain.GetServerChain().GetEventDb().GetBurnTickets(clientId, ethereumAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve burn tickets: %w", err)
+	}
+
+	response := make([]*bcstate.BurnTicket, 0)
+
+	for _, burnTicket := range burnTickets {
+		if burnTicket.Nonce > nonceInt {
+			response = append(
+				response,
+				bcstate.NewBurnTicket(
+					burnTicket.UserID,
+					burnTicket.EthereumAddress,
+					burnTicket.Hash,
+					burnTicket.Nonce,
+				))
+		}
+	}
+
+	sort.Slice(response, func(i, j int) bool {
+		return response[i].Nonce < response[j].Nonce
+	})
+
+	return response, nil
 }
 
 func HealthcheckHandler(ctx context.Context, r *http.Request) (interface{}, error) {

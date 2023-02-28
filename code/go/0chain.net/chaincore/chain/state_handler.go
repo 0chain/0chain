@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
 	"0chain.net/smartcontract/faucetsc"
@@ -22,7 +20,6 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
-	bcstate "0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -65,7 +62,6 @@ func SetupScRestApiHandlers() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
-	http.HandleFunc("/v1/client/get/not_processed_burn_tickets", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNotProcessedBurnTicketsHandler))))
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
 	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
 	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
@@ -142,56 +138,6 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 		return nil, err
 	}
 	return retObj, nil
-}
-
-// GetNotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
-// with a help of offset nonce
-func (c *Chain) GetNotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	ethereumAddress := r.FormValue("ethereum_address")
-	if ethereumAddress == "" {
-		return nil, errors.New("Argument 'ethereumAddress' should not be empty")
-	}
-	clientId := r.FormValue("client_id")
-	if clientId == "" {
-		return nil, errors.New("Argument 'client_id' should not be empty")
-	}
-
-	nonce := r.FormValue("nonce")
-
-	var nonceInt int64
-	if nonce != "" {
-		var err error
-		nonceInt, err = strconv.ParseInt(nonce, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	burnTickets, err := c.GetEventDb().GetBurnTickets(clientId, ethereumAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve burn tickets: %w", err)
-	}
-
-	response := make([]*bcstate.BurnTicket, 0)
-
-	for _, burnTicket := range burnTickets {
-		if burnTicket.Nonce > nonceInt {
-			response = append(
-				response,
-				bcstate.NewBurnTicket(
-					burnTicket.UserID,
-					burnTicket.EthereumAddress,
-					burnTicket.Hash,
-					burnTicket.Nonce,
-				))
-		}
-	}
-
-	sort.Slice(response, func(i, j int) bool {
-		return response[i].Nonce < response[j].Nonce
-	})
-
-	return response, nil
 }
 
 // GetBalanceHandler - get the balance of a client
