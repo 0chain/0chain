@@ -1,121 +1,275 @@
 package event
 
 import (
+	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
 	"github.com/go-faker/faker/v4"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
+
 func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
-	eventDb, clean := GetTestEventDB(t)
-	defer clean()
-	round := int64(5)
-	expectedBucketId := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
-	initialSnapshot := fillSnapshot(t, eventDb)
-	initialAuthorizers := createMockAuthorizers(t, eventDb, 5, expectedBucketId)
-	snapshotCurrentAuthorizers(t, eventDb)
-	initialSnapshot.AuthorizerCount = 5
+	t.Run("should create snapshots if round < AggregatePeriod", func(t *testing.T) {
+		// PartitionKeepCount = 10
+		// PartitionChangePeriod = 100
+		// For round 0 => authorizer_aggregate_0 is created for round from 0 to 100
+		const round = int64(5)
 
-	var updatedAuthorizers []Authorizer
-
-	for _, authorizer := range initialAuthorizers {
-		updatedAuthorizers = append(updatedAuthorizers, Authorizer{
-			Provider: Provider{
-				ID: authorizer.ID,
-				TotalStake: authorizer.TotalStake * 2,
-				UnstakeTotal: authorizer.UnstakeTotal * 2,
-				ServiceCharge: authorizer.ServiceCharge * 2,
-			},
-			Fee: authorizer.Fee * 2,
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+		eventDb.settings.Update(map[string]string{
+			"server_chain.dbs.settings.aggregate_period": "10",
+			"server_chain.dbs.settings.partition_change_period": "100",
+			"server_chain.dbs.settings.partition_keep_count": "10",
 		})
-	}
-	err := eventDb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"total_stake", "unstake_total", "service_charge", "fee"}),
-	}).Create(&updatedAuthorizers).Error
-	require.NoError(t, err)
+		require.Equal(t, int64(10), config.Configuration().ChainConfig.DbSettings().AggregatePeriod)
 
-	var expectedAggregateCount int = 0
-	expectedAggregates := make(map[string]*AuthorizerAggregate)
-	var gsDiff Snapshot
-	var updatedAuthorizer Authorizer
-	for i, oldAuthorizer := range initialAuthorizers {
-		updatedAuthorizer = updatedAuthorizers[i]
-		t.Logf("test authorizer %v with bucket_id %v", oldAuthorizer.ID, oldAuthorizer.BucketId)
-		if oldAuthorizer.BucketId == expectedBucketId {
-			t.Log("take authorizer")
-			ag := &AuthorizerAggregate{
-				Round: round,
-				AuthorizerID: oldAuthorizer.ID,
-				BucketID: oldAuthorizer.BucketId,
-				TotalStake: (oldAuthorizer.TotalStake + updatedAuthorizer.TotalStake) / 2,
-				UnstakeTotal: (oldAuthorizer.UnstakeTotal + updatedAuthorizer.UnstakeTotal) / 2,
-				ServiceCharge: (oldAuthorizer.ServiceCharge + updatedAuthorizer.ServiceCharge) / 2,
-				Fee: (oldAuthorizer.Fee + updatedAuthorizer.Fee) / 2,
+		var (
+			expectedBucketId = round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
+			initialSnapshot = fillSnapshot(t, eventDb)
+			authorizerIds = createAuthorizers(t, eventDb, 5, expectedBucketId)
+			authorizerSnaps []AuthorizerSnapshot
+			authorizersBeforeUpdate []Authorizer
+			authorizerSnapsMap map[string]*AuthorizerSnapshot = make(map[string]*AuthorizerSnapshot)
+			err error
+		)
+
+		// Assert authorizers snapshots
+		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersBeforeUpdate).Error
+		require.NoError(t, err)
+		
+		// force bucket_id using an update query
+		authorizersInBucket := make([]Authorizer, 0, len(authorizersBeforeUpdate))
+		bucketAuthorizersIds := make([]string, 0, len(authorizersBeforeUpdate))
+		for i := range authorizersBeforeUpdate {
+			if i&1 == 0 {
+				authorizersInBucket = append(authorizersInBucket, authorizersBeforeUpdate[i])
+				bucketAuthorizersIds = append(bucketAuthorizersIds, authorizersBeforeUpdate[i].ID)
 			}
-			expectedAggregates[oldAuthorizer.ID] = ag
-			expectedAggregateCount++
-			gsDiff.AverageTxnFee += int64(ag.Fee)
-			gsDiff.TransactionsCount++
 		}
-	}
+		err = eventDb.Store.Get().Model(&Authorizer{}).Where("id IN ?", bucketAuthorizersIds).Update("bucket_id", expectedBucketId).Error
+		require.NoError(t, err)
+		
+		eventDb.updateAuthorizerAggregate(round, 10, initialSnapshot)
 
-	t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
-	updatedSnapshot, err := eventDb.GetGlobal()
-	require.NoError(t, err)
-	eventDb.updateAuthorizerAggregate(round, 10, &updatedSnapshot)
+		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersBeforeUpdate).Error
+		require.NoError(t, err)
+				
+		err = eventDb.Get().Model(&AuthorizerSnapshot{}).Find(&authorizerSnaps).Error
+		require.NoError(t, err)
+		for i, authorizerSnap := range authorizerSnaps {
+			authorizerSnapsMap[authorizerSnap.AuthorizerID] = &authorizerSnaps[i]
+		}
 
-	// test updated aggregates
-	var actualAggregates []*AuthorizerAggregate
-	err = eventDb.Store.Get().Model(&actualAggregates).Where("round = ?", round).Error
-	require.NoError(t, err)
-	require.Len(t, actualAggregates, expectedAggregateCount)
+		t.Logf("authorizersInBucket: %v", authorizersInBucket)
+		t.Logf("authorizerSnaps: %v", authorizerSnaps)
+		
+		for _, authorizer := range authorizersInBucket {
+			snap, ok := authorizerSnapsMap[authorizer.ID]
+			require.True(t, ok)
+			require.Equal(t, authorizer.ID, snap.AuthorizerID)
+			require.Equal(t, authorizer.Fee, snap.Fee)
+			require.Equal(t, authorizer.TotalStake, snap.TotalStake)
+			require.Equal(t, authorizer.UnstakeTotal, snap.UnstakeTotal)
+			require.Equal(t, authorizer.ServiceCharge, snap.ServiceCharge)
+			require.Equal(t, authorizer.Rewards.TotalRewards, snap.TotalRewards)
+			require.Equal(t, authorizer.CreationRound, snap.CreationRound)
+		}
+	})
 
-	for _, actualAggregate := range actualAggregates {
-		require.Equal(t, expectedBucketId, actualAggregate.BucketID)
-		expectedAggregate, ok := expectedAggregates[actualAggregate.AuthorizerID]
-		require.True(t, ok)
-		require.Equal(t, expectedAggregate.TotalStake, actualAggregate.TotalStake)
-		require.Equal(t, expectedAggregate.UnstakeTotal, actualAggregate.UnstakeTotal)
-		require.Equal(t, expectedAggregate.ServiceCharge, actualAggregate.ServiceCharge)
-		require.Equal(t, expectedAggregate.Fee, actualAggregate.Fee)
-	}
+	t.Run("should compute aggregates and snapshots correctly", func(t *testing.T) {
+		// PartitionKeepCount = 10
+		// PartitionChangePeriod = 100
+		// For round 0 => authorizer_aggregate_0 is created for round from 0 to 100
+		const round = int64(15)
+		
+		eventDb, clean := GetTestEventDB(t)
+		defer clean()
+		eventDb.settings.Update(map[string]string{
+			"server_chain.dbs.settings.aggregate_period": "10",
+			"server_chain.dbs.settings.partition_change_period": "100",
+			"server_chain.dbs.settings.partition_keep_count": "10",
+		})
 
-	// test updated snapshot
-	require.Equal(t, initialSnapshot.TransactionsCount + gsDiff.TransactionsCount, updatedSnapshot.TransactionsCount)
-	require.Equal(t, initialSnapshot.AverageTxnFee + (gsDiff.SuccessfulChallenges / updatedSnapshot.TransactionsCount), updatedSnapshot.AverageTxnFee)
+		var (
+			expectedBucketId = round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
+			initialSnapshot = fillSnapshot(t, eventDb)
+			authorizerIds = createAuthorizers(t, eventDb, 5, expectedBucketId)
+			authorizerSnaps []AuthorizerSnapshot
+			authorizersBeforeUpdate []Authorizer
+			authorizersAfterUpdate []Authorizer
+			authorizerSnapsMap map[string]*AuthorizerSnapshot = make(map[string]*AuthorizerSnapshot)
+			expectedAggregates map[string]*AuthorizerAggregate = make(map[string]*AuthorizerAggregate)
+			gsDiff Snapshot
+			expectedAggregateCount = 0
+			err error
+		)
+		snapshotCurrentAuthorizers(t, eventDb)
+		initialSnapshot.AuthorizerCount = 5
+
+		// Assert authorizers snapshots
+		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersBeforeUpdate).Error
+		require.NoError(t, err)
+		err = eventDb.Get().Model(&AuthorizerSnapshot{}).Find(&authorizerSnaps).Error
+		require.NoError(t, err)
+		require.Equal(t, len(authorizersBeforeUpdate), len(authorizerSnaps))
+
+		for i, authorizerSnap := range authorizerSnaps {
+			authorizerSnapsMap[authorizerSnap.AuthorizerID] = &authorizerSnaps[i]
+		}
+		for _, authorizer := range authorizersBeforeUpdate {
+			snap, ok := authorizerSnapsMap[authorizer.ID]
+			require.True(t, ok)
+			require.Equal(t, authorizer.ID, snap.AuthorizerID)
+			require.Equal(t, authorizer.Fee, snap.Fee)
+			require.Equal(t, authorizer.TotalStake, snap.TotalStake)
+			require.Equal(t, authorizer.UnstakeTotal, snap.UnstakeTotal)
+			require.Equal(t, authorizer.ServiceCharge, snap.ServiceCharge)
+			require.Equal(t, authorizer.Rewards.TotalRewards, snap.TotalRewards)
+			require.Equal(t, authorizer.CreationRound, snap.CreationRound)
+		}
+
+		// force bucket_id using an update query
+		authorizersInBucket := make([]string, 0, len(authorizersBeforeUpdate))
+		for i := range authorizersBeforeUpdate {
+			if i&1 == 0 {
+				authorizersInBucket = append(authorizersInBucket, authorizersBeforeUpdate[i].ID)
+			}
+		}
+		t.Logf("authorizersInBucket = %v", authorizersInBucket)
+		err = eventDb.Store.Get().Model(&Authorizer{}).Where("id IN ?", authorizersInBucket).Update("bucket_id", expectedBucketId).Error
+		require.NoError(t, err)
+
+		// Get authorizers again with correct bucket_id
+		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersBeforeUpdate).Error
+		printAuthorizers("bobberBeforeUpdate", &authorizersBeforeUpdate)
+		require.NoError(t, err)
+
+		// Update the authorizers
+		updates := map[string]interface{}{
+			"total_stake": gorm.Expr("total_stake * ?", 2),
+			"unstake_total": gorm.Expr("unstake_total * ?", 2),
+			"service_charge": gorm.Expr("service_charge * ?", 2),
+			"fee": gorm.Expr("fee * ?", 2),
+		}
+		
+		err = eventDb.Store.Get().Model(&Authorizer{}).Where("1=1").Updates(updates).Error
+		require.NoError(t, err)
+
+		// Update authorizer rewards
+		err = eventDb.Store.Get().Model(&ProviderRewards{}).Where("provider_id IN ?", authorizerIds).UpdateColumn("total_rewards", gorm.Expr("total_rewards * ?", 2)).Error
+		require.NoError(t, err)
+
+		// Get authorizers after update
+		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersAfterUpdate).Error
+		printAuthorizers("authorizersAfterUpdate", &authorizersAfterUpdate)
+		require.NoError(t, err)
+		
+		for _, oldAuthorizer := range authorizersBeforeUpdate {
+			var curAuthorizer *Authorizer
+			for _, authorizer := range authorizersAfterUpdate {
+				if authorizer.ID == oldAuthorizer.ID {
+					curAuthorizer = &authorizer
+					break
+				}
+			}
+			require.NotNil(t, curAuthorizer)
+
+			// Check authorizer is updated
+			require.Equal(t, oldAuthorizer.TotalStake * 2, curAuthorizer.TotalStake)
+			require.Equal(t, oldAuthorizer.UnstakeTotal * 2, curAuthorizer.UnstakeTotal)
+			require.Equal(t, oldAuthorizer.ServiceCharge * 2, curAuthorizer.ServiceCharge)
+			require.Equal(t, oldAuthorizer.Fee * 2, curAuthorizer.Fee)
+			require.Equal(t, oldAuthorizer.Rewards.TotalRewards * 2, curAuthorizer.Rewards.TotalRewards)
+
+			t.Logf("test authorizer %v with bucket_id %v", curAuthorizer.ID, curAuthorizer.BucketId)
+			if oldAuthorizer.BucketId == expectedBucketId {
+				t.Log("take authorizer")
+				ag := &AuthorizerAggregate{
+					Round: round,
+					AuthorizerID: oldAuthorizer.ID,
+					BucketID: oldAuthorizer.BucketId,
+					TotalStake: (oldAuthorizer.TotalStake + curAuthorizer.TotalStake) / 2,
+					Fee: (oldAuthorizer.Fee + curAuthorizer.Fee) / 2,
+					UnstakeTotal: (oldAuthorizer.UnstakeTotal + curAuthorizer.UnstakeTotal) / 2,
+					TotalRewards: (oldAuthorizer.Rewards.TotalRewards + curAuthorizer.Rewards.TotalRewards) / 2,
+					ServiceCharge: (oldAuthorizer.ServiceCharge + curAuthorizer.ServiceCharge) / 2,
+				}
+				expectedAggregates[oldAuthorizer.ID] = ag
+				expectedAggregateCount++
+				gsDiff.TotalRewards += int64(ag.TotalRewards - oldAuthorizer.Rewards.TotalRewards)
+				fees, err := ag.Fee.Int64()
+				require.NoError(t, err)
+				gsDiff.AverageTxnFee += fees
+				t.Logf("authorizer %v expectedAggregates %v", oldAuthorizer.ID, expectedAggregates[oldAuthorizer.ID])
+			}
+		}
+		t.Logf("round = %v, expectedBucketId = %v, expectedAggregateCount = %v", round, expectedBucketId, expectedAggregateCount)
+		t.Logf("gsDiff = %v", gsDiff)
+
+		updatedSnapshot, err := eventDb.GetGlobal()
+		require.NoError(t, err)
+		eventDb.updateAuthorizerAggregate(round, 10, &updatedSnapshot)
+
+		// test updated aggregates
+		var actualAggregates []AuthorizerAggregate
+		err = eventDb.Store.Get().Model(&AuthorizerAggregate{}).Where("round = ?", round).Find(&actualAggregates).Error
+		require.NoError(t, err)
+		require.Len(t, actualAggregates, expectedAggregateCount)
+
+		for _, actualAggregate := range actualAggregates {
+			require.Equal(t, expectedBucketId, actualAggregate.BucketID)
+			expectedAggregate, ok := expectedAggregates[actualAggregate.AuthorizerID]
+			require.True(t, ok)
+			t.Logf("authorizer %v actualAggregate %v", actualAggregate.AuthorizerID, actualAggregate)
+			require.Equal(t, expectedAggregate.TotalStake, actualAggregate.TotalStake)
+			require.Equal(t, expectedAggregate.UnstakeTotal, actualAggregate.UnstakeTotal)
+			require.Equal(t, expectedAggregate.ServiceCharge, actualAggregate.ServiceCharge)
+			require.Equal(t, expectedAggregate.Fee, actualAggregate.Fee)
+			require.Equal(t, expectedAggregate.TotalRewards, actualAggregate.TotalRewards)
+		}
+
+		// test updated snapshot
+		require.Equal(t, initialSnapshot.TotalRewards + gsDiff.TotalRewards, updatedSnapshot.TotalRewards)
+		require.Equal(t, initialSnapshot.AverageTxnFee + (gsDiff.AverageTxnFee / updatedSnapshot.TransactionsCount), updatedSnapshot.AverageTxnFee)
+	})
 }
 
-func createMockAuthorizers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Authorizer) []Authorizer {
+func createAuthorizers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Authorizer) []string {
 	var (
-		authorizers []Authorizer
+		ids []string
 		curAuthorizer Authorizer
 		err error
+		authorizers []Authorizer
+		i = 0
 	)
 
-	for i := 0; i < len(seed) && i < n; i++ {
+	for ; i < len(seed) && i < n; i++ {
 		curAuthorizer = seed[i]
 		if curAuthorizer.ID == "" {
 			curAuthorizer.ID = faker.UUIDHyphenated()
 		}
 		authorizers = append(authorizers, seed[i])
+		ids = append(ids, curAuthorizer.ID)
 	}
 	
-	for i := len(authorizers); i < n; i++ {
+	for ; i < n; i++ {
 		err = faker.FakeData(&curAuthorizer)
 		require.NoError(t, err)
+		curAuthorizer.DelegateWallet = OwnerId
 		curAuthorizer.BucketId = int64((i%2)) * targetBucket
-		t.Logf("create authorizer %v with bucket_id %v", curAuthorizer.ID, curAuthorizer.BucketId)
 		authorizers = append(authorizers, curAuthorizer)
+		ids = append(ids, curAuthorizer.ID)
 	}
+	printAuthorizersBucketId("before creation", authorizers)
 
-	err = eventDb.Store.Get().Omit(clause.Associations).Create(&authorizers).Error
-	require.NoError(t, err)
-
-	return authorizers
+	q := eventDb.Store.Get().Omit(clause.Associations).Create(&authorizers)
+	require.NoError(t, q.Error)
+	return ids
 }
 
 func snapshotCurrentAuthorizers(t *testing.T, edb *EventDb) {
@@ -136,10 +290,27 @@ func authorizerToSnapshot(authorizer *Authorizer) AuthorizerSnapshot {
 		AuthorizerID: authorizer.ID,
 		Fee: authorizer.Fee,
 		UnstakeTotal: authorizer.UnstakeTotal,
-		TotalRewards: authorizer.Rewards.TotalRewards,
 		TotalStake: authorizer.TotalStake,
-		CreationRound: authorizer.CreationRound,
+		TotalRewards: authorizer.Rewards.TotalRewards,
 		ServiceCharge: authorizer.ServiceCharge,
+		CreationRound: authorizer.CreationRound,
 	}
 	return snapshot
+}
+
+func printAuthorizersBucketId(tag string, authorizers []Authorizer) {
+	fmt.Printf("%v: ", tag)
+	for _, authorizer := range authorizers {
+		fmt.Printf("%v => %v ", authorizer.ID, authorizer.BucketId)
+	}
+	fmt.Println()
+}
+
+func printAuthorizers(tag string, authorizers *[]Authorizer) {
+	fmt.Printf("%v :-\n", tag)
+	for _, b := range *authorizers {
+		fmt.Printf("%v { bucket_id: %v, total_stake: %v, unstake_total: %v, service_charge: %v, total_rewards: %v }\n",
+		b.ID, b.BucketId, b.TotalStake, b.UnstakeTotal, b.ServiceCharge, b.Rewards.TotalRewards)
+	}
+	fmt.Println()
 }
