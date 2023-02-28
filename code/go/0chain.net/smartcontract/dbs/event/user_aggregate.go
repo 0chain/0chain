@@ -37,7 +37,6 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					ReadPoolTotal: rpl.Amount,
 				}
 			}
-			break
 		case TagUnlockReadPool:
 			rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
 			if !ok {
@@ -53,7 +52,6 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					ReadPoolTotal: -rpl.Amount,
 				}
 			}
-			break
 		case TagLockWritePool:
 			wpls, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
@@ -69,7 +67,6 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					WritePoolTotal: wpl.Amount,
 				}
 			}
-			break
 		case TagUnlockWritePool:
 			wpls, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
@@ -85,7 +82,6 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					WritePoolTotal: -wpl.Amount,
 				}
 			}
-			break
 		case TagLockStakePool:
 			dpls, ok := fromEvent[[]DelegatePoolLock](event.Data)
 			if !ok {
@@ -101,7 +97,6 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					TotalStake: dpl.Amount,
 				}
 			}
-			break
 		case TagUnlockStakePool:
 			dpls, ok := fromEvent[[]DelegatePoolLock](event.Data)
 			if !ok {
@@ -117,7 +112,6 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					TotalStake: -dpl.Amount,
 				}
 			}
-			break
 		case TagUpdateUserPayedFees:
 			users, ok := fromEvent[[]UserAggregate](event.Data)
 			if !ok {
@@ -133,7 +127,6 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					PayedFees: u.PayedFees,
 				}
 			}
-			break
 		case TagUpdateUserCollectedRewards:
 			users, ok := fromEvent[[]UserAggregate](event.Data)
 			if !ok {
@@ -149,7 +142,6 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					CollectedReward: u.CollectedReward,
 				}
 			}
-			break
 		default:
 			continue
 		}
