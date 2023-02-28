@@ -12,16 +12,6 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
-ALTER TABLE public.users
-    ADD bucket_id bigint NOT NULL DEFAULT 0,
-    ADD collected_reward bigint,
-    ADD total_stake bigint,
-    ADD read_pool_total bigint,
-    ADD write_pool_total bigint,
-    ADD payed_fees bigint
-;
-
-
 CREATE TABLE public.user_aggregates (
     user_id text,
     round bigint,
@@ -45,21 +35,10 @@ ALTER TABLE public.user_aggregates
 -- Migration complete
 --
 
-
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-
-
-ALTER TABLE public.users
-    DROP COLUMN bucket_id, 
-    DROP COLUMN collected_reward, 
-    DROP COLUMN total_stake, 
-    DROP COLUMN read_pool_total,
-    DROP COLUMN write_pool_total,
-    DROP COLUMN payed_fees
-;
 
 DROP TABLE public.user_aggregates;
 
