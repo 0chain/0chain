@@ -719,10 +719,6 @@ func (sc *StorageSmartContract) challengePassed(
 	}
 
 	// save allocation object
-	_, err = balances.InsertTrieNode(cab.alloc.GetKey(sc.ID), cab.alloc)
-	if err != nil {
-		return "", common.NewError("challenge_reward_error", err.Error())
-	}
 	if err := cab.alloc.save(balances, sc.ID); err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
