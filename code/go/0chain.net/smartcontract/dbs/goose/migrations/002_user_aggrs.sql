@@ -22,19 +22,6 @@ ALTER TABLE public.users
 ;
 
 
-CREATE TABLE public.user_snapshots (
-    user_id text,
-    round bigint,
-    collected_reward bigint,
-    total_stake bigint,
-    read_pool_total bigint,
-    write_pool_total bigint,
-    payed_fees bigint
-);
-
-ALTER TABLE public.user_snapshots OWNER TO zchain_user;
-
-
 CREATE TABLE public.user_aggregates (
     user_id text,
     round bigint,
@@ -47,9 +34,6 @@ CREATE TABLE public.user_aggregates (
 ) PARTITION BY RANGE (round);
 
 ALTER TABLE public.user_aggregates OWNER TO zchain_user;
-
-CREATE INDEX idx_user_snapshot_user_id ON public.user_snapshots USING btree (user_id);
-
 
 CREATE UNIQUE INDEX idx_user_aggregate ON public.user_aggregates USING btree (round, user_id);
 
@@ -77,11 +61,8 @@ ALTER TABLE public.users
     DROP COLUMN payed_fees
 ;
 
-DROP TABLE public.user_snapshots, public.user_aggregates;
-
-DROP INDEX idx_user_snapshot_user_id;
+DROP TABLE public.user_aggregates;
 
 DROP INDEX idx_user_aggregate;
-
 
 -- +goose StatementEnd

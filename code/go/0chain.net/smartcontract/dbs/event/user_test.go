@@ -211,7 +211,7 @@ func makeUserCollectedRewardsEvent(id string, reward int64) Event {
 		Type:  TypeStats,
 		Tag:   TagUpdateUserCollectedRewards,
 		Index: id,
-		Data: User{
+		Data: UserAggregate{
 			UserID:          id,
 			CollectedReward: reward,
 		},
@@ -259,7 +259,7 @@ func makeUserPayedFeesEvent(id string, fee int64) Event {
 		Type:  TypeStats,
 		Tag:   TagUpdateUserPayedFees,
 		Index: id,
-		Data: User{
+		Data: UserAggregate{
 			UserID:    id,
 			PayedFees: fee,
 		},
@@ -268,7 +268,7 @@ func makeUserPayedFeesEvent(id string, fee int64) Event {
 
 func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 	type expect struct {
-		users  map[string]User
+		users  map[string]UserAggregate
 		others []Event
 	}
 
@@ -286,7 +286,7 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 				makeUserCollectedRewardsEvent("u_2", 200),
 			},
 			expect: expect{
-				users: map[string]User{
+				users: map[string]UserAggregate{
 					"u_1": {UserID: "u_1", CollectedReward: 100},
 					"u_2": {UserID: "u_2", CollectedReward: 200},
 				},
@@ -299,7 +299,7 @@ func TestMergeUpdateUserCollectedRewardsEvents(t *testing.T) {
 				makeUserCollectedRewardsEvent("u_1", 200),
 			},
 			expect: expect{
-				users: map[string]User{
+				users: map[string]UserAggregate{
 					"u_1": {UserID: "u_1", CollectedReward: 300},
 				},
 			},
@@ -560,7 +560,7 @@ func TestMergeUpdateUserWritePoolLockEvents(t *testing.T) {
 
 func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
 	type expect struct {
-		pools  map[string]User
+		pools  map[string]UserAggregate
 		others []Event
 	}
 
@@ -578,7 +578,7 @@ func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
 				makeUserPayedFeesEvent("c_2", 200),
 			},
 			expect: expect{
-				pools: map[string]User{
+				pools: map[string]UserAggregate{
 					"c_1": {UserID: "c_1", PayedFees: 100},
 					"c_2": {UserID: "c_2", PayedFees: 200},
 				},
@@ -591,7 +591,7 @@ func TestMergeUpdateUserPayedFeesEvents(t *testing.T) {
 				makeUserPayedFeesEvent("c_1", 200),
 			},
 			expect: expect{
-				pools: map[string]User{
+				pools: map[string]UserAggregate{
 					"c_1": {UserID: "c_1", PayedFees: 300},
 				},
 			},

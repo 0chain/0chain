@@ -804,54 +804,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
-	case TagLockReadPool:
-		rpl, ok := fromEvent[[]ReadPoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserReadPoolTotal(*rpl, true)
-	case TagUnlockReadPool:
-		u, ok := fromEvent[[]ReadPoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserReadPoolTotal(*u, false)
-	case TagLockWritePool:
-		wpl, ok := fromEvent[[]WritePoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserWritePoolTotal(*wpl, true)
-	case TagUnlockWritePool:
-		u, ok := fromEvent[[]WritePoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserWritePoolTotal(*u, false)
-	case TagLockStakePool:
-		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserTotalStake(*dpl, true)
-	case TagUnlockStakePool:
-		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserTotalStake(*dpl, false)
-	case TagUpdateUserPayedFees:
-		u, ok := fromEvent[[]User](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserPayedFees(*u)
-	case TagUpdateUserCollectedRewards:
-		u, ok := fromEvent[[]User](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserCollectedRewards(*u)
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
