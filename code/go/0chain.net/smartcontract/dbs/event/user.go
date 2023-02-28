@@ -130,6 +130,6 @@ func withPayedFeesMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeAddUsersEvents() *eventsMergerImpl[UserAggregate] {
-	return newEventsMerger[UserAggregate](TagAddOrOverwriteUser, withUniqueEventOverwrite())
+func mergeAddUsersEvents() *eventsMergerImpl[User] {
+	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
 }
