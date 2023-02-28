@@ -108,3 +108,13 @@ func (edb *EventDb) GetSumOfRewardsByRewardType(rewardType string) int64 {
 
 	return sum
 }
+
+func (edb *EventDb) RunWhereQuery(query string) []RewardProvider {
+
+	var rps []RewardProvider
+
+	edb.Get().Where(query).Find(&rps)
+
+	return rps
+
+}
