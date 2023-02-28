@@ -18,7 +18,7 @@ type UserAggregate struct {
 	CreatedAt       time.Time
 }
 
-func (edb *EventDb) updateUserAggregate(round int64, evs []Event) {
+func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 	userAggrs := map[string]*UserAggregate{}
 	for _, event := range evs {
 		switch event.Tag {
@@ -29,47 +29,77 @@ func (edb *EventDb) updateUserAggregate(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, rpl := range *rpls {
-				userAggrs[rpl.Client].ReadPoolTotal += rpl.Amount
+				if aggr, ok := userAggrs[rpl.Client]; ok {
+					aggr.ReadPoolTotal += rpl.Amount
+					continue
+				}
+				userAggrs[rpl.Client] = &UserAggregate{
+					ReadPoolTotal: rpl.Amount,
+				}
 			}
 			break
 		case TagUnlockReadPool:
 			rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
 			if !ok {
-				logging.Logger.Error("user aggregate",
+				logging.Logger.Error("user aggregate unlock read pool",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, rpl := range *rpls {
-				userAggrs[rpl.Client].ReadPoolTotal -= rpl.Amount
+				if aggr, ok := userAggrs[rpl.Client]; ok {
+					aggr.ReadPoolTotal -= rpl.Amount
+					continue
+				}
+				userAggrs[rpl.Client] = &UserAggregate{
+					ReadPoolTotal: -rpl.Amount,
+				}
 			}
 			break
 		case TagLockWritePool:
 			wpls, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
-				logging.Logger.Error("user aggregate",
+				logging.Logger.Error("user aggregate lock write pool",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, wpl := range *wpls {
-				userAggrs[wpl.Client].WritePoolTotal = wpl.Amount
+				if aggr, ok := userAggrs[wpl.Client]; ok {
+					aggr.WritePoolTotal += wpl.Amount
+					continue
+				}
+				userAggrs[wpl.Client] = &UserAggregate{
+					WritePoolTotal: wpl.Amount,
+				}
 			}
 			break
 		case TagUnlockWritePool:
 			wpls, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
-				logging.Logger.Error("user aggregate",
+				logging.Logger.Error("user aggregate unlock stake pool",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, wpl := range *wpls {
-				userAggrs[wpl.Client].WritePoolTotal -= wpl.Amount
+				if aggr, ok := userAggrs[wpl.Client]; ok {
+					aggr.WritePoolTotal -= wpl.Amount
+					continue
+				}
+				userAggrs[wpl.Client] = &UserAggregate{
+					WritePoolTotal: -wpl.Amount,
+				}
 			}
 			break
 		case TagLockStakePool:
 			dpls, ok := fromEvent[[]DelegatePoolLock](event.Data)
 			if !ok {
-				logging.Logger.Error("user aggregate",
+				logging.Logger.Error("user aggregate lock stake pool",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, dpl := range *dpls {
-				userAggrs[dpl.Client].TotalStake += dpl.Amount
+				if aggr, ok := userAggrs[dpl.Client]; ok {
+					aggr.TotalStake += dpl.Amount
+					continue
+				}
+				userAggrs[dpl.Client] = &UserAggregate{
+					TotalStake: dpl.Amount,
+				}
 			}
 			break
 		case TagUnlockStakePool:
@@ -79,7 +109,13 @@ func (edb *EventDb) updateUserAggregate(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, dpl := range *dpls {
-				userAggrs[dpl.Client].TotalStake -= dpl.Amount
+				if aggr, ok := userAggrs[dpl.Client]; ok {
+					aggr.TotalStake -= dpl.Amount
+					continue
+				}
+				userAggrs[dpl.Client] = &UserAggregate{
+					TotalStake: -dpl.Amount,
+				}
 			}
 			break
 		case TagUpdateUserPayedFees:
@@ -89,7 +125,13 @@ func (edb *EventDb) updateUserAggregate(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, u := range *users {
-				userAggrs[u.UserID].PayedFees += u.PayedFees
+				if aggr, ok := userAggrs[u.UserID]; ok {
+					aggr.PayedFees += u.PayedFees
+					continue
+				}
+				userAggrs[u.UserID] = &UserAggregate{
+					PayedFees: u.PayedFees,
+				}
 			}
 			break
 		case TagUpdateUserCollectedRewards:
@@ -99,7 +141,13 @@ func (edb *EventDb) updateUserAggregate(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, u := range *users {
-				userAggrs[u.UserID].CollectedReward += u.CollectedReward
+				if aggr, ok := userAggrs[u.UserID]; ok {
+					aggr.CollectedReward += u.CollectedReward
+					continue
+				}
+				userAggrs[u.UserID] = &UserAggregate{
+					CollectedReward: u.CollectedReward,
+				}
 			}
 			break
 		default:
