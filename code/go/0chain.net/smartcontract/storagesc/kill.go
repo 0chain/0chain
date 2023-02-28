@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"strings"
+
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 
@@ -40,7 +43,10 @@ func (_ *StorageSmartContract) killBlobber(
 			}
 
 			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
-				return nil, nil, err
+				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+					return nil, nil, common.NewError("kill_blobber_failed",
+						"remove blobber form challenge partition, "+err.Error())
+				}
 			}
 
 			sp, err := getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
@@ -95,8 +101,10 @@ func (_ *StorageSmartContract) killValidator(
 			}
 
 			if err := validatorPartitions.Remove(balances, validator.Id()); err != nil {
-				return nil, nil, common.NewError("kill_validator_failed",
-					"failed to remove validator."+err.Error())
+				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+					return nil, nil, common.NewError("kill_validator_failed",
+						"failed to remove validator from partition, "+err.Error())
+				}
 			}
 
 			sp, err := getStakePoolAdapter(validator.Type(), validator.Id(), balances)
