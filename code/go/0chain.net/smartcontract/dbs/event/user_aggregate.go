@@ -18,8 +18,28 @@ type UserAggregate struct {
 	CreatedAt       time.Time
 }
 
-func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
-	userAggrs := map[string]*UserAggregate{}
+func (edb *EventDb) GetLatestUserAggregates() (map[string]*UserAggregate, error) {
+	var ua []UserAggregate
+
+	result := edb.Store.Get().
+		Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
+	FROM user_aggregates 
+	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`).
+		Scan(&ua)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	var mappedAggrs = make(map[string]*UserAggregate, len(ua))
+
+	for _, aggr := range ua {
+		mappedAggrs[aggr.UserID] = &aggr
+	}
+
+	return mappedAggrs, nil
+}
+
+func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Event) {
 	for _, event := range evs {
 		switch event.Tag {
 		case TagLockReadPool:
@@ -29,11 +49,11 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, rpl := range *rpls {
-				if aggr, ok := userAggrs[rpl.Client]; ok {
+				if aggr, ok := lua[rpl.Client]; ok {
 					aggr.ReadPoolTotal += rpl.Amount
 					continue
 				}
-				userAggrs[rpl.Client] = &UserAggregate{
+				lua[rpl.Client] = &UserAggregate{
 					ReadPoolTotal: rpl.Amount,
 				}
 			}
@@ -44,11 +64,11 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, rpl := range *rpls {
-				if aggr, ok := userAggrs[rpl.Client]; ok {
+				if aggr, ok := lua[rpl.Client]; ok {
 					aggr.ReadPoolTotal -= rpl.Amount
 					continue
 				}
-				userAggrs[rpl.Client] = &UserAggregate{
+				lua[rpl.Client] = &UserAggregate{
 					ReadPoolTotal: -rpl.Amount,
 				}
 			}
@@ -59,11 +79,11 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, wpl := range *wpls {
-				if aggr, ok := userAggrs[wpl.Client]; ok {
+				if aggr, ok := lua[wpl.Client]; ok {
 					aggr.WritePoolTotal += wpl.Amount
 					continue
 				}
-				userAggrs[wpl.Client] = &UserAggregate{
+				lua[wpl.Client] = &UserAggregate{
 					WritePoolTotal: wpl.Amount,
 				}
 			}
@@ -74,11 +94,11 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, wpl := range *wpls {
-				if aggr, ok := userAggrs[wpl.Client]; ok {
+				if aggr, ok := lua[wpl.Client]; ok {
 					aggr.WritePoolTotal -= wpl.Amount
 					continue
 				}
-				userAggrs[wpl.Client] = &UserAggregate{
+				lua[wpl.Client] = &UserAggregate{
 					WritePoolTotal: -wpl.Amount,
 				}
 			}
@@ -89,11 +109,11 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, dpl := range *dpls {
-				if aggr, ok := userAggrs[dpl.Client]; ok {
+				if aggr, ok := lua[dpl.Client]; ok {
 					aggr.TotalStake += dpl.Amount
 					continue
 				}
-				userAggrs[dpl.Client] = &UserAggregate{
+				lua[dpl.Client] = &UserAggregate{
 					TotalStake: dpl.Amount,
 				}
 			}
@@ -104,11 +124,11 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, dpl := range *dpls {
-				if aggr, ok := userAggrs[dpl.Client]; ok {
+				if aggr, ok := lua[dpl.Client]; ok {
 					aggr.TotalStake -= dpl.Amount
 					continue
 				}
-				userAggrs[dpl.Client] = &UserAggregate{
+				lua[dpl.Client] = &UserAggregate{
 					TotalStake: -dpl.Amount,
 				}
 			}
@@ -119,11 +139,11 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, u := range *users {
-				if aggr, ok := userAggrs[u.UserID]; ok {
+				if aggr, ok := lua[u.UserID]; ok {
 					aggr.PayedFees += u.PayedFees
 					continue
 				}
-				userAggrs[u.UserID] = &UserAggregate{
+				lua[u.UserID] = &UserAggregate{
 					PayedFees: u.PayedFees,
 				}
 			}
@@ -134,11 +154,11 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			}
 			for _, u := range *users {
-				if aggr, ok := userAggrs[u.UserID]; ok {
+				if aggr, ok := lua[u.UserID]; ok {
 					aggr.CollectedReward += u.CollectedReward
 					continue
 				}
-				userAggrs[u.UserID] = &UserAggregate{
+				lua[u.UserID] = &UserAggregate{
 					CollectedReward: u.CollectedReward,
 				}
 			}
@@ -146,7 +166,7 @@ func (edb *EventDb) updateUserAggregates(round int64, evs []Event) {
 			continue
 		}
 	}
-	for key, aggr := range userAggrs {
+	for key, aggr := range lua {
 		aggr.Round = round
 		aggr.UserID = key
 		err := edb.addUserAggregate(aggr)
