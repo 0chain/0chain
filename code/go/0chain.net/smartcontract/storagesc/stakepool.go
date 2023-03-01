@@ -363,10 +363,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 
 func (ssc *StorageSmartContract) createStakePool(
 	conf *Config,
-	providerType spenum.Provider,
-	providerId datastore.Key,
 	settings stakepool.Settings,
-	balances chainstate.StateContextI,
 ) (*stakePool, error) {
 	if err := validateStakePoolSettings(settings, conf); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)

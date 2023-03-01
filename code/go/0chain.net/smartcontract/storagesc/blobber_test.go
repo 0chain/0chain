@@ -1318,7 +1318,8 @@ func TestOnlyAdd(t *testing.T) {
 	require.NoError(t, err)
 
 	b.BaseURL = "https://newabcurl.com"
-	_, err = updateBlobberAdd(t, b, 0, tp, ssc, balances)
+	//should fail as only add is allowed
+	_, err = updateBlobberUsingAddBlobber(t, b, 0, tp, ssc, balances)
 	require.Error(t, err)
 
 }
