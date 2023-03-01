@@ -799,6 +799,7 @@ func (sc *StorageSmartContract) challengeFailed(
 func (sc *StorageSmartContract) getAllocationForChallenge(
 	t *transaction.Transaction,
 	allocID string,
+	blobberID string,
 	balances cstate.StateContextI) (alloc *StorageAllocation, err error) {
 
 	alloc, err = sc.getAllocation(allocID, balances)
@@ -818,7 +819,11 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 		return nil, common.NewError("adding_challenge_error",
 			"found empty allocation stats")
 	}
-	if alloc.Stats.NumWrites > 0 {
+
+	//we check that this allocation do have write-commits and can be challenged.
+	//We can't check only allocation to be written, because blobbers can commit in different order,
+	//so we check particular blobber's allocation to be written
+	if alloc.Stats.NumWrites > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
 		return alloc, nil // found
 	}
 	return nil, nil
@@ -931,13 +936,13 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		allocID := randBlobberAllocs[randomIndex].ID
 
 		// get the storage allocation from MPT
-		alloc, err = sc.getAllocationForChallenge(txn, allocID, balances)
+		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
 		if err != nil {
 			return nil, err
 		}
 
 		if alloc == nil {
-			return nil, errors.New("empty allocation")
+			continue
 		}
 
 		if alloc.Expiration >= txn.CreationDate {
@@ -953,7 +958,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	if !foundAllocation {
-		logging.Logger.Error("populate_generate_challenge: all blobber partition allocations are already expired")
+		logging.Logger.Error("populate_generate_challenge: couldn't find appropriate allocation for a blobber",
+			zap.String("blobberId", blobberID))
 		return nil, nil
 	}
 
