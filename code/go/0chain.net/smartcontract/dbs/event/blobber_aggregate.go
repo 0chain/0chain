@@ -101,8 +101,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 	logging.Logger.Debug("blobber_snapshot", zap.Int("total_current_blobbers", len(currentBlobbers)))
 
 	if round <= edb.AggregatePeriod() && len(currentBlobbers) > 0 {
-		logging.Logger.Debug("creating snapshots", zap.Any("currentBlobbers", currentBlobbers))
-
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
 			logging.Logger.Error("saving blobbers snapshots", zap.Error(err))
 		}

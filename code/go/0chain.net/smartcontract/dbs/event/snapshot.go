@@ -86,7 +86,6 @@ func (s *Snapshot) updateAveragesBeforeDecrement(provider spenum.Provider) {
 // ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
 // For some fields, the count of the providers may be needed so a provider parameter is added.
 func (s *Snapshot) ApplyDiff(diff *Snapshot, provider spenum.Provider) {
-	logging.Logger.Debug("SnapshotDiff", zap.Any("provider", provider), zap.Any("diff", diff), zap.Any("snapshot_before", s))
 	s.TotalMint += diff.TotalMint
 	s.TotalChallengePools += diff.TotalChallengePools
 	s.ActiveAllocatedDelta += diff.ActiveAllocatedDelta
@@ -100,11 +99,15 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot, provider spenum.Provider) {
 	s.TotalChallenges += diff.TotalChallenges
 	s.AllocatedStorage += diff.AllocatedStorage
 	s.MaxCapacityStorage += diff.MaxCapacityStorage
-	s.StakedStorage += diff.StakedStorage
+	s.StakedStorage +=  diff.StakedStorage
 	s.UsedStorage += diff.UsedStorage
 	s.TransactionsCount += diff.TransactionsCount
 	s.UniqueAddresses += diff.UniqueAddresses
 	s.BlockCount += diff.BlockCount
+
+	if s.StakedStorage > s.MaxCapacityStorage {
+		s.StakedStorage = s.MaxCapacityStorage
+	}
 
 	if s.TransactionsCount > 0 {
 		s.AverageTxnFee += diff.AverageTxnFee / s.TransactionsCount
@@ -114,8 +117,6 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot, provider spenum.Provider) {
 	if providerCount > 0 {
 		s.AverageWritePrice += diff.AverageWritePrice / providerCount
 	}
-
-	logging.Logger.Debug("SnapshotDiff", zap.Any("snapshot_after", s))
 }
 
 type FieldType int
