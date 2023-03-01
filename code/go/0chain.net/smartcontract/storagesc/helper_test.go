@@ -160,7 +160,7 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	return ssc.addValidator(tx, input, balances)
 }
 
-func updateBlobberAdd(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
+func updateBlobberUsingAddBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
 	ssc *StorageSmartContract, balances chainState.StateContextI) (
 	resp string, err error) {
 

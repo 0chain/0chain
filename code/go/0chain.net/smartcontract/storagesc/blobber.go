@@ -880,8 +880,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.createStakePool(conf, spenum.Blobber, blobber.ID,
-		blobber.StakePoolSettings, balances)
+	sp, err = sc.createStakePool(conf, blobber.StakePoolSettings)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
 	}
