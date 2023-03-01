@@ -2,10 +2,8 @@ package sharder
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,15 +13,12 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
 	"0chain.net/chaincore/node"
-	bcstate "0chain.net/chaincore/state"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
 )
 
 func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlers := map[string]common.ReqRespHandlerf{
-		"/v1/mint_nonce":                   common.ToJSONResponse(MintNonceHandler),
-		"/v1/not_processed_burn_tickets":   common.ToJSONResponse(NotProcessedBurnTicketsHandler),
 		"/v1/block/get":                    common.ToJSONResponse(BlockHandler),
 		"/v1/block/magic/get":              common.ToJSONResponse(MagicBlockHandler),
 		"/v1/transaction/get/confirmation": common.ToJSONResponse(TransactionConfirmationHandler),
@@ -50,75 +45,6 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 
 type ChainInfo struct {
 	LatestFinalizedBlock *block.BlockSummary `json:"latest_finalized_block"`
-}
-
-// MintNonceHandler returns the latest mint nonce for the client with the help of the given client id
-func MintNonceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	sc := chain.GetServerChain()
-
-	if sc.GetEventDb() == nil {
-		return nil, common.NewError("get_balance_error", "event database not enabled")
-	}
-
-	clientID := r.FormValue("client_id")
-
-	user, err := sc.GetEventDb().GetUser(clientID)
-	if err != nil {
-		return nil, err
-	}
-
-	return user.MintNonce, nil
-}
-
-// NotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
-// with a help of offset nonce
-func NotProcessedBurnTicketsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	sc := chain.GetServerChain()
-
-	if sc.GetEventDb() == nil {
-		return nil, common.NewError("get_balance_error", "event database not enabled")
-	}
-
-	ethereumAddress := r.FormValue("ethereum_address")
-	if ethereumAddress == "" {
-		return nil, errors.New("Argument 'ethereum_address' should not be empty")
-	}
-
-	nonce := r.FormValue("nonce")
-
-	var nonceInt int64
-	if nonce != "" {
-		var err error
-		nonceInt, err = strconv.ParseInt(nonce, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	burnTickets, err := sc.GetEventDb().GetBurnTickets(ethereumAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve burn tickets: %w", err)
-	}
-
-	response := make([]*bcstate.BurnTicket, 0)
-
-	for _, burnTicket := range burnTickets {
-		if burnTicket.Nonce > nonceInt {
-			response = append(
-				response,
-				bcstate.NewBurnTicket(
-					burnTicket.EthereumAddress,
-					burnTicket.Hash,
-					burnTicket.Nonce,
-				))
-		}
-	}
-
-	sort.Slice(response, func(i, j int) bool {
-		return response[i].Nonce < response[j].Nonce
-	})
-
-	return response, nil
 }
 
 func HealthcheckHandler(ctx context.Context, r *http.Request) (interface{}, error) {

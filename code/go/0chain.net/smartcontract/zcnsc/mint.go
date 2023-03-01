@@ -28,13 +28,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		string(inputData),
 	)
 
-	user, err := ctx.GetEventDB().GetUser(trans.ClientID)
-	if err != nil {
-		msg := fmt.Sprintf("failed to get user by client id: %v, %s", err, info)
-		err = common.NewError(code, msg)
-		return
-	}
-
 	gn, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node error: %v, %s", err, info)
@@ -107,15 +100,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 			code,
 			fmt.Sprintf(
 				"nonce given (%v) for receiving client (%s) has alredy been minted for Node.ID: '%s', %s",
-				payload.Nonce, payload.ReceivingClientID, trans.ClientID, info))
-		return
-	}
-
-	if payload.Nonce <= user.MintNonce {
-		err = common.NewError(
-			code,
-			fmt.Sprintf(
-				"nonce given (%v) for receiving client (%s) is not sequential for Node.ID: '%s', %s",
 				payload.Nonce, payload.ReceivingClientID, trans.ClientID, info))
 		return
 	}

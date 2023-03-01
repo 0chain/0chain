@@ -2,6 +2,8 @@ package zcnsc
 
 import (
 	"net/http"
+	"sort"
+	"strconv"
 
 	"0chain.net/smartcontract/rest"
 
@@ -34,6 +36,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		{URI: zcn + "/getAuthorizerNodes", Handler: common.UserRateLimit(zrh.getAuthorizerNodes)},
 		{URI: zcn + "/getGlobalConfig", Handler: common.UserRateLimit(zrh.GetGlobalConfig)},
 		{URI: zcn + "/getAuthorizer", Handler: common.UserRateLimit(zrh.getAuthorizer)},
+		{URI: zcn + "/v1/mint_nonce", Handler: common.UserRateLimit(zrh.mintNonceHandler)},
+		{URI: zcn + "/v1/not_processed_burn_tickets", Handler: common.UserRateLimit(zrh.notProcessedBurnTicketsHandler)},
 	}
 }
 
@@ -111,6 +115,79 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 	rtv := toAuthorizerResponse(ev)
 
 	common.Respond(w, r, rtv, nil)
+}
+
+// MintNonceHandler returns the latest mint nonce for the client with the help of the given client id
+func (zrh *ZcnRestHandler) mintNonceHandler(w http.ResponseWriter, r *http.Request) {
+	edb := zrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	clientID := r.FormValue("client_id")
+
+	user, err := edb.GetUser(clientID)
+	if err != nil {
+		common.Respond(w, r, nil, errors.Wrap(err, "GetAuser DB error, ID = "+clientID))
+		return
+	}
+
+	common.Respond(w, r, user.MintNonce, nil)
+}
+
+// NotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
+// with a help of offset nonce
+func (zrh *ZcnRestHandler) notProcessedBurnTicketsHandler(w http.ResponseWriter, r *http.Request) {
+	edb := zrh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	ethereumAddress := r.FormValue("ethereum_address")
+	if ethereumAddress == "" {
+		common.Respond(w, r, nil, errors.New("argument 'ethereum_address' should not be empty"))
+		return
+	}
+
+	nonce := r.FormValue("nonce")
+
+	var nonceInt int64
+	if nonce != "" {
+		var err error
+		nonceInt, err = strconv.ParseInt(nonce, 10, 64)
+		if err != nil {
+			common.Respond(w, r, nil, errors.Wrap(err, "Bad nonce format"))
+			return
+		}
+	}
+
+	burnTickets, err := edb.GetBurnTickets(ethereumAddress)
+	if err != nil {
+		common.Respond(w, r, nil, errors.Wrap(err, "Failed to retrieve burn tickets"))
+		return
+	}
+
+	response := make([]*BurnTicket, 0)
+
+	for _, burnTicket := range burnTickets {
+		if burnTicket.Nonce > nonceInt {
+			response = append(
+				response,
+				NewBurnTicket(
+					burnTicket.EthereumAddress,
+					burnTicket.Hash,
+					burnTicket.Nonce,
+				))
+		}
+	}
+
+	sort.Slice(response, func(i, j int) bool {
+		return response[i].Nonce < response[j].Nonce
+	})
+
+	common.Respond(w, r, response, nil)
 }
 
 // swagger:model authorizerResponse
