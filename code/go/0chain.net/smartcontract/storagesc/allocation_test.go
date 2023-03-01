@@ -804,7 +804,6 @@ func TestTransferAllocation(t *testing.T) {
 		mockNewOwnerId        = "mock new owner id"
 		mockNewOwnerPublicKey = "mock new owner public key"
 		mockOldOwner          = "mock old owner"
-		mockCuratorId         = "mock curator id"
 		mockAllocationId      = "mock allocation id"
 	)
 	type args struct {
@@ -814,9 +813,7 @@ func TestTransferAllocation(t *testing.T) {
 		balances chainState.StateContextI
 	}
 	type parameters struct {
-		curator                 string
 		info                    transferAllocationInput
-		existingCurators        []string
 		existingWPForAllocation bool
 		existingNoiseWPools     int
 	}
@@ -826,9 +823,7 @@ func TestTransferAllocation(t *testing.T) {
 	}
 	var setExpectations = func(t *testing.T, name string, p parameters, want want) args {
 		var balances = &mocks.StateContextI{}
-		var txn = &transaction.Transaction{
-			ClientID: p.curator,
-		}
+		var txn = &transaction.Transaction{}
 		var ssc = &StorageSmartContract{
 
 			SmartContract: sci.NewSC(ADDRESS),
@@ -841,7 +836,6 @@ func TestTransferAllocation(t *testing.T) {
 			ID:        p.info.AllocationId,
 			WritePool: 0,
 		}
-		sa.Curators = append(sa.Curators, p.existingCurators...)
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID),
 			mock.MatchedBy(func(s *StorageAllocation) bool {
 				*s = sa
@@ -852,11 +846,7 @@ func TestTransferAllocation(t *testing.T) {
 			"InsertTrieNode",
 			sa.GetKey(ssc.ID),
 			mock.MatchedBy(func(sa *StorageAllocation) bool {
-				for i, curator := range p.existingCurators {
-					if sa.Curators[i] != curator {
-						return false
-					}
-				}
+
 				return sa.ID == p.info.AllocationId &&
 					sa.Owner == p.info.NewOwnerId &&
 					sa.OwnerPublicKey == p.info.NewOwnerPublicKey
@@ -882,13 +872,11 @@ func TestTransferAllocation(t *testing.T) {
 		{
 			name: "ok",
 			parameters: parameters{
-				curator: mockCuratorId,
 				info: transferAllocationInput{
 					AllocationId:      mockAllocationId,
 					NewOwnerId:        mockNewOwnerId,
 					NewOwnerPublicKey: mockNewOwnerPublicKey,
 				},
-				existingCurators:        []string{mockCuratorId, "another", "and another"},
 				existingNoiseWPools:     3,
 				existingWPForAllocation: false,
 			},
@@ -896,13 +884,11 @@ func TestTransferAllocation(t *testing.T) {
 		{
 			name: "ok",
 			parameters: parameters{
-				curator: mockCuratorId,
 				info: transferAllocationInput{
 					AllocationId:      mockAllocationId,
 					NewOwnerId:        mockNewOwnerId,
 					NewOwnerPublicKey: mockNewOwnerPublicKey,
 				},
-				existingCurators:        []string{mockCuratorId, "another", "and another"},
 				existingNoiseWPools:     0,
 				existingWPForAllocation: false,
 			},
@@ -910,31 +896,13 @@ func TestTransferAllocation(t *testing.T) {
 		{
 			name: "ok_owner",
 			parameters: parameters{
-				curator: mockOldOwner,
 				info: transferAllocationInput{
 					AllocationId:      mockAllocationId,
 					NewOwnerId:        mockNewOwnerId,
 					NewOwnerPublicKey: mockNewOwnerPublicKey,
 				},
-				existingCurators:        []string{mockCuratorId, "another", "and another"},
 				existingNoiseWPools:     0,
 				existingWPForAllocation: false,
-			},
-		},
-		{
-			name: "Err_not_curator",
-			parameters: parameters{
-				curator: mockCuratorId,
-				info: transferAllocationInput{
-					AllocationId:      mockAllocationId,
-					NewOwnerId:        mockNewOwnerId,
-					NewOwnerPublicKey: mockNewOwnerPublicKey,
-				},
-				existingCurators: []string{"not mock curator"},
-			},
-			want: want{
-				err:    true,
-				errMsg: "curator_transfer_allocation_failed: only curators or the owner can transfer allocations; mock curator id is neither",
 			},
 		},
 	}
@@ -944,7 +912,7 @@ func TestTransferAllocation(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
-			resp, err := args.ssc.curatorTransferAllocation(args.txn, args.input, args.balances)
+			resp, err := args.ssc.transferAllocation(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {

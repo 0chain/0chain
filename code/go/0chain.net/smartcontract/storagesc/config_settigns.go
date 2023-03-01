@@ -97,12 +97,9 @@ const (
 	CostAddFreeStorageAssigner
 	CostFreeAllocationRequest
 	CostFreeUpdateAllocation
-	CostAddCurator
-	CostRemoveCurator
 	CostBlobberHealthCheck
 	CostUpdateBlobberSettings
 	CostPayBlobberBlockRewards
-	CostCuratorTransferAllocation
 	CostChallengeRequest
 	CostChallengeResponse
 	CostGenerateChallenges
@@ -201,12 +198,9 @@ func initSettingName() {
 	SettingName[CostAddFreeStorageAssigner] = "cost.add_free_storage_assigner"
 	SettingName[CostFreeAllocationRequest] = "cost.free_allocation_request"
 	SettingName[CostFreeUpdateAllocation] = "cost.free_update_allocation"
-	SettingName[CostAddCurator] = "cost.add_curator"
-	SettingName[CostRemoveCurator] = "cost.remove_curator"
 	SettingName[CostBlobberHealthCheck] = "cost.blobber_health_check"
 	SettingName[CostUpdateBlobberSettings] = "cost.update_blobber_settings"
 	SettingName[CostPayBlobberBlockRewards] = "cost.pay_blobber_block_rewards"
-	SettingName[CostCuratorTransferAllocation] = "cost.curator_transfer_allocation"
 	SettingName[CostChallengeRequest] = "cost.challenge_request"
 	SettingName[CostChallengeResponse] = "cost.challenge_response"
 	SettingName[CostGenerateChallenges] = "cost.generate_challenges"
@@ -288,12 +282,9 @@ func initSettings() {
 		CostAddFreeStorageAssigner.String():       {CostAddFreeStorageAssigner, smartcontract.Cost},
 		CostFreeAllocationRequest.String():        {CostFreeAllocationRequest, smartcontract.Cost},
 		CostFreeUpdateAllocation.String():         {CostFreeUpdateAllocation, smartcontract.Cost},
-		CostAddCurator.String():                   {CostAddCurator, smartcontract.Cost},
-		CostRemoveCurator.String():                {CostRemoveCurator, smartcontract.Cost},
 		CostBlobberHealthCheck.String():           {CostBlobberHealthCheck, smartcontract.Cost},
 		CostUpdateBlobberSettings.String():        {CostUpdateBlobberSettings, smartcontract.Cost},
 		CostPayBlobberBlockRewards.String():       {CostPayBlobberBlockRewards, smartcontract.Cost},
-		CostCuratorTransferAllocation.String():    {CostCuratorTransferAllocation, smartcontract.Cost},
 		CostChallengeRequest.String():             {CostChallengeRequest, smartcontract.Cost},
 		CostChallengeResponse.String():            {CostChallengeResponse, smartcontract.Cost},
 		CostGenerateChallenges.String():           {CostGenerateChallenges, smartcontract.Cost},

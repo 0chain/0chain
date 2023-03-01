@@ -14,7 +14,6 @@ simulation:
   num_blobber_delegates: 10
   num_miner_delegates: 10
   num_sharder_delegates: 10
-  num_curators: 1
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
   num_write_redeem_allocation: 1
