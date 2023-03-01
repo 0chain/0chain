@@ -43,6 +43,8 @@ func (edb *EventDb) GetLatestUserAggregates() (map[string]*UserAggregate, error)
 func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Event) {
 	var updatedAggrs []UserAggregate
 	for _, event := range evs {
+		logging.Logger.Debug("update user aggregate",
+			zap.String("tag", event.Tag.String()))
 		switch event.Tag {
 		case TagLockReadPool:
 			rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
