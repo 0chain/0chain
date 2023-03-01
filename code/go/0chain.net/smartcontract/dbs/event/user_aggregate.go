@@ -176,7 +176,7 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			}
 			for _, u := range *users {
 				if aggr, ok := lua[u.UserID]; ok {
-					aggr.PayedFees += u.PayedFees
+					aggr.PayedFees += 100
 					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
