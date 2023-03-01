@@ -78,6 +78,11 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.UniqueAddresses + snapshotDiff.UniqueAddresses, s.UniqueAddresses)
 		require.Equal(t, initialSnapshot.BlockCount + snapshotDiff.BlockCount, s.BlockCount)
 		require.Equal(t, initialSnapshot.AverageTxnFee + (snapshotDiff.AverageTxnFee / s.TransactionsCount), s.AverageTxnFee)
+
+		// Test snapshot StakedStorage will not exceed MaxCapacityStorage
+		snapShotDiff2 := Snapshot{ StakedStorage: s.MaxCapacityStorage + 1 }
+		s.ApplyDiff(&snapShotDiff2, spenum.Blobber)
+		require.Equal(t, s.MaxCapacityStorage, s.StakedStorage)
 	})
 }
 
