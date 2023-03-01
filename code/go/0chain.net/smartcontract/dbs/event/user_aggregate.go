@@ -51,10 +51,13 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			if !ok {
 				logging.Logger.Error("user aggregate",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+
 			}
 			for _, rpl := range *rpls {
 				if aggr, ok := lua[rpl.Client]; ok {
 					aggr.ReadPoolTotal += rpl.Amount
+					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
 				lua[rpl.Client] = &UserAggregate{
@@ -68,10 +71,13 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			if !ok {
 				logging.Logger.Error("user aggregate unlock read pool",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+
 			}
 			for _, rpl := range *rpls {
 				if aggr, ok := lua[rpl.Client]; ok {
 					aggr.ReadPoolTotal -= rpl.Amount
+					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
 				lua[rpl.Client] = &UserAggregate{
@@ -85,10 +91,13 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			if !ok {
 				logging.Logger.Error("user aggregate lock write pool",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+
 			}
 			for _, wpl := range *wpls {
 				if aggr, ok := lua[wpl.Client]; ok {
 					aggr.WritePoolTotal += wpl.Amount
+					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
 				lua[wpl.Client] = &UserAggregate{
@@ -102,10 +111,13 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			if !ok {
 				logging.Logger.Error("user aggregate unlock stake pool",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+
 			}
 			for _, wpl := range *wpls {
 				if aggr, ok := lua[wpl.Client]; ok {
 					aggr.WritePoolTotal -= wpl.Amount
+					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
 				lua[wpl.Client] = &UserAggregate{
@@ -119,10 +131,13 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			if !ok {
 				logging.Logger.Error("user aggregate lock stake pool",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+
 			}
 			for _, dpl := range *dpls {
 				if aggr, ok := lua[dpl.Client]; ok {
 					aggr.TotalStake += dpl.Amount
+					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
 				lua[dpl.Client] = &UserAggregate{
@@ -136,10 +151,13 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			if !ok {
 				logging.Logger.Error("user aggregate",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+
 			}
 			for _, dpl := range *dpls {
 				if aggr, ok := lua[dpl.Client]; ok {
 					aggr.TotalStake -= dpl.Amount
+					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
 				lua[dpl.Client] = &UserAggregate{
@@ -153,10 +171,13 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			if !ok {
 				logging.Logger.Error("user aggregate",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+
 			}
 			for _, u := range *users {
 				if aggr, ok := lua[u.UserID]; ok {
 					aggr.PayedFees += u.PayedFees
+					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
 				lua[u.UserID] = &UserAggregate{
@@ -170,10 +191,13 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 			if !ok {
 				logging.Logger.Error("user aggregate",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+
 			}
 			for _, u := range *users {
 				if aggr, ok := lua[u.UserID]; ok {
 					aggr.CollectedReward += u.CollectedReward
+					updatedAggrs = append(updatedAggrs, *aggr)
 					continue
 				}
 				lua[u.UserID] = &UserAggregate{
