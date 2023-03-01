@@ -239,14 +239,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		}
 
 		due := time.Since(tse)
-		logging.Logger.Debug("event db process",
-			zap.Duration("duration", due),
-			zap.Int("events number", len(es.events)),
-			zap.Strings("tags", tags),
-			zap.Int64("round", es.round),
-			zap.String("block", es.block),
-			zap.Int("block size", es.blockSize))
-
 		if due.Milliseconds() > 200 {
 			logging.Logger.Warn("event db work slow",
 				zap.Duration("duration", due),
@@ -582,16 +574,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
-
 		return edb.addOrUpdateBlock(*block)
 	case TagFinalizeBlock:
 		block, ok := fromEvent[Block](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		logging.Logger.Debug("updating block event - finalized", zap.String("id", block.Hash))
-
 		return edb.addOrUpdateBlock(*block)
 	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
@@ -845,7 +833,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
 	default:
-		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
 	}
 }

@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/0chain/common/core/logging"
@@ -43,8 +42,6 @@ func (edb *EventDb) GetLatestUserAggregates() (map[string]*UserAggregate, error)
 func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Event) {
 	var updatedAggrs []UserAggregate
 	for _, event := range evs {
-		logging.Logger.Debug("update user aggregate",
-			zap.String("tag", event.Tag.String()))
 		switch event.Tag {
 		case TagLockReadPool:
 			rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
@@ -211,12 +208,6 @@ func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Eve
 		}
 	}
 	for _, aggr := range updatedAggrs {
-		logging.Logger.Debug("Logging aggrs to be saved", zap.String("reward", fmt.Sprintf(`reward %v`, aggr.CollectedReward)),
-			zap.String("fees", fmt.Sprintf(`fees %v`, aggr.PayedFees)),
-			zap.String("read pool", fmt.Sprintf(`read pool %v`, aggr.ReadPoolTotal)),
-			zap.String("write pool", fmt.Sprintf(`reward %v`, aggr.WritePoolTotal)),
-			zap.String("stake pool", fmt.Sprintf(`stake pool %v`, aggr.TotalStake)),
-		)
 		aggr.Round = round
 		err := edb.addUserAggregate(&aggr)
 		if err != nil {
