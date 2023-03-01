@@ -454,7 +454,7 @@ func (edb *EventDb) updateUserAggregates(e blockEvents, ua map[string]*UserAggre
 	round := e.round
 	var events []Event
 	for _, ev := range e.events {
-		if ev.Type == TypeStats || (ev.Type == TypeChain && ev.Tag == TagFinalizeBlock) {
+		if ev.Type == TypeStats && (ev.Tag == TagLockReadPool || ev.Tag == TagUnlockReadPool || ev.Tag == TagLockStakePool || ev.Tag == TagUnlockStakePool || ev.Tag == TagLockWritePool || ev.Tag == TagUnlockWritePool || ev.Tag == TagUpdateUserCollectedRewards || ev.Tag == TagUpdateUserPayedFees) {
 			events = append(events, ev)
 		}
 	}
