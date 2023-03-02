@@ -93,7 +93,7 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCompletedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation, validators []string, partial float64,
-	balances cstate.StateContextI) error {
+	balances cstate.StateContextI, options ...string) error {
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
@@ -137,8 +137,10 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	transactionData := &TransactionData{}
-	err = json.Unmarshal([]byte(t.TransactionData), transactionData)
+	var challengeID string
+	if len(options) > 0 {
+		challengeID = options[0]
+	}
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
@@ -197,7 +199,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, transactionData.Input.ChallengeId)
+	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
@@ -214,7 +216,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, transactionData.Input.ChallengeId)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -298,7 +300,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 
 // move tokens from challenge pool back to write pool
 func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev common.Timestamp,
-	blobAlloc *BlobberAllocation, validators []string, balances cstate.StateContextI) (err error) {
+	blobAlloc *BlobberAllocation, validators []string, balances cstate.StateContextI, options ...string) (err error) {
 	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
@@ -358,11 +360,14 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 		return
 	}
 
-	transactionData := &TransactionData{}
-	err = json.Unmarshal([]byte(t.TransactionData), transactionData)
+	var challengeID string
+
+	if len(options) > 0 {
+		challengeID = options[0]
+	}
 
 	// validators reward
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances, transactionData.Input.ChallengeId)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -737,7 +742,10 @@ func (sc *StorageSmartContract) challengePassed(
 		partial = float64(cab.success) / float64(cab.threshold)
 	}
 
-	err = sc.blobberReward(cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators, partial, balances)
+	transactionData := &TransactionData{}
+	err = json.Unmarshal([]byte(t.TransactionData), transactionData)
+
+	err = sc.blobberReward(cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators, partial, balances, transactionData.Input.ChallengeId)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
@@ -779,8 +787,11 @@ func (sc *StorageSmartContract) challengeFailed(
 
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 
-	err := sc.blobberPenalty(cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc,
-		cab.validators, balances)
+	transactionData := &TransactionData{}
+	err := json.Unmarshal([]byte(t.TransactionData), transactionData)
+
+	err = sc.blobberPenalty(cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc,
+		cab.validators, balances, transactionData.Input.ChallengeId)
 	if err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
 	}
