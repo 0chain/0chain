@@ -2534,13 +2534,16 @@ func (z *ValidatorNodes) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *WriteMarker) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 11
+	// map header, size 9
 	// string "AllocationRoot"
-	o = append(o, 0x8b, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
+	o = append(o, 0x89, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
 	o = msgp.AppendString(o, z.AllocationRoot)
 	// string "PreviousAllocationRoot"
 	o = append(o, 0xb6, 0x50, 0x72, 0x65, 0x76, 0x69, 0x6f, 0x75, 0x73, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
 	o = msgp.AppendString(o, z.PreviousAllocationRoot)
+	// string "FileMetaRoot"
+	o = append(o, 0xac, 0x46, 0x69, 0x6c, 0x65, 0x4d, 0x65, 0x74, 0x61, 0x52, 0x6f, 0x6f, 0x74)
+	o = msgp.AppendString(o, z.FileMetaRoot)
 	// string "AllocationID"
 	o = append(o, 0xac, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x44)
 	o = msgp.AppendString(o, z.AllocationID)
@@ -2563,15 +2566,6 @@ func (z *WriteMarker) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Signature"
 	o = append(o, 0xa9, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65)
 	o = msgp.AppendString(o, z.Signature)
-	// string "Operation"
-	o = append(o, 0xa9, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
-	o = msgp.AppendString(o, z.Operation)
-	// string "LookupHash"
-	o = append(o, 0xaa, 0x4c, 0x6f, 0x6f, 0x6b, 0x75, 0x70, 0x48, 0x61, 0x73, 0x68)
-	o = msgp.AppendString(o, z.LookupHash)
-	// string "ContentHash"
-	o = append(o, 0xab, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x48, 0x61, 0x73, 0x68)
-	o = msgp.AppendString(o, z.ContentHash)
 	return
 }
 
@@ -2603,6 +2597,12 @@ func (z *WriteMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			z.PreviousAllocationRoot, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "PreviousAllocationRoot")
+				return
+			}
+		case "FileMetaRoot":
+			z.FileMetaRoot, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "FileMetaRoot")
 				return
 			}
 		case "AllocationID":
@@ -2641,24 +2641,6 @@ func (z *WriteMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Signature")
 				return
 			}
-		case "Operation":
-			z.Operation, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Operation")
-				return
-			}
-		case "LookupHash":
-			z.LookupHash, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "LookupHash")
-				return
-			}
-		case "ContentHash":
-			z.ContentHash, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ContentHash")
-				return
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -2673,7 +2655,7 @@ func (z *WriteMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *WriteMarker) Msgsize() (s int) {
-	s = 1 + 15 + msgp.StringPrefixSize + len(z.AllocationRoot) + 23 + msgp.StringPrefixSize + len(z.PreviousAllocationRoot) + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 5 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + z.Timestamp.Msgsize() + 9 + msgp.StringPrefixSize + len(z.ClientID) + 10 + msgp.StringPrefixSize + len(z.Signature) + 10 + msgp.StringPrefixSize + len(z.Operation) + 11 + msgp.StringPrefixSize + len(z.LookupHash) + 12 + msgp.StringPrefixSize + len(z.ContentHash)
+	s = 1 + 15 + msgp.StringPrefixSize + len(z.AllocationRoot) + 23 + msgp.StringPrefixSize + len(z.PreviousAllocationRoot) + 13 + msgp.StringPrefixSize + len(z.FileMetaRoot) + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 5 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + z.Timestamp.Msgsize() + 9 + msgp.StringPrefixSize + len(z.ClientID) + 10 + msgp.StringPrefixSize + len(z.Signature)
 	return
 }
 

@@ -1724,19 +1724,9 @@ definitions:
             client_id:
                 type: string
                 x-go-name: ClientID
-            content_hash:
+            file_meta_root:
                 type: string
-                x-go-name: ContentHash
-            lookup_hash:
-                description: file info
-                type: string
-                x-go-name: LookupHash
-            name:
-                type: string
-                x-go-name: Name
-            operation:
-                type: string
-                x-go-name: Operation
+                x-go-name: FileMetaRoot
             prev_allocation_root:
                 type: string
                 x-go-name: PreviousAllocationRoot
@@ -3085,11 +3075,6 @@ paths:
                   name: allocation_id
                   required: true
                   type: string
-                - description: file name
-                  in: query
-                  name: filename
-                  required: true
-                  type: string
                 - description: offset
                   in: query
                   name: offset
@@ -3367,7 +3352,7 @@ paths:
             description: Generic search endpoint
             operationId: search
             parameters:
-                - description: 'Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address'
+                - description: 'Generic query string, supported inputs: Block hash, Round num, Transaction hash, Wallet address'
                   in: query
                   name: searchString
                   required: true

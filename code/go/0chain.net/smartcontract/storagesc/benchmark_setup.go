@@ -748,9 +748,6 @@ func AddMockWriteRedeems(
 					AllocationRoot: "mock allocation root",
 					BlockNumber:    mockBlockNumber,
 					Size:           100,
-					LookupHash:     benchmark.GetMockWriteMarkerLookUpHash(i, j),
-					Name:           benchmark.GetMockWriteMarkerFileName(i),
-					ContentHash:    benchmark.GetMockWriteMarkerContentHash(i, j),
 				}
 				if err := eventDb.Store.Get().Create(&writeMarker).Error; err != nil {
 					log.Fatal(err)
