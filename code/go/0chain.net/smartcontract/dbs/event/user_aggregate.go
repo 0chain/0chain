@@ -157,7 +157,7 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 	}
 
 	var idlist []string
-	for id, _ := range ids {
+	for id := range ids {
 		idlist = append(idlist, id)
 	}
 
