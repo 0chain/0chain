@@ -150,7 +150,12 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 
 func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[string]*UserAggregate, error) {
 	var ua []UserAggregate
+	var mappedAggrs = make(map[string]*UserAggregate, len(ua))
 
+	if len(ids) == 0 {
+		logging.Logger.Info("empty aggregates list")
+		return mappedAggrs, nil
+	}
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_user_ids (ID text) ON COMMIT DROP")
 	if exec.Error != nil {
 		logging.Logger.Error("can't create temp_user_ids", zap.Error(exec.Error))
@@ -179,8 +184,6 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 		return nil, result.Error
 	}
 
-	var mappedAggrs = make(map[string]*UserAggregate, len(ua))
-
 	for _, aggr := range ua {
 		mappedAggrs[aggr.UserID] = &aggr
 	}
@@ -189,10 +192,8 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 }
 
 func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
-	var events []Event
-
 	var updatedAggrs []UserAggregate
-	for _, ev := range events {
+	for _, ev := range e.events {
 		if h := handlers[ev.Tag]; h != nil {
 			updatedAggrs = append(updatedAggrs, h(ev)...)
 		}
