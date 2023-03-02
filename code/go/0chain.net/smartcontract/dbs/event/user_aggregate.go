@@ -18,12 +18,158 @@ type UserAggregate struct {
 	CreatedAt       time.Time
 }
 
-func (edb *EventDb) GetLatestUserAggregates() (map[string]*UserAggregate, error) {
+var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
+	TagLockReadPool: func(event Event) (updatedAggrs []UserAggregate) {
+		rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
+		if !ok {
+			logging.Logger.Error("user aggregate",
+				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+			return
+
+		}
+		for _, rpl := range *rpls {
+			updatedAggrs = append(updatedAggrs, UserAggregate{
+				UserID:        rpl.Client,
+				ReadPoolTotal: rpl.Amount,
+			})
+		}
+		return
+	},
+	TagUnlockReadPool: func(event Event) (updatedAggrs []UserAggregate) {
+		rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
+		if !ok {
+			logging.Logger.Error("user aggregate unlock read pool",
+				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+			return
+
+		}
+		for _, rpl := range *rpls {
+			updatedAggrs = append(updatedAggrs, UserAggregate{
+				UserID:        rpl.Client,
+				ReadPoolTotal: -rpl.Amount,
+			})
+		}
+		return
+	},
+	TagLockWritePool: func(event Event) (updatedAggrs []UserAggregate) {
+		wpls, ok := fromEvent[[]WritePoolLock](event.Data)
+		if !ok {
+			logging.Logger.Error("user aggregate lock write pool",
+				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+			return
+
+		}
+		for _, wpl := range *wpls {
+			updatedAggrs = append(updatedAggrs, UserAggregate{
+				UserID:         wpl.Client,
+				WritePoolTotal: wpl.Amount,
+			})
+		}
+		return
+	},
+	TagUnlockWritePool: func(event Event) (updatedAggrs []UserAggregate) {
+		wpls, ok := fromEvent[[]WritePoolLock](event.Data)
+		if !ok {
+			logging.Logger.Error("user aggregate unlock stake pool",
+				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+			return
+
+		}
+		for _, wpl := range *wpls {
+			updatedAggrs = append(updatedAggrs, UserAggregate{
+				UserID:         wpl.Client,
+				WritePoolTotal: -wpl.Amount,
+			})
+		}
+		return
+	},
+	TagLockStakePool: func(event Event) (updatedAggrs []UserAggregate) {
+		dpls, ok := fromEvent[[]DelegatePoolLock](event.Data)
+		if !ok {
+			logging.Logger.Error("user aggregate lock stake pool",
+				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+			return
+
+		}
+		for _, dpl := range *dpls {
+			updatedAggrs = append(updatedAggrs, UserAggregate{
+				UserID:     dpl.Client,
+				TotalStake: dpl.Amount,
+			})
+		}
+		return
+	},
+	TagUnlockStakePool: func(event Event) (updatedAggrs []UserAggregate) {
+		dpls, ok := fromEvent[[]DelegatePoolLock](event.Data)
+		if !ok {
+			logging.Logger.Error("user aggregate",
+				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+			return
+
+		}
+		for _, dpl := range *dpls {
+			updatedAggrs = append(updatedAggrs, UserAggregate{
+				UserID:     dpl.Client,
+				TotalStake: -dpl.Amount,
+			})
+		}
+		return
+	},
+	TagUpdateUserPayedFees: func(event Event) (updatedAggrs []UserAggregate) {
+		users, ok := fromEvent[[]UserAggregate](event.Data)
+		if !ok {
+			logging.Logger.Error("user aggregate",
+				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+			return
+
+		}
+		for _, u := range *users {
+			updatedAggrs = append(updatedAggrs, UserAggregate{
+				UserID:    u.UserID,
+				PayedFees: u.PayedFees,
+			})
+		}
+		return
+	},
+	TagUpdateUserCollectedRewards: func(event Event) (updatedAggrs []UserAggregate) {
+		users, ok := fromEvent[[]UserAggregate](event.Data)
+		if !ok {
+			logging.Logger.Error("user aggregate",
+				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+			return
+		}
+		for _, u := range *users {
+			updatedAggrs = append(updatedAggrs, UserAggregate{
+				UserID:          u.UserID,
+				CollectedReward: u.CollectedReward,
+			})
+		}
+		return
+	},
+}
+
+func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[string]*UserAggregate, error) {
 	var ua []UserAggregate
+
+	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_user_ids (ID text) ON COMMIT DROP")
+	if exec.Error != nil {
+		return nil, exec.Error
+	}
+
+	var idlist []string
+	for id, _ := range ids {
+		idlist = append(idlist, id)
+	}
+
+	r := edb.Store.Get().Exec("INSERT INTO temp_user_ids (ID) VALUES (?)", idlist)
+	if r.Error != nil {
+		return nil, r.Error
+	}
 
 	result := edb.Store.Get().
 		Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
 	FROM user_aggregates 
+	WHERE user_id IN (SELECT ID from temp_user_ids)
 	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`).
 		Scan(&ua)
 	if result.Error != nil {
@@ -39,185 +185,60 @@ func (edb *EventDb) GetLatestUserAggregates() (map[string]*UserAggregate, error)
 	return mappedAggrs, nil
 }
 
-func (edb *EventDb) update(lua map[string]*UserAggregate, round int64, evs []Event) {
+func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
+	var events []Event
+
 	var updatedAggrs []UserAggregate
-	for _, event := range evs {
-		switch event.Tag {
-		case TagLockReadPool:
-			rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("user aggregate",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+	for _, ev := range events {
+		if h := handlers[ev.Tag]; h != nil {
+			updatedAggrs = append(updatedAggrs, h(ev)...)
+		}
+	}
 
-			}
-			for _, rpl := range *rpls {
-				if aggr, ok := lua[rpl.Client]; ok {
-					aggr.ReadPoolTotal += rpl.Amount
-					updatedAggrs = append(updatedAggrs, *aggr)
-					continue
-				}
-				lua[rpl.Client] = &UserAggregate{
-					UserID:        rpl.Client,
-					ReadPoolTotal: rpl.Amount,
-				}
-				updatedAggrs = append(updatedAggrs, *lua[rpl.Client])
-			}
-		case TagUnlockReadPool:
-			rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("user aggregate unlock read pool",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+	ids := make(map[string]interface{})
+	for _, aggr := range updatedAggrs {
+		ids[aggr.UserID] = struct{}{}
+	}
 
-			}
-			for _, rpl := range *rpls {
-				if aggr, ok := lua[rpl.Client]; ok {
-					aggr.ReadPoolTotal -= rpl.Amount
-					updatedAggrs = append(updatedAggrs, *aggr)
-					continue
-				}
-				lua[rpl.Client] = &UserAggregate{
-					UserID:        rpl.Client,
-					ReadPoolTotal: -rpl.Amount,
-				}
-				updatedAggrs = append(updatedAggrs, *lua[rpl.Client])
-			}
-		case TagLockWritePool:
-			wpls, ok := fromEvent[[]WritePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("user aggregate lock write pool",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+	latest, err := edb.GetLatestUserAggregates(ids)
+	if err != nil {
+		logging.Logger.Error("can't load latest aggregates", zap.Error(err))
+		return err
+	}
 
-			}
-			for _, wpl := range *wpls {
-				if aggr, ok := lua[wpl.Client]; ok {
-					aggr.WritePoolTotal += wpl.Amount
-					updatedAggrs = append(updatedAggrs, *aggr)
-					continue
-				}
-				lua[wpl.Client] = &UserAggregate{
-					UserID:         wpl.Client,
-					WritePoolTotal: wpl.Amount,
-				}
-				updatedAggrs = append(updatedAggrs, *lua[wpl.Client])
-			}
-		case TagUnlockWritePool:
-			wpls, ok := fromEvent[[]WritePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("user aggregate unlock stake pool",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-
-			}
-			for _, wpl := range *wpls {
-				if aggr, ok := lua[wpl.Client]; ok {
-					aggr.WritePoolTotal -= wpl.Amount
-					updatedAggrs = append(updatedAggrs, *aggr)
-					continue
-				}
-				lua[wpl.Client] = &UserAggregate{
-					UserID:         wpl.Client,
-					WritePoolTotal: -wpl.Amount,
-				}
-				updatedAggrs = append(updatedAggrs, *lua[wpl.Client])
-			}
-		case TagLockStakePool:
-			dpls, ok := fromEvent[[]DelegatePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("user aggregate lock stake pool",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-
-			}
-			for _, dpl := range *dpls {
-				if aggr, ok := lua[dpl.Client]; ok {
-					aggr.TotalStake += dpl.Amount
-					updatedAggrs = append(updatedAggrs, *aggr)
-					continue
-				}
-				lua[dpl.Client] = &UserAggregate{
-					UserID:     dpl.Client,
-					TotalStake: dpl.Amount,
-				}
-				updatedAggrs = append(updatedAggrs, *lua[dpl.Client])
-			}
-		case TagUnlockStakePool:
-			dpls, ok := fromEvent[[]DelegatePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("user aggregate",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-
-			}
-			for _, dpl := range *dpls {
-				if aggr, ok := lua[dpl.Client]; ok {
-					aggr.TotalStake -= dpl.Amount
-					updatedAggrs = append(updatedAggrs, *aggr)
-					continue
-				}
-				lua[dpl.Client] = &UserAggregate{
-					UserID:     dpl.Client,
-					TotalStake: -dpl.Amount,
-				}
-				updatedAggrs = append(updatedAggrs, *lua[dpl.Client])
-			}
-		case TagUpdateUserPayedFees:
-			users, ok := fromEvent[[]UserAggregate](event.Data)
-			if !ok {
-				logging.Logger.Error("user aggregate",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-
-			}
-			for _, u := range *users {
-				if aggr, ok := lua[u.UserID]; ok {
-					aggr.PayedFees += u.PayedFees
-					updatedAggrs = append(updatedAggrs, *aggr)
-					continue
-				}
-				lua[u.UserID] = &UserAggregate{
-					UserID:    u.UserID,
-					PayedFees: u.PayedFees,
-				}
-				updatedAggrs = append(updatedAggrs, *lua[u.UserID])
-			}
-		case TagUpdateUserCollectedRewards:
-			users, ok := fromEvent[[]UserAggregate](event.Data)
-			if !ok {
-				logging.Logger.Error("user aggregate",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-
-			}
-			for _, u := range *users {
-				if aggr, ok := lua[u.UserID]; ok {
-					aggr.CollectedReward += u.CollectedReward
-					updatedAggrs = append(updatedAggrs, *aggr)
-					continue
-				}
-				lua[u.UserID] = &UserAggregate{
-					UserID:          u.UserID,
-					CollectedReward: u.CollectedReward,
-				}
-				updatedAggrs = append(updatedAggrs, *lua[u.UserID])
-			}
-		default:
+	for _, aggr := range updatedAggrs {
+		a, ok := latest[aggr.UserID]
+		if !ok {
+			latest[aggr.UserID] = &aggr
 			continue
 		}
+		merge(a, &aggr)
 	}
-	for _, aggr := range updatedAggrs {
-		aggr.Round = round
-		err := edb.addUserAggregate(&aggr)
-		if err != nil {
-			logging.Logger.Error("saving user aggregate failed", zap.Error(err))
-		}
+
+	err = edb.addUserAggregates(latest)
+	if err != nil {
+		logging.Logger.Error("saving user aggregate failed", zap.Error(err))
+		return err
 	}
+
+	return nil
 }
 
-func (edb *EventDb) addUserAggregate(ua *UserAggregate) error {
-	if result := edb.Store.Get().Create(ua); result.Error != nil {
+func merge(a *UserAggregate, u *UserAggregate) {
+	a.Round = u.Round
+	a.CollectedReward += u.CollectedReward
+	a.PayedFees += u.PayedFees
+	a.WritePoolTotal += u.WritePoolTotal
+	a.TotalStake += u.TotalStake
+	a.ReadPoolTotal += u.ReadPoolTotal
+}
+
+func (edb *EventDb) addUserAggregates(mapped map[string]*UserAggregate) error {
+	var aggrs []*UserAggregate
+	for _, aggr := range mapped {
+		aggrs = append(aggrs, aggr)
+	}
+	if result := edb.Store.Get().Create(aggrs); result.Error != nil {
 		return result.Error
 	}
 	return nil

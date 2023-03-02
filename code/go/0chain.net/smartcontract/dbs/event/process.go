@@ -184,7 +184,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var gs *Snapshot
-	var ua map[string]*UserAggregate
 	edb.managePartitions(0)
 
 	for {
@@ -223,7 +222,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 					zap.Error(err),
 				)
 			}
-			ua, err = updateUserAggregates(ua, es, tx)
+			err = edb.updateUserAggregates(&es)
 			if err != nil {
 				logging.Logger.Error("user aggregate could not be processed",
 					zap.Error(err),
@@ -325,24 +324,6 @@ func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, erro
 	return tx.updateSnapshots(es, gs)
 }
 
-func updateUserAggregates(ua map[string]*UserAggregate, es blockEvents, tx *EventDb) (map[string]*UserAggregate, error) {
-	if ua != nil {
-		return tx.updateUserAggregates(es, ua)
-	}
-
-	if es.round == 0 {
-		return tx.updateUserAggregates(es, make(map[string]*UserAggregate))
-	}
-
-	lua, err := tx.GetLatestUserAggregates()
-	if err != nil {
-		logging.Logger.Panic("can't load user aggregate for", zap.Int64("round", es.round), zap.Error(err))
-	}
-	ua = lua
-
-	return tx.updateUserAggregates(es, ua)
-}
-
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -440,22 +421,6 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	}
 
 	return &gs.Snapshot, nil
-}
-
-func (edb *EventDb) updateUserAggregates(e blockEvents, ua map[string]*UserAggregate) (map[string]*UserAggregate, error) {
-	round := e.round
-	var events []Event
-	for _, ev := range e.events {
-		if ev.Type == TypeStats && (ev.Tag == TagLockReadPool || ev.Tag == TagUnlockReadPool || ev.Tag == TagLockStakePool || ev.Tag == TagUnlockStakePool || ev.Tag == TagLockWritePool || ev.Tag == TagUnlockWritePool || ev.Tag == TagUpdateUserCollectedRewards || ev.Tag == TagUpdateUserPayedFees) {
-			events = append(events, ev)
-		}
-	}
-	if len(events) == 0 {
-		return ua, nil
-	}
-	edb.update(ua, round, events)
-
-	return ua, nil
 }
 
 func (edb *EventDb) addStat(event Event) (err error) {
