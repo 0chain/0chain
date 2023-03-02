@@ -1102,6 +1102,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		iterInfo.eTxns = iterInfo.eTxns[:blockSize]
 	}
 
+l:
 	for _, biTxn := range buildInTxns {
 		biTxn.Nonce, err = mc.getCurrentSelfNonce(b.Round, b.MinerID, blockState)
 		if err != nil {
@@ -1119,15 +1120,26 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		err = mc.processTxn(ctx, biTxn, b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Warn("generate block - process build-in txn failed",
+				zap.String("txn", txn.Hash),
 				zap.String("SC", txn.TransactionData),
 				zap.Int64("round", b.Round),
 				zap.Error(err))
+			if cstate.ErrInvalidState(err) {
+				return err
+			}
+
+			switch err {
+			case context.Canceled, context.DeadlineExceeded:
+				break l
+			}
 		}
 	}
 
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
 	if iterInfo.byteSize > 10*mc.MaxByteSize() {
-		logging.Logger.Info("generate block (too much byte size)", zap.Int64("round", b.Round), zap.Int64("iteration byte size", iterInfo.byteSize))
+		logging.Logger.Info("generate block (too much byte size)",
+			zap.Int64("round", b.Round),
+			zap.Int64("iteration byte size", iterInfo.byteSize))
 	}
 
 	if err = client.GetClients(ctx, iterInfo.clients); err != nil {
