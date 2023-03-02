@@ -153,6 +153,7 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_user_ids (ID text) ON COMMIT DROP")
 	if exec.Error != nil {
+		logging.Logger.Error("can't create temp_user_ids", zap.Error(exec.Error))
 		return nil, exec.Error
 	}
 
@@ -163,6 +164,7 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 
 	r := edb.Store.Get().Exec("INSERT INTO temp_user_ids (ID) VALUES (?)", idlist)
 	if r.Error != nil {
+		logging.Logger.Error("can't insert into temp_user_ids", zap.Error(exec.Error))
 		return nil, r.Error
 	}
 
@@ -173,6 +175,7 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`).
 		Scan(&ua)
 	if result.Error != nil {
+		logging.Logger.Error("can't select aggregates", zap.Error(exec.Error))
 		return nil, result.Error
 	}
 
