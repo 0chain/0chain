@@ -74,13 +74,13 @@ func CreateClients(numClients int) []Client {
 		client["public_key"] = publicKey
 		clientID := encryption.Hash(publicKey)
 		client["id"] = clientID
-		for true {
-			ok := SendRequest(httpclient, GetURL("/v1/client/put"), client)
-			if ok {
-				time.Sleep(5 * time.Millisecond)
-				break
-			}
-		}
+		// for true {
+		// 	ok := SendRequest(httpclient, GetURL("/v1/client/put"), client)
+		// 	if ok {
+		// 		time.Sleep(5 * time.Millisecond)
+		// 		break
+		// 	}
+		// }
 		clients[i] = Client{publicKey, clientID, privateKey}
 	}
 	return clients

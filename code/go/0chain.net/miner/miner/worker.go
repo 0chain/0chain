@@ -217,10 +217,10 @@ func GetOwnerWallet(c *chain.Chain, workdir string) *wallet.Wallet {
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
 	defer memorystore.Close(ctx)
 	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-	err = w.Register(ctx)
-	if err != nil {
-		panic(err)
-	}
+	// err = w.Register(ctx)
+	// if err != nil {
+	// 	panic(err)
+	// }
 	return w
 }
 
@@ -249,10 +249,10 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 		wallets = append(wallets, w)
 
 		//Server side code bypassing REST for speed
-		err := w.Register(ctx)
-		if err != nil {
-			panic(err)
-		}
+		// err := w.Register(ctx)
+		// if err != nil {
+		// 	panic(err)
+		// }
 	}
 	time.Sleep(1 * time.Second)
 	for _, w := range wallets {

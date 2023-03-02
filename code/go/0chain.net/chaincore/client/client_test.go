@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -122,11 +121,11 @@ func postClient(t *testing.T, sigScheme encryption.SignatureScheme, done chan<- 
 
 	pk := sigScheme.GetPublicKey()
 	require.NoError(t, client.SetPublicKey(pk))
-	ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
-	ctx = memorystore.WithConnection(ctx)
-	_, err := PutClient(ctx, client)
-	if err != nil {
-		fmt.Printf("error for %v : %v %v\n", pk, client.GetKey(), err)
-	}
+	// ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
+	// ctx = memorystore.WithConnection(ctx)
+	// _, err := PutClient(ctx, client)
+	// if err != nil {
+	// 	fmt.Printf("error for %v : %v %v\n", pk, client.GetKey(), err)
+	// }
 	done <- true
 }

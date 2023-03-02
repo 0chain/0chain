@@ -1,27 +1,25 @@
 package wallet
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 )
 
 /*Register - register a wallet using the server side api */
-func (w *Wallet) Register(ctx context.Context) error {
-	c := clientMetadataProvider.Instance().(*client.Client)
-	if err := c.SetPublicKey(w.SignatureScheme.GetPublicKey()); err != nil {
-		return err
-	}
-	_, err := client.PutClient(ctx, c)
-	return err
-}
+// func (w *Wallet) Register(ctx context.Context) error {
+// 	c := clientMetadataProvider.Instance().(*client.Client)
+// 	if err := c.SetPublicKey(w.SignatureScheme.GetPublicKey()); err != nil {
+// 		return err
+// 	}
+// 	_, err := client.PutClient(ctx, c)
+// 	return err
+// }
 
 var transactionMetadataProvider datastore.EntityMetadata
 var clientMetadataProvider datastore.EntityMetadata

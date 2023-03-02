@@ -46,7 +46,7 @@ const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
 const finalizeBlockURL = "v1/block/get/latest_finalized"
 
 // RegisterClient path to RegisterClient
-const RegisterClient = "/v1/client/put"
+// const RegisterClient = "/v1/client/put"
 
 var httpClient *http.Client
 

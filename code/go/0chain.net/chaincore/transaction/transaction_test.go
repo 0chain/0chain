@@ -148,13 +148,13 @@ func postClient(t *testing.B, sigScheme encryption.SignatureScheme, done chan<- 
 	}
 	require.NoError(t, c.SetPublicKey(sigScheme.GetPublicKey()))
 
-	ctx := datastore.WithAsyncChannel(context.Background(), client.ClientEntityChannel)
-	//ctx := memorystore.WithEntityConnection(context.Background(),entity.GetEntityMetadata())
-	_, err := client.PutClient(ctx, entity)
-	//memorystore.Close(ctx)
-	if err != nil {
-		fmt.Printf("error for %v : %v\n", c.PublicKey, err)
-	}
+	// ctx := datastore.WithAsyncChannel(context.Background(), client.ClientEntityChannel)
+	// //ctx := memorystore.WithEntityConnection(context.Background(),entity.GetEntityMetadata())
+	// _, err := client.PutClient(ctx, entity)
+	// //memorystore.Close(ctx)
+	// if err != nil {
+	// 	fmt.Printf("error for %v : %v\n", c.PublicKey, err)
+	// }
 	done <- true
 }
 

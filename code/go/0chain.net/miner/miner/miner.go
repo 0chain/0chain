@@ -181,10 +181,10 @@ func main() {
 	if node.Self.Underlying().Type != node.NodeTypeMiner {
 		logging.Logger.Panic("node not configured as miner")
 	}
-	err = common.NewError("saving self as client", "client save")
-	for err != nil {
-		_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
-	}
+	// err = common.NewError("saving self as client", "client save")
+	// for err != nil {
+	// 	_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
+	// }
 	if config.Development() {
 		if *delayFile != "" {
 			node.ReadNetworkDelays(*delayFile)
@@ -321,7 +321,7 @@ func main() {
 		logging.Logger.Info("Http server shut down", zap.Error(err2))
 	}()
 
-	go mc.RegisterClient()
+	// go mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
 
 	// start restart round event worker before the StartProtocol to be able

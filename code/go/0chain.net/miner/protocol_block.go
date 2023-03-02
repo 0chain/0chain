@@ -582,12 +582,12 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 					return
 				}
 
-				if err := mc.SaveClients(cs); err != nil {
-					logging.Logger.Warn("validate transactions, save discovered clients failed",
-						zap.Int64("round", b.Round),
-						zap.String("block", b.Hash),
-						zap.Error(err))
-				}
+				// if err := mc.SaveClients(cs); err != nil {
+				// 	logging.Logger.Warn("validate transactions, save discovered clients failed",
+				// 		zap.Int64("round", b.Round),
+				// 		zap.String("block", b.Hash),
+				// 		zap.Error(err))
+				// }
 			}()
 		}
 		return nil

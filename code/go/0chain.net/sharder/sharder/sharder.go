@@ -320,7 +320,7 @@ func main() {
 	initServer()
 	initHandlers(sc)
 
-	go sc.RegisterClient()
+	// go sc.RegisterClient()
 	if sc.ChainConfig.IsFeeEnabled() {
 		logging.Logger.Info("setting up sharder(sc)")
 		go sc.SetupSC(ctx)

@@ -305,7 +305,7 @@ func newRegisteredMPTWallet() string {
 		ClientID:        clientID,
 	}
 
-	registerMPTWallet(w)
+	// registerMPTWallet(w)
 
 	return clientID
 }

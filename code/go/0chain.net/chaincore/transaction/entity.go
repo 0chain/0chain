@@ -318,9 +318,9 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 		if err := co.SetPublicKey(t.PublicKey); err != nil {
 			return nil, err
 		}
-		if err := client.PutClientCache(co); err != nil {
-			return nil, err
-		}
+		// if err := client.PutClientCache(co); err != nil {
+		// 	return nil, err
+		// }
 	}
 
 	if co.SigScheme == nil {
@@ -332,9 +332,9 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 		if err := co.SetPublicKey(t.PublicKey); err != nil {
 			return nil, err
 		}
-		if err := client.PutClientCache(co); err != nil {
-			return nil, err
-		}
+		// if err := client.PutClientCache(co); err != nil {
+		// 	return nil, err
+		// }
 	}
 
 	return co.SigScheme, nil

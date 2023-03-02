@@ -390,12 +390,12 @@ func TestChain_deletingTxns(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err = client.PutClient(ctx, cl)
-	require.NoError(t, err)
+	// _, err = client.PutClient(ctx, cl)
+	// require.NoError(t, err)
 
-	require.NoError(t, client.PutClientCache(cl))
+	// require.NoError(t, client.PutClientCache(cl))
 
-	mc.RegisterClient()
+	// mc.RegisterClient()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
