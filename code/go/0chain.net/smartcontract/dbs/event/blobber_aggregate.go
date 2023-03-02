@@ -151,7 +151,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.MaxCapacityStorage += aggregate.Capacity - old.Capacity
 		gsDiff.UsedStorage += aggregate.SavedData - old.SavedData
 		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
-		gsDiff.AverageWritePrice += int64(aggregate.WritePrice - old.WritePrice)
+		gsDiff.TotalWritePrice += int64(aggregate.WritePrice - old.WritePrice)
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
 		if aggregate.WritePrice == 0 {

@@ -140,11 +140,6 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 
 		aggregate.Fee = (old.Fee + current.Fee) / 2
 		aggregates = append(aggregates, aggregate)
-		fees, err := aggregate.Fee.Int64()
-		if err != nil {
-			logging.Logger.Error("authorizer aggregate fees failed to convert", zap.Error(err))
-		}
-		gsDiff.AverageTxnFee += fees
 		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 	}
 	gs.ApplyDiff(&gsDiff, spenum.Authorizer)

@@ -141,11 +141,6 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 		aggregate.Fees = (old.Fees + current.Fees) / 2
 		aggregates = append(aggregates, aggregate)
 
-		fees, err := aggregate.Fees.Int64()
-		if err != nil {
-			logging.Logger.Error("sharder aggregate fees failed to convert", zap.Error(err))
-		}
-		gsDiff.AverageTxnFee += fees
 		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 	}
 	gs.ApplyDiff(&gsDiff, spenum.Sharder)

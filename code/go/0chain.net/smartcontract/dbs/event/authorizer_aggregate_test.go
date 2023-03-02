@@ -194,9 +194,6 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 				expectedAggregates[oldAuthorizer.ID] = ag
 				expectedAggregateCount++
 				gsDiff.TotalRewards += int64(ag.TotalRewards - oldAuthorizer.Rewards.TotalRewards)
-				fees, err := ag.Fee.Int64()
-				require.NoError(t, err)
-				gsDiff.AverageTxnFee += fees
 			}
 		}
 
@@ -223,7 +220,6 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 
 		// test updated snapshot
 		require.Equal(t, initialSnapshot.TotalRewards + gsDiff.TotalRewards, updatedSnapshot.TotalRewards)
-		require.Equal(t, initialSnapshot.AverageTxnFee + (gsDiff.AverageTxnFee / updatedSnapshot.TransactionsCount), updatedSnapshot.AverageTxnFee)
 	})
 }
 

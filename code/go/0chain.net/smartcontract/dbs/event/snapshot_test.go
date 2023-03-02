@@ -41,7 +41,6 @@ func TestSnapshotFunctions(t *testing.T) {
 			TotalValueLocked: int64(10),
 			ClientLocks: int64(100),
 			MinedTotal: int64(100),
-			AverageWritePrice: int64(1000000),
 			TotalStaked: int64(100),
 			TotalRewards: int64(100),
 			SuccessfulChallenges: int64(100),
@@ -53,7 +52,8 @@ func TestSnapshotFunctions(t *testing.T) {
 			TransactionsCount: int64(100),
 			UniqueAddresses: int64(100),
 			BlockCount: int64(1000),
-			AverageTxnFee: int64(1000),	
+			TotalTxnFee: int64(1000),
+			TotalWritePrice: int64(1000000),
 		}
 
 		s.ApplyDiff(&snapshotDiff, spenum.Blobber)
@@ -65,7 +65,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.TotalValueLocked + snapshotDiff.TotalValueLocked, s.TotalValueLocked)
 		require.Equal(t, initialSnapshot.ClientLocks + snapshotDiff.ClientLocks, s.ClientLocks)
 		require.Equal(t, initialSnapshot.MinedTotal + snapshotDiff.MinedTotal, s.MinedTotal)
-		require.Equal(t, initialSnapshot.AverageWritePrice + (snapshotDiff.AverageWritePrice / initialSnapshot.BlobberCount) , s.AverageWritePrice)
+		require.Equal(t, initialSnapshot.TotalTxnFee + snapshotDiff.TotalTxnFee , s.TotalTxnFee)
 		require.Equal(t, initialSnapshot.TotalStaked + snapshotDiff.TotalStaked, s.TotalStaked)
 		require.Equal(t, initialSnapshot.TotalRewards + snapshotDiff.TotalRewards, s.TotalRewards)
 		require.Equal(t, initialSnapshot.SuccessfulChallenges + snapshotDiff.SuccessfulChallenges, s.SuccessfulChallenges)
@@ -77,7 +77,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.TransactionsCount + snapshotDiff.TransactionsCount, s.TransactionsCount)
 		require.Equal(t, initialSnapshot.UniqueAddresses + snapshotDiff.UniqueAddresses, s.UniqueAddresses)
 		require.Equal(t, initialSnapshot.BlockCount + snapshotDiff.BlockCount, s.BlockCount)
-		require.Equal(t, initialSnapshot.AverageTxnFee + (snapshotDiff.AverageTxnFee / s.TransactionsCount), s.AverageTxnFee)
+		require.Equal(t, initialSnapshot.TotalTxnFee + snapshotDiff.TotalTxnFee, s.TotalTxnFee)
 
 		// Test snapshot StakedStorage will not exceed MaxCapacityStorage
 		snapShotDiff2 := Snapshot{ StakedStorage: s.MaxCapacityStorage + 1 }
@@ -96,7 +96,6 @@ func TestProviderCountInSnapshot(t *testing.T) {
 		require.NoError(t, err)
 		blobberCountBefore := s.BlobberCount
 		
-		expectedAvgWritePrice := s.AverageWritePrice * s.BlobberCount / (s.BlobberCount + 1)
 		s.update([]Event{
 			{
 				Type: TypeStats,
@@ -104,9 +103,7 @@ func TestProviderCountInSnapshot(t *testing.T) {
 			},
 		})
 		require.Equal(t, blobberCountBefore+1, s.BlobberCount)
-		require.Equal(t, expectedAvgWritePrice, s.AverageWritePrice)
 		
-		expectedAvgWritePrice = s.AverageWritePrice * s.BlobberCount / (s.BlobberCount - 1)
 		s.update([]Event{
 			{
 				Type: TypeStats,
@@ -114,7 +111,6 @@ func TestProviderCountInSnapshot(t *testing.T) {
 			},
 		})
 		require.Equal(t, blobberCountBefore, s.BlobberCount)
-		require.Equal(t, expectedAvgWritePrice, s.AverageWritePrice)
 	})
 
 	t.Run("test miner count", func(t *testing.T) {
@@ -218,6 +214,26 @@ func TestProviderCountInSnapshot(t *testing.T) {
 		})
 		require.Equal(t, validatorCountBefore+1, s.ValidatorCount)
 	})
+
+	t.Run("test transaction count and total", func(t *testing.T) {
+		s, err := eventDb.GetGlobal()
+		require.NoError(t, err)
+		txCountBefore := s.TransactionsCount
+		txTotalFeesBefore := s.TotalTxnFee
+
+		s.update([]Event{
+			{
+				Type: TypeStats,
+				Tag:  TagAddTransactions,
+				Data: []Transaction{
+					{ Fee: 1 },
+					{ Fee: 2 },
+				},
+			},
+		})
+		require.Equal(t, txCountBefore + 2, s.TransactionsCount)
+		require.Equal(t, txTotalFeesBefore + 3, s.TotalTxnFee)
+	})
 }
 
 
@@ -230,7 +246,7 @@ func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {
 		TotalValueLocked: int64(100),
 		ClientLocks: int64(100),
 		MinedTotal: int64(100),
-		AverageWritePrice: int64(1000000),
+		TotalWritePrice: int64(1000000),
 		TotalStaked: int64(100),
 		TotalRewards: int64(100),
 		SuccessfulChallenges: int64(100),
@@ -242,7 +258,7 @@ func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {
 		TransactionsCount: int64(100),
 		UniqueAddresses: int64(100),
 		BlockCount: int64(1000),
-		AverageTxnFee: int64(1000),
+		TotalTxnFee: int64(1000),
 		BlobberCount: int64(5),
 		MinerCount: int64(5),
 		SharderCount: int64(5),

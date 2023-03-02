@@ -139,11 +139,6 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 
 		aggregates = append(aggregates, aggregate)
 
-		fees, err := aggregate.Fees.Int64()
-		if err != nil {
-			logging.Logger.Error("miner aggregate fees failed to convert", zap.Error(err))
-		}
-		gsDiff.AverageTxnFee += fees
 		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 	}
 	gs.ApplyDiff(&gsDiff, spenum.Miner)

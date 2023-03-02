@@ -193,9 +193,6 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 				expectedAggregates[oldSharder.ID] = ag
 				expectedAggregateCount++
 				gsDiff.TotalRewards += int64(ag.TotalRewards - oldSharder.Rewards.TotalRewards)
-				fees, err := ag.Fees.Int64()
-				require.NoError(t, err)
-				gsDiff.AverageTxnFee += fees
 			}
 		}
 
@@ -222,7 +219,6 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 
 		// test updated snapshot
 		require.Equal(t, initialSnapshot.TotalRewards + gsDiff.TotalRewards, updatedSnapshot.TotalRewards)
-		require.Equal(t, initialSnapshot.AverageTxnFee + (gsDiff.AverageTxnFee / updatedSnapshot.TransactionsCount), updatedSnapshot.AverageTxnFee)
 	})
 }
 

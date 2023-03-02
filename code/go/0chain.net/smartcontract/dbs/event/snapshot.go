@@ -29,7 +29,7 @@ type Snapshot struct {
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
 	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
 	// updated from blobber snapshot aggregate table
-	AverageWritePrice    int64 `json:"average_write_price"`              //*494 AVG it's the price from the terms and triggered with their updates //???
+	TotalWritePrice    	 int64 `json:"total_write_price"`                // Total write price of all blobbers
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
 	TotalRewards         int64 `json:"total_rewards"`                    //SUM total of all rewards
 	SuccessfulChallenges int64 `json:"successful_challenges"`            //*493 SUM percentage of challenges failed by a particular blobber
@@ -41,7 +41,7 @@ type Snapshot struct {
 	TransactionsCount    int64 `json:"transactions_count"`               // Total number of transactions in a block
 	UniqueAddresses      int64 `json:"unique_addresses"`                 // Total unique address
 	BlockCount           int64 `json:"block_count"`                      // Total number of blocks currently
-	AverageTxnFee        int64 `json:"avg_txn_fee"`                      // Average transaction fee per block
+	TotalTxnFee        int64 `json:"avg_txn_fee"`                        // Total fees of all transactions
 	CreatedAt            int64 `gorm:"autoCreateTime" json:"created_at"` // Snapshot creation date
 	BlobberCount		 int64 `json:"blobber_count"`                    // Total number of blobbers
 	MinerCount			 int64 `json:"miner_count"`                      // Total number of miners
@@ -67,21 +67,6 @@ func (s *Snapshot) providerCount(provider spenum.Provider) int64 {
 	}
 }
 
-// updateAveragesAfterIncrement updates average fields before incrementing the count of the provider.
-func (s *Snapshot) updateAveragesBeforeIncrement(provider spenum.Provider) {
-	providerCount := s.providerCount(provider)
-	if providerCount > 0 {
-		s.AverageWritePrice = (s.AverageWritePrice * providerCount) / (providerCount + 1)
-	}
-}
-
-// updateAveragesAfterDecrement updates average fields after decrementing the count of the provider.
-func (s *Snapshot) updateAveragesBeforeDecrement(provider spenum.Provider) {
-	providerCount := s.providerCount(provider)
-	if providerCount > 0 {
-		s.AverageWritePrice = (s.AverageWritePrice * providerCount) / (providerCount - 1)
-	}
-}
 
 // ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
 // For some fields, the count of the providers may be needed so a provider parameter is added.
@@ -104,19 +89,13 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot, provider spenum.Provider) {
 	s.TransactionsCount += diff.TransactionsCount
 	s.UniqueAddresses += diff.UniqueAddresses
 	s.BlockCount += diff.BlockCount
+	s.TotalTxnFee += diff.TotalTxnFee
+	s.TotalWritePrice += diff.TotalWritePrice
 
 	if s.StakedStorage > s.MaxCapacityStorage {
 		s.StakedStorage = s.MaxCapacityStorage
 	}
 
-	if s.TransactionsCount > 0 {
-		s.AverageTxnFee += diff.AverageTxnFee / s.TransactionsCount
-	}
-
-	providerCount := s.providerCount(provider)
-	if providerCount > 0 {
-		s.AverageWritePrice += diff.AverageWritePrice / providerCount
-	}
 }
 
 type FieldType int
@@ -293,13 +272,6 @@ func (gs *Snapshot) update(e []Event) {
 				}
 			}
 		case TagFinalizeBlock:
-			block, ok := fromEvent[Block](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			gs.TransactionsCount += int64(block.NumTxns)
 			gs.BlockCount += 1
 		case TagUniqueAddress:
 			gs.UniqueAddresses += 1
@@ -310,18 +282,16 @@ func (gs *Snapshot) update(e []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			averageFee := 0
+			gs.TransactionsCount += int64(len(*txns))
+			totalFee := 0
 			for _, txn := range *txns {
-				averageFee += int(txn.Fee)
+				totalFee += int(txn.Fee)
 			}
-			averageFee = averageFee / len(*txns)
-			gs.AverageTxnFee = int64(averageFee)
+			gs.TotalTxnFee = int64(totalFee)
 		case TagAddBlobber:
-			gs.updateAveragesBeforeIncrement(spenum.Blobber)
 			gs.BlobberCount += 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddBlobber"), zap.Any("snapshot", gs))
 		case TagDeleteBlobber:
-			gs.updateAveragesBeforeDecrement(spenum.Blobber)
 			gs.BlobberCount -= 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteBlobber"), zap.Any("snapshot", gs))
 		case TagAddAuthorizer:
