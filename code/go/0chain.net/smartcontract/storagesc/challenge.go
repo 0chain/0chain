@@ -964,7 +964,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			if err != nil {
 				if cstate.ErrInvalidState(err) {
 					return nil, common.NewError("add_challenge",
-						"mismatched state: "+err.Error())
+						err.Error())
 				}
 				continue
 			}
