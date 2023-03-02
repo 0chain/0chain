@@ -287,7 +287,7 @@ func (gs *Snapshot) update(e []Event) {
 			for _, txn := range *txns {
 				totalFee += int(txn.Fee)
 			}
-			gs.TotalTxnFee = int64(totalFee)
+			gs.TotalTxnFee += int64(totalFee)
 		case TagAddBlobber:
 			gs.BlobberCount += 1
 			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddBlobber"), zap.Any("snapshot", gs))
