@@ -43,7 +43,7 @@ type AbstractStakePool interface {
 	GetSettings() Settings
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
-	Kill()
+	Kill(float64, string, spenum.Provider, cstate.StateContextI) error
 	IsDead() bool
 	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
 }
@@ -180,8 +180,16 @@ func (sp *StakePool) IsDead() bool {
 	return sp.HasBeenKilled
 }
 
-func (sp *StakePool) Kill() {
+func (sp *StakePool) Kill(
+	killSlash float64, providerId string, pType spenum.Provider, balances cstate.StateContextI,
+) error {
 	sp.HasBeenKilled = true
+	return sp.SlashFraction(
+		killSlash,
+		providerId,
+		pType,
+		balances,
+	)
 }
 
 func (sp *StakePool) OrderedPoolIds() []string {
@@ -326,11 +334,8 @@ func (sp *StakePool) SlashFraction(
 		return nil
 	}
 	for _, dp := range sp.Pools {
-		dpSlash, err := currency.Float64ToCoin(float64(dp.Balance) * fraction)
-		if err != nil {
-			return err
-		}
-		dp.Balance, err = currency.MinusCoin(dp.Balance, dpSlash)
+		var err error
+		dp.Balance, err = currency.MultFloat64(dp.Balance, 1-fraction)
 		if err != nil {
 			return err
 		}

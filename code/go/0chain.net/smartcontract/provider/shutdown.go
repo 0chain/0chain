@@ -13,7 +13,7 @@ import (
 
 func ShutDown(
 	id string,
-	providerSpecific func() (Abstract, stakepool.AbstractStakePool, error),
+	providerSpecific func() (AbstractProvider, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
 	p, sp, err := providerSpecific()

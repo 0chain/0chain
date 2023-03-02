@@ -10,7 +10,7 @@ import (
 
 //go:generate msgp -io=false -tests=false -v
 
-type Abstract interface {
+type AbstractProvider interface {
 	IsActive(common.Timestamp, common.Timestamp) (bool, string)
 	Kill()
 	IsKilled() bool

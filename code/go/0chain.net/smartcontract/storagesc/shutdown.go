@@ -20,7 +20,7 @@ func (_ *StorageSmartContract) shutdownBlobber(
 	var blobber = newBlobber("")
 	err := provider.ShutDown(
 		tx.ClientID,
-		func() (provider.Abstract, stakepool.AbstractStakePool, error) {
+		func() (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if blobber, err = getBlobber(tx.ClientID, balances); err != nil {
 				return nil, nil, common.NewError("shutdown_blobber_failed",
@@ -61,7 +61,7 @@ func (_ *StorageSmartContract) shutdownValidator(
 	var validator = newValidator("")
 	err := provider.ShutDown(
 		tx.ClientID,
-		func() (provider.Abstract, stakepool.AbstractStakePool, error) {
+		func() (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if err = balances.GetTrieNode(provider.GetKey(tx.ClientID), validator); err != nil {
 				return nil, nil, common.NewError("shutdown_validator_failed",

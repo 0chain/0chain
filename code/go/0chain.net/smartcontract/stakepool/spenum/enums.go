@@ -9,18 +9,16 @@ func init() {
 type Provider int
 
 const (
-	Invalid Provider = iota
-	Miner
+	Miner Provider = iota + 1
 	Sharder
 	Blobber
 	Validator
 	Authorizer
 )
 
-var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
+var providerString = []string{"invalid", "miner", "sharder", "blobber", "validator", "authorizer"}
 
 var Providers = map[string]Provider{
-	"invalid":    Invalid,
 	"miner":      Miner,
 	"sharder":    Sharder,
 	"blobber":    Blobber,
@@ -29,17 +27,16 @@ var Providers = map[string]Provider{
 }
 
 func (p Provider) String() string {
-	if p < 0 || int(p) >= len(providerString) {
+	if p < 1 || int(p) >= len(providerString) {
 		return "unknown"
 	}
-
 	return providerString[p]
 }
 
 func ToProviderType(ps string) Provider {
-	for i, s := range providerString {
-		if s == ps {
-			return Provider(i)
+	for name, pType := range Providers {
+		if name == ps {
+			return pType
 		}
 	}
 	return 0

@@ -29,13 +29,13 @@ func (_ *StorageSmartContract) killBlobber(
 		return "", common.NewError("can't get config", err.Error())
 	}
 
-	var blobber = newBlobber("")
+	var blobber = &StorageNode{}
 	err = provider.Kill(
 		input,
 		tx.ClientID,
 		conf.OwnerId,
 		conf.StakePool.KillSlash,
-		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
+		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if blobber, err = getBlobber(req.ID, balances); err != nil {
 				return nil, nil, common.NewError("kill_blobber_failed",
@@ -81,13 +81,13 @@ func (_ *StorageSmartContract) killValidator(
 		return "", common.NewError("can't get config", err.Error())
 	}
 
-	var validator = newValidator("")
+	var validator = &ValidationNode{}
 	err = provider.Kill(
 		input,
 		tx.ClientID,
 		conf.OwnerId,
 		conf.StakePool.KillSlash,
-		func(req provider.ProviderRequest) (provider.Abstract, stakepool.AbstractStakePool, error) {
+		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
 				return nil, nil, common.NewError("kill_validator_failed",

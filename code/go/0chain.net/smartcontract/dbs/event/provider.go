@@ -129,7 +129,7 @@ func providerToTableName(pType spenum.Provider) string {
 	return pType.String() + "s"
 }
 
-func splitProviders(
+func mapProviders(
 	providers []dbs.Provider,
 ) map[spenum.Provider][]string {
 	idSlices := make(map[spenum.Provider][]string, 5)
@@ -143,8 +143,8 @@ func splitProviders(
 }
 
 func (edb *EventDb) providersSetBoolean(providers []dbs.Provider, field string, value bool) error {
-	splitProviders := splitProviders(providers)
-	for pType, ids := range splitProviders {
+	mappedProviders := mapProviders(providers)
+	for pType, ids := range mappedProviders {
 		table := providerToTableName(pType)
 		var values []bool
 		for i := 0; i < len(ids); i++ {

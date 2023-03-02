@@ -30,7 +30,7 @@ func Kill(
 	input []byte,
 	clientID, ownerId string,
 	killSlash float64,
-	providerSpecific func(ProviderRequest) (Abstract, stakepool.AbstractStakePool, error),
+	providerSpecific func(ProviderRequest) (AbstractProvider, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
 	var req ProviderRequest
@@ -58,13 +58,7 @@ func Kill(
 	}
 	p.Kill()
 
-	sp.Kill()
-	if err := sp.SlashFraction(
-		killSlash,
-		req.ID,
-		p.Type(),
-		balances,
-	); err != nil {
+	if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
 		return err
 	}
 
