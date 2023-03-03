@@ -16,26 +16,23 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNodeResponse{
-		SimpleNode: SimpleNode{
-			ID:          edbSharder.ID,
-			N2NHost:     edbSharder.N2NHost,
-			Host:        edbSharder.Host,
-			Port:        edbSharder.Port,
-			Path:        edbSharder.Path,
-			PublicKey:   edbSharder.PublicKey,
-			ShortName:   edbSharder.ShortName,
-			BuildTag:    edbSharder.BuildTag,
-			TotalStaked: edbSharder.TotalStake,
-			Delete:      edbSharder.Delete,
-
-			LastHealthCheck: edbSharder.LastHealthCheck,
-			Geolocation: SimpleNodeGeolocation{
-				Latitude:  edbSharder.Latitude,
-				Longitude: edbSharder.Longitude,
-			},
-			NodeType: NodeTypeSharder,
-			Status:   status,
+		ID:              edbSharder.ID,
+		N2NHost:         edbSharder.N2NHost,
+		Host:            edbSharder.Host,
+		Port:            edbSharder.Port,
+		Path:            edbSharder.Path,
+		PublicKey:       edbSharder.PublicKey,
+		ShortName:       edbSharder.ShortName,
+		BuildTag:        edbSharder.BuildTag,
+		TotalStaked:     edbSharder.TotalStake,
+		Delete:          edbSharder.Delete,
+		LastHealthCheck: edbSharder.LastHealthCheck,
+		Geolocation: SimpleNodeGeolocation{
+			Latitude:  edbSharder.Latitude,
+			Longitude: edbSharder.Longitude,
 		},
+		NodeType:                      NodeTypeSharder,
+		Status:                        status,
 		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
 	}
 
@@ -64,6 +61,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 				Status:       spenum.PoolStatus(delegate.Status),
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
+				StakedAt:     delegate.StakedAt,
 			},
 			RoundPoolLastUpdated: delegate.RoundPoolLastUpdated,
 		}
@@ -108,7 +106,7 @@ func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
 }
 
-func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
+func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) {
 	data := dbs.DbHealthCheck{
 		ID:              sn.ID,
 		LastHealthCheck: sn.LastHealthCheck,
@@ -116,7 +114,6 @@ func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.Stat
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)
-	return nil
 }
 
 func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
@@ -152,7 +149,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 	return nil
 }
 
-func emitDeleteSharder(id string, balances cstate.StateContextI) error {
+func emitDeleteSharder(id string, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagDeleteSharder, id, id)
-	return nil
 }

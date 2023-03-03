@@ -990,6 +990,7 @@ definitions:
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     Provider:
+        format: int64
         properties:
             CreatedAt:
                 format: date-time
@@ -1020,8 +1021,8 @@ definitions:
                 $ref: '#/definitions/Coin'
             unstake_total:
                 $ref: '#/definitions/Coin'
-        type: object
-        x-go-package: 0chain.net/smartcontract/dbs/event
+        type: integer
+        x-go-package: 0chain.net/smartcontract/stakepool/spenum
     ProviderRewards:
         description: ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
         properties:
@@ -1481,6 +1482,8 @@ definitions:
                 format: int64
                 type: integer
                 x-go-name: LastRewardDataReadRound
+            provider_type:
+                $ref: '#/definitions/Provider'
             reward_partition:
                 $ref: '#/definitions/RewardPartitionLocation'
             saved_data:
@@ -1651,6 +1654,8 @@ definitions:
             id:
                 type: string
                 x-go-name: ID
+            provider_type:
+                $ref: '#/definitions/Provider'
             stake_pool_settings:
                 $ref: '#/definitions/Settings'
             url:
@@ -1719,19 +1724,9 @@ definitions:
             client_id:
                 type: string
                 x-go-name: ClientID
-            content_hash:
+            file_meta_root:
                 type: string
-                x-go-name: ContentHash
-            lookup_hash:
-                description: file info
-                type: string
-                x-go-name: LookupHash
-            name:
-                type: string
-                x-go-name: Name
-            operation:
-                type: string
-                x-go-name: Operation
+                x-go-name: FileMetaRoot
             prev_allocation_root:
                 type: string
                 x-go-name: PreviousAllocationRoot
@@ -2081,6 +2076,8 @@ definitions:
                 format: int64
                 type: integer
                 x-go-name: LastRewardDataReadRound
+            provider_type:
+                $ref: '#/definitions/Provider'
             read_data:
                 format: int64
                 type: integer
@@ -3078,11 +3075,6 @@ paths:
                   name: allocation_id
                   required: true
                   type: string
-                - description: file name
-                  in: query
-                  name: filename
-                  required: true
-                  type: string
                 - description: offset
                   in: query
                   name: offset
@@ -3360,7 +3352,7 @@ paths:
             description: Generic search endpoint
             operationId: search
             parameters:
-                - description: 'Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address'
+                - description: 'Generic query string, supported inputs: Block hash, Round num, Transaction hash, Wallet address'
                   in: query
                   name: searchString
                   required: true

@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"github.com/0chain/common/core/currency"
 
 	"go.uber.org/zap"
@@ -133,18 +135,17 @@ func (c *Chain) isRegistered(ctx context.Context) (is bool) {
 
 func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
 	getAPIPath func(n *node.Node) string, remote bool) bool {
-
 	var (
+		allNodeIDs   = minersc.NodeIDs{}
 		allNodesList = &minersc.MinerNodes{}
 		selfNode     = node.Self.Underlying()
 		selfNodeKey  = selfNode.GetKey()
 	)
 
 	if c.IsActiveInChain() && !remote {
-
 		var (
 			sp  = getStatePath(selfNode)
-			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, allNodesList)
+			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, &allNodeIDs)
 		)
 
 		if err != nil {
@@ -153,8 +154,12 @@ func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.No
 			return false
 		}
 
+		for _, id := range allNodeIDs {
+			if id == selfNodeKey {
+				return true
+			}
+		}
 	} else {
-
 		var (
 			mb       = c.GetCurrentMagicBlock()
 			sharders = mb.Sharders.N2NURLs()
@@ -168,15 +173,15 @@ func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.No
 			logging.Logger.Error("is registered", zap.Error(err))
 			return false
 		}
-	}
 
-	for _, miner := range allNodesList.Nodes {
-		if miner == nil {
-			continue
-		}
+		for _, miner := range allNodesList.Nodes {
+			if miner == nil {
+				continue
+			}
 
-		if miner.ID == selfNodeKey {
-			return true
+			if miner.ID == selfNodeKey {
+				return true
+			}
 		}
 	}
 
@@ -268,8 +273,10 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
+		mn.ProviderType = spenum.Miner
 		scData.Name = scNameAddMiner
 	} else if selfNode.Type == node.NodeTypeSharder {
+		mn.ProviderType = spenum.Sharder
 		scData.Name = scNameAddSharder
 	}
 

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	sc "0chain.net/smartcontract"
@@ -61,7 +63,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, _ *testing.B) error {
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	return err
 }
@@ -231,7 +233,7 @@ func BenchmarkTests(
 					Expiration:      common.Timestamp(50 * 60 * 60),
 					RemoveBlobberId: getMockBlobberId(0),
 					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
-					FileOptions: 	 63,
+					FileOptions:     63,
 				}
 				bytes, _ := json.Marshal(&uar)
 				return bytes
@@ -244,9 +246,8 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				//CreationDate: common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
 				CreationDate: creationTime + benchAllocationExpire(creationTime) + 1,
-				ClientID:     data.Clients[0],
+				ClientID:     data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
@@ -398,6 +399,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
+					Provider: provider.Provider{
+						ProviderType: spenum.Blobber,
+					},
 					BaseURL:           "my_new_blobber.com",
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
@@ -419,7 +423,10 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					ID:                encryption.Hash("my_new_validator"),
+					Provider: provider.Provider{
+						ID:           encryption.Hash("my_new_validator"),
+						ProviderType: spenum.Validator,
+					},
 					BaseURL:           "my_new_validator.com",
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_validator")),
 				})
@@ -440,6 +447,19 @@ func BenchmarkTests(
 			input: []byte{},
 		},
 		{
+			name:     "storage.validator_health_check",
+			endpoint: ssc.validatorHealthCheck,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: creationTime + 1,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: []byte{},
+		},
+		{
 			name:     "storage.update_blobber_settings",
 			endpoint: ssc.updateBlobberSettings,
 			txn: &transaction.Transaction{
@@ -454,7 +474,10 @@ func BenchmarkTests(
 				stake := currency.Coin(viper.GetInt64(bk.StorageMaxStake) * 1e10)
 				totalStake := stake * currency.Coin(viper.GetInt(bk.NumBlobberDelegates))
 				bytes, _ := json.Marshal(&StorageNode{
-					ID:                getMockBlobberId(0),
+					Provider: provider.Provider{
+						ID:           getMockBlobberId(0),
+						ProviderType: spenum.Blobber,
+					},
 					Terms:             getMockBlobberTerms(),
 					Capacity:          int64(totalStake * GB),
 					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
@@ -475,7 +498,10 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					ID:                getMockValidatorId(0),
+					Provider: provider.Provider{
+						ID:           getMockValidatorId(0),
+						ProviderType: spenum.Validator,
+					},
 					BaseURL:           getMockValidatorUrl(0),
 					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
 				})
@@ -599,12 +625,12 @@ func BenchmarkTests(
 				},
 				Value: rpMinLock,
 				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
-					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
+					mockFinalizedAllocationIndex, viper.GetInt(bk.NumActiveClients))],
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
-					AllocationID: getMockAllocationId(viper.GetInt(bk.NumAllocations) - 1),
+					AllocationID: getMockAllocationId(mockFinalizedAllocationIndex),
 				})
 				return bytes
 			}(),

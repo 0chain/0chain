@@ -69,6 +69,8 @@ smart_contracts:
       delete_sharder: 100
       miner_health_check: 100
       sharder_health_check: 100
+      blobber_health_check: 100
+      validator_health_check: 100
       contributeMpk: 100
       shareSignsOrShares: 100
       wait: 100
