@@ -335,7 +335,7 @@ func TestChain_deletingTxns(t *testing.T) {
 		},
 	}
 
-	var err error
+	// var err error
 
 	require.NoError(t, initDefaultPool())
 
