@@ -185,20 +185,20 @@ func (t testWallet) getGroupMPTWallet() mptwallet.Wallet {
 	}
 }
 
-func (t testWallet) getSignerMPTWallets() []mptwallet.Wallet {
-	var ws []mptwallet.Wallet
+// func (t testWallet) getSignerMPTWallets() []mptwallet.Wallet {
+// 	var ws []mptwallet.Wallet
 
-	for i := range t.signerClientIDs {
-		w := mptwallet.Wallet{
-			SignatureScheme: t.signerKeys[i],
-			PublicKey:       t.signerKeys[i].GetPublicKey(),
-			ClientID:        t.signerClientIDs[i],
-		}
-		ws = append(ws, w)
-	}
+// 	for i := range t.signerClientIDs {
+// 		w := mptwallet.Wallet{
+// 			SignatureScheme: t.signerKeys[i],
+// 			PublicKey:       t.signerKeys[i].GetPublicKey(),
+// 			ClientID:        t.signerClientIDs[i],
+// 		}
+// 		ws = append(ws, w)
+// 	}
 
-	return ws
-}
+// 	return ws
+// }
 
 func (t testWallet) getMPTWalletForSigner(signerClientID string) mptwallet.Wallet {
 	for i, id := range t.signerClientIDs {
