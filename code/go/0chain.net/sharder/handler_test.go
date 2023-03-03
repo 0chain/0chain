@@ -11,12 +11,6 @@ import (
 	"0chain.net/core/encryption"
 )
 
-const (
-	clientID        = "client_id"
-	ethereumAddress = "ethereum_address"
-	hash            = "hash"
-)
-
 func init() {
 	common.ConfigRateLimits()
 }

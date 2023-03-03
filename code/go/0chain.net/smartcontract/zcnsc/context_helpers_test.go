@@ -5,6 +5,7 @@ package zcnsc_test
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"gorm.io/gorm/clause"
@@ -497,4 +498,24 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 	}
 
 	return "", fmt.Errorf("node with key: %s is not supported", key)
+}
+
+var (
+	_ cstate.TimedQueryStateContextI = (*mocks.TimedQueryStateContextI)(nil)
+)
+
+type mockTimedQueryStateContext struct {
+	*mockStateContext
+}
+
+func MakeMockTimedQueryStateContext() *mockTimedQueryStateContext {
+	ctx := new(mockTimedQueryStateContext)
+
+	ctx.mockStateContext = MakeMockStateContext()
+
+	return ctx
+}
+
+func (ctx mockTimedQueryStateContext) Now() common.Timestamp {
+	return common.Timestamp(time.Now().Unix())
 }

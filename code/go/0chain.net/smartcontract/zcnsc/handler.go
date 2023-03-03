@@ -36,8 +36,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		{URI: zcn + "/getAuthorizerNodes", Handler: common.UserRateLimit(zrh.getAuthorizerNodes)},
 		{URI: zcn + "/getGlobalConfig", Handler: common.UserRateLimit(zrh.GetGlobalConfig)},
 		{URI: zcn + "/getAuthorizer", Handler: common.UserRateLimit(zrh.getAuthorizer)},
-		{URI: zcn + "/v1/mint_nonce", Handler: common.UserRateLimit(zrh.mintNonceHandler)},
-		{URI: zcn + "/v1/not_processed_burn_tickets", Handler: common.UserRateLimit(zrh.notProcessedBurnTicketsHandler)},
+		{URI: zcn + "/v1/mint_nonce", Handler: common.UserRateLimit(zrh.MintNonceHandler)},
+		{URI: zcn + "/v1/not_processed_burn_tickets", Handler: common.UserRateLimit(zrh.NotProcessedBurnTicketsHandler)},
 	}
 }
 
@@ -118,7 +118,7 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 }
 
 // MintNonceHandler returns the latest mint nonce for the client with the help of the given client id
-func (zrh *ZcnRestHandler) mintNonceHandler(w http.ResponseWriter, r *http.Request) {
+func (zrh *ZcnRestHandler) MintNonceHandler(w http.ResponseWriter, r *http.Request) {
 	edb := zrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -129,7 +129,7 @@ func (zrh *ZcnRestHandler) mintNonceHandler(w http.ResponseWriter, r *http.Reque
 
 	user, err := edb.GetUser(clientID)
 	if err != nil {
-		common.Respond(w, r, nil, errors.Wrap(err, "GetAuser DB error, ID = "+clientID))
+		common.Respond(w, r, nil, errors.Wrap(err, "GetUser DB error, ID = "+clientID))
 		return
 	}
 
@@ -138,7 +138,7 @@ func (zrh *ZcnRestHandler) mintNonceHandler(w http.ResponseWriter, r *http.Reque
 
 // NotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
 // with a help of offset nonce
-func (zrh *ZcnRestHandler) notProcessedBurnTicketsHandler(w http.ResponseWriter, r *http.Request) {
+func (zrh *ZcnRestHandler) NotProcessedBurnTicketsHandler(w http.ResponseWriter, r *http.Request) {
 	edb := zrh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
