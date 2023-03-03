@@ -213,10 +213,10 @@ func GetOwnerWallet(c *chain.Chain, workdir string) *wallet.Wallet {
 	if err != nil {
 		panic(err)
 	}
-	clientMetadataProvider := datastore.GetEntityMetadata("client")
-	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
-	defer memorystore.Close(ctx)
-	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
+	// clientMetadataProvider := datastore.GetEntityMetadata("client")
+	// ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
+	// defer memorystore.Close(ctx)
+	// ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
 	// err = w.Register(ctx)
 	// if err != nil {
 	// 	panic(err)

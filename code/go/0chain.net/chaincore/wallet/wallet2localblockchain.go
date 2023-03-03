@@ -22,12 +22,13 @@ import (
 // }
 
 var transactionMetadataProvider datastore.EntityMetadata
-var clientMetadataProvider datastore.EntityMetadata
+
+// var clientMetadataProvider datastore.EntityMetadata
 
 /*SetupWallet - setup the wallet package */
 func SetupWallet() {
 	transactionMetadataProvider = datastore.GetEntityMetadata("txn")
-	clientMetadataProvider = datastore.GetEntityMetadata("client")
+	// clientMetadataProvider = datastore.GetEntityMetadata("client")
 }
 
 /*CreateRandomSendTransaction - create a transaction */
