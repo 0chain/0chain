@@ -3,7 +3,6 @@ package event
 import (
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/model"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -143,7 +142,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 
 		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
 	}
-	gs.ApplyDiff(&gsDiff, spenum.Sharder)
+	gs.ApplyDiff(&gsDiff)
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))

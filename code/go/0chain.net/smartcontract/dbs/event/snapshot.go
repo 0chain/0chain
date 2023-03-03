@@ -2,8 +2,8 @@ package event
 
 import (
 	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 
 	"go.uber.org/zap"
@@ -50,27 +50,8 @@ type Snapshot struct {
 	AuthorizerCount		 int64 `json:"authorizer_count"`                  // Total number of authorizers
 }
 
-func (s *Snapshot) providerCount(provider spenum.Provider) int64 {
-	switch provider {
-	case spenum.Blobber:
-		return s.BlobberCount
-	case spenum.Miner:
-		return s.MinerCount
-	case spenum.Sharder:
-		return s.SharderCount
-	case spenum.Validator:
-		return s.ValidatorCount
-	case spenum.Authorizer:
-		return s.AuthorizerCount
-	default:
-		return 0
-	}
-}
-
-
 // ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
-// For some fields, the count of the providers may be needed so a provider parameter is added.
-func (s *Snapshot) ApplyDiff(diff *Snapshot, provider spenum.Provider) {
+func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.TotalMint += diff.TotalMint
 	s.TotalChallengePools += diff.TotalChallengePools
 	s.ActiveAllocatedDelta += diff.ActiveAllocatedDelta
@@ -91,11 +72,15 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot, provider spenum.Provider) {
 	s.BlockCount += diff.BlockCount
 	s.TotalTxnFee += diff.TotalTxnFee
 	s.TotalWritePrice += diff.TotalWritePrice
+	s.BlobberCount += diff.BlobberCount
+	s.MinerCount += diff.MinerCount
+	s.SharderCount += diff.SharderCount
+	s.ValidatorCount += diff.ValidatorCount
+	s.AuthorizerCount += diff.AuthorizerCount
 
 	if s.StakedStorage > s.MaxCapacityStorage {
 		s.StakedStorage = s.MaxCapacityStorage
 	}
-
 }
 
 type FieldType int
@@ -288,34 +273,26 @@ func (gs *Snapshot) update(e []Event) {
 				totalFee += int(txn.Fee)
 			}
 			gs.TotalTxnFee += int64(totalFee)
-		case TagAddBlobber:
-			gs.BlobberCount += 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddBlobber"), zap.Any("snapshot", gs))
-		case TagDeleteBlobber:
-			gs.BlobberCount -= 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteBlobber"), zap.Any("snapshot", gs))
-		case TagAddAuthorizer:
-			gs.AuthorizerCount += 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddAuthorizer"), zap.Any("snapshot", gs))
-		case TagDeleteAuthorizer:
-			gs.AuthorizerCount -= 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteAuthorizer"), zap.Any("snapshot", gs))
-		case TagAddMiner:
-			gs.MinerCount += 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddMiner"), zap.Any("snapshot", gs))
-		case TagDeleteMiner:
-			gs.MinerCount -= 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteMiner"), zap.Any("snapshot", gs))
-		case TagAddSharder:
-			gs.SharderCount += 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddSharder"), zap.Any("snapshot", gs))
-		case TagDeleteSharder:
-			gs.SharderCount -= 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "DeleteSharder"), zap.Any("snapshot", gs))
-		case TagAddOrOverwiteValidator:
-			gs.ValidatorCount += 1
-			logging.Logger.Debug("SnapshotProvider", zap.String("type", "AddValidator"), zap.Any("snapshot", gs))
 		}
 
 	}
+}
+
+
+type ProcessingEntity struct {
+	Entity interface{}
+	Processed bool
+}
+
+// MakeProcessingMap creates a map of ProcessingEntity from map[string]interface{}. Should fail if parameter is not castable to map[string]interface{}
+func MakeProcessingMap(val interface{}) (map[string]ProcessingEntity, error) {
+	mapIn, ok := val.(map[string]interface{})
+	if !ok {
+		return nil, common.NewError("invalid_processing_map", "val is not castable to map[string]interface{}")
+	}
+	mpOut := make(map[string]ProcessingEntity)
+	for k, v := range mapIn {
+		mpOut[k] = ProcessingEntity{Entity: v, Processed: false}
+	}
+	return mpOut, nil
 }

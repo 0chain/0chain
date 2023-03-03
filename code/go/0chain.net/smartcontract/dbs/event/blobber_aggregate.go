@@ -5,7 +5,6 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/model"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -113,15 +112,32 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 	}
 	logging.Logger.Debug("blobber_snapshot", zap.Int("total_old_blobbers", len(oldBlobbers)))
 
+	oldBlobbersProcessingMap, err := MakeProcessingMap(oldBlobbers) 
+	if err != nil {
+		logging.Logger.Error("creating oldBlobbersProcessingMap", zap.Error(err))
+		return
+	}
+	
 	var (
 		aggregates []BlobberAggregate
 		gsDiff	   Snapshot
+		old BlobberSnapshot
+		ok bool
 	)
 	for _, current := range currentBlobbers {
-		old, found := oldBlobbers[current.ID]
+		processingEntity, found := oldBlobbersProcessingMap[current.ID]
+		processingEntity.Processed = true
 		if !found {
-			continue
+			old = BlobberSnapshot{ /* zero values */ }
+			gsDiff.BlobberCount += 1
+		} else {
+			old, ok = processingEntity.Entity.(BlobberSnapshot)
+			if !ok {
+				logging.Logger.Error("error converting processable entity to blobber snapshot")
+				continue
+			}
 		}
+		
 		aggregate := BlobberAggregate{
 			Round:     round,
 			BlobberID: current.ID,
@@ -142,29 +158,59 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
-		//aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 
-		gsDiff.SuccessfulChallenges += int64(aggregate.ChallengesPassed - old.ChallengesPassed)
-		gsDiff.TotalChallenges += int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
-		gsDiff.AllocatedStorage += aggregate.Allocated - old.Allocated
-		gsDiff.MaxCapacityStorage += aggregate.Capacity - old.Capacity
-		gsDiff.UsedStorage += aggregate.SavedData - old.SavedData
-		gsDiff.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
-		gsDiff.TotalWritePrice += int64(aggregate.WritePrice - old.WritePrice)
+		gsDiff.SuccessfulChallenges += int64(current.ChallengesPassed - old.ChallengesPassed)
+		gsDiff.TotalChallenges += int64(current.ChallengesCompleted - old.ChallengesCompleted)
+		gsDiff.AllocatedStorage += current.Allocated - old.Allocated
+		gsDiff.MaxCapacityStorage += current.Capacity - old.Capacity
+		gsDiff.UsedStorage += current.SavedData - old.SavedData
+		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
+		gsDiff.TotalWritePrice += int64(current.WritePrice - old.WritePrice)
 
 		const GB = currency.Coin(1024 * 1024 * 1024)
 		if aggregate.WritePrice == 0 {
 			gs.StakedStorage = gs.MaxCapacityStorage	// chosed not to use gsDiff here not to over-complicate the calculation
 		} else {
-			ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
+			ss, err := ((current.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
 			if err != nil {
 				logging.Logger.Error("converting coin to int64", zap.Error(err))
 			}
 			gsDiff.StakedStorage += ss
 		}
+
+		oldBlobbersProcessingMap[current.ID] = processingEntity
 	}
-	gs.ApplyDiff(&gsDiff, spenum.Blobber)
+
+	// Decrease global snapshot and blobber_snapshots based on deleted blobbers
+	var snapshotIdsToDelete []string
+	for _, processingEntity := range oldBlobbersProcessingMap {
+		if processingEntity.Processed {
+			continue
+		}
+		old, ok = processingEntity.Entity.(BlobberSnapshot)
+		if !ok {
+			logging.Logger.Error("error converting processable entity to blobber snapshot")
+			continue
+		}
+		snapshotIdsToDelete = append(snapshotIdsToDelete, old.BlobberID)
+		gsDiff.SuccessfulChallenges += int64(-old.ChallengesPassed)
+		gsDiff.TotalChallenges += int64(-old.ChallengesCompleted)
+		gsDiff.AllocatedStorage += -old.Allocated
+		gsDiff.MaxCapacityStorage += -old.Capacity
+		gsDiff.UsedStorage += -old.SavedData
+		gsDiff.TotalRewards += int64(-old.TotalRewards)
+		gsDiff.TotalWritePrice += int64(-old.WritePrice)
+		gsDiff.StakedStorage += int64(-old.TotalStake)
+		gsDiff.BlobberCount -= 1
+	}
+	if len(snapshotIdsToDelete) > 0 {
+		if result := edb.Store.Get().Where("blobber_id IN (?)", snapshotIdsToDelete).Delete(&BlobberSnapshot{}); result.Error != nil {
+			logging.Logger.Error("deleting blobber snapshots", zap.Error(result.Error))
+		}
+	}
+	
+	gs.ApplyDiff(&gsDiff)
 
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {

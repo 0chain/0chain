@@ -3,7 +3,6 @@ package event
 import (
 	"testing"
 
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/stretchr/testify/require"
 )
 
@@ -11,23 +10,6 @@ func TestSnapshotFunctions(t *testing.T) {
 	eventDb, clean := GetTestEventDB(t)
 	defer clean()
 	initialSnapshot := fillSnapshot(t, eventDb)
-
-	t.Run("test providerCount", func(t *testing.T) {
-		s, err := eventDb.GetGlobal()
-		require.NoError(t, err)
-
-		s.BlobberCount = int64(1)
-		s.MinerCount = int64(2)
-		s.SharderCount = int64(3)
-		s.AuthorizerCount = int64(4)
-		s.ValidatorCount = int64(5)
-
-		require.Equal(t, int64(1), s.providerCount(spenum.Blobber))
-		require.Equal(t, int64(2), s.providerCount(spenum.Miner))
-		require.Equal(t, int64(3), s.providerCount(spenum.Sharder))
-		require.Equal(t, int64(4), s.providerCount(spenum.Authorizer))
-		require.Equal(t, int64(5), s.providerCount(spenum.Validator))
-	})
 
 	t.Run("test ApplyDiff", func(t *testing.T) {
 		s, err := eventDb.GetGlobal()
@@ -54,9 +36,14 @@ func TestSnapshotFunctions(t *testing.T) {
 			BlockCount: int64(1000),
 			TotalTxnFee: int64(1000),
 			TotalWritePrice: int64(1000000),
+			BlobberCount: int64(1),
+			MinerCount: int64(1),
+			SharderCount: int64(1),
+			AuthorizerCount: int64(1),
+			ValidatorCount: int64(1),
 		}
 
-		s.ApplyDiff(&snapshotDiff, spenum.Blobber)
+		s.ApplyDiff(&snapshotDiff)
 
 		require.Equal(t, initialSnapshot.TotalMint + snapshotDiff.TotalMint, s.TotalMint)
 		require.Equal(t, initialSnapshot.TotalChallengePools + snapshotDiff.TotalChallengePools, s.TotalChallengePools)
@@ -78,142 +65,25 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.UniqueAddresses + snapshotDiff.UniqueAddresses, s.UniqueAddresses)
 		require.Equal(t, initialSnapshot.BlockCount + snapshotDiff.BlockCount, s.BlockCount)
 		require.Equal(t, initialSnapshot.TotalTxnFee + snapshotDiff.TotalTxnFee, s.TotalTxnFee)
+		require.Equal(t, initialSnapshot.TotalWritePrice + snapshotDiff.TotalWritePrice, s.TotalWritePrice)
+		require.Equal(t, initialSnapshot.BlobberCount + snapshotDiff.BlobberCount, s.BlobberCount)
+		require.Equal(t, initialSnapshot.MinerCount + snapshotDiff.MinerCount, s.MinerCount)
+		require.Equal(t, initialSnapshot.SharderCount + snapshotDiff.SharderCount, s.SharderCount)
+		require.Equal(t, initialSnapshot.AuthorizerCount + snapshotDiff.AuthorizerCount, s.AuthorizerCount)
+		require.Equal(t, initialSnapshot.ValidatorCount + snapshotDiff.ValidatorCount, s.ValidatorCount)
 
 		// Test snapshot StakedStorage will not exceed MaxCapacityStorage
 		snapShotDiff2 := Snapshot{ StakedStorage: s.MaxCapacityStorage + 1 }
-		s.ApplyDiff(&snapShotDiff2, spenum.Blobber)
+		s.ApplyDiff(&snapShotDiff2)
 		require.Equal(t, s.MaxCapacityStorage, s.StakedStorage)
 	})
 }
 
-func TestProviderCountInSnapshot(t *testing.T) {
+func TestGlobalSnapshotUpdateBasedOnEvents(t *testing.T) {
 	eventDb, clean := GetTestEventDB(t)
 	defer clean()
 	fillSnapshot(t, eventDb)
 	
-	t.Run("test blobber count", func(t *testing.T) {
-		s, err := eventDb.GetGlobal()
-		require.NoError(t, err)
-		blobberCountBefore := s.BlobberCount
-		
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagAddBlobber,
-			},
-		})
-		require.Equal(t, blobberCountBefore+1, s.BlobberCount)
-		
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagDeleteBlobber,
-			},
-		})
-		require.Equal(t, blobberCountBefore, s.BlobberCount)
-	})
-
-	t.Run("test miner count", func(t *testing.T) {
-		s, err := eventDb.GetGlobal()
-		require.NoError(t, err)
-		minerCountBefore := s.MinerCount
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagAddMiner,
-			},
-		})
-		require.Equal(t, minerCountBefore+1, s.MinerCount)
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagDeleteMiner,
-			},
-		})
-		require.Equal(t, minerCountBefore, s.MinerCount)
-	})
-
-	t.Run("test sharder count", func(t *testing.T) {
-		s, err := eventDb.GetGlobal()
-		require.NoError(t, err)
-		sharderCountBefore := s.SharderCount
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagAddSharder,
-			},
-		})
-		require.Equal(t, sharderCountBefore+1, s.SharderCount)
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagDeleteSharder,
-			},
-		})
-		require.Equal(t, sharderCountBefore, s.BlobberCount)
-	})
-
-	t.Run("test sharder count", func(t *testing.T) {
-		s, err := eventDb.GetGlobal()
-		require.NoError(t, err)
-		sharderCountBefore := s.SharderCount
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagAddSharder,
-			},
-		})
-		require.Equal(t, sharderCountBefore+1, s.SharderCount)
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagDeleteSharder,
-			},
-		})
-		require.Equal(t, sharderCountBefore, s.BlobberCount)
-	})
-
-	t.Run("test authorizer count", func(t *testing.T) {
-		s, err := eventDb.GetGlobal()
-		require.NoError(t, err)
-		authorizerCountBefore := s.AuthorizerCount
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagAddAuthorizer,
-			},
-		})
-		require.Equal(t, authorizerCountBefore+1, s.AuthorizerCount)
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagDeleteAuthorizer,
-			},
-		})
-		require.Equal(t, authorizerCountBefore, s.AuthorizerCount)
-	})
-
-	t.Run("test validator count", func(t *testing.T) {
-		s, err := eventDb.GetGlobal()
-		require.NoError(t, err)
-		validatorCountBefore := s.ValidatorCount
-
-		s.update([]Event{
-			{
-				Type: TypeStats,
-				Tag:  TagAddOrOverwiteValidator,
-			},
-		})
-		require.Equal(t, validatorCountBefore+1, s.ValidatorCount)
-	})
 
 	t.Run("test transaction count and total", func(t *testing.T) {
 		s, err := eventDb.GetGlobal()
