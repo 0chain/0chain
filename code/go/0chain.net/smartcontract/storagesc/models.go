@@ -92,11 +92,9 @@ type AllocOpenChallenge struct {
 }
 
 type AllocationChallenges struct {
-	AllocationID   string                `json:"allocation_id"`
-	OpenChallenges []*AllocOpenChallenge `json:"open_challenges"`
-	//OpenChallenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*AllocOpenChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge              `json:"latest_completed_challenge"`
+	AllocationID   string                         `json:"allocation_id"`
+	OpenChallenges []*AllocOpenChallenge          `json:"open_challenges"`
+	ChallengeMap   map[string]*AllocOpenChallenge `json:"-" msg:"-"`
 }
 
 func (acs *AllocationChallenges) GetKey(globalKey string) datastore.Key {
@@ -159,8 +157,6 @@ func (acs *AllocationChallenges) removeChallenge(challenge *StorageChallenge) bo
 		if acs.OpenChallenges[i].ID == challenge.ID {
 			acs.OpenChallenges = append(
 				acs.OpenChallenges[:i], acs.OpenChallenges[i+1:]...)
-
-			acs.LatestCompletedChallenge = challenge
 			return true
 		}
 	}
@@ -527,7 +523,8 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin `json:"challenge_pool_integral_value"`
+	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
+	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
 }
 
 func newBlobberAllocation(
@@ -1421,17 +1418,13 @@ func (bc *BlobberCloseConnection) Verify() bool {
 type WriteMarker struct {
 	AllocationRoot         string           `json:"allocation_root"`
 	PreviousAllocationRoot string           `json:"prev_allocation_root"`
+	FileMetaRoot           string           `json:"file_meta_root"`
 	AllocationID           string           `json:"allocation_id"`
 	Size                   int64            `json:"size"`
 	BlobberID              string           `json:"blobber_id"`
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
-	Operation              string           `json:"operation"`
-
-	// file info
-	LookupHash  string `json:"lookup_hash"`
-	ContentHash string `json:"content_hash"`
 }
 
 func (wm *WriteMarker) VerifySignature(
@@ -1455,9 +1448,11 @@ func (wm *WriteMarker) VerifySignature(
 }
 
 func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", wm.AllocationRoot,
-		wm.PreviousAllocationRoot, wm.AllocationID, wm.BlobberID, wm.ClientID,
-		wm.Size, wm.Timestamp)
+	hashData := fmt.Sprintf(
+		"%s:%s:%s:%s:%s:%s:%d:%d",
+		wm.AllocationRoot, wm.PreviousAllocationRoot,
+		wm.FileMetaRoot, wm.AllocationID,
+		wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
 	return hashData
 }
 
