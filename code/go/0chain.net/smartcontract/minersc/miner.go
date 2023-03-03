@@ -62,17 +62,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			"failed to add new miner: Not in magic block")
 	}
 
-	allMiners, err := getMinersList(balances)
-	if err != nil {
-		logging.Logger.Error("add_miner: Error in getting list from the DB",
-			zap.Error(err))
-		return "", common.NewErrorf("add_miner",
-			"failed to get miner list: %v", err)
-	}
-
-	msc.verifyMinerState(allMiners, balances,
-		"add_miner: checking all miners list in the beginning")
-
 	if config.Development() && newMiner.Settings.DelegateWallet == "" {
 		newMiner.Settings.DelegateWallet = newMiner.ID
 	}
@@ -108,51 +97,42 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	newMiner.NodeType = NodeTypeMiner // set node type
+	newMiner.ProviderType = spenum.Miner
 
-	if err = quickFixDuplicateHosts(newMiner, allMiners.Nodes); err != nil {
+	exist, err := getMinerNode(newMiner.ID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return "", common.NewErrorf("add_miner", "could not get miner: %v", err)
+	}
+
+	if exist != nil {
+		logging.Logger.Info("add_miner: miner already exists", zap.String("ID", newMiner.ID))
+		return string(newMiner.Encode()), nil
+	}
+
+	if err = insertNodeN2NHost(balances, ADDRESS, newMiner); err != nil {
 		return "", common.NewError("add_miner", err.Error())
 	}
 
-	allMap := make(map[string]struct{}, len(allMiners.Nodes))
-	for _, n := range allMiners.Nodes {
-		allMap[n.GetKey()] = struct{}{}
-	}
-
-	var update bool
-	if _, ok := allMap[newMiner.GetKey()]; !ok {
-		allMiners.Nodes = append(allMiners.Nodes, newMiner)
-		if err = updateMinersList(balances, allMiners); err != nil {
-			return "", common.NewErrorf("add_miner",
-				"saving all miners list: %v", err)
-		}
-
-		emitAddMiner(newMiner, balances)
-		update = true
-	}
-
-	exist, err := doesMinerExist(newMiner.GetKey(), balances)
+	nodeIDs, err := getNodeIDs(balances, AllMinersKey)
 	if err != nil {
-		return "", common.NewErrorf("add_miner", "error checking miner existence: %v", err)
+		return "", common.NewErrorf("add_miner", "could not get miner ids: %v", err)
 	}
 
-	if !exist {
-		if err = newMiner.save(balances); err != nil {
-			return "", common.NewError("add_miner", err.Error())
-		}
-
-		msc.verifyMinerState(allMiners, balances, "add_miner: Checking all miners list afterInsert")
-
-		update = true
+	nodeIDs = append(nodeIDs, newMiner.ID)
+	if err := nodeIDs.save(balances, AllMinersKey); err != nil {
+		return "", common.NewErrorf("add_miner", "save miner to list failed: %v", err)
 	}
 
-	if !update {
-		logging.Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
+	if err := newMiner.save(balances); err != nil {
+		return "", common.NewErrorf("add_miner", "save failed: %v", err)
 	}
+
+	emitAddMiner(newMiner, balances)
 
 	return string(newMiner.Encode()), nil
 }
 
-// deleteMiner Function to handle removing a miner from the chain
+// DeleteMiner Function to handle removing a miner from the chain
 func (msc *MinerSmartContract) DeleteMiner(
 	_ *transaction.Transaction,
 	inputData []byte,
@@ -315,14 +295,6 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 }
 
 // ------------- local functions ---------------------
-// TODO: remove this or return error and do real checking
-func (msc *MinerSmartContract) verifyMinerState(allMinersList *MinerNodes, balances cstate.StateContextI,
-	msg string) {
-	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
-		logging.Logger.Info(msg + " allminerslist is empty")
-		return
-	}
-}
 
 func (msc *MinerSmartContract) getMinersList(balances cstate.QueryStateContextI) (
 	all *MinerNodes, err error) {

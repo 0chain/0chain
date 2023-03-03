@@ -92,11 +92,9 @@ type AllocOpenChallenge struct {
 }
 
 type AllocationChallenges struct {
-	AllocationID   string                `json:"allocation_id"`
-	OpenChallenges []*AllocOpenChallenge `json:"open_challenges"`
-	//OpenChallenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*AllocOpenChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge              `json:"latest_completed_challenge"`
+	AllocationID   string                         `json:"allocation_id"`
+	OpenChallenges []*AllocOpenChallenge          `json:"open_challenges"`
+	ChallengeMap   map[string]*AllocOpenChallenge `json:"-" msg:"-"`
 }
 
 func (acs *AllocationChallenges) GetKey(globalKey string) datastore.Key {
@@ -159,8 +157,6 @@ func (acs *AllocationChallenges) removeChallenge(challenge *StorageChallenge) bo
 		if acs.OpenChallenges[i].ID == challenge.ID {
 			acs.OpenChallenges = append(
 				acs.OpenChallenges[:i], acs.OpenChallenges[i+1:]...)
-
-			acs.LatestCompletedChallenge = challenge
 			return true
 		}
 	}
@@ -527,7 +523,8 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin `json:"challenge_pool_integral_value"`
+	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
+	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
 }
 
 func newBlobberAllocation(
@@ -537,16 +534,19 @@ func newBlobberAllocation(
 	date common.Timestamp,
 	timeUnit time.Duration,
 ) (*BlobberAllocation, error) {
-	var err error
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
 	ba.Terms = blobber.Terms
 	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
-	ba.MinLockDemand, err = blobber.Terms.minLockDemand(
-		sizeInGB(size), allocation.restDurationInTimeUnits(date, timeUnit),
-	)
+
+	rdtu, err := allocation.restDurationInTimeUnits(date, timeUnit)
+	if err != nil {
+		return nil, fmt.Errorf("new blobber allocation failed: %v", err)
+	}
+
+	ba.MinLockDemand, err = blobber.Terms.minLockDemand(sizeInGB(size), rdtu)
 	return ba, err
 }
 
@@ -585,9 +585,20 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 // challenge (doesn't matter rewards or penalty). The RDTU should be based on
 // previous challenge time. And the DTU should be based on previous - current
 // challenge time.
-func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin) {
+func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin, err error) {
 	move = currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
-	d.ChallengePoolIntegralValue -= move
+	cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, move)
+	if err != nil {
+		logging.Logger.Warn("challenge minus failed",
+			zap.Error(err),
+			zap.Any("dtu", dtu),
+			zap.Any("rdtu", rdtu),
+			zap.Any("challenge value", d.ChallengePoolIntegralValue),
+			zap.Any("move", move))
+		err = fmt.Errorf("minus challenge pool value failed: %v", err)
+		return
+	}
+	d.ChallengePoolIntegralValue = cv
 	return
 }
 
@@ -1154,13 +1165,22 @@ func (sa *StorageAllocation) Until(maxChallengeCompletionTime time.Duration) com
 // The durationInTimeUnits returns given duration (represented as
 // common.Timestamp) as duration in time units (float point value) for
 // this allocation (time units for the moment of the allocation creation).
-func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) float64 {
-	return float64(dur.Duration()) / float64(timeUnit)
+func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) (float64, error) {
+	if dur < 0 {
+		return 0, errors.New("negative duration")
+	}
+	return float64(dur.Duration()) / float64(timeUnit), nil
 }
 
 // The restDurationInTimeUnits return rest duration of the allocation in time
 // units as a float64 value.
-func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) float64 {
+func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) (float64, error) {
+	if sa.Expiration < now {
+		logging.Logger.Error("rest duration time overflow, timestamp is beyond alloc expiration",
+			zap.Int64("now", int64(now)),
+			zap.Int64("alloc expiration", int64(sa.Expiration)))
+		return 0, errors.New("rest duration time overflow, timestamp is beyond alloc expiration")
+	}
 	return sa.durationInTimeUnits(sa.Expiration-now, timeUnit)
 }
 
@@ -1204,16 +1224,21 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // we are using the same terms. And for this method, the oterms argument is
 // nil for this case (meaning, terms hasn't changed).
 func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, timeUnit time.Duration,
-	oterms []Terms) (values []currency.Coin) {
+	oterms []Terms) (values []currency.Coin, err error) {
 
 	// odr -- old duration remaining
 	// ndr -- new duration remaining
 
 	// in time units, instead of common.Timestamp
-	var (
-		odrtu = sa.durationInTimeUnits(odr, timeUnit)
-		ndrtu = sa.durationInTimeUnits(ndr, timeUnit)
-	)
+	odrtu, err := sa.durationInTimeUnits(odr, timeUnit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get old challenge pool duration: %v", err)
+	}
+
+	ndrtu, err := sa.durationInTimeUnits(ndr, timeUnit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get new challenge pool duration: %v", err)
+	}
 
 	values = make([]currency.Coin, 0, len(sa.BlobberAllocs))
 
@@ -1389,17 +1414,13 @@ func (bc *BlobberCloseConnection) Verify() bool {
 type WriteMarker struct {
 	AllocationRoot         string           `json:"allocation_root"`
 	PreviousAllocationRoot string           `json:"prev_allocation_root"`
+	FileMetaRoot           string           `json:"file_meta_root"`
 	AllocationID           string           `json:"allocation_id"`
 	Size                   int64            `json:"size"`
 	BlobberID              string           `json:"blobber_id"`
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
-	Operation              string           `json:"operation"`
-
-	// file info
-	LookupHash  string `json:"lookup_hash"`
-	ContentHash string `json:"content_hash"`
 }
 
 func (wm *WriteMarker) VerifySignature(
@@ -1423,9 +1444,11 @@ func (wm *WriteMarker) VerifySignature(
 }
 
 func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", wm.AllocationRoot,
-		wm.PreviousAllocationRoot, wm.AllocationID, wm.BlobberID, wm.ClientID,
-		wm.Size, wm.Timestamp)
+	hashData := fmt.Sprintf(
+		"%s:%s:%s:%s:%s:%s:%d:%d",
+		wm.AllocationRoot, wm.PreviousAllocationRoot,
+		wm.FileMetaRoot, wm.AllocationID,
+		wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
 	return hashData
 }
 

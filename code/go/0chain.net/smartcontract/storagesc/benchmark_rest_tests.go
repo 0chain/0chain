@@ -36,14 +36,6 @@ func BenchmarkRestTests(
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
-				FuncName: "get_blobber_count",
-				Endpoint: srh.getBlobberCount,
-			},
-			{
-				FuncName: "get_blobber_total_stakes",
-				Endpoint: srh.getBlobberTotalStakes,
-			},
-			{
 				FuncName: "blobbers-by-geolocation",
 				Params: map[string]string{
 					"max_latitude":  "40",
@@ -99,10 +91,6 @@ func BenchmarkRestTests(
 					"round":      "1",
 				},
 				Endpoint: srh.getBlock,
-			},
-			{
-				FuncName: "total-saved-data",
-				Endpoint: srh.getTotalData,
 			},
 			{
 				FuncName: "latestreadmarker",
@@ -219,7 +207,6 @@ func BenchmarkRestTests(
 				FuncName: "getWriteMarkers",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
-					"filename":      "",
 				},
 				Endpoint: srh.getWriteMarkers,
 			},

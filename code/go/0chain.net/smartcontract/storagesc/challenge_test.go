@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -364,6 +365,15 @@ func TestBlobberReward(t *testing.T) {
 		require.EqualValues(t, err.Error(), errLate)
 	})
 
+	t.Run("test old challenge", func(t *testing.T) {
+		var thisChallenge = previousChallenge - 1
+		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+		require.Error(t, err)
+		require.EqualValues(t, err.Error(), "old challenge response on blobber rewarding")
+	})
+
 	t.Run(errTokensChallengePool, func(t *testing.T) {
 		var challengePoolBalance = currency.Coin(0)
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
@@ -396,7 +406,7 @@ func TestBlobberPenalty(t *testing.T) {
 	var challengePoolIntegralValue = currency.Coin(73000000)
 	var challengePoolBalance = currency.Coin(700000)
 	var partial = 0.9
-	var preiviousChallenge = common.Timestamp(3)
+	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
 	var thisExpires = common.Timestamp(222)
 	var now = common.Timestamp(101)
@@ -424,7 +434,7 @@ func TestBlobberPenalty(t *testing.T) {
 	t.Run("test blobberPenalty ", func(t *testing.T) {
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -432,7 +442,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var size = int64(10000)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -440,16 +450,25 @@ func TestBlobberPenalty(t *testing.T) {
 		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLate)
+	})
+
+	t.Run("old challenge", func(t *testing.T) {
+		var thisChallenge = previousChallenge - 1
+		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
+		require.Error(t, err)
+		require.EqualValues(t, err.Error(), "old challenge response on blobber penalty")
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {
 		var validatorStakes = [][]int64{{45, 666, 4533}, {}, {10}}
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -457,7 +476,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var challengePoolBalance = currency.Coin(0)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errTokensChallengePool))
 	})
@@ -503,7 +522,7 @@ func TestVerifyChallenge(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			ssc, balances, tp, alloc, b3, valids, validators, blobber := prepareAllocChallenges(t, 10)
+			ssc, balances, tp, alloc, b3, valids, validators, blobber, _ := prepareAllocChallenges(t, 10)
 			step := (int64(alloc.Expiration) - tp) / 10
 
 			challID := fmt.Sprintf("chall-0")
@@ -551,6 +570,91 @@ func TestVerifyChallenge(t *testing.T) {
 
 }
 
+func TestVerifyChallengeOldChallenge(t *testing.T) {
+	ssc, balances, tp, alloc, b3, valids, validators, blobber, blobbers := prepareAllocChallenges(t, 10)
+	step := (int64(alloc.Expiration) - tp) / 10
+
+	t.Run("verify challenge first time", func(t *testing.T) {
+		challID := fmt.Sprintf("chall-0")
+		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
+
+		chall := &ChallengeResponse{
+			ID: challID,
+		}
+
+		for i := 0; i < 10; i++ {
+			chall.ValidationTickets = append(chall.ValidationTickets,
+				valids[i].validTicket(t, chall.ID, b3.id, true, tp))
+		}
+
+		tp += step / 2
+		tx := newTransaction(b3.id, ssc.ID, 0, tp)
+		balances.setTransaction(t, tx)
+		var resp string
+		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+		require.NoError(t, err)
+
+		require.Equal(t, resp, "challenge passed by blobber")
+	})
+
+	t.Run("same alloc, different blobber, older timestamp, should be ok", func(t *testing.T) {
+		var (
+			b1       = testGetBlobber(blobbers, alloc, 0)
+			challID  = fmt.Sprintf("chall-1")
+			blobber1 *StorageNode
+		)
+
+		blobber1, err := ssc.getBlobber(b1.id, balances)
+		// reduce timestamp to generate challenge with older create time
+		tp := tp - 10
+		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber1, balances)
+
+		chall1 := &ChallengeResponse{
+			ID: challID,
+		}
+
+		for i := 0; i < 10; i++ {
+			chall1.ValidationTickets = append(chall1.ValidationTickets,
+				valids[i].validTicket(t, chall1.ID, b1.id, true, tp))
+		}
+
+		tx := newTransaction(b1.id, ssc.ID, 0, tp)
+		balances.setTransaction(t, tx)
+		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall1), balances)
+		require.NoError(t, err)
+		require.Equal(t, resp, "challenge passed by blobber")
+	})
+
+	t.Run("same alloc, same blobber, older timestamp, should fail", func(t *testing.T) {
+		b1 := testGetBlobber(blobbers, alloc, 0)
+
+		challID := fmt.Sprintf("chall-1")
+		var blobber1 *StorageNode
+		blobber1, err := ssc.getBlobber(b1.id, balances)
+		// reduce timestamp to generate challenge with older create time
+		tp := tp - 20
+		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber1, balances)
+
+		chall1 := &ChallengeResponse{
+			ID: challID,
+		}
+
+		for i := 0; i < 10; i++ {
+			chall1.ValidationTickets = append(chall1.ValidationTickets,
+				valids[i].validTicket(t, chall1.ID, b1.id, true, tp))
+		}
+
+		tx := newTransaction(b1.id, ssc.ID, 0, tp)
+		balances.setTransaction(t, tx)
+		// update block round to ignore the ongoing blobber reward checking
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall1), balances)
+		require.EqualError(t, err, "challenge_reward_error: old challenge response on blobber rewarding")
+	})
+}
+
 func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
 	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
@@ -559,7 +663,7 @@ func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 
 // TODO: test to run the same verify challenge SC multiple times result in the same state
 func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
-	ssc, balances, tp, alloc, b3, valids, validators, blobber := prepareAllocChallenges(t, 10)
+	ssc, balances, tp, alloc, b3, valids, validators, blobber, _ := prepareAllocChallenges(t, 10)
 	step := (int64(alloc.Expiration) - tp) / 10
 
 	challID := fmt.Sprintf("chall-0")
@@ -598,7 +702,8 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	require.Equal(t, len(stateRoots), 1)
 }
 
-func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64, *StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode) {
+func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
+	*StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode, []*Client) {
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, true)
@@ -659,7 +764,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	var blobber *StorageNode
 	blobber, err = ssc.getBlobber(b3.id, balances)
 	require.NoError(t, err)
-	return ssc, balances, tp, alloc, b3, valids, validators, blobber
+	return ssc, balances, tp, alloc, b3, valids, validators, blobber, blobs
 }
 
 func testAddValidators(t *testing.T, balances *testBalances, ssc *StorageSmartContract, num int, tp int64) ([]*Client, int64) {
@@ -798,11 +903,10 @@ func testBlobberPenalty(
 		now:                        now,
 	}
 
-	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-		wpBalance, challengePoolIntegralValue,
-		challengePoolBalance, thisChallange, thisExpires, now, size)
+	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
+		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(txn, allocation, previous, challenge, details, validators, ctx)
+	err = ssc.blobberPenalty(allocation, previous, details, validators, ctx)
 	if err != nil {
 		return err
 	}
@@ -853,11 +957,10 @@ func testBlobberReward(
 		now:                        now,
 	}
 
-	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-		wpBalance, challengePoolIntegralValue,
-		challengePoolBalance, thisChallange, thisExpires, now, 0)
+	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
+		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(txn, allocation, previous, challenge, details, validators, partial, ctx)
+	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx)
 	if err != nil {
 		return err
 	}
@@ -887,8 +990,7 @@ func setupChallengeMocks(
 	challengePoolIntegralValue, challengePoolBalance currency.Coin,
 	thisChallange, thisExpires, now common.Timestamp,
 	size int64,
-) (*transaction.Transaction, *StorageSmartContract, *StorageAllocation,
-	*AllocationChallenges, *BlobberAllocation, *mockStateContext) {
+) (*StorageSmartContract, *StorageAllocation, *BlobberAllocation, *mockStateContext) {
 	require.Len(t, validatorStakes, len(validators))
 
 	var err error
@@ -900,12 +1002,6 @@ func setupChallengeMocks(
 		WritePool:  currency.Coin(wpBalance),
 	}
 
-	var allocChallenges = &AllocationChallenges{
-		AllocationID: encryption.Hash("alloc_challenges_id"),
-		LatestCompletedChallenge: &StorageChallenge{
-			Created: thisChallange,
-		},
-	}
 	var details = &BlobberAllocation{
 		BlobberID:                  blobberId,
 		ChallengePoolIntegralValue: challengePoolIntegralValue,
@@ -913,6 +1009,9 @@ func setupChallengeMocks(
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
 		Size: size,
+		LatestCompletedChallenge: &StorageChallenge{
+			Created: thisChallange,
+		},
 	}
 
 	var txn = &transaction.Transaction{
@@ -985,7 +1084,7 @@ func setupChallengeMocks(
 	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
-	return txn, ssc, allocation, allocChallenges, details, ctx
+	return ssc, allocation, details, ctx
 }
 
 type formulaeBlobberReward struct {
