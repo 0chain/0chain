@@ -46,7 +46,7 @@ dbs:
     conn_max_lifetime: 20s
     aggregate_period: 5
   settings:
-    debug: false
+    debug: true
     aggregate_period: 10
     partition_change_period: 100
     partition_keep_count: 10
