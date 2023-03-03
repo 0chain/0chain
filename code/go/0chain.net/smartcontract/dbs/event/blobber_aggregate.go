@@ -77,7 +77,7 @@ func paginate(round, pageAmount, count, pageLimit int64) (int64, int64, int) {
 }
 
 func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset int64) {
-
+	const GB = currency.Coin(1024 * 1024 * 1024)
 	var ids []string
 	r := edb.Store.Get().
 		Raw("select id from temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
@@ -98,12 +98,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		return
 	}
 	logging.Logger.Debug("blobber_snapshot", zap.Int("total_current_blobbers", len(currentBlobbers)))
-
-	if round <= edb.AggregatePeriod() && len(currentBlobbers) > 0 {
-		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
-			logging.Logger.Error("saving blobbers snapshots", zap.Error(err))
-		}
-	}
 
 	oldBlobbers, err := edb.getBlobberSnapshots(limit, offset)
 	if err != nil {
@@ -168,16 +162,22 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
 		gsDiff.TotalWritePrice += int64(current.WritePrice - old.WritePrice)
 
-		const GB = currency.Coin(1024 * 1024 * 1024)
-		if aggregate.WritePrice == 0 {
-			gs.StakedStorage = gs.MaxCapacityStorage	// chosed not to use gsDiff here not to over-complicate the calculation
-		} else {
-			ss, err := ((current.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
+		// Change in staked storage (staked_storage = total_stake / write_price)
+		oldSS := old.Capacity
+		if old.WritePrice > 0 {
+			oldSS, err = (old.TotalStake / old.WritePrice * GB).Int64()
 			if err != nil {
 				logging.Logger.Error("converting coin to int64", zap.Error(err))
 			}
-			gsDiff.StakedStorage += ss
 		}
+		newSS := current.Capacity
+		if current.WritePrice > 0 {
+			newSS, err = (current.TotalStake / current.WritePrice * GB).Int64()
+			if err != nil {
+				logging.Logger.Error("converting coin to int64", zap.Error(err))
+			}
+		}
+		gsDiff.StakedStorage += (newSS - oldSS)
 
 		oldBlobbersProcessingMap[current.ID] = processingEntity
 	}
@@ -201,8 +201,17 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.UsedStorage += -old.SavedData
 		gsDiff.TotalRewards += int64(-old.TotalRewards)
 		gsDiff.TotalWritePrice += int64(-old.WritePrice)
-		gsDiff.StakedStorage += int64(-old.TotalStake)
 		gsDiff.BlobberCount -= 1
+
+		if old.WritePrice > 0 {
+			gsDiff.StakedStorage += -old.Capacity
+		} else {
+			ss, err := (old.TotalStake / old.WritePrice * GB).Int64()
+			if err != nil {
+				logging.Logger.Error("converting coin to int64", zap.Error(err))
+			}
+			gsDiff.StakedStorage += -ss
+		}
 	}
 	if len(snapshotIdsToDelete) > 0 {
 		if result := edb.Store.Get().Where("blobber_id IN (?)", snapshotIdsToDelete).Delete(&BlobberSnapshot{}); result.Error != nil {
