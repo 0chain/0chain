@@ -222,7 +222,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 					zap.Error(err),
 				)
 			}
-			err = edb.updateUserAggregates(&es)
+			err = tx.updateUserAggregates(&es)
 			if err != nil {
 				logging.Logger.Error("user aggregate could not be processed",
 					zap.Error(err),
