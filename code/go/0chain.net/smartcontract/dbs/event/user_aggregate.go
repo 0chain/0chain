@@ -156,31 +156,21 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 		logging.Logger.Info("empty aggregates list")
 		return mappedAggrs, nil
 	}
-	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_user_ids (ID text) ON COMMIT DROP")
-	if exec.Error != nil {
-		logging.Logger.Error("can't create temp_user_ids", zap.Error(exec.Error))
-		return nil, exec.Error
-	}
-
 	var idlist []string
 	for id := range ids {
 		idlist = append(idlist, id)
 	}
 
-	r := edb.Store.Get().Exec("INSERT INTO temp_user_ids (ID) VALUES (?)", idlist)
-	if r.Error != nil {
-		logging.Logger.Error("can't insert into temp_user_ids", zap.Error(exec.Error))
-		return nil, r.Error
-	}
+	logging.Logger.Debug("user_aggregate_ids", zap.Strings("ids", idlist))
 
 	result := edb.Store.Get().
 		Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
 	FROM user_aggregates 
-	WHERE user_id IN (SELECT ID from temp_user_ids)
-	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`).
+	WHERE user_id IN (SELECT unnest(?::text[]))
+	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, idlist).
 		Scan(&ua)
 	if result.Error != nil {
-		logging.Logger.Error("can't select aggregates", zap.Error(exec.Error))
+		logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
 		return nil, result.Error
 	}
 
