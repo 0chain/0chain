@@ -316,7 +316,7 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 	// }
 
 	co := NewClient()
-	if err = co.Read(ctx, key); err != nil {
+	if err := co.Read(ctx, key); err != nil {
 		return nil, err
 	}
 
