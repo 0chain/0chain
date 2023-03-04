@@ -531,11 +531,12 @@ func validateBlobbers(
 }
 
 type updateAllocationRequest struct {
-	ID                      string           `json:"id"`              // allocation id
-	Name                    string           `json:"name"`            // allocation name
-	OwnerID                 string           `json:"owner_id"`        // Owner of the allocation
-	Size                    int64            `json:"size"`            // difference
-	Expiration              common.Timestamp `json:"expiration_date"` // difference
+	ID                      string           `json:"id"`               // allocation id
+	Name                    string           `json:"name"`             // allocation name
+	OwnerID                 string           `json:"owner_id"`         // Owner of the allocation
+	OwnerPublicKey          string           `json:"owner_public_key"` // Owner Public Key of the allocation
+	Size                    int64            `json:"size"`             // difference
+	Expiration              common.Timestamp `json:"expiration_date"`  // difference
 	UpdateTerms             bool             `json:"update_terms"`
 	AddBlobberId            string           `json:"add_blobber_id"`
 	RemoveBlobberId         string           `json:"remove_blobber_id"`
@@ -558,7 +559,8 @@ func (uar *updateAllocationRequest) validate(
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
 		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) &&
-		(!uar.FileOptionsChanged || uar.FileOptions == alloc.FileOptions) {
+		(!uar.FileOptionsChanged || uar.FileOptions == alloc.FileOptions) &&
+		(alloc.Owner == uar.OwnerID) {
 		return errors.New("update allocation changes nothing")
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
@@ -1152,7 +1154,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
-	if t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner {
+	if t.ClientID != alloc.Owner {
 		if !alloc.ThirdPartyExtendable || (request.Size <= 0 && request.Expiration <= 0) {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
@@ -1275,6 +1277,15 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				},
 			})
 		}
+
+		if request.OwnerID != alloc.Owner {
+			alloc.Owner = request.OwnerID
+			if request.OwnerPublicKey == "" {
+				return "", common.NewError("allocation_updating_failed", "owner public key is required when updating owner id")
+			}
+			alloc.OwnerPublicKey = request.OwnerPublicKey
+		}
+
 	}
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)
@@ -1791,47 +1802,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	alloc.Finalized = true
 
 	return nil
-}
-
-type transferAllocationInput struct {
-	AllocationId      string `json:"allocation_id"`
-	NewOwnerId        string `json:"new_owner_id"`
-	NewOwnerPublicKey string `json:"new_owner_public_key"`
-}
-
-func (aci *transferAllocationInput) decode(input []byte) error {
-	return json.Unmarshal(input, aci)
-}
-
-func (sc *StorageSmartContract) transferAllocation(
-	txn *transaction.Transaction,
-	input []byte,
-	balances chainstate.StateContextI,
-) (string, error) {
-	var tai transferAllocationInput
-	if err := tai.decode(input); err != nil {
-		return "", common.NewError("transfer_allocation_failed",
-			"error unmarshalling input: "+err.Error())
-	}
-
-	alloc, err := sc.getAllocation(tai.AllocationId, balances)
-	if err != nil {
-		return "", common.NewError("transfer_allocation_failed", err.Error())
-	}
-
-	alloc.Owner = tai.NewOwnerId
-	alloc.OwnerPublicKey = tai.NewOwnerPublicKey
-
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	if err != nil {
-		return "", common.NewErrorf("transfer_allocation_failed",
-			"saving new allocation: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-
-	// txn.Hash is the id of the new token pool
-	return txn.Hash, nil
 }
 
 func emitUpdateAllocationStatEvent(w *WriteMarker, movedTokens currency.Coin, balances chainstate.StateContextI) {
