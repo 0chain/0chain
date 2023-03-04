@@ -199,6 +199,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 
 	ids := make(map[string]interface{})
 	for _, aggr := range updatedAggrs {
+		aggr.Round = e.round
 		ids[aggr.UserID] = struct{}{}
 	}
 
