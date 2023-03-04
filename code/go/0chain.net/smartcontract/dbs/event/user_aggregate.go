@@ -152,10 +152,6 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 	var ua []UserAggregate
 	var mappedAggrs = make(map[string]*UserAggregate, len(ua))
 
-	if len(ids) == 0 {
-		logging.Logger.Info("empty aggregates list")
-		return mappedAggrs, nil
-	}
 	var idlist []string
 	for id := range ids {
 		idlist = append(idlist, id)
@@ -165,6 +161,7 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 
 	switch len(idlist) {
 	case 0:
+		logging.Logger.Info("empty aggregates list")
 		return mappedAggrs, nil
 	case 1:
 		result := edb.Store.Get().
@@ -201,12 +198,17 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 	var updatedAggrs []UserAggregate
 	for _, ev := range e.events {
 		if h := handlers[ev.Tag]; h != nil {
-			updatedAggrs = append(updatedAggrs, h(ev)...)
+			aggrs := h(ev)
+			for _, agg := range aggrs {
+				logging.Logger.Debug("user_aggregate_id", zap.Any("aggr", agg))
+			}
+			updatedAggrs = append(updatedAggrs, aggrs...)
 		}
 	}
 
 	ids := make(map[string]interface{})
 	for _, aggr := range updatedAggrs {
+		logging.Logger.Debug("user_aggregate_id", zap.String("id", aggr.UserID))
 		ids[aggr.UserID] = struct{}{}
 	}
 
