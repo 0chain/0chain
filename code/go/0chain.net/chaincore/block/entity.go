@@ -590,7 +590,7 @@ func (b *Block) GetClients() ([]*client.Client, error) {
 			continue
 		}
 		// c, err := client.GetClientFromCache(t.ClientID)
-		c = client.NewClient()
+		c := client.NewClient()
 		if err := c.SetPublicKey(t.PublicKey); err != nil {
 			return nil, err
 		}

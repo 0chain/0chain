@@ -312,7 +312,7 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
 
 	// co, err := client.GetClientFromCache(t.ClientID)
-	co = client.NewClient()
+	co := client.NewClient()
 	co.ID = t.ClientID
 	if err := co.SetPublicKey(t.PublicKey); err != nil {
 		return nil, err
