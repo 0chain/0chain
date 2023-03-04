@@ -9,6 +9,12 @@ ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS total_txn_fee bigint default 0;
 ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS total_write_price bigint default 0;
 ALTER TABLE snapshots DROP COLUMN IF EXISTS average_txn_fee;
 ALTER TABLE snapshots DROP COLUMN IF EXISTS average_write_price;
+
+ALTER TABLE blobber_snapshots ADD COLUMN IF NOT EXISTS bucket_id bigint default 0;
+ALTER TABLE authorizer_snapshots ADD COLUMN IF NOT EXISTS bucket_id bigint default 0;
+ALTER TABLE miner_snapshots ADD COLUMN IF NOT EXISTS bucket_id bigint default 0;
+ALTER TABLE sharder_snapshots ADD COLUMN IF NOT EXISTS bucket_id bigint default 0;
+ALTER TABLE validator_snapshots ADD COLUMN IF NOT EXISTS bucket_id bigint default 0;
 -- +goose StatementEnd
 
 -- +goose Down
@@ -20,4 +26,10 @@ ALTER TABLE snapshots DROP COLUMN IF EXISTS authorizer_count;
 ALTER TABLE snapshots DROP COLUMN IF EXISTS validator_count;
 ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS average_txn_fee bigint default 0;
 ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS average_write_price bigint default 0;
+
+ALTER TABLE blobber_snapshots DROP COLUMN IF EXISTS bucket_id;
+ALTER TABLE authorizer_snapshots DROP COLUMN IF EXISTS bucket_id;
+ALTER TABLE miner_snapshots DROP COLUMN IF EXISTS bucket_id;
+ALTER TABLE sharder_snapshots DROP COLUMN IF EXISTS bucket_id;
+ALTER TABLE validator_snapshots DROP COLUMN IF EXISTS bucket_id;
 -- +goose StatementEnd

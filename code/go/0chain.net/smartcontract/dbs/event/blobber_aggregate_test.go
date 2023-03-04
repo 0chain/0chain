@@ -94,16 +94,19 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		})
 
 		var (
-			expectedBucketId       = updateRound % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
+			expectedBucketId       int64
 			initialSnapshot        = Snapshot{ Round: 5 }
 			blobberIds             = createBlobbers(t, eventDb, 5, expectedBucketId)
 			blobbersBefore   	   []Blobber
 			blobbersAfter          []Blobber
-			blobberSnapshotsBefore []BlobberSnapshot
+			blobberSnapshots 	   []BlobberSnapshot
 			expectedAggregates     []BlobberAggregate
 			expectedSnapshots      []BlobberSnapshot
 			err                    error
 		)
+		expectedBucketId = 5 % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
+		err = eventDb.Store.Get().Model(&Snapshot{}).Create(&initialSnapshot).Error
+		require.NoError(t, err)
 
 		// Initial blobbers table image + force bucket_id for blobbers in bucket
 		err = eventDb.Get().Model(&Blobber{}).Where("id IN ?", blobberIds).Find(&blobbersBefore).Error
@@ -111,19 +114,24 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		blobbersInBucket := []string{ blobbersBefore[0].ID, blobbersBefore[1].ID, blobbersBefore[2].ID }
 		err = eventDb.Store.Get().Model(&Blobber{}).Where("id IN ?", blobbersInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
+		err = eventDb.Store.Get().Model(&Blobber{}).Where("id NOT IN ?", blobbersInBucket).Update("bucket_id", expectedBucketId + 1).Error
+		require.NoError(t, err)
 		err = eventDb.Get().Model(&Blobber{}).Where("id IN ?", blobberIds).Find(&blobbersBefore).Error
 		require.NoError(t, err)
-		err = eventDb.Get().Model(&BlobberSnapshot{}).Find(&blobberSnapshotsBefore).Error
+		err = eventDb.Get().Model(&BlobberSnapshot{}).Find(&blobberSnapshots).Error
 		require.NoError(t, err)
 
-		expectedAggregates, expectedSnapshots = calculateAggregatesAndSnapshots(5, blobbersBefore, blobberSnapshotsBefore)
+		expectedAggregates, expectedSnapshots = calculateBlobberAggregatesAndSnapshots(5, expectedBucketId, blobbersBefore, blobberSnapshots)
 
 		// Initial run. Should register snapshots and aggregates of blobbers in bucket
-		eventDb.updateBlobberAggregate(updateRound, 10, &initialSnapshot)
+		eventDb.updateBlobberAggregate(5, 10, &initialSnapshot)
+		eventDb.Store.Get().Exec("DROP TABLE IF EXISTS temp_ids")
+		eventDb.Store.Get().Exec("DROP TABLE IF EXISTS old_temp_ids")
 		assertBlobberAggregateAndSnapshots(t, eventDb, 5, expectedAggregates, expectedSnapshots)
-		assertGlobalSnapshot(t, eventDb, 5, expectedBucketId, blobbersBefore)
+		assertBlobberGlobalSnapshot(t, eventDb, 5, expectedBucketId, blobbersBefore, &initialSnapshot)
 
 		// Add a new blobber
+		expectedBucketId = updateRound % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 		newBlobber := Blobber{
 			Provider:  Provider{
 				ID:        "new-blobber",
@@ -143,7 +151,9 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 			ChallengesPassed: 100,
 			ChallengesCompleted: 100,
 		}
-		err = eventDb.Store.Get().Create(&newBlobber).Error
+		err = eventDb.Store.Get().Omit(clause.Associations).Create(&newBlobber).Error
+		require.NoError(t, err)
+		err = eventDb.Store.Get().Model(&Blobber{}).Where("id", newBlobber.ID).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
 
 		// Update an existing blobber
@@ -166,24 +176,30 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update this blobber's rewards
-		err = eventDb.Store.Get().Model(&ProviderRewards{}).Where("provider_id IN ?", blobberIds).UpdateColumn("total_rewards", gorm.Expr("total_rewards * ?", 2)).Error
+		err = eventDb.Store.Get().Model(&ProviderRewards{}).Where("provider_id", blobbersInBucket[0]).UpdateColumn("total_rewards", gorm.Expr("total_rewards * ?", 2)).Error
 		require.NoError(t, err)
 
 		// Delete 2 blobbers
-		err = eventDb.Store.Get().Model(&Blobber{}).Where("id IN ?", blobbersInBucket[1:]).Delete(&Blobber{}).Error
+		err = eventDb.Store.Get().Model(&Blobber{}).Where("id IN (?)", blobbersInBucket[1:]).Delete(&Blobber{}).Error
 		require.NoError(t, err)
 
-		// Get blobbers after update
-		err = eventDb.Get().Model(&Blobber{}).Where("id IN ?", blobberIds).Find(&blobbersAfter).Error
+		// Get blobbers and snapshots after update
+		err = eventDb.Get().Model(&Blobber{}).Find(&blobbersAfter).Error
 		require.NoError(t, err)
 		require.Equal(t, 4, len(blobbersAfter)) // 5 + 1 - 2
+		err = eventDb.Get().Model(&BlobberSnapshot{}).Find(&blobberSnapshots).Error
+		require.NoError(t, err)
 
 		// Check the added blobber is there
-		require.Contains(t, blobbersAfter, newBlobber.ID)
+		actualIds := make([]string, 0, len(blobbersAfter))
+		for _, b := range blobbersAfter {
+			actualIds = append(actualIds, b.ID)
+		}
+		require.Contains(t, actualIds, newBlobber.ID)
 
 		// Check the deleted blobbers are not there
-		require.NotContains(t,blobbersAfter, blobbersInBucket[1])
-		require.NotContains(t,blobbersAfter, blobbersInBucket[2])
+		require.NotContains(t, actualIds, blobbersInBucket[1])
+		require.NotContains(t, actualIds, blobbersInBucket[2])
 
 		// Check the updated blobber is updated
 		var (
@@ -217,12 +233,17 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		require.Equal(t, oldBlobber.ChallengesCompleted*2, curBlobber.ChallengesCompleted)
 		require.Equal(t, oldBlobber.Rewards.TotalRewards*2, curBlobber.Rewards.TotalRewards)
 
+		for _, b := range blobbersAfter {
+			t.Logf("actualBlobber %v => bucketId %v", b.ID, b.BucketId)
+		}
+
 		// Check generated snapshots/aggregates
+		expectedAggregates, expectedSnapshots = calculateBlobberAggregatesAndSnapshots(updateRound, expectedBucketId, blobbersAfter, blobberSnapshots)
 		eventDb.updateBlobberAggregate(updateRound, 10, &initialSnapshot)
 		assertBlobberAggregateAndSnapshots(t, eventDb, updateRound, expectedAggregates, expectedSnapshots)
 
 		// Check global snapshot changes
-		assertGlobalSnapshot(t, eventDb, updateRound, expectedBucketId, blobbersAfter)
+		assertBlobberGlobalSnapshot(t, eventDb, updateRound, expectedBucketId, blobbersAfter, &initialSnapshot)
 	})
 }
 
@@ -255,7 +276,6 @@ func createBlobbers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, s
 	}
 
 	q := eventDb.Store.Get().Omit(clause.Associations).Create(&blobbers)
-	t.Logf("creation query: %v", q.Statement.SQL.String())
 	require.NoError(t, q.Error)
 	return ids
 }
@@ -276,6 +296,7 @@ func snapshotCurrentBlobbers(t *testing.T, edb *EventDb) {
 func blobberToSnapshot(blobber *Blobber) BlobberSnapshot {
 	snapshot := BlobberSnapshot{
 		BlobberID:           blobber.ID,
+		BucketId: 			 blobber.BucketId,
 		WritePrice:          blobber.WritePrice,
 		Capacity:            blobber.Capacity,
 		Allocated:           blobber.Allocated,
@@ -294,11 +315,14 @@ func blobberToSnapshot(blobber *Blobber) BlobberSnapshot {
 	return snapshot
 }
 
-func calculateAggregatesAndSnapshots(round int64, curBlobbers []Blobber, oldBlobbers []BlobberSnapshot) ([]BlobberAggregate, []BlobberSnapshot) {
+func calculateBlobberAggregatesAndSnapshots(round, expectedBucketId int64, curBlobbers []Blobber, oldBlobbers []BlobberSnapshot) ([]BlobberAggregate, []BlobberSnapshot) {
 	snapshots := make([]BlobberSnapshot, 0, len(curBlobbers))
 	aggregates := make([]BlobberAggregate, 0, len(curBlobbers))
 
 	for _, curBlobber := range curBlobbers {
+		if curBlobber.BucketId != expectedBucketId {
+			continue
+		}
 		var oldBlobber *BlobberSnapshot
 		for _, old := range oldBlobbers {
 			if old.BlobberID == curBlobber.ID {
@@ -313,14 +337,14 @@ func calculateAggregatesAndSnapshots(round int64, curBlobbers []Blobber, oldBlob
 			}
 		}
 
-		aggregates = append(aggregates, calculateAggregate(round, &curBlobber, oldBlobber))
+		aggregates = append(aggregates, calculateBlobberAggregate(round, &curBlobber, oldBlobber))
 		snapshots = append(snapshots, blobberToSnapshot(&curBlobber))
 	}
 
 	return aggregates, snapshots
 }
 
-func calculateAggregate(round int64, current *Blobber, old *BlobberSnapshot) BlobberAggregate {
+func calculateBlobberAggregate(round int64, current *Blobber, old *BlobberSnapshot) BlobberAggregate {
 	aggregate := BlobberAggregate{
 		Round:     round,
 		BlobberID: current.ID,
@@ -338,7 +362,6 @@ func calculateAggregate(round int64, current *Blobber, old *BlobberSnapshot) Blo
 	aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
 	aggregate.Downtime = current.Downtime
 	aggregate.RankMetric = current.RankMetric
-
 	aggregate.ChallengesPassed = current.ChallengesPassed
 	aggregate.ChallengesCompleted = current.ChallengesCompleted
 	return aggregate
@@ -357,7 +380,7 @@ func assertBlobberAggregateAndSnapshots(t *testing.T, edb *EventDb, round int64,
 				break
 			}
 		}
-		assert.Equal(t, expected, actualAggregate)
+		assertBlobberAggregate(t, &expected, &actualAggregate)
 	}
 
 	var snapshots []BlobberSnapshot
@@ -372,14 +395,57 @@ func assertBlobberAggregateAndSnapshots(t *testing.T, edb *EventDb, round int64,
 				break
 			}
 		}
-		assert.Equal(t, expected, actualSnapshot)
+		assertBlobberSnapshot(t, &expected, &actualSnapshot)
 	}
 }
 
-func assertGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId int64, actualBlobbers []Blobber) {
+func assertBlobberAggregate(t *testing.T, expected, actual *BlobberAggregate) {
+	require.Equal(t, expected.Round, actual.Round)
+	require.Equal(t, expected.BlobberID, actual.BlobberID)
+	require.Equal(t, expected.BucketID, actual.BucketID)
+	require.Equal(t, expected.WritePrice, actual.WritePrice)
+	require.Equal(t, expected.Capacity, actual.Capacity)
+	require.Equal(t, expected.Allocated, actual.Allocated)
+	require.Equal(t, expected.SavedData, actual.SavedData)
+	require.Equal(t, expected.ReadData, actual.ReadData)
+	require.Equal(t, expected.TotalStake, actual.TotalStake)
+	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
+	require.Equal(t, expected.OffersTotal, actual.OffersTotal)
+	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
+	require.Equal(t, expected.OpenChallenges, actual.OpenChallenges)
+	require.Equal(t, expected.ChallengesPassed, actual.ChallengesPassed)
+	require.Equal(t, expected.ChallengesCompleted, actual.ChallengesCompleted)
+	require.Equal(t, expected.Downtime, actual.Downtime)
+	require.Equal(t, expected.RankMetric, actual.RankMetric)
+	require.Equal(t, expected.ChallengesPassed, actual.ChallengesPassed)
+	require.Equal(t, expected.ChallengesCompleted, actual.ChallengesCompleted)
+}
+
+func assertBlobberSnapshot(t *testing.T, expected, actual *BlobberSnapshot) {
+	require.Equal(t, expected.BlobberID, actual.BlobberID)
+	require.Equal(t, expected.BucketId, actual.BucketId)
+	require.Equal(t, expected.WritePrice, actual.WritePrice)
+	require.Equal(t, expected.Capacity, actual.Capacity)
+	require.Equal(t, expected.Allocated, actual.Allocated)
+	require.Equal(t, expected.SavedData, actual.SavedData)
+	require.Equal(t, expected.ReadData, actual.ReadData)
+	require.Equal(t, expected.OffersTotal, actual.OffersTotal)
+	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
+	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
+	require.Equal(t, expected.TotalStake, actual.TotalStake)
+	require.Equal(t, expected.ChallengesPassed, actual.ChallengesPassed)
+	require.Equal(t, expected.ChallengesCompleted, actual.ChallengesCompleted)
+	require.Equal(t, expected.OpenChallenges, actual.OpenChallenges)
+	require.Equal(t, expected.CreationRound, actual.CreationRound)
+	require.Equal(t, expected.RankMetric, actual.RankMetric)
+}
+
+func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId int64, actualBlobbers []Blobber, actualSnapshot *Snapshot) {
 	const GB = int64(1024 * 1024 * 1024)
-	actualSnapshot, err := edb.GetGlobal()
-	require.NoError(t, err)
+
+	for _, b := range actualBlobbers {
+		t.Logf("actualBlobber %v => bucketId %v", b.ID, b.BucketId)
+	}
 
 	expectedGlobal := Snapshot{ Round: round }
 	for _, blobber := range actualBlobbers {
@@ -400,7 +466,17 @@ func assertGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId in
 		expectedGlobal.StakedStorage += ss
 		expectedGlobal.BlobberCount += 1
 	}
-	expectedGlobal.StakedStorage *= GB
+	if expectedGlobal.StakedStorage > expectedGlobal.MaxCapacityStorage {
+		expectedGlobal.StakedStorage = expectedGlobal.MaxCapacityStorage
+	}
 
-	assert.Equal(t, expectedGlobal, actualSnapshot)
+	assert.Equal(t, expectedGlobal.SuccessfulChallenges, actualSnapshot.SuccessfulChallenges)
+	assert.Equal(t, expectedGlobal.TotalChallenges, actualSnapshot.TotalChallenges)
+	assert.Equal(t, expectedGlobal.AllocatedStorage, actualSnapshot.AllocatedStorage)
+	assert.Equal(t, expectedGlobal.MaxCapacityStorage, actualSnapshot.MaxCapacityStorage)
+	assert.Equal(t, expectedGlobal.UsedStorage, actualSnapshot.UsedStorage)
+	assert.Equal(t, expectedGlobal.TotalRewards, actualSnapshot.TotalRewards)
+	assert.Equal(t, expectedGlobal.TotalWritePrice, actualSnapshot.TotalWritePrice)
+	assert.Equal(t, expectedGlobal.StakedStorage, actualSnapshot.StakedStorage)
+	assert.Equal(t, expectedGlobal.BlobberCount, actualSnapshot.BlobberCount)	
 }

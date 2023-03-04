@@ -44,6 +44,14 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *Snapshot
 		return
 	}
 
+	exec = edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS old_temp_ids "+
+		"ON COMMIT DROP AS SELECT blobber_id as id FROM blobber_snapshots where bucket_id = ?",
+		currentBucket)
+	if exec.Error != nil {
+		logging.Logger.Error("error creating old temp table", zap.Error(exec.Error))
+		return
+	}
+
 	var count int64
 	r := edb.Store.Get().Raw("SELECT count(*) FROM temp_ids").Scan(&count)
 	if r.Error != nil {
@@ -55,6 +63,7 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *Snapshot
 	}
 	pageCount := count / edb.PageLimit()
 
+	logging.Logger.Debug("blobber aggregate/snapshot started", zap.Int64("round", round), zap.Int64("bucket_id", currentBucket), zap.Int64("page_limit", edb.PageLimit()))
 	for i := int64(0); i <= pageCount; i++ {
 		edb.calculateBlobberAggregate(gs, round, edb.PageLimit(), i*edb.PageLimit())
 	}
@@ -85,7 +94,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
 	}
-	logging.Logger.Debug("getting blobber aggregate ids", zap.Int("num", len(ids)))
 
 	var currentBlobbers []Blobber
 	result := edb.Store.Get().Model(&Blobber{}).
@@ -97,34 +105,28 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		logging.Logger.Error("getting current blobbers", zap.Error(result.Error))
 		return
 	}
-	logging.Logger.Debug("blobber_snapshot", zap.Int("total_current_blobbers", len(currentBlobbers)))
 
 	oldBlobbers, err := edb.getBlobberSnapshots(limit, offset)
 	if err != nil {
 		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
 		return
 	}
-	logging.Logger.Debug("blobber_snapshot", zap.Int("total_old_blobbers", len(oldBlobbers)))
-
-	oldBlobbersProcessingMap, err := MakeProcessingMap(oldBlobbers) 
-	if err != nil {
-		logging.Logger.Error("creating oldBlobbersProcessingMap", zap.Error(err))
-		return
-	}
 	
 	var (
+		oldBlobbersProcessingMap = MakeProcessingMap(oldBlobbers) 
 		aggregates []BlobberAggregate
 		gsDiff	   Snapshot
 		old BlobberSnapshot
 		ok bool
 	)
+
 	for _, current := range currentBlobbers {
 		processingEntity, found := oldBlobbersProcessingMap[current.ID]
-		processingEntity.Processed = true
 		if !found {
 			old = BlobberSnapshot{ /* zero values */ }
 			gsDiff.BlobberCount += 1
 		} else {
+			processingEntity.Processed = true
 			old, ok = processingEntity.Entity.(BlobberSnapshot)
 			if !ok {
 				logging.Logger.Error("error converting processable entity to blobber snapshot")
@@ -181,11 +183,11 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 
 		oldBlobbersProcessingMap[current.ID] = processingEntity
 	}
-
+	
 	// Decrease global snapshot and blobber_snapshots based on deleted blobbers
 	var snapshotIdsToDelete []string
 	for _, processingEntity := range oldBlobbersProcessingMap {
-		if processingEntity.Processed {
+		if processingEntity.Entity == nil || processingEntity.Processed {
 			continue
 		}
 		old, ok = processingEntity.Entity.(BlobberSnapshot)
@@ -213,12 +215,12 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 			gsDiff.StakedStorage += -ss
 		}
 	}
+
 	if len(snapshotIdsToDelete) > 0 {
 		if result := edb.Store.Get().Where("blobber_id IN (?)", snapshotIdsToDelete).Delete(&BlobberSnapshot{}); result.Error != nil {
 			logging.Logger.Error("deleting blobber snapshots", zap.Error(result.Error))
 		}
 	}
-	
 	gs.ApplyDiff(&gsDiff)
 
 	if len(aggregates) > 0 {
@@ -226,7 +228,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
 		}
 	}
-	logging.Logger.Debug("blobber_snapshot", zap.Int("aggregates", len(aggregates)))
 
 	if len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
@@ -234,5 +235,11 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		}
 	}
 
-	logging.Logger.Debug("blobber_snapshot", zap.Int("current_blobebrs", len(currentBlobbers)))
+	logging.Logger.Debug("blobber aggregate/snapshots finished successfully",
+		zap.Int("current_blobbers", len(currentBlobbers)),
+		zap.Int("old_blobbers", len(oldBlobbers)),
+		zap.Int("aggregates", len(aggregates)),
+		zap.Int("deleted_snapshots", len(snapshotIdsToDelete)),
+		zap.Any("global_snapshot_after", gs),
+	)
 }

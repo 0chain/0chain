@@ -2,7 +2,6 @@ package event
 
 import (
 	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
 
@@ -284,15 +283,11 @@ type ProcessingEntity struct {
 	Processed bool
 }
 
-// MakeProcessingMap creates a map of ProcessingEntity from map[string]interface{}. Should fail if parameter is not castable to map[string]interface{}
-func MakeProcessingMap(val interface{}) (map[string]ProcessingEntity, error) {
-	mapIn, ok := val.(map[string]interface{})
-	if !ok {
-		return nil, common.NewError("invalid_processing_map", "val is not castable to map[string]interface{}")
-	}
+// MakeProcessingMap wraps map entries into a struct with "Processed" boolean flag
+func MakeProcessingMap[T any](mapIn map[string]T) (map[string]ProcessingEntity) {
 	mpOut := make(map[string]ProcessingEntity)
 	for k, v := range mapIn {
 		mpOut[k] = ProcessingEntity{Entity: v, Processed: false}
 	}
-	return mpOut, nil
+	return mpOut
 }
