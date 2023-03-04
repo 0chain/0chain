@@ -163,15 +163,31 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 
 	logging.Logger.Debug("user_aggregate_ids", zap.Strings("ids", idlist))
 
-	result := edb.Store.Get().
-		Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
+	switch len(idlist) {
+	case 0:
+		return mappedAggrs, nil
+	case 1:
+		result := edb.Store.Get().
+			Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
+	FROM user_aggregates 
+	WHERE user_id = ?
+	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, idlist[0]).
+			Scan(&ua)
+		if result.Error != nil {
+			logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
+			return nil, result.Error
+		}
+	default:
+		result := edb.Store.Get().
+			Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
 	FROM user_aggregates 
 	WHERE user_id IN (SELECT unnest(?::text[]))
 	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, idlist).
-		Scan(&ua)
-	if result.Error != nil {
-		logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
-		return nil, result.Error
+			Scan(&ua)
+		if result.Error != nil {
+			logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
+			return nil, result.Error
+		}
 	}
 
 	for _, aggr := range ua {
