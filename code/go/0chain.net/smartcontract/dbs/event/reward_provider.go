@@ -73,7 +73,7 @@ func (edb *EventDb) GetChallengeRewardsByChallengeID(challengeID string) []Rewar
 func (edb *EventDb) GetChallengeRewardsByProviderID(providerID string) []RewardProvider {
 
 	var rps []RewardProvider
-	edb.Get().Where("provider_id = ? AND reward_type IN (6, 8, 9)", providerID).Find(&rps)
+	edb.Get().Where("provider_id = ? AND reward_type IN (0, 6, 8, 9, 10)", providerID).Find(&rps)
 
 	return rps
 }
@@ -81,7 +81,7 @@ func (edb *EventDb) GetChallengeRewardsByProviderID(providerID string) []RewardP
 func (edb *EventDb) GetAllChallengeRewards() []RewardProvider {
 
 	var rps []RewardProvider
-	edb.Get().Where("reward_type IN (6, 8, 9)").Find(&rps)
+	edb.Get().Where("reward_type IN (0, 6, 8, 9, 10)").Find(&rps)
 
 	return rps
 }
