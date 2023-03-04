@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/0chain/common/core/logging"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -29,6 +30,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		for _, rpl := range *rpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
+				Round:         event.BlockNumber,
 				UserID:        rpl.Client,
 				ReadPoolTotal: rpl.Amount,
 			})
@@ -45,6 +47,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		for _, rpl := range *rpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
+				Round:         event.BlockNumber,
 				UserID:        rpl.Client,
 				ReadPoolTotal: -rpl.Amount,
 			})
@@ -61,6 +64,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		for _, wpl := range *wpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
+				Round:          event.BlockNumber,
 				UserID:         wpl.Client,
 				WritePoolTotal: wpl.Amount,
 			})
@@ -77,6 +81,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		for _, wpl := range *wpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
+				Round:          event.BlockNumber,
 				UserID:         wpl.Client,
 				WritePoolTotal: -wpl.Amount,
 			})
@@ -93,6 +98,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		for _, dpl := range *dpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
+				Round:      event.BlockNumber,
 				UserID:     dpl.Client,
 				TotalStake: dpl.Amount,
 			})
@@ -109,6 +115,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		for _, dpl := range *dpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
+				Round:      event.BlockNumber,
 				UserID:     dpl.Client,
 				TotalStake: -dpl.Amount,
 			})
@@ -125,6 +132,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		for _, u := range *users {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
+				Round:     event.BlockNumber,
 				UserID:    u.UserID,
 				PayedFees: u.PayedFees,
 			})
@@ -140,6 +148,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		for _, u := range *users {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
+				Round:           event.BlockNumber,
 				UserID:          u.UserID,
 				CollectedReward: u.CollectedReward,
 			})
@@ -157,34 +166,19 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 		idlist = append(idlist, id)
 	}
 
-	logging.Logger.Debug("user_aggregate_ids", zap.Strings("ids", idlist))
-
-	switch len(idlist) {
-	case 0:
+	if len(idlist) == 0 {
 		logging.Logger.Info("empty aggregates list")
 		return mappedAggrs, nil
-	case 1:
-		result := edb.Store.Get().
-			Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
-	FROM user_aggregates 
-	WHERE user_id = ?
-	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, idlist[0]).
-			Scan(&ua)
-		if result.Error != nil {
-			logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
-			return nil, result.Error
-		}
-	default:
-		result := edb.Store.Get().
-			Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
+	}
+	result := edb.Store.Get().
+		Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
 	FROM user_aggregates 
 	WHERE user_id IN (SELECT unnest(?::text[]))
-	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, idlist).
-			Scan(&ua)
-		if result.Error != nil {
-			logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
-			return nil, result.Error
-		}
+	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, pq.Array(idlist)).
+		Scan(&ua)
+	if result.Error != nil {
+		logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
+		return nil, result.Error
 	}
 
 	for _, aggr := range ua {
@@ -199,16 +193,12 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 	for _, ev := range e.events {
 		if h := handlers[ev.Tag]; h != nil {
 			aggrs := h(ev)
-			for _, agg := range aggrs {
-				logging.Logger.Debug("user_aggregate_id", zap.Any("aggr", agg))
-			}
 			updatedAggrs = append(updatedAggrs, aggrs...)
 		}
 	}
 
 	ids := make(map[string]interface{})
 	for _, aggr := range updatedAggrs {
-		logging.Logger.Debug("user_aggregate_id", zap.String("id", aggr.UserID))
 		ids[aggr.UserID] = struct{}{}
 	}
 
@@ -219,12 +209,13 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 	}
 
 	for _, aggr := range updatedAggrs {
-		a, ok := latest[aggr.UserID]
+		u := aggr
+		a, ok := latest[u.UserID]
 		if !ok {
-			latest[aggr.UserID] = &aggr
+			latest[u.UserID] = &u
 			continue
 		}
-		merge(a, &aggr)
+		merge(a, &u)
 	}
 
 	err = edb.addUserAggregates(latest)
