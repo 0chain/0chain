@@ -1283,6 +1283,7 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 		ServiceCharge:            v.ServiceCharge,
 		UncollectedServiceCharge: v.Rewards.Rewards,
 		TotalServiceCharge:       v.Rewards.TotalRewards,
+		LastHealthCheck:          v.LastHealthCheck,
 	}
 }
 
