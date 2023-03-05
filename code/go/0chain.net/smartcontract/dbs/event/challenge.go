@@ -28,6 +28,12 @@ type Challenge struct {
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 }
 
+func (edb *EventDb) GetAllChallenges() (Challenges, error) {
+	var chs Challenges
+	result := edb.Store.Get().Model(&Challenge{}).Find(&chs)
+	return chs, result.Error
+}
+
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	var ch Challenge
 
@@ -81,7 +87,7 @@ func (edb *EventDb) updateChallenges(chs []Challenge) error {
 	var (
 		challengeIdList []string
 		respondedList   []bool
-		passedList   	[]bool
+		passedList      []bool
 	)
 
 	for _, ch := range chs {

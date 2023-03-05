@@ -95,6 +95,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
 		rest.MakeEndpoint(storage+"/reward-providers", srh.rewardProviders),
+		rest.MakeEndpoint(storage+"/all-challenges", srh.getAllChallenges),
 	}
 }
 
@@ -3008,4 +3009,16 @@ func (srh *StorageRestHandler) rewardProviders(w http.ResponseWriter, r *http.Re
 
 	// return the list of reward providers
 	common.Respond(w, r, result, nil)
+}
+
+func (srh *StorageRestHandler) getAllChallenges(w http.ResponseWriter, r *http.Request) {
+	// read all data from challenges table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	challenges, _ := edb.GetAllChallenges()
+	common.Respond(w, r, challenges, nil)
 }
