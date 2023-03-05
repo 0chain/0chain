@@ -28,6 +28,13 @@ type Challenge struct {
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 }
 
+func (edb *EventDb) CleanDataFromChallengesAndRewardProviders() error {
+	if err := edb.Store.Get().Unscoped().Delete(&Challenge{}).Error; err != nil {
+		return err
+	}
+	return edb.Store.Get().Unscoped().Delete(&RewardProvider{}).Error
+}
+
 func (edb *EventDb) GetAllChallenges() (Challenges, error) {
 	var chs Challenges
 	result := edb.Store.Get().Model(&Challenge{}).Find(&chs)
