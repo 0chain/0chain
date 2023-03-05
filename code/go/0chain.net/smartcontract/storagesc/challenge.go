@@ -461,6 +461,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	logging.Logger.Info("time_taken: receive challenge response",
 		zap.String("challenge_id", challenge.ID),
+		zap.String("blobber", t.ClientID),
 		zap.Duration("delay", time.Since(common.ToTime(challenge.Created))))
 
 	result, err := verifyChallengeTickets(balances, t, challenge, &challResp)
