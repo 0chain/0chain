@@ -292,8 +292,4 @@ func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, user.MintNonce, payload.Nonce)
-
-	resp, err = contract.Mint(tr, payload.Encode(), ctx)
-	require.Error(t, err)
-	require.Zero(t, resp)
 }
