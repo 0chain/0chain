@@ -39,6 +39,12 @@ func (sc *StorageSmartContract) completeChallenge(cab *challengeAllocBlobberPass
 
 	// update to latest challenge
 	cab.blobAlloc.LatestCompletedChallenge = cab.challenge
+	logging.Logger.Debug("complete challenge",
+		zap.String("challenge", cab.challenge.ID),
+		zap.String("blobber", cab.challenge.BlobberID),
+		zap.String("alloc", cab.challenge.AllocationID),
+		zap.Any("created", cab.challenge.Created),
+	)
 	return true
 }
 
@@ -89,6 +95,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	if challengeCompletedTime < latestCompletedChallTime {
 		logging.Logger.Debug("old challenge response - blobber reward",
+			zap.String("challenge", blobAlloc.LatestCompletedChallenge.BlobberID),
+			zap.String("blobber", blobAlloc.LatestCompletedChallenge.BlobberID),
+			zap.String("alloc", blobAlloc.LatestCompletedChallenge.AllocationID),
 			zap.Int64("latestCompletedChallTime", int64(latestCompletedChallTime)),
 			zap.Int64("challenge time", int64(challengeCompletedTime)))
 		return errors.New("old challenge response on blobber rewarding")
@@ -462,6 +471,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	logging.Logger.Info("time_taken: receive challenge response",
 		zap.String("challenge_id", challenge.ID),
 		zap.String("blobber", t.ClientID),
+		zap.String("alloc", challenge.AllocationID),
+		zap.Any("created_at", challenge.Created),
 		zap.Duration("delay", time.Since(common.ToTime(challenge.Created))))
 
 	result, err := verifyChallengeTickets(balances, t, challenge, &challResp)
