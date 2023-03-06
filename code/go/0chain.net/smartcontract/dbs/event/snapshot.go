@@ -28,13 +28,13 @@ type Snapshot struct {
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
 	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
 	// updated from blobber snapshot aggregate table
-	TotalWritePrice    	 int64 `json:"total_write_price"`                // Total write price of all blobbers
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
 	TotalRewards         int64 `json:"total_rewards"`                    //SUM total of all rewards
 	SuccessfulChallenges int64 `json:"successful_challenges"`            //*493 SUM percentage of challenges failed by a particular blobber
 	TotalChallenges      int64 `json:"total_challenges"`                 //*493 SUM percentage of challenges failed by a particular blobber
 	AllocatedStorage     int64 `json:"allocated_storage"`                //*490 SUM clients have locked up storage by purchasing allocations (new + previous + update -sub fin+cancel or reduceed)
 	MaxCapacityStorage   int64 `json:"max_capacity_storage"`             //*491 SUM all storage from blobber settings
+	BlobbersStake        int64 `json:"blobbers_stake"`                   // Total staked tokens for all the blobbers. Important for calculating Average Write Price (= BlobbersStake / StakedStorage)
 	StakedStorage        int64 `json:"staked_storage"`                   //*491 SUM staked capacity by delegates
 	UsedStorage          int64 `json:"used_storage"`                     //*491 SUM this is the actual usage or data that is in the server - write markers (triggers challenge pool / the price).(bytes written used capacity)
 	TransactionsCount    int64 `json:"transactions_count"`               // Total number of transactions in a block
@@ -70,7 +70,7 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.UniqueAddresses += diff.UniqueAddresses
 	s.BlockCount += diff.BlockCount
 	s.TotalTxnFee += diff.TotalTxnFee
-	s.TotalWritePrice += diff.TotalWritePrice
+	s.BlobbersStake += diff.BlobbersStake
 	s.BlobberCount += diff.BlobberCount
 	s.MinerCount += diff.MinerCount
 	s.SharderCount += diff.SharderCount

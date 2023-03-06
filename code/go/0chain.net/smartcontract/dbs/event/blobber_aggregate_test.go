@@ -458,7 +458,7 @@ func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBuck
 		expectedGlobal.MaxCapacityStorage += blobber.Capacity
 		expectedGlobal.UsedStorage += blobber.SavedData
 		expectedGlobal.TotalRewards += int64(blobber.Rewards.TotalRewards)
-		expectedGlobal.TotalWritePrice += int64(blobber.WritePrice)
+		expectedGlobal.BlobbersStake += int64(blobber.TotalStake)
 		ss := blobber.Capacity
 		if blobber.WritePrice > 0 {
 			ss = int64(blobber.TotalStake / blobber.WritePrice) * GB
@@ -476,7 +476,7 @@ func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBuck
 	assert.Equal(t, expectedGlobal.MaxCapacityStorage, actualSnapshot.MaxCapacityStorage)
 	assert.Equal(t, expectedGlobal.UsedStorage, actualSnapshot.UsedStorage)
 	assert.Equal(t, expectedGlobal.TotalRewards, actualSnapshot.TotalRewards)
-	assert.Equal(t, expectedGlobal.TotalWritePrice, actualSnapshot.TotalWritePrice)
+	assert.Equal(t, expectedGlobal.BlobbersStake, actualSnapshot.BlobbersStake)
 	assert.Equal(t, expectedGlobal.StakedStorage, actualSnapshot.StakedStorage)
 	assert.Equal(t, expectedGlobal.BlobberCount, actualSnapshot.BlobberCount)	
 }
