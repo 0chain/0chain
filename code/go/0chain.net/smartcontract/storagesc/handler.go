@@ -3020,7 +3020,9 @@ func (srh *StorageRestHandler) getAllChallenges(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	challenges, _ := edb.GetAllChallenges()
+	allocationID := r.URL.Query().Get("allocation_id")
+
+	challenges, _ := edb.GetAllChallengesByAllocationID(allocationID)
 	common.Respond(w, r, challenges, nil)
 }
 
@@ -3032,6 +3034,9 @@ func (srh *StorageRestHandler) cleanDataFromChallengesAndRewardProviders(w http.
 		return
 	}
 
-	edb.CleanDataFromChallengesAndRewardProviders()
+	err := edb.CleanDataFromChallengesAndRewardProviders()
+	if err != nil {
+		return
+	}
 	common.Respond(w, r, nil, nil)
 }

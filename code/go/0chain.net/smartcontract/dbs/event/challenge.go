@@ -35,9 +35,9 @@ func (edb *EventDb) CleanDataFromChallengesAndRewardProviders() error {
 	return edb.Store.Get().Delete(&RewardProvider{}).Error
 }
 
-func (edb *EventDb) GetAllChallenges() (Challenges, error) {
+func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challenges, error) {
 	var chs Challenges
-	result := edb.Store.Get().Model(&Challenge{}).Find(&chs)
+	result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{AllocationID: allocationID}).Find(&chs)
 	return chs, result.Error
 }
 
