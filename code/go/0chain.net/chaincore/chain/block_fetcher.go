@@ -376,35 +376,10 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 	}
 
 	sharders := mb.Sharders
-	blockC := make(chan *block.Block, 1)
+	blockC := make(chan *block.Block, sharders.Size())
 
 	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel()
-
-	var handler = func(ctx context.Context, entity datastore.Entity) (resp interface{}, err error) {
-		var gfb, ok = entity.(*block.Block)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-
-		if ticket.LFBHash != "" && gfb.ComputeHash() != ticket.LFBHash {
-			logging.Logger.Error("fetch_fb_from_sharders - wrong block hash",
-				zap.Int64("round", gfb.Round), zap.String("block", gfb.Hash))
-			return nil, common.NewError("fetch_fb_from_sharders",
-				"wrong block hash")
-		}
-
-		logging.Logger.Error("fetch_fb_from_sharders - got block",
-			zap.String("block", gfb.Hash),
-			zap.Int64("round", gfb.Round))
-
-		select {
-		case blockC <- gfb:
-		case <-ctx.Done():
-		}
-
-		return // (nil, nil)
-	}
 
 	params := make(url.Values)
 	params.Add("hash", ticket.LFBHash)
@@ -414,7 +389,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 	// try to fetch from all other sharders from the current MB
 	if node.Self.Underlying().GetKey() != ticket.SharderID {
 		if sh := sharders.GetNode(ticket.SharderID); sh != nil {
-			sh.RequestEntityFromNode(lctx, FBRequestor, &params, handler)
+			sh.RequestEntityFromNode(lctx, FBRequestor, &params, fbHandlerFunc(blockC, ticket))
 			select {
 			case fb = <-blockC:
 				return c.validateBlock(ctx, fb)
@@ -432,7 +407,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 		)
 
 		go func() {
-			node.RequestEntityFromNodes(lctx, nds, FBRequestor, &params, handler)
+			node.RequestEntityFromNodes(lctx, nds, FBRequestor, &params, fbHandlerFunc(blockC, ticket))
 			close(blockC)
 			close(doneC)
 		}()
@@ -455,7 +430,6 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 			// stop requesting on first block accepted
 			cancel()
 			<-doneC
-
 			return b, nil
 		}
 	}
@@ -505,6 +479,29 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 		}
 	}
 	return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
+}
+
+func fbHandlerFunc(bc chan *block.Block, ticket *LFBTicket) datastore.JSONEntityReqResponderF {
+	return func(ctx context.Context, entity datastore.Entity) (resp interface{}, err error) {
+		var gfb, ok = entity.(*block.Block)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+
+		if ticket.LFBHash != "" && gfb.ComputeHash() != ticket.LFBHash {
+			logging.Logger.Error("fetch_fb_from_sharders - wrong block hash",
+				zap.Int64("round", gfb.Round), zap.String("block", gfb.Hash))
+			return nil, common.NewError("fetch_fb_from_sharders",
+				"wrong block hash")
+		}
+
+		select {
+		case bc <- gfb:
+		case <-ctx.Done():
+		}
+
+		return // (nil, nil)
+	}
 }
 
 func (c *Chain) validateBlock(ctx context.Context, b *block.Block) (*block.Block, error) {
