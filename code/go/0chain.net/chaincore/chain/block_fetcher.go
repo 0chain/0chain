@@ -394,6 +394,10 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 				"wrong block hash")
 		}
 
+		logging.Logger.Error("fetch_fb_from_sharders - got block",
+			zap.String("block", gfb.Hash),
+			zap.Int64("round", gfb.Round))
+
 		select {
 		case blockC <- gfb:
 		case <-ctx.Done():
@@ -488,6 +492,16 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 			return b, nil
 		case context.Canceled, context.DeadlineExceeded:
 			return nil, err
+		default:
+			ns := make([]string, len(nodes[start:end]))
+			for i, n := range nodes[start:end] {
+				ns[i] = n.N2NHost
+			}
+			logging.Logger.Error("fetch_fb_from_sharders failed",
+				zap.Int("start", start),
+				zap.Int("end", end),
+				zap.Any("nodes", ns),
+				zap.Error(err))
 		}
 	}
 	return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
