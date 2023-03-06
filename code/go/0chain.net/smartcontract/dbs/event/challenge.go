@@ -29,10 +29,10 @@ type Challenge struct {
 }
 
 func (edb *EventDb) CleanDataFromChallengesAndRewardProviders() error {
-	if err := edb.Store.Get().Unscoped().Delete(&Challenge{}).Error; err != nil {
+	if err := edb.Store.Get().Delete(&Challenge{}).Error; err != nil {
 		return err
 	}
-	return edb.Store.Get().Unscoped().Delete(&RewardProvider{}).Error
+	return edb.Store.Get().Delete(&RewardProvider{}).Error
 }
 
 func (edb *EventDb) GetAllChallenges() (Challenges, error) {
