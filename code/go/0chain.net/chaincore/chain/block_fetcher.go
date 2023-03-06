@@ -376,7 +376,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 	}
 
 	sharders := mb.Sharders
-	blockC := make(chan *block.Block, sharders.Size())
+	blockC := make(chan *block.Block, 1)
 
 	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel()
@@ -422,7 +422,11 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 	fetchFB := func(nds []*node.Node) (*block.Block, error) {
 		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
 		defer cancel()
-		doneC := make(chan struct{})
+		var (
+			doneC  = make(chan struct{})
+			blockC = make(chan *block.Block, len(nds))
+		)
+
 		go func() {
 			node.RequestEntityFromNodes(lctx, nds, FBRequestor, &params, handler)
 			close(blockC)
