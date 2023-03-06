@@ -9,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -245,7 +249,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
-			ID:        blob[i],
+			Provider: provider.Provider{
+				ID:           blob[i],
+				ProviderType: spenum.Blobber,
+			},
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
@@ -426,7 +433,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 			_, err := args.ssc.freeAllocationRequest(args.txn, args.input, args.balances)
 
-			require.EqualValues(t, test.want.err, err != nil, err)
+			if (test.want.err) != (err != nil) {
+				require.EqualValues(t, test.want.err, err != nil, err)
+			}
+
 			if err != nil {
 				require.EqualValues(t, test.want.errMsg, err.Error())
 				return
@@ -473,7 +483,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
-			ID:        strconv.Itoa(i),
+			Provider: provider.Provider{
+				ID:           strconv.Itoa(i),
+				ProviderType: spenum.Blobber,
+			},
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
@@ -559,10 +572,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
-				"GetTrieNode", blobber.GetKey(ssc.ID),
+				"GetTrieNode", blobber.GetKey(),
 				mockSetValue(blobber)).Return(nil).Once()
 			balances.On(
-				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
+				"InsertTrieNode", blobber.GetKey(), mock.Anything,
 			).Return("", nil).Once()
 			sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
 				BlobberID:    blobber.ID,
@@ -621,7 +634,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 		balances.On(
 			"EmitEvent",
-			event.TypeStats, event.TagUpdateAllocationBlobberTerm, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(

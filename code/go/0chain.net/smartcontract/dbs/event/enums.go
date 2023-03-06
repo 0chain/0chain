@@ -22,6 +22,7 @@ const (
 	BlobberTable    ProviderTable = "blobbers"
 	AuthorizerTable ProviderTable = "authorizers"
 	ValidatorTable  ProviderTable = "validators"
+	UserTable       ProviderTable = "users"
 )
 
 func (t EventType) String() string {

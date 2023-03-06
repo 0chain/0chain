@@ -4,7 +4,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
-	"gorm.io/gorm/clause"
 
 	"go.uber.org/zap"
 
@@ -68,22 +67,13 @@ type AllocationBlobberValueChanged struct {
 	Delta        int64
 }
 
-func (edb *EventDb) ReplicateSnapshots(offset int, limit int) ([]Snapshot, error) {
+func (edb *EventDb) ReplicateSnapshots(round int64, limit int) ([]Snapshot, error) {
 	var snapshots []Snapshot
-
-	queryBuilder := edb.Store.Get().
-		Model(&Snapshot{}).Offset(offset).Limit(limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "round"},
-		Desc:   false,
-	})
-
-	result := queryBuilder.Scan(&snapshots)
+	result := edb.Store.Get().
+		Raw("SELECT * FROM snapshots WHERE round > ? ORDER BY round LIMIT ?", round, limit).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-
 	return snapshots, nil
 }
 

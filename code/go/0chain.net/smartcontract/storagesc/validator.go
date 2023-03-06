@@ -3,34 +3,41 @@ package storagesc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/provider"
+
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
-	commonsc "0chain.net/smartcontract/common"
+)
+
+const (
+	validatorHealthTime = 60 * 60 // 1 hour
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
-	newValidator := &ValidationNode{}
+	newValidator := newValidator("")
 	err := newValidator.Decode(input) //json.Unmarshal(input, &newValidator)
 	if err != nil {
 		return "", err
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
+	newValidator.ProviderType = spenum.Validator
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
 		return "", err
 	}
 
-	tmp := &ValidationNode{}
-	err = balances.GetTrieNode(newValidator.GetKey(sc.ID), tmp)
+	_, err = getValidator(t.ClientID, balances)
 	switch err {
 	case nil:
-		sc.statIncr(statUpdateValidator)
+		return "", common.NewError("add_validator_failed",
+			"provider already exist at id:"+t.ClientID)
 	case util.ErrValueNotPresent:
 		validatorPartitions, err := getValidatorsList(balances)
 		if err != nil {
@@ -61,7 +68,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		sc.statIncr(statNumberOfValidators)
 	default:
 		return "", common.NewError("add_validator_failed",
-			"Failed to get validator."+err.Error())
+			"Failed to get validator. "+err.Error())
 	}
 
 	var conf *Config
@@ -83,6 +90,8 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			"saving stake pool error: "+err.Error())
 	}
 
+	newValidator.LastHealthCheck = t.CreationDate
+
 	if err = newValidator.emitAddOrOverwrite(sp, balances); err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
 	}
@@ -91,15 +100,26 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	return string(buff), nil
 }
 
+func newValidator(id string) *ValidationNode {
+	return &ValidationNode{
+		Provider: provider.Provider{
+			ID:           id,
+			ProviderType: spenum.Validator,
+		},
+	}
+}
+
 func getValidator(
 	validatorID string,
 	balances state.CommonStateContextI,
 ) (*ValidationNode, error) {
-	validator := new(ValidationNode)
-	validator.ID = validatorID
+	validator := newValidator(validatorID)
 	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
 	if err != nil {
 		return nil, err
+	}
+	if validator.ProviderType != spenum.Validator {
+		return nil, fmt.Errorf("provider is %s should be %s", validator.ProviderType, spenum.Validator)
 	}
 	return validator, nil
 }
@@ -237,9 +257,47 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
+	inputValidator.LastHealthCheck = t.CreationDate
+
 	if err := inputValidator.emitUpdate(sp, balances); err != nil {
 		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
 	}
 
 	return
+}
+
+func filterHealthyValidators(now common.Timestamp) filterValidatorFunc {
+	return filterValidatorFunc(func(v *ValidationNode) (kick bool, err error) {
+		return v.LastHealthCheck <= (now - validatorHealthTime), nil
+	})
+}
+
+func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
+	_ []byte, balances state.StateContextI,
+) (string, error) {
+
+	var (
+		validator *ValidationNode
+		downtime  uint64
+		err       error
+	)
+
+	if validator, err = sc.getValidator(t.ClientID, balances); err != nil {
+		return "", common.NewError("validator_health_check_failed",
+			"can't get the validator "+t.ClientID+": "+err.Error())
+	}
+
+	downtime = common.Downtime(validator.LastHealthCheck, t.CreationDate)
+	validator.LastHealthCheck = t.CreationDate
+
+	emitValidatorHealthCheck(validator, downtime, balances)
+
+	_, err = balances.InsertTrieNode(validator.GetKey(sc.ID), validator)
+
+	if err != nil {
+		return "", common.NewError("validator_health_check_failed",
+			"can't Save validator: "+err.Error())
+	}
+
+	return string(validator.Encode()), nil
 }

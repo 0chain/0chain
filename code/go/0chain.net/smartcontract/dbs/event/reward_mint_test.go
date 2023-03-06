@@ -103,7 +103,7 @@ func TestGetRewardClaimedTotalBetweenDates(t *testing.T) {
 
 	block := Block{
 		Round:        1,
-		CreationDate: time.Now().AddDate(0, 0, -5).UnixNano(),
+		CreationDate: time.Now().AddDate(0, 0, -5).Unix(),
 		Hash:         "new_hash",
 		ChainId:      "new_chain_id",
 		MinerID:      "new_miner_id",
@@ -117,7 +117,7 @@ func TestGetRewardClaimedTotalBetweenDates(t *testing.T) {
 	require.Equal(t, int64(1), blocksCount, "Blocks not getting inserted")
 
 	block.Round = 800
-	block.CreationDate = time.Now().AddDate(0, 0, -1).UnixNano()
+	block.CreationDate = time.Now().AddDate(0, 0, -1).Unix()
 	block.Hash = "another_hash"
 
 	err = eventDb.addOrUpdateBlock(block)

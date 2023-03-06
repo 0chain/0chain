@@ -115,8 +115,8 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 	res := edb.Store.Get().
 		Model(&Transaction{}).
 		Where("round >= ? AND round < ?", blockStart, blockEnd).
-		Offset(limit.Limit).
-		Limit(limit.Offset).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,

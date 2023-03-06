@@ -55,8 +55,10 @@ dbs:
     conn_max_lifetime: 20s
     aggregate_period: 5
   settings:
-    debug: true
+    debug: false
     aggregate_period: 10
+    partition_change_period: 100
+    partition_keep_count: 10
     page_limit: 50
 
 smart_contracts:
@@ -212,6 +214,6 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
-  show_output: true
+  show_output: false
   bench_data_list_length: 12
 

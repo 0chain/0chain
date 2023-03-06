@@ -1196,15 +1196,12 @@ CREATE TABLE public.write_markers (
                                       allocation_id text,
                                       transaction_id text,
                                       allocation_root text,
+                                      file_meta_root character(64),
                                       previous_allocation_root text,
                                       size bigint,
                                       "timestamp" bigint,
                                       signature text,
-                                      block_number bigint,
-                                      lookup_hash text,
-                                      name text,
-                                      content_hash text,
-                                      operation text
+                                      block_number bigint
 );
 
 
@@ -2016,27 +2013,6 @@ CREATE INDEX idx_wblocknum ON public.write_markers USING btree (block_number);
 
 
 --
--- Name: idx_wcontent; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wcontent ON public.write_markers USING btree (content_hash);
-
-
---
--- Name: idx_wlookup; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wlookup ON public.write_markers USING btree (lookup_hash);
-
-
---
--- Name: idx_wname; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wname ON public.write_markers USING btree (name);
-
-
---
 -- Name: idx_write_markers_transaction_id; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
@@ -2136,22 +2112,6 @@ ALTER TABLE ONLY public.write_markers
 
 ALTER TABLE ONLY public.write_markers
     ADD CONSTRAINT fk_write_markers_user FOREIGN KEY (client_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
-CREATE TABLE blobber_aggregates_0 PARTITION OF blobber_aggregates
-    FOR VALUES FROM (0) TO (100);
-CREATE TABLE public.miner_aggregates_0 PARTITION OF miner_aggregates
-    FOR VALUES FROM (0) TO (100);
-CREATE TABLE public.authorizer_aggregates_0 PARTITION OF authorizer_aggregates
-    FOR VALUES FROM (0) TO (100);
-CREATE TABLE public.validator_aggregates_0 PARTITION OF validator_aggregates
-    FOR VALUES FROM (0) TO (100);
-CREATE TABLE public.sharder_aggregates_0 PARTITION OF sharder_aggregates
-    FOR VALUES FROM (0) TO (100);
-CREATE TABLE snapshots_0 PARTITION OF snapshots
-    FOR VALUES FROM (0) TO (100);
-CREATE TABLE events_0 PARTITION OF events
-    FOR VALUES FROM (0) TO (100);
 
 --
 -- PostgreSQL database dump complete

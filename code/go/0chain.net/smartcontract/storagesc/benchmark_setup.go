@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/dbs/benchmark"
 
 	"0chain.net/core/datastore"
@@ -28,7 +30,10 @@ import (
 	"0chain.net/core/common"
 )
 
-const mockMinLockDemand = 1
+const (
+	mockMinLockDemand            = 1
+	mockFinalizedAllocationIndex = 2
+)
 
 func AddMockAllocations(
 	clients, publicKeys []string,
@@ -83,9 +88,8 @@ func addMockAllocation(
 			FailedChallenges:          1,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
-		TimeUnit: 1 * time.Hour,
-		// make last allocation finalised
-		Finalized: i == viper.GetInt(sc.NumAllocations)-1,
+		TimeUnit:  1 * time.Hour,
+		Finalized: i == mockFinalizedAllocationIndex,
 		WritePool: mockWriePoolSize,
 	}
 	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
@@ -368,7 +372,10 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
 		blobber := &StorageNode{
-			ID:      id,
+			Provider: provider.Provider{
+				ID:           id,
+				ProviderType: spenum.Blobber,
+			},
 			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
@@ -377,14 +384,13 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
-			LastHealthCheck:   balances.GetTransaction().CreationDate, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
+			LastHealthCheck:   balances.GetTransaction().CreationDate,
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
-			//TotalStake: viper.GetInt64(sc.StorageMaxStake), todo missing field
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
-		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
+		_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			log.Fatal("insert blobber into mpt", err)
 		}
@@ -450,6 +456,9 @@ func AddMockBlobbers(
 }
 
 func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
 	var mockChallengesPassed = viper.GetUint64(sc.EventDbAggregatePeriod)
 	var mockChallengesCompleted = viper.GetUint64(sc.EventDbAggregatePeriod) + 1
 	const mockInactiveRounds = 17
@@ -480,6 +489,9 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 }
 
 func AddMockSnapshots(edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
 	var snapshots []event.Snapshot
 	for i := 1; i < viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
 		snapshot := event.Snapshot{
@@ -527,7 +539,10 @@ func AddMockValidators(
 		id := getMockValidatorId(i)
 		url := getMockValidatorUrl(i)
 		validator := &ValidationNode{
-			ID:                id,
+			Provider: provider.Provider{
+				ID:           id,
+				ProviderType: spenum.Validator,
+			},
 			BaseURL:           url,
 			PublicKey:         publicKeys[i%len(publicKeys)],
 			StakePoolSettings: getMockStakePoolSettings(id),
@@ -606,6 +621,7 @@ func GetMockBlobberStakePools(
 					TotalPenalty: 0,
 					Status:       spenum.Active,
 					RoundCreated: 1,
+					StakedAt:     sp.Pools[id].StakedAt,
 				}
 				if err := eventDb.Store.Get().Create(&dp).Error; err != nil {
 					log.Fatal(err)
@@ -732,9 +748,6 @@ func AddMockWriteRedeems(
 					AllocationRoot: "mock allocation root",
 					BlockNumber:    mockBlockNumber,
 					Size:           100,
-					LookupHash:     benchmark.GetMockWriteMarkerLookUpHash(i, j),
-					Name:           benchmark.GetMockWriteMarkerFileName(i),
-					ContentHash:    benchmark.GetMockWriteMarkerContentHash(i, j),
 				}
 				if err := eventDb.Store.Get().Create(&writeMarker).Error; err != nil {
 					log.Fatal(err)

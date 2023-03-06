@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: Go 1.18 setup.
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: '1.18'
 
@@ -30,7 +30,7 @@ jobs:
         docker-compose --version
 
     - name: Login to Docker Hub
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -63,15 +63,23 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
-    - name: Creating Artifact con-byz-tests-logs.tar.gz file.
-      run: |
-        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
-
-    - name: Uploading artifact con-byz-tests-logs.tar.gz file.
-      uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
+      if: failure()
       with:
-        name: Conductor-test-logs
-        path: ./con-byz-tests-logs.tar.gz
+        name: conductor-logs
+        path: |
+          0chain/conductor/logs/
+          0chain/docker.local/
+
+    # - name: Creating Artifact con-byz-tests-logs.tar.gz file.
+    #   run: |
+    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
+
+    # - name: Uploading artifact con-byz-tests-logs.tar.gz file.
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: Conductor-test-logs
+    #     path: ./con-byz-tests-logs.tar.gz
 
     - name: Cleanup
       run: |

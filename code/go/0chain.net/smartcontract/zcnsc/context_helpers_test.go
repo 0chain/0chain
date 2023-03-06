@@ -118,7 +118,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 
 	ctx.On("DeleteTrieNode", mock.AnythingOfType("string")).Return(
 		func(key datastore.Key) datastore.Key {
-			if strings.Contains(key, AuthorizerNodeType) {
+			if strings.Contains(key, Porvider) {
 				delete(ctx.authorizers, key)
 				return key
 			}
@@ -306,7 +306,7 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 		return nil
 	}
 
-	if strings.Contains(key, AuthorizerNodeType) {
+	if strings.Contains(key, Porvider) {
 		authorizer, ok := ctx.authorizers[key]
 		if !ok {
 			return util.ErrValueNotPresent
@@ -398,7 +398,7 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 		return key, fmt.Errorf("failed to convert key: %s to UserNode: %v", key, node)
 	}
 
-	if strings.Contains(key, AuthorizerNodeType) {
+	if strings.Contains(key, Porvider) {
 		if authorizer, ok := node.(*AuthorizerNode); ok {
 			ctx.authorizers[key] = &Authorizer{
 				Scheme: nil,

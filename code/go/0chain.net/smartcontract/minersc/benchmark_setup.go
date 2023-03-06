@@ -49,7 +49,7 @@ func AddMockNodes(
 	var (
 		err                error
 		nodes, publickKeys []string
-		allNodes           MinerNodes
+		allNodes           NodeIDs
 		nodeMap            = make(map[string]*SimpleNode)
 		numNodes           int
 		numActive          int
@@ -57,6 +57,7 @@ func AddMockNodes(
 		key                string
 		dRewards           []event.RewardDelegate
 		dps                []event.DelegatePool
+		providerType       spenum.Provider
 	)
 
 	if nodeType == spenum.Miner {
@@ -64,11 +65,13 @@ func AddMockNodes(
 		numNodes = viper.GetInt(benchmark.NumMiners)
 		numDelegates = viper.GetInt(benchmark.NumMinerDelegates)
 		key = AllMinersKey
+		providerType = spenum.Miner
 	} else {
 		numActive = viper.GetInt(benchmark.NumActiveSharders)
 		numNodes = viper.GetInt(benchmark.NumSharders)
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 		key = AllShardersKey
+		providerType = spenum.Sharder
 	}
 
 	for i := 0; i < numNodes; i++ {
@@ -77,6 +80,7 @@ func AddMockNodes(
 		if err != nil {
 			log.Fatal(err)
 		}
+		newNode.ProviderType = providerType
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
@@ -119,7 +123,7 @@ func AddMockNodes(
 		}
 		nodes = append(nodes, newNode.ID)
 		nodeMap[newNode.ID] = newNode.SimpleNode
-		allNodes.Nodes = append(allNodes.Nodes, newNode)
+		allNodes = append(allNodes, newNode.ID)
 
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			if nodeType == spenum.Miner {
@@ -174,6 +178,7 @@ func AddMockNodes(
 					Status:               pool.Status,
 					RoundCreated:         pool.RoundCreated,
 					RoundPoolLastUpdated: viper.GetInt64(benchmark.NumBlocks),
+					StakedAt:             pool.StakedAt,
 				})
 			}
 		}
@@ -205,9 +210,8 @@ func AddMockNodes(
 			panic(err)
 		}
 	} else {
-		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
-			Nodes: allNodes.Nodes[1:],
-		})
+		allIDs := allNodes[1:]
+		_, err = balances.InsertTrieNode(ShardersKeepKey, &allIDs)
 		if err != nil {
 			panic(err)
 		}

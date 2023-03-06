@@ -78,10 +78,21 @@ func (edb *EventDb) addChallenges(chlgs []Challenge) error {
 }
 
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "challenge_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"responded", "passed"}),
-	}).Create(chs).Error
+	var (
+		challengeIdList []string
+		respondedList   []bool
+		passedList   	[]bool
+	)
+
+	for _, ch := range chs {
+		challengeIdList = append(challengeIdList, ch.ChallengeID)
+		respondedList = append(respondedList, ch.Responded)
+		passedList = append(passedList, ch.Passed)
+	}
+
+	return CreateBuilder("challenges", "challenge_id", challengeIdList).
+		AddUpdate("responded", respondedList).
+		AddUpdate("passed", passedList).Exec(edb).Error
 }
 
 func mergeAddChallengesEvents() *eventsMergerImpl[Challenge] {

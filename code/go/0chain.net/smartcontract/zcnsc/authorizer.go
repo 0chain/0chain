@@ -10,13 +10,13 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	commonsc "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/storagesc"
 	. "github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
-	commonsc "0chain.net/smartcontract/common"
 )
 
 // AddAuthorizer sc API function
@@ -74,7 +74,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	if err := commonsc.ValidateDelegateWallet(params.PublicKey, params.StakePoolSettings.DelegateWallet); err != nil {
 		return "", err
 	}
-	
+
 	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
@@ -336,8 +336,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		Logger.Error("get global node", zap.Error(err))
 		return "", err
 	}
-
-	in := &AuthorizerNode{}
+	in := NewAuthorizerNode("")
 	if err = in.Decode(input); err != nil {
 		msg := fmt.Sprintf("decoding request: %v", err)
 		Logger.Error(msg, zap.Error(err))

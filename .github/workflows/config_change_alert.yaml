@@ -31,10 +31,10 @@ jobs:
         if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/0chain.yaml')
         run: |
           echo "Your 0chain.yaml file has been modified."
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your 0chain.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"<!here> Your 0chain.yaml config file has been modified.\n Link : https://github.com/0chain/0chain/blob/staging/docker.local/config/0chain.yaml"}' ${{ secrets.CHAT_WEBHOOK_URL }}
       
       - name: Run step when a sc.yaml file changes
         if: contains(steps.changed-files.outputs.modified_files, 'docker.local/config/sc.yaml')
         run: |
           echo "Your sc.yaml file has been modified."
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"Your sc.yaml config file has been modified."}' ${{ secrets.CHAT_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"<!here> Your sc.yaml config file has been modified.\n Link : https://github.com/0chain/0chain/blob/staging/docker.local/config/sc.yaml"}' ${{ secrets.CHAT_WEBHOOK_URL }}

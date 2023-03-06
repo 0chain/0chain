@@ -66,9 +66,13 @@ func (z *AuthorizerConfig) Msgsize() (s int) {
 func (z *AuthorizerNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 4
-	// string "ID"
-	o = append(o, 0x84, 0xa2, 0x49, 0x44)
-	o = msgp.AppendString(o, z.ID)
+	// string "Provider"
+	o = append(o, 0x84, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o, err = z.Provider.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Provider")
+		return
+	}
 	// string "PublicKey"
 	o = append(o, 0xa9, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
 	o = msgp.AppendString(o, z.PublicKey)
@@ -110,10 +114,10 @@ func (z *AuthorizerNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "ID":
-			z.ID, bts, err = msgp.ReadStringBytes(bts)
+		case "Provider":
+			bts, err = z.Provider.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "ID")
+				err = msgp.WrapError(err, "Provider")
 				return
 			}
 		case "PublicKey":
@@ -182,7 +186,7 @@ func (z *AuthorizerNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *AuthorizerNode) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 4 + msgp.StringPrefixSize + len(z.URL) + 7
+	s = 1 + 9 + z.Provider.Msgsize() + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 4 + msgp.StringPrefixSize + len(z.URL) + 7
 	if z.Config == nil {
 		s += msgp.NilSize
 	} else {

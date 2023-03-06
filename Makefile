@@ -26,6 +26,8 @@ check-commit: go-get run-test
 
 .PHONY: install-mockery mockery install-msgp msgp build-mocks swagger
 
+.PHONY: build-benchmark benchmark
+
 go-mod:
 	@echo "Prepare Go mod files..."
 	@cd $(root_path)/code/go/0chain.net && go mod tidy -v
@@ -70,3 +72,9 @@ swagger:
 	swagger generate markdown  -f docs/swagger.yaml --output=docs/swagger.md
 	@echo "swagger documentation generated"
 
+build-benchmark:
+	./docker.local/bin/build.benchmark.sh
+
+benchmark:
+	@cd $(root_path)/docker.local/benchmarks \
+	&& ../bin/start.benchmarks.sh

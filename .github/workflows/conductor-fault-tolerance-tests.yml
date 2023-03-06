@@ -75,15 +75,23 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
 
-    - name: Creating Artifact con-ft-tests-logs.tar.gz file.
-      run: |
-        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-ft-tests-logs.tar.gz --null --files-from -
-
-    - name: Uploading artifact con-ft-tests-logs.tar.gz file.
-      uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
+      if: failure()
       with:
-        name: Conductor-test-logs
-        path: ./con-ft-tests-logs.tar.gz
+        name: conductor-logs
+        path: |
+          0chain/conductor/logs/
+          0chain/docker.local/
+
+    # - name: Creating Artifact con-ft-tests-logs.tar.gz file.
+    #   run: |
+    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-ft-tests-logs.tar.gz --null --files-from -
+
+    # - name: Uploading artifact con-ft-tests-logs.tar.gz file.
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: Conductor-test-logs
+    #     path: ./con-ft-tests-logs.tar.gz
 
     - name: Cleanup
       run: |

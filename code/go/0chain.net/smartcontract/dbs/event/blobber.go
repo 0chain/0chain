@@ -115,13 +115,6 @@ func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error
 	return blobberIDs, result.Error
 }
 
-func (edb *EventDb) GetAllBlobberId() ([]string, error) {
-	var blobberIDs []string
-	result := edb.Store.Get().Model(&Blobber{}).Select("id").Find(&blobberIDs)
-
-	return blobberIDs, result.Error
-}
-
 func (edb *EventDb) GeBlobberByLatLong(
 	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit common2.Pagination,
 ) ([]string, error) {
@@ -166,13 +159,6 @@ func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
 
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedHealth, withUniqueEventOverwrite())
-}
-
-func (edb *EventDb) GetBlobberCount() (int64, error) {
-	var count int64
-	res := edb.Store.Get().Model(Blobber{}).Count(&count)
-
-	return count, res.Error
 }
 
 type AllocationQuery struct {
