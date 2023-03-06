@@ -49,7 +49,7 @@ require (
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/pressly/goose/v3 v3.9.0
 	gorm.io/driver/sqlite v1.4.4
-	moul.io/zapgorm2 v1.2.0
+	moul.io/zapgorm2 v1.3.0
 )
 
 require (
