@@ -212,7 +212,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 	for _, aggr := range updatedAggrs {
 		u := aggr
 		if aggr.Round == e.round {
-			logging.Logger.Error("duplicate round, not sure why", zap.Any("aggr", aggr))
+			logging.Logger.Error("duplicate round, not sure why", zap.Any("aggr", aggr), zap.Any("latest", latest[u.UserID]))
 		}
 		a, ok := latest[u.UserID]
 		if !ok {
