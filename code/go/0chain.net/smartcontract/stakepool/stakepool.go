@@ -333,9 +333,19 @@ func (sp *StakePool) SlashFraction(
 	if fraction == 0.0 {
 		return nil
 	}
+	if fraction < 0 || fraction > 1 {
+		return fmt.Errorf("kill slash %v should be in the interval [0,1]", fraction)
+	}
+	reduction := 1 - fraction
+	if reduction < 0 {
+		reduction = 0
+	}
+	if reduction > 1 {
+		reduction = 1
+	}
 	for _, dp := range sp.Pools {
 		var err error
-		dp.Balance, err = currency.MultFloat64(dp.Balance, 1-fraction)
+		dp.Balance, err = currency.MultFloat64(dp.Balance, reduction)
 		if err != nil {
 			return err
 		}
