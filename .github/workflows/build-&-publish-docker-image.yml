@@ -203,6 +203,7 @@ jobs:
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
           custom_go_sdk_version: staging
+          SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
           TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
 
       - name: "Run System tests"

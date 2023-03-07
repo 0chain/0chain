@@ -207,7 +207,6 @@ func BenchmarkRestTests(
 				FuncName: "getWriteMarkers",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
-					"filename":      "",
 				},
 				Endpoint: srh.getWriteMarkers,
 			},
