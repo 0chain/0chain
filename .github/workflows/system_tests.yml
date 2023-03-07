@@ -73,5 +73,6 @@ jobs:
       DEV7KC: ${{ secrets.DEV7KC }}
       DEV8KC: ${{ secrets.DEV8KC }}
       DEV9KC: ${{ secrets.DEV9KC }}
+      SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
       TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
       DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

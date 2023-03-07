@@ -22,11 +22,11 @@ const (
 	FetchStrategyNearest = 1
 )
 
-//FetchStrategy - when fetching an entity, the strategy to use to select the peer nodes
+// FetchStrategy - when fetching an entity, the strategy to use to select the peer nodes
 // var FetchStrategy = FetchStrategyNearest
 var FetchStrategy = FetchStrategyRandom
 
-//GetFetchStrategy - indicate which fetch strategy to use
+// GetFetchStrategy - indicate which fetch strategy to use
 func GetFetchStrategy() int {
 	if Self.Underlying().Type == NodeTypeSharder {
 		return FetchStrategyRandom
@@ -40,7 +40,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	rhandler := requestor(params, handler)
 	var nds []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nds = np.shuffleNodes(true)
+		nds = np.ShuffleNodes(true)
 	} else {
 		nds = np.GetNodesByLargeMessageTime()
 	}
@@ -124,6 +124,11 @@ func sendRequestConcurrent(ctx context.Context, nds []*Node, handler SendHandler
 	return nil
 }
 
+// RequestEntityFromNodes - request an entity from nodes, returns when any node has response
+func RequestEntityFromNodes(ctx context.Context, nds []*Node, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
+	return sendRequestConcurrent(ctx, nds, requestor(params, handler))
+}
+
 // RequestEntityFromAll - requests an entity from all the nodes
 func (np *Pool) RequestEntityFromAll(ctx context.Context,
 	requestor EntityRequestor, params *url.Values,
@@ -132,7 +137,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context,
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodes(true)
+		nodes = np.ShuffleNodes(true)
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
 	}
@@ -157,7 +162,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context,
 	wg.Wait()
 }
 
-//RequestEntityFromNode - request an entity from a node
+// RequestEntityFromNode - request an entity from a node
 func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) bool {
 	rhandler := requestor(params, handler)
 	select {
@@ -187,7 +192,7 @@ func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata d
 	return true
 }
 
-//RequestEntityHandler - a handler that requests an entity and uses it
+// RequestEntityHandler - a handler that requests an entity and uses it
 func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datastore.EntityMetadata) EntityRequestor {
 	return func(params *url.Values, handler datastore.JSONEntityReqResponderF) SendHandler {
 		return func(ctx context.Context, provider *Node) bool {
