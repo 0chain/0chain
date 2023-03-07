@@ -2021,14 +2021,13 @@ Status: Bad Request
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers
 ```
 
-Gets read markers according to a filter
+Gets writemarkers according to a filter
 
 #### Parameters
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | allocation_id | `query` | string | `string` |  | ✓ |  | count write markers for this allocation |
-| filename | `query` | string | `string` |  | ✓ |  | file name |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
@@ -2903,7 +2902,7 @@ Generic search endpoint
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| searchString | `query` | string | `string` |  | ✓ |  | Generic query string, supported inputs: Block hash, Round num, Transaction hash, File name, Content hash, Wallet address |
+| searchString | `query` | string | `string` |  | ✓ |  | Generic query string, supported inputs: Block hash, Round num, Transaction hash, Wallet address |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -4774,10 +4773,7 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | AllocationRoot | string| `string` |  | |  |  |
 | BlobberID | string| `string` |  | |  |  |
 | ClientID | string| `string` |  | |  |  |
-| ContentHash | string| `string` |  | |  |  |
-| LookupHash | string| `string` |  | | file info |  |
-| Name | string| `string` |  | |  |  |
-| Operation | string| `string` |  | |  |  |
+| FileMetaRoot | string| `string` |  | |  |  |
 | PreviousAllocationRoot | string| `string` |  | |  |  |
 | Signature | string| `string` |  | |  |  |
 | Size | int64 (formatted integer)| `int64` |  | |  |  |

@@ -456,6 +456,9 @@ func AddMockBlobbers(
 }
 
 func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
 	var mockChallengesPassed = viper.GetUint64(sc.EventDbAggregatePeriod)
 	var mockChallengesCompleted = viper.GetUint64(sc.EventDbAggregatePeriod) + 1
 	const mockInactiveRounds = 17
@@ -486,6 +489,9 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 }
 
 func AddMockSnapshots(edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
 	var snapshots []event.Snapshot
 	for i := 1; i < viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
 		snapshot := event.Snapshot{
@@ -742,9 +748,6 @@ func AddMockWriteRedeems(
 					AllocationRoot: "mock allocation root",
 					BlockNumber:    mockBlockNumber,
 					Size:           100,
-					LookupHash:     benchmark.GetMockWriteMarkerLookUpHash(i, j),
-					Name:           benchmark.GetMockWriteMarkerFileName(i),
-					ContentHash:    benchmark.GetMockWriteMarkerContentHash(i, j),
 				}
 				if err := eventDb.Store.Get().Create(&writeMarker).Error; err != nil {
 					log.Fatal(err)

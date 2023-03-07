@@ -152,16 +152,15 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 	}
 
 	if minerDelete {
-		if _, err = balances.InsertTrieNode(AllMinersKey, miners); err != nil {
-			return common.NewErrorf("view_change_pools_work",
-				"failed saving all miners list: %v", err)
+		if err := updateMinersList(balances, miners); err != nil {
+			return err
 		}
 	}
 
 	if sharderDelete {
-		if _, err = balances.InsertTrieNode(AllShardersKey, sharders); err != nil {
+		if err = updateAllShardersList(balances, sharders); err != nil {
 			return common.NewErrorf("view_change_pools_work",
-				"failed saving all sharder list: %v", err)
+				"failed saving all sharders list: %v", err)
 		}
 	}
 	return nil

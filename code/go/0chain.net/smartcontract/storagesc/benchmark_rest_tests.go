@@ -93,10 +93,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getBlock,
 			},
 			{
-				FuncName: "total-saved-data",
-				Endpoint: srh.getTotalData,
-			},
-			{
 				FuncName: "latestreadmarker",
 				Params: map[string]string{
 					"client":  data.Clients[0],
@@ -211,7 +207,6 @@ func BenchmarkRestTests(
 				FuncName: "getWriteMarkers",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
-					"filename":      "",
 				},
 				Endpoint: srh.getWriteMarkers,
 			},

@@ -172,7 +172,7 @@ func BenchmarkTests(
 			name:     "miner.sharder_health_check",
 			endpoint: msc.sharderHealthCheck,
 			txn: &transaction.Transaction{
-				ClientID:     data.Miners[0],
+				ClientID:     data.Sharders[0],
 				CreationDate: creationTime,
 			},
 			input: nil,
