@@ -302,7 +302,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err != nil {
 		return "", fmt.Errorf("error splitting fees by ratio: %v", err)
 	}
-
 	// pay random N miners
 	if err := mn.StakePool.DistributeRewardsRandN(
 		minerRewards,
@@ -365,6 +364,14 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			gn, rewardSharders, sharderRewards, seed,
 			spenum.BlockRewardSharder, balances); err != nil {
 			return "", err
+		}
+
+		for _, sh := range rewardSharders {
+			if err = sh.save(balances); err != nil {
+				return "", common.NewErrorf("pay_fees/pay_sharders",
+					"saving sharder node: %v", err)
+			}
+
 		}
 	}
 
@@ -502,11 +509,6 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)
-		}
-
-		if err = sh.save(balances); err != nil {
-			return common.NewErrorf("pay_fees/pay_sharders",
-				"saving sharder node: %v", err)
 		}
 
 		return nil
