@@ -19,6 +19,9 @@ type BlobberSnapshot struct {
 	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
 	TotalRewards		currency.Coin `json:"total_rewards"`
 	TotalStake          currency.Coin `json:"total_stake"`
+	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
+	TotalReadIncome		currency.Coin `json:"total_read_income"`
+	TotalSlashedStake	currency.Coin `json:"total_slashed_stake"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
@@ -61,6 +64,9 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 			OffersTotal:  blobber.OffersTotal,
 			UnstakeTotal: blobber.UnstakeTotal,
 			TotalRewards: blobber.Rewards.TotalRewards,
+			TotalStorageIncome: blobber.TotalStorageIncome,
+			TotalReadIncome: blobber.TotalReadIncome,
+			TotalSlashedStake: blobber.TotalSlashedStake,
 			//TotalServiceCharge:  blobber.TotalServiceCharge,
 			TotalStake:          blobber.TotalStake,
 			ChallengesPassed:    blobber.ChallengesPassed,

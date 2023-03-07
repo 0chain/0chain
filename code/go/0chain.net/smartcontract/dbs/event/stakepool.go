@@ -107,6 +107,10 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		if err := edb.rewardProviders(rewards.rewards, round); err != nil {
 			return fmt.Errorf("could not rewards providers: %v", err)
 		}
+
+		if err := edb.blobberSpecificRevenue(spus); err != nil {
+			return fmt.Errorf("could not update blobber specific revenue: %v", err)
+		}
 	}
 
 	rpdu := time.Since(ts)
@@ -199,4 +203,43 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: un
 	}
 
 	return edb.Store.Get().Model(provider).Where(provider).Updates(vs).Error
+}
+
+func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
+	var (
+		ids []string
+		totalStorageIncome []int64
+		totalReadIncome []int64
+		totalSlashStake []int64
+		totalChanges = 0
+	)
+
+	for _, spu := range spus {
+		if spu.ProviderType != spenum.Blobber {
+			continue
+		}
+		ids = append(ids, spu.ProviderId)
+		
+		switch (spu.RewardType) {
+			case spenum.ChallengePassReward:
+				totalChanges++
+				totalStorageIncome = append(totalStorageIncome, int64(spu.Reward))
+			case spenum.FileDownloadReward:
+				totalChanges++
+				totalReadIncome = append(totalReadIncome, int64(spu.Reward))
+			case spenum.ChallengeSlashPenalty:
+				totalChanges++
+				totalSlashStake = append(totalSlashStake, int64(spu.Reward))
+		}
+	}
+
+	if totalChanges == 0 {
+		return nil
+	}
+
+	return CreateBuilder("blobbers", "id", ids).
+		AddUpdate("total_storage_income", totalStorageIncome, "blobbers.total_storage_income + t.total_storage_income").
+		AddUpdate("total_read_income", totalReadIncome, "blobbers.total_read_income + t.total_read_income").
+		AddUpdate("total_slash_stake", totalSlashStake, "blobbers.total_slash_stake + t.total_slash_stake").
+		Exec(edb).Debug().Error
 }
