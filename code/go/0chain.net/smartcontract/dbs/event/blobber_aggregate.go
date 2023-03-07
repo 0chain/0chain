@@ -206,13 +206,13 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.BlobberCount -= 1
 
 		if old.WritePrice > 0 {
-			gsDiff.StakedStorage += -old.Capacity
-		} else {
 			ss, err := (old.TotalStake / old.WritePrice * GB).Int64()
 			if err != nil {
 				logging.Logger.Error("converting coin to int64", zap.Error(err))
 			}
 			gsDiff.StakedStorage += -ss
+		} else {
+			gsDiff.StakedStorage += -old.Capacity
 		}
 	}
 
