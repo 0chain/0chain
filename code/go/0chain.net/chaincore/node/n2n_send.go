@@ -70,7 +70,7 @@ func (np *Pool) SendToMultipleNodes(ctx context.Context, handler SendHandler, no
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(ctx context.Context, numNodes int, handler SendHandler) []*Node {
-	nodes := np.shuffleNodes(false)
+	nodes := np.ShuffleNodes(false)
 	var infos []string
 	for _, n := range nodes {
 		infos = append(infos, n.GetPseudoName())
