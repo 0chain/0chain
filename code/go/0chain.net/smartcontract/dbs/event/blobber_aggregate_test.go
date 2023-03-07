@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/config"
+	"github.com/0chain/common/core/currency"
 	faker "github.com/go-faker/faker/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -252,6 +253,7 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 }
 
 func createBlobbers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Blobber) []string {
+	const GB = int64(1024 * 1024 * 1024)
 	var (
 		ids        []string
 		curBlobber Blobber
@@ -275,6 +277,9 @@ func createBlobbers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, s
 		curBlobber.DelegateWallet = OwnerId
 		curBlobber.BucketId = int64((i % 2)) * targetBucket
 		curBlobber.BaseURL = fmt.Sprintf("http://url%v.com", i)
+		curBlobber.WritePrice += 10
+		curBlobber.TotalStake += currency.Coin(uint64(curBlobber.Capacity) * uint64(curBlobber.WritePrice))
+		curBlobber.Capacity *= GB
 		blobbers = append(blobbers, curBlobber)
 		ids = append(ids, curBlobber.ID)
 	}
