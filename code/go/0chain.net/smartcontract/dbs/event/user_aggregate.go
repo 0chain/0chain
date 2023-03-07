@@ -28,6 +28,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 			return
 
 		}
+		logging.Logger.Debug("user_aggregates TagLockReadPool", zap.Int("events", len(*rpls)))
 		for _, rpl := range *rpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
 				Round:         event.BlockNumber,
@@ -45,6 +46,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 			return
 
 		}
+		logging.Logger.Debug("user_aggregates TagUnlockReadPool", zap.Int("events", len(*rpls)))
 		for _, rpl := range *rpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
 				Round:         event.BlockNumber,
@@ -62,6 +64,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 			return
 
 		}
+		logging.Logger.Debug("user_aggregates TagLockWritePool", zap.Int("events", len(*wpls)))
 		for _, wpl := range *wpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
 				Round:          event.BlockNumber,
@@ -79,6 +82,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 			return
 
 		}
+		logging.Logger.Debug("user_aggregates TagUnlockWritePool", zap.Int("events", len(*wpls)))
 		for _, wpl := range *wpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
 				Round:          event.BlockNumber,
@@ -96,6 +100,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 			return
 
 		}
+		logging.Logger.Debug("user_aggregates TagLockStakePool", zap.Int("events", len(*dpls)))
 		for _, dpl := range *dpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
 				Round:      event.BlockNumber,
@@ -113,6 +118,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 			return
 
 		}
+		logging.Logger.Debug("user_aggregates TagUnlockStakePool", zap.Int("events", len(*dpls)))
 		for _, dpl := range *dpls {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
 				Round:      event.BlockNumber,
@@ -130,6 +136,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 			return
 
 		}
+		logging.Logger.Debug("user_aggregates TagUpdateUserPayedFees", zap.Int("events", len(*users)))
 		for _, u := range *users {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
 				Round:     event.BlockNumber,
@@ -146,6 +153,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			return
 		}
+		logging.Logger.Debug("user_aggregates TagUpdateUserCollectedRewards", zap.Int("events", len(*users)))
 		for _, u := range *users {
 			updatedAggrs = append(updatedAggrs, UserAggregate{
 				Round:           event.BlockNumber,
@@ -189,9 +197,10 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 }
 
 func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
+	logging.Logger.Debug("calculating user aggregates", zap.Int64("round", e.round))
 	var updatedAggrs []UserAggregate
 	for _, ev := range e.events {
-		if h := handlers[ev.Tag]; h != nil {
+		if h, ok := handlers[ev.Tag]; ok {
 			aggrs := h(ev)
 			updatedAggrs = append(updatedAggrs, aggrs...)
 		}
