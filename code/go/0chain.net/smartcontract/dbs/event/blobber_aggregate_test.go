@@ -130,6 +130,8 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		assertBlobberAggregateAndSnapshots(t, eventDb, 5, expectedAggregates, expectedSnapshots)
 		assertBlobberGlobalSnapshot(t, eventDb, 5, expectedBucketId, blobbersBefore, &initialSnapshot)
 
+		printBlobbers("&blobbersBefore", &blobbersBefore)
+
 		// Add a new blobber
 		expectedBucketId = updateRound % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 		newBlobber := Blobber{
@@ -238,8 +240,10 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		}
 
 		// Check generated snapshots/aggregates
+		printBlobbers("blobbersAfter", &blobbersAfter)
 		expectedAggregates, expectedSnapshots = calculateBlobberAggregatesAndSnapshots(updateRound, expectedBucketId, blobbersAfter, blobberSnapshots)
 		eventDb.updateBlobberAggregate(updateRound, 10, &initialSnapshot)
+		printGlobalSnapshot("expectedGlobalSnapshot", &initialSnapshot)
 		assertBlobberAggregateAndSnapshots(t, eventDb, updateRound, expectedAggregates, expectedSnapshots)
 
 		// Check global snapshot changes
@@ -479,4 +483,18 @@ func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBuck
 	assert.Equal(t, expectedGlobal.BlobbersStake, actualSnapshot.BlobbersStake)
 	assert.Equal(t, expectedGlobal.StakedStorage, actualSnapshot.StakedStorage)
 	assert.Equal(t, expectedGlobal.BlobberCount, actualSnapshot.BlobberCount)	
+}
+
+func printBlobbers(tag string, blobbers *[]Blobber) {
+	fmt.Println(tag);
+	for _, b := range *blobbers {
+		fmt.Printf("\tBlobber %v => bucketId %v, capacity %v, allocated %v, savedData %v, readData %v, totalStake %v, totalRewards %v, offersTotal %v, unstakeTotal %v, openChallenges %v, challengesPassed %v, challengesCompleted %v, rankMetric %v, downtime %v, writePrice %v, creationRound %v, lastHealthCheck %v\n",
+			b.ID, b.BucketId, b.Capacity, b.Allocated, b.SavedData, b.ReadData, b.TotalStake, b.Rewards.TotalRewards, b.OffersTotal, b.UnstakeTotal, b.OpenChallenges, b.ChallengesPassed, b.ChallengesCompleted, b.RankMetric, b.Downtime, b.WritePrice, b.CreationRound, b.LastHealthCheck);
+	}
+}
+
+func printGlobalSnapshot(tag string, snapshot *Snapshot) {
+	fmt.Println(tag);
+	fmt.Printf("\tSuccessfulChallenges %v, TotalChallenges %v, AllocatedStorage %v, MaxCapacityStorage %v, UsedStorage %v, TotalRewards %v, BlobbersStake %v, StakedStorage %v, BlobberCount %v\n",
+		snapshot.SuccessfulChallenges, snapshot.TotalChallenges, snapshot.AllocatedStorage, snapshot.MaxCapacityStorage, snapshot.UsedStorage, snapshot.TotalRewards, snapshot.BlobbersStake, snapshot.StakedStorage, snapshot.BlobberCount);
 }
