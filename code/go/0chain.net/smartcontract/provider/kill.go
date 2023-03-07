@@ -66,9 +66,9 @@ func Kill(
 		return err
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagKillProvider, p.Id(), dbs.Provider{
-		ProviderId:   p.Id(),
-		ProviderType: p.Type(),
+	balances.EmitEvent(event.TypeStats, event.TagKillProvider, p.Id(), dbs.ProviderID{
+		ID:   p.Id(),
+		Type: p.Type(),
 	})
 
 	return nil

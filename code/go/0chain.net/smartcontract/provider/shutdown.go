@@ -34,9 +34,9 @@ func ShutDown(
 		return err
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagShutdownProvider, p.Id(), dbs.Provider{
-		ProviderId:   p.Id(),
-		ProviderType: p.Type(),
+	balances.EmitEvent(event.TypeStats, event.TagShutdownProvider, p.Id(), dbs.ProviderID{
+		ID:   p.Id(),
+		Type: p.Type(),
 	})
 
 	return nil

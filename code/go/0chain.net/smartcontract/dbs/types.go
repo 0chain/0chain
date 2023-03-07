@@ -33,13 +33,13 @@ func NewDbUpdateProvider(id string, typ spenum.Provider) *DbUpdateProvider {
 
 }
 
-type Provider struct {
-	ProviderId   string          `json:"provider_id"`
-	ProviderType spenum.Provider `json:"provider_type"`
+type ProviderID struct {
+	ID   string          `json:"provider_id"`
+	Type spenum.Provider `json:"provider_type"`
 }
 
 type StakePoolReward struct {
-	Provider
+	ProviderID
 	Reward     currency.Coin `json:"reward"`
 	RewardType spenum.Reward `json:"reward_type"`
 	// rewards delegate pools
@@ -49,7 +49,7 @@ type StakePoolReward struct {
 }
 
 type DelegatePoolId struct {
-	Provider
+	ProviderID
 	PoolId string `json:"pool_id"`
 }
 
@@ -61,20 +61,20 @@ type DelegatePoolUpdate struct {
 func NewDelegatePoolUpdate(pool, provider string, pType spenum.Provider) *DelegatePoolUpdate {
 	var dpu DelegatePoolUpdate
 	dpu.PoolId = pool
-	dpu.ProviderId = provider
-	dpu.ProviderType = pType
+	dpu.ID = provider
+	dpu.Type = pType
 	dpu.Updates = make(map[string]interface{})
 	return &dpu
 }
 
 type SpBalance struct {
-	Provider
+	ProviderID
 	Balance         int64            `json:"sp_reward"`
 	DelegateBalance map[string]int64 `json:"delegate_reward"`
 }
 
 type SpReward struct {
-	Provider
+	ProviderID
 	SpReward       int64            `json:"sp_reward"`
 	DelegateReward map[string]int64 `json:"delegate_reward"`
 }

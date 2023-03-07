@@ -130,19 +130,19 @@ func providerToTableName(pType spenum.Provider) string {
 }
 
 func mapProviders(
-	providers []dbs.Provider,
+	providers []dbs.ProviderID,
 ) map[spenum.Provider][]string {
 	idSlices := make(map[spenum.Provider][]string, 5)
 	for _, provider := range providers {
 		var ids []string
-		ids = idSlices[provider.ProviderType]
-		ids = append(ids, provider.ProviderId)
-		idSlices[provider.ProviderType] = ids
+		ids = idSlices[provider.Type]
+		ids = append(ids, provider.ID)
+		idSlices[provider.Type] = ids
 	}
 	return idSlices
 }
 
-func (edb *EventDb) providersSetBoolean(providers []dbs.Provider, field string, value bool) error {
+func (edb *EventDb) providersSetBoolean(providers []dbs.ProviderID, field string, value bool) error {
 	mappedProviders := mapProviders(providers)
 	for pType, ids := range mappedProviders {
 		table := providerToTableName(pType)

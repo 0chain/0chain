@@ -33,7 +33,7 @@ func TestTagKillProvider(t *testing.T) {
 			Type:        TypeStats,
 			Tag:         TagKillProvider,
 			Index:       "blobber two",
-			Data:        dbs.Provider{ProviderId: "blobber two", ProviderType: spenum.Blobber},
+			Data:        dbs.ProviderID{ID: "blobber two", Type: spenum.Blobber},
 		},
 		{
 			BlockNumber: round,
@@ -41,21 +41,21 @@ func TestTagKillProvider(t *testing.T) {
 			Type:        TypeStats,
 			Tag:         TagKillProvider,
 			Index:       "blobber two",
-			Data:        dbs.Provider{ProviderId: "blobber two", ProviderType: spenum.Blobber},
+			Data:        dbs.ProviderID{ID: "blobber two", Type: spenum.Blobber},
 		},
 		{
 			BlockNumber: round,
 			Type:        TypeStats,
 			Tag:         TagKillProvider,
 			Index:       minerIds[0],
-			Data:        dbs.Provider{ProviderId: minerIds[0], ProviderType: spenum.Miner},
+			Data:        dbs.ProviderID{ID: minerIds[0], Type: spenum.Miner},
 		},
 		{
 			BlockNumber: round,
 			Type:        TypeStats,
 			Tag:         TagKillProvider,
 			Index:       minerIds[1],
-			Data:        dbs.Provider{ProviderId: minerIds[1], ProviderType: spenum.Miner},
+			Data:        dbs.ProviderID{ID: minerIds[1], Type: spenum.Miner},
 		},
 	}
 	events, err := mergeEvents(round, "", killEvents)
@@ -98,11 +98,11 @@ func TestProvidersSetBoolean(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	providers := []dbs.Provider{
-		{ProviderId: minerIds[0], ProviderType: spenum.Miner},
-		{ProviderId: minerIds[1], ProviderType: spenum.Miner},
-		{ProviderId: "1", ProviderType: spenum.Sharder},
-		{ProviderId: "blobber two", ProviderType: spenum.Blobber},
+	providers := []dbs.ProviderID{
+		{ID: minerIds[0], Type: spenum.Miner},
+		{ID: minerIds[1], Type: spenum.Miner},
+		{ID: "1", Type: spenum.Sharder},
+		{ID: "blobber two", Type: spenum.Blobber},
 	}
 	err = edb.providersSetBoolean(providers, "is_shutdown", true)
 	require.NoError(t, err)

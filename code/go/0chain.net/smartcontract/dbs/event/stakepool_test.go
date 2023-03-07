@@ -45,33 +45,33 @@ func TestStakePoolReward(t *testing.T) {
 
 	spus := []dbs.StakePoolReward{
 		{
-			Provider: dbs.Provider{
-				ProviderId:   "provider_1",
-				ProviderType: spenum.Miner,
+			ProviderID: dbs.ProviderID{
+				ID:   "provider_1",
+				Type: spenum.Miner,
 			},
 			Reward:     168,
 			RewardType: spenum.BlockRewardSharder,
 		},
 		{
-			Provider: dbs.Provider{
-				ProviderId:   "provider_1",
-				ProviderType: spenum.Miner,
+			ProviderID: dbs.ProviderID{
+				ID:   "provider_1",
+				Type: spenum.Miner,
 			},
 			Reward:     80,
 			RewardType: spenum.FeeRewardMiner,
 		},
 		{
-			Provider: dbs.Provider{
-				ProviderId:   "provider_2",
-				ProviderType: spenum.Sharder,
+			ProviderID: dbs.ProviderID{
+				ID:   "provider_2",
+				Type: spenum.Sharder,
 			},
 			Reward:     100,
 			RewardType: spenum.BlockRewardSharder,
 		},
 		{
-			Provider: dbs.Provider{
-				ProviderId:   "provider_2",
-				ProviderType: spenum.Sharder,
+			ProviderID: dbs.ProviderID{
+				ID:   "provider_2",
+				Type: spenum.Sharder,
 			},
 			Reward:     21,
 			RewardType: spenum.FeeRewardSharder,

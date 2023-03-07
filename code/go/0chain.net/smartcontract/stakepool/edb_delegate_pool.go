@@ -15,8 +15,8 @@ type DelegatePoolUpdate dbs.DelegatePoolUpdate
 func newDelegatePoolUpdate(poolID, pId string, pType spenum.Provider) *DelegatePoolUpdate {
 	var spu DelegatePoolUpdate
 	spu.PoolId = poolID
-	spu.ProviderId = pId
-	spu.ProviderType = pType
+	spu.ID = pId
+	spu.Type = pType
 	spu.Updates = make(map[string]interface{})
 	return &spu
 }

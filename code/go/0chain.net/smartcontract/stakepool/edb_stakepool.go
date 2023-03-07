@@ -26,8 +26,8 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 
 func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
 	var spu StakePoolReward
-	spu.ProviderId = pId
-	spu.ProviderType = pType
+	spu.ID = pId
+	spu.Type = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
@@ -42,7 +42,7 @@ func (spu StakePoolReward) Emit(
 	balances.EmitEvent(
 		event.TypeStats,
 		tag,
-		spu.RewardType.String()+spu.ProviderId,
+		spu.RewardType.String()+spu.ID,
 		stakePoolRewardToStakePoolRewardEvent(spu),
 	)
 	return nil
@@ -50,7 +50,7 @@ func (spu StakePoolReward) Emit(
 
 func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolReward {
 	return &dbs.StakePoolReward{
-		Provider:        spu.Provider,
+		ProviderID:      spu.ProviderID,
 		Reward:          spu.Reward,
 		DelegateRewards: spu.DelegateRewards,
 		RewardType:      spu.RewardType,
