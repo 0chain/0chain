@@ -190,7 +190,8 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 	}
 
 	for _, aggr := range ua {
-		mappedAggrs[aggr.UserID] = &aggr
+		u := aggr
+		mappedAggrs[u.UserID] = &u
 	}
 
 	return mappedAggrs, nil
