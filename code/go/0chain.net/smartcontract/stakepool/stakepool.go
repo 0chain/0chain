@@ -325,18 +325,18 @@ func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.State
 // SlashFraction
 // slash stake pools funds, if a provider is killed
 func (sp *StakePool) SlashFraction(
-	fraction float64,
+	killSlashFraction float64,
 	providerId string,
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
-	if fraction == 0.0 {
+	if killSlashFraction == 0.0 {
 		return nil
 	}
-	if fraction < 0 || fraction > 1 {
-		return fmt.Errorf("kill slash %v should be in the interval [0,1]", fraction)
+	if killSlashFraction < 0 || killSlashFraction > 1 {
+		return fmt.Errorf("kill slash %v should be in the interval [0,1]", killSlashFraction)
 	}
-	reduction := 1 - fraction
+	reduction := 1 - killSlashFraction
 	if reduction < 0 {
 		reduction = 0
 	}
