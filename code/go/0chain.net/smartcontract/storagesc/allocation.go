@@ -1660,12 +1660,12 @@ func (sc *StorageSmartContract) finishAllocation(
 	}
 	fmt.Println("distribute rewards", time.Since(st))
 
-	st = time.Now()
-	var blobbers []*StorageNode
-	if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
-		return fmt.Errorf("could not get alloc blobbers: %v", err)
-	}
-	fmt.Println("get allocation blobbers", time.Since(st))
+	//st = time.Now()
+	//var blobbers []*StorageNode
+	//if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
+	//	return fmt.Errorf("could not get alloc blobbers: %v", err)
+	//}
+	//fmt.Println("get allocation blobbers", time.Since(st))
 
 	var cp *challengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
@@ -1680,10 +1680,10 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
-		var b = blobbers[i]
-		if b.ID != d.BlobberID {
-			return fmt.Errorf("blobber %s and %s don't match", b.ID, d.BlobberID)
-		}
+		//var b = blobbers[i]
+		//if b.ID != d.BlobberID {
+		//	return fmt.Errorf("blobber %s and %s don't match", b.ID, d.BlobberID)
+		//}
 
 		ts := time.Now()
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
@@ -1698,9 +1698,9 @@ func (sc *StorageSmartContract) finishAllocation(
 				return err
 			}
 
-			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, spenum.ChallengePassReward, balances)
+			err = sps[i].DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
 			if err != nil {
-				return fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", b.ID, err)
+				return fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", d.BlobberID, err)
 			}
 
 			d.Spent, err = currency.AddCoin(d.Spent, reward)
@@ -1740,24 +1740,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				Delta:        int64((stake - before[i]) / d.Terms.WritePrice),
 			})
 		}
-
-		//ts = time.Now()
-		// update the blobber
-		//if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
-		//	return fmt.Errorf("failed to save blobber: %s, err: %v", d.BlobberID, err)
-		//}
-
-		//blobSave += time.Since(ts)
-
-		emitUpdateBlobber(b, balances)
-		// TODO: move to populate challenge
-		//ts = time.Now()
-		//err = removeAllocationFromBlobber(balances, d)
-		//if err != nil {
-		//	return err
-		//}
-		//
-		//removeAlloc += time.Since(ts)
+		//emitUpdateBlobber(b, balances)
 	}
 
 	fmt.Println("stake save:", stakeSave)
