@@ -462,13 +462,13 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 	}
 
 	if startBlockString != "" && endBlockString != "" {
-		startBlock, err := strconv.ParseUint(startBlockString, 10, 64)
+		startBlock, err := strconv.ParseInt(startBlockString, 10, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start-block string to a number", err.Error()))
 			return
 		}
 
-		endBlock, err := strconv.ParseUint(endBlockString, 10, 64)
+		endBlock, err := strconv.ParseInt(endBlockString, 10, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end-block string to a number", err.Error()))
 			return
@@ -479,8 +479,8 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 			return
 		}
 
-		query.StartBlock = int(startBlock)
-		query.EndBlock = int(endBlock)
+		query.StartBlock = startBlock
+		query.EndBlock = endBlock
 
 		rewards, err := edb.GetRewardClaimedTotalBetweenBlocks(query)
 		if err != nil {
