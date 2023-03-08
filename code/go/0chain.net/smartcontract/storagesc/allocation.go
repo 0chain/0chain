@@ -1674,9 +1674,8 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	st = time.Now()
 	var (
-		stakeSave   time.Duration
-		blobSave    time.Duration
-		removeAlloc time.Duration
+		stakeSave time.Duration
+		//blobSave  time.Duration
 	)
 
 	var passPayments currency.Coin
@@ -1714,9 +1713,11 @@ func (sc *StorageSmartContract) finishAllocation(
 			}
 		}
 
+		ts = time.Now()
 		if err = sps[i].Save(spenum.Blobber, d.BlobberID, balances); err != nil {
 			return fmt.Errorf("failed to save stake pool: %s, err: %v", d.BlobberID, err)
 		}
+		fmt.Println("save stake pool", time.Since(ts))
 
 		staked, err := sps[i].stake()
 		if err != nil {
@@ -1740,13 +1741,13 @@ func (sc *StorageSmartContract) finishAllocation(
 			})
 		}
 
-		ts = time.Now()
+		//ts = time.Now()
 		// update the blobber
-		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
-			return fmt.Errorf("failed to save blobber: %s, err: %v", d.BlobberID, err)
-		}
+		//if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
+		//	return fmt.Errorf("failed to save blobber: %s, err: %v", d.BlobberID, err)
+		//}
 
-		blobSave += time.Since(ts)
+		//blobSave += time.Since(ts)
 
 		emitUpdateBlobber(b, balances)
 		// TODO: move to populate challenge
@@ -1760,8 +1761,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	}
 
 	fmt.Println("stake save:", stakeSave)
-	fmt.Println("blob save:", blobSave)
-	fmt.Println("remove allocation:", removeAlloc)
+	//fmt.Println("blob save:", blobSave)
 
 	fmt.Println("blobber alloc actions", time.Since(st))
 	prevBal := cp.Balance
