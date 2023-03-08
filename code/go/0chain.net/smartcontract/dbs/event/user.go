@@ -10,12 +10,13 @@ import (
 
 type User struct {
 	model.UpdatableModel
-	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
-	TxnHash string        `json:"txn_hash"`
-	Balance currency.Coin `json:"balance"`
-	Change  currency.Coin `json:"change"`
-	Round   int64         `json:"round"`
-	Nonce   int64         `json:"nonce"`
+	UserID    string        `json:"user_id" gorm:"uniqueIndex"`
+	TxnHash   string        `json:"txn_hash"`
+	Balance   currency.Coin `json:"balance"`
+	Change    currency.Coin `json:"change"`
+	Round     int64         `json:"round"`
+	Nonce     int64         `json:"nonce"`
+	MintNonce int64         `json:"mint_nonce"`
 }
 
 func (edb *EventDb) GetUser(userID string) (*User, error) {
@@ -35,7 +36,7 @@ func (edb *EventDb) GetUser(userID string) (*User, error) {
 func (edb *EventDb) addOrUpdateUsers(users []User) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce"}),
+		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce", "mint_nonce"}),
 	}).Create(&users).Error
 }
 

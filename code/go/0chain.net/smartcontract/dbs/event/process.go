@@ -130,6 +130,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAuthorizerHealthCheckEvents(),
 			mergeValidatorHealthCheckEvents(),
 
+			mergeAddBurnTicket(),
+
 			mergeUpdateUserCollectedRewardsEvents(),
 			mergeUserStakeEvents(),
 			mergeUserUnstakeEvents(),
@@ -797,6 +799,15 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
+	case TagAddBurnTicket:
+		bt, ok := fromEvent[[]BurnTicket](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		if len(*bt) == 0 {
+			return ErrInvalidEventData
+		}
+		return edb.addBurnTicket((*bt)[0])
 	default:
 		return nil
 	}
