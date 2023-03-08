@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
 )
@@ -19,6 +20,9 @@ type Authorizer struct {
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+
+	TotalMint currency.Coin `json:"total_mint"`
+	TotalBurn currency.Coin `json:"total_burn"`
 
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_authorizer_creation_round"`
 }
@@ -154,6 +158,44 @@ func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error 
 	return edb.updateProviderTotalStakes(provs, "authorizers")
 }
 
+func (edb *EventDb) updateAuthorizersTotalMint(mints []state.Mint) error {
+	var (
+		ids []string
+		totalMint []int64
+	)
+	for _, m := range mints {
+		ids = append(ids, m.ToClientID)
+		amt, err := m.Amount.Int64()
+		if err != nil {
+			return err
+		}
+		totalMint = append(totalMint, amt)
+	}
+
+	return CreateBuilder("authorizers", "id", ids).
+		AddUpdate("total_mint", totalMint, "authorizers.total_mint + t.total_mint").
+		Exec(edb).Debug().Error
+}
+
+func (edb *EventDb) updateAuthorizersTotalBurn(burns []state.Burn) error {
+	var (
+		ids []string
+		totalBurns []int64
+	)
+	for _, m := range burns {
+		ids = append(ids, m.Burner)
+		amt, err := m.Amount.Int64()
+		if err != nil {
+			return err
+		}
+		totalBurns = append(totalBurns, amt)
+	}
+
+	return CreateBuilder("authorizers", "id", ids).
+		AddUpdate("total_burn", totalBurns, "authorizers.total_burn + t.total_burn").
+		Exec(edb).Debug().Error
+}
+
 func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) error {
 	var provs []Provider
 	for _, a := range authorizer {
@@ -172,4 +214,12 @@ func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
 
 func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
 	return newEventsMerger[dbs.DbHealthCheck](TagAuthorizerHealthCheck, withUniqueEventOverwrite())
+}
+
+func mergeBridgeMintEvents() *eventsMergerImpl[state.Mint] {
+	return newEventsMerger[state.Mint](TagBridgeMint, withUniqueEventOverwrite())
+}
+
+func mergeBridgeBurnEvents() *eventsMergerImpl[state.Burn] {
+	return newEventsMerger[state.Burn](TagBridgeBurn, withUniqueEventOverwrite())
 }

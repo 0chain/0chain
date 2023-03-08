@@ -146,7 +146,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 	payload.Amount = amount
 	for _, sig := range payload.Signatures {
-		err = ctx.AddMint(&state.Mint{
+		err = ctx.AddBridgeMint(&state.Mint{
 			Minter:     gn.ID,
 			ToClientID: sig.ID,
 			Amount:     share,

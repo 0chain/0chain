@@ -109,6 +109,7 @@ type StateContextI interface {
 	AddTransfer(t *state.Transfer) error
 	AddSignedTransfer(st *state.SignedTransfer)
 	AddMint(m *state.Mint) error
+	AddBridgeMint(m *state.Mint) error
 	GetTransfers() []*state.Transfer // cannot use in smart contracts or REST endpoints
 	GetSignedTransfers() []*state.SignedTransfer
 	GetMints() []*state.Mint // cannot use in smart contracts or REST endpoints
@@ -268,7 +269,28 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		TxHash:      sc.txn.Hash,
 		Type:        event.TypeStats,
 		Tag:         event.TagAddMint,
-		Index:       sc.txn.ClientID,
+		Index:       m.ToClientID,
+		Data:        m,
+	})
+
+	return nil
+}
+
+// AddBridgeMint - add bridge mint for the authorizers
+func (sc *StateContext) AddBridgeMint(m *state.Mint) error {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
+	if !sc.isApprovedMinter(m) {
+		return state.ErrInvalidMint
+	}
+	sc.mints = append(sc.mints, m)
+
+	sc.events = append(sc.events, event.Event{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        event.TypeStats,
+		Tag:         event.TagBridgeMint,
+		Index:       m.ToClientID,
 		Data:        m,
 	})
 

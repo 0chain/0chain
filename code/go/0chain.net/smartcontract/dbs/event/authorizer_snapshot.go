@@ -15,6 +15,8 @@ type AuthorizerSnapshot struct {
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
+	TotalMint     currency.Coin `json:"total_mint"`
+	TotalBurn     currency.Coin `json:"total_burn"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
 }
@@ -84,6 +86,8 @@ func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer) error {
 			ServiceCharge: authorizer.ServiceCharge,
 			CreationRound: authorizer.CreationRound,
 			TotalRewards:  authorizer.Rewards.TotalRewards,
+			TotalMint:     authorizer.TotalMint,
+			TotalBurn:     authorizer.TotalBurn,
 		})
 	}
 
