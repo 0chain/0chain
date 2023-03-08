@@ -18,6 +18,7 @@ func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, e
 	if err != nil {
 		return nil, err
 	}
+
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
@@ -124,6 +125,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&User{},
 		&UserAggregate{},
 		&UserSnapshot{},
+		&BurnTicket{},
 		&Transaction{},
 		&WriteMarker{},
 		&Validator{},

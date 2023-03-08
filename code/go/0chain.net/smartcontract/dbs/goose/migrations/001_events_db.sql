@@ -1060,6 +1060,41 @@ ALTER TABLE public.transactions_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 
+--
+-- Name: burn_tickets; Type: TABLE; Schema: public; Owner: zchain_user
+--
+
+CREATE TABLE public.burn_tickets (
+                              id bigint NOT NULL,
+                              created_at timestamp with time zone,
+                              updated_at timestamp with time zone,
+                              ethereum_address text,
+                              hash text,
+                              nonce bigint
+);
+
+
+ALTER TABLE public.burn_tickets OWNER TO zchain_user;
+
+--
+-- Name: burn_tickets_id_seq; Type: SEQUENCE; Schema: public; Owner: zchain_user
+--
+
+CREATE SEQUENCE public.burn_tickets_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.burn_tickets_id_seq OWNER TO zchain_user;
+
+--
+-- Name: burn_tickets_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: zchain_user
+--
+
+ALTER SEQUENCE public.burn_tickets_id_seq OWNED BY public.burn_tickets.id;
 
 --
 -- Name: users; Type: TABLE; Schema: public; Owner: zchain_user
@@ -1074,7 +1109,8 @@ CREATE TABLE public.users (
                               balance bigint,
                               change bigint,
                               round bigint,
-                              nonce bigint
+                              nonce bigint,
+                              mint_nonce bigint
 );
 
 
@@ -1353,6 +1389,11 @@ ALTER TABLE ONLY public.sharder_aggregates ALTER COLUMN id SET DEFAULT nextval('
 
 ALTER TABLE ONLY public.transactions ALTER COLUMN id SET DEFAULT nextval('public.transactions_id_seq'::regclass);
 
+--
+-- Name: burn tickets id; Type: DEFAULT; Schema: public; Owner: zchain_user
+--
+
+ALTER TABLE ONLY public.burn_tickets ALTER COLUMN id SET DEFAULT nextval('public.burn_tickets_id_seq'::regclass);
 
 --
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: zchain_user
