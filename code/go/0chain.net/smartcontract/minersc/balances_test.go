@@ -96,7 +96,8 @@ func (tb *testBalances) GetLatestFinalizedBlock() *block.Block { return nil }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
-func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
+func (tb *testBalances) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
+	delete(tb.tree, key)
 	return "", nil
 }
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
