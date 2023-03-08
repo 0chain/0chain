@@ -110,6 +110,17 @@ func addMockAllocation(
 			AllocationRoot: encryption.Hash("allocation root"),
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
+
+		blobAllocPart, err := partitionsBlobberAllocations(bId, balances)
+		if err != nil {
+			log.Fatal("add blob alloc partition", err)
+		}
+		if err := blobAllocPart.Add(balances, &BlobberAllocationNode{ID: sa.ID}); err != nil {
+			log.Fatal("add blob alloc node", err)
+		}
+		if err := blobAllocPart.Save(balances); err != nil {
+			log.Fatal("save blob alloc part", err)
+		}
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
@@ -225,29 +236,6 @@ func AddMockChallenges(
 				blobAlloc[oc.BlobberID] = make(map[string]*AllocOpenChallenge)
 			}
 			blobAlloc[oc.BlobberID][ch.AllocationID] = oc
-		}
-	}
-
-	// adding blobber challenge allocation partition
-	for blobberID, val := range blobAlloc {
-
-		aPart, err := partitionsBlobberAllocations(blobberID, balances)
-		if err != nil {
-			panic(err)
-		}
-		for allocID := range val {
-
-			err = aPart.Add(balances, &BlobberAllocationNode{
-				ID: allocID,
-			})
-			if err != nil {
-				panic(err)
-			}
-		}
-		err = aPart.Save(balances)
-
-		if err != nil {
-			panic(err)
 		}
 	}
 }
