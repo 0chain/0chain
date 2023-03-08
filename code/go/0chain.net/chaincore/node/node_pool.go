@@ -21,7 +21,7 @@ import (
 //msgp:ignore Pool
 //go:generate msgp -v -io=false -tests=false -unexported
 
-//ErrNodeNotFound - to indicate that a node is not present in the pool
+// ErrNodeNotFound - to indicate that a node is not present in the pool
 var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not found")
 
 func atomicLoadFloat64(addr *uint64) float64 {
@@ -138,7 +138,7 @@ func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
 	return
 }
 
-func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
+func (np *Pool) ShuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
 	np.mmx.RLock()
 	for _, v := range np.NodesMap {
 		shuffled = append(shuffled, v)
@@ -160,7 +160,7 @@ func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
 // Print - print this pool. This will be used for http response and read method
 // should be able to consume it
 func (np *Pool) Print(w io.Writer) {
-	nodes := np.shuffleNodes(false)
+	nodes := np.ShuffleNodes(false)
 	for _, node := range nodes {
 		if node.IsActive() {
 			node.Print(w)
