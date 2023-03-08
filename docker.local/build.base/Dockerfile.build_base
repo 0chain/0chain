@@ -7,6 +7,8 @@ RUN apk add --update --no-cache  coreutils linux-headers perl zlib-dev bzip2-dev
 # For Herumi's cryptography
 RUN apk add --update --no-cache gmp gmp-dev openssl-dev 
 
+RUN apk add make
+
 # Install RocksDB
 RUN cd /tmp && \
     wget -O - https://github.com/facebook/rocksdb/archive/v6.20.3.tar.gz | tar xz 
