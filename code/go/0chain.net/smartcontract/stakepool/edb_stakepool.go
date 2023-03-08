@@ -24,13 +24,22 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 	}
 }
 
-func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, options ...string) *StakePoolReward {
+
+	var challengeID string
+	if len(options) > 0 {
+		challengeID = options[0]
+	} else {
+		challengeID = ""
+	}
+
 	var spu StakePoolReward
 	spu.ID = pId
 	spu.Type = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
+	spu.ChallengeID = challengeID
 	return &spu
 }
 
@@ -54,5 +63,6 @@ func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolRe
 		Reward:          spu.Reward,
 		DelegateRewards: spu.DelegateRewards,
 		RewardType:      spu.RewardType,
+		ChallengeID:     spu.ChallengeID,
 	}
 }
