@@ -745,7 +745,42 @@ func BenchmarkTests(
 			endpoint: ssc.commitSettingChanges,
 			txn:      &transaction.Transaction{},
 		},
-
+		{
+			name: "storage.kill_blobber",
+			input: (&provider.ProviderRequest{
+				ID: getMockBlobberId(0),
+			}).Encode(),
+			endpoint: ssc.killBlobber,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.StorageOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
+			name: "storage.kill_validator",
+			input: (&provider.ProviderRequest{
+				ID: getMockValidatorId(0),
+			}).Encode(),
+			endpoint: ssc.killValidator,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.StorageOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
+			name:     "storage.shutdown_blobber",
+			endpoint: ssc.shutdownBlobber,
+			txn: &transaction.Transaction{
+				ClientID: getMockBlobberId(0),
+			},
+		},
+		{
+			name:     "storage.shutdown_validator",
+			endpoint: ssc.shutdownValidator,
+			txn: &transaction.Transaction{
+				ClientID: getMockValidatorId(0),
+			},
+		},
 		{
 			name:     "storage.update_settings",
 			endpoint: ssc.updateSettings,

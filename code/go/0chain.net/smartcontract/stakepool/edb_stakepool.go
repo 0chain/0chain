@@ -12,19 +12,25 @@ import (
 
 type StakePoolReward dbs.StakePoolReward
 
-func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, optional ...string) *StakePoolReward {
-
-	if len(optional) == 0 {
-		optional = append(optional, "")
+func (sp *StakePool) EmitStakePoolBalanceUpdate(
+	pId string,
+	pType spenum.Provider,
+	balances cstate.StateContextI,
+) {
+	for id, dp := range sp.Pools {
+		dpu := dbs.NewDelegatePoolUpdate(id, pId, pType)
+		dpu.Updates["balance"] = dp.Balance
+		balances.EmitEvent(event.TypeStats, event.TagUpdateDelegatePool, id, *dpu)
 	}
+}
 
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
 	var spu StakePoolReward
-	spu.ProviderId = pId
-	spu.ProviderType = pType
+	spu.ID = pId
+	spu.Type = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
-	spu.ChallengeID = optional[0]
 	return &spu
 }
 
@@ -36,7 +42,7 @@ func (spu StakePoolReward) Emit(
 	balances.EmitEvent(
 		event.TypeStats,
 		tag,
-		spu.RewardType.String()+spu.ProviderId,
+		spu.RewardType.String()+spu.ID,
 		stakePoolRewardToStakePoolRewardEvent(spu),
 	)
 	return nil
@@ -44,10 +50,9 @@ func (spu StakePoolReward) Emit(
 
 func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolReward {
 	return &dbs.StakePoolReward{
-		StakePoolId:     spu.StakePoolId,
+		ProviderID:      spu.ProviderID,
 		Reward:          spu.Reward,
 		DelegateRewards: spu.DelegateRewards,
 		RewardType:      spu.RewardType,
-		ChallengeID:     spu.ChallengeID,
 	}
 }

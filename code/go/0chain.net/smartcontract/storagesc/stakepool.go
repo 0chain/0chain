@@ -301,20 +301,27 @@ func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 //
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
+func (_ *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
 	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
 	return getStakePool(providerType, providerID, balances)
 }
 
-// getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
-	balances chainstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+func getStakePoolAdapter(
+	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+) (sp stakepool.AbstractStakePool, err error) {
 	pool, err := getStakePool(providerType, providerID, balances)
 	if err != nil {
 		return nil, err
 	}
 
 	return pool, nil
+}
+
+// getStakePool of given blobber
+func (_ *StorageSmartContract) getStakePoolAdapter(
+	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+) (sp stakepool.AbstractStakePool, err error) {
+	return getStakePoolAdapter(providerType, providerID, balances)
 }
 
 func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (

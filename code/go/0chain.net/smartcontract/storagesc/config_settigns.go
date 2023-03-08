@@ -44,7 +44,7 @@ const (
 
 	StakePoolMinLock
 	StakePoolMinLockPeriod
-
+	StakePoolKillSlash
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
 	CancellationCharge
@@ -61,6 +61,8 @@ const (
 
 	ValidatorReward
 	BlobberSlash
+
+	HealthCheckPeriod
 	MaxBlobbersPerAllocation
 	MaxReadPrice
 	MaxWritePrice
@@ -119,6 +121,10 @@ const (
 	CostStakePoolPayInterests
 	CostCommitSettingsChanges
 	CostCollectReward
+	CostKillBlobber
+	CostKillValidator
+	CostShutdownBlobber
+	CostShutdownValidator
 	NumberOfSettings
 )
 
@@ -153,6 +159,7 @@ func initSettingName() {
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
 	SettingName[WritePoolMinLock] = "writepool.min_lock"
 	SettingName[StakePoolMinLock] = "stakepool.min_lock"
+	SettingName[StakePoolKillSlash] = "stakepool.kill_slash"
 	SettingName[StakePoolMinLockPeriod] = "stakepool.min_lock_period"
 	SettingName[MaxTotalFreeAllocation] = "max_total_free_allocation"
 	SettingName[MaxIndividualFreeAllocation] = "max_individual_free_allocation"
@@ -168,6 +175,7 @@ func initSettingName() {
 	SettingName[FreeAllocationReadPoolFraction] = "free_allocation_settings.read_pool_fraction"
 	SettingName[ValidatorReward] = "validator_reward"
 	SettingName[BlobberSlash] = "blobber_slash"
+	SettingName[HealthCheckPeriod] = "health_check_period"
 	SettingName[MaxBlobbersPerAllocation] = "max_blobbers_per_allocation"
 	SettingName[MaxReadPrice] = "max_read_price"
 	SettingName[MaxWritePrice] = "max_write_price"
@@ -223,6 +231,10 @@ func initSettingName() {
 	SettingName[CostStakePoolPayInterests] = "cost.stake_pool_pay_interests"
 	SettingName[CostCommitSettingsChanges] = "cost.commit_settings_changes"
 	SettingName[CostCollectReward] = "cost.collect_reward"
+	SettingName[CostKillBlobber] = "cost.kill_blobber"
+	SettingName[CostKillValidator] = "cost.kill_validator"
+	SettingName[CostShutdownBlobber] = "cost.shutdown_blobber"
+	SettingName[CostShutdownValidator] = "cost.shutdown_validator"
 }
 
 func initSettings() {
@@ -241,6 +253,7 @@ func initSettings() {
 		WritePoolMinLock.String():                 {WritePoolMinLock, smartcontract.CurrencyCoin},
 		StakePoolMinLock.String():                 {StakePoolMinLock, smartcontract.CurrencyCoin},
 		StakePoolMinLockPeriod.String():           {StakePoolMinLockPeriod, smartcontract.Duration},
+		StakePoolKillSlash.String():               {StakePoolKillSlash, smartcontract.Float64},
 		MaxTotalFreeAllocation.String():           {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		MaxIndividualFreeAllocation.String():      {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
 		CancellationCharge.String():               {CancellationCharge, smartcontract.Float64},
@@ -255,6 +268,7 @@ func initSettings() {
 		FreeAllocationReadPoolFraction.String():   {FreeAllocationReadPoolFraction, smartcontract.Float64},
 		ValidatorReward.String():                  {ValidatorReward, smartcontract.Float64},
 		BlobberSlash.String():                     {BlobberSlash, smartcontract.Float64},
+		HealthCheckPeriod.String():                {HealthCheckPeriod, smartcontract.Duration},
 		MaxBlobbersPerAllocation.String():         {MaxBlobbersPerAllocation, smartcontract.Int},
 		MaxReadPrice.String():                     {MaxReadPrice, smartcontract.CurrencyCoin},
 		MaxWritePrice.String():                    {MaxWritePrice, smartcontract.CurrencyCoin},
@@ -310,6 +324,10 @@ func initSettings() {
 		CostStakePoolPayInterests.String():        {CostStakePoolPayInterests, smartcontract.Cost},
 		CostCommitSettingsChanges.String():        {CostCommitSettingsChanges, smartcontract.Cost},
 		CostCollectReward.String():                {CostCollectReward, smartcontract.Cost},
+		CostKillBlobber.String():                  {CostKillBlobber, smartcontract.Cost},
+		CostKillValidator.String():                {CostKillValidator, smartcontract.Cost},
+		CostShutdownBlobber.String():              {CostShutdownBlobber, smartcontract.Cost},
+		CostShutdownValidator.String():            {CostShutdownValidator, smartcontract.Cost},
 	}
 }
 
@@ -470,6 +488,8 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.ValidatorReward = change
 	case CancellationCharge:
 		conf.CancellationCharge = change
+	case StakePoolKillSlash:
+		conf.StakePool.KillSlash = change
 	case BlobberSlash:
 		conf.BlobberSlash = change
 	case ChallengeGenerationRate:
@@ -542,6 +562,8 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.StakePool.MinLockPeriod = change
 	case FreeAllocationDuration:
 		conf.FreeAllocationSettings.Duration = change
+	case HealthCheckPeriod:
+		conf.HealthCheckPeriod = change
 	default:
 		return fmt.Errorf("key: %v not implemented as duration", key)
 	}
@@ -688,6 +710,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.FreeAllocationSettings.Size
 	case FreeAllocationDuration:
 		return conf.FreeAllocationSettings.Duration
+	case HealthCheckPeriod:
+		return conf.HealthCheckPeriod
 	case FreeAllocationReadPriceRangeMin:
 		return conf.FreeAllocationSettings.ReadPriceRange.Min
 	case FreeAllocationReadPriceRangeMax:
@@ -700,6 +724,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.FreeAllocationSettings.ReadPoolFraction
 	case ValidatorReward:
 		return conf.ValidatorReward
+	case StakePoolKillSlash:
+		return conf.StakePool.KillSlash
 	case BlobberSlash:
 		return conf.BlobberSlash
 	case MaxBlobbersPerAllocation:

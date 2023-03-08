@@ -465,13 +465,13 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 	}
 
 	if startBlockString != "" && endBlockString != "" {
-		startBlock, err := strconv.ParseUint(startBlockString, 10, 64)
+		startBlock, err := strconv.ParseInt(startBlockString, 10, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("failed to parse start-block string to a number", err.Error()))
 			return
 		}
 
-		endBlock, err := strconv.ParseUint(endBlockString, 10, 64)
+		endBlock, err := strconv.ParseInt(endBlockString, 10, 64)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal("failed to parse end-block string to a number", err.Error()))
 			return
@@ -482,8 +482,8 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 			return
 		}
 
-		query.StartBlock = int(startBlock)
-		query.EndBlock = int(endBlock)
+		query.StartBlock = startBlock
+		query.EndBlock = endBlock
 
 		rewards, err := edb.GetRewardClaimedTotalBetweenBlocks(query)
 		if err != nil {
@@ -1254,11 +1254,14 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 }
 
 type validatorNodeResponse struct {
-	ValidatorID  string        `json:"validator_id"`
-	BaseUrl      string        `json:"url"`
-	StakeTotal   currency.Coin `json:"stake_total"`
-	UnstakeTotal currency.Coin `json:"unstake_total"`
-	PublicKey    string        `json:"public_key"`
+	ValidatorID     string           `json:"validator_id"`
+	BaseUrl         string           `json:"url"`
+	StakeTotal      currency.Coin    `json:"stake_total"`
+	UnstakeTotal    currency.Coin    `json:"unstake_total"`
+	PublicKey       string           `json:"public_key"`
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	IsKilled        bool             `json:"is_killed"`
+	IsShutdown      bool             `json:"is_shutdown"`
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`
@@ -1285,6 +1288,9 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 		ServiceCharge:            v.ServiceCharge,
 		UncollectedServiceCharge: v.Rewards.Rewards,
 		TotalServiceCharge:       v.Rewards.TotalRewards,
+		IsKilled:                 v.IsKilled,
+		IsShutdown:               v.IsShutdown,
+		LastHealthCheck:          v.LastHealthCheck,
 	}
 }
 
@@ -2085,6 +2091,8 @@ type storageNodeResponse struct {
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
 	Allocated               int64                  `json:"allocated"` // allocated capacity
 	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
+	IsKilled                bool                   `json:"is_killed"`
+	IsShutdown              bool                   `json:"is_shutdown"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
@@ -2116,21 +2124,25 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		LastRewardDataReadRound: sn.LastRewardDataReadRound,
 		StakePoolSettings:       sn.StakePoolSettings,
 		RewardRound:             sn.RewardRound,
+		IsKilled:                sn.IsKilled(),
+		IsShutdown:              sn.IsShutDown(),
 	}
 }
 
 func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 	return StorageNode{
 		Provider: provider.Provider{
-			ID:           snr.ID,
-			ProviderType: spenum.Blobber,
+			ID:              snr.ID,
+			ProviderType:    spenum.Blobber,
+			LastHealthCheck: snr.LastHealthCheck,
+			HasBeenKilled:   snr.IsKilled,
+			HasBeenShutDown: snr.IsShutdown,
 		},
 		BaseURL:                 snr.BaseURL,
 		Geolocation:             snr.Geolocation,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
 		Allocated:               snr.Allocated,
-		LastHealthCheck:         snr.LastHealthCheck,
 		PublicKey:               snr.PublicKey,
 		SavedData:               snr.SavedData,
 		DataReadLastRewardRound: snr.DataReadLastRewardRound,
@@ -2171,6 +2183,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		TotalOffers:              blobber.OffersTotal,
 		TotalServiceCharge:       blobber.Rewards.TotalRewards,
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
+		IsKilled:                 blobber.IsKilled,
+		IsShutdown:               blobber.IsShutdown,
 	}
 }
 

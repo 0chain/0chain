@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	blobberHealthTime = 60 * 60 // 1 Hour
-	CHUNK_SIZE        = 64 * KB
+	CHUNK_SIZE = 64 * KB
 )
 
 func newBlobber(id string) *StorageNode {
@@ -327,12 +326,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
 
 	return string(blobber.Encode()), nil
-}
-
-func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
-	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
-		return b.LastHealthCheck <= (now - blobberHealthTime), nil
-	})
 }
 
 func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
