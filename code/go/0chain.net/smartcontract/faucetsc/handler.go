@@ -57,8 +57,7 @@ func NoResourceOrErrInternal(w http.ResponseWriter, r *http.Request, err error) 
 //	200: StringMap
 //	404:
 func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
-	gn, err := getGlobalNode(frh.GetQueryStateContext())
-	if err != nil {
+	gn, err := getGlobalNode(frh.GetQueryStateCon
 		NoResourceOrErrInternal(w, r, err)
 		return
 	}
