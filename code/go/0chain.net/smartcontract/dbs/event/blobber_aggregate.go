@@ -86,7 +86,7 @@ func paginate(round, pageAmount, count, pageLimit int64) (int64, int64, int) {
 }
 
 func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset int64) {
-	const GB = currency.Coin(1024 * 1024 * 1024)
+	const GB = float64(1024 * 1024 * 1024)
 	var ids []string
 	r := edb.Store.Get().
 		Raw("select id from temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
@@ -166,20 +166,12 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 
 		// Change in staked storage (staked_storage = total_stake / write_price)
 		oldSS := old.Capacity
-		oldWritePricePerGB := old.WritePrice / GB 
-		if oldWritePricePerGB > 0 {
-			oldSS, err = (old.TotalStake / oldWritePricePerGB).Int64()
-			if err != nil {
-				logging.Logger.Error("converting coin to int64", zap.Error(err))
-			}
+		if old.WritePrice > 0 {
+			oldSS = int64((float64(old.TotalStake) / float64(old.WritePrice)) * GB)
 		}
-		newWritePricePerGB := current.WritePrice / GB 
 		newSS := current.Capacity
-		if newWritePricePerGB > 0 {
-			newSS, err = (current.TotalStake / newWritePricePerGB).Int64()
-			if err != nil {
-				logging.Logger.Error("converting coin to int64", zap.Error(err))
-			}
+		if current.WritePrice > 0 {
+			newSS = int64((float64(current.TotalStake) / float64(current.WritePrice)) * GB)
 		}
 		gsDiff.StakedStorage += (newSS - oldSS)
 
@@ -207,12 +199,8 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.BlobbersStake += int64(-old.TotalStake)
 		gsDiff.BlobberCount -= 1
 
-		oldWritePricePerGB := old.WritePrice / GB
-		if oldWritePricePerGB > 0 {
-			ss, err := (old.TotalStake / oldWritePricePerGB).Int64()
-			if err != nil {
-				logging.Logger.Error("converting coin to int64", zap.Error(err))
-			}
+		if old.WritePrice > 0 {
+			ss := int64((float64(old.TotalStake) / float64(old.WritePrice)) * GB)
 			gsDiff.StakedStorage += -ss
 		} else {
 			gsDiff.StakedStorage += -old.Capacity
