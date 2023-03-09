@@ -304,6 +304,15 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	err := edb.Store.Get().Model(&Blobber{}).Omit(clause.Associations).Create([]Blobber{
 		{
 			Provider: Provider{
+				ID:                "B000",
+			},
+			BaseURL: "https://blobber.zero",
+			TotalStorageIncome: 0,
+			TotalReadIncome:   0,
+			TotalSlashedStake: 0,
+		},
+		{
+			Provider: Provider{
 				ID:                "B001",
 			},
 			BaseURL: "https://blobber.one",
@@ -336,7 +345,7 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 		{
 			// Shouldn't affect anybody
 			StakePoolId: dbs.StakePoolId{
-				ProviderId: "B001",
+				ProviderId: "B000",
 				ProviderType: spenum.Blobber,
 			},
 			Reward: 10,
@@ -385,18 +394,21 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	err = edb.Store.Get().Model(&Blobber{}).Omit(clause.Associations).Order("id ASC").Find(&blobbersAfter).Error
 	require.NoError(t, err)
 
-
-	assert.Equal(t, blobbersBefore[0].TotalStorageIncome + 20, blobbersAfter[0].TotalStorageIncome)
+	assert.Equal(t, blobbersBefore[0].TotalStorageIncome, blobbersAfter[0].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[0].TotalReadIncome, blobbersAfter[0].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[0].TotalSlashedStake, blobbersAfter[0].TotalSlashedStake)
 
-	assert.Equal(t, blobbersBefore[1].TotalStorageIncome, blobbersAfter[1].TotalStorageIncome)
-	assert.Equal(t, blobbersBefore[1].TotalReadIncome + 30, blobbersAfter[1].TotalReadIncome)
+	assert.Equal(t, blobbersBefore[1].TotalStorageIncome + 20, blobbersAfter[1].TotalStorageIncome)
+	assert.Equal(t, blobbersBefore[1].TotalReadIncome, blobbersAfter[1].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[1].TotalSlashedStake, blobbersAfter[1].TotalSlashedStake)
 
 	assert.Equal(t, blobbersBefore[2].TotalStorageIncome, blobbersAfter[2].TotalStorageIncome)
-	assert.Equal(t, blobbersBefore[2].TotalReadIncome, blobbersAfter[2].TotalReadIncome)
-	assert.Equal(t, blobbersBefore[2].TotalSlashedStake + 40, blobbersAfter[2].TotalSlashedStake)
+	assert.Equal(t, blobbersBefore[2].TotalReadIncome + 30, blobbersAfter[2].TotalReadIncome)
+	assert.Equal(t, blobbersBefore[2].TotalSlashedStake, blobbersAfter[2].TotalSlashedStake)
+
+	assert.Equal(t, blobbersBefore[3].TotalStorageIncome, blobbersAfter[3].TotalStorageIncome)
+	assert.Equal(t, blobbersBefore[3].TotalReadIncome, blobbersAfter[3].TotalReadIncome)
+	assert.Equal(t, blobbersBefore[3].TotalSlashedStake + 40, blobbersAfter[3].TotalSlashedStake)
 }
 
 func requireDelegateRewards(

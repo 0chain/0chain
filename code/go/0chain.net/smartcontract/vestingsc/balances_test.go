@@ -43,6 +43,7 @@ func (tb *testBalances) Validate() error                              { return n
 func (tb *testBalances) GetMints() []*state.Mint                      { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error           { return nil }
 func (tb *testBalances) AddMint(*state.Mint) error                    { return nil }
+func (tb *testBalances) AddBridgeMint(*state.Mint) error              { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer              { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)   {}
