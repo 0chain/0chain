@@ -166,15 +166,17 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 
 		// Change in staked storage (staked_storage = total_stake / write_price)
 		oldSS := old.Capacity
-		if old.WritePrice > 0 {
-			oldSS, err = (old.TotalStake / old.WritePrice * GB).Int64()
+		oldWritePricePerGB := old.WritePrice / GB 
+		if oldWritePricePerGB > 0 {
+			oldSS, err = (old.TotalStake / oldWritePricePerGB).Int64()
 			if err != nil {
 				logging.Logger.Error("converting coin to int64", zap.Error(err))
 			}
 		}
+		newWritePricePerGB := current.WritePrice / GB 
 		newSS := current.Capacity
-		if current.WritePrice > 0 {
-			newSS, err = (current.TotalStake / current.WritePrice * GB).Int64()
+		if newWritePricePerGB > 0 {
+			newSS, err = (current.TotalStake / newWritePricePerGB).Int64()
 			if err != nil {
 				logging.Logger.Error("converting coin to int64", zap.Error(err))
 			}
@@ -205,8 +207,9 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.BlobbersStake += int64(-old.TotalStake)
 		gsDiff.BlobberCount -= 1
 
-		if old.WritePrice > 0 {
-			ss, err := (old.TotalStake / old.WritePrice * GB).Int64()
+		oldWritePricePerGB := old.WritePrice / GB
+		if oldWritePricePerGB > 0 {
+			ss, err := (old.TotalStake / oldWritePricePerGB).Int64()
 			if err != nil {
 				logging.Logger.Error("converting coin to int64", zap.Error(err))
 			}

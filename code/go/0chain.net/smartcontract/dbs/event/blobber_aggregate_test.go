@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/config"
+	"github.com/0chain/common/core/currency"
 	faker "github.com/go-faker/faker/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -448,7 +449,7 @@ func assertBlobberSnapshot(t *testing.T, expected, actual *BlobberSnapshot) {
 }
 
 func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId int64, actualBlobbers []Blobber, actualSnapshot *Snapshot) {
-	const GB = int64(1024 * 1024 * 1024)
+	const GB = currency.Coin(1024 * 1024 * 1024)
 
 	for _, b := range actualBlobbers {
 		t.Logf("actualBlobber %v => bucketId %v", b.ID, b.BucketId)
@@ -466,9 +467,15 @@ func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBuck
 		expectedGlobal.UsedStorage += blobber.SavedData
 		expectedGlobal.TotalRewards += int64(blobber.Rewards.TotalRewards)
 		expectedGlobal.BlobbersStake += int64(blobber.TotalStake)
-		ss := blobber.Capacity
-		if blobber.WritePrice > 0 {
-			ss = int64(blobber.TotalStake / blobber.WritePrice) * GB
+		
+		var (
+			ss = blobber.Capacity
+			err error
+		)
+		writePricePerGB := blobber.WritePrice / GB
+		if writePricePerGB > 0 {
+			ss, err = (blobber.TotalStake / writePricePerGB).Int64()
+			require.NoError(t, err)
 		}
 		expectedGlobal.StakedStorage += ss
 		expectedGlobal.BlobberCount += 1
