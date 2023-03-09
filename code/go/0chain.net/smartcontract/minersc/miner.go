@@ -186,6 +186,11 @@ func (msc *MinerSmartContract) deleteNode(
 		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
 	}
 
+	err = saveDeleteNodeID(balances, nodeType, deleteNode.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, pool := range deleteNode.GetOrderedPools() {
 		switch pool.Status {
 		case spenum.Active:

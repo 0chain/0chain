@@ -58,6 +58,14 @@ func (msc *MinerSmartContract) unlockOffline(
 	return nil
 }
 
+func (msc *MinerSmartContract) viewChangeDeleteNodes(balances cstate.StateContextI) error {
+	if err := deleteNodesOnViewChange(balances, spenum.Miner); err != nil {
+		return err
+	}
+
+	return deleteNodesOnViewChange(balances, spenum.Sharder)
+}
+
 func (msc *MinerSmartContract) viewChangePoolsWork(
 	mb *block.MagicBlock,
 	round int64,
@@ -97,6 +105,8 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 			minerDelete = true
 			continue
 		}
+
+		// TODO: remove as there is no pending status anymore
 		if err = msc.activatePending(mn); err != nil {
 			return err
 		}
@@ -125,6 +135,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 			sharderDelete = true
 			continue
 		}
+		// TODO: remove as there is no pending status anymore
 		if err = msc.activatePending(sn); err != nil {
 			return err
 		}
@@ -291,7 +302,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err != nil {
 		return "", fmt.Errorf("error splitting fees by ratio: %v", err)
 	}
-
 	// pay random N miners
 	if err := mn.StakePool.DistributeRewardsRandN(
 		minerRewards,
@@ -317,31 +327,51 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 
-	// pay and mint rest for block sharders
-	sharders, err := getAllShardersList(balances)
+	shardersIDs, err := getNodeIDs(balances, AllShardersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", err
 		}
 	}
 
-	if len(sharders.Nodes) > 0 {
-		mbSharders := getRegisterShardersInMagicBlock(balances, sharders)
-		if err := msc.payShardersAndDelegates(
-			gn, mbSharders, sharderFees,
-			gn.NumShardersRewarded, b.GetRoundRandomSeed(),
-			spenum.FeeRewardSharder,
-			balances,
-		); err != nil {
+	if len(shardersIDs) > 0 {
+		seed := b.GetRoundRandomSeed()
+		randS := rand.New(rand.NewSource(seed))
+		mbShardersIDs := getRegisterShardersInMagicBlock(balances, shardersIDs)
+
+		randS.Shuffle(len(mbShardersIDs), func(i, j int) {
+			mbShardersIDs[i], mbShardersIDs[j] = mbShardersIDs[j], mbShardersIDs[i]
+		})
+
+		shardersPaid := gn.NumShardersRewarded
+		if shardersPaid > len(mbShardersIDs) {
+			shardersPaid = len(mbShardersIDs)
+		}
+
+		rewardShardersIDs := mbShardersIDs[:shardersPaid]
+		rewardSharders, err := cstate.GetItemsByIDs(rewardShardersIDs, getSharderNode, balances)
+		if err != nil {
 			return "", err
 		}
+
 		if err := msc.payShardersAndDelegates(
-			gn, mbSharders, sharderRewards,
-			gn.NumShardersRewarded, b.GetRoundRandomSeed(),
-			spenum.BlockRewardSharder,
-			balances,
-		); err != nil {
+			gn, rewardSharders, sharderFees, seed,
+			spenum.FeeRewardSharder, balances); err != nil {
 			return "", err
+		}
+
+		if err := msc.payShardersAndDelegates(
+			gn, rewardSharders, sharderRewards, seed,
+			spenum.BlockRewardSharder, balances); err != nil {
+			return "", err
+		}
+
+		for _, sh := range rewardSharders {
+			if err = sh.save(balances); err != nil {
+				return "", common.NewErrorf("pay_fees/pay_sharders",
+					"saving sharder node: %v", err)
+			}
+
 		}
 	}
 
@@ -354,8 +384,9 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if gn.RewardRoundFrequency != 0 && b.Round%gn.RewardRoundFrequency == 0 {
 		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 		if lfmb != nil {
-			err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
-			if err != nil {
+			// TODO: use viewChangePoolsWork when view change is enabled
+			//err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
+			if err = msc.viewChangeDeleteNodes(balances); err != nil {
 				return "", err
 			}
 		} else {
@@ -372,20 +403,20 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	return resp, nil
 }
 
-func getRegisterShardersInMagicBlock(balances cstate.StateContextI, sharders *MinerNodes) []*MinerNode {
+func getRegisterShardersInMagicBlock(balances cstate.StateContextI, shardersIDs []string) []string {
 	var (
-		shardersKeys = getMagicBlockSharders(balances)
-		smap         = make(map[string]struct{}, len(shardersKeys))
+		shardersKeysInMB = getMagicBlockSharders(balances)
+		smap             = make(map[string]struct{}, len(shardersKeysInMB))
 	)
 
-	for _, key := range shardersKeys {
+	for _, key := range shardersKeysInMB {
 		smap[key] = struct{}{}
 	}
 
-	retSharders := make([]*MinerNode, 0, len(shardersKeys))
-	for i, s := range sharders.Nodes {
-		if _, ok := smap[s.GetKey()]; ok {
-			retSharders = append(retSharders, sharders.Nodes[i])
+	retSharders := make([]string, 0, len(shardersKeysInMB))
+	for _, id := range shardersIDs {
+		if _, ok := smap[GetSharderKey(id)]; ok {
+			retSharders = append(retSharders, id)
 			continue
 		}
 	}
@@ -438,23 +469,19 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
 	gn *GlobalNode,
-	sharders []*MinerNode,
+	rewardSharders []*MinerNode,
 	reward currency.Coin,
-	randN int,
 	seed int64,
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) error {
-	shardersPaid := randN
-	if randN > len(sharders) {
-		shardersPaid = len(sharders)
-	}
-	sharderShare, totalCoinLeft, err := currency.DistributeCoin(reward, int64(shardersPaid))
+	n := int64(len(rewardSharders))
+	sharderShare, totalCoinLeft, err := currency.DistributeCoin(reward, n)
 	if err != nil {
 		return err
 	}
-	if totalCoinLeft > currency.Coin(shardersPaid) {
-		clShare, cl, err := currency.DistributeCoin(totalCoinLeft, int64(shardersPaid))
+	if totalCoinLeft > currency.Coin(n) {
+		clShare, cl, err := currency.DistributeCoin(totalCoinLeft, n)
 		if err != nil {
 			return err
 		}
@@ -465,10 +492,6 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 
 		totalCoinLeft = cl
 	}
-
-	var (
-		randS = rand.New(rand.NewSource(seed))
-	)
 
 	rewardSharder := func(sh *MinerNode) error {
 		var extraShare currency.Coin
@@ -488,22 +511,11 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 				"distributing rewards: %v", err)
 		}
 
-		if err = sh.save(balances); err != nil {
-			return common.NewErrorf("pay_fees/pay_sharders",
-				"saving sharder node: %v", err)
-		}
-
 		return nil
 	}
 
-	var perm []int
-	perm = randS.Perm(len(sharders))
-	if shardersPaid < len(perm) {
-		perm = perm[:shardersPaid]
-	}
-
-	for _, i := range perm {
-		if err := rewardSharder(sharders[i]); err != nil {
+	for i := range rewardSharders {
+		if err := rewardSharder(rewardSharders[i]); err != nil {
 			return err
 		}
 	}
