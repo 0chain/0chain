@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/cache"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
@@ -24,11 +25,11 @@ func SetClientSignatureScheme(scheme string) {
 	defaultClientSignatureScheme = scheme
 }
 
-// var cacher cache.Cache
+var cacher cache.Cache
 
-// func init() {
-// 	cacher = cache.NewLFUCache(10 * 1024)
-// }
+func init() {
+	cacher = cache.NewLFUCache(10 * 1024)
+}
 
 // SetupClientDB sets up client DB
 func SetupClientDB() {
@@ -294,54 +295,38 @@ func GetClients(ctx context.Context, clients map[string]*Client) (err error) {
 	return
 }
 
-// GetClientFromCache - gets client from either cache
-// func GetClientFromCache(key datastore.Key) (*Client, error) {
-// 	co, err := cacher.Get(key)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return co.(*Client), nil
-// }
+//GetClientFromCache - gets client from either cache
+func GetClientFromCache(key datastore.Key) (*Client, error) {
+	co, err := cacher.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	return co.(*Client), nil
+}
 
-// PutClientCache saves client to cache
-// func PutClientCache(co *Client) error {
-// 	return cacher.Add(co.GetKey(), co)
-// }
+//PutClientCache saves client to cache
+func PutClientCache(co *Client) error {
+	return cacher.Add(co.GetKey(), co)
+}
 
 // GetClient - gets client from either cache or database
 func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
-	// coi, err := cacher.Get(key)
-	// if err == nil {
-	// 	return coi.(*Client), nil
-	// }
+	coi, err := cacher.Get(key)
+	if err == nil {
+		return coi.(*Client), nil
+	}
 
 	co := NewClient()
 	if err := co.Read(ctx, key); err != nil {
 		return nil, err
 	}
 
-	// if err := cacher.Add(key, co); err != nil {
-	// 	return nil, err
-	// }
+	if err := cacher.Add(key, co); err != nil {
+		return nil, err
+	}
 
 	return co, nil
 }
-
-// PutClient - Given a client data, it stores it
-// func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-// 	co, ok := entity.(*Client)
-// 	if !ok {
-// 		return nil, common.NewError("entity_invalid_type", "Invalid entity type")
-// 	}
-// 	response, err := datastore.PutEntityHandler(ctx, entity)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if err := cacher.Add(co.GetKey(), co); err != nil {
-// 		logging.Logger.Warn("put client to cache failed", zap.Error(err))
-// 	}
-// 	return response, nil
-// }
 
 // GetIDFromPublicKey computes the ID of a public key
 func GetIDFromPublicKey(pubkey string) (string, error) {

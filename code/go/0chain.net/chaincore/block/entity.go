@@ -589,17 +589,13 @@ func (b *Block) GetClients() ([]*client.Client, error) {
 		if _, ok := cmap[t.PublicKey]; ok {
 			continue
 		}
-		// c, err := client.GetClientFromCache(t.ClientID)
-		c := client.NewClient()
-		if err := c.SetPublicKey(t.PublicKey); err != nil {
-			return nil, err
+		c, err := client.GetClientFromCache(t.ClientID)
+		if err != nil {
+			c = client.NewClient()
+			if err := c.SetPublicKey(t.PublicKey); err != nil {
+				return nil, err
+			}
 		}
-		// if err != nil {
-		// 	c = client.NewClient()
-		// 	if err := c.SetPublicKey(t.PublicKey); err != nil {
-		// 		return nil, err
-		// 	}
-		// }
 
 		cmap[t.PublicKey] = c
 	}

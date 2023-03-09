@@ -298,13 +298,5 @@ func newRegisteredMPTWallet() string {
 
 	clientID := clientIDForKey(scheme)
 
-	// w := mptwallet.Wallet{
-	// 	SignatureScheme: scheme,
-	// 	PublicKey:       scheme.GetPublicKey(),
-	// 	ClientID:        clientID,
-	// }
-
-	// registerMPTWallet(w)
-
 	return clientID
 }

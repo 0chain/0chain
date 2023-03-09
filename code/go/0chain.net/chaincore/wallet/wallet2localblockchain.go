@@ -11,16 +11,6 @@ import (
 	"0chain.net/core/datastore"
 )
 
-/*Register - register a wallet using the server side api */
-// func (w *Wallet) Register(ctx context.Context) error {
-// 	c := clientMetadataProvider.Instance().(*client.Client)
-// 	if err := c.SetPublicKey(w.SignatureScheme.GetPublicKey()); err != nil {
-// 		return err
-// 	}
-// 	_, err := client.PutClient(ctx, c)
-// 	return err
-// }
-
 var transactionMetadataProvider datastore.EntityMetadata
 
 // var clientMetadataProvider datastore.EntityMetadata
@@ -28,7 +18,6 @@ var transactionMetadataProvider datastore.EntityMetadata
 /*SetupWallet - setup the wallet package */
 func SetupWallet() {
 	transactionMetadataProvider = datastore.GetEntityMetadata("txn")
-	// clientMetadataProvider = datastore.GetEntityMetadata("client")
 }
 
 /*CreateRandomSendTransaction - create a transaction */

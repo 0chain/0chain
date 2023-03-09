@@ -272,34 +272,6 @@ func (mc *Chain) GetMinerRound(roundNumber int64) *Round {
 	return mr
 }
 
-// SaveClients - save clients from the block.
-// func (mc *Chain) SaveClients(clients []*client.Client) error {
-// 	var err error
-// 	clientKeys := make([]datastore.Key, len(clients))
-// 	for idx, c := range clients {
-// 		clientKeys[idx] = c.GetKey()
-// 	}
-// 	clientEntityMetadata := datastore.GetEntityMetadata("client")
-// 	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-// 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
-// 	defer memorystore.Close(ctx)
-// 	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-// 	for idx, c := range clients {
-// 		if !datastore.IsEmpty(cEntities[idx].GetKey()) {
-// 			continue
-// 		}
-// 		_, cerr := client.PutClient(ctx, c)
-// 		if cerr != nil {
-// 			err = cerr
-// 		}
-// 	}
-// 	return err
-// }
-
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {

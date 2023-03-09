@@ -38,67 +38,6 @@ const (
 	scRestAPIGetSharderKeepList = "/getSharderKeepList"
 )
 
-// RegisterClient registers client on BC.
-// func (c *Chain) RegisterClient() {
-// 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-// 		var (
-// 			clientMetadataProvider = datastore.GetEntityMetadata("client")
-// 			ctx                    = memorystore.WithEntityConnection(
-// 				common.GetRootContext(), clientMetadataProvider)
-// 		)
-// 		defer memorystore.Close(ctx)
-// 		ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-// 		_, err := client.PutClient(ctx, &node.Self.Underlying().Client)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 	}
-
-// 	nodeBytes, err := json.Marshal(node.Self.Underlying().Client.Clone())
-// 	if err != nil {
-// 		logging.Logger.DPanic("Encode self node failed", zap.Error(err))
-// 	}
-
-// 	var (
-// 		mb               = c.GetCurrentMagicBlock()
-// 		miners           = mb.Miners.CopyNodesMap()
-// 		registered       = 0
-// 		thresholdByCount = config.GetThresholdCount()
-// 		consensus        = int(math.Ceil((float64(thresholdByCount) / 100) *
-// 			float64(len(miners))))
-// 	)
-
-// 	if consensus > len(miners) {
-// 		logging.Logger.DPanic(fmt.Sprintf("number of miners %d is not enough"+
-// 			" relative to the threshold parameter %d%%(%d)", len(miners),
-// 			thresholdByCount, consensus))
-// 	}
-
-// 	for registered < consensus {
-// 		for key, miner := range miners {
-// 			body, err := httpclientutil.SendPostRequest(
-// 				miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes,
-// 				"", "", nil,
-// 			)
-// 			if err != nil {
-// 				logging.Logger.Error("error in register client",
-// 					zap.Error(err),
-// 					zap.ByteString("body", body),
-// 					zap.Int("registered", registered),
-// 					zap.Int("consensus", consensus))
-// 			} else {
-// 				delete(miners, key)
-// 				registered++
-// 			}
-// 		}
-// 		time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
-// 	}
-
-// 	logging.Logger.Info("register client success",
-// 		zap.Int("registered", registered),
-// 		zap.Int("consensus", consensus))
-// }
-
 func (c *Chain) isRegistered(ctx context.Context) (is bool) {
 	getStatePathFunc := func(n *node.Node) string {
 		switch n.Type {

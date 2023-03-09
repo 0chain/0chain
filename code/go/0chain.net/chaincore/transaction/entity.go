@@ -311,22 +311,17 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 /*GetSignatureScheme - get the signature scheme associated with this transaction */
 func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
 
-	// co, err := client.GetClientFromCache(t.ClientID)
-	co := client.NewClient()
-	co.ID = t.ClientID
-	if err := co.SetPublicKey(t.PublicKey); err != nil {
-		return nil, err
+	co, err := client.GetClientFromCache(t.ClientID)
+	if err != nil {
+		co = client.NewClient()
+		co.ID = t.ClientID
+		if err := co.SetPublicKey(t.PublicKey); err != nil {
+			return nil, err
+		}
+		if err := client.PutClientCache(co); err != nil {
+			return nil, err
+		}
 	}
-	// if err != nil {
-	// 	co = client.NewClient()
-	// 	co.ID = t.ClientID
-	// 	if err := co.SetPublicKey(t.PublicKey); err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if err := client.PutClientCache(co); err != nil {
-	// 		return nil, err
-	// 	}
-	// }
 
 	if co.SigScheme == nil {
 		if t.PublicKey == "" {
@@ -337,9 +332,9 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 		if err := co.SetPublicKey(t.PublicKey); err != nil {
 			return nil, err
 		}
-		// if err := client.PutClientCache(co); err != nil {
-		// 	return nil, err
-		// }
+		if err := client.PutClientCache(co); err != nil {
+			return nil, err
+		}
 	}
 
 	return co.SigScheme, nil
