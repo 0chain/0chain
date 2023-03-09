@@ -509,13 +509,19 @@ func (p *Partitions) addPartition() *partition {
 }
 
 func (p *Partitions) deleteTail(balances state.StateContextI) error {
-	_, err := balances.DeleteTrieNode(p.partitionKey(p.partitionsNum() - 1))
+	k := p.partitionKey(p.partitionsNum() - 1)
+	_, err := balances.DeleteTrieNode(k)
 	if err != nil {
 		logging.Logger.Debug("partition delete tail failed",
 			zap.Error(err),
 			zap.Int("partition num", p.partitionsNum()))
 		return err
 	}
+	logging.Logger.Debug("delete tail partition",
+		zap.String("partition", p.Name),
+		zap.String("partition key", k),
+		zap.Int("partition num", p.partitionsNum()))
+
 	p.Partitions = p.Partitions[:p.partitionsNum()-1]
 	p.NumPartitions--
 	return nil
