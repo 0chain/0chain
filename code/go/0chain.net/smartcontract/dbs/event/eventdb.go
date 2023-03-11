@@ -134,7 +134,6 @@ func (edb *EventDb) AutoMigrate() error {
 		&Error{},
 		&Miner{},
 		&Sharder{},
-		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
 		&RewardMint{},
