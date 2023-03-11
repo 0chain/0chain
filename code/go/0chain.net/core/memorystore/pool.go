@@ -79,8 +79,11 @@ func (p *poolList) getDbPool(entityMetadata datastore.EntityMetadata) *dbPool {
 	id := entityMetadata.GetDB()
 	pool, ok := p.list[id]
 	if !ok {
-		logging.Logger.Panic("Invalid entity metadata setup, unknown db pool: " + id)
+		logging.Logger.Panic(fmt.Sprintf("Invalid db metadata, unknown db pool: %s, pools: %p", id, p.list))
+		//logging.Logger.Panic(fmt.Sprintf("Invalid entity metadata setup, unknown db pool: %s, pools: %p", id, p.list))
 	}
+
+	logging.Logger.Debug(fmt.Sprintf("get db pool: %s, ok: %v, pools: %p", id, ok, p.list))
 
 	return pool
 }
