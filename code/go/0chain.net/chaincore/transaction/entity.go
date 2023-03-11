@@ -118,6 +118,9 @@ func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currenc
 			return errors.New("invalid transaction data")
 		}
 
+		logging.Logger.Debug("txnExempted",
+			zap.Any("txnExempted", txnExempted),
+			zap.Any("sc data", smartContractData))
 		if _, ok := txnExempted[smartContractData.FunctionName]; ok {
 			return nil
 		}
