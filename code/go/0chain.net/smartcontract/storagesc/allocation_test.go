@@ -858,165 +858,6 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	assert.Equal(t, alloc.Encode(), got.Encode())
 }
 
-func TestTransferAllocation(t *testing.T) {
-	t.Parallel()
-	const (
-		mockNewOwnerId        = "mock new owner id"
-		mockNewOwnerPublicKey = "mock new owner public key"
-		mockOldOwner          = "mock old owner"
-		mockCuratorId         = "mock curator id"
-		mockAllocationId      = "mock allocation id"
-	)
-	type args struct {
-		ssc      *StorageSmartContract
-		txn      *transaction.Transaction
-		input    []byte
-		balances chainState.StateContextI
-	}
-	type parameters struct {
-		curator                 string
-		info                    transferAllocationInput
-		existingCurators        []string
-		existingWPForAllocation bool
-		existingNoiseWPools     int
-	}
-	type want struct {
-		err    bool
-		errMsg string
-	}
-	var setExpectations = func(t *testing.T, name string, p parameters, want want) args {
-		var balances = &mocks.StateContextI{}
-		var txn = &transaction.Transaction{
-			ClientID: p.curator,
-		}
-		var ssc = &StorageSmartContract{
-
-			SmartContract: sci.NewSC(ADDRESS),
-		}
-		input, err := json.Marshal(p.info)
-		require.NoError(t, err)
-
-		var sa = StorageAllocation{
-			Owner:     mockOldOwner,
-			ID:        p.info.AllocationId,
-			WritePool: 0,
-		}
-		sa.Curators = append(sa.Curators, p.existingCurators...)
-		balances.On("GetTrieNode", sa.GetKey(ssc.ID),
-			mock.MatchedBy(func(s *StorageAllocation) bool {
-				*s = sa
-				return true
-			})).Return(nil).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			sa.GetKey(ssc.ID),
-			mock.MatchedBy(func(sa *StorageAllocation) bool {
-				for i, curator := range p.existingCurators {
-					if sa.Curators[i] != curator {
-						return false
-					}
-				}
-				return sa.ID == p.info.AllocationId &&
-					sa.Owner == p.info.NewOwnerId &&
-					sa.OwnerPublicKey == p.info.NewOwnerPublicKey
-			})).Return("", nil).Once()
-
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagUpdateAllocation, mock.Anything, mock.Anything,
-		).Return().Maybe()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
-		).Return().Maybe()
-
-		return args{ssc, txn, input, balances}
-	}
-
-	testCases := []struct {
-		name       string
-		parameters parameters
-		want       want
-	}{
-		{
-			name: "ok",
-			parameters: parameters{
-				curator: mockCuratorId,
-				info: transferAllocationInput{
-					AllocationId:      mockAllocationId,
-					NewOwnerId:        mockNewOwnerId,
-					NewOwnerPublicKey: mockNewOwnerPublicKey,
-				},
-				existingCurators:        []string{mockCuratorId, "another", "and another"},
-				existingNoiseWPools:     3,
-				existingWPForAllocation: false,
-			},
-		},
-		{
-			name: "ok",
-			parameters: parameters{
-				curator: mockCuratorId,
-				info: transferAllocationInput{
-					AllocationId:      mockAllocationId,
-					NewOwnerId:        mockNewOwnerId,
-					NewOwnerPublicKey: mockNewOwnerPublicKey,
-				},
-				existingCurators:        []string{mockCuratorId, "another", "and another"},
-				existingNoiseWPools:     0,
-				existingWPForAllocation: false,
-			},
-		},
-		{
-			name: "ok_owner",
-			parameters: parameters{
-				curator: mockOldOwner,
-				info: transferAllocationInput{
-					AllocationId:      mockAllocationId,
-					NewOwnerId:        mockNewOwnerId,
-					NewOwnerPublicKey: mockNewOwnerPublicKey,
-				},
-				existingCurators:        []string{mockCuratorId, "another", "and another"},
-				existingNoiseWPools:     0,
-				existingWPForAllocation: false,
-			},
-		},
-		{
-			name: "Err_not_curator",
-			parameters: parameters{
-				curator: mockCuratorId,
-				info: transferAllocationInput{
-					AllocationId:      mockAllocationId,
-					NewOwnerId:        mockNewOwnerId,
-					NewOwnerPublicKey: mockNewOwnerPublicKey,
-				},
-				existingCurators: []string{"not mock curator"},
-			},
-			want: want{
-				err:    true,
-				errMsg: "curator_transfer_allocation_failed: only curators or the owner can transfer allocations; mock curator id is neither",
-			},
-		},
-	}
-	for _, test := range testCases {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			args := setExpectations(t, test.name, test.parameters, test.want)
-
-			resp, err := args.ssc.curatorTransferAllocation(args.txn, args.input, args.balances)
-
-			require.EqualValues(t, test.want.err, err != nil)
-			if err != nil {
-				require.EqualValues(t, test.want.errMsg, err.Error())
-				return
-			}
-			require.EqualValues(t, args.txn.Hash, resp)
-			//require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
-		})
-	}
-}
-
 func isEqualStrings(a, b []string) (eq bool) {
 	if len(a) != len(b) {
 		return
@@ -2178,6 +2019,31 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	numb = int64(alloc.DataShards + alloc.ParityShards)
 	bsize = (alloc.Size + (numb - 1)) / numb
 	assert.True(t, math.Abs(float64(bsize*numb-tbs)) < 100)
+
+	//
+	// change owner and owner public key
+	//
+
+	cp = &StorageAllocation{}
+	err = cp.Decode(alloc.Encode())
+	require.NoError(t, err)
+
+	var uarOwnerUpdate = updateAllocationRequest{
+		ID:             alloc.ID,
+		OwnerID:        otherClient.id,
+		OwnerPublicKey: otherClient.pk,
+	}
+
+	tp += 100
+	resp, err = uarOwnerUpdate.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	require.NoError(t, err)
+	require.NoError(t, deco.Decode([]byte(resp)))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.EqualValues(t, alloc.Owner, otherClient.id)
+	require.EqualValues(t, alloc.OwnerPublicKey, otherClient.pk)
+	require.EqualValues(t, alloc, &deco)
 
 	//
 	// reduce

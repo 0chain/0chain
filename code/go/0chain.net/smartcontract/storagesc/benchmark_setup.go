@@ -92,9 +92,6 @@ func addMockAllocation(
 		Finalized: i == mockFinalizedAllocationIndex,
 		WritePool: mockWriePoolSize,
 	}
-	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
-		sa.Curators = append(sa.Curators, clients[j])
-	}
 
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 	for j := 0; j < viper.GetInt(sc.NumBlobbersPerAllocation); j++ {
@@ -913,12 +910,9 @@ func SetMockConfig(
 		"cost.add_free_storage_assigner":   mockCost,
 		"cost.free_allocation_request":     mockCost,
 		"cost.free_update_allocation":      mockCost,
-		"cost.add_curator":                 mockCost,
-		"cost.remove_curator":              mockCost,
 		"cost.blobber_health_check":        mockCost,
 		"cost.update_blobber_settings":     mockCost,
 		"cost.pay_blobber_block_rewards":   mockCost,
-		"cost.curator_transfer_allocation": mockCost,
 		"cost.challenge_request":           mockCost,
 		"cost.challenge_response":          mockCost,
 		"cost.generate_challenges":         mockCost,
