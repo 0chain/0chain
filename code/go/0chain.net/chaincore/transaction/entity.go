@@ -120,6 +120,9 @@ func (t *Transaction) ValidateNonce() error {
 // ValidateFee - Validate fee
 func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currency.Coin) error {
 	if t.TransactionData != "" {
+		logging.Logger.Debug("txnExempted",
+			zap.Any("exempted  map", txnExempted),
+			zap.Any("txn", t))
 		if _, ok := txnExempted[t.FunctionName]; ok {
 			return nil
 		}
