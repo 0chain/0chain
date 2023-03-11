@@ -1,4 +1,0 @@
-package mocks
-
-func init() {
-}

@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
