@@ -44,7 +44,7 @@
 #### Windows
 Run powershell as administrator
 ```powershell
-./windows_network.sh
+./windows_network.ps1
 ```
 #### Ubuntu/WSL2
 Run the following script
@@ -92,8 +92,6 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 ```
 ./docker.local/bin/build.sharders.sh
 ```
-
-for building the 1 sharder.
 
 2.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
 
@@ -191,19 +189,6 @@ Start the sharder service that also brings up the cassandra service. To run comm
 ```
 ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
 ```
-
-## Generating Test Transactions
-
-There is no need to generate the test data separately. In development mode, the transaction data is automatically generated at a certain rate based on the block size.
-
-However, you can use the <a href='https://github.com/0chain/block-explorer'>block explorer</a> to submit transactions, view the blocks and confirm the transactions.
-
-## Monitoring the progress
-
-1. Use <a href='https://github.com/0chain/block-explorer'>block explorer</a> to see the progress of the block chain.
-
-2. In addition, use the '/\_diagnostics' link on any node to view internal details of the blockchain and the node.
-
 ## Troubleshooting
 
 1. Ensure the port mapping is all correct:

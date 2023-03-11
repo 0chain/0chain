@@ -259,8 +259,8 @@ func (sp *stakePool) slash(
 		}
 		edbSlash.DelegatePenalties[id] = dpSlash
 	}
-	// todo we should slash from stake pools not rewards. 0chain issue 1495
-	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
+	//Added New Tag for StakePoolPenalty
+	if err := edbSlash.Emit(event.TagStakePoolPenalty, balances); err != nil {
 		return 0, err
 	}
 

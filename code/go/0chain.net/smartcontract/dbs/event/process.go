@@ -628,12 +628,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.deleteSharder(*sharderID)
-	case TagAddOrOverwriteCurator:
-		c, ok := fromEvent[Curator](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addOrOverwriteCurator(*c)
 	case TagUpdateSharderTotalStake:
 		s, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {
@@ -647,12 +641,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateShardersTotalUnStakes(*s)
-	case TagRemoveCurator:
-		c, ok := fromEvent[Curator](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.removeCurator(*c)
 
 	//stake pool
 	case TagAddDelegatePool:
@@ -673,6 +661,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.rewardUpdate(*spus, event.BlockNumber)
+	case TagStakePoolPenalty:
+		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.penaltyUpdate(*spus, event.BlockNumber)
 	case TagAddAllocation:
 		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {

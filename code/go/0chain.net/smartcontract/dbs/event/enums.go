@@ -63,9 +63,8 @@ const (
 	TagAddSharder
 	TagUpdateSharder
 	TagDeleteSharder
-	TagAddOrOverwriteCurator
-	TagRemoveCurator
 	TagStakePoolReward
+	TagStakePoolPenalty
 	TagAddDelegatePool
 	TagUpdateDelegatePool
 	TagAddAllocation
@@ -163,9 +162,8 @@ func initTagString() {
 	TagString[TagAddSharder] = "TagAddSharder"
 	TagString[TagUpdateSharder] = "TagUpdateSharder"
 	TagString[TagDeleteSharder] = "TagDeleteSharder"
-	TagString[TagAddOrOverwriteCurator] = "TagAddOrOverwriteCurator"
-	TagString[TagRemoveCurator] = "TagRemoveCurator"
 	TagString[TagStakePoolReward] = "TagStakePoolReward"
+	TagString[TagStakePoolPenalty] = "TagStakePoolPenalty"
 	TagString[TagAddDelegatePool] = "TagAddDelegatePool"
 	TagString[TagUpdateDelegatePool] = "TagUpdateDelegatePool"
 	TagString[TagAddAllocation] = "TagAddAllocation"

@@ -226,13 +226,10 @@ smart_contracts:
       add_free_storage_assigner: 100
       free_allocation_request: 1500
       free_update_allocation: 2500
-      add_curator: 100
-      remove_curator: 100
       blobber_health_check: 100
       update_blobber_settings: 100
       update_validator_settings: 100
       pay_blobber_block_rewards: 100
-      curator_transfer_allocation: 100
       challenge_request: 100
       challenge_response: 1600
       add_validator: 100

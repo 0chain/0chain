@@ -11,7 +11,6 @@ simulation:
   num_blocks: 100
   num_challenges_blobber: 1
   num_clients: 1000000
-  num_curators: 1
   num_free_storage_assigners: 1
   num_miner_delegates: 10
   num_miners: 100
