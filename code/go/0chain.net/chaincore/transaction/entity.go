@@ -93,7 +93,7 @@ func (t *Transaction) ComputeProperties() error {
 	if t.ChainID == "" {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
-	if t.TransactionType == TxnTypeSmartContract {
+	if t.TransactionType == TxnTypeSmartContract || t.TransactionType == TxnTypeSend {
 		std := &SmartContractData{}
 		if err := json.Unmarshal([]byte(t.TransactionData), std); err != nil {
 			return fmt.Errorf("invalid smart contract data: %v", err)
