@@ -234,7 +234,7 @@ func NewUpdateBlobberTotalUnStakeEvent(ID string, totalUnStake currency.Coin) (t
 	return TagUpdateBlobberTotalUnStake, Blobber{
 		Provider: Provider{
 			ID:         ID,
-			TotalStake: totalUnStake,
+			UnstakeTotal: totalUnStake,
 		},
 	}
 }
