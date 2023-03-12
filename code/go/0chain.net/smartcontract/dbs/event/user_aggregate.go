@@ -167,7 +167,7 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 
 func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[string]*UserAggregate, error) {
 	var ua []UserAggregate
-	var mappedAggrs = make(map[string]*UserAggregate, len(ua))
+	var mappedAggrs = make(map[string]*UserAggregate, len(ids))
 
 	var idlist []string
 	for id := range ids {
@@ -208,9 +208,9 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 	}
 
 	ids := make(map[string]interface{})
-	for _, aggr := range updatedAggrs {
-		aggr.Round = e.round
-		ids[aggr.UserID] = struct{}{}
+	for i := range updatedAggrs {
+		updatedAggrs[i].Round = e.round
+		ids[updatedAggrs[i].UserID] = struct{}{}
 	}
 
 	latest, err := edb.GetLatestUserAggregates(ids)
@@ -222,7 +222,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 	for _, aggr := range updatedAggrs {
 		u := aggr
 		if u.Round == e.round {
-			logging.Logger.Error("duplicate round, not sure why", zap.Any("aggr", aggr), zap.Any("latest", latest[u.UserID]))
+			logging.Logger.Error("duplicate round", zap.Any("aggr", aggr), zap.Any("latest", latest[u.UserID]))
 		}
 		a, ok := latest[u.UserID]
 		if !ok {
