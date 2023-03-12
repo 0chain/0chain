@@ -1536,6 +1536,25 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 			logging.Logger.Info("restartRound->kickSharders: kick sharder FB",
 				zap.Int64("round", mr.GetRoundNumber()))
 			go mc.ForcePushNotarizedBlock(common.GetRootContext(), mr.Block)
+		} else {
+			if mr == nil {
+				logging.Logger.Debug("kickSharders - ignored round, mr nil",
+					zap.Int64("round", s),
+					zap.Int64("current round", c))
+			} else {
+				if mr.Block == nil {
+					logging.Logger.Debug("kickSharders - ignored round, mr.Block nil",
+						zap.Int64("round", s),
+						zap.Int64("current round", c))
+				} else {
+					logging.Logger.Debug("kickSharders - ignored round, state not meet",
+						zap.Int64("round", s),
+						zap.Int64("current round", c),
+						zap.Any("is notarized", mr.Block.IsBlockNotarized()),
+						zap.Any("is state success", mr.Block.GetStateStatus() == block.StateSuccessful),
+						zap.Any("is state synched", mr.Block.GetStateStatus() == block.StateSynched))
+				}
+			}
 		}
 	}
 }
