@@ -316,9 +316,11 @@ func assertAuthorizerGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedB
 			continue
 		}
 		expectedGlobal.TotalRewards += int64(authorizer.Rewards.TotalRewards)
+		expectedGlobal.TotalStaked += int64(authorizer.TotalStake)
 		expectedGlobal.AuthorizerCount += 1
 	}
 
 	assert.Equal(t, expectedGlobal.TotalRewards, actualSnapshot.TotalRewards)
+	assert.Equal(t, expectedGlobal.TotalStaked, actualSnapshot.TotalStaked)
 	assert.Equal(t, expectedGlobal.AuthorizerCount, actualSnapshot.AuthorizerCount)
 }

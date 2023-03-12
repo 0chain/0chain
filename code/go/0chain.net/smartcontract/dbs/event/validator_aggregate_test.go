@@ -306,9 +306,11 @@ func assertValidatorGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBu
 			continue
 		}
 		expectedGlobal.TotalRewards += int64(validator.Rewards.TotalRewards)
+		expectedGlobal.TotalStaked += int64(validator.TotalStake)
 		expectedGlobal.ValidatorCount += 1
 	}
 
 	assert.Equal(t, expectedGlobal.TotalRewards, actualSnapshot.TotalRewards)
 	assert.Equal(t, expectedGlobal.ValidatorCount, actualSnapshot.ValidatorCount)
+	assert.Equal(t, expectedGlobal.TotalStaked, actualSnapshot.TotalStaked)
 }
