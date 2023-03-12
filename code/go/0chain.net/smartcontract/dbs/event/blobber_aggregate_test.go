@@ -465,7 +465,6 @@ func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBuck
 		expectedGlobal.MaxCapacityStorage += blobber.Capacity
 		expectedGlobal.UsedStorage += blobber.SavedData
 		expectedGlobal.TotalRewards += int64(blobber.Rewards.TotalRewards)
-		expectedGlobal.BlobbersStake += int64(blobber.TotalStake)
 		
 		ss := blobber.Capacity
 		if blobber.WritePrice > 0 {
@@ -484,7 +483,6 @@ func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBuck
 	assert.Equal(t, expectedGlobal.MaxCapacityStorage, actualSnapshot.MaxCapacityStorage)
 	assert.Equal(t, expectedGlobal.UsedStorage, actualSnapshot.UsedStorage)
 	assert.Equal(t, expectedGlobal.TotalRewards, actualSnapshot.TotalRewards)
-	assert.Equal(t, expectedGlobal.BlobbersStake, actualSnapshot.BlobbersStake)
 	assert.Equal(t, expectedGlobal.StakedStorage, actualSnapshot.StakedStorage)
 	assert.Equal(t, expectedGlobal.BlobberCount, actualSnapshot.BlobberCount)	
 }
@@ -499,6 +497,6 @@ func printBlobbers(tag string, blobbers *[]Blobber) {
 
 func printGlobalSnapshot(tag string, snapshot *Snapshot) {
 	fmt.Println(tag);
-	fmt.Printf("\tSuccessfulChallenges %v, TotalChallenges %v, AllocatedStorage %v, MaxCapacityStorage %v, UsedStorage %v, TotalRewards %v, BlobbersStake %v, StakedStorage %v, BlobberCount %v\n",
-		snapshot.SuccessfulChallenges, snapshot.TotalChallenges, snapshot.AllocatedStorage, snapshot.MaxCapacityStorage, snapshot.UsedStorage, snapshot.TotalRewards, snapshot.BlobbersStake, snapshot.StakedStorage, snapshot.BlobberCount);
+	fmt.Printf("\tSuccessfulChallenges %v, TotalChallenges %v, AllocatedStorage %v, MaxCapacityStorage %v, UsedStorage %v, TotalRewards %v, StakedStorage %v, BlobberCount %v\n",
+		snapshot.SuccessfulChallenges, snapshot.TotalChallenges, snapshot.AllocatedStorage, snapshot.MaxCapacityStorage, snapshot.UsedStorage, snapshot.TotalRewards, snapshot.StakedStorage, snapshot.BlobberCount);
 }

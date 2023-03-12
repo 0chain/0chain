@@ -149,6 +149,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
+		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
 
 		oldAuthorizersProcessingMap[current.ID] = processingEntity
 	}
@@ -167,6 +168,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 		snapshotIdsToDelete = append(snapshotIdsToDelete, old.AuthorizerID)
 		gsDiff.AuthorizerCount -= 1
 		gsDiff.TotalRewards -= int64(old.TotalRewards)
+		gsDiff.TotalStaked -= int64(old.TotalStake)
 	}
 	if len(snapshotIdsToDelete) > 0 {
 		if result := edb.Store.Get().Where("authorizer_id in (?)", snapshotIdsToDelete).Delete(&AuthorizerSnapshot{}); result.Error != nil {

@@ -150,6 +150,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
+		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
 
 		oldShardersProcessingMap[current.ID] = processingEntity
 	}
@@ -167,6 +168,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 		snapshotIdsToDelete = append(snapshotIdsToDelete, old.SharderID)
 		gsDiff.SharderCount -= 1
 		gsDiff.TotalRewards -= int64(old.TotalRewards)
+		gsDiff.TotalStaked -= int64(old.TotalStake)
 	}
 	if len(snapshotIdsToDelete) > 0 {
 		if result := edb.Store.Get().Where("sharder_id in (?)", snapshotIdsToDelete).Delete(&SharderSnapshot{}); result.Error != nil {

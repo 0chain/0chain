@@ -33,7 +33,6 @@ type Snapshot struct {
 	TotalChallenges      int64 `json:"total_challenges"`                 //*493 SUM percentage of challenges failed by a particular blobber
 	AllocatedStorage     int64 `json:"allocated_storage"`                //*490 SUM clients have locked up storage by purchasing allocations (new + previous + update -sub fin+cancel or reduceed)
 	MaxCapacityStorage   int64 `json:"max_capacity_storage"`             //*491 SUM all storage from blobber settings
-	BlobbersStake        int64 `json:"blobbers_stake"`                   // Total staked tokens for all the blobbers. Important for calculating Average Write Price (= BlobbersStake / StakedStorage)
 	StakedStorage        int64 `json:"staked_storage"`                   //*491 SUM staked capacity by delegates
 	UsedStorage          int64 `json:"used_storage"`                     //*491 SUM this is the actual usage or data that is in the server - write markers (triggers challenge pool / the price).(bytes written used capacity)
 	TransactionsCount    int64 `json:"transactions_count"`               // Total number of transactions in a block
@@ -68,7 +67,6 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.UniqueAddresses += diff.UniqueAddresses
 	s.BlockCount += diff.BlockCount
 	s.TotalTxnFee += diff.TotalTxnFee
-	s.BlobbersStake += diff.BlobbersStake
 	s.BlobberCount += diff.BlobberCount
 	s.MinerCount += diff.MinerCount
 	s.SharderCount += diff.SharderCount
@@ -164,30 +162,6 @@ func (gs *Snapshot) update(e []Event) {
 			gs.ZCNSupply -= int64(m.Amount)
 			logging.Logger.Info("snapshot update TagBurn",
 				zap.Int64("zcn_supply", gs.ZCNSupply))
-		case TagLockStakePool:
-			ds, ok := fromEvent[[]DelegatePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-
-			var total int64
-			for _, d := range *ds {
-				total += d.Amount
-				gs.TotalStaked += d.Amount
-			}
-			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", total))
-		case TagUnlockStakePool:
-			ds, ok := fromEvent[[]DelegatePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			for _, d := range *ds {
-				gs.TotalStaked -= d.Amount
-			}
 		case TagLockWritePool:
 			ds, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {

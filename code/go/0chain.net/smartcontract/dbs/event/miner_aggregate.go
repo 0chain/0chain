@@ -147,6 +147,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
+		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
 
 		oldMinersProcessingMap[current.ID] = processingEntity
 	}
@@ -164,6 +165,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 		snapshotIdsToDelete = append(snapshotIdsToDelete, old.MinerID)
 		gsDiff.MinerCount -= 1
 		gsDiff.TotalRewards -= int64(old.TotalRewards)
+		gsDiff.TotalStaked -= int64(old.TotalStake)
 	}
 	if len(snapshotIdsToDelete) > 0 {
 		if result := edb.Store.Get().Where("miner_id in (?)", snapshotIdsToDelete).Delete(&MinerSnapshot{}); result.Error != nil {

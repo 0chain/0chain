@@ -34,7 +34,6 @@ func TestSnapshotFunctions(t *testing.T) {
 			UniqueAddresses: int64(100),
 			BlockCount: int64(1000),
 			TotalTxnFee: int64(1000),
-			BlobbersStake: int64(1000000),
 			BlobberCount: int64(1),
 			MinerCount: int64(1),
 			SharderCount: int64(1),
@@ -63,7 +62,6 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.UniqueAddresses + snapshotDiff.UniqueAddresses, s.UniqueAddresses)
 		require.Equal(t, initialSnapshot.BlockCount + snapshotDiff.BlockCount, s.BlockCount)
 		require.Equal(t, initialSnapshot.TotalTxnFee + snapshotDiff.TotalTxnFee, s.TotalTxnFee)
-		require.Equal(t, initialSnapshot.BlobbersStake + snapshotDiff.BlobbersStake, s.BlobbersStake)
 		require.Equal(t, initialSnapshot.BlobberCount + snapshotDiff.BlobberCount, s.BlobberCount)
 		require.Equal(t, initialSnapshot.MinerCount + snapshotDiff.MinerCount, s.MinerCount)
 		require.Equal(t, initialSnapshot.SharderCount + snapshotDiff.SharderCount, s.SharderCount)
@@ -113,7 +111,6 @@ func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {
 		ZCNSupply: int64(100),
 		ClientLocks: int64(100),
 		MinedTotal: int64(100),
-		BlobbersStake: int64(1000000),
 		TotalStaked: int64(100),
 		TotalRewards: int64(100),
 		SuccessfulChallenges: int64(100),
