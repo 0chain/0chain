@@ -259,8 +259,8 @@ func (sp *stakePool) slash(
 		}
 		edbSlash.DelegatePenalties[id] = dpSlash
 	}
-	// todo we should slash from stake pools not rewards. 0chain issue 1495
-	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
+	//Added New Tag for StakePoolPenalty
+	if err := edbSlash.Emit(event.TagStakePoolPenalty, balances); err != nil {
 		return 0, err
 	}
 
@@ -365,6 +365,25 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	sp.Settings.MaxStake = settings.MaxStake
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+	return sp, nil
+}
+
+func (ssc *StorageSmartContract) createStakePool(
+	conf *Config,
+	settings stakepool.Settings,
+) (*stakePool, error) {
+	if err := validateStakePoolSettings(settings, conf); err != nil {
+		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
+	}
+
+	sp := newStakePool()
+	sp.Settings.DelegateWallet = settings.DelegateWallet
+	sp.Minter = chainstate.MinterStorage
+	sp.Settings.MinStake = settings.MinStake
+	sp.Settings.MaxStake = settings.MaxStake
+	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
+	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+
 	return sp, nil
 }
 

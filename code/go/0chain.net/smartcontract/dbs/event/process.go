@@ -84,8 +84,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
-			mergeAddProviderEvents[dbs.ProviderID](TagShutdownProvider, withUniqueEventOverwrite()),
-			mergeAddProviderEvents[dbs.ProviderID](TagKillProvider, withUniqueEventOverwrite()),
 
 			mergeAddAllocationEvents(),
 			mergeUpdateAllocEvents(),
@@ -131,6 +129,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeBlobberHealthCheckEvents(),
 			mergeAuthorizerHealthCheckEvents(),
 			mergeValidatorHealthCheckEvents(),
+
+			mergeAddBurnTicket(),
 
 			mergeUpdateUserCollectedRewardsEvents(),
 			mergeUserStakeEvents(),
@@ -628,12 +628,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.deleteSharder(*sharderID)
-	case TagAddOrOverwriteCurator:
-		c, ok := fromEvent[Curator](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addOrOverwriteCurator(*c)
 	case TagUpdateSharderTotalStake:
 		s, ok := fromEvent[[]Sharder](event.Data)
 		if !ok {
@@ -647,12 +641,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateShardersTotalUnStakes(*s)
-	case TagRemoveCurator:
-		c, ok := fromEvent[Curator](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.removeCurator(*c)
 
 	//stake pool
 	case TagAddDelegatePool:
@@ -673,6 +661,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.rewardUpdate(*spus, event.BlockNumber)
+	case TagStakePoolPenalty:
+		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.penaltyUpdate(*spus, event.BlockNumber)
 	case TagAddAllocation:
 		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
@@ -854,18 +848,15 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateUserCollectedRewards(*u)
-	case TagShutdownProvider:
-		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
+	case TagAddBurnTicket:
+		bt, ok := fromEvent[[]BurnTicket](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.providersSetBoolean(*u, "is_shutdown", true)
-	case TagKillProvider:
-		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
-		if !ok {
+		if len(*bt) == 0 {
 			return ErrInvalidEventData
 		}
-		return edb.providersSetBoolean(*u, "is_killed", true)
+		return edb.addBurnTicket((*bt)[0])
 	default:
 		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
