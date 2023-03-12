@@ -27,11 +27,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	blobberTermsMap := make(map[string]Terms)
 	blobberMap := make(map[string]*BlobberAllocation)
 
-	curators, err := eventDb.GetCuratorsByAllocationID(alloc.AllocationID)
-	if err != nil {
-		return nil, fmt.Errorf("error finding curators: %v", err)
-	}
-
 	for _, t := range alloc.Terms {
 		blobberIDs = append(blobberIDs, t.BlobberID)
 		blobberTermsMap[t.BlobberID] = Terms{
@@ -93,17 +88,17 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}
 
 	sa := &StorageAllocation{
-		ID:             alloc.AllocationID,
-		Tx:             alloc.TransactionID,
-		DataShards:     alloc.DataShards,
-		ParityShards:   alloc.ParityShards,
-		Size:           alloc.Size,
-		Expiration:     common.Timestamp(alloc.Expiration),
-		Owner:          alloc.Owner,
-		OwnerPublicKey: alloc.OwnerPublicKey,
-		WritePool:      alloc.WritePool,
+		ID:                   alloc.AllocationID,
+		Tx:                   alloc.TransactionID,
+		DataShards:           alloc.DataShards,
+		ParityShards:         alloc.ParityShards,
+		Size:                 alloc.Size,
+		Expiration:           common.Timestamp(alloc.Expiration),
+		Owner:                alloc.Owner,
+		OwnerPublicKey:       alloc.OwnerPublicKey,
+		WritePool:            alloc.WritePool,
 		ThirdPartyExtendable: alloc.ThirdPartyExtendable,
-		FileOptions: alloc.FileOptions,
+		FileOptions:          alloc.FileOptions,
 		Stats: &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
@@ -126,7 +121,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		MovedBack:         alloc.MovedBack,
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
-		Curators:          curators,
 	}
 
 	return &StorageAllocationBlobbers{
@@ -137,30 +131,30 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
 	alloc := &event.Allocation{
-		AllocationID:      sa.ID,
-		TransactionID:     sa.Tx,
-		DataShards:        sa.DataShards,
-		ParityShards:      sa.ParityShards,
-		Size:              sa.Size,
-		Expiration:        int64(sa.Expiration),
-		Terms:             sa.buildEventBlobberTerms(),
-		Owner:             sa.Owner,
-		OwnerPublicKey:    sa.OwnerPublicKey,
-		ReadPriceMin:      sa.ReadPriceRange.Min,
-		ReadPriceMax:      sa.ReadPriceRange.Max,
-		WritePriceMin:     sa.WritePriceRange.Min,
-		WritePriceMax:     sa.WritePriceRange.Max,
-		StartTime:         int64(sa.StartTime),
-		Finalized:         sa.Finalized,
-		Cancelled:         sa.Canceled,
-		UsedSize:          sa.UsedSize,
-		MovedToChallenge:  sa.MovedToChallenge,
-		MovedBack:         sa.MovedBack,
-		MovedToValidators: sa.MovedToValidators,
-		TimeUnit:          int64(sa.TimeUnit),
-		WritePool:         sa.WritePool,
+		AllocationID:         sa.ID,
+		TransactionID:        sa.Tx,
+		DataShards:           sa.DataShards,
+		ParityShards:         sa.ParityShards,
+		Size:                 sa.Size,
+		Expiration:           int64(sa.Expiration),
+		Terms:                sa.buildEventBlobberTerms(),
+		Owner:                sa.Owner,
+		OwnerPublicKey:       sa.OwnerPublicKey,
+		ReadPriceMin:         sa.ReadPriceRange.Min,
+		ReadPriceMax:         sa.ReadPriceRange.Max,
+		WritePriceMin:        sa.WritePriceRange.Min,
+		WritePriceMax:        sa.WritePriceRange.Max,
+		StartTime:            int64(sa.StartTime),
+		Finalized:            sa.Finalized,
+		Cancelled:            sa.Canceled,
+		UsedSize:             sa.UsedSize,
+		MovedToChallenge:     sa.MovedToChallenge,
+		MovedBack:            sa.MovedBack,
+		MovedToValidators:    sa.MovedToValidators,
+		TimeUnit:             int64(sa.TimeUnit),
+		WritePool:            sa.WritePool,
 		ThirdPartyExtendable: sa.ThirdPartyExtendable,
-		FileOptions: sa.FileOptions,
+		FileOptions:          sa.FileOptions,
 	}
 
 	if sa.Stats != nil {
@@ -194,29 +188,29 @@ func (sa *StorageAllocation) buildEventBlobberTerms() []event.AllocationBlobberT
 
 func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 	eAlloc := event.Allocation{
-		AllocationID:      sa.ID,
-		TransactionID:     sa.Tx,
-		DataShards:        sa.DataShards,
-		ParityShards:      sa.ParityShards,
-		Size:              sa.Size,
-		Expiration:        int64(sa.Expiration),
-		Owner:             sa.Owner,
-		OwnerPublicKey:    sa.OwnerPublicKey,
-		ReadPriceMin:      sa.ReadPriceRange.Min,
-		ReadPriceMax:      sa.ReadPriceRange.Max,
-		WritePriceMin:     sa.WritePriceRange.Min,
-		WritePriceMax:     sa.WritePriceRange.Max,
-		StartTime:         int64(sa.StartTime),
-		Finalized:         sa.Finalized,
-		Cancelled:         sa.Canceled,
-		UsedSize:          sa.UsedSize,
-		MovedToChallenge:  sa.MovedToChallenge,
-		MovedBack:         sa.MovedBack,
-		MovedToValidators: sa.MovedToValidators,
-		TimeUnit:          int64(sa.TimeUnit),
-		WritePool:         sa.WritePool,
+		AllocationID:         sa.ID,
+		TransactionID:        sa.Tx,
+		DataShards:           sa.DataShards,
+		ParityShards:         sa.ParityShards,
+		Size:                 sa.Size,
+		Expiration:           int64(sa.Expiration),
+		Owner:                sa.Owner,
+		OwnerPublicKey:       sa.OwnerPublicKey,
+		ReadPriceMin:         sa.ReadPriceRange.Min,
+		ReadPriceMax:         sa.ReadPriceRange.Max,
+		WritePriceMin:        sa.WritePriceRange.Min,
+		WritePriceMax:        sa.WritePriceRange.Max,
+		StartTime:            int64(sa.StartTime),
+		Finalized:            sa.Finalized,
+		Cancelled:            sa.Canceled,
+		UsedSize:             sa.UsedSize,
+		MovedToChallenge:     sa.MovedToChallenge,
+		MovedBack:            sa.MovedBack,
+		MovedToValidators:    sa.MovedToValidators,
+		TimeUnit:             int64(sa.TimeUnit),
+		WritePool:            sa.WritePool,
 		ThirdPartyExtendable: sa.ThirdPartyExtendable,
-		FileOptions:	   sa.FileOptions,
+		FileOptions:          sa.FileOptions,
 	}
 
 	if sa.Stats != nil {
