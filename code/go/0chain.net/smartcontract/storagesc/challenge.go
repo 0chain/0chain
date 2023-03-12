@@ -160,41 +160,50 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("blobber reward failed: %v", err)
 	}
 
-	logging.Logger.Debug("jayash rdtu : ", zap.Int64("rdtu", int64(rdtu)))
+	// convert all data in rdtu to string for logging
+	rdtuStr, _ := json.Marshal(rdtu)
+	logging.Logger.Debug("jayash rdtu : ", zap.String("rdtu", string(rdtuStr)))
 
 	dtu, err := alloc.durationInTimeUnits(challengeCompletedTime-latestCompletedChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber reward failed: %v", err)
 	}
 
-	logging.Logger.Debug("jayash dtu : ", zap.Int64("dtu", int64(dtu)))
+	// convert all data in dtu to string for logging
+	dtuStr, _ := json.Marshal(dtu)
+	logging.Logger.Debug("jayash dtu : ", zap.String("dtu", string(dtuStr)))
 
 	move, err := blobAlloc.challenge(dtu, rdtu)
 	if err != nil {
 		return err
 	}
 
-	logging.Logger.Debug("jayash move1 : ", zap.Int64("move", int64(move)))
+	// convert all data in move to string for logging
+	moveStr, _ := json.Marshal(move)
+	logging.Logger.Debug("jayash move : ", zap.String("move", string(moveStr)))
 
 	var challengeID string
 	if len(options) > 0 {
 		challengeID = options[0]
 	}
-
 	logging.Logger.Debug("jayash challengeID : ", zap.String("challengeID", challengeID))
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
 
-	logging.Logger.Debug("jayash validatorsReward : ", zap.Int64("validatorsReward", int64(validatorsReward)))
+	// convert all data in validatorsReward to string for logging
+	validatorsRewardStr, _ := json.Marshal(validatorsReward)
+	logging.Logger.Debug("jayash validatorsReward : ", zap.String("validatorsReward", string(validatorsRewardStr)))
 
 	if err != nil {
 		return err
 	}
 	move, err = currency.MinusCoin(move, validatorsReward)
 
-	logging.Logger.Debug("jayash move2 : ", zap.Int64("move", int64(move)))
+	// convert all data in move to string for logging
+	moveStr, _ = json.Marshal(move)
+	logging.Logger.Debug("jayash move : ", zap.String("move", string(moveStr)))
 
 	if err != nil {
 		return err
@@ -203,14 +212,18 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	// for a case of a partial verification
 	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
 
-	logging.Logger.Debug("jayash blobberReward : ", zap.Int64("blobberReward", int64(blobberReward)))
+	// convert all data in blobberReward to string for logging
+	blobberRewardStr, _ := json.Marshal(blobberReward)
+	logging.Logger.Debug("jayash blobberReward : ", zap.String("blobberReward", string(blobberRewardStr)))
 
 	if err != nil {
 		return err
 	}
 	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
 
-	logging.Logger.Debug("jayash back : ", zap.Int64("back", int64(back)))
+	// convert back to string and log
+	backStr, _ := json.Marshal(back)
+	logging.Logger.Debug("jayash back : ", zap.String("back", string(backStr)))
 
 	if err != nil {
 		return err
@@ -223,7 +236,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		}
 		newMoved, err := currency.AddCoin(alloc.MovedBack, back)
 
-		logging.Logger.Debug("jayash newMoved : ", zap.Int64("newMoved", int64(newMoved)))
+		// convert all data in newMoved to string for logging
+		newMovedStr, _ := json.Marshal(newMoved)
+		logging.Logger.Debug("jayash newMoved : ", zap.String("newMoved", string(newMovedStr)))
 
 		if err != nil {
 			return err
@@ -232,7 +247,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 		newReturned, err := currency.AddCoin(blobAlloc.Returned, back)
 
-		logging.Logger.Debug("jayash newReturned : ", zap.Int64("newReturned", int64(newReturned)))
+		// convert all data in newReturned to string for logging
+		newReturnedStr, _ := json.Marshal(newReturned)
+		logging.Logger.Debug("jayash newReturned : ", zap.String("newReturned", string(newReturnedStr)))
 
 		if err != nil {
 			return err
@@ -241,7 +258,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 		coin, _ := move.Int64()
 
-		logging.Logger.Debug("jayash coin : ", zap.Int64("coin", int64(coin)))
+		// convert all data in coin to string for logging
+		coinStr, _ := json.Marshal(coin)
+		logging.Logger.Debug("jayash coin : ", zap.String("coin", string(coinStr)))
 
 		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
@@ -273,7 +292,10 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
 
-	logging.Logger.Debug("jayash newChallengeReward : ", zap.Int64("newChallengeReward", int64(newChallengeReward)))
+	// convert all data in newChallengeReward to string for logging
+	newChallengeRewardStr, _ := json.Marshal(newChallengeReward)
+	logging.Logger.Debug("jayash newChallengeReward : ", zap.String("newChallengeReward", string(newChallengeRewardStr)))
+
 	if err != nil {
 		return err
 	}
@@ -297,7 +319,10 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	moveToValidators, err := currency.AddCoin(alloc.MovedToValidators, validatorsReward)
 
-	logging.Logger.Debug("jayash moveToValidators : ", zap.Int64("moveToValidators", int64(moveToValidators)))
+	// convert all data in moveToValidators to string for logging
+	moveToValidatorsStr, _ := json.Marshal(moveToValidators)
+	logging.Logger.Debug("jayash moveToValidators : ", zap.String("moveToValidators", string(moveToValidatorsStr)))
+
 	if err != nil {
 		return err
 	}
@@ -311,7 +336,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	if blobAlloc.Terms.WritePrice > 0 {
 		stake, err := sp.stake()
 
-		logging.Logger.Debug("jayash stake : ", zap.Int64("stake", int64(stake)))
+		// convert all data in stake to string for logging
+		stakeStr, _ := json.Marshal(stake)
+		logging.Logger.Debug("jayash stake : ", zap.String("stake", string(stakeStr)))
 
 		if err != nil {
 			return err

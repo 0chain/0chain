@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -46,12 +47,22 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	bbr, err := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
 		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio,
 		conf.BlockReward.BlobberWeight)
+
+	// convert bbr to string and log it
+	bbrString, err := json.Marshal(bbr)
+	logging.Logger.Debug("bbrString", zap.String("bbrString", string(bbrString)))
+
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get block rewards: "+err.Error())
 	}
 
 	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
+
+	// convert activePassedBlobberRewardPart to string and log it
+	activePassedBlobberRewardPartString, err := json.Marshal(activePassedBlobberRewardPart)
+	logging.Logger.Debug("activePassedBlobberRewardPartString", zap.String("activePassedBlobberRewardPartString", string(activePassedBlobberRewardPartString)))
+
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())
@@ -75,6 +86,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		}
 		return nil
 	}
+
+	// read all data of blobberRewards and log it
+	blobberRewardsString, _ := json.Marshal(blobberRewards)
+	logging.Logger.Info("jayashA blobberRewards", zap.String("blobberRewards", string(blobberRewardsString)))
 
 	type spResp struct {
 		index int
@@ -108,6 +123,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	stakePools := make([]*stakePool, len(blobberRewards))
+
 	before := make([]currency.Coin, len(blobberRewards))
 	for resp := range spC {
 		stakePools[resp.index] = resp.sp
@@ -118,7 +134,15 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		before[resp.index] = stake
 	}
 
+	// read all data of stakePools and log it
+	stakePoolsString, _ := json.Marshal(stakePools)
+	logging.Logger.Info("jayash stakePools", zap.String("stakePools", string(stakePoolsString)))
+
 	qualifyingBlobberIds := make([]string, len(blobberRewards))
+
+	// read all data of blobberRewards and log it
+	blobberRewardsString, _ = json.Marshal(blobberRewards)
+	logging.Logger.Info("jayashB blobberRewards", zap.String("blobberRewards", string(blobberRewardsString)))
 
 	for i, br := range blobberRewards {
 		sp := stakePools[i]
@@ -137,6 +161,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			br.TotalData,
 			br.DataRead,
 		)
+
+		// log the values of gamma
+		logging.Logger.Info("jayashB gamma", zap.Float64("gamma", gamma))
+
 		zeta := maths.GetZeta(
 			conf.BlockReward.Zeta.I,
 			conf.BlockReward.Zeta.K,
@@ -144,11 +172,19 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			float64(br.WritePrice),
 			float64(br.ReadPrice),
 		)
+
+		// log the values of zeta
+		logging.Logger.Info("jayashB zeta", zap.Float64("zeta", zeta))
+
 		qualifyingBlobberIds[i] = br.ID
 		totalQStake += stake
 		blobberWeight := ((gamma * zeta) + 1) * stake * float64(br.SuccessChallenges)
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
+
+		// log the values of blobberWeight
+
+		logging.Logger.Info("jayashB blobberWeight", zap.Float64("blobberWeight", blobberWeight))
 	}
 
 	if totalWeight == 0 {
