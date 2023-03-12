@@ -1382,6 +1382,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, errors.New("invalid transaction nonce")
 	}
 
+	if txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
+		return nil, errors.New("insufficient balance to send")
+	}
+
 	if sc.IsFeeEnabled() {
 		_, minFee, err := sc.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, WithSync())
 		if err != nil {

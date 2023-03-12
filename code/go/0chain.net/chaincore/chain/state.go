@@ -394,6 +394,16 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
+		// check src balance
+		balance, err := sctx.GetClientBalance(txn.ClientID)
+		if err != nil {
+			return nil, err
+		}
+
+		if balance < txn.Fee+txn.Value {
+			return nil, errors.New("insufficient balance to send")
+		}
+
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
