@@ -505,7 +505,6 @@ func AddMockSnapshots(edb *event.EventDb) {
 			MaxCapacityStorage:   int64(i * 10240),
 			StakedStorage:        int64(i * 512),
 			UsedStorage:          int64(i * 256),
-			TotalValueLocked:     int64(currency.Coin(i * (0.001 * 1e10))),
 			ClientLocks:          int64(currency.Coin(i * (0.0001 * 1e10))),
 		}
 		snapshots = append(snapshots, snapshot)

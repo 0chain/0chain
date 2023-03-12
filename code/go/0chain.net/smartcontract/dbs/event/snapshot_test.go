@@ -20,7 +20,6 @@ func TestSnapshotFunctions(t *testing.T) {
 			TotalChallengePools: int64(10),
 			ActiveAllocatedDelta: int64(10),
 			ZCNSupply: int64(10),
-			TotalValueLocked: int64(10),
 			ClientLocks: int64(100),
 			MinedTotal: int64(100),
 			TotalStaked: int64(100),
@@ -49,7 +48,6 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.TotalChallengePools + snapshotDiff.TotalChallengePools, s.TotalChallengePools)
 		require.Equal(t, initialSnapshot.ActiveAllocatedDelta + snapshotDiff.ActiveAllocatedDelta, s.ActiveAllocatedDelta)
 		require.Equal(t, initialSnapshot.ZCNSupply + snapshotDiff.ZCNSupply, s.ZCNSupply)
-		require.Equal(t, initialSnapshot.TotalValueLocked + snapshotDiff.TotalValueLocked, s.TotalValueLocked)
 		require.Equal(t, initialSnapshot.ClientLocks + snapshotDiff.ClientLocks, s.ClientLocks)
 		require.Equal(t, initialSnapshot.MinedTotal + snapshotDiff.MinedTotal, s.MinedTotal)
 		require.Equal(t, initialSnapshot.TotalTxnFee + snapshotDiff.TotalTxnFee , s.TotalTxnFee)
@@ -113,7 +111,6 @@ func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {
 		TotalChallengePools: int64(100),
 		ActiveAllocatedDelta: int64(100),
 		ZCNSupply: int64(100),
-		TotalValueLocked: int64(100),
 		ClientLocks: int64(100),
 		MinedTotal: int64(100),
 		BlobbersStake: int64(1000000),
