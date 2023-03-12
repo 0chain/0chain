@@ -1531,7 +1531,9 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		var mr = mc.GetMinerRound(s)
 		// send block to sharders again, if missing sharders side
 		if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() &&
-			(mr.Block.GetStateStatus() == block.StateSuccessful || mr.Block.GetStateStatus() == block.StateSynched) {
+			(mr.Block.GetStateStatus() == block.StateSuccessful ||
+				mr.Block.GetStateStatus() == block.StateSynched ||
+				mr.Block.GetBlockState() == block.StateNotarized) {
 
 			logging.Logger.Info("restartRound->kickSharders: kick sharder FB",
 				zap.Int64("round", mr.GetRoundNumber()))
