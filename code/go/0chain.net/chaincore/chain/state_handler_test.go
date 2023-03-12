@@ -28,6 +28,14 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
+const (
+	clientID        = "client_id"
+	ethereumAddress = "ethereum_address"
+	hash            = "hash"
+	blobberID       = "blobber_id"
+	allocationID    = "allocation_id"
+)
+
 func init() {
 	config.SetupDefaultConfig()
 	viper.Set("server_chain.smart_contract.faucet", true)
@@ -50,11 +58,6 @@ func init() {
 
 func TestChain_HandleSCRest_Status(t *testing.T) {
 	t.Skip("need to be reworked to work with new handler setup")
-	const (
-		clientID     = "client id"
-		blobberID    = "blobber_id"
-		allocationID = "allocation_id"
-	)
 
 	lfb := block.NewBlock("", 1)
 	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
