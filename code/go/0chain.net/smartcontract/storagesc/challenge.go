@@ -95,6 +95,11 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	blobAlloc *BlobberAllocation, validators []string, partial float64,
 	balances cstate.StateContextI, options ...string) error {
 	conf, err := sc.getConfig(balances, true)
+
+	// convert all data in conf to string for logging
+	confStr, _ := json.Marshal(conf)
+	logging.Logger.Debug("jayash conf : ", zap.String("conf", string(confStr)))
+
 	if err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
 	}
@@ -123,6 +128,10 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	// convert all data in allocation to string for logging
 	allocStr, _ := json.Marshal(alloc)
 	logging.Logger.Debug("jayash alloc : ", zap.String("alloc", string(allocStr)))
+
+	// convert all data in latestCompletedChallTime to string for logging
+	latestCompletedChallTimeStr, _ := json.Marshal(latestCompletedChallTime)
+	logging.Logger.Debug("jayash latestCompletedChallTime : ", zap.String("latestCompletedChallTime", string(latestCompletedChallTimeStr)))
 
 	// convert all data in blobAlloc to string for logging
 	blobAllocStr, _ := json.Marshal(blobAlloc)
