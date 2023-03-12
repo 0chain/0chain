@@ -24,7 +24,6 @@ type Snapshot struct {
 	TotalChallengePools  int64 `json:"total_challenge_pools"`  //486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
 	ActiveAllocatedDelta int64 `json:"active_allocated_delta"` //496 SUM total amount of new allocation storage in a period (number of allocations active)
 	ZCNSupply            int64 `json:"zcn_supply"`             //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
-	TotalValueLocked     int64 `json:"total_value_locked"`     //487 SUM Total value locked = Total staked ZCN * Price per ZCN (across all pools)
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
 	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
 	// updated from blobber snapshot aggregate table
@@ -55,7 +54,6 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.TotalChallengePools += diff.TotalChallengePools
 	s.ActiveAllocatedDelta += diff.ActiveAllocatedDelta
 	s.ZCNSupply += diff.ZCNSupply
-	s.TotalValueLocked += diff.TotalValueLocked
 	s.ClientLocks += diff.ClientLocks
 	s.MinedTotal += diff.MinedTotal
 	s.TotalStaked += diff.TotalStaked
@@ -177,11 +175,9 @@ func (gs *Snapshot) update(e []Event) {
 			var total int64
 			for _, d := range *ds {
 				total += d.Amount
-				gs.TotalValueLocked += d.Amount
 				gs.TotalStaked += d.Amount
 			}
-			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", total),
-				zap.Int64("total_amount", gs.TotalValueLocked))
+			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", total))
 		case TagUnlockStakePool:
 			ds, ok := fromEvent[[]DelegatePoolLock](event.Data)
 			if !ok {
@@ -190,7 +186,6 @@ func (gs *Snapshot) update(e []Event) {
 				continue
 			}
 			for _, d := range *ds {
-				gs.TotalValueLocked -= d.Amount
 				gs.TotalStaked -= d.Amount
 			}
 		case TagLockWritePool:
@@ -202,7 +197,6 @@ func (gs *Snapshot) update(e []Event) {
 			}
 			for _, d := range *ds {
 				gs.ClientLocks += d.Amount
-				gs.TotalValueLocked += d.Amount
 			}
 		case TagUnlockWritePool:
 			ds, ok := fromEvent[[]WritePoolLock](event.Data)
@@ -213,7 +207,6 @@ func (gs *Snapshot) update(e []Event) {
 			}
 			for _, d := range *ds {
 				gs.ClientLocks -= d.Amount
-				gs.TotalValueLocked -= d.Amount
 			}
 		case TagLockReadPool:
 			ds, ok := fromEvent[[]ReadPoolLock](event.Data)
@@ -224,7 +217,6 @@ func (gs *Snapshot) update(e []Event) {
 			}
 			for _, d := range *ds {
 				gs.ClientLocks += d.Amount
-				gs.TotalValueLocked += d.Amount
 			}
 		case TagUnlockReadPool:
 			ds, ok := fromEvent[[]ReadPoolLock](event.Data)
@@ -235,7 +227,6 @@ func (gs *Snapshot) update(e []Event) {
 			}
 			for _, d := range *ds {
 				gs.ClientLocks -= d.Amount
-				gs.TotalValueLocked -= d.Amount
 			}
 		case TagStakePoolReward:
 			spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
