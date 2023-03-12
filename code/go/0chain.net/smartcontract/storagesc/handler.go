@@ -1635,6 +1635,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		return
 	}
 
+	//TODO use maximum blobber price instead
 	blobbers, err := edb.GetBlobbersFromIDs(request.Blobbers)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))

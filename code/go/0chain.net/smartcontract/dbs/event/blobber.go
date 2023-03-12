@@ -195,7 +195,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "capacity"},
+		Column: clause.Column{Name: "capacity"}, //TODO order by price
 		Desc:   limit.IsDescending,
 	})
 	var blobberIDs []string

@@ -91,6 +91,7 @@ func (fsa *freeStorageAssigner) save(sscKey string, balances cstate.StateContext
 	return err
 }
 
+//TODO test that we really send some value here
 func (fsa *freeStorageAssigner) validate(
 	marker freeStorageMarker,
 	now common.Timestamp,
@@ -253,7 +254,12 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	if err := assigner.validate(marker, txn.CreationDate, txn.Value, balances); err != nil {
+	coin, err := currency.Float64ToCoin(marker.FreeTokens)
+	if err != nil {
+		return "", common.NewErrorf("free_allocation_failed",
+			"marker verification failed: %v", err)
+	}
+	if err := assigner.validate(marker, txn.CreationDate, coin, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"marker verification failed: %v", err)
 	}
