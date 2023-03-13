@@ -94,6 +94,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-authorizer-aggregates", srh.replicateAuthorizerAggregates),
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
+		rest.MakeEndpoint(storage+"/reward-providers", srh.rewardProviders),
+		rest.MakeEndpoint(storage+"/all-challenges", srh.getAllChallenges),
+		rest.MakeEndpoint(storage+"/clean-challenges-and-reward-providers", srh.cleanDataFromChallengesAndRewardProviders),
 	}
 }
 
@@ -2964,4 +2967,76 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		users = []event.UserAggregate{}
 	}
 	common.Respond(w, r, users, nil)
+}
+
+func (srh *StorageRestHandler) rewardProviders(w http.ResponseWriter, r *http.Request) {
+	// read all data from reward_providers table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	challengeID := r.URL.Query().Get("challenge_id")
+	providerID := r.URL.Query().Get("provider_id")
+	rewardType := r.URL.Query().Get("reward_type")
+	query := r.URL.Query().Get("query")
+
+	var rps []event.RewardProvider
+
+	if query != "" {
+		rps = edb.RunWhereQuery(query)
+	} else if challengeID != "" {
+		rps = edb.GetChallengeRewardsByChallengeID(challengeID)
+	} else if providerID != "" {
+		rps = edb.GetChallengeRewardsByProviderID(providerID)
+	} else if rewardType != "" {
+		rps = edb.GetAllChallengeRewardsByRewardType(rewardType)
+	} else {
+		rps = edb.GetAllChallengeRewards()
+	}
+
+	var sum int64
+
+	for _, rp := range rps {
+		cur, _ := rp.Amount.Int64()
+		sum += cur
+	}
+
+	result := map[string]interface{}{
+		"sum": sum,
+		"rps": rps,
+	}
+
+	// return the list of reward providers
+	common.Respond(w, r, result, nil)
+}
+
+func (srh *StorageRestHandler) getAllChallenges(w http.ResponseWriter, r *http.Request) {
+	// read all data from challenges table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	allocationID := r.URL.Query().Get("allocation_id")
+
+	challenges, _ := edb.GetAllChallengesByAllocationID(allocationID)
+	common.Respond(w, r, challenges, nil)
+}
+
+func (srh *StorageRestHandler) cleanDataFromChallengesAndRewardProviders(w http.ResponseWriter, r *http.Request) {
+	// read all data from challenges table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	err := edb.CleanDataFromChallengesAndRewardProviders()
+	if err != nil {
+		return
+	}
+	common.Respond(w, r, nil, nil)
 }

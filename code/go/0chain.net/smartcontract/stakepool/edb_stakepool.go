@@ -12,13 +12,22 @@ import (
 
 type StakePoolReward dbs.StakePoolReward
 
-func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, options ...string) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ProviderId = pId
 	spu.ProviderType = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
+
+	var challengeID string
+	if len(options) > 0 {
+		challengeID = options[0]
+	} else {
+		challengeID = ""
+	}
+	spu.ChallengeID = challengeID
+
 	return &spu
 }
 
