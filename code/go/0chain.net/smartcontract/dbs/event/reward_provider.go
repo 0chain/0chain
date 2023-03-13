@@ -30,7 +30,10 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 			BlockNumber: round,
 			ProviderId:  sp.ProviderId,
 			RewardType:  sp.RewardType,
-			ChallengeID: sp.ChallengeID,
+		}
+
+		if sp.ChallengeID != "" {
+			pr.ChallengeID = sp.ChallengeID
 		}
 		prs = append(prs, pr)
 	}
