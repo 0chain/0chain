@@ -82,7 +82,6 @@ const (
 	SimulationNumAllocationPayerPools
 	SimulationNumAllocationPayer
 	SimulationNumBlobberDelegates
-	SimulationNumCurators
 	SimulationNumValidators
 	SimulationNumFreeStorageAssigners
 	SimulationNumMinerDelegates
@@ -252,7 +251,6 @@ var parameterName = []string{
 	"num_allocation_payers_pools",
 	"num_allocation_payers",
 	"num_blobber_delegates",
-	"num_curators",
 	"num_validators",
 	"num_free_storage_assigners",
 	"num_miner_delegates",
@@ -283,7 +281,6 @@ var (
 	NumAllocationPayerPools      = Simulation + SimulationNumAllocationPayerPools.String()
 	NumAllocationPayer           = Simulation + SimulationNumAllocationPayer.String()
 	NumBlobberDelegates          = Simulation + SimulationNumBlobberDelegates.String()
-	NumCurators                  = Simulation + SimulationNumCurators.String()
 	NumValidators                = Simulation + SimulationNumValidators.String()
 	NumFreeStorageAssigners      = Simulation + SimulationNumFreeStorageAssigners.String()
 	NumMinerDelegates            = Simulation + SimulationNumMinerDelegates.String()

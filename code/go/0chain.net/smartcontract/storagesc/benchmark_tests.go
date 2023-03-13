@@ -508,56 +508,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-		// add_curator
-		{
-			name:     "storage.curator_transfer_allocation",
-			endpoint: ssc.curatorTransferAllocation,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				ClientID:     data.Clients[0],
-				CreationDate: creationTime,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&transferAllocationInput{
-					AllocationId:      getMockAllocationId(0),
-					NewOwnerId:        data.Clients[1],
-					NewOwnerPublicKey: data.PublicKeys[1],
-				})
-				return bytes
-			}(),
-		},
-		{
-			name:     "storage.add_curator",
-			endpoint: ssc.addCurator,
-			txn: &transaction.Transaction{
-				ClientID:     data.Clients[0],
-				CreationDate: creationTime,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&curatorInput{
-					CuratorId:    data.Clients[viper.GetInt(bk.NumCurators)],
-					AllocationId: getMockAllocationId(0),
-				})
-				return bytes
-			}(),
-		},
-		{
-			name:     "storage.remove_curator",
-			endpoint: ssc.removeCurator,
-			txn: &transaction.Transaction{
-				ClientID:     data.Clients[0],
-				CreationDate: creationTime,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&curatorInput{
-					CuratorId:    data.Clients[0],
-					AllocationId: getMockAllocationId(0),
-				})
-				return bytes
-			}(),
-		},
 		// read_pool
 		{
 			name:     "storage.new_read_pool",
@@ -806,38 +756,35 @@ func BenchmarkTests(
 					"block_reward.zeta.k":           "0.9",
 					"block_reward.zeta.mu":          "0.2",
 
-					"cost.update_settings":             "105",
-					"cost.read_redeem":                 "105",
-					"cost.commit_connection":           "105",
-					"cost.new_allocation_request":      "105",
-					"cost.update_allocation_request":   "105",
-					"cost.finalize_allocation":         "105",
-					"cost.cancel_allocation":           "105",
-					"cost.add_free_storage_assigner":   "105",
-					"cost.free_allocation_request":     "105",
-					"cost.free_update_allocation":      "105",
-					"cost.add_curator":                 "105",
-					"cost.remove_curator":              "105",
-					"cost.blobber_health_check":        "105",
-					"cost.update_blobber_settings":     "105",
-					"cost.pay_blobber_block_rewards":   "105",
-					"cost.curator_transfer_allocation": "105",
-					"cost.challenge_request":           "105",
-					"cost.challenge_response":          "105",
-					"cost.generate_challenges":         "105",
-					"cost.add_validator":               "105",
-					"cost.update_validator_settings":   "105",
-					"cost.add_blobber":                 "105",
-					"cost.new_read_pool":               "105",
-					"cost.read_pool_lock":              "105",
-					"cost.read_pool_unlock":            "105",
-					"cost.write_pool_lock":             "105",
-					"cost.write_pool_unlock":           "105",
-					"cost.stake_pool_lock":             "105",
-					"cost.stake_pool_unlock":           "105",
-					"cost.stake_pool_pay_interests":    "105",
-					"cost.commit_settings_changes":     "105",
-					"cost.collect_reward":              "105",
+					"cost.update_settings":           "105",
+					"cost.read_redeem":               "105",
+					"cost.commit_connection":         "105",
+					"cost.new_allocation_request":    "105",
+					"cost.update_allocation_request": "105",
+					"cost.finalize_allocation":       "105",
+					"cost.cancel_allocation":         "105",
+					"cost.add_free_storage_assigner": "105",
+					"cost.free_allocation_request":   "105",
+					"cost.free_update_allocation":    "105",
+					"cost.blobber_health_check":      "105",
+					"cost.update_blobber_settings":   "105",
+					"cost.pay_blobber_block_rewards": "105",
+					"cost.challenge_request":         "105",
+					"cost.challenge_response":        "105",
+					"cost.generate_challenges":       "105",
+					"cost.add_validator":             "105",
+					"cost.update_validator_settings": "105",
+					"cost.add_blobber":               "105",
+					"cost.new_read_pool":             "105",
+					"cost.read_pool_lock":            "105",
+					"cost.read_pool_unlock":          "105",
+					"cost.write_pool_lock":           "105",
+					"cost.write_pool_unlock":         "105",
+					"cost.stake_pool_lock":           "105",
+					"cost.stake_pool_unlock":         "105",
+					"cost.stake_pool_pay_interests":  "105",
+					"cost.commit_settings_changes":   "105",
+					"cost.collect_reward":            "105",
 				},
 			}).Encode(),
 		},

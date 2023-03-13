@@ -123,31 +123,8 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = ssc.getBlobber(blob.id, balances)
-	require.NoError(t, err)
-}
-
-func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
-	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		tp       int64 = 100
-		err      error
-	)
-
-	setConfig(t, balances)
-
-	var blob = newClient(0, balances)
-	blob.terms = avgTerms
-	blob.cap = 2 * GB
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.EqualError(t, err, fmt.Sprintf("add_or_update_blobber_failed: blobber already exists,with id: %s ", blob.id))
 
 	_, err = ssc.getBlobber(blob.id, balances)
 	require.NoError(t, err)
@@ -1320,5 +1297,29 @@ func TestBlobberHealthCheck(t *testing.T) {
 	// check health
 	_, err = healthCheckBlobber(t, b, 0, tp, ssc, balances)
 	require.NoError(t, err)
+
+}
+
+func TestOnlyAdd(t *testing.T) {
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+
+		tp int64 = 100
+	)
+
+	setConfig(t, balances)
+
+	var (
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		b, err = ssc.getBlobber(blob.id, balances)
+	)
+	require.NoError(t, err)
+
+	b.BaseURL = "https://newabcurl.com"
+	//should fail as only add is allowed
+	_, err = updateBlobberUsingAddBlobber(t, b, 0, tp, ssc, balances)
+	require.Error(t, err)
 
 }

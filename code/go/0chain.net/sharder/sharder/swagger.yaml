@@ -1262,11 +1262,6 @@ definitions:
                     transaction.
                 type: boolean
                 x-go-name: Canceled
-            curators:
-                items:
-                    type: string
-                type: array
-                x-go-name: Curators
             data_shards:
                 format: int64
                 type: integer
