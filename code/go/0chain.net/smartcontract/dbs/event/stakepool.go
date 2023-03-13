@@ -54,10 +54,10 @@ func aggregateProviderPenalties(spus []dbs.StakePoolReward) (*providerPenaltiesD
 	)
 	for i, sp := range spus {
 		for poolId := range spus[i].DelegatePenalties {
-			if _, found := dpPenaltiesMap[sp.ProviderId]; !found {
-				dpPenaltiesMap[sp.ProviderId] = make(map[string]currency.Coin, len(spus[i].DelegatePenalties))
+			if _, found := dpPenaltiesMap[sp.ID]; !found {
+				dpPenaltiesMap[sp.ID] = make(map[string]currency.Coin, len(spus[i].DelegatePenalties))
 			}
-			dpPenaltiesMap[sp.ProviderId][poolId] = dpPenaltiesMap[sp.ProviderId][poolId] + spus[i].DelegatePenalties[poolId]
+			dpPenaltiesMap[sp.ID][poolId] = dpPenaltiesMap[sp.ID][poolId] + spus[i].DelegatePenalties[poolId]
 		}
 	}
 	return &providerPenaltiesDelegates{
