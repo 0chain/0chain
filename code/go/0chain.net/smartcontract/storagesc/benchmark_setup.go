@@ -92,9 +92,6 @@ func addMockAllocation(
 		Finalized: i == mockFinalizedAllocationIndex,
 		WritePool: mockWriePoolSize,
 	}
-	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
-		sa.Curators = append(sa.Curators, clients[j])
-	}
 
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 	for j := 0; j < viper.GetInt(sc.NumBlobbersPerAllocation); j++ {
@@ -456,6 +453,9 @@ func AddMockBlobbers(
 }
 
 func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
 	var mockChallengesPassed = viper.GetUint64(sc.EventDbAggregatePeriod)
 	var mockChallengesCompleted = viper.GetUint64(sc.EventDbAggregatePeriod) + 1
 	const mockInactiveRounds = 17
@@ -486,6 +486,9 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 }
 
 func AddMockSnapshots(edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
 	var snapshots []event.Snapshot
 	for i := 1; i < viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
 		snapshot := event.Snapshot{
@@ -742,9 +745,6 @@ func AddMockWriteRedeems(
 					AllocationRoot: "mock allocation root",
 					BlockNumber:    mockBlockNumber,
 					Size:           100,
-					LookupHash:     benchmark.GetMockWriteMarkerLookUpHash(i, j),
-					Name:           benchmark.GetMockWriteMarkerFileName(i),
-					ContentHash:    benchmark.GetMockWriteMarkerContentHash(i, j),
 				}
 				if err := eventDb.Store.Get().Create(&writeMarker).Error; err != nil {
 					log.Fatal(err)
@@ -897,38 +897,35 @@ func SetMockConfig(
 	}
 	var mockCost = 100
 	conf.Cost = map[string]int{
-		"cost.update_settings":             mockCost,
-		"cost.read_redeem":                 mockCost,
-		"cost.commit_connection":           mockCost,
-		"cost.new_allocation_request":      mockCost,
-		"cost.update_allocation_request":   mockCost,
-		"cost.finalize_allocation":         mockCost,
-		"cost.cancel_allocation":           mockCost,
-		"cost.add_free_storage_assigner":   mockCost,
-		"cost.free_allocation_request":     mockCost,
-		"cost.free_update_allocation":      mockCost,
-		"cost.add_curator":                 mockCost,
-		"cost.remove_curator":              mockCost,
-		"cost.blobber_health_check":        mockCost,
-		"cost.update_blobber_settings":     mockCost,
-		"cost.pay_blobber_block_rewards":   mockCost,
-		"cost.curator_transfer_allocation": mockCost,
-		"cost.challenge_request":           mockCost,
-		"cost.challenge_response":          mockCost,
-		"cost.generate_challenges":         mockCost,
-		"cost.add_validator":               mockCost,
-		"cost.update_validator_settings":   mockCost,
-		"cost.add_blobber":                 mockCost,
-		"cost.new_read_pool":               mockCost,
-		"cost.read_pool_lock":              mockCost,
-		"cost.read_pool_unlock":            mockCost,
-		"cost.write_pool_lock":             mockCost,
-		"cost.write_pool_unlock":           mockCost,
-		"cost.stake_pool_lock":             mockCost,
-		"cost.stake_pool_unlock":           mockCost,
-		"cost.stake_pool_pay_interests":    mockCost,
-		"cost.commit_settings_changes":     mockCost,
-		"cost.collect_reward":              mockCost,
+		"cost.update_settings":           mockCost,
+		"cost.read_redeem":               mockCost,
+		"cost.commit_connection":         mockCost,
+		"cost.new_allocation_request":    mockCost,
+		"cost.update_allocation_request": mockCost,
+		"cost.finalize_allocation":       mockCost,
+		"cost.cancel_allocation":         mockCost,
+		"cost.add_free_storage_assigner": mockCost,
+		"cost.free_allocation_request":   mockCost,
+		"cost.free_update_allocation":    mockCost,
+		"cost.blobber_health_check":      mockCost,
+		"cost.update_blobber_settings":   mockCost,
+		"cost.pay_blobber_block_rewards": mockCost,
+		"cost.challenge_request":         mockCost,
+		"cost.challenge_response":        mockCost,
+		"cost.generate_challenges":       mockCost,
+		"cost.add_validator":             mockCost,
+		"cost.update_validator_settings": mockCost,
+		"cost.add_blobber":               mockCost,
+		"cost.new_read_pool":             mockCost,
+		"cost.read_pool_lock":            mockCost,
+		"cost.read_pool_unlock":          mockCost,
+		"cost.write_pool_lock":           mockCost,
+		"cost.write_pool_unlock":         mockCost,
+		"cost.stake_pool_lock":           mockCost,
+		"cost.stake_pool_unlock":         mockCost,
+		"cost.stake_pool_pay_interests":  mockCost,
+		"cost.commit_settings_changes":   mockCost,
+		"cost.collect_reward":            mockCost,
 	}
 	return
 }

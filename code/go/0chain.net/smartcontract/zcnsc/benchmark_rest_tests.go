@@ -27,6 +27,20 @@ func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) b
 				},
 				Endpoint: zrh.getAuthorizer,
 			},
+			{
+				FuncName: "mint_nonce",
+				Params: map[string]string{
+					"client_id": data.Clients[0],
+				},
+				Endpoint: zrh.MintNonceHandler,
+			},
+			{
+				FuncName: "not_processed_burn_tickets",
+				Params: map[string]string{
+					"ethereum_address": data.Clients[0],
+				},
+				Endpoint: zrh.NotProcessedBurnTicketsHandler,
+			},
 		},
 		ADDRESS,
 		zrh,

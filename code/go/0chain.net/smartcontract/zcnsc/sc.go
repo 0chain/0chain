@@ -52,7 +52,6 @@ func NewZCNSmartContract() smartcontractinterface.SmartContractInterface {
 }
 
 // InitSC ...
-//
 func (zcn *ZCNSmartContract) InitSC() {
 	// Config
 	zcn.smartContractFunctions[UpdateGlobalConfigFunc] = zcn.UpdateGlobalConfig

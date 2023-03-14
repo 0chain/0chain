@@ -1,4 +1,4 @@
-package minersc_test
+package minersc
 
 import (
 	"strconv"
@@ -17,7 +17,7 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	. "0chain.net/smartcontract/minersc"
+
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -149,4 +149,51 @@ func TestDeleteMiner(t *testing.T) {
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
+}
+
+func TestAddMiner(t *testing.T) {
+	const stakeVal, stakeHolders = 10e10, 5
+
+	var (
+		balances = newTestBalances()
+		msc      = newTestMinerSC()
+		now      int64
+
+		miners []*miner
+	)
+
+	setConfig(t, balances)
+
+	for i := 0; i < 10; i++ {
+		mn, err := addMiner(t, msc, now, true, balances)
+		require.NoError(t, err)
+		miners = append(miners, mn)
+		now += 10
+	}
+
+	// check miners are added successfully
+	ids, err := getNodeIDs(balances, AllMinersKey)
+	require.NoError(t, err)
+
+	for i := 0; i < len(miners); i++ {
+		require.Equal(t, ids[i], miners[i].miner.id)
+	}
+
+	t.Run("add miner not in magic block", func(t *testing.T) {
+		_, err = addMiner(t, msc, now, false, balances)
+		require.EqualError(t, err, "add_miner: failed to add new miner: Not in magic block")
+	})
+
+	t.Run("add miner already exist", func(t *testing.T) {
+		m := miners[0]
+		_, err := m.execAddMinerTxn(msc, now, balances)
+		require.NoError(t, err) // no error expected
+	})
+
+	t.Run("duplicate n2n host", func(t *testing.T) {
+		m := newMiner(t, true, balances)
+		m.node.N2NHost = miners[0].node.N2NHost
+		_, err := m.execAddMinerTxn(msc, now, balances)
+		require.ErrorContains(t, err, "add_miner: n2nhost:port already exists") // no error expected
+	})
 }

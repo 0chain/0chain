@@ -435,44 +435,6 @@ ALTER TABLE public.challenges_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE public.challenges_id_seq OWNED BY public.challenges.id;
 
-
---
--- Name: curators; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE public.curators (
-                                 id bigint NOT NULL,
-                                 created_at timestamp with time zone,
-                                 updated_at timestamp with time zone,
-                                 deleted_at timestamp with time zone,
-                                 curator_id text,
-                                 allocation_id text
-);
-
-
-ALTER TABLE public.curators OWNER TO zchain_user;
-
---
--- Name: curators_id_seq; Type: SEQUENCE; Schema: public; Owner: zchain_user
---
-
-CREATE SEQUENCE public.curators_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.curators_id_seq OWNER TO zchain_user;
-
---
--- Name: curators_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: zchain_user
---
-
-ALTER SEQUENCE public.curators_id_seq OWNED BY public.curators.id;
-
-
 --
 -- Name: delegate_pools; Type: TABLE; Schema: public; Owner: zchain_user
 --
@@ -1060,6 +1022,41 @@ ALTER TABLE public.transactions_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 
+--
+-- Name: burn_tickets; Type: TABLE; Schema: public; Owner: zchain_user
+--
+
+CREATE TABLE public.burn_tickets (
+                              id bigint NOT NULL,
+                              created_at timestamp with time zone,
+                              updated_at timestamp with time zone,
+                              ethereum_address text,
+                              hash text,
+                              nonce bigint
+);
+
+
+ALTER TABLE public.burn_tickets OWNER TO zchain_user;
+
+--
+-- Name: burn_tickets_id_seq; Type: SEQUENCE; Schema: public; Owner: zchain_user
+--
+
+CREATE SEQUENCE public.burn_tickets_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.burn_tickets_id_seq OWNER TO zchain_user;
+
+--
+-- Name: burn_tickets_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: zchain_user
+--
+
+ALTER SEQUENCE public.burn_tickets_id_seq OWNED BY public.burn_tickets.id;
 
 --
 -- Name: users; Type: TABLE; Schema: public; Owner: zchain_user
@@ -1074,7 +1071,8 @@ CREATE TABLE public.users (
                               balance bigint,
                               change bigint,
                               round bigint,
-                              nonce bigint
+                              nonce bigint,
+                              mint_nonce bigint
 );
 
 
@@ -1196,15 +1194,12 @@ CREATE TABLE public.write_markers (
                                       allocation_id text,
                                       transaction_id text,
                                       allocation_root text,
+                                      file_meta_root character(64),
                                       previous_allocation_root text,
                                       size bigint,
                                       "timestamp" bigint,
                                       signature text,
-                                      block_number bigint,
-                                      lookup_hash text,
-                                      name text,
-                                      content_hash text,
-                                      operation text
+                                      block_number bigint
 );
 
 
@@ -1272,12 +1267,6 @@ ALTER TABLE ONLY public.blocks ALTER COLUMN id SET DEFAULT nextval('public.block
 
 ALTER TABLE ONLY public.challenges ALTER COLUMN id SET DEFAULT nextval('public.challenges_id_seq'::regclass);
 
-
---
--- Name: curators id; Type: DEFAULT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.curators ALTER COLUMN id SET DEFAULT nextval('public.curators_id_seq'::regclass);
 
 
 --
@@ -1356,6 +1345,11 @@ ALTER TABLE ONLY public.sharder_aggregates ALTER COLUMN id SET DEFAULT nextval('
 
 ALTER TABLE ONLY public.transactions ALTER COLUMN id SET DEFAULT nextval('public.transactions_id_seq'::regclass);
 
+--
+-- Name: burn tickets id; Type: DEFAULT; Schema: public; Owner: zchain_user
+--
+
+ALTER TABLE ONLY public.burn_tickets ALTER COLUMN id SET DEFAULT nextval('public.burn_tickets_id_seq'::regclass);
 
 --
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: zchain_user
@@ -1449,13 +1443,6 @@ ALTER TABLE ONLY public.challenge_pools
 ALTER TABLE ONLY public.challenges
     ADD CONSTRAINT challenges_pkey PRIMARY KEY (id);
 
-
---
--- Name: curators curators_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.curators
-    ADD CONSTRAINT curators_pkey PRIMARY KEY (id);
 
 
 --
@@ -1778,20 +1765,6 @@ CREATE INDEX idx_copen_challenge ON public.challenges USING btree (created_at, b
 
 
 --
--- Name: idx_curators_curator_id; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX idx_curators_curator_id ON public.curators USING btree (curator_id);
-
-
---
--- Name: idx_curators_deleted_at; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_curators_deleted_at ON public.curators USING btree (deleted_at);
-
-
---
 -- Name: idx_ddel_active; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
@@ -2016,27 +1989,6 @@ CREATE INDEX idx_wblocknum ON public.write_markers USING btree (block_number);
 
 
 --
--- Name: idx_wcontent; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wcontent ON public.write_markers USING btree (content_hash);
-
-
---
--- Name: idx_wlookup; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wlookup ON public.write_markers USING btree (lookup_hash);
-
-
---
--- Name: idx_wname; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX idx_wname ON public.write_markers USING btree (name);
-
-
---
 -- Name: idx_write_markers_transaction_id; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
@@ -2081,21 +2033,6 @@ ALTER TABLE ONLY public.read_markers
 ALTER TABLE ONLY public.write_markers
     ADD CONSTRAINT fk_blobbers_write_markers FOREIGN KEY (blobber_id) REFERENCES public.blobbers(id);
 
-
---
--- Name: curators fk_curators_allocation; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.curators
-    ADD CONSTRAINT fk_curators_allocation FOREIGN KEY (allocation_id) REFERENCES public.allocations(allocation_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: curators fk_curators_user; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.curators
-    ADD CONSTRAINT fk_curators_user FOREIGN KEY (curator_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

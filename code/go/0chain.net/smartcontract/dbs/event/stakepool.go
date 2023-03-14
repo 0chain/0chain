@@ -2,8 +2,9 @@ package event
 
 import (
 	"fmt"
-	"github.com/0chain/common/core/currency"
 	"time"
+
+	"github.com/0chain/common/core/currency"
 
 	"github.com/0chain/common/core/logging"
 
@@ -15,6 +16,10 @@ import (
 
 type providerRewardsDelegates struct {
 	rewards       map[string]currency.Coin
+	delegatePools map[string]map[string]currency.Coin
+}
+
+type providerPenaltiesDelegates struct {
 	delegatePools map[string]map[string]currency.Coin
 }
 
@@ -40,6 +45,23 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	return &providerRewardsDelegates{
 		rewards:       rewardsMap,
 		delegatePools: dpRewardsMap,
+	}, nil
+}
+
+func aggregateProviderPenalties(spus []dbs.StakePoolReward) (*providerPenaltiesDelegates, error) {
+	var (
+		dpPenaltiesMap = make(map[string]map[string]currency.Coin)
+	)
+	for i, sp := range spus {
+		for poolId := range spus[i].DelegatePenalties {
+			if _, found := dpPenaltiesMap[sp.ProviderId]; !found {
+				dpPenaltiesMap[sp.ProviderId] = make(map[string]currency.Coin, len(spus[i].DelegatePenalties))
+			}
+			dpPenaltiesMap[sp.ProviderId][poolId] = dpPenaltiesMap[sp.ProviderId][poolId] + spus[i].DelegatePenalties[poolId]
+		}
+	}
+	return &providerPenaltiesDelegates{
+		delegatePools: dpPenaltiesMap,
 	}, nil
 }
 
@@ -134,6 +156,44 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
+func (edb *EventDb) penaltyUpdate(spus []dbs.StakePoolReward, round int64) error {
+	if len(spus) == 0 {
+		return nil
+	}
+
+	ts := time.Now()
+
+	penalties, err := aggregateProviderPenalties(spus)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		du := time.Since(ts)
+		n := len(penalties.delegatePools)
+		if du > 50*time.Millisecond {
+			logging.Logger.Debug("event db - update penalties slow",
+				zap.Int64("round", round),
+				zap.Duration("duration", du),
+				zap.Int("total update items", n),
+				zap.Int("delegate pools num", len(penalties.delegatePools)))
+		}
+	}()
+
+	if len(penalties.delegatePools) > 0 {
+		if err := edb.penaltyProviderDelegates(penalties.delegatePools, round); err != nil {
+			return fmt.Errorf("could not penalise delegate pool: %v", err)
+		}
+	}
+
+	if edb.Debug() {
+		if err := edb.insertDelegateReward(spus, round); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (edb *EventDb) rewardProviders(prRewards map[string]currency.Coin, round int64) error {
 	var ids []string
 	var rewards []uint64
@@ -171,6 +231,32 @@ func (edb *EventDb) rewardProviderDelegates(dps map[string]map[string]currency.C
 		AddUpdate("total_reward", reward, "delegate_pools.total_reward + t.reward").
 		AddUpdate("round_pool_last_updated", lastUpdated).
 		Exec(edb)
+	return ret.Error
+}
+
+func (edb *EventDb) penaltyProviderDelegates(dps map[string]map[string]currency.Coin, round int64) error {
+
+	var poolIds []string
+	var providerIds []string
+	var slash []uint64
+	var lastUpdated []uint64
+
+	for id, pools := range dps {
+		for poolId, s := range pools {
+			poolIds = append(poolIds, poolId)
+			providerIds = append(providerIds, id)
+			slash = append(slash, uint64(s))
+			lastUpdated = append(lastUpdated, uint64(round))
+		}
+	}
+
+	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
+		AddCompositeId("provider_id", providerIds).
+		AddUpdate("balance", slash, "delegate_pools.balance - t.balance").
+		AddUpdate("total_penalty", slash, "t.total_penalty + delegate_pools.total_penalty").
+		AddUpdate("round_pool_last_updated", lastUpdated).
+		Exec(edb)
+
 	return ret.Error
 }
 

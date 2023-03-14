@@ -49,7 +49,7 @@ func AddMockNodes(
 	var (
 		err                error
 		nodes, publickKeys []string
-		allNodes           MinerNodes
+		allNodes           NodeIDs
 		nodeMap            = make(map[string]*SimpleNode)
 		numNodes           int
 		numActive          int
@@ -123,7 +123,7 @@ func AddMockNodes(
 		}
 		nodes = append(nodes, newNode.ID)
 		nodeMap[newNode.ID] = newNode.SimpleNode
-		allNodes.Nodes = append(allNodes.Nodes, newNode)
+		allNodes = append(allNodes, newNode.ID)
 
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			if nodeType == spenum.Miner {
@@ -210,9 +210,8 @@ func AddMockNodes(
 			panic(err)
 		}
 	} else {
-		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
-			Nodes: allNodes.Nodes[1:],
-		})
+		allIDs := allNodes[1:]
+		_, err = balances.InsertTrieNode(ShardersKeepKey, &allIDs)
 		if err != nil {
 			panic(err)
 		}
