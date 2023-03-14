@@ -19,8 +19,8 @@ type RewardMint struct {
 }
 
 type RewardMintQuery struct {
-	StartBlock   int       `json:"start_block"`
-	EndBlock     int       `json:"end_block"`
+	StartBlock   int64     `json:"start_block"`
+	EndBlock     int64     `json:"end_block"`
 	DataPoints   int64     `json:"data_points"`
 	StartDate    time.Time `json:"start_date"`
 	EndDate      time.Time `json:"end_date"`
