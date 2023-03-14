@@ -112,10 +112,10 @@ func TestCacheWrite(t *testing.T) {
 
 	time.Sleep(time.Second)
 	_, err = os.Stat(filepath.Join(p, hash1))
-	require.NotNil(t, err)
+	require.Nil(t, err)
 
 	_, err = os.Stat(filepath.Join(p, hash2))
-	require.NotNil(t, err)
+	require.Nil(t, err)
 
 	_, err = os.Stat(filepath.Join(p, hash3))
 	require.Nil(t, err)
