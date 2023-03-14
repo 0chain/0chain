@@ -96,16 +96,15 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	blobAlloc *BlobberAllocation, validators []string, partial float64,
 	balances cstate.StateContextI, options ...string) error {
 	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return fmt.Errorf("can't get SC configurations: %v", err.Error())
+	}
 
 	uniqueIdForLogging := uuid.New().String()
 
 	// convert all data in conf to string for logging
 	confStr, _ := json.Marshal(conf)
 	logging.Logger.Debug("jayash conf : "+uniqueIdForLogging, zap.String("conf", string(confStr)))
-
-	if err != nil {
-		return fmt.Errorf("can't get SC configurations: %v", err.Error())
-	}
 
 	// time of this challenge
 	challengeCompletedTime := blobAlloc.LatestCompletedChallenge.Created
@@ -194,43 +193,41 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
+	if err != nil {
+		return err
+	}
 
 	// convert all data in validatorsReward to string for logging
 	validatorsRewardStr, _ := json.Marshal(validatorsReward)
 	logging.Logger.Debug("jayash validatorsReward : "+uniqueIdForLogging, zap.String("validatorsReward", string(validatorsRewardStr)))
 
+	move, err = currency.MinusCoin(move, validatorsReward)
 	if err != nil {
 		return err
 	}
-	move, err = currency.MinusCoin(move, validatorsReward)
 
 	// convert all data in move to string for logging
 	moveStr, _ = json.Marshal(move)
 	logging.Logger.Debug("jayash move : "+uniqueIdForLogging, zap.String("move", string(moveStr)))
 
+	// for a case of a partial verification
+	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
 	if err != nil {
 		return err
 	}
-
-	// for a case of a partial verification
-	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
 
 	// convert all data in blobberReward to string for logging
 	blobberRewardStr, _ := json.Marshal(blobberReward)
 	logging.Logger.Debug("jayash blobberReward : "+uniqueIdForLogging, zap.String("blobberReward", string(blobberRewardStr)))
 
+	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
 	if err != nil {
 		return err
 	}
-	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
 
 	// convert back to string and log
 	backStr, _ := json.Marshal(back)
 	logging.Logger.Debug("jayash back : "+uniqueIdForLogging, zap.String("back", string(backStr)))
-
-	if err != nil {
-		return err
-	}
 
 	if back > 0 {
 		err = alloc.moveFromChallengePool(cp, back)
@@ -238,25 +235,25 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
 		newMoved, err := currency.AddCoin(alloc.MovedBack, back)
+		if err != nil {
+			return err
+		}
 
 		// convert all data in newMoved to string for logging
 		newMovedStr, _ := json.Marshal(newMoved)
 		logging.Logger.Debug("jayash newMoved : "+uniqueIdForLogging, zap.String("newMoved", string(newMovedStr)))
 
-		if err != nil {
-			return err
-		}
 		alloc.MovedBack = newMoved
 
 		newReturned, err := currency.AddCoin(blobAlloc.Returned, back)
+		if err != nil {
+			return err
+		}
 
 		// convert all data in newReturned to string for logging
 		newReturnedStr, _ := json.Marshal(newReturned)
 		logging.Logger.Debug("jayash newReturned : "+uniqueIdForLogging, zap.String("newReturned", string(newReturnedStr)))
 
-		if err != nil {
-			return err
-		}
 		blobAlloc.Returned = newReturned
 
 		coin, _ := move.Int64()
@@ -282,11 +279,11 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	logging.Logger.Debug("jayash sp : "+uniqueIdForLogging, zap.String("sp", string(spStr)))
 
 	before, err := sp.stake()
-
-	logging.Logger.Debug("jayash before : "+uniqueIdForLogging, zap.Int64("before", int64(before)))
 	if err != nil {
 		return err
 	}
+
+	logging.Logger.Debug("jayash before : "+uniqueIdForLogging, zap.Int64("before", int64(before)))
 
 	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, challengeID)
 	if err != nil {
@@ -294,26 +291,25 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	}
 
 	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
+	if err != nil {
+		return err
+	}
 
 	// convert all data in newChallengeReward to string for logging
 	newChallengeRewardStr, _ := json.Marshal(newChallengeReward)
 	logging.Logger.Debug("jayash newChallengeReward : "+uniqueIdForLogging, zap.String("newChallengeReward", string(newChallengeRewardStr)))
 
-	if err != nil {
-		return err
-	}
 	blobAlloc.ChallengeReward = newChallengeReward
 
 	// validators' stake pools
 	vsps, err := sc.validatorsStakePools(validators, balances)
+	if err != nil {
+		return err
+	}
 
 	// convert all data in vsps to string for logging
 	vspsStr, _ := json.Marshal(vsps)
 	logging.Logger.Debug("jayash vsps : "+uniqueIdForLogging, zap.String("vsps", string(vspsStr)))
-
-	if err != nil {
-		return err
-	}
 
 	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, challengeID)
 	if err != nil {
@@ -321,14 +317,14 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	}
 
 	moveToValidators, err := currency.AddCoin(alloc.MovedToValidators, validatorsReward)
+	if err != nil {
+		return err
+	}
 
 	// convert all data in moveToValidators to string for logging
 	moveToValidatorsStr, _ := json.Marshal(moveToValidators)
 	logging.Logger.Debug("jayash moveToValidators : "+uniqueIdForLogging, zap.String("moveToValidators", string(moveToValidatorsStr)))
 
-	if err != nil {
-		return err
-	}
 	alloc.MovedToValidators = moveToValidators
 
 	// Save validators' stake pools
@@ -338,14 +334,14 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	if blobAlloc.Terms.WritePrice > 0 {
 		stake, err := sp.stake()
+		if err != nil {
+			return err
+		}
 
 		// convert all data in stake to string for logging
 		stakeStr, _ := json.Marshal(stake)
 		logging.Logger.Debug("jayash stake : "+uniqueIdForLogging, zap.String("stake", string(stakeStr)))
 
-		if err != nil {
-			return err
-		}
 		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
 			FieldType:    event.Staked,
 			AllocationId: "",

@@ -51,26 +51,24 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	bbr, err := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
 		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio,
 		conf.BlockReward.BlobberWeight)
-
-	// convert bbr to string and log it
-	bbrString, err := json.Marshal(bbr)
-	logging.Logger.Debug("bbrString"+uniqueIdForLogging, zap.String("bbrString", string(bbrString)))
-
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get block rewards: "+err.Error())
 	}
 
+	// convert bbr to string and log it
+	bbrString, err := json.Marshal(bbr)
+	logging.Logger.Debug("bbrString"+uniqueIdForLogging, zap.String("bbrString", string(bbrString)))
+
 	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
-
-	// convert activePassedBlobberRewardPart to string and log it
-	activePassedBlobberRewardPartString, err := json.Marshal(activePassedBlobberRewardPart)
-	logging.Logger.Debug("activePassedBlobberRewardPartString"+uniqueIdForLogging, zap.String("activePassedBlobberRewardPartString", string(activePassedBlobberRewardPartString)))
-
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())
 	}
+
+	// convert activePassedBlobberRewardPart to string and log it
+	activePassedBlobberRewardPartString, err := json.Marshal(activePassedBlobberRewardPart)
+	logging.Logger.Debug("activePassedBlobberRewardPartString"+uniqueIdForLogging, zap.String("activePassedBlobberRewardPartString", string(activePassedBlobberRewardPartString)))
 
 	hashString := encryption.Hash(balances.GetTransaction().Hash + balances.GetBlock().PrevHash)
 	var randomSeed int64
