@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"math"
 	"math/rand"
 	"strconv"
@@ -24,7 +25,10 @@ import (
 func (ssc *StorageSmartContract) blobberBlockRewards(
 	balances cstate.StateContextI,
 ) (err error) {
-	logging.Logger.Info("blobberBlockRewards started",
+	// generate random unique id for logging
+	uniqueIdForLogging := uuid.New().String()
+
+	logging.Logger.Info("blobberBlockRewards started"+uniqueIdForLogging,
 		zap.Int64("round", balances.GetBlock().Round),
 		zap.String("block_hash", balances.GetBlock().Hash))
 
@@ -50,7 +54,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	// convert bbr to string and log it
 	bbrString, err := json.Marshal(bbr)
-	logging.Logger.Debug("bbrString", zap.String("bbrString", string(bbrString)))
+	logging.Logger.Debug("bbrString"+uniqueIdForLogging, zap.String("bbrString", string(bbrString)))
 
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
@@ -61,7 +65,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	// convert activePassedBlobberRewardPart to string and log it
 	activePassedBlobberRewardPartString, err := json.Marshal(activePassedBlobberRewardPart)
-	logging.Logger.Debug("activePassedBlobberRewardPartString", zap.String("activePassedBlobberRewardPartString", string(activePassedBlobberRewardPartString)))
+	logging.Logger.Debug("activePassedBlobberRewardPartString"+uniqueIdForLogging, zap.String("activePassedBlobberRewardPartString", string(activePassedBlobberRewardPartString)))
 
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
@@ -79,7 +83,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	var blobberRewards []BlobberRewardNode
 	if err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards); err != nil {
-		logging.Logger.Info("blobber_block_rewards_failed",
+		logging.Logger.Info("blobber_block_rewards_failed"+uniqueIdForLogging,
 			zap.String("getting random partition", err.Error()))
 		if err != util.ErrValueNotPresent {
 			return err
@@ -89,7 +93,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	// read all data of blobberRewards and log it
 	blobberRewardsString, _ := json.Marshal(blobberRewards)
-	logging.Logger.Info("jayashA blobberRewards", zap.String("blobberRewards", string(blobberRewardsString)))
+	logging.Logger.Info("jayashA blobberRewards"+uniqueIdForLogging, zap.String("blobberRewards", string(blobberRewardsString)))
 
 	type spResp struct {
 		index int
@@ -136,13 +140,13 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	// read all data of stakePools and log it
 	stakePoolsString, _ := json.Marshal(stakePools)
-	logging.Logger.Info("jayash stakePools", zap.String("stakePools", string(stakePoolsString)))
+	logging.Logger.Info("jayash stakePools"+uniqueIdForLogging, zap.String("stakePools", string(stakePoolsString)))
 
 	qualifyingBlobberIds := make([]string, len(blobberRewards))
 
 	// read all data of blobberRewards and log it
 	blobberRewardsString, _ = json.Marshal(blobberRewards)
-	logging.Logger.Info("jayashB blobberRewards", zap.String("blobberRewards", string(blobberRewardsString)))
+	logging.Logger.Info("jayashB blobberRewards"+uniqueIdForLogging, zap.String("blobberRewards", string(blobberRewardsString)))
 
 	for i, br := range blobberRewards {
 		sp := stakePools[i]
@@ -163,7 +167,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		)
 
 		// log the values of gamma
-		logging.Logger.Info("jayashB gamma", zap.Float64("gamma", gamma))
+		logging.Logger.Info("jayashB gamma"+uniqueIdForLogging, zap.Float64("gamma", gamma))
 
 		zeta := maths.GetZeta(
 			conf.BlockReward.Zeta.I,
@@ -174,7 +178,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		)
 
 		// log the values of zeta
-		logging.Logger.Info("jayashB zeta", zap.Float64("zeta", zeta))
+		logging.Logger.Info("jayashB zeta"+uniqueIdForLogging, zap.Float64("zeta", zeta))
 
 		qualifyingBlobberIds[i] = br.ID
 		totalQStake += stake
@@ -184,7 +188,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 		// log the values of blobberWeight
 
-		logging.Logger.Info("jayashB blobberWeight", zap.Float64("blobberWeight", blobberWeight))
+		logging.Logger.Info("jayashB blobberWeight"+uniqueIdForLogging, zap.Float64("blobberWeight", blobberWeight))
 	}
 
 	if totalWeight == 0 {
@@ -212,7 +216,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			} else {
 				rewardBal -= reward
 			}
-			logging.Logger.Info("blobber_block_rewards_pass",
+			logging.Logger.Info("blobber_block_rewards_pass"+uniqueIdForLogging,
 				zap.Uint64("reward", uint64(reward)),
 				zap.String("blobber id", qualifyingBlobberIds[i]),
 				zap.Int64("round", balances.GetBlock().Round),
@@ -224,7 +228,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			}
 
 		} else {
-			logging.Logger.Error("blobber_bloc_rewards - error in weight ratio",
+			logging.Logger.Error("blobber_bloc_rewards - error in weight ratio"+uniqueIdForLogging,
 				zap.Any("stake pool", qsp))
 			return common.NewError("blobber_block_rewards_failed", "weight ratio out of bound")
 		}
@@ -239,7 +243,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		if rShare > 0 {
 			for i := range stakePools {
 				if err := stakePools[i].DistributeRewards(rShare, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances); err != nil {
-					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+					return common.NewError("blobber_block_rewards_failed"+uniqueIdForLogging, "minting capacity reward"+err.Error())
 				}
 			}
 		}
@@ -247,7 +251,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		if rl > 0 {
 			for i := 0; i < int(rl); i++ {
 				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances); err != nil {
-					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+					return common.NewError("blobber_block_rewards_failed"+uniqueIdForLogging, "minting capacity reward"+err.Error())
 				}
 			}
 		}
@@ -256,12 +260,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	for i, qsp := range stakePools {
 		if err = qsp.Save(spenum.Blobber, qualifyingBlobberIds[i], balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed",
+			return common.NewError("blobber_block_rewards_failed"+uniqueIdForLogging,
 				"saving stake pool: "+err.Error())
 		}
 		staked, err := qsp.stake()
 		if err != nil {
-			return common.NewError("blobber_block_rewards_failed",
+			return common.NewError("blobber_block_rewards_failed"+uniqueIdForLogging,
 				"getting stake pool stake: "+err.Error())
 		}
 

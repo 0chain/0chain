@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math/rand"
 	"strconv"
 	"time"
@@ -96,9 +97,11 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	balances cstate.StateContextI, options ...string) error {
 	conf, err := sc.getConfig(balances, true)
 
+	uniqueIdForLogging := uuid.New().String()
+
 	// convert all data in conf to string for logging
 	confStr, _ := json.Marshal(conf)
-	logging.Logger.Debug("jayash conf : ", zap.String("conf", string(confStr)))
+	logging.Logger.Debug("jayash conf : "+uniqueIdForLogging, zap.String("conf", string(confStr)))
 
 	if err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
@@ -111,7 +114,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	}
 
 	if challengeCompletedTime < latestCompletedChallTime {
-		logging.Logger.Debug("old challenge response - blobber reward",
+		logging.Logger.Debug("old challenge response - blobber reward"+uniqueIdForLogging,
 			zap.Int64("latestCompletedChallTime", int64(latestCompletedChallTime)),
 			zap.Int64("challenge time", int64(challengeCompletedTime)))
 		return errors.New("old challenge response on blobber rewarding")
@@ -123,27 +126,27 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in balances to string for logging
 	balancesStr, _ := json.Marshal(balances)
-	logging.Logger.Debug("jayash balances : ", zap.String("balances", string(balancesStr)))
+	logging.Logger.Debug("jayash balances : "+uniqueIdForLogging, zap.String("balances", string(balancesStr)))
 
 	// convert all data in allocation to string for logging
 	allocStr, _ := json.Marshal(alloc)
-	logging.Logger.Debug("jayash alloc : ", zap.String("alloc", string(allocStr)))
+	logging.Logger.Debug("jayash alloc : "+uniqueIdForLogging, zap.String("alloc", string(allocStr)))
 
 	// convert all data in latestCompletedChallTime to string for logging
 	latestCompletedChallTimeStr, _ := json.Marshal(latestCompletedChallTime)
-	logging.Logger.Debug("jayash latestCompletedChallTime : ", zap.String("latestCompletedChallTime", string(latestCompletedChallTimeStr)))
+	logging.Logger.Debug("jayash latestCompletedChallTime : "+uniqueIdForLogging, zap.String("latestCompletedChallTime", string(latestCompletedChallTimeStr)))
 
 	// convert all data in blobAlloc to string for logging
 	blobAllocStr, _ := json.Marshal(blobAlloc)
-	logging.Logger.Debug("jayash blobAlloc : ", zap.String("blobAlloc", string(blobAllocStr)))
+	logging.Logger.Debug("jayash blobAlloc : "+uniqueIdForLogging, zap.String("blobAlloc", string(blobAllocStr)))
 
 	// convert all data in validators to string for logging
 	validatorsStr, _ := json.Marshal(validators)
-	logging.Logger.Debug("jayash validators : ", zap.String("validators", string(validatorsStr)))
+	logging.Logger.Debug("jayash validators : "+uniqueIdForLogging, zap.String("validators", string(validatorsStr)))
 
 	// convert all data in partial to string for logging
 	partialStr, _ := json.Marshal(partial)
-	logging.Logger.Debug("jayash partial : ", zap.String("partial", string(partialStr)))
+	logging.Logger.Debug("jayash partial : "+uniqueIdForLogging, zap.String("partial", string(partialStr)))
 
 	// pool
 	var cp *challengePool
@@ -153,7 +156,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in cp to string for logging
 	cpStr, _ := json.Marshal(cp)
-	logging.Logger.Debug("jayash cp : ", zap.String("cp", string(cpStr)))
+	logging.Logger.Debug("jayash cp : "+uniqueIdForLogging, zap.String("cp", string(cpStr)))
 
 	rdtu, err := alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
 	if err != nil {
@@ -162,7 +165,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in rdtu to string for logging
 	rdtuStr, _ := json.Marshal(rdtu)
-	logging.Logger.Debug("jayash rdtu : ", zap.String("rdtu", string(rdtuStr)))
+	logging.Logger.Debug("jayash rdtu : "+uniqueIdForLogging, zap.String("rdtu", string(rdtuStr)))
 
 	dtu, err := alloc.durationInTimeUnits(challengeCompletedTime-latestCompletedChallTime, conf.TimeUnit)
 	if err != nil {
@@ -171,7 +174,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in dtu to string for logging
 	dtuStr, _ := json.Marshal(dtu)
-	logging.Logger.Debug("jayash dtu : ", zap.String("dtu", string(dtuStr)))
+	logging.Logger.Debug("jayash dtu : "+uniqueIdForLogging, zap.String("dtu", string(dtuStr)))
 
 	move, err := blobAlloc.challenge(dtu, rdtu)
 	if err != nil {
@@ -180,13 +183,13 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in move to string for logging
 	moveStr, _ := json.Marshal(move)
-	logging.Logger.Debug("jayash move : ", zap.String("move", string(moveStr)))
+	logging.Logger.Debug("jayash move : "+uniqueIdForLogging, zap.String("move", string(moveStr)))
 
 	var challengeID string
 	if len(options) > 0 {
 		challengeID = options[0]
 	}
-	logging.Logger.Debug("jayash challengeID : ", zap.String("challengeID", challengeID))
+	logging.Logger.Debug("jayash challengeID : "+uniqueIdForLogging, zap.String("challengeID", challengeID))
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
@@ -194,7 +197,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in validatorsReward to string for logging
 	validatorsRewardStr, _ := json.Marshal(validatorsReward)
-	logging.Logger.Debug("jayash validatorsReward : ", zap.String("validatorsReward", string(validatorsRewardStr)))
+	logging.Logger.Debug("jayash validatorsReward : "+uniqueIdForLogging, zap.String("validatorsReward", string(validatorsRewardStr)))
 
 	if err != nil {
 		return err
@@ -203,7 +206,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in move to string for logging
 	moveStr, _ = json.Marshal(move)
-	logging.Logger.Debug("jayash move : ", zap.String("move", string(moveStr)))
+	logging.Logger.Debug("jayash move : "+uniqueIdForLogging, zap.String("move", string(moveStr)))
 
 	if err != nil {
 		return err
@@ -214,7 +217,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in blobberReward to string for logging
 	blobberRewardStr, _ := json.Marshal(blobberReward)
-	logging.Logger.Debug("jayash blobberReward : ", zap.String("blobberReward", string(blobberRewardStr)))
+	logging.Logger.Debug("jayash blobberReward : "+uniqueIdForLogging, zap.String("blobberReward", string(blobberRewardStr)))
 
 	if err != nil {
 		return err
@@ -223,7 +226,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert back to string and log
 	backStr, _ := json.Marshal(back)
-	logging.Logger.Debug("jayash back : ", zap.String("back", string(backStr)))
+	logging.Logger.Debug("jayash back : "+uniqueIdForLogging, zap.String("back", string(backStr)))
 
 	if err != nil {
 		return err
@@ -238,7 +241,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 		// convert all data in newMoved to string for logging
 		newMovedStr, _ := json.Marshal(newMoved)
-		logging.Logger.Debug("jayash newMoved : ", zap.String("newMoved", string(newMovedStr)))
+		logging.Logger.Debug("jayash newMoved : "+uniqueIdForLogging, zap.String("newMoved", string(newMovedStr)))
 
 		if err != nil {
 			return err
@@ -249,7 +252,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 		// convert all data in newReturned to string for logging
 		newReturnedStr, _ := json.Marshal(newReturned)
-		logging.Logger.Debug("jayash newReturned : ", zap.String("newReturned", string(newReturnedStr)))
+		logging.Logger.Debug("jayash newReturned : "+uniqueIdForLogging, zap.String("newReturned", string(newReturnedStr)))
 
 		if err != nil {
 			return err
@@ -260,7 +263,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 		// convert all data in coin to string for logging
 		coinStr, _ := json.Marshal(coin)
-		logging.Logger.Debug("jayash coin : ", zap.String("coin", string(coinStr)))
+		logging.Logger.Debug("jayash coin : "+uniqueIdForLogging, zap.String("coin", string(coinStr)))
 
 		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
@@ -276,11 +279,11 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in sp to string for logging
 	spStr, _ := json.Marshal(sp)
-	logging.Logger.Debug("jayash sp : ", zap.String("sp", string(spStr)))
+	logging.Logger.Debug("jayash sp : "+uniqueIdForLogging, zap.String("sp", string(spStr)))
 
 	before, err := sp.stake()
 
-	logging.Logger.Debug("jayash before : ", zap.Int64("before", int64(before)))
+	logging.Logger.Debug("jayash before : "+uniqueIdForLogging, zap.Int64("before", int64(before)))
 	if err != nil {
 		return err
 	}
@@ -294,7 +297,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in newChallengeReward to string for logging
 	newChallengeRewardStr, _ := json.Marshal(newChallengeReward)
-	logging.Logger.Debug("jayash newChallengeReward : ", zap.String("newChallengeReward", string(newChallengeRewardStr)))
+	logging.Logger.Debug("jayash newChallengeReward : "+uniqueIdForLogging, zap.String("newChallengeReward", string(newChallengeRewardStr)))
 
 	if err != nil {
 		return err
@@ -306,7 +309,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in vsps to string for logging
 	vspsStr, _ := json.Marshal(vsps)
-	logging.Logger.Debug("jayash vsps : ", zap.String("vsps", string(vspsStr)))
+	logging.Logger.Debug("jayash vsps : "+uniqueIdForLogging, zap.String("vsps", string(vspsStr)))
 
 	if err != nil {
 		return err
@@ -321,7 +324,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in moveToValidators to string for logging
 	moveToValidatorsStr, _ := json.Marshal(moveToValidators)
-	logging.Logger.Debug("jayash moveToValidators : ", zap.String("moveToValidators", string(moveToValidatorsStr)))
+	logging.Logger.Debug("jayash moveToValidators : "+uniqueIdForLogging, zap.String("moveToValidators", string(moveToValidatorsStr)))
 
 	if err != nil {
 		return err
@@ -338,7 +341,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 		// convert all data in stake to string for logging
 		stakeStr, _ := json.Marshal(stake)
-		logging.Logger.Debug("jayash stake : ", zap.String("stake", string(stakeStr)))
+		logging.Logger.Debug("jayash stake : "+uniqueIdForLogging, zap.String("stake", string(stakeStr)))
 
 		if err != nil {
 			return err
@@ -361,7 +364,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in sp to string for logging
 	spStr, _ = json.Marshal(sp)
-	logging.Logger.Debug("jayash sp : ", zap.String("sp", string(spStr)))
+	logging.Logger.Debug("jayash sp : "+uniqueIdForLogging, zap.String("sp", string(spStr)))
 
 	if err = alloc.saveUpdatedStakes(balances); err != nil {
 		return fmt.Errorf("can't save allocation: %v", err)
@@ -369,7 +372,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// convert all data in alloc to string for logging
 	allocStr, _ = json.Marshal(alloc)
-	logging.Logger.Debug("jayash alloc : ", zap.String("alloc", string(allocStr)))
+	logging.Logger.Debug("jayash alloc : "+uniqueIdForLogging, zap.String("alloc", string(allocStr)))
 
 	return nil
 }
