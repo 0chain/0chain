@@ -3,7 +3,6 @@ package blockstore
 import (
 	"bytes"
 	"container/list"
-	"crypto/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/0chain/common/core/logging"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/core/viper"
 	"github.com/stretchr/testify/require"
 )
@@ -93,7 +93,8 @@ func TestCacheWrite(t *testing.T) {
 
 	size := 250 * MB
 	hash1 := "hash1"
-	b := generateRandomBytes(t, size)
+	b := new(block.Block)
+	b.Hash = hash1
 	err := c.Write(hash1, b)
 	require.Nil(t, err)
 
@@ -104,13 +105,13 @@ func TestCacheWrite(t *testing.T) {
 
 	size = 250 * MB
 	hash2 := "hash2"
-	b = generateRandomBytes(t, size)
+	b.Hash = hash2
 	err = c.Write(hash2, b)
 	require.Nil(t, err)
 
 	size = 250 * MB
 	hash3 := "hash3"
-	b = generateRandomBytes(t, size)
+	b.Hash = hash3
 	err = c.Write(hash3, b)
 	require.Nil(t, err)
 
@@ -123,7 +124,6 @@ func TestCacheWrite(t *testing.T) {
 
 	finfo, err = os.Stat(filepath.Join(p, hash3))
 	require.Nil(t, err)
-	require.EqualValues(t, size, finfo.Size())
 
 	l := c.(*cache).lru.list
 	e := l.Front()
@@ -142,23 +142,23 @@ func TestCacheRead(t *testing.T) {
 		c = initCache(v)
 	})
 
-	m := map[string]int{
-		"hash1": 1024,
-		"hash2": 1024,
-		"hash3": 1024,
+	s := []string{
+		"hash1",
+		"hash2",
+		"hash3",
 	}
 
 	var lastKey string
-	for k, v := range m {
-		b := generateRandomBytes(t, v)
-		err := c.Write(k, b)
+	for _, hash := range s {
+		b := new(block.Block)
+		b.Hash = hash
+		err := c.Write(hash, b)
 		require.Nil(t, err)
 
-		finfo, err := os.Stat(filepath.Join(p, k))
+		_, err = os.Stat(filepath.Join(p, hash))
 		require.Nil(t, err)
 
-		require.EqualValues(t, v, finfo.Size())
-		lastKey = k
+		lastKey = hash
 	}
 
 	time.Sleep(500 * time.Millisecond)
@@ -167,23 +167,11 @@ func TestCacheRead(t *testing.T) {
 	require.Equal(t, k, lastKey)
 
 	hash1 := "hash1"
-	b, err := c.Read(hash1)
+	_, err := c.Read(hash1)
 	require.Nil(t, err)
-
-	require.Equal(t, m[hash1], len(b))
 
 	time.Sleep(500 * time.Millisecond)
 	e = c.(*cache).lru.list.Front()
 	k = e.Value.(*listEntry).key
 	require.Equal(t, k, hash1)
-}
-
-func generateRandomBytes(t *testing.T, size int) []byte {
-	b := make([]byte, size)
-	n, err := rand.Read(b)
-	require.Nil(t, err)
-	require.Equal(t, n, size)
-
-	return b
-
 }
