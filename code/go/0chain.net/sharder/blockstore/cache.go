@@ -7,6 +7,7 @@ package blockstore
 // that total removed size is >= n
 
 import (
+	"bytes"
 	"container/list"
 	"fmt"
 	"io"
@@ -17,6 +18,8 @@ import (
 
 	"github.com/0chain/common/core/logging"
 
+	"0chain.net/chaincore/block"
+	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
 )
 
@@ -28,8 +31,18 @@ const (
 )
 
 type cacher interface {
-	Write(hash string, data []byte) error
+	Write(hash string, b *block.Block) error
 	Read(hash string) ([]byte, error)
+}
+
+type noOpCache struct{}
+
+func (noOpCache) Write(hash string, b *block.Block) error {
+	return nil
+}
+
+func (noOpCache) Read(hash string) ([]byte, error) {
+	return nil, nil
 }
 
 // cache manages blocks cache
@@ -48,7 +61,7 @@ type cache struct {
 
 // write will write block to the path and then run go routine to add its entry into
 // lru cache. If the size reaches cache limit, it will try to delete old block caches.
-func (c *cache) Write(hash string, data []byte) error {
+func (c *cache) Write(hash string, b *block.Block) error {
 	logging.Logger.Info(fmt.Sprintf("Writing %v to cache", hash))
 
 	bPath := filepath.Join(c.path, hash)
@@ -58,6 +71,13 @@ func (c *cache) Write(hash string, data []byte) error {
 	}
 	defer f.Close()
 
+	buffer := new(bytes.Buffer)
+	err = datastore.WriteMsgpack(buffer, b)
+	if err != nil {
+		return err
+	}
+
+	data := buffer.Bytes()
 	n, err := f.Write(data)
 	if err != nil {
 		return err

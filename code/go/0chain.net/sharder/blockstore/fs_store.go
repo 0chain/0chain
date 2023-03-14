@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"compress/zlib"
-	"context"
 	"fmt"
 	"math"
 	"os"
@@ -77,19 +76,7 @@ func getBlockFilePath(hash string) string {
 type BlockStore struct {
 	basePath              string
 	blockMetadataProvider datastore.EntityMetadata
-	write                 func(bStore *BlockStore, hash string, b *block.Block) error
-	read                  func(bStore *BlockStore, hash string) (*block.Block, error)
 	cache                 cacher
-}
-
-func (bStore *BlockStore) writeBlockToCache(hash string, b *block.Block) error {
-	buffer := new(bytes.Buffer)
-	err := datastore.WriteMsgpack(buffer, b)
-	if err != nil {
-		return err
-	}
-
-	return bStore.cache.Write(hash, buffer.Bytes())
 }
 
 func (bStore *BlockStore) writeToDisk(hash string, b *block.Block) error {
@@ -119,8 +106,22 @@ func (bStore *BlockStore) writeToDisk(hash string, b *block.Block) error {
 	return bf.Flush()
 }
 
+func (bStore *BlockStore) write(hash string, b *block.Block) error {
+	err := bStore.writeToDisk(hash, b)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		if err := bStore.cache.Write(hash, b); err != nil {
+			logging.Logger.Error(err.Error())
+		}
+	}()
+	return nil
+}
+
 func (bStore *BlockStore) Write(b *block.Block) error {
-	err := bStore.write(bStore, b.Hash, b)
+	err := bStore.write(b.Hash, b)
 	if err != nil {
 		return err
 	}
@@ -130,13 +131,35 @@ func (bStore *BlockStore) Write(b *block.Block) error {
 			zap.Int64("round", b.Round),
 			zap.String("mb hash", b.MagicBlock.Hash),
 		)
-		return bStore.write(bStore, b.MagicBlock.Hash, b)
+		return bStore.write(b.MagicBlock.Hash, b)
 	}
 	return nil
 }
 
 func (bStore *BlockStore) Read(hash string) (*block.Block, error) {
-	return bStore.read(bStore, hash)
+	b := bStore.blockMetadataProvider.Instance().(*block.Block)
+	data, err := bStore.cache.Read(hash)
+	if data != nil && err == nil {
+		r := bytes.NewReader(data)
+		err = datastore.ReadMsgpack(r, b)
+		if err == nil {
+			return b, nil
+		}
+	}
+
+	b, err = bStore.readFromDisk(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		err := bStore.cache.Write(b.Hash, b)
+		if err != nil {
+			logging.Logger.Error(err.Error())
+		}
+	}()
+
+	return b, nil
 }
 
 func (bStore *BlockStore) readFromDisk(hash string) (*block.Block, error) {
@@ -162,14 +185,14 @@ func (bStore *BlockStore) readFromDisk(hash string) (*block.Block, error) {
 
 // ReadWithBlockSummary - read the block given the block summary
 func (bStore *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
-	return bStore.read(bStore, bs.Hash)
+	return bStore.Read(bs.Hash)
 }
 
 // Init checks for minimum disk size, inodes requirement and assigns
 // block storer to a variable. If any error occurs during initialization
 // it will panic.
 // It will register read and write function based on whether cache config is provided or not.
-func Init(ctx context.Context, sViper *viper.Viper) {
+func Init(sViper *viper.Viper) {
 	logging.Logger.Info("Initializing storage")
 
 	basePath := sViper.GetString("root_dir")
@@ -182,64 +205,15 @@ func Init(ctx context.Context, sViper *viper.Viper) {
 		panic(err)
 	}
 
-	bStore := new(BlockStore)
-	bStore.blockMetadataProvider = datastore.GetEntityMetadata("block")
-	bStore.basePath = basePath
+	bStore := &BlockStore{
+		cache:                 noOpCache{},
+		blockMetadataProvider: datastore.GetEntityMetadata("block"),
+		basePath:              basePath,
+	}
 
 	cViper := sViper.Sub("cache")
 	if cViper != nil {
 		bStore.cache = initCache(cViper)
-	}
-
-	switch {
-	default:
-		bStore.write = func(bStore *BlockStore, hash string, b *block.Block) error {
-			return bStore.writeToDisk(hash, b)
-		}
-
-		bStore.read = func(bStore *BlockStore, hash string) (*block.Block, error) {
-			return bStore.readFromDisk(hash)
-		}
-	case cViper != nil:
-		bStore.write = func(bStore *BlockStore, hash string, b *block.Block) error {
-			err := bStore.writeToDisk(hash, b)
-			if err != nil {
-				return err
-			}
-
-			go func() {
-				if err := bStore.writeBlockToCache(hash, b); err != nil {
-					logging.Logger.Error(err.Error())
-				}
-			}()
-
-			return nil
-		}
-
-		bStore.read = func(bStore *BlockStore, hash string) (*block.Block, error) {
-			b := bStore.blockMetadataProvider.Instance().(*block.Block)
-			data, err := bStore.cache.Read(hash)
-			if err == nil {
-				r := bytes.NewReader(data)
-				err = datastore.ReadMsgpack(r, b)
-				if err == nil {
-					return b, nil
-				}
-			}
-
-			b, err = bStore.readFromDisk(hash)
-			if err != nil {
-				return nil, err
-			}
-
-			go func() {
-				err := bStore.writeBlockToCache(b.Hash, b)
-				if err != nil {
-					logging.Logger.Error(err.Error())
-				}
-			}()
-			return b, nil
-		}
 	}
 
 	SetupStore(bStore)

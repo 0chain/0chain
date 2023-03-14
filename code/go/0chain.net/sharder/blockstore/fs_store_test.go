@@ -72,7 +72,7 @@ cache:
 	b := new(block.Block)
 	b.Hash = "new hash"
 
-	err = bStore.writeBlockToCache(b.Hash, b)
+	err = bStore.cache.Write(b.Hash, b)
 	require.NoError(t, err)
 
 	data, err := bStore.cache.Read(b.Hash)

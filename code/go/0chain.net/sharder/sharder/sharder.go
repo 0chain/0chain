@@ -172,7 +172,7 @@ func main() {
 	if sViper == nil {
 		panic("Storage config is required")
 	}
-	blockstore.Init(ctx, sViper)
+	blockstore.Init(sViper)
 
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock, initStates)
 
