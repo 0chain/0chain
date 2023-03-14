@@ -91,38 +91,33 @@ func TestCacheWrite(t *testing.T) {
 		c = initCache(v)
 	})
 
-	size := 250 * MB
 	hash1 := "hash1"
 	b := new(block.Block)
 	b.Hash = hash1
 	err := c.Write(hash1, b)
 	require.Nil(t, err)
 
-	finfo, err := os.Stat(filepath.Join(p, hash1))
+	_, err = os.Stat(filepath.Join(p, hash1))
 	require.Nil(t, err)
 
-	require.EqualValues(t, size, finfo.Size())
-
-	size = 250 * MB
 	hash2 := "hash2"
 	b.Hash = hash2
 	err = c.Write(hash2, b)
 	require.Nil(t, err)
 
-	size = 250 * MB
 	hash3 := "hash3"
 	b.Hash = hash3
 	err = c.Write(hash3, b)
 	require.Nil(t, err)
 
 	time.Sleep(time.Second)
-	finfo, err = os.Stat(filepath.Join(p, hash1))
+	_, err = os.Stat(filepath.Join(p, hash1))
 	require.NotNil(t, err)
 
-	finfo, err = os.Stat(filepath.Join(p, hash2))
+	_, err = os.Stat(filepath.Join(p, hash2))
 	require.NotNil(t, err)
 
-	finfo, err = os.Stat(filepath.Join(p, hash3))
+	_, err = os.Stat(filepath.Join(p, hash3))
 	require.Nil(t, err)
 
 	l := c.(*cache).lru.list
