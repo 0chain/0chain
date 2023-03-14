@@ -460,7 +460,14 @@ func (sp *StakePool) DistributeRewards(
 	if value == 0 {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options...)
+
+	var spUpdate *StakePoolReward
+
+	if len(options) > 0 {
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
+	} else {
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+	}
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
