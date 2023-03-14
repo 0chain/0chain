@@ -224,6 +224,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 					zap.Error(err),
 				)
 			}
+			err = tx.updateUserAggregates(&es)
+			if err != nil {
+				logging.Logger.Error("user aggregate could not be processed",
+					zap.Error(err),
+				)
+			}
 		}
 
 		if err := tx.Commit(); err != nil {
@@ -234,14 +240,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		}
 
 		due := time.Since(tse)
-		logging.Logger.Debug("event db process",
-			zap.Duration("duration", due),
-			zap.Int("events number", len(es.events)),
-			zap.Strings("tags", tags),
-			zap.Int64("round", es.round),
-			zap.String("block", es.block),
-			zap.Int("block size", es.blockSize))
-
 		if due.Milliseconds() > 200 {
 			logging.Logger.Warn("event db work slow",
 				zap.Duration("duration", due),
@@ -412,7 +410,6 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	logging.Logger.Debug("getting blobber aggregate ids", zap.Any("snapshot_before", s))
 
 	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), s)
-	edb.updateUserAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateMinerAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateSharderAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), s)
@@ -543,16 +540,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		logging.Logger.Debug("saving block event", zap.String("id", block.Hash))
-
 		return edb.addOrUpdateBlock(*block)
 	case TagFinalizeBlock:
 		block, ok := fromEvent[Block](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		logging.Logger.Debug("updating block event - finalized", zap.String("id", block.Hash))
-
 		return edb.addOrUpdateBlock(*block)
 	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
@@ -799,54 +792,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
-	case TagLockReadPool:
-		rpl, ok := fromEvent[[]ReadPoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserReadPoolTotal(*rpl, true)
-	case TagUnlockReadPool:
-		u, ok := fromEvent[[]ReadPoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserReadPoolTotal(*u, false)
-	case TagLockWritePool:
-		wpl, ok := fromEvent[[]WritePoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserWritePoolTotal(*wpl, true)
-	case TagUnlockWritePool:
-		u, ok := fromEvent[[]WritePoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserWritePoolTotal(*u, false)
-	case TagLockStakePool:
-		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserTotalStake(*dpl, true)
-	case TagUnlockStakePool:
-		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserTotalStake(*dpl, false)
-	case TagUpdateUserPayedFees:
-		u, ok := fromEvent[[]User](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserPayedFees(*u)
-	case TagUpdateUserCollectedRewards:
-		u, ok := fromEvent[[]User](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateUserCollectedRewards(*u)
 	case TagAddBurnTicket:
 		bt, ok := fromEvent[[]BurnTicket](event.Data)
 		if !ok {
@@ -857,7 +802,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.addBurnTicket((*bt)[0])
 	default:
-		logging.Logger.Debug("skipping event", zap.String("tag", event.Tag.String()))
 		return nil
 	}
 }
