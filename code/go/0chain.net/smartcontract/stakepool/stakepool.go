@@ -463,11 +463,17 @@ func (sp *StakePool) DistributeRewards(
 
 	var spUpdate *StakePoolReward
 
+	logging.Logger.Debug("jayashyc28r9be")
+
 	if len(options) > 0 {
 		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
 	} else {
 		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 	}
+
+	spUpdateStr, _ := json.Marshal(spUpdate)
+
+	logging.Logger.Debug("jayashspUpdate", zap.String("spUpdate", string(spUpdateStr)))
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -477,6 +483,8 @@ func (sp *StakePool) DistributeRewards(
 		}
 		spUpdate.Reward = value
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+
+			logging.Logger.Debug("jayashyc28f3ewifuboqwr9be", zap.Error(err))
 			return err
 		}
 
@@ -546,7 +554,11 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 	}
+
+	logging.Logger.Debug("jayash43gefwyb392re")
+
 	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+		logging.Logger.Debug("jayashError", zap.Error(err))
 		return err
 	}
 
