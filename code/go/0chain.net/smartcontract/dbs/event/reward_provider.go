@@ -6,6 +6,8 @@ import (
 	"0chain.net/smartcontract/dbs/model"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 )
 
@@ -23,6 +25,14 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 	if len(inserts) == 0 {
 		return nil
 	}
+
+	var challengeID string
+	if inserts[0].ChallengeID != "" {
+		challengeID = inserts[0].ChallengeID
+	} else {
+		challengeID = ""
+	}
+
 	var prs []RewardProvider
 	for _, sp := range inserts {
 		pr := RewardProvider{
@@ -30,14 +40,16 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 			BlockNumber: round,
 			ProviderId:  sp.ProviderId,
 			RewardType:  sp.RewardType,
+			ChallengeID: challengeID,
 		}
 
-		if sp.ChallengeID != "" {
-			pr.ChallengeID = sp.ChallengeID
-		}
 		prs = append(prs, pr)
 	}
-	return edb.Get().Create(&prs).Error
+	err := edb.Get().Create(&prs).Error
+
+	logging.Logger.Debug("insertProviderReward", zap.Any("err", err))
+
+	return err
 }
 
 func (edb *EventDb) GetProviderRewards(limit common.Pagination, id string, start, end int64) ([]RewardProvider, error) {
