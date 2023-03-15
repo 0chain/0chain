@@ -106,6 +106,10 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		return nil
 	}
 
+	logging.Logger.Debug("event db - update reward",
+		zap.Int64("round", round),
+		zap.Int("total update items", len(spus)))
+
 	ts := time.Now()
 	rewards, err := aggregateProviderRewards(spus)
 	if err != nil {
@@ -144,8 +148,11 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}
 
+	logging.Logger.Debug("event db - update reward done")
+
 	if edb.Debug() {
 		if err := edb.insertProviderReward(spus, round); err != nil {
+			logging.Logger.Error("event db - insert provider reward", zap.Error(err))
 			return err
 		}
 		if err := edb.insertDelegateReward(spus, round); err != nil {

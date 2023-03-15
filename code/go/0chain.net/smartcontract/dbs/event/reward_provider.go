@@ -26,12 +26,16 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 		return nil
 	}
 
+	logging.Logger.Debug("insertProviderReward", zap.Any("inserts", inserts))
+
 	var challengeID string
 	if inserts[0].ChallengeID != "" {
 		challengeID = inserts[0].ChallengeID
 	} else {
 		challengeID = ""
 	}
+
+	logging.Logger.Debug("insertProviderReward", zap.Any("challengeID", challengeID))
 
 	var prs []RewardProvider
 	for _, sp := range inserts {
