@@ -127,8 +127,8 @@ func TestTagStakePoolReward(t *testing.T) {
 	var before int64
 	db.Get().Table("delegate_pools").Count(&before)
 	var spr dbs.StakePoolReward
-	spr.ProviderId = "provider_id"
-	spr.ProviderType = spenum.Blobber
+	spr.ID = "provider_id"
+	spr.Type = spenum.Blobber
 	spr.Reward = 17
 	spr.DelegateRewards = map[string]currency.Coin{
 		"pool_id_1": 15,
@@ -137,7 +137,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	require.NoError(t, db.addStat(Event{
 		Type:  TypeStats,
 		Tag:   TagStakePoolReward,
-		Index: spr.ProviderId,
+		Index: spr.ID,
 		Data:  []dbs.StakePoolReward{spr},
 	}))
 
@@ -192,8 +192,8 @@ func TestTagStakePoolPenalty(t *testing.T) {
 	var before int64
 	db.Get().Table("delegate_pools").Count(&before)
 	var spr dbs.StakePoolReward
-	spr.ProviderId = "provider_id"
-	spr.ProviderType = spenum.Blobber
+	spr.ID = "provider_id"
+	spr.Type = spenum.Blobber
 	spr.Reward = 17
 	spr.DelegatePenalties = map[string]currency.Coin{
 		"pool_id_1": 2,
@@ -201,7 +201,7 @@ func TestTagStakePoolPenalty(t *testing.T) {
 	require.NoError(t, db.addStat(Event{
 		Type:  TypeStats,
 		Tag:   TagStakePoolPenalty,
-		Index: spr.ProviderId,
+		Index: spr.ID,
 		Data:  []dbs.StakePoolReward{spr},
 	}))
 	var after int64

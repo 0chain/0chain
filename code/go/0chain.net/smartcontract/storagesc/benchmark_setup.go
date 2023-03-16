@@ -370,8 +370,9 @@ func AddMockBlobbers(
 		const mockUsedData = 1000
 		blobber := &StorageNode{
 			Provider: provider.Provider{
-				ID:           id,
-				ProviderType: spenum.Blobber,
+				ID:              id,
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: balances.GetTransaction().CreationDate,
 			},
 			BaseURL: getMockBlobberUrl(i),
 			Geolocation: StorageNodeGeolocation{
@@ -381,7 +382,6 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
-			LastHealthCheck:   balances.GetTransaction().CreationDate,
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
@@ -832,6 +832,8 @@ func SetMockConfig(
 	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
 	conf.ValidatorReward = 0.025
+
+	conf.HealthCheckPeriod = 1 * time.Hour
 	conf.BlobberSlash = 0.1
 	conf.CancellationCharge = 0.2
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
@@ -860,6 +862,7 @@ func SetMockConfig(
 	if err != nil {
 		panic(err)
 	}
+	conf.StakePool.KillSlash = 0.5
 	conf.FreeAllocationSettings = freeAllocationSettings{
 		DataShards:   viper.GetInt(sc.StorageFasDataShards),
 		ParityShards: viper.GetInt(sc.StorageFasParityShards),
@@ -926,6 +929,10 @@ func SetMockConfig(
 		"cost.stake_pool_pay_interests":  mockCost,
 		"cost.commit_settings_changes":   mockCost,
 		"cost.collect_reward":            mockCost,
+		"cost.kill_blobber":              mockCost,
+		"cost.kill_validator":            mockCost,
+		"cost.shutdown_blobber":          mockCost,
+		"cost.shutdown_validator":        mockCost,
 	}
 	return
 }

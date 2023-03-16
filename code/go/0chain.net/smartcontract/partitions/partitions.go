@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	errItemNotFoundCode = "item not found"
+	ErrItemNotFoundCode = "item not found"
 	errItemExistCode    = "item already exist"
 )
 
@@ -90,7 +90,7 @@ func ErrItemNotFound(err error) bool {
 		return false
 	}
 
-	return cErr.Code == errItemNotFoundCode
+	return cErr.Code == ErrItemNotFoundCode
 }
 
 // ErrItemExist checks if error is common.Error and code is 'item already exist'
@@ -176,7 +176,7 @@ func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) 
 	}
 
 	if !ok {
-		return common.NewError(errItemNotFoundCode, id)
+		return common.NewError(ErrItemNotFoundCode, id)
 	}
 
 	if err := p.get(state, loc, id, v); err != nil {
@@ -209,7 +209,7 @@ func (p *Partitions) UpdateItem(state state.StateContextI, it PartitionItem) err
 	}
 
 	if !ok {
-		return common.NewError(errItemNotFoundCode, it.GetID())
+		return common.NewError(ErrItemNotFoundCode, it.GetID())
 	}
 
 	if err := p.updateItem(state, loc, it); err != nil {
@@ -240,7 +240,7 @@ func (p *Partitions) Update(state state.StateContextI, key string, f func(data [
 	}
 
 	if !ok {
-		return common.NewError(errItemNotFoundCode, key)
+		return common.NewError(ErrItemNotFoundCode, key)
 	}
 
 	part, err := p.getPartition(state, l)
@@ -250,7 +250,7 @@ func (p *Partitions) Update(state state.StateContextI, key string, f func(data [
 
 	v, idx, ok := part.find(key)
 	if !ok {
-		return common.NewError(errItemNotFoundCode, key)
+		return common.NewError(ErrItemNotFoundCode, key)
 	}
 
 	nData, err := f(v.Data)
@@ -272,7 +272,7 @@ func (p *Partitions) Remove(state state.StateContextI, id string) error {
 	}
 
 	if !ok {
-		return common.NewError(errItemNotFoundCode, id)
+		return common.NewError(ErrItemNotFoundCode, id)
 	}
 
 	if err := p.removeItem(state, id, loc); err != nil {
