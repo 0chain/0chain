@@ -209,6 +209,8 @@ func authorizerToSnapshot(authorizer *Authorizer, round int64) AuthorizerSnapsho
 		UnstakeTotal:       authorizer.UnstakeTotal,
 		TotalRewards:       authorizer.Rewards.TotalRewards,
 		TotalStake:         authorizer.TotalStake,
+		TotalMint:          authorizer.TotalMint,
+		TotalBurn:          authorizer.TotalBurn,
 		CreationRound:      authorizer.CreationRound,
 		ServiceCharge: 	 	authorizer.ServiceCharge,
 	}
