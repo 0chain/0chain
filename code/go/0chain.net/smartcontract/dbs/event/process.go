@@ -84,6 +84,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[dbs.ProviderID](TagShutdownProvider, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[dbs.ProviderID](TagKillProvider, withUniqueEventOverwrite()),
 
 			mergeAddAllocationEvents(),
 			mergeUpdateAllocEvents(),
@@ -802,6 +804,18 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addBurnTicket((*bt)[0])
+	case TagShutdownProvider:
+		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.providersSetBoolean(*u, "is_shutdown", true)
+	case TagKillProvider:
+		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.providersSetBoolean(*u, "is_killed", true)
 	default:
 		return nil
 	}

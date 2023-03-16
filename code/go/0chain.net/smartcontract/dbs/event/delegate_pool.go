@@ -88,8 +88,8 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider, p
 
 func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
 	var dp = DelegatePool{
-		ProviderID:   updates.ProviderId,
-		ProviderType: updates.ProviderType,
+		ProviderID:   updates.ID,
+		ProviderType: updates.Type,
 		PoolID:       updates.PoolId,
 	}
 
