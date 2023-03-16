@@ -148,17 +148,17 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}
 
-	logging.Logger.Debug("event db - update reward done")
+	logging.Logger.Debug("event db - update reward done", zap.Any("Debug", edb.Debug()))
 
-	if edb.Debug() {
-		if err := edb.insertProviderReward(spus, round); err != nil {
-			logging.Logger.Error("event db - insert provider reward", zap.Error(err))
-			return err
-		}
-		if err := edb.insertDelegateReward(spus, round); err != nil {
-			return err
-		}
+	//if edb.Debug() {
+	if err := edb.insertProviderReward(spus, round); err != nil {
+		logging.Logger.Error("event db - insert provider reward", zap.Error(err))
+		return err
 	}
+	if err := edb.insertDelegateReward(spus, round); err != nil {
+		return err
+	}
+	//}
 
 	return nil
 }
