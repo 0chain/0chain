@@ -9,6 +9,7 @@ import (
 // swagger:model MinerSnapshot
 type MinerSnapshot struct {
 	MinerID string `json:"id" gorm:"index"`
+	BucketId	 int64  `json:"bucket_id"`
 	Round   int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
@@ -54,7 +55,7 @@ func (m *MinerSnapshot) SetTotalRewards(value currency.Coin) {
 func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnapshot, error) {
 	var snapshots []MinerSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM miner_snapshots WHERE miner_id in (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM miner_snapshots WHERE miner_id in (select id from miner_old_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -73,11 +74,13 @@ func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnap
 	return mapSnapshots, result.Error
 }
 
-func (edb *EventDb) addMinerSnapshot(miners []Miner) error {
+func (edb *EventDb) addMinerSnapshot(miners []Miner, round int64) error {
 	var snapshots []MinerSnapshot
 	for _, miner := range miners {
 		snapshots = append(snapshots, MinerSnapshot{
 			MinerID:       miner.ID,
+			Round:         round,
+			BucketId:      miner.BucketId,
 			UnstakeTotal:  miner.UnstakeTotal,
 			Fees:          miner.Fees,
 			TotalStake:    miner.TotalStake,

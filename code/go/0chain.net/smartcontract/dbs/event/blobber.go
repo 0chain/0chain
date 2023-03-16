@@ -236,7 +236,7 @@ func NewUpdateBlobberTotalUnStakeEvent(ID string, totalUnStake currency.Coin) (t
 	return TagUpdateBlobberTotalUnStake, Blobber{
 		Provider: Provider{
 			ID:         ID,
-			TotalStake: totalUnStake,
+			UnstakeTotal: totalUnStake,
 		},
 	}
 }
@@ -299,7 +299,8 @@ func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {
 
 	return CreateBuilder("blobbers", "id", ids).
 		AddUpdate("used", used, "blobbers.used + t.used").
-		AddUpdate("saved_data", savedData, "blobbers.saved_data + t.saved_data").Exec(edb).Error
+		AddUpdate("saved_data", savedData, "blobbers.saved_data + t.saved_data").
+		AddUpdate("read_data", savedData, "blobbers.read_data + t.read_data").Exec(edb).Error
 }
 
 func mergeUpdateBlobberStatsEvents() *eventsMergerImpl[Blobber] {

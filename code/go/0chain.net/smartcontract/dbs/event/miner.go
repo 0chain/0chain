@@ -290,7 +290,7 @@ func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag
 	return TagUpdateMinerTotalUnStake, Miner{
 		Provider: Provider{
 			ID:         ID,
-			TotalStake: unstakeTotal,
+			UnstakeTotal: unstakeTotal,
 		},
 	}
 }
