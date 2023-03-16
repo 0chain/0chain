@@ -155,6 +155,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
 		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
+		gsDiff.TotalMint += int64(current.TotalMint - old.TotalMint)
 
 		oldAuthorizersProcessingMap[current.ID] = processingEntity
 	}
