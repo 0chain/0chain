@@ -1251,11 +1251,12 @@ func (srh *StorageRestHandler) getValidator(w http.ResponseWriter, r *http.Reque
 }
 
 type validatorNodeResponse struct {
-	ValidatorID  string        `json:"validator_id"`
-	BaseUrl      string        `json:"url"`
-	StakeTotal   currency.Coin `json:"stake_total"`
-	UnstakeTotal currency.Coin `json:"unstake_total"`
-	PublicKey    string        `json:"public_key"`
+	ValidatorID     string           `json:"validator_id"`
+	BaseUrl         string           `json:"url"`
+	StakeTotal      currency.Coin    `json:"stake_total"`
+	UnstakeTotal    currency.Coin    `json:"unstake_total"`
+	PublicKey       string           `json:"public_key"`
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
 	// StakePoolSettings
 	DelegateWallet string        `json:"delegate_wallet"`
@@ -1282,6 +1283,7 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 		ServiceCharge:            v.ServiceCharge,
 		UncollectedServiceCharge: v.Rewards.Rewards,
 		TotalServiceCharge:       v.Rewards.TotalRewards,
+		LastHealthCheck:          v.LastHealthCheck,
 	}
 }
 
