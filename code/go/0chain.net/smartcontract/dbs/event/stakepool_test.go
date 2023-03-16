@@ -344,36 +344,36 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	spus := []dbs.StakePoolReward{
 		{
 			// Shouldn't affect anybody
-			StakePoolId: dbs.StakePoolId{
-				ProviderId: "B000",
-				ProviderType: spenum.Blobber,
+			ProviderID: dbs.ProviderID{
+				ID: "B000",
+				Type: spenum.Blobber,
 			},
 			Reward: 10,
 			RewardType: spenum.BlockRewardBlobber,
 		},
 		{
 			// Storage income : blobber one
-			StakePoolId: dbs.StakePoolId{
-				ProviderId: "B001",
-				ProviderType: spenum.Blobber,
+			ProviderID: dbs.ProviderID{
+				ID: "B001",
+				Type: spenum.Blobber,
 			},
 			Reward: 20,
 			RewardType: spenum.ChallengePassReward,
 		},
 		{
 			// Read income : blobber two
-			StakePoolId: dbs.StakePoolId{
-				ProviderId: "B002",
-				ProviderType: spenum.Blobber,
+			ProviderID: dbs.ProviderID{
+				ID: "B002",
+				Type: spenum.Blobber,
 			},
 			Reward: 30,
 			RewardType: spenum.FileDownloadReward,
 		},
 		{
 			// Slashed stake : blobber three
-			StakePoolId: dbs.StakePoolId{
-				ProviderId: "B003",
-				ProviderType: spenum.Blobber,
+			ProviderID: dbs.ProviderID{
+				ID: "B003",
+				Type: spenum.Blobber,
 			},
 			Reward: 40,
 			RewardType: spenum.ChallengeSlashPenalty,

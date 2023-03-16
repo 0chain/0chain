@@ -301,10 +301,10 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 	)
 
 	for i, spu := range spus {
-		if spu.ProviderType != spenum.Blobber {
+		if spu.Type != spenum.Blobber {
 			continue
 		}
-		ids = append(ids, spu.ProviderId)
+		ids = append(ids, spu.ProviderID.ID)
 		totalStorageIncome = append(totalStorageIncome, 0)
 		totalReadIncome = append(totalReadIncome, 0)
 		totalSlashedStake = append(totalSlashedStake, 0)
