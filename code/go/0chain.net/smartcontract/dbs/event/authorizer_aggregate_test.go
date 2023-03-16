@@ -146,9 +146,11 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 		require.Equal(t, oldAuthorizer.TotalBurn*2, curAuthorizer.TotalBurn)
 
 		// Check generated snapshots/aggregates
+		totalMintedBefore := initialSnapshot.TotalMint
 		expectedAggregates, expectedSnapshots = calculateAuthorizerAggregatesAndSnapshots(updateRound, expectedBucketId, authorizersAfter, authorizerSnapshots)
 		eventDb.updateAuthorizerAggregate(updateRound, 10, &initialSnapshot)
 		assertAuthorizerAggregateAndSnapshots(t, eventDb, updateRound, expectedAggregates, expectedSnapshots)
+		require.Equal(t, totalMintedBefore + int64(oldAuthorizer.TotalMint), initialSnapshot.TotalMint)
 
 		// Check global snapshot changes
 		assertAuthorizerGlobalSnapshot(t, eventDb, updateRound, expectedBucketId, authorizersAfter, &initialSnapshot)
@@ -329,12 +331,10 @@ func assertAuthorizerGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedB
 		}
 		expectedGlobal.TotalRewards += int64(authorizer.Rewards.TotalRewards)
 		expectedGlobal.TotalStaked += int64(authorizer.TotalStake)
-		expectedGlobal.TotalMint += int64(authorizer.TotalMint)
 		expectedGlobal.AuthorizerCount += 1
 	}
 
 	assert.Equal(t, expectedGlobal.TotalRewards, actualSnapshot.TotalRewards)
 	assert.Equal(t, expectedGlobal.TotalStaked, actualSnapshot.TotalStaked)
 	assert.Equal(t, expectedGlobal.AuthorizerCount, actualSnapshot.AuthorizerCount)
-	assert.Equal(t, expectedGlobal.TotalMint, actualSnapshot.TotalMint)
 }
