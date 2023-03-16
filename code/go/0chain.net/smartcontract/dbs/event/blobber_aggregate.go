@@ -36,7 +36,7 @@ type BlobberAggregate struct {
 	Downtime            uint64        `json:"downtime"`
 }
 
-func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSnapshot) {
+func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *Snapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS temp_ids "+
@@ -44,6 +44,14 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSn
 		currentBucket)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
+		return
+	}
+
+	exec = edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS old_temp_ids "+
+		"ON COMMIT DROP AS SELECT blobber_id as id FROM blobber_snapshots where bucket_id = ?",
+		currentBucket)
+	if exec.Error != nil {
+		logging.Logger.Error("error creating old temp table", zap.Error(exec.Error))
 		return
 	}
 
@@ -58,6 +66,7 @@ func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *globalSn
 	}
 	pageCount := count / edb.PageLimit()
 
+	logging.Logger.Debug("blobber aggregate/snapshot started", zap.Int64("round", round), zap.Int64("bucket_id", currentBucket), zap.Int64("page_limit", edb.PageLimit()))
 	for i := int64(0); i <= pageCount; i++ {
 		edb.calculateBlobberAggregate(gs, round, edb.PageLimit(), i*edb.PageLimit())
 	}
@@ -79,8 +88,8 @@ func paginate(round, pageAmount, count, pageLimit int64) (int64, int64, int) {
 	return size, currentPageNumber, subpageCount
 }
 
-func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, offset int64) {
-
+func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset int64) {
+	const GB = float64(1024 * 1024 * 1024)
 	var ids []string
 	r := edb.Store.Get().
 		Raw("select id from temp_ids ORDER BY ID limit ? offset ?", limit, offset).Scan(&ids)
@@ -88,7 +97,6 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
 	}
-	logging.Logger.Debug("getting blobber aggregate ids", zap.Int("num", len(ids)))
 
 	var currentBlobbers []Blobber
 	result := edb.Store.Get().Model(&Blobber{}).
@@ -100,27 +108,35 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		logging.Logger.Error("getting current blobbers", zap.Error(result.Error))
 		return
 	}
-	logging.Logger.Debug("blobber_snapshot", zap.Int("total_current_blobbers", len(currentBlobbers)))
-
-	if round <= edb.AggregatePeriod() && len(currentBlobbers) > 0 {
-		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
-			logging.Logger.Error("saving blobbers snapshots", zap.Error(err))
-		}
-	}
 
 	oldBlobbers, err := edb.getBlobberSnapshots(limit, offset)
 	if err != nil {
 		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
 		return
 	}
-	logging.Logger.Debug("blobber_snapshot", zap.Int("total_old_blobbers", len(oldBlobbers)))
+	
+	var (
+		oldBlobbersProcessingMap = MakeProcessingMap(oldBlobbers) 
+		aggregates []BlobberAggregate
+		gsDiff	   Snapshot
+		old BlobberSnapshot
+		ok bool
+	)
 
-	var aggregates []BlobberAggregate
 	for _, current := range currentBlobbers {
-		old, found := oldBlobbers[current.ID]
+		processingEntity, found := oldBlobbersProcessingMap[current.ID]
 		if !found {
-			continue
+			old = BlobberSnapshot{ /* zero values */ }
+			gsDiff.BlobberCount += 1
+		} else {
+			processingEntity.Processed = true
+			old, ok = processingEntity.Entity.(BlobberSnapshot)
+			if !ok {
+				logging.Logger.Error("error converting processable entity to blobber snapshot")
+				continue
+			}
 		}
+		
 		aggregate := BlobberAggregate{
 			Round:     round,
 			BlobberID: current.ID,
@@ -144,37 +160,71 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
-		//aggregate.TotalServiceCharge = current.TotalServiceCharge
 		aggregates = append(aggregates, aggregate)
 
-		gs.totalWritePricePeriod += aggregate.WritePrice
+		gsDiff.SuccessfulChallenges += int64(current.ChallengesPassed - old.ChallengesPassed)
+		gsDiff.TotalChallenges += int64(current.ChallengesCompleted - old.ChallengesCompleted)
+		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
+		gsDiff.AllocatedStorage += current.Allocated - old.Allocated
+		gsDiff.MaxCapacityStorage += current.Capacity - old.Capacity
+		gsDiff.UsedStorage += current.SavedData - old.SavedData
+		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
 
-		gs.SuccessfulChallenges += int64(aggregate.ChallengesPassed - old.ChallengesPassed)
-		gs.TotalChallenges += int64(aggregate.ChallengesCompleted - old.ChallengesCompleted)
-		gs.AllocatedStorage += aggregate.Allocated - old.Allocated
-		gs.MaxCapacityStorage += aggregate.Capacity - old.Capacity
-		gs.UsedStorage += aggregate.SavedData - old.SavedData
-		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
-
-		const GB = currency.Coin(1024 * 1024 * 1024)
-		if aggregate.WritePrice == 0 {
-			gs.StakedStorage = gs.MaxCapacityStorage
-		} else {
-			ss, err := ((aggregate.TotalStake - old.TotalStake) * (GB / aggregate.WritePrice)).Int64()
-			if err != nil {
-				logging.Logger.Error("converting coin to int64", zap.Error(err))
-			}
-			gs.StakedStorage += ss
+		// Change in staked storage (staked_storage = total_stake / write_price)
+		oldSS := old.Capacity
+		if old.WritePrice > 0 {
+			oldSS = int64((float64(old.TotalStake) / float64(old.WritePrice)) * GB)
 		}
+		newSS := current.Capacity
+		if current.WritePrice > 0 {
+			newSS = int64((float64(current.TotalStake) / float64(current.WritePrice)) * GB)
+		}
+		gsDiff.StakedStorage += (newSS - oldSS)
 
-		gs.blobberCount++ //todo figure out why we increment blobberCount on every update
+		oldBlobbersProcessingMap[current.ID] = processingEntity
 	}
+	
+	// Decrease global snapshot and blobber_snapshots based on deleted blobbers
+	var snapshotIdsToDelete []string
+	for _, processingEntity := range oldBlobbersProcessingMap {
+		if processingEntity.Entity == nil || processingEntity.Processed {
+			continue
+		}
+		old, ok = processingEntity.Entity.(BlobberSnapshot)
+		if !ok {
+			logging.Logger.Error("error converting processable entity to blobber snapshot")
+			continue
+		}
+		snapshotIdsToDelete = append(snapshotIdsToDelete, old.BlobberID)
+		gsDiff.SuccessfulChallenges += int64(-old.ChallengesPassed)
+		gsDiff.TotalChallenges += int64(-old.ChallengesCompleted)
+		gsDiff.AllocatedStorage += -old.Allocated
+		gsDiff.MaxCapacityStorage += -old.Capacity
+		gsDiff.UsedStorage += -old.SavedData
+		gsDiff.TotalRewards += int64(-old.TotalRewards)
+		gsDiff.TotalStaked += int64(-old.TotalStake)
+		gsDiff.BlobberCount -= 1
+
+		if old.WritePrice > 0 {
+			ss := int64((float64(old.TotalStake) / float64(old.WritePrice)) * GB)
+			gsDiff.StakedStorage += -ss
+		} else {
+			gsDiff.StakedStorage += -old.Capacity
+		}
+	}
+
+	if len(snapshotIdsToDelete) > 0 {
+		if result := edb.Store.Get().Where("blobber_id IN (?)", snapshotIdsToDelete).Delete(&BlobberSnapshot{}); result.Error != nil {
+			logging.Logger.Error("deleting blobber snapshots", zap.Error(result.Error))
+		}
+	}
+	gs.ApplyDiff(&gsDiff)
+
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
 		}
 	}
-	logging.Logger.Debug("blobber_snapshot", zap.Int("aggregates", len(aggregates)))
 
 	if len(currentBlobbers) > 0 {
 		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
@@ -182,16 +232,11 @@ func (edb *EventDb) calculateBlobberAggregate(gs *globalSnapshot, round, limit, 
 		}
 	}
 
-	logging.Logger.Debug("blobber_snapshot", zap.Int("current_blobebrs", len(currentBlobbers)))
-
-	// update global snapshot object
-	if gs.blobberCount != 0 {
-
-		twp, err := gs.totalWritePricePeriod.Int64()
-		if err != nil {
-			logging.Logger.Error("converting write price to coin", zap.Error(err))
-			return
-		}
-		gs.AverageWritePrice = int64(twp / int64(gs.blobberCount))
-	}
+	logging.Logger.Debug("blobber aggregate/snapshots finished successfully",
+		zap.Int("current_blobbers", len(currentBlobbers)),
+		zap.Int("old_blobbers", len(oldBlobbers)),
+		zap.Int("aggregates", len(aggregates)),
+		zap.Int("deleted_snapshots", len(snapshotIdsToDelete)),
+		zap.Any("global_snapshot_after", gs),
+	)
 }

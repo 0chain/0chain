@@ -455,57 +455,6 @@ func (t *Timings) tick(name string) {
 	t.timings[name] = time.Since(t.start)
 }
 
-func (sc *StorageSmartContract) selectBlobbers(
-	creationDate time.Time,
-	allBlobbersList StorageNodes,
-	sa *StorageAllocation,
-	randomSeed int64,
-	balances chainstate.CommonStateContextI,
-) ([]*StorageNode, int64, error) {
-	var err error
-	var conf *Config
-	if conf, err = getConfig(balances); err != nil {
-		return nil, 0, fmt.Errorf("can't get config: %v", err)
-	}
-
-	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
-
-	// number of blobbers required
-	var size = sa.DataShards + sa.ParityShards
-	// size of allocation for a blobber
-	var bSize = sa.bSize()
-	timestamp := common.Timestamp(creationDate.Unix())
-
-	list, err := sa.filterBlobbers(allBlobbersList.Nodes.copy(), timestamp,
-		bSize, filterHealthyBlobbers(timestamp),
-		sc.filterBlobbersByFreeSpace(timestamp, bSize, balances))
-	if err != nil {
-		return nil, 0, fmt.Errorf("could not filter blobbers: %v", err)
-	}
-
-	if len(list) < size {
-		return nil, 0, errors.New("not enough blobbers to honor the allocation")
-	}
-
-	sa.BlobberAllocs = make([]*BlobberAllocation, 0)
-	sa.Stats = &StorageAllocationStats{}
-
-	var blobberNodes []*StorageNode
-	if len(sa.PreferredBlobbers) > 0 {
-		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
-		if err != nil {
-			return nil, 0, common.NewError("allocation_creation_failed",
-				err.Error())
-		}
-	}
-
-	if len(blobberNodes) < size {
-		blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
-	}
-
-	return blobberNodes[:size], bSize, nil
-}
-
 func validateBlobbers(
 	creationDate time.Time,
 	sa *StorageAllocation,
@@ -518,7 +467,7 @@ func validateBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
-	var list, errs = sa.validateEachBlobber(blobbers, common.Timestamp(creationDate.Unix()))
+	var list, errs = sa.validateEachBlobber(blobbers, common.Timestamp(creationDate.Unix()), conf)
 
 	if len(list) < size {
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation: " + strings.Join(errs, ", "))
@@ -531,11 +480,12 @@ func validateBlobbers(
 }
 
 type updateAllocationRequest struct {
-	ID                      string           `json:"id"`              // allocation id
-	Name                    string           `json:"name"`            // allocation name
-	OwnerID                 string           `json:"owner_id"`        // Owner of the allocation
-	Size                    int64            `json:"size"`            // difference
-	Expiration              common.Timestamp `json:"expiration_date"` // difference
+	ID                      string           `json:"id"`               // allocation id
+	Name                    string           `json:"name"`             // allocation name
+	OwnerID                 string           `json:"owner_id"`         // Owner of the allocation
+	OwnerPublicKey          string           `json:"owner_public_key"` // Owner Public Key of the allocation
+	Size                    int64            `json:"size"`             // difference
+	Expiration              common.Timestamp `json:"expiration_date"`  // difference
 	UpdateTerms             bool             `json:"update_terms"`
 	AddBlobberId            string           `json:"add_blobber_id"`
 	RemoveBlobberId         string           `json:"remove_blobber_id"`
@@ -558,7 +508,8 @@ func (uar *updateAllocationRequest) validate(
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
 		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) &&
-		(!uar.FileOptionsChanged || uar.FileOptions == alloc.FileOptions) {
+		(!uar.FileOptionsChanged || uar.FileOptions == alloc.FileOptions) &&
+		(alloc.Owner == uar.OwnerID) {
 		return errors.New("update allocation changes nothing")
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
@@ -1152,7 +1103,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
-	if t.ClientID != alloc.Owner || request.OwnerID != alloc.Owner {
+	if t.ClientID != alloc.Owner {
 		if !alloc.ThirdPartyExtendable || (request.Size <= 0 && request.Expiration <= 0) {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
@@ -1275,6 +1226,15 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				},
 			})
 		}
+
+		if request.OwnerID != alloc.Owner {
+			alloc.Owner = request.OwnerID
+			if request.OwnerPublicKey == "" {
+				return "", common.NewError("allocation_updating_failed", "owner public key is required when updating owner id")
+			}
+			alloc.OwnerPublicKey = request.OwnerPublicKey
+		}
+
 	}
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)
@@ -1791,52 +1751,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	alloc.Finalized = true
 
 	return nil
-}
-
-type transferAllocationInput struct {
-	AllocationId      string `json:"allocation_id"`
-	NewOwnerId        string `json:"new_owner_id"`
-	NewOwnerPublicKey string `json:"new_owner_public_key"`
-}
-
-func (aci *transferAllocationInput) decode(input []byte) error {
-	return json.Unmarshal(input, aci)
-}
-
-func (sc *StorageSmartContract) curatorTransferAllocation(
-	txn *transaction.Transaction,
-	input []byte,
-	balances chainstate.StateContextI,
-) (string, error) {
-	var tai transferAllocationInput
-	if err := tai.decode(input); err != nil {
-		return "", common.NewError("curator_transfer_allocation_failed",
-			"error unmarshalling input: "+err.Error())
-	}
-
-	alloc, err := sc.getAllocation(tai.AllocationId, balances)
-	if err != nil {
-		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
-	}
-
-	if !alloc.isCurator(txn.ClientID) && alloc.Owner != txn.ClientID {
-		return "", common.NewError("curator_transfer_allocation_failed",
-			"only curators or the owner can transfer allocations; "+txn.ClientID+" is neither")
-	}
-
-	alloc.Owner = tai.NewOwnerId
-	alloc.OwnerPublicKey = tai.NewOwnerPublicKey
-
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	if err != nil {
-		return "", common.NewErrorf("curator_transfer_allocation_failed",
-			"saving new allocation: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-
-	// txn.Hash is the id of the new token pool
-	return txn.Hash, nil
 }
 
 func emitUpdateAllocationStatEvent(w *WriteMarker, movedTokens currency.Coin, balances chainstate.StateContextI) {

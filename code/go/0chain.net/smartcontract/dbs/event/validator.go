@@ -169,7 +169,7 @@ func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (
 	return TagUpdateValidatorUnStakeTotal, Validator{
 		Provider: Provider{
 			ID:         ID,
-			TotalStake: totalUntake},
+			UnstakeTotal: totalUntake},
 	}
 }
 

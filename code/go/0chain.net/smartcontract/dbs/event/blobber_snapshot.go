@@ -9,6 +9,7 @@ import (
 // swagger:model BlobberSnapshot
 type BlobberSnapshot struct {
 	BlobberID           string        `json:"id" gorm:"index"`
+	BucketId			int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
 	Allocated           int64         `json:"allocated"` // allocated capacity
@@ -32,7 +33,7 @@ type BlobberSnapshot struct {
 func (edb *EventDb) getBlobberSnapshots(limit, offset int64) (map[string]BlobberSnapshot, error) {
 	var snapshots []BlobberSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM blobber_snapshots WHERE blobber_id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM blobber_snapshots WHERE blobber_id in (select id from old_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -56,6 +57,7 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 	for _, blobber := range blobbers {
 		snapshots = append(snapshots, BlobberSnapshot{
 			BlobberID:    blobber.ID,
+			BucketId: 	  blobber.BucketId,
 			WritePrice:   blobber.WritePrice,
 			Capacity:     blobber.Capacity,
 			Allocated:    blobber.Allocated,
