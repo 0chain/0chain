@@ -464,7 +464,7 @@ func (sp *StakePool) DistributeRewards(
 	var spUpdate *StakePoolReward
 
 	// log all parameters
-	logging.Logger.Debug("jayashspParams", zap.String("providerId", providerId), zap.String("providerType", string(providerType)), zap.String("rewardType", string(rewardType)), zap.String("options", options[0]))
+	logging.Logger.Debug("jayashspParams", zap.String("providerId", providerId), zap.String("providerType", string(providerType)), zap.String("rewardType", string(rewardType)))
 
 	if len(options) > 0 {
 		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
