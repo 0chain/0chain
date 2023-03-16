@@ -2,6 +2,8 @@ package maths
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"math"
 
 	"github.com/0chain/common/core/currency"
@@ -13,6 +15,9 @@ import (
 // R is data read by blobber
 func GetGamma(A, B, alpha, X, R float64) float64 {
 
+	// log the values of parameters
+	logging.Logger.Info("jayashB A", zap.Float64("A", A), zap.Float64("B", B), zap.Float64("alpha", alpha), zap.Float64("X", X), zap.Float64("R", R))
+
 	if X == 0 {
 		return 0
 	}
@@ -22,6 +27,9 @@ func GetGamma(A, B, alpha, X, R float64) float64 {
 }
 
 func GetZeta(i, k, mu, wp, rp float64) float64 {
+
+	// log the values of parameters
+	logging.Logger.Info("jayashB i", zap.Float64("i", i), zap.Float64("k", k), zap.Float64("mu", mu), zap.Float64("wp", wp), zap.Float64("rp", rp))
 
 	if wp == 0 {
 		return 0

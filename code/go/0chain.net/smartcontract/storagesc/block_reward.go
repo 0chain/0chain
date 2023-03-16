@@ -150,6 +150,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		sp := stakePools[i]
 
 		staked, err := sp.stake()
+
+		logging.Logger.Debug("jayashB staked"+uniqueIdForLogging, zap.Any("staked", staked))
+
 		if err != nil {
 			return err
 		}
