@@ -96,7 +96,7 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 	return nil
 }
 
-func emitValidatorHealthCheck(vn *ValidationNode, downtime uint64, balances cstate.StateContextI) error {
+func emitValidatorHealthCheck(vn *ValidationNode, downtime uint64, balances cstate.StateContextI) {
 	data := dbs.DbHealthCheck{
 		ID:              vn.ID,
 		LastHealthCheck: vn.LastHealthCheck,
@@ -104,5 +104,4 @@ func emitValidatorHealthCheck(vn *ValidationNode, downtime uint64, balances csta
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagValidatorHealthCheck, vn.ID, data)
-	return nil
 }

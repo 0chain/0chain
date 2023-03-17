@@ -74,7 +74,8 @@ func TestNewAllocation(t *testing.T) {
 	for i := 0; i < request.DataShards+request.ParityShards+4; i++ {
 		var nextBlobber = StorageNode{
 			Provider: provider.Provider{
-				ProviderType: spenum.Blobber,
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: now - blobberHealthTime,
 			},
 			Capacity:  536870912,
 			Allocated: 73,
@@ -82,7 +83,6 @@ func TestNewAllocation(t *testing.T) {
 				MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 				ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 			},
-			LastHealthCheck: now - blobberHealthTime,
 		}
 		nextBlobber.ID = strconv.Itoa(i)
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
@@ -149,14 +149,14 @@ func TestCancelAllocationRequest(t *testing.T) {
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = StorageNode{
 			Provider: provider.Provider{
-				ProviderType: spenum.Blobber,
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: now - blobberHealthTime,
 			},
 			Capacity: 536870912,
 			Terms: Terms{
 				MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 				ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 			},
-			LastHealthCheck: now - blobberHealthTime,
 		}
 		nextBlobber.ID = strconv.Itoa(i)
 		nextBlobber.ProviderType = spenum.Blobber
@@ -275,13 +275,13 @@ func TestFinalizeAllocation(t *testing.T) {
 		var nextBlobber = StorageNode{
 			Capacity: 536870912,
 			Provider: provider.Provider{
-				ProviderType: spenum.Blobber,
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: now - blobberHealthTime,
 			},
 			Terms: Terms{
 				MaxOfferDuration: 1000 * scYaml.MinAllocDuration,
 				ReadPrice:        zcnToBalance(blobberYaml.readPrice),
 			},
-			LastHealthCheck: now - blobberHealthTime,
 		}
 		nextBlobber.ID = strconv.Itoa(i)
 		nextBlobber.ProviderType = spenum.Blobber

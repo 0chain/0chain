@@ -9,6 +9,7 @@ import (
 // swagger:model SharderSnapshot
 type SharderSnapshot struct {
 	SharderID string `json:"id" gorm:"index"`
+	BucketId	 int64  `json:"bucket_id"`
 	Round     int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
@@ -54,7 +55,7 @@ func (s *SharderSnapshot) SetTotalRewards(value currency.Coin) {
 func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]SharderSnapshot, error) {
 	var snapshots []SharderSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM sharder_snapshots WHERE sharder_id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM sharder_snapshots WHERE sharder_id in (select id from sharder_old_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -73,11 +74,13 @@ func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]Sharder
 	return mapSnapshots, result.Error
 }
 
-func (edb *EventDb) addSharderSnapshot(sharders []Sharder) error {
+func (edb *EventDb) addSharderSnapshot(sharders []Sharder, round int64) error {
 	var snapshots []SharderSnapshot
 	for _, sharder := range sharders {
 		snapshots = append(snapshots, SharderSnapshot{
 			SharderID:     sharder.ID,
+			BucketId:      sharder.BucketId,
+			Round:         round,
 			UnstakeTotal:  sharder.UnstakeTotal,
 			Fees:          sharder.Fees,
 			TotalStake:    sharder.TotalStake,
