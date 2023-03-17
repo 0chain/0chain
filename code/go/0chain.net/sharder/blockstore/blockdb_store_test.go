@@ -2,6 +2,7 @@ package blockstore
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/sharder/blockdb"
 	"github.com/0chain/common/core/logging"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
@@ -312,6 +314,10 @@ func Test_txnRecord_Decode(t *testing.T) {
 			PublicKey: "667e8dd9ff6626868570daeb5f783e5e2af2f3093dc1b7e7d5743ef86d715c210e289a4d8e72ca0919707d78fec350eb661da0063ac3c97cfb42f908e1bb261f",
 		}
 	)
+
+	txnData, err := json.Marshal(struct{}{})
+	require.NoError(t, err)
+	tx.TransactionData = string(txnData)
 
 	type fields struct {
 		Transaction *transaction.Transaction
