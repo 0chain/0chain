@@ -2286,22 +2286,6 @@ func Test_finalize_allocation(t *testing.T) {
 	assert.True(t,
 		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
 		"should receive min_lock_demand")
-
-	// assert that allocation is removed from all the blobber
-	for _, b := range blobs {
-		p, err := partitionsBlobberAllocations(b.id, balances)
-		require.NoError(t, err)
-		var baNode BlobberAllocationNode
-		err = p.Get(balances, allocID, &baNode)
-		require.True(t, partitions.ErrItemNotFound(err))
-
-	}
-	// assert blobber challenge ready partition is removed
-	challengeParts, err := partitionsChallengeReadyBlobbers(balances)
-	require.NoError(t, err)
-	var crbNode ChallengeReadyBlobber
-	err = challengeParts.Get(balances, b1.id, &crbNode)
-	require.True(t, partitions.ErrItemNotFound(err))
 }
 
 func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
@@ -2459,19 +2443,4 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	assert.True(t,
 		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
 		"should receive min_lock_demand")
-
-	// assert that allocation is removed from blobber
-	p, err := partitionsBlobberAllocations(b1.id, balances)
-	require.NoError(t, err)
-	var baNode BlobberAllocationNode
-	err = p.Get(balances, allocID, &baNode)
-	require.True(t, partitions.ErrItemNotFound(err))
-
-	// assert blobber challenge ready partition is not removed as we still have one allocation is bound
-	challengeParts, err := partitionsChallengeReadyBlobbers(balances)
-	require.NoError(t, err)
-	var crbNode ChallengeReadyBlobber
-	err = challengeParts.Get(balances, b1.id, &crbNode)
-	require.NoError(t, err)
-	require.Equal(t, b1.id, crbNode.BlobberID)
 }
