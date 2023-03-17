@@ -50,6 +50,7 @@ const (
 	TransactionMinFee  // todo from global
 	TransactionMaxFee
 	TransactionExempt
+	TransactionCostFeeCoeff
 
 	ClientSignatureScheme
 	ClientDiscover // todo from chain
@@ -183,6 +184,7 @@ func initGlobalSettingNames() {
 	GlobalSettingName[TransactionMinFee] = "server_chain.transaction.min_fee"
 	GlobalSettingName[TransactionMaxFee] = "server_chain.transaction.max_fee"
 	GlobalSettingName[TransactionExempt] = "server_chain.transaction.exempt"
+	GlobalSettingName[TransactionCostFeeCoeff] = "server_chain.transaction.cost_fee_coeff"
 
 	GlobalSettingName[ClientSignatureScheme] = "server_chain.client.signature_scheme"
 	GlobalSettingName[ClientDiscover] = "server_chain.client.discover"
@@ -304,7 +306,9 @@ func initGlobalSettings() {
 		GlobalSettingName[TransactionPayloadMaxSize]: {smartcontract.Int, true},
 		GlobalSettingName[TransactionTimeout]:        {smartcontract.Int, false},
 		GlobalSettingName[TransactionMinFee]:         {smartcontract.Int64, false},
+		GlobalSettingName[TransactionMaxFee]:         {smartcontract.Int64, false},
 		GlobalSettingName[TransactionExempt]:         {smartcontract.Strings, true},
+		GlobalSettingName[TransactionCostFeeCoeff]:   {smartcontract.Int, true},
 
 		GlobalSettingName[ClientSignatureScheme]: {smartcontract.String, true},
 		GlobalSettingName[ClientDiscover]:        {smartcontract.Boolean, false},
