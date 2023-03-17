@@ -63,7 +63,7 @@ jobs:
       zdns_branch: ${{ github.event.inputs.zdns_branch }}
       zs3server_branch: ${{ github.event.inputs.zs3server_branch }}
       gosdk_branch: ${{ github.event.inputs.gosdk_branch }}
-      skip_tests: ${{ github.event.inputs.skip_tests }}
+      skip_tests: false
     secrets:
       SVC_ACCOUNT_SECRET: ${{ secrets.SVC_ACCOUNT_SECRET }}
       DEV1KC: ${{ secrets.DEV1KC }}
