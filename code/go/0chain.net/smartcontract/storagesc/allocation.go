@@ -1610,11 +1610,6 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
-	var blobbers []*StorageNode
-	if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
-		return fmt.Errorf("could not get alloc blobbers: %v", err)
-	}
-
 	var cp *challengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
@@ -1622,11 +1617,6 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
-		var b = blobbers[i]
-		if b.ID != d.BlobberID {
-			return fmt.Errorf("blobber %s and %s don't match", b.ID, d.BlobberID)
-		}
-
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
 			ratio := float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 			cpBalance, err := cp.Balance.Float64()
@@ -1639,9 +1629,9 @@ func (sc *StorageSmartContract) finishAllocation(
 				return err
 			}
 
-			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, spenum.ChallengePassReward, balances)
+			err = sps[i].DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
 			if err != nil {
-				return fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", b.ID, err)
+				return fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", d.BlobberID, err)
 			}
 
 			d.Spent, err = currency.AddCoin(d.Spent, reward)
@@ -1653,41 +1643,8 @@ func (sc *StorageSmartContract) finishAllocation(
 				return fmt.Errorf("pass payments: %v", err)
 			}
 		}
-
-		if err = sps[i].Save(spenum.Blobber, d.BlobberID, balances); err != nil {
-			return fmt.Errorf("failed to save stake pool: %s, err: %v", d.BlobberID, err)
-		}
-
-		staked, err := sps[i].stake()
-		if err != nil {
-			return err
-		}
-
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(d.BlobberID, staked)
-		balances.EmitEvent(event.TypeStats, tag, d.BlobberID, data)
-		if d.Terms.WritePrice > 0 {
-			stake, err := sps[i].stake()
-			if err != nil {
-				return err
-			}
-			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, d.BlobberID, event.AllocationBlobberValueChanged{
-				FieldType:    event.Staked,
-				AllocationId: "",
-				BlobberId:    d.BlobberID,
-				Delta:        int64((stake - before[i]) / d.Terms.WritePrice),
-			})
-		}
-		// update the blobber
-		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
-			return fmt.Errorf("failed to save blobber: %s, err: %v", d.BlobberID, err)
-		}
-
-		emitUpdateBlobber(b, balances)
-		err = removeAllocationFromBlobber(balances, d)
-		if err != nil {
-			return err
-		}
 	}
+
 	prevBal := cp.Balance
 	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
 	if err != nil {
@@ -1730,6 +1687,27 @@ func (sc *StorageSmartContract) finishAllocation(
 		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances)
 		if err != nil {
 			return fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", ba.BlobberID, err)
+		}
+
+		if err = sps[i].Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
+			return fmt.Errorf("failed to save stake pool: %s, err: %v", ba.BlobberID, err)
+		}
+
+		staked, err := sps[i].stake()
+		if err != nil {
+			return err
+		}
+
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(ba.BlobberID, staked)
+		balances.EmitEvent(event.TypeStats, tag, ba.BlobberID, data)
+		if ba.Terms.WritePrice > 0 {
+			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange,
+				ba.BlobberID, event.AllocationBlobberValueChanged{
+					FieldType:    event.Staked,
+					AllocationId: "",
+					BlobberId:    ba.BlobberID,
+					Delta:        int64((staked - before[i]) / ba.Terms.WritePrice),
+				})
 		}
 	}
 
