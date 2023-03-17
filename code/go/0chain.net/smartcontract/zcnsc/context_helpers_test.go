@@ -142,6 +142,9 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			return nil
 		})
 
+	// sp = stakepool.NewStakePool()
+	// err = balances.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, authorizerID), sp)
+
 	/// InsertTrieNode
 
 	ctx.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("util.MPTSerializable")).Return(
@@ -150,6 +153,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 				ctx.userNodes[key] = node.(*UserNode)
 				return node
 			}
+
 			if strings.Contains(key, AuthorizerNodeType) {
 				authorizerNode := node.(*AuthorizerNode)
 				ctx.authorizers[key] = &Authorizer{
@@ -159,9 +163,21 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 				return authorizerNode
 			}
 
+			// if strings.Contains(key, )
+
 			return nil
 		},
 		func(_ datastore.Key) error {
+			return nil
+		})
+
+	ctx.On("InsertTrieNode", ctx.globalNode.GetKey(),
+		mock.AnythingOfType("*zcnsc.GlobalNode")).Return(
+		func(_ datastore.Key, node util.MPTSerializable) datastore.Key {
+			ctx.globalNode = node.(*GlobalNode)
+			return ""
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
 			return nil
 		})
 
@@ -416,6 +432,8 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 	}
 
 	if strings.Contains(key, StakePoolNodeType) {
+		fmt.Println("")
+		fmt.Println(key, ctx.stakingPools)
 		n, ok := ctx.stakingPools[key]
 		if !ok {
 			return util.ErrValueNotPresent

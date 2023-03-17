@@ -255,6 +255,7 @@ func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
 
 func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 	ctx := MakeMockStateContext()
+
 	tr := CreateDefaultTransactionToZcnsc()
 	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
 		Debug:                 true,
