@@ -1456,10 +1456,8 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
-	ts := time.Now()
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(req.AllocationID, balances)
-	fmt.Println("get allocation", time.Since(ts))
 
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
@@ -1475,20 +1473,17 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"trying to cancel expired allocation")
 	}
 
-	ts = time.Now()
 	var passRates []float64
 	passRates, err = sc.canceledPassRates(alloc, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
-	fmt.Println("canceled pass rates", time.Since(ts))
 
 	// can cancel
 	// new values
 	alloc.Expiration = t.CreationDate
 
-	ts = time.Now()
 	sps := make([]*stakePool, 0, len(alloc.BlobberAllocs))
 	for _, d := range alloc.BlobberAllocs {
 		var sp *stakePool
@@ -1502,19 +1497,16 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		}
 		sps = append(sps, sp)
 	}
-	fmt.Println("reduce offer", time.Since(ts))
 	conf, err := getConfig(balances)
 	if err != nil {
 		return "", common.NewError("can't get config", err.Error())
 	}
 
-	ts = time.Now()
 	err = sc.finishAllocation(t, alloc, passRates, sps, balances, conf)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
-	fmt.Println("finish allocation", time.Since(ts))
 	alloc.Finalized, alloc.Canceled = true, true
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
