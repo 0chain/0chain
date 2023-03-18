@@ -101,7 +101,7 @@ func Test_MaxFeeMint(t *testing.T) {
 			maxFee: 10,
 			expect: expect{
 				sharedFee:    3,
-				remainAmount: 191,
+				remainAmount: 197,
 			},
 		},
 		{
@@ -109,7 +109,7 @@ func Test_MaxFeeMint(t *testing.T) {
 			maxFee: 9,
 			expect: expect{
 				sharedFee:    3,
-				remainAmount: 191,
+				remainAmount: 197,
 			},
 		},
 	}
@@ -152,7 +152,7 @@ func Test_MaxFeeMint(t *testing.T) {
 			require.NotEmpty(t, response)
 
 			mm := ctx.GetMints()
-			require.Equal(t, len(mm), len(authorizersID)+1)
+			require.Equal(t, len(mm), 1)
 
 			auths := make([]string, 0, len(payload.Signatures))
 			for _, sig := range payload.Signatures {
@@ -164,9 +164,13 @@ func Test_MaxFeeMint(t *testing.T) {
 				mintsMap[m.ToClientID] = mm[i]
 			}
 
-			for _, id := range auths {
-				require.Equal(t, tc.expect.sharedFee, mintsMap[id].Amount)
-			}
+			rand.Seed(int64(transaction.CreationDate.Duration()))
+			sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
+
+			stakePool := NewStakePool()
+			err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePool)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect.sharedFee, stakePool.Reward)
 
 			// assert transaction.ClientID has remaining amount
 			tm, ok := mintsMap[transaction.ClientID]
