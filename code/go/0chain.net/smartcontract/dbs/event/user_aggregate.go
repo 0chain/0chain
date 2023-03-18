@@ -26,7 +26,6 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 			logging.Logger.Error("user aggregate",
 				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 			return
-
 		}
 		logging.Logger.Debug("user_aggregates TagLockReadPool", zap.Int("events", len(*rpls)))
 		for _, rpl := range *rpls {
