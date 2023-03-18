@@ -1690,7 +1690,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				return err
 			}
 
-			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, spenum.ChallengePassReward, balances)
+			err = sps[i].DistributeRewards(reward, b.ID, spenum.Blobber, spenum.ChallengePassReward, balances, "finishAllocation")
 			if err != nil {
 				return fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", b.ID, err)
 			}

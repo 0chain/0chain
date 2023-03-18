@@ -117,6 +117,9 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 		challengeID = ""
 	}
 
+	// log the challengeID for debugging
+	logging.Logger.Debug("jayashMTV challengeID", zap.String("challengeID", challengeID))
+
 	for i, sp := range vSPs {
 		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, spenum.ValidationReward, balances, challengeID)
 		if err != nil {
