@@ -107,6 +107,17 @@ func addMockAllocation(
 			AllocationRoot: encryption.Hash("allocation root"),
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
+
+		blobAllocPart, err := partitionsBlobberAllocations(bId, balances)
+		if err != nil {
+			log.Fatal("add blob alloc partition", err)
+		}
+		if err := blobAllocPart.Add(balances, &BlobberAllocationNode{ID: sa.ID}); err != nil {
+			log.Fatal("add blob alloc node", err)
+		}
+		if err := blobAllocPart.Save(balances); err != nil {
+			log.Fatal("save blob alloc part", err)
+		}
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
@@ -222,29 +233,6 @@ func AddMockChallenges(
 				blobAlloc[oc.BlobberID] = make(map[string]*AllocOpenChallenge)
 			}
 			blobAlloc[oc.BlobberID][ch.AllocationID] = oc
-		}
-	}
-
-	// adding blobber challenge allocation partition
-	for blobberID, val := range blobAlloc {
-
-		aPart, err := partitionsBlobberAllocations(blobberID, balances)
-		if err != nil {
-			panic(err)
-		}
-		for allocID := range val {
-
-			err = aPart.Add(balances, &BlobberAllocationNode{
-				ID: allocID,
-			})
-			if err != nil {
-				panic(err)
-			}
-		}
-		err = aPart.Save(balances)
-
-		if err != nil {
-			panic(err)
 		}
 	}
 }
@@ -496,7 +484,6 @@ func AddMockSnapshots(edb *event.EventDb) {
 			TotalMint:            int64(i + 10),
 			TotalChallengePools:  int64(currency.Coin(i + (1 * 1e10))),
 			ActiveAllocatedDelta: int64(i),
-			AverageWritePrice:    int64(getMockBlobberTerms().WritePrice),
 			TotalStaked:          int64(currency.Coin(i * (0.001 * 1e10))),
 			SuccessfulChallenges: int64(i-1) / 2,
 			TotalChallenges:      int64(i - 1),
@@ -505,7 +492,6 @@ func AddMockSnapshots(edb *event.EventDb) {
 			MaxCapacityStorage:   int64(i * 10240),
 			StakedStorage:        int64(i * 512),
 			UsedStorage:          int64(i * 256),
-			TotalValueLocked:     int64(currency.Coin(i * (0.001 * 1e10))),
 			ClientLocks:          int64(currency.Coin(i * (0.0001 * 1e10))),
 		}
 		snapshots = append(snapshots, snapshot)
