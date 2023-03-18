@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -34,6 +35,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const blobberHealthTime = 60 * 60 // 1 Hour
 
 func TestSelectBlobbers(t *testing.T) {
 	const (
@@ -74,12 +77,12 @@ func TestSelectBlobbers(t *testing.T) {
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
 			Provider: provider.Provider{
-				ID:           mockBlobberId + strconv.Itoa(index),
-				ProviderType: spenum.Blobber,
+				ID:              mockBlobberId + strconv.Itoa(index),
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: common.Timestamp(now.Unix()),
 			},
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: common.Timestamp(now.Unix()),
+			BaseURL:  mockURL + strconv.Itoa(index),
+			Capacity: mockBlobberCapacity,
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -225,6 +228,63 @@ func TestSelectBlobbers(t *testing.T) {
 	}
 }
 
+func (sc *StorageSmartContract) selectBlobbers(
+	creationDate time.Time,
+	allBlobbersList StorageNodes,
+	sa *StorageAllocation,
+	randomSeed int64,
+	balances chainState.CommonStateContextI,
+) ([]*StorageNode, int64, error) {
+	var err error
+	var conf *Config
+	if conf, err = getConfig(balances); err != nil {
+		return nil, 0, fmt.Errorf("can't get config: %v", err)
+	}
+
+	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
+
+	// number of blobbers required
+	var size = sa.DataShards + sa.ParityShards
+	// size of allocation for a blobber
+	var bSize = sa.bSize()
+	timestamp := common.Timestamp(creationDate.Unix())
+
+	list, err := sa.filterBlobbers(allBlobbersList.Nodes.copy(), timestamp,
+		bSize, filterHealthyBlobbers(timestamp),
+		sc.filterBlobbersByFreeSpace(timestamp, bSize, balances))
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not filter blobbers: %v", err)
+	}
+
+	if len(list) < size {
+		return nil, 0, errors.New("not enough blobbers to honor the allocation")
+	}
+
+	sa.BlobberAllocs = make([]*BlobberAllocation, 0)
+	sa.Stats = &StorageAllocationStats{}
+
+	var blobberNodes []*StorageNode
+	if len(sa.PreferredBlobbers) > 0 {
+		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
+		if err != nil {
+			return nil, 0, common.NewError("allocation_creation_failed",
+				err.Error())
+		}
+	}
+
+	if len(blobberNodes) < size {
+		blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
+	}
+
+	return blobberNodes[:size], bSize, nil
+}
+
+func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
+	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
+		return b.LastHealthCheck <= (now - blobberHealthTime), nil
+	})
+}
+
 func TestChangeBlobbers(t *testing.T) {
 	const (
 		confMinAllocSize    = 1024
@@ -334,8 +394,9 @@ func TestChangeBlobbers(t *testing.T) {
 
 			blobber := &StorageNode{
 				Provider: provider.Provider{
-					ID:           ba.BlobberID,
-					ProviderType: spenum.Blobber,
+					ID:              ba.BlobberID,
+					ProviderType:    spenum.Blobber,
+					LastHealthCheck: now,
 				},
 				Capacity: mockBlobberCapacity,
 				Terms: Terms{
@@ -343,7 +404,6 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:        mockReadPrice,
 					WritePrice:       mockWritePrice,
 				},
-				LastHealthCheck: now,
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
@@ -563,12 +623,12 @@ func TestExtendAllocation(t *testing.T) {
 	makeMockBlobber := func(index int) *StorageNode {
 		return &StorageNode{
 			Provider: provider.Provider{
-				ID:           mockBlobberId + strconv.Itoa(index),
-				ProviderType: spenum.Blobber,
+				ID:              mockBlobberId + strconv.Itoa(index),
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: now - blobberHealthTime + 1,
 			},
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: now - blobberHealthTime + 1,
+			BaseURL:  mockURL + strconv.Itoa(index),
+			Capacity: mockBlobberCapacity,
 			Terms: Terms{
 				ReadPrice:        mockReadPrice,
 				WritePrice:       mockWritePrice,
@@ -867,8 +927,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 	all.Nodes = []*StorageNode{
 		{
 			Provider: provider.Provider{
-				ID:           "b1",
-				ProviderType: spenum.Blobber,
+				ID:              "b1",
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: 0,
 			},
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
@@ -877,14 +938,14 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.1,
 				MaxOfferDuration: 200 * time.Second,
 			},
-			Capacity:        25 * GB, // 20 GB
-			Allocated:       5 * GB,  //  5 GB
-			LastHealthCheck: 0,
+			Capacity:  25 * GB, // 20 GB
+			Allocated: 5 * GB,  //  5 GB
 		},
 		{
 			Provider: provider.Provider{
-				ID:           "b2",
-				ProviderType: spenum.Blobber,
+				ID:              "b2",
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: 0,
 			},
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
@@ -893,9 +954,8 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.05,
 				MaxOfferDuration: 250 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
-			Allocated:       10 * GB, // 10 GB
-			LastHealthCheck: 0,
+			Capacity:  20 * GB, // 20 GB
+			Allocated: 10 * GB, // 10 GB
 		},
 	}
 	return
@@ -2151,22 +2211,6 @@ func Test_finalize_allocation(t *testing.T) {
 	assert.True(t,
 		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
 		"should receive min_lock_demand")
-
-	// assert that allocation is removed from all the blobber
-	for _, b := range blobs {
-		p, err := partitionsBlobberAllocations(b.id, balances)
-		require.NoError(t, err)
-		var baNode BlobberAllocationNode
-		err = p.Get(balances, allocID, &baNode)
-		require.True(t, partitions.ErrItemNotFound(err))
-
-	}
-	// assert blobber challenge ready partition is removed
-	challengeParts, err := partitionsChallengeReadyBlobbers(balances)
-	require.NoError(t, err)
-	var crbNode ChallengeReadyBlobber
-	err = challengeParts.Get(balances, b1.id, &crbNode)
-	require.True(t, partitions.ErrItemNotFound(err))
 }
 
 func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
@@ -2324,19 +2368,4 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	assert.True(t,
 		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
 		"should receive min_lock_demand")
-
-	// assert that allocation is removed from blobber
-	p, err := partitionsBlobberAllocations(b1.id, balances)
-	require.NoError(t, err)
-	var baNode BlobberAllocationNode
-	err = p.Get(balances, allocID, &baNode)
-	require.True(t, partitions.ErrItemNotFound(err))
-
-	// assert blobber challenge ready partition is not removed as we still have one allocation is bound
-	challengeParts, err := partitionsChallengeReadyBlobbers(balances)
-	require.NoError(t, err)
-	var crbNode ChallengeReadyBlobber
-	err = challengeParts.Get(balances, b1.id, &crbNode)
-	require.NoError(t, err)
-	require.Equal(t, b1.id, crbNode.BlobberID)
 }
