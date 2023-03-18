@@ -9,6 +9,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -126,9 +127,14 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	// record the global nonce from solidity smart contract
 	gn.WZCNNonceMinted[payload.Nonce] = true
 
+	// record mint nonce for a certain user
+	ctx.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, trans.ClientID, &event.User{
+		UserID:    trans.ClientID,
+		MintNonce: payload.Nonce,
+	})
+
 	var (
 		amount currency.Coin
-		n      currency.Coin
 		share  currency.Coin
 	)
 	share, _, err = currency.DistributeCoin(gn.ZCNSConfig.MaxFee, int64(len(payload.Signatures)))
@@ -136,12 +142,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = errors.Wrap(err, fmt.Sprintf("%s, DistributeCoin operation, %s", code, info))
 		return
 	}
-	n, err = currency.Int64ToCoin(int64(len(payload.Signatures)))
-	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, convert len signatures to coin, %s", code, info))
-		return
-	}
-	amount, err = currency.MinusCoin(payload.Amount, share*n)
+
+	amount, err = currency.MinusCoin(payload.Amount, share)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share * len(signatures), %s", code, info))
 		return

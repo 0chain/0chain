@@ -236,8 +236,6 @@ func createTransactionSignatures(ctx *mockStateContext, m *MintPayload) ([]*Auth
 			return nil, err
 		}
 
-		fmt.Println(authorizer.Node.ID)
-
 		sigs = append(sigs, &AuthorizerSignature{
 			ID:        authorizer.Node.ID,
 			Signature: signature,

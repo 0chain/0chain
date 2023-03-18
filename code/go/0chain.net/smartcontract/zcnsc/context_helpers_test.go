@@ -16,7 +16,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/storagesc"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/util"
@@ -142,9 +145,6 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			return nil
 		})
 
-	// sp = stakepool.NewStakePool()
-	// err = balances.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, authorizerID), sp)
-
 	/// InsertTrieNode
 
 	ctx.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("util.MPTSerializable")).Return(
@@ -162,8 +162,6 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 				}
 				return authorizerNode
 			}
-
-			// if strings.Contains(key, )
 
 			return nil
 		},
@@ -318,6 +316,25 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		})
 
 	ctx.On("EmitEvent",
+		event.TypeStats,
+		event.TagStakePoolReward,
+		mock.AnythingOfType("string"),
+		mock.AnythingOfType("*dbs.StakePoolReward"),
+	).Run(func(args mock.Arguments) {
+		stakePoolReward, ok := args.Get(3).(*dbs.StakePoolReward)
+		if !ok {
+			panic("failed to convert to get stake pool reward")
+		}
+
+		stakePool, ok := ctx.stakingPools[stakepool.StakePoolKey(spenum.Authorizer, stakePoolReward.ID)]
+		if !ok {
+			panic("failed to retreive a stake pool")
+		}
+
+		stakePool.Reward = stakePoolReward.Reward
+	})
+
+	ctx.On("EmitEvent",
 		mock.AnythingOfType("event.EventType"),
 		mock.AnythingOfType("event.EventTag"),
 		mock.AnythingOfType("string"), // authorizerID
@@ -432,8 +449,6 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 	}
 
 	if strings.Contains(key, StakePoolNodeType) {
-		fmt.Println("")
-		fmt.Println(key, ctx.stakingPools)
 		n, ok := ctx.stakingPools[key]
 		if !ok {
 			return util.ErrValueNotPresent

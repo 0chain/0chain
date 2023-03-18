@@ -10,6 +10,8 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -291,6 +293,68 @@ func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 
 	user, err := ctx.GetEventDB().GetUser(tr.ClientID)
 	require.NoError(t, err)
-
 	require.Equal(t, user.MintNonce, payload.Nonce)
+}
+
+func Test_CheckAuthorizerStakePoolDistributedRewards(t *testing.T) {
+	ctx := MakeMockStateContext()
+
+	tr := CreateDefaultTransactionToZcnsc()
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    tr.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	contract := CreateZCNSmartContract()
+
+	payload.Nonce = 1
+
+	gn, err := GetGlobalNode(ctx)
+	require.NoError(t, err)
+
+	gn.ZCNSConfig.MaxFee = 100
+	err = gn.Save(ctx)
+	require.NoError(t, err)
+
+	rand.Seed(int64(tr.CreationDate.Duration()))
+	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
+
+	stakePoolBefore := NewStakePool()
+	err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePoolBefore)
+	require.NoError(t, err)
+
+	resp, err := contract.Mint(tr, payload.Encode(), ctx)
+	require.NoError(t, err)
+	require.NotZero(t, resp)
+
+	stakePoolAfter := NewStakePool()
+	err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePoolAfter)
+	require.NoError(t, err)
+
+	rewardAfter, err := stakePoolAfter.Reward.Float64()
+	require.NoError(t, err)
+
+	rewardBefore, err := stakePoolBefore.Reward.Float64()
+	require.NoError(t, err)
+
+	require.NotEqual(t, rewardAfter, rewardBefore)
 }
