@@ -924,6 +924,31 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			continue
 		}
 
+		if alloc.Finalized {
+			if err := blobberAllocParts.Remove(balances, allocID); err != nil {
+				logging.Logger.Error("could not remove allocation from blobber",
+					zap.Error(err),
+					zap.String("blobber", blobberID),
+					zap.String("allocation", allocID))
+				return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
+			}
+
+			allocNum, err := blobberAllocParts.Size(balances)
+			if err != nil {
+				return nil, fmt.Errorf("could not get challenge partition size: %v", err)
+			}
+
+			if allocNum == 0 {
+				// remove blobber from challenge ready partition when there's no allocation bind to it
+				err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
+				if err != nil && !partitions.ErrItemNotFound(err) {
+					// it could be empty if we finalize the allocation before committing any read or write
+					return nil, fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
+				}
+			}
+			continue
+		}
+
 		if alloc.Expiration >= txn.CreationDate {
 			foundAllocation = true
 			break
