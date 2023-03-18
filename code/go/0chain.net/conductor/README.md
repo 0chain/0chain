@@ -346,7 +346,7 @@ internal docker builds and can fail due to this bug.
 
 ## Code structure
 
-The conductor code is located in `code/go/0chain.net/conductor`. Here we highlight the next directories:
+The conductor code is located in `code/go/0chain.net/conductor`. Next directories importance is highlighted.
 
 * `cases` - has all test cases that should be linked to directives in `config`. These test cases are executed on directive `make_test_case_check`.
 * `conductor` - has all features related to reading test file and the directives instructions.
