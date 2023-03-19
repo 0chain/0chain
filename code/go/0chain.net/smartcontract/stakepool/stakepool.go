@@ -471,7 +471,7 @@ func (sp *StakePool) DistributeRewards(
 	// log all parameters
 
 	if len(options) > 0 {
-		logging.Logger.Debug("jayashDistributeRewardParams", zap.String("providerId", providerId), zap.String("providerType", string(providerType)), zap.String("rewardType", string(rewardType)), zap.String("options", options[0]))
+		logging.Logger.Debug("jayashDistributeRewardParams"+uniqueIdForLogging, zap.String("providerId", providerId), zap.String("providerType", string(providerType)), zap.String("rewardType", string(rewardType)), zap.String("options", options[0]))
 		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
 	} else {
 		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
@@ -479,7 +479,7 @@ func (sp *StakePool) DistributeRewards(
 
 	spUpdateStr, _ := json.Marshal(spUpdate)
 
-	logging.Logger.Debug("jayashspUpdate", zap.String("spUpdate", string(spUpdateStr)))
+	logging.Logger.Debug("jayashspUpdate"+uniqueIdForLogging, zap.String("spUpdate", string(spUpdateStr)))
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
