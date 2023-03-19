@@ -483,6 +483,7 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 		spUpdate.Reward = value
+
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 
 			logging.Logger.Debug("jayashyc28f3ewifuboqwr9be", zap.Error(err))
