@@ -160,6 +160,7 @@ smart_contracts:
       mint: 100
       burn: 100
       delete-authorizer: 100
+      authorizer-health-check: 0
       add-authorizer: 100
 
   faucetsc:

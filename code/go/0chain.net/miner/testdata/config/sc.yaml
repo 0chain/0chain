@@ -274,4 +274,5 @@ smart_contracts:
       mint: 100
       burn: 100
       add-authorizer: 100
+      authorizer-health-check: 0
       delete-authorizer: 100
