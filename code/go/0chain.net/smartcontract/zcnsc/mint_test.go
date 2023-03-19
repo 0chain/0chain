@@ -164,7 +164,7 @@ func Test_MaxFeeMint(t *testing.T) {
 				mintsMap[m.ToClientID] = mm[i]
 			}
 
-			rand.Seed(int64(transaction.CreationDate.Duration()))
+			rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
 			sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
 
 			stakePool := NewStakePool()
@@ -339,7 +339,7 @@ func Test_CheckAuthorizerStakePoolDistributedRewards(t *testing.T) {
 	err = gn.Save(ctx)
 	require.NoError(t, err)
 
-	rand.Seed(int64(tr.CreationDate.Duration()))
+	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
 	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
 
 	stakePoolBefore := NewStakePool()

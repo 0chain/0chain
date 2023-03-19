@@ -145,12 +145,12 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 
 	amount, err = currency.MinusCoin(payload.Amount, share)
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share * len(signatures), %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share, %s", code, info))
 		return
 	}
 	payload.Amount = amount
 
-	rand.Seed(int64(trans.CreationDate.Duration()))
+	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
 	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
 
 	sp, err := zcn.getStakePool(sig.ID, ctx)
