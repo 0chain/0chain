@@ -28,15 +28,6 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 
 	logging.Logger.Debug("insertProviderReward", zap.Any("inserts", inserts), zap.Any("round", round))
 
-	var challengeID string
-	if inserts[0].ChallengeID != "" {
-		challengeID = inserts[0].ChallengeID
-	} else {
-		challengeID = ""
-	}
-
-	logging.Logger.Debug("insertProviderReward", zap.Any("challengeID", challengeID))
-
 	var prs []RewardProvider
 	for _, sp := range inserts {
 		pr := RewardProvider{
@@ -44,7 +35,7 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 			BlockNumber: round,
 			ProviderId:  sp.ProviderId,
 			RewardType:  sp.RewardType,
-			ChallengeID: challengeID,
+			ChallengeID: sp.ChallengeID,
 		}
 
 		prs = append(prs, pr)
