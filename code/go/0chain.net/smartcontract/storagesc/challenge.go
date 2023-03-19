@@ -207,8 +207,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	}
 
 	// convert all data in move to string for logging
-	moveStr, _ = json.Marshal(move)
-	logging.Logger.Debug("jayash move : "+uniqueIdForLogging, zap.String("move", string(moveStr)))
+	logging.Logger.Debug("jayash move : "+uniqueIdForLogging, zap.Any("move", move))
 
 	// for a case of a partial verification
 	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
@@ -219,6 +218,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	// convert all data in blobberReward to string for logging
 	blobberRewardStr, _ := json.Marshal(blobberReward)
 	logging.Logger.Debug("jayash blobberReward : "+uniqueIdForLogging, zap.String("blobberReward", string(blobberRewardStr)))
+	logging.Logger.Debug("jayash blobberRewardFloat : "+uniqueIdForLogging, zap.Any("blobberRewardFloat", blobberReward))
 
 	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
 	if err != nil {
