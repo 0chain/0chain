@@ -335,6 +335,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			zap.Error(err))
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
+	i, _ := txn.Value.Int64()
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sa.ID, event.WritePoolLock{
+		Client:       txn.ClientID,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
 
 	cost, err := sa.cost()
 	if err != nil {
@@ -1677,6 +1683,13 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err != nil {
 		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
 	}
+	// This event just decreases the cancelation charge from the write pool's reflection in global snapshot's total client locked tokens
+	i, _ := cancellationCharge.Int64()
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
+		Client:       t.ClientID,
+		AllocationId: alloc.ID,
+		Amount:       i,
+	})
 
 	reward, _, err := currency.DistributeCoin(cancellationCharge, int64(len(alloc.BlobberAllocs)))
 	if err != nil {
@@ -1715,7 +1728,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
-	i, err := prevBal.Int64()
+	i, err = prevBal.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}
