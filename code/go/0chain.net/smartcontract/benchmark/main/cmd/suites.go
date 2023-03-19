@@ -170,10 +170,11 @@ func runSuite(
 				b.StopTimer()
 				var prevMptHashRoot string
 				_ = prevMptHashRoot
-				for i := 0; i < 1000; i++ {
+				for i := 0; i < b.N; i++ {
+					cloneMPT := util.CloneMPT(mpt)
 					_, balances := getBalances(
 						bm.Transaction(),
-						extractMpt(mpt, root),
+						extractMpt(cloneMPT, root),
 						data,
 					)
 					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
@@ -185,7 +186,6 @@ func runSuite(
 					if err != nil {
 						mockUpdateState(bm.Transaction(), balances)
 					}
-
 					currMptHashRoot := util.ToHex(timedBalance.GetState().GetRoot())
 					if i > 0 && currMptHashRoot != prevMptHashRoot {
 						log.Println("Run:", i, "Previous MPT root hash:", prevMptHashRoot, "Current MPT root hash:", currMptHashRoot)
