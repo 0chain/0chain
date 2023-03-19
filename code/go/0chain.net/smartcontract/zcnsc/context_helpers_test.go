@@ -42,6 +42,7 @@ type mockStateContext struct {
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
 	authCount    *AuthCount
+	block        *block.Block
 	eventDb      *event.EventDb
 }
 
@@ -98,6 +99,8 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		ctx.userNodes[userNode.GetKey()] = userNode
 	}
 
+	ctx.block = block.NewBlock("", 0)
+
 	// Transfers
 
 	var transfers []*state.Transfer
@@ -129,6 +132,12 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 
 	ctx.On("GetTransfers").Return(func() []*state.Transfer {
 		return transfers
+	})
+
+	/// GetBlock
+
+	ctx.On("GetBlock").Return(func() *block.Block {
+		return ctx.block
 	})
 
 	/// DeleteTrieNode
