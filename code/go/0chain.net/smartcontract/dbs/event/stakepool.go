@@ -2,8 +2,9 @@ package event
 
 import (
 	"fmt"
-	"github.com/0chain/common/core/currency"
 	"time"
+
+	"github.com/0chain/common/core/currency"
 
 	"github.com/0chain/common/core/logging"
 
@@ -18,6 +19,10 @@ type providerRewardsDelegates struct {
 	delegatePools map[string]map[string]currency.Coin
 }
 
+type providerPenaltiesDelegates struct {
+	delegatePools map[string]map[string]currency.Coin
+}
+
 func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
 	var (
 		rewardsMap   = make(map[string]currency.Coin)
@@ -25,13 +30,13 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	)
 	for i, sp := range spus {
 		if sp.Reward != 0 {
-			rewardsMap[sp.ProviderId] = rewardsMap[sp.ProviderId] + sp.Reward
+			rewardsMap[sp.ID] = rewardsMap[sp.ID] + sp.Reward
 		}
 		for poolId := range spus[i].DelegateRewards {
-			if _, found := dpRewardsMap[sp.ProviderId]; !found {
-				dpRewardsMap[sp.ProviderId] = make(map[string]currency.Coin, len(spus[i].DelegateRewards))
+			if _, found := dpRewardsMap[sp.ID]; !found {
+				dpRewardsMap[sp.ID] = make(map[string]currency.Coin, len(spus[i].DelegateRewards))
 			}
-			dpRewardsMap[sp.ProviderId][poolId] = dpRewardsMap[sp.ProviderId][poolId] + spus[i].DelegateRewards[poolId]
+			dpRewardsMap[sp.ID][poolId] = dpRewardsMap[sp.ID][poolId] + spus[i].DelegateRewards[poolId]
 		}
 		// todo https://github.com/0chain/0chain/issues/2122
 		// slash charges are no longer taken from rewards, but the stake pool. So related code has been removed.
@@ -40,6 +45,23 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	return &providerRewardsDelegates{
 		rewards:       rewardsMap,
 		delegatePools: dpRewardsMap,
+	}, nil
+}
+
+func aggregateProviderPenalties(spus []dbs.StakePoolReward) (*providerPenaltiesDelegates, error) {
+	var (
+		dpPenaltiesMap = make(map[string]map[string]currency.Coin)
+	)
+	for i, sp := range spus {
+		for poolId := range spus[i].DelegatePenalties {
+			if _, found := dpPenaltiesMap[sp.ID]; !found {
+				dpPenaltiesMap[sp.ID] = make(map[string]currency.Coin, len(spus[i].DelegatePenalties))
+			}
+			dpPenaltiesMap[sp.ID][poolId] = dpPenaltiesMap[sp.ID][poolId] + spus[i].DelegatePenalties[poolId]
+		}
+	}
+	return &providerPenaltiesDelegates{
+		delegatePools: dpPenaltiesMap,
 	}, nil
 }
 
@@ -134,6 +156,44 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	return nil
 }
 
+func (edb *EventDb) penaltyUpdate(spus []dbs.StakePoolReward, round int64) error {
+	if len(spus) == 0 {
+		return nil
+	}
+
+	ts := time.Now()
+
+	penalties, err := aggregateProviderPenalties(spus)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		du := time.Since(ts)
+		n := len(penalties.delegatePools)
+		if du > 50*time.Millisecond {
+			logging.Logger.Debug("event db - update penalties slow",
+				zap.Int64("round", round),
+				zap.Duration("duration", du),
+				zap.Int("total update items", n),
+				zap.Int("delegate pools num", len(penalties.delegatePools)))
+		}
+	}()
+
+	if len(penalties.delegatePools) > 0 {
+		if err := edb.penaltyProviderDelegates(penalties.delegatePools, round); err != nil {
+			return fmt.Errorf("could not penalise delegate pool: %v", err)
+		}
+	}
+
+	if edb.Debug() {
+		if err := edb.insertDelegateReward(spus, round); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (edb *EventDb) rewardProviders(prRewards map[string]currency.Coin, round int64) error {
 	var ids []string
 	var rewards []uint64
@@ -174,23 +234,49 @@ func (edb *EventDb) rewardProviderDelegates(dps map[string]map[string]currency.C
 	return ret.Error
 }
 
+func (edb *EventDb) penaltyProviderDelegates(dps map[string]map[string]currency.Coin, round int64) error {
+
+	var poolIds []string
+	var providerIds []string
+	var slash []uint64
+	var lastUpdated []uint64
+
+	for id, pools := range dps {
+		for poolId, s := range pools {
+			poolIds = append(poolIds, poolId)
+			providerIds = append(providerIds, id)
+			slash = append(slash, uint64(s))
+			lastUpdated = append(lastUpdated, uint64(round))
+		}
+	}
+
+	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
+		AddCompositeId("provider_id", providerIds).
+		AddUpdate("balance", slash, "delegate_pools.balance - t.balance").
+		AddUpdate("total_penalty", slash, "t.total_penalty + delegate_pools.total_penalty").
+		AddUpdate("round_pool_last_updated", lastUpdated).
+		Exec(edb)
+
+	return ret.Error
+}
+
 func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: unused
 	if spu.Reward == 0 {
 		return nil
 	}
 
 	var provider interface{}
-	switch spu.ProviderType {
+	switch spu.Type {
 	case spenum.Blobber:
-		provider = &Blobber{Provider: Provider{ID: spu.ProviderId}}
+		provider = &Blobber{Provider: Provider{ID: spu.ID}}
 	case spenum.Validator:
-		provider = &Validator{Provider: Provider{ID: spu.ProviderId}}
+		provider = &Validator{Provider: Provider{ID: spu.ID}}
 	case spenum.Miner:
-		provider = &Miner{Provider: Provider{ID: spu.ProviderId}}
+		provider = &Miner{Provider: Provider{ID: spu.ID}}
 	case spenum.Sharder:
-		provider = &Sharder{Provider: Provider{ID: spu.ProviderId}}
+		provider = &Sharder{Provider: Provider{ID: spu.ID}}
 	default:
-		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
+		return fmt.Errorf("not implented provider type %v", spu.Type)
 	}
 
 	vs := map[string]interface{}{

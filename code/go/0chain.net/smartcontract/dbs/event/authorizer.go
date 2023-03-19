@@ -155,7 +155,7 @@ func NewUpdateAuthorizerTotalUnStakeEvent(ID string, totalUnstake currency.Coin)
 	return TagUpdateAuthorizerTotalStake, Authorizer{
 		Provider: Provider{
 			ID:         ID,
-			TotalStake: totalUnstake,
+			UnstakeTotal: totalUnstake,
 		},
 	}
 }

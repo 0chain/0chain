@@ -35,13 +35,7 @@ func (edb *EventDb) GetGenericSearchType(query string) (string, error) {
 			) THEN 'TransactionHash' 
 			WHEN EXISTS (
 				SELECT Id FROM BLOCKS WHERE HASH = @query
-			) THEN 'BlockHash' 
-			WHEN EXISTS (
-				SELECT Id FROM WRITE_MARKERS WHERE CONTENT_HASH = @query
-			) THEN 'ContentHash' 
-			WHEN EXISTS (
-				SELECT Id FROM WRITE_MARKERS WHERE NAME = @query
-			) THEN 'FileName'
+			) THEN 'BlockHash'
 			ELSE 'Not Found' 
 			END AS queryType
 		`, roundSearchQueryString,

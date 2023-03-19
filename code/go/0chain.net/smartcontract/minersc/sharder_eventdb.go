@@ -106,7 +106,7 @@ func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
 }
 
-func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
+func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) {
 	data := dbs.DbHealthCheck{
 		ID:              sn.ID,
 		LastHealthCheck: sn.LastHealthCheck,
@@ -114,7 +114,6 @@ func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.Stat
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagSharderHealthCheck, sn.ID, data)
-	return nil
 }
 
 func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
@@ -150,7 +149,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 	return nil
 }
 
-func emitDeleteSharder(id string, balances cstate.StateContextI) error {
+func emitDeleteSharder(id string, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagDeleteSharder, id, id)
-	return nil
 }

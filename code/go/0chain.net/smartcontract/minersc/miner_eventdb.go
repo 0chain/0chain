@@ -144,7 +144,7 @@ func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
 }
 
-func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
+func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) {
 	data := dbs.DbHealthCheck{
 		ID:              mn.ID,
 		LastHealthCheck: mn.LastHealthCheck,
@@ -152,7 +152,6 @@ func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateC
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagMinerHealthCheck, mn.ID, data)
-	return nil
 }
 
 func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {

@@ -92,11 +92,9 @@ type AllocOpenChallenge struct {
 }
 
 type AllocationChallenges struct {
-	AllocationID   string                `json:"allocation_id"`
-	OpenChallenges []*AllocOpenChallenge `json:"open_challenges"`
-	//OpenChallenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*AllocOpenChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge              `json:"latest_completed_challenge"`
+	AllocationID   string                         `json:"allocation_id"`
+	OpenChallenges []*AllocOpenChallenge          `json:"open_challenges"`
+	ChallengeMap   map[string]*AllocOpenChallenge `json:"-" msg:"-"`
 }
 
 func (acs *AllocationChallenges) GetKey(globalKey string) datastore.Key {
@@ -159,8 +157,6 @@ func (acs *AllocationChallenges) removeChallenge(challenge *StorageChallenge) bo
 		if acs.OpenChallenges[i].ID == challenge.ID {
 			acs.OpenChallenges = append(
 				acs.OpenChallenges[:i], acs.OpenChallenges[i+1:]...)
-
-			acs.LatestCompletedChallenge = challenge
 			return true
 		}
 	}
@@ -341,7 +337,6 @@ type StorageNode struct {
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
 	Allocated               int64                  `json:"allocated"` // allocated capacity
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
@@ -527,7 +522,8 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin `json:"challenge_pool_integral_value"`
+	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
+	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
 }
 
 func newBlobberAllocation(
@@ -687,8 +683,6 @@ type StorageAllocation struct {
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.
 	TimeUnit time.Duration `json:"time_unit"`
-
-	Curators []string `json:"curators"`
 }
 
 type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
@@ -804,14 +798,18 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	return nil
 }
 
-func (sa *StorageAllocation) validateAllocationBlobber(
+func (sa *StorageAllocation) isActive(
 	blobber *StorageNode,
 	total, offers currency.Coin,
+	conf *Config,
 	now common.Timestamp,
 ) error {
-	bSize := sa.bSize()
-	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+	active, reason := blobber.Provider.IsActive(now, common.ToSeconds(conf.HealthCheckPeriod))
+	if !active {
+		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
+	}
 
+	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 	// filter by max offer duration
 	if blobber.Terms.MaxOfferDuration < duration {
 		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
@@ -827,14 +825,12 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 		return fmt.Errorf("read price range %v does not match blobber %s write price %v",
 			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
 	}
+
+	bSize := sa.bSize()
 	// filter by blobber's capacity left
 	if blobber.Capacity-blobber.Allocated < bSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
 			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
-	}
-
-	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
-		return fmt.Errorf("blobber %s failed health check", blobber.ID)
 	}
 
 	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, total, offers)
@@ -1013,7 +1009,7 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
-	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now); err != nil {
+	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
 		return nil, err
 	}
 
@@ -1142,6 +1138,7 @@ List:
 func (sa *StorageAllocation) validateEachBlobber(
 	blobbers []*storageNodeResponse,
 	creationDate common.Timestamp,
+	conf *Config,
 ) ([]*StorageNode, []string) {
 	var (
 		errs     = make([]string, 0, len(blobbers))
@@ -1149,7 +1146,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 	)
 	for _, b := range blobbers {
 		sn := StoragNodeResponseToStorageNode(*b)
-		err := sa.validateAllocationBlobber(&sn, b.TotalStake, b.TotalOffers, creationDate)
+		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, conf, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errs = append(errs, err.Error())
@@ -1421,17 +1418,13 @@ func (bc *BlobberCloseConnection) Verify() bool {
 type WriteMarker struct {
 	AllocationRoot         string           `json:"allocation_root"`
 	PreviousAllocationRoot string           `json:"prev_allocation_root"`
+	FileMetaRoot           string           `json:"file_meta_root"`
 	AllocationID           string           `json:"allocation_id"`
 	Size                   int64            `json:"size"`
 	BlobberID              string           `json:"blobber_id"`
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
-	Operation              string           `json:"operation"`
-
-	// file info
-	LookupHash  string `json:"lookup_hash"`
-	ContentHash string `json:"content_hash"`
 }
 
 func (wm *WriteMarker) VerifySignature(
@@ -1455,9 +1448,11 @@ func (wm *WriteMarker) VerifySignature(
 }
 
 func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", wm.AllocationRoot,
-		wm.PreviousAllocationRoot, wm.AllocationID, wm.BlobberID, wm.ClientID,
-		wm.Size, wm.Timestamp)
+	hashData := fmt.Sprintf(
+		"%s:%s:%s:%s:%s:%s:%d:%d",
+		wm.AllocationRoot, wm.PreviousAllocationRoot,
+		wm.FileMetaRoot, wm.AllocationID,
+		wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
 	return hashData
 }
 

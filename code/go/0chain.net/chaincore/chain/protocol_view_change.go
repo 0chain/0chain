@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,6 +10,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
 
@@ -134,18 +135,17 @@ func (c *Chain) isRegistered(ctx context.Context) (is bool) {
 
 func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
 	getAPIPath func(n *node.Node) string, remote bool) bool {
-
 	var (
+		allNodeIDs   = minersc.NodeIDs{}
 		allNodesList = &minersc.MinerNodes{}
 		selfNode     = node.Self.Underlying()
 		selfNodeKey  = selfNode.GetKey()
 	)
 
 	if c.IsActiveInChain() && !remote {
-
 		var (
 			sp  = getStatePath(selfNode)
-			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, allNodesList)
+			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, &allNodeIDs)
 		)
 
 		if err != nil {
@@ -154,8 +154,12 @@ func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.No
 			return false
 		}
 
+		for _, id := range allNodeIDs {
+			if id == selfNodeKey {
+				return true
+			}
+		}
 	} else {
-
 		var (
 			mb       = c.GetCurrentMagicBlock()
 			sharders = mb.Sharders.N2NURLs()
@@ -169,15 +173,15 @@ func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.No
 			logging.Logger.Error("is registered", zap.Error(err))
 			return false
 		}
-	}
 
-	for _, miner := range allNodesList.Nodes {
-		if miner == nil {
-			continue
-		}
+		for _, miner := range allNodesList.Nodes {
+			if miner == nil {
+				continue
+			}
 
-		if miner.ID == selfNodeKey {
-			return true
+			if miner.ID == selfNodeKey {
+				return true
+			}
 		}
 	}
 
@@ -480,14 +484,14 @@ func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder st
 // The GetFromSharders used to obtains an information from sharders using REST
 // API interface of a SC. About the arguments:
 //
-//     - address    -- SC address
-//     - relative   -- REST API relative path (e.g. handler name)
-//     - sharders   -- list of sharders to request from (N2N URLs)
-//     - newFunc    -- factory to create new value of type you want to request
-//     - rejectFunc -- filter to reject some values, can't be nil (feel free
-//                     to modify)
-//     - highFunc   -- function that returns value highness; used to choose
-//                     highest values
+//   - address    -- SC address
+//   - relative   -- REST API relative path (e.g. handler name)
+//   - sharders   -- list of sharders to request from (N2N URLs)
+//   - newFunc    -- factory to create new value of type you want to request
+//   - rejectFunc -- filter to reject some values, can't be nil (feel free
+//     to modify)
+//   - highFunc   -- function that returns value highness; used to choose
+//     highest values
 //
 // TODO (sfxdx): to trust or not to trust, that is the question
 //
