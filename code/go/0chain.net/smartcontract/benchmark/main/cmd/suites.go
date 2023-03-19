@@ -166,10 +166,12 @@ func runSuite(
 			timer := time.Now()
 			log.Println("starting", bm.Name())
 			var err error
-
 			result := testing.Benchmark(func(b *testing.B) {
+				b.StopTimer()
+				b.N = 1000
+				var prevMptHashRoot string
+				_ = prevMptHashRoot
 				for i := 0; i < b.N; i++ {
-					b.StopTimer()
 					_, balances := getBalances(
 						bm.Transaction(),
 						extractMpt(mpt, root),
@@ -180,9 +182,19 @@ func runSuite(
 					})
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
+					b.StopTimer()
 					if err != nil {
 						mockUpdateState(bm.Transaction(), balances)
 					}
+
+					currMptHashRoot := util.ToHex(timedBalance.GetState().GetRoot())
+					if i > 0 && currMptHashRoot != prevMptHashRoot {
+						log.Println("Run:", i, "Previous MPT root hash:", prevMptHashRoot, "Current MPT root hash:", currMptHashRoot)
+						b.Errorf("MPT hash root inconsistency in benchmark test %s\n", bm.Name())
+					} else {
+						prevMptHashRoot = currMptHashRoot
+					}
+					balances.GetEventDB().Rollback()
 				}
 			})
 			var resTimings map[string]time.Duration
