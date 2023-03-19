@@ -193,10 +193,6 @@ func runSuite(
 					} else {
 						prevMptHashRoot = currMptHashRoot
 					}
-					err = balances.GetEventDB().Rollback()
-					if err != nil {
-						log.Println("Error rolling back eventDB in benchmark test", bm.Name(), "error:", err)
-					}
 				}
 			})
 			var resTimings map[string]time.Duration
