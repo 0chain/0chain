@@ -168,10 +168,9 @@ func runSuite(
 			var err error
 			result := testing.Benchmark(func(b *testing.B) {
 				b.StopTimer()
-				b.N = 1000
 				var prevMptHashRoot string
 				_ = prevMptHashRoot
-				for i := 0; i < b.N; i++ {
+				for i := 0; i < 1000; i++ {
 					_, balances := getBalances(
 						bm.Transaction(),
 						extractMpt(mpt, root),
@@ -194,7 +193,10 @@ func runSuite(
 					} else {
 						prevMptHashRoot = currMptHashRoot
 					}
-					balances.GetEventDB().Rollback()
+					err = balances.GetEventDB().Rollback()
+					if err != nil {
+						log.Println("Error rolling back eventDB in benchmark test", bm.Name(), "error:", err)
+					}
 				}
 			})
 			var resTimings map[string]time.Duration
