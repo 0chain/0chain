@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math/rand"
 	"sort"
 	"time"
@@ -463,6 +464,10 @@ func (sp *StakePool) DistributeRewards(
 
 	var spUpdate *StakePoolReward
 
+	uniqueIdForLogging := uuid.New().String()
+
+	logging.Logger.Debug("jayashSP "+uniqueIdForLogging, zap.Any("sp", sp))
+
 	// log all parameters
 
 	if len(options) > 0 {
@@ -484,6 +489,8 @@ func (sp *StakePool) DistributeRewards(
 		}
 		spUpdate.Reward = value
 
+		logging.Logger.Debug("jayashNoStakePools "+uniqueIdForLogging, zap.Any("sp", sp), zap.Any("spUpdate", spUpdate), zap.Any("value", value))
+
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 
 			logging.Logger.Debug("jayashyc28f3ewifuboqwr9be", zap.Error(err))
@@ -498,6 +505,9 @@ func (sp *StakePool) DistributeRewards(
 		return err
 	}
 	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
+
+	logging.Logger.Debug("jayashServiceCharge "+uniqueIdForLogging, zap.Any("serviceCharge", serviceCharge), zap.Any("fValue", fValue), zap.Any("sp.Settings.ServiceChargeRatio", sp.Settings.ServiceChargeRatio), zap.Any("value", value))
+
 	if err != nil {
 		return err
 	}
@@ -510,6 +520,8 @@ func (sp *StakePool) DistributeRewards(
 		sp.Reward = sr
 		spUpdate.Reward = reward
 	}
+
+	logging.Logger.Debug("jayashServiceCharge2 "+uniqueIdForLogging, zap.Any("serviceCharge", serviceCharge), zap.Any("fValue", fValue), zap.Any("sp.Settings.ServiceChargeRatio", sp.Settings.ServiceChargeRatio), zap.Any("value", value), zap.Any("sp.Reward", sp.Reward), zap.Any("spUpdate.Reward", spUpdate.Reward))
 
 	valueLeft := value - serviceCharge
 	if valueLeft == 0 {
@@ -524,6 +536,8 @@ func (sp *StakePool) DistributeRewards(
 	if stake == 0 {
 		return fmt.Errorf("no stake")
 	}
+
+	logging.Logger.Debug("jayashStake "+uniqueIdForLogging, zap.Any("stake", stake), zap.Any("valueLeft", valueLeft), zap.Any("valueBalance", valueBalance), zap.Any("sp.Pools", sp.Pools))
 
 	for id, pool := range sp.Pools {
 		if valueBalance == 0 {
@@ -548,6 +562,8 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
+
+		logging.Logger.Debug("jayashDelegateRewards "+uniqueIdForLogging, zap.Any("id", id), zap.Any("pool.Reward", pool.Reward), zap.Any("reward", reward), zap.Any("valueBalance", valueBalance), zap.Any("spUpdate.DelegateRewards", spUpdate.DelegateRewards))
 	}
 
 	if valueBalance > 0 {
@@ -558,6 +574,8 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	logging.Logger.Debug("jayash43gefwyb392re")
+
+	logging.Logger.Debug("jayashSP "+uniqueIdForLogging, zap.Any("sp", sp), zap.Any("balances", balances))
 
 	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 		logging.Logger.Debug("jayashError", zap.Error(err))
