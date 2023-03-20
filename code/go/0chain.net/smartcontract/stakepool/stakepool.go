@@ -518,7 +518,7 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 		sp.Reward = sr
-		spUpdate.Reward = sp.Reward
+		spUpdate.Reward = reward
 	}
 
 	logging.Logger.Debug("jayashServiceCharge2 "+uniqueIdForLogging, zap.Any("serviceCharge", serviceCharge), zap.Any("fValue", fValue), zap.Any("sp.Settings.ServiceChargeRatio", sp.Settings.ServiceChargeRatio), zap.Any("value", value), zap.Any("sp.Reward", sp.Reward), zap.Any("spUpdate.Reward", spUpdate.Reward))
