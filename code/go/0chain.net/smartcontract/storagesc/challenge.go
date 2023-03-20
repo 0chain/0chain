@@ -976,11 +976,17 @@ const (
 func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
 	r *rand.Rand, balances cstate.StateContextI) (string, error) {
 
+	uniqueIdForLogging := uuid.New().String()
+
+	logging.Logger.Debug("jayash selectBlobberForChallenge"+uniqueIdForLogging, zap.Int("selection", int(selection)), zap.Any("challengeBlobbersPartition", challengeBlobbersPartition), zap.Any("r", r), zap.Any("balances", balances))
+
 	var challengeBlobbers []ChallengeReadyBlobber
 	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
 	if err != nil {
 		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
+
+	logging.Logger.Debug("jayash selectBlobberForChallenge"+uniqueIdForLogging, zap.Any("challengeBlobbers", challengeBlobbers))
 
 	switch selection {
 	case randomWeightSelection:
@@ -1029,6 +1035,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	if err != nil {
 		return nil, common.NewError("add_challenge", err.Error())
 	}
+	logging.Logger.Debug("jayash populateGenerateChallenge", zap.Any("blobberSelection", blobberSelection), zap.Any("blobberID", blobberID), zap.Any("err", err))
 
 	if blobberID == "" {
 		return nil, common.NewError("add_challenges", "empty blobber id")
@@ -1198,6 +1205,8 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		return common.NewErrorf("generate_challenge",
 			"error getting the blobber challenge list: %v", err)
 	}
+
+	logging.Logger.Debug("jayash challengeReadyParts", zap.Any("challengeReadyParts", challengeReadyParts))
 
 	bcNum, err := challengeReadyParts.Size(balances)
 	if err != nil {
