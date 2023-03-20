@@ -413,6 +413,12 @@ func (zcn *ZCNSmartContract) AuthorizerHealthCheck(
 		return "", err
 	}
 
+	if payload.ID != t.ClientID {
+		err = common.NewError(errorCode, "authorizer id should be equal to the client id of a transaction sender")
+		Logger.Error("authorizer id error", zap.Error(err))
+		return "", err
+	}
+
 	authorizerID = payload.ID
 
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
