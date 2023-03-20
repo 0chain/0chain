@@ -252,6 +252,8 @@ func Test_AuthorizerHealthCheck(t *testing.T) {
 	require.NotNil(t, node1)
 	require.Zero(t, node1.LastHealthCheck)
 
+	tr.ClientID = defaultAuthorizer
+
 	authorizerHealthCheckPayload := AuthorizerHealthCheckPayload{
 		ID: defaultAuthorizer,
 	}
