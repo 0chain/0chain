@@ -39,7 +39,7 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-func minerHandlers() map[string]func(http.ResponseWriter, *http.Request) {
+func minerHandlers(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
 
@@ -69,12 +69,40 @@ func minerHandlers() map[string]func(http.ResponseWriter, *http.Request) {
 				transactionEntityMetadata,
 			),
 		)),
+
+		//TEMP: SHARDER ENDPOINTS
+		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedBlockHandler,
+			),
+		)),
+		"/v1/block/get/latest_finalized_magic_block_summary": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedMagicBlockSummaryHandler,
+			),
+		)),
+		"/v1/block/get/latest_finalized_magic_block": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestFinalizedMagicBlockHandler(c),
+			),
+		)),
+		"/v1/block/get/recent_finalized": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				RecentFinalizedBlockHandler,
+			),
+		)),
+		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
+			common.ToJSONResponse(
+				LFBTicketHandler,
+			),
+		),
 	}
 
 	return m
 }
 
 func sharderHandlers(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
@@ -101,6 +129,34 @@ func sharderHandlers(c Chainer) map[string]func(http.ResponseWriter, *http.Reque
 				LFBTicketHandler,
 			),
 		),
+
+		//TEMP: MINER ENDPOINTS
+		"/v1/chain/get": common.Recover(
+			common.ToJSONResponse(
+				memorystore.WithConnectionHandler(
+					GetChainHandler,
+				),
+			),
+		),
+		"/v1/block/get/fee_stats": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				LatestBlockFeeStatsHandler,
+			),
+		)),
+		"/v1/estimate_tx_cost": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				SuggestedFeeHandler,
+			),
+		)),
+		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
+			datastore.ToJSONEntityReqResponse(
+				datastore.DoAsyncEntityJSONHandler(
+					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
+					transaction.TransactionEntityChannel,
+				),
+				transactionEntityMetadata,
+			),
+		)),
 	}
 
 	return m
@@ -1876,7 +1932,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 // SetupHandlers sets up the necessary API end points for miners
 func SetupMinerHandlers(c Chainer) {
 	setupHandlers(commonHandlers(c))
-	setupHandlers(minerHandlers())
+	setupHandlers(minerHandlers(c))
 }
 
 // SetupHandlers sets up the necessary API end points for sharders
