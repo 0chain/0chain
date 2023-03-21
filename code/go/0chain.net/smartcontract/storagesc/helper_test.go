@@ -103,6 +103,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
 	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
+	sn.StakePoolSettings.DelegateWallet = c.id
 	return mustEncode(t, &sn)
 }
 
@@ -159,7 +160,7 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	return ssc.addValidator(tx, input, balances)
 }
 
-func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
+func updateBlobberUsingAddBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
 	ssc *StorageSmartContract, balances chainState.StateContextI) (
 	resp string, err error) {
 
@@ -169,6 +170,50 @@ func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int
 	)
 	balances.(*testBalances).setTransaction(t, tx)
 	return ssc.addBlobber(tx, input, balances)
+}
+
+func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
+	ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = blob.Encode()
+		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).setTransaction(t, tx)
+	return ssc.updateBlobberSettings(tx, input, balances)
+}
+
+func healthCheckBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = blob.Encode()
+		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).setTransaction(t, tx)
+	resp, err = ssc.blobberHealthCheck(tx, input, balances)
+	require.NoError(t, err)
+	b, err := ssc.getBlobber(blob.ID, balances)
+	require.NoError(t, err)
+	require.Equal(t, b.LastHealthCheck, tx.CreationDate)
+	return resp, err
+}
+
+func healthCheckValidator(t testing.TB, validator *ValidationNode, value currency.Coin, now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = validator.Encode()
+		tx    = newTransaction(validator.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).setTransaction(t, tx)
+	resp, err = ssc.validatorHealthCheck(tx, input, balances)
+	require.NoError(t, err)
+	v, err := ssc.getValidator(validator.ID, balances)
+	require.NoError(t, err)
+	require.Equal(t, v.LastHealthCheck, tx.CreationDate)
+	return resp, err
 }
 
 // pseudo-random IPv4 address by ID (never used)
@@ -366,7 +411,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxStake = 1000e10 // 100 toks
 	conf.MaxMint = 100e10
 	conf.MaxBlobbersPerAllocation = 50
-
+	conf.HealthCheckPeriod = time.Hour
 	conf.ReadPool = &readPoolConfig{
 		MinLock: 10,
 	}

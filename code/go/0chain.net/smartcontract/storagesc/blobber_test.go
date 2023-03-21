@@ -123,31 +123,8 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = ssc.getBlobber(blob.id, balances)
-	require.NoError(t, err)
-}
-
-func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
-	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		tp       int64 = 100
-		err      error
-	)
-
-	setConfig(t, balances)
-
-	var blob = newClient(0, balances)
-	blob.terms = avgTerms
-	blob.cap = 2 * GB
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.EqualError(t, err, fmt.Sprintf("add_or_update_blobber_failed: blobber already exists,with id: %s ", blob.id))
 
 	_, err = ssc.getBlobber(blob.id, balances)
 	require.NoError(t, err)
@@ -356,10 +333,10 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		size := (int64(math.Ceil(float64(cc.WriteMarker.Size) / CHUNK_SIZE))) * CHUNK_SIZE
+		rdtu, err := alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit)
+		require.NoError(t, err)
 
-		var moved = int64(sizeInGB(size) *
-			float64(avgTerms.WritePrice) *
-			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit))
+		var moved = int64(sizeInGB(size) * float64(avgTerms.WritePrice) * rdtu)
 
 		require.EqualValues(t, moved, cp.Balance)
 
@@ -1297,5 +1274,52 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 	})
+
+}
+
+func TestBlobberHealthCheck(t *testing.T) {
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+
+		tp int64 = 100
+	)
+
+	setConfig(t, balances)
+
+	var (
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		b, err = ssc.getBlobber(blob.id, balances)
+	)
+	require.NoError(t, err)
+
+	// check health
+	_, err = healthCheckBlobber(t, b, 0, tp, ssc, balances)
+	require.NoError(t, err)
+
+}
+
+func TestOnlyAdd(t *testing.T) {
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+
+		tp int64 = 100
+	)
+
+	setConfig(t, balances)
+
+	var (
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		b, err = ssc.getBlobber(blob.id, balances)
+	)
+	require.NoError(t, err)
+
+	b.BaseURL = "https://newabcurl.com"
+	//should fail as only add is allowed
+	_, err = updateBlobberUsingAddBlobber(t, b, 0, tp, ssc, balances)
+	require.Error(t, err)
 
 }

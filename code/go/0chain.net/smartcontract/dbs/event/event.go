@@ -165,11 +165,6 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&Curator{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
 	if err != nil {
 		return err
@@ -201,11 +196,6 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&UserAggregate{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&UserSnapshot{})
 	if err != nil {
 		return err
 	}

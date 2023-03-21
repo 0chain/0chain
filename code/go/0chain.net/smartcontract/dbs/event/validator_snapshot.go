@@ -9,6 +9,7 @@ import (
 // swagger:model ValidatorSnapshot
 type ValidatorSnapshot struct {
 	ValidatorID string `json:"id" gorm:"index"`
+	BucketId	 int64  `json:"bucket_id"`
 
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
@@ -52,7 +53,7 @@ func (v *ValidatorSnapshot) SetTotalRewards(value currency.Coin) {
 func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]ValidatorSnapshot, error) {
 	var snapshots []ValidatorSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM validator_snapshots WHERE validator_id in (select id from validator_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM validator_snapshots WHERE validator_id in (select id from validator_old_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -76,6 +77,7 @@ func (edb *EventDb) addValidatorSnapshot(validators []Validator) error {
 	for _, validator := range validators {
 		snapshots = append(snapshots, ValidatorSnapshot{
 			ValidatorID:   validator.ID,
+			BucketId:      validator.BucketId,
 			UnstakeTotal:  validator.UnstakeTotal,
 			TotalStake:    validator.TotalStake,
 			ServiceCharge: validator.ServiceCharge,

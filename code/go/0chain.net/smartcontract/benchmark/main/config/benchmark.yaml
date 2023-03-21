@@ -14,7 +14,6 @@ simulation:
   num_blobber_delegates: 10
   num_miner_delegates: 10
   num_sharder_delegates: 10
-  num_curators: 1
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
   num_write_redeem_allocation: 1
@@ -55,8 +54,10 @@ dbs:
     conn_max_lifetime: 20s
     aggregate_period: 5
   settings:
-    debug: true
+    debug: false
     aggregate_period: 10
+    partition_change_period: 100
+    partition_keep_count: 10
     page_limit: 50
 
 smart_contracts:
@@ -89,8 +90,8 @@ smart_contracts:
     interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     max_mint: 1500000.0 # tokens
     num_miner_delegates_rewarded: 10
-    num_sharders_rewarded: 5
-    num_sharder_delegates_rewarded: 1
+    num_sharders_rewarded: 1
+    num_sharder_delegates_rewarded: 5
     cost:
       add_miner: 100
       add_sharder: 100

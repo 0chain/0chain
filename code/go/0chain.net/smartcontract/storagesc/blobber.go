@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	blobberHealthTime = 60 * 60 // 1 Hour
-	CHUNK_SIZE        = 64 * KB
+	CHUNK_SIZE = 64 * KB
 )
 
 func newBlobber(id string) *StorageNode {
@@ -217,6 +216,8 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // tokens left will be moved to unlocked part of related stake pool;
 // the part can be moved back to the blobber anytime or used to
 // increase blobber's capacity or write_price next time
+
+//only use this function to add blobber(for update call updateBlobberSettings)
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
@@ -243,7 +244,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return "", err
 	}
 
-	// insert, update or remove blobber
+	// insert blobber
 	if err = sc.insertBlobber(t, conf, blobber, balances); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed", err.Error())
 	}
@@ -327,12 +328,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
 
 	return string(blobber.Encode()), nil
-}
-
-func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
-	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
-		return b.LastHealthCheck <= (now - blobberHealthTime), nil
-	})
 }
 
 func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
@@ -583,8 +578,12 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 
 	var move currency.Coin
 	if size > 0 {
-		move, err = details.upload(size, wmTime,
-			alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
+		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
+		if err != nil {
+			return 0, fmt.Errorf("could not move tokens to challenge pool: %v", err)
+		}
+
+		move, err = details.upload(size, wmTime, rdtu)
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
@@ -612,7 +611,12 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		}
 		details.Spent = spent
 	} else {
-		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit))
+		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
+		if err != nil {
+			return 0, fmt.Errorf("could not move tokens from pool: %v", err)
+		}
+
+		move = details.delete(-size, wmTime, rdtu)
 		err = alloc.moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
@@ -850,10 +854,10 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
-	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
+	_, err = sc.getBlobber(blobber.ID, balances)
 	if err == nil {
-		// already exist, update it
-		return sc.updateBlobber(t, conf, blobber, savedBlobber, balances)
+		// already exists with same id
+		return fmt.Errorf("blobber already exists,with id: %s ", blobber.ID)
 	}
 
 	if err != util.ErrValueNotPresent {
@@ -878,8 +882,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, spenum.Blobber, blobber.ID,
-		blobber.StakePoolSettings, balances)
+	sp, err = sc.createStakePool(conf, blobber.StakePoolSettings)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
 	}
