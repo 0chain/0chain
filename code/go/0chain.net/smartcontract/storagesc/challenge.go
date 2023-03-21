@@ -989,30 +989,30 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 	logging.Logger.Debug("jayash selectBlobberForChallenge"+uniqueIdForLogging, zap.Any("challengeBlobbers", challengeBlobbers))
 
 	switch selection {
-	//case randomWeightSelection:
-	//	const maxBlobbersSelect = 5
-	//
-	//	var challengeBlobber ChallengeReadyBlobber
-	//	var maxWeight uint64
-	//
-	//	var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
-	//	if len(challengeBlobbers) <= maxBlobbersSelect {
-	//		blobbersSelected = challengeBlobbers
-	//	} else {
-	//		for i := 0; i < maxBlobbersSelect; i++ {
-	//			randomIndex := r.Intn(len(challengeBlobbers))
-	//			blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
-	//		}
-	//	}
-	//
-	//	for _, bc := range blobbersSelected {
-	//		if bc.Weight > maxWeight {
-	//			maxWeight = bc.Weight
-	//			challengeBlobber = bc
-	//		}
-	//	}
-	//
-	//	return challengeBlobber.BlobberID, nil
+	case randomWeightSelection:
+		const maxBlobbersSelect = 5
+
+		var challengeBlobber ChallengeReadyBlobber
+		var maxWeight uint64
+
+		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
+		if len(challengeBlobbers) <= maxBlobbersSelect {
+			blobbersSelected = challengeBlobbers
+		} else {
+			for i := 0; i < maxBlobbersSelect; i++ {
+				randomIndex := r.Intn(len(challengeBlobbers))
+				blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
+			}
+		}
+
+		for _, bc := range blobbersSelected {
+			if bc.Weight > maxWeight {
+				maxWeight = bc.Weight
+				challengeBlobber = bc
+			}
+		}
+
+		return challengeBlobber.BlobberID, nil
 	case randomSelection:
 		randomIndex := r.Intn(len(challengeBlobbers))
 		return challengeBlobbers[randomIndex].BlobberID, nil
@@ -1031,7 +1031,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(r.Intn(2))
-	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
+	blobberID, err := selectBlobberForChallenge(1, challengeBlobbersPartition, r, balances)
 	if err != nil {
 		return nil, common.NewError("add_challenge", err.Error())
 	}
