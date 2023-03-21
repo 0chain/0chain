@@ -75,6 +75,17 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				input:    createAuthorizerPayload(data, indexOfNewAuth),
 			},
 			{
+				name:     benchmark.ZcnSc + AuthorizerHealthCheckFunc,
+				endpoint: sc.AuthorizerHealthCheck,
+				txn:      createTransaction(owner, "", 3000),
+				input: func() []byte {
+					input, _ := (&AuthorizerHealthCheckPayload{
+						ID: data.Clients[indexOfNewAuth],
+					}).Encode()
+					return input
+				}(),
+			},
+			{
 				name:     benchmark.ZcnSc + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
 				txn:      createTransaction(data.Clients[0], data.PublicKeys[0], 3000),
