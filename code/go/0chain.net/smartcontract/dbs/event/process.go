@@ -194,6 +194,10 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		es := <-edb.eventsChannel
 
+		if es.round%edb.settings.PartitionChangePeriod == 0 {
+			edb.managePartitions(es.round)
+		}
+
 		tx, err := edb.Begin()
 		if err != nil {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
@@ -209,17 +213,13 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 					zap.Int64("round", event.BlockNumber),
 					zap.Any("tag", event.Tag),
 					zap.Error(err))
-				logging.Logger.Panic(fmt.Sprintf("error processing event %v, %v, %v",
-					event.BlockNumber, event.Tag, err))
+				//logging.Logger.Panic(fmt.Sprintf("error processing event %v, %v, %v",
+				//	event.BlockNumber, event.Tag, err))
 			}
 		}
 
 		// process snapshot for none adding block events only
 		if isNotAddBlockEvent(es) {
-			if es.round%edb.settings.PartitionChangePeriod == 0 {
-				edb.managePartitions(es.round)
-			}
-
 			gs, err = updateSnapshots(gs, es, tx)
 			if err != nil {
 				logging.Logger.Error("snapshot could not be processed",
@@ -259,6 +259,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 }
 
 func (edb *EventDb) managePartitions(round int64) {
+	logging.Logger.Info("managing partitions", zap.Int64("round", round))
 	if err := edb.addPartition(round, "events"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
