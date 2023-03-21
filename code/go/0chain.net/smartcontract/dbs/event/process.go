@@ -108,6 +108,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberTotalUnStakesEvents(),
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
+			mergeStakePoolPenaltyEvents(),
 			mergeAddDelegatePoolsEvents(),
 
 			mergeUpdateMinerTotalStakesEvents(),
@@ -208,7 +209,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		for _, event := range es.events {
 			tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
 			if err != nil {
-				logging.Logger.Error("error processing event",
+				logging.Logger.Panic("error processing event",
 					zap.Int64("round", event.BlockNumber),
 					zap.Any("tag", event.Tag),
 					zap.Error(err))
