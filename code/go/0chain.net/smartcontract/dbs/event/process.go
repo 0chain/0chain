@@ -203,7 +203,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
 
-		tx.addEvents(ctx, es)
+		if err = tx.addEvents(ctx, es); err != nil {
+			logging.Logger.Error("error saving events",
+				zap.Int64("round", es.round),
+				zap.Error(err))
+		}
+
 		tse := time.Now()
 		tags := make([]string, 0, len(es.events))
 		for _, event := range es.events {
