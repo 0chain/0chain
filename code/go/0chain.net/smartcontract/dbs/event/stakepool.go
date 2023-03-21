@@ -70,7 +70,7 @@ func mergeStakePoolRewardsEvents() *eventsMergerImpl[dbs.StakePoolReward] {
 }
 
 func mergeStakePoolPenaltyEvents() *eventsMergerImpl[dbs.StakePoolReward] {
-	return newEventsMerger[dbs.StakePoolReward](TagStakePoolPenalty)
+	return newEventsMerger[dbs.StakePoolReward](TagStakePoolPenalty, withUniqueEventOverwrite())
 }
 
 // withProviderRewardsPenaltiesAdded is an event merger middleware that merge two

@@ -143,6 +143,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUserWritePoolLockEvents(),
 			mergeUserWritePoolUnlockEvents(),
 			mergeUpdateUserPayedFeesEvents(),
+			mergeAddBridgeMintEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -812,6 +813,14 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addBurnTicket((*bt)[0])
+	case TagAddBridgeMint:
+		// challenge pool
+		u, ok := fromEvent[[]User](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserMintNonce(*u)
+
 	case TagShutdownProvider:
 		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
 		if !ok {
