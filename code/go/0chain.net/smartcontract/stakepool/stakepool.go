@@ -343,8 +343,10 @@ func (sp *StakePool) SlashFraction(
 	if reduction > 1 {
 		reduction = 1
 	}
-	for _, dp := range sp.Pools {
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
 		var err error
+		dp := sp.Pools[id]
 		dp.Balance, err = currency.MultFloat64(dp.Balance, reduction)
 		if err != nil {
 			return err
