@@ -199,10 +199,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
 
-		if es.round%edb.settings.PartitionChangePeriod == 0 {
-			edb.managePartitions(es.round)
-		}
-
 		tx.addEvents(ctx, es)
 		tse := time.Now()
 		tags := make([]string, 0, len(es.events))
@@ -218,6 +214,10 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		// process snapshot for none adding block events only
 		if isNotAddBlockEvent(es) {
+			if es.round%edb.settings.PartitionChangePeriod == 0 {
+				edb.managePartitions(es.round)
+			}
+
 			gs, err = updateSnapshots(gs, es, tx)
 			if err != nil {
 				logging.Logger.Error("snapshot could not be processed",
