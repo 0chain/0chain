@@ -74,6 +74,7 @@ const (
 	BlockRewardSharder
 	BlockRewardBlobber
 	FeeRewardMiner
+	FeeRewardAuthorizer
 	FeeRewardSharder
 	ValidationReward
 	FileDownloadReward
