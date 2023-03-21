@@ -168,17 +168,13 @@ func runSuite(
 			var err error
 
 			result := testing.Benchmark(func(b *testing.B) {
-				var roots [][]byte
 				for i := 0; i < b.N; i++ {
 					b.StopTimer()
-					cloneMPT := util.CloneMPT(mpt)
 					_, balances := getBalances(
 						bm.Transaction(),
-						extractMpt(cloneMPT, root),
+						extractMpt(mpt, root),
 						data,
 					)
-					roots = append(roots, cloneMPT.GetRoot())
-
 					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 						return data.Now
 					})
