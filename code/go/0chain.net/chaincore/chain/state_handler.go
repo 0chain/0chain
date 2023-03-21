@@ -150,12 +150,14 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 		return nil, common.NewError("get_balance_error", "event database not enabled")
 	}
 
-	user, err := c.GetEventDb().GetUser(clientID)
-	if err != nil {
-		return nil, err
-	}
+	return c.GetState(c.GetLatestFinalizedBlock().Clone(), clientID)
 
-	return userToState(user), nil
+	//user, err := c.GetEventDb().GetUser(clientID)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//return userToState(user), nil
 }
 
 func (c *Chain) GetBalanceFromMPTHandler(ctx context.Context, r *http.Request) (interface{}, error) {
