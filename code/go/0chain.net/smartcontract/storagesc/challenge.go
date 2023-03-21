@@ -989,30 +989,30 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 	logging.Logger.Debug("jayash selectBlobberForChallenge"+uniqueIdForLogging, zap.Any("challengeBlobbers", challengeBlobbers))
 
 	switch selection {
-	case randomWeightSelection:
-		const maxBlobbersSelect = 5
-
-		var challengeBlobber ChallengeReadyBlobber
-		var maxWeight uint64
-
-		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
-		if len(challengeBlobbers) <= maxBlobbersSelect {
-			blobbersSelected = challengeBlobbers
-		} else {
-			for i := 0; i < maxBlobbersSelect; i++ {
-				randomIndex := r.Intn(len(challengeBlobbers))
-				blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
-			}
-		}
-
-		for _, bc := range blobbersSelected {
-			if bc.Weight > maxWeight {
-				maxWeight = bc.Weight
-				challengeBlobber = bc
-			}
-		}
-
-		return challengeBlobber.BlobberID, nil
+	//case randomWeightSelection:
+	//	const maxBlobbersSelect = 5
+	//
+	//	var challengeBlobber ChallengeReadyBlobber
+	//	var maxWeight uint64
+	//
+	//	var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
+	//	if len(challengeBlobbers) <= maxBlobbersSelect {
+	//		blobbersSelected = challengeBlobbers
+	//	} else {
+	//		for i := 0; i < maxBlobbersSelect; i++ {
+	//			randomIndex := r.Intn(len(challengeBlobbers))
+	//			blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
+	//		}
+	//	}
+	//
+	//	for _, bc := range blobbersSelected {
+	//		if bc.Weight > maxWeight {
+	//			maxWeight = bc.Weight
+	//			challengeBlobber = bc
+	//		}
+	//	}
+	//
+	//	return challengeBlobber.BlobberID, nil
 	case randomSelection:
 		randomIndex := r.Intn(len(challengeBlobbers))
 		return challengeBlobbers[randomIndex].BlobberID, nil
