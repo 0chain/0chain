@@ -95,8 +95,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
 		rest.MakeEndpoint(storage+"/reward-providers", srh.rewardProviders),
+		rest.MakeEndpoint(storage+"/reward-delegates", srh.rewardProviders),
 		rest.MakeEndpoint(storage+"/all-challenges", srh.getAllChallenges),
-		rest.MakeEndpoint(storage+"/clean-challenges-and-reward-providers", srh.cleanDataFromChallengesAndRewardProviders),
+		rest.MakeEndpoint(storage+"/block-rewards", srh.getBlockRewards),
 	}
 }
 
@@ -2979,21 +2980,18 @@ func (srh *StorageRestHandler) rewardProviders(w http.ResponseWriter, r *http.Re
 
 	challengeID := r.URL.Query().Get("challenge_id")
 	providerID := r.URL.Query().Get("provider_id")
-	rewardType := r.URL.Query().Get("reward_type")
 	query := r.URL.Query().Get("query")
 
 	var rps []event.RewardProvider
 
 	if query != "" {
-		rps = edb.RunWhereQuery(query)
+		rps = edb.RunWhereQueryInProviderRewards(query)
 	} else if challengeID != "" {
 		rps = edb.GetChallengeRewardsByChallengeID(challengeID)
 	} else if providerID != "" {
 		rps = edb.GetChallengeRewardsByProviderID(providerID)
-	} else if rewardType != "" {
-		rps = edb.GetAllChallengeRewardsByRewardType(rewardType)
 	} else {
-		rps = edb.GetAllChallengeRewards()
+		rps = edb.GetAllProviderChallengeRewards()
 	}
 
 	var sum int64
@@ -3012,6 +3010,43 @@ func (srh *StorageRestHandler) rewardProviders(w http.ResponseWriter, r *http.Re
 	common.Respond(w, r, result, nil)
 }
 
+func (srh *StorageRestHandler) rewardDelegates(w http.ResponseWriter, r *http.Request) {
+	// read all data from reward_delegates table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	challengeID := r.URL.Query().Get("challenge_id")
+	query := r.URL.Query().Get("query")
+
+	var rds []event.RewardDelegate
+
+	if query != "" {
+		rds = edb.RunWhereQueryInDelegateRewards(query)
+	} else if challengeID != "" {
+		rds = edb.GetDelegateChallengeRewardsByID(challengeID)
+	} else {
+		rds = edb.GetAllDelegateChallengeRewards()
+	}
+
+	var sum int64
+
+	for _, rd := range rds {
+		cur, _ := rd.Amount.Int64()
+		sum += cur
+	}
+
+	result := map[string]interface{}{
+		"sum": sum,
+		"rds": rds,
+	}
+
+	// return the list of reward delegates
+	common.Respond(w, r, result, nil)
+}
+
 func (srh *StorageRestHandler) getAllChallenges(w http.ResponseWriter, r *http.Request) {
 	// read all data from challenges table and return
 	edb := srh.GetQueryStateContext().GetEventDB()
@@ -3026,17 +3061,25 @@ func (srh *StorageRestHandler) getAllChallenges(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, challenges, nil)
 }
 
-func (srh *StorageRestHandler) cleanDataFromChallengesAndRewardProviders(w http.ResponseWriter, r *http.Request) {
-	// read all data from challenges table and return
+func (srh *StorageRestHandler) getBlockRewards(w http.ResponseWriter, r *http.Request) {
+	// read all data from block_rewards table and return
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	err := edb.CleanDataFromChallengesAndRewardProviders()
-	if err != nil {
-		return
+	block_number := r.URL.Query().Get("block_number")
+	start_block_number := r.URL.Query().Get("start_block_number")
+	end_block_number := r.URL.Query().Get("end_block_number")
+
+	providerRewards := edb.GetBlockRewardsToProviders(block_number, start_block_number, end_block_number)
+	delegateRewards := edb.GetBlockRewardsToDelegates(block_number, start_block_number, end_block_number)
+
+	result := map[string]interface{}{
+		"provider_rewards": providerRewards,
+		"delegate_rewards": delegateRewards,
 	}
-	common.Respond(w, r, nil, nil)
+
+	common.Respond(w, r, result, nil)
 }

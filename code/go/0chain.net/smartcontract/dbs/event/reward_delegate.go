@@ -76,3 +76,63 @@ func (edb *EventDb) GetDelegateRewards(limit common.Pagination, PoolId string, s
 			Desc:   limit.IsDescending,
 		}).Scan(&rds).Error
 }
+
+func (edb *EventDb) GetDelegateChallengeRewardsByID(challengeID string) []RewardDelegate {
+
+	var rds []RewardDelegate
+	edb.Get().Where("challenge_id = ? AND reward_type IN (6, 8)", challengeID).Find(&rds)
+
+	return rds
+}
+
+func (edb *EventDb) GetSumOfRewardsByRewardType(rewardType string) int64 {
+
+	var rds []RewardDelegate
+
+	var sum int64
+	edb.Get().Where("reward_type = ?", rewardType).Find(&rds)
+
+	for _, rp := range rds {
+		f, _ := rp.Amount.Int64()
+		sum += f
+	}
+
+	return sum
+}
+
+func (edb *EventDb) RunWhereQueryInDelegateRewards(query string) []RewardDelegate {
+
+	var rds []RewardDelegate
+
+	edb.Get().Where(query).Find(&rds)
+
+	return rds
+}
+
+func (edb *EventDb) GetAllDelegateChallengeRewards() []RewardDelegate {
+
+	var rds []RewardDelegate
+	edb.Get().Where("reward_type IN (0, 6, 8, 9, 10)").Find(&rds)
+
+	return rds
+}
+
+func (edb *EventDb) GetBlockRewardsToDelegates(block_number, start_block_number, end_block_number string) []RewardDelegate {
+
+	if block_number != "" {
+		var rds []RewardDelegate
+		edb.Get().Where("block_number = ? AND reward_type IN (3)", block_number).Find(&rds)
+
+		return rds
+	}
+
+	if start_block_number != "" && end_block_number != "" {
+		var rds []RewardDelegate
+		edb.Get().Where("block_number >= ? AND block_number < ? AND reward_type IN (3)", start_block_number, end_block_number).Find(&rds)
+
+		return rds
+	}
+
+	return nil
+
+}

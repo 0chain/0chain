@@ -88,7 +88,7 @@ func (edb *EventDb) GetChallengeRewardsByProviderID(providerID string) []RewardP
 	return rps
 }
 
-func (edb *EventDb) GetAllChallengeRewards() []RewardProvider {
+func (edb *EventDb) GetAllProviderChallengeRewards() []RewardProvider {
 
 	var rps []RewardProvider
 	edb.Get().Where("reward_type IN (0, 6, 8, 9, 10)").Find(&rps)
@@ -96,7 +96,7 @@ func (edb *EventDb) GetAllChallengeRewards() []RewardProvider {
 	return rps
 }
 
-func (edb *EventDb) GetAllChallengeRewardsByRewardType(rewardType string) []RewardProvider {
+func (edb *EventDb) GetRewardsByRewardType(rewardType string) []RewardProvider {
 
 	var rps []RewardProvider
 	edb.Get().Where("reward_type = ?", rewardType).Find(&rps)
@@ -104,22 +104,7 @@ func (edb *EventDb) GetAllChallengeRewardsByRewardType(rewardType string) []Rewa
 	return rps
 }
 
-func (edb *EventDb) GetSumOfRewardsByRewardType(rewardType string) int64 {
-
-	var rps []RewardProvider
-
-	var sum int64
-	edb.Get().Where("reward_type = ?", rewardType).Find(&rps)
-
-	for _, rp := range rps {
-		f, _ := rp.Amount.Int64()
-		sum += f
-	}
-
-	return sum
-}
-
-func (edb *EventDb) RunWhereQuery(query string) []RewardProvider {
+func (edb *EventDb) RunWhereQueryInProviderRewards(query string) []RewardProvider {
 
 	var rps []RewardProvider
 
@@ -127,4 +112,23 @@ func (edb *EventDb) RunWhereQuery(query string) []RewardProvider {
 
 	return rps
 
+}
+
+func (edb *EventDb) GetBlockRewardsToProviders(block_number, start_block_number, end_block_number string) []RewardProvider {
+
+	if block_number != "" {
+		var rps []RewardProvider
+		edb.Get().Where("block_number = ? AND reward_type IN (3)", block_number).Find(&rps)
+
+		return rps
+	}
+
+	if start_block_number != "" && end_block_number != "" {
+		var rps []RewardProvider
+		edb.Get().Where("block_number >= ? AND block_number < ? AND reward_type IN (3)", start_block_number, end_block_number).Find(&rps)
+
+		return rps
+	}
+
+	return nil
 }
