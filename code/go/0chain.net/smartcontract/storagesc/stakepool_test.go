@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -79,22 +80,25 @@ func TestStakePoolLock(t *testing.T) {
 		MaxMint:      zcnToBalance(4000000.0),
 		MinStake:     0.1e10,
 		MaxStake:     10.1e10,
-		StakePool:    &stakePoolConfig{},
+		StakePool: &stakePoolConfig{
+			MinLock: 0.1e10,
+		},
 	}
-	const minLock = 0.1e10
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
-		value, err := currency.MinusCoin(minLock, 1)
+		value, err := currency.MinusCoin(scYaml.StakePool.MinLock, 1)
 		require.NoError(t, err)
 		creationDate = common.Timestamp(time.Second * 120)
 		var delegates = []mockStakePool{{5, 0}}
 		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
+		cond := fmt.Sprintf(": %v < %v", value, scYaml.StakePool.MinLock)
+		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall+cond)
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		scYaml.Minted = scYaml.MaxMint
-		value, err := currency.MinusCoin(minLock, 1)
+		value, err := currency.MinusCoin(scYaml.StakePool.MinLock, 1)
 		require.NoError(t, err)
 		creationDate = common.Timestamp(time.Second * 120)
 		var delegates = []mockStakePool{{5, 0}}
