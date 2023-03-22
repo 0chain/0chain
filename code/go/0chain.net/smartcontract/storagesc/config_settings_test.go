@@ -496,9 +496,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.ReadPool.MinLock
 	case WritePoolMinLock:
 		return conf.WritePool.MinLock
-
-	case StakePoolMinLock:
-		return conf.StakePool.MinLock
 	case HealthCheckPeriod:
 		return conf.HealthCheckPeriod
 	case MaxTotalFreeAllocation:
