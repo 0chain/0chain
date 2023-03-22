@@ -132,7 +132,6 @@ func TestUpdateSettings(t *testing.T) {
 
 					"readpool.min_lock":  "10",
 					"writepool.min_lock": "10",
-					"stakepool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
@@ -497,8 +496,6 @@ func getConfField(conf Config, field string) interface{} {
 	case WritePoolMinLock:
 		return conf.WritePool.MinLock
 
-	case StakePoolMinLock:
-		return conf.StakePool.MinLock
 	case HealthCheckPeriod:
 		return conf.HealthCheckPeriod
 	case MaxTotalFreeAllocation:
