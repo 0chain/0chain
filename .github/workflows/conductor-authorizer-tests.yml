@@ -8,7 +8,7 @@ on:
 jobs:
   CONDUCTOR_AUTHORIZER_TESTS:
     name: CONDUCTOR-AUTHORIZER-TESTS
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [self-hosted, conductor-test03]
 
     steps:
     - name: Cleanup before restarting conductor tests.
