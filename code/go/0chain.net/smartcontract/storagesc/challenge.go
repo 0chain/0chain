@@ -874,6 +874,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	txn *transaction.Transaction,
 	challengeID string,
 	balances cstate.StateContextI,
+	minValidators int,
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(r.Intn(2))
@@ -1036,7 +1037,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	if len(selectedValidators) < minValidators {
-		return nil, errors.New("validators number does not meet minimum challenge requirement after healthcheck")
+		return nil, errors.New("validators number does not meet minimum challenge requirement after filtering")
 	}
 
 	validatorIDs := make([]string, len(selectedValidators))
