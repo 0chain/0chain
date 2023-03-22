@@ -561,11 +561,13 @@ func (sp *StakePool) DistributeRewards(
 		return fmt.Errorf("no stake")
 	}
 
-	for id, pool := range sp.Pools {
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
 		if valueBalance == 0 {
 			break
 		}
-		ratio := float64(pool.Balance) / float64(stake)
+		dp := sp.Pools[id]
+		ratio := float64(dp.Balance) / float64(stake)
 		reward, err := currency.MultFloat64(valueLeft, ratio)
 		if err != nil {
 			return err
@@ -576,7 +578,7 @@ func (sp *StakePool) DistributeRewards(
 		} else {
 			valueBalance -= reward
 		}
-		pool.Reward, err = currency.AddCoin(pool.Reward, reward)
+		dp.Reward, err = currency.AddCoin(dp.Reward, reward)
 		if err != nil {
 			return err
 		}
@@ -600,8 +602,10 @@ func (sp *StakePool) DistributeRewards(
 }
 
 func (sp *StakePool) stake() (stake currency.Coin, err error) {
-	for _, pool := range sp.Pools {
-		newStake, err := currency.AddCoin(stake, pool.Balance)
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
+		newStake, err := currency.AddCoin(stake, dp.Balance)
 		if err != nil {
 			return 0, err
 		}
