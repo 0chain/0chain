@@ -381,8 +381,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":  "10",
-					"stakepool.min_lock": "10",
+					"readpool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
