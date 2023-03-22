@@ -991,7 +991,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		randValidator := randValidators[perm[i]]
 		if randValidator.Id != blobberID {
 			validator, err := getValidator(randValidator.Id, balances)
-
 			if err != nil {
 				if cstate.ErrInvalidState(err) {
 					return nil, common.NewError("add_challenge",
@@ -1001,7 +1000,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			}
 
 			kick, err := filterValidator(validator)
-
 			if err != nil {
 				return nil, common.NewError("add_challenge", "failed to filter validator: "+
 					err.Error())
@@ -1011,18 +1009,34 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				continue
 			}
 
-			selectedValidators = append(selectedValidators,
-				&ValidationNode{
-					Provider: provider.Provider{
-						ID:           randValidator.Id,
-						ProviderType: spenum.Validator,
-					},
-					BaseURL: randValidator.Url,
-				})
+			sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
+			if err != nil {
+				return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
+			}
+
+			stake, err := sp.stake()
+			if err != nil {
+				return nil, err
+			}
+
+			if stake >= validator.StakePoolSettings.MinStake {
+				selectedValidators = append(selectedValidators,
+					&ValidationNode{
+						Provider: provider.Provider{
+							ID:           randValidator.Id,
+							ProviderType: spenum.Validator,
+						},
+						BaseURL: randValidator.Url,
+					})
+			}
 		}
 		if len(selectedValidators) > alloc.DataShards {
 			break
 		}
+	}
+
+	if len(selectedValidators) < minValidators {
+		return nil, errors.New("validators number does not meet minimum challenge requirement after healthcheck")
 	}
 
 	validatorIDs := make([]string, len(selectedValidators))
@@ -1127,7 +1141,8 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		validators,
 		t,
 		challengeID,
-		balances)
+		balances,
+		minValidators)
 	if err != nil {
 		return common.NewErrorf("adding_challenge_error", err.Error())
 	}
