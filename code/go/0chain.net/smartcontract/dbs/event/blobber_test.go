@@ -255,37 +255,6 @@ func TestBlobbers(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestBlobberIds(t *testing.T) {
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access, config.DbSettings{})
-	if err != nil {
-		return
-	}
-	defer eventDb.Close()
-
-	err = eventDb.AutoMigrate()
-	require.NoError(t, err)
-	defer eventDb.Drop()
-
-	setUpBlobbers(t, eventDb)
-
-	blobberIDs, err := eventDb.GetAllBlobberId()
-	require.NoError(t, err)
-	require.Equal(t, 10, len(blobberIDs), "All blobber id's were not found")
-
-}
-
 func TestBlobberLatLong(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 	access := config.DbAccess{

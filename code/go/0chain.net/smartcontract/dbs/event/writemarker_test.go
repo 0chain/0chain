@@ -175,11 +175,7 @@ func TestGetWriteMarkers(t *testing.T) {
 		assert.NoError(t, err)
 		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
 	})
-	t.Run("GetWriteMarkersForAllocationFile", func(t *testing.T) {
-		gotWM, err := eventDb.GetWriteMarkersForAllocationFile("allocation_id", "name_txt", common2.Pagination{Offset: 20})
-		assert.NoError(t, err)
-		compareWriteMarker(t, gotWM, "someHash", 5, 5, true)
-	})
+
 	t.Run("writeMarker count", func(t *testing.T) {
 		gotCount, err := eventDb.GetWriteMarkerCount("allocation_id")
 		assert.NoError(t, err)
@@ -194,7 +190,7 @@ func addWriterMarkers(t *testing.T, eventDb *EventDb, blobberID string) {
 		if !assert.NoError(t, err, "Error while writing blobber marker") {
 			return
 		}
-		wm := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id", Name: "name.txt"}
+		wm := WriteMarker{TransactionID: transactionID, BlobberID: blobberID, BlockNumber: int64(i), Size: int64(i), AllocationID: "allocation_id"}
 		err = eventDb.addWriteMarkers([]WriteMarker{wm})
 		if !assert.NoError(t, err, "Error while writing read marker") {
 			return

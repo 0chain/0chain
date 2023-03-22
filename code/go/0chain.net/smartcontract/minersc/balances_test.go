@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
@@ -25,12 +26,17 @@ type testBalances struct {
 	block         *block.Block
 	blockSharders []string
 	lfmb          *block.Block
+	magicBlock    *block.MagicBlock
 }
 
 func newTestBalances() *testBalances {
 	return &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
+		magicBlock: &block.MagicBlock{
+			Miners:   node.NewPool(node.NodeTypeMiner),
+			Sharders: node.NewPool(node.NodeTypeSharder),
+		},
 	}
 }
 
@@ -44,6 +50,10 @@ func (tb *testBalances) setBalance(key datastore.Key, b currency.Coin) { //nolin
 
 func (tb *testBalances) setLFMB(lfmb *block.Block) {
 	tb.lfmb = lfmb
+}
+
+func (tb *testBalances) setMagicBlock(magicBlock *block.MagicBlock) {
+	tb.magicBlock = magicBlock
 }
 
 func (tb *testBalances) requireAllBeZeros(t *testing.T) { //nolint
@@ -60,7 +70,7 @@ func (tb *testBalances) GetBlock() *block.Block {
 }
 
 func (tb *testBalances) GetMagicBlock(round int64) *block.MagicBlock {
-	return nil
+	return tb.magicBlock
 }
 
 func (tb *testBalances) SetMagicBlock(mb *block.MagicBlock) {
@@ -86,7 +96,8 @@ func (tb *testBalances) GetLatestFinalizedBlock() *block.Block { return nil }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
-func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
+func (tb *testBalances) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
+	delete(tb.tree, key)
 	return "", nil
 }
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
@@ -156,7 +167,7 @@ func (tb *testBalances) AddMint(mint *state.Mint) error {
 }
 
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock {
-	return nil
+	return tb.magicBlock
 }
 
 func (tb *testBalances) GetClientState(clientID datastore.Key) (*state.State, error) {

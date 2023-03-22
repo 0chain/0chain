@@ -52,7 +52,7 @@ func (m *MinerAggregate) SetTotalRewards(value currency.Coin) {
 	m.TotalRewards = value
 }
 
-func (edb *EventDb) updateMinerAggregate(round, pageAmount int64, gs *globalSnapshot) {
+func (edb *EventDb) updateMinerAggregate(round, pageAmount int64, gs *Snapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 
 	exec := edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS miner_temp_ids "+
@@ -60,6 +60,14 @@ func (edb *EventDb) updateMinerAggregate(round, pageAmount int64, gs *globalSnap
 		currentBucket)
 	if exec.Error != nil {
 		logging.Logger.Error("error creating temp table", zap.Error(exec.Error))
+		return
+	}
+
+	exec = edb.Store.Get().Exec("CREATE TEMP TABLE IF NOT EXISTS miner_old_temp_ids "+
+		"ON COMMIT DROP AS SELECT miner_id as id FROM miner_snapshots where bucket_id = ?",
+		currentBucket)
+	if exec.Error != nil {
+		logging.Logger.Error("error creating old temp table", zap.Error(exec.Error))
 		return
 	}
 
@@ -74,13 +82,13 @@ func (edb *EventDb) updateMinerAggregate(round, pageAmount int64, gs *globalSnap
 	}
 	pageCount := count / edb.PageLimit()
 
+	logging.Logger.Debug("miner aggregate/snapshot started", zap.Int64("round", round), zap.Int64("bucket_id", currentBucket), zap.Int64("page_limit", edb.PageLimit()))
 	for i := int64(0); i <= pageCount; i++ {
 		edb.calculateMinerAggregate(gs, round, edb.PageLimit(), i*edb.PageLimit())
 	}
-
 }
 
-func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, offset int64) {
+func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset int64) {
 
 	var ids []string
 	r := edb.Store.Get().
@@ -89,7 +97,6 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 		logging.Logger.Error("getting ids", zap.Error(r.Error))
 		return
 	}
-	logging.Logger.Debug("getting ids", zap.Strings("ids", ids))
 
 	var currentMiners []Miner
 
@@ -102,65 +109,89 @@ func (edb *EventDb) calculateMinerAggregate(gs *globalSnapshot, round, limit, of
 		logging.Logger.Error("getting current miners", zap.Error(result.Error))
 		return
 	}
-	logging.Logger.Debug("miner_snapshot", zap.Int("total_current_miners", len(currentMiners)))
-
-	if round <= edb.AggregatePeriod() && len(currentMiners) > 0 {
-		if err := edb.addMinerSnapshot(currentMiners); err != nil {
-			logging.Logger.Error("saving miners snapshots", zap.Error(err))
-		}
-	}
 
 	oldMiners, err := edb.getMinerSnapshots(limit, offset)
 	if err != nil {
 		logging.Logger.Error("getting miner snapshots", zap.Error(err))
 		return
 	}
-	logging.Logger.Debug("miner_snapshot", zap.Int("total_old_miners", len(oldMiners)))
 
-	var aggregates []MinerAggregate
+	var (
+		oldMinersProcessingMap = MakeProcessingMap(oldMiners)
+		aggregates []MinerAggregate
+		gsDiff     Snapshot
+		old MinerSnapshot
+		ok bool
+	)
 	for _, current := range currentMiners {
-		old, found := oldMiners[current.ID]
+		processingEntity, found := oldMinersProcessingMap[current.ID]
 		if !found {
-			continue
+			old = MinerSnapshot{ /* zero values */ }
+			gsDiff.MinerCount += 1
+		} else {
+			processingEntity.Processed = true
+			old, ok = processingEntity.Entity.(MinerSnapshot)
+			if !ok {
+				logging.Logger.Error("error converting processable entity to miner snapshot")
+				continue
+			}
 		}
 		aggregate := MinerAggregate{
 			Round:        round,
 			MinerID:      current.ID,
 			BucketID:     current.BucketId,
-			TotalRewards: (old.TotalRewards + current.Rewards.TotalRewards) / 2,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
-
 		aggregate.Fees = (old.Fees + current.Fees) / 2
-
 		aggregates = append(aggregates, aggregate)
 
-		gs.totalTxnFees += aggregate.Fees
-		gs.TotalRewards += int64(aggregate.TotalRewards - old.TotalRewards)
-		gs.TransactionsCount++
+		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
+		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
+
+		oldMinersProcessingMap[current.ID] = processingEntity
 	}
+	// Decrease global snapshot values for not processed entities (deleted)
+	var snapshotIdsToDelete []string
+	for _, processingEntity := range oldMinersProcessingMap {
+		if processingEntity.Entity == nil || processingEntity.Processed {
+			continue
+		}
+		old, ok = processingEntity.Entity.(MinerSnapshot)
+		if !ok {
+			logging.Logger.Error("error converting processable entity to miner snapshot")
+			continue
+		}
+		snapshotIdsToDelete = append(snapshotIdsToDelete, old.MinerID)
+		gsDiff.MinerCount -= 1
+		gsDiff.TotalRewards -= int64(old.TotalRewards)
+		gsDiff.TotalStaked -= int64(old.TotalStake)
+	}
+	if len(snapshotIdsToDelete) > 0 {
+		if result := edb.Store.Get().Where("miner_id in (?)", snapshotIdsToDelete).Delete(&MinerSnapshot{}); result.Error != nil {
+			logging.Logger.Error("deleting Miner snapshots", zap.Error(result.Error))
+		}
+	}
+	
+	gs.ApplyDiff(&gsDiff)
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
 			logging.Logger.Error("saving aggregates", zap.Error(result.Error))
 		}
 	}
-	logging.Logger.Debug("miner_snapshot", zap.Int("aggregates", len(aggregates)))
 
 	if len(currentMiners) > 0 {
-		if err := edb.addMinerSnapshot(currentMiners); err != nil {
+		if err := edb.addMinerSnapshot(currentMiners, round); err != nil {
 			logging.Logger.Error("saving miner snapshots", zap.Error(err))
 		}
 	}
 
-	logging.Logger.Debug("miner_snapshot", zap.Int("current_miners", len(currentMiners)))
+	logging.Logger.Debug("miner aggregate/snapshots finished successfully",
+		zap.Int("current_miners", len(currentMiners)),
+		zap.Int("old_miners", len(oldMiners)),
+		zap.Int("aggregates", len(aggregates)),
+		zap.Int("deleted_snapshots", len(snapshotIdsToDelete)),
+		zap.Any("global_snapshot_after", gs),
+	)
 
-	// update global snapshot object
-
-	ttf, err := gs.totalTxnFees.Int64()
-	if err != nil {
-		logging.Logger.Error("converting write price to coin", zap.Error(err))
-		return
-	}
-	gs.AverageTxnFee = ttf / gs.TransactionsCount
 }

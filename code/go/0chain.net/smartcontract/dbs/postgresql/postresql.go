@@ -65,7 +65,7 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 			config.Password)),
 			&gorm.Config{
 				Logger:                 lgr,
-				SkipDefaultTransaction: false,
+				SkipDefaultTransaction: true,
 				CreateBatchSize:        50,
 			})
 
