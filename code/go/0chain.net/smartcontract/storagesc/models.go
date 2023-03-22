@@ -720,6 +720,8 @@ func (sa *StorageAllocation) addToWritePool(
 	balances cstate.StateContextI,
 	opts ...WithOption,
 ) error {
+
+	logging.Logger.Debug("jayash adding to write pool", zap.Any("txn", txn), zap.Any("opts", opts), zap.Any("sa", sa), zap.Any("balances", balances))
 	//default behaviour
 	if len(opts) == 0 {
 		value, err := WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)(balances)
@@ -745,6 +747,8 @@ func (sa *StorageAllocation) addToWritePool(
 			sa.WritePool = writePool
 		}
 	}
+
+	logging.Logger.Debug("jayash adding to write pool2", zap.Any("txn", txn), zap.Any("opts", opts), zap.Any("sa", sa), zap.Any("balances", balances))
 	return nil
 }
 
@@ -752,6 +756,9 @@ func (sa *StorageAllocation) moveToChallengePool(
 	cp *challengePool,
 	value currency.Coin,
 ) error {
+
+	logging.Logger.Debug("jayash moveToChallengePool", zap.Any("cp", cp), zap.Any("value", value), zap.Any("sa", sa))
+
 	if cp == nil {
 		return errors.New("invalid challenge pool")
 	}
@@ -770,6 +777,8 @@ func (sa *StorageAllocation) moveToChallengePool(
 		sa.WritePool = writePool
 	}
 
+	logging.Logger.Debug("jayash moveToChallengePool2", zap.Any("cp", cp), zap.Any("value", value), zap.Any("sa", sa))
+
 	return nil
 }
 
@@ -786,6 +795,8 @@ func (sa *StorageAllocation) moveFromChallengePool(
 			cp.ID, cp.Balance, value)
 	}
 
+	logging.Logger.Debug("jayash moveFromChallengePool", zap.Any("cp", cp), zap.Any("value", value))
+
 	if balance, err := currency.MinusCoin(cp.Balance, value); err != nil {
 		return err
 	} else {
@@ -796,6 +807,8 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	} else {
 		sa.WritePool = writePool
 	}
+
+	logging.Logger.Debug("jayash moveFromChallengePool2", zap.Any("cp", cp), zap.Any("value", value))
 	return nil
 }
 
