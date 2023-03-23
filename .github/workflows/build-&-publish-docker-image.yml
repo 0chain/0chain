@@ -62,7 +62,7 @@ jobs:
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker tag $ZCHAIN_BUILDBASE:latest ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
         docker tag $ZCHAIN_BUILDBASE:latest ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
-
+        docker images
         docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
 
