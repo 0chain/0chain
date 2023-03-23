@@ -63,14 +63,14 @@ jobs:
         docker tag $ZCHAIN_BUILDBASE:latest ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
         docker tag $ZCHAIN_BUILDBASE:latest ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
         docker images
-        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+        docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
 
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
         docker tag $ZCHAIN_BUILDRUN:latest ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA  
-        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+        docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
     
     - name: Build & Push
@@ -140,14 +140,14 @@ jobs:
         docker tag $ZCHAIN_BUILDBASE:latest ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
         docker tag $ZCHAIN_BUILDBASE:latest ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
 
-        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+        docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
 
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
         docker tag $ZCHAIN_BUILDRUN:latest ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA  
-        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+        docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
     
     - name: generate swagger
