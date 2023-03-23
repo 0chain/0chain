@@ -16,7 +16,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/storagesc"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/util"
@@ -39,6 +42,7 @@ type mockStateContext struct {
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
 	authCount    *AuthCount
+	block        *block.Block
 	eventDb      *event.EventDb
 }
 
@@ -95,6 +99,8 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		ctx.userNodes[userNode.GetKey()] = userNode
 	}
 
+	ctx.block = block.NewBlock("", 0)
+
 	// Transfers
 
 	var transfers []*state.Transfer
@@ -128,6 +134,12 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		return transfers
 	})
 
+	/// GetBlock
+
+	ctx.On("GetBlock").Return(func() *block.Block {
+		return ctx.block
+	})
+
 	/// DeleteTrieNode
 
 	ctx.On("DeleteTrieNode", mock.AnythingOfType("string")).Return(
@@ -150,6 +162,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 				ctx.userNodes[key] = node.(*UserNode)
 				return node
 			}
+
 			if strings.Contains(key, AuthorizerNodeType) {
 				authorizerNode := node.(*AuthorizerNode)
 				ctx.authorizers[key] = &Authorizer{
@@ -162,6 +175,16 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			return nil
 		},
 		func(_ datastore.Key) error {
+			return nil
+		})
+
+	ctx.On("InsertTrieNode", ctx.globalNode.GetKey(),
+		mock.AnythingOfType("*zcnsc.GlobalNode")).Return(
+		func(_ datastore.Key, node util.MPTSerializable) datastore.Key {
+			ctx.globalNode = node.(*GlobalNode)
+			return ""
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
 			return nil
 		})
 
@@ -300,6 +323,25 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			}
 			burnTicketEvents[ethereumAdress] = append(burnTicketEvents[ethereumAdress], burnTicket)
 		})
+
+	ctx.On("EmitEvent",
+		event.TypeStats,
+		event.TagStakePoolReward,
+		mock.AnythingOfType("string"),
+		mock.AnythingOfType("*dbs.StakePoolReward"),
+	).Run(func(args mock.Arguments) {
+		stakePoolReward, ok := args.Get(3).(*dbs.StakePoolReward)
+		if !ok {
+			panic("failed to convert to get stake pool reward")
+		}
+
+		stakePool, ok := ctx.stakingPools[stakepool.StakePoolKey(spenum.Authorizer, stakePoolReward.ID)]
+		if !ok {
+			panic("failed to retreive a stake pool")
+		}
+
+		stakePool.Reward = stakePoolReward.Reward
+	})
 
 	ctx.On("EmitEvent",
 		mock.AnythingOfType("event.EventType"),
