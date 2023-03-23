@@ -60,12 +60,14 @@ jobs:
         docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILD_BASE_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG-$SHORT_SHA
         docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
 
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
+        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
@@ -134,12 +136,15 @@ jobs:
         docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILD_BASE_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG-$SHORT_SHA
+
         docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
 
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
+        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
         docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
