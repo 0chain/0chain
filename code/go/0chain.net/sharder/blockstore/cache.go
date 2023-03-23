@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	DefaultCacheBufferSize = 100
+	DefaultCacheBufferSize = 1
 	KB                     = 1024
 	MB                     = 1024 * KB
 	GB                     = 1024 * MB
@@ -103,9 +103,12 @@ func (c *cache) Read(hash string) (data []byte, err error) {
 	}
 
 	go func() {
-		c.bufferCh <- &cacheEntry{
-			key:  hash,
-			data: data,
+		ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+		defer ctxCncl()
+		select {
+		case <-ctx.Done():
+			return
+		case c.bufferCh <- &cacheEntry{key: hash, data: data}:
 		}
 	}()
 
@@ -114,18 +117,20 @@ func (c *cache) Read(hash string) (data []byte, err error) {
 
 func (c *cache) Add() {
 	for cEntry := range c.bufferCh {
-		if cEntry.data == nil || c.lru.Contains(cEntry.key) { // write
+		if c.lru.Contains(cEntry.key) {
 			c.lru.Add(cEntry.key, nil)
 			continue
 		}
 
 		oldestKey, _, _ := c.lru.GetOldest()
 		evicted := c.lru.Add(cEntry.key, nil)
-		if evicted && oldestKey != "" {
+		if evicted {
 			bPath := filepath.Join(c.path, oldestKey)
 			os.Remove(bPath)
+		}
 
-			bPath = filepath.Join(c.path, cEntry.key)
+		if cEntry.data != nil {
+			bPath := filepath.Join(c.path, cEntry.key)
 			f, err := os.Create(bPath)
 			if err != nil {
 				c.lru.Remove(cEntry.key)
