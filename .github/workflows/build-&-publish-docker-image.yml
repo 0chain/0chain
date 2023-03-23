@@ -58,8 +58,9 @@ jobs:
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
         docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
+        
         docker images
-        # docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
         # docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         # docker tag $ZCHAIN_BUILDBASE ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
         # docker tag $ZCHAIN_BUILDBASE ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
