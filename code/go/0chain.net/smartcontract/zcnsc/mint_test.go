@@ -152,7 +152,7 @@ func Test_MaxFeeMint(t *testing.T) {
 			require.NotEmpty(t, response)
 
 			mm := ctx.GetMints()
-			require.Equal(t, len(mm), 1)
+			require.Equal(t, 4, len(mm))
 
 			auths := make([]string, 0, len(payload.Signatures))
 			for _, sig := range payload.Signatures {
