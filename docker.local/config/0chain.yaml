@@ -82,6 +82,7 @@ server_chain:
       - shareSignsOrShares
       - wait
       - mint
+      - pour
   client:
     signature_scheme: bls0chain # ed25519 or bls0chain
     discover: true

@@ -211,6 +211,11 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 				zap.String("input", txn.TransactionData), zap.Error(err))
 			return math.MaxInt32, err
 		}
+
+		if _, ok := c.ChainConfig.TxnExempt()[scData.FunctionName]; ok {
+			return 0, nil
+		}
+
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
 		if missingKeys := sctx.GetMissingNodeKeys(); len(missingKeys) > 0 {
 			syncOpts := &SyncReplyC{}
@@ -259,6 +264,10 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	if err != nil {
 		return 0, 0, err
 	}
+	logging.Logger.Debug("estimate transaction cost fee",
+		zap.Int("cost", cost),
+		zap.String("txn hash", txn.Hash),
+		zap.String("txn", txn.TransactionData))
 
 	maxFee := c.ChainConfig.MaxTxnFee()
 	if maxFee > 0 && currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > maxFee {
