@@ -75,7 +75,6 @@ func (tb *testBalances) Validate() error                             { return ni
 func (tb *testBalances) GetMints() []*state.Mint                     { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error          { return nil }
 func (tb *testBalances) AddMint(*state.Mint) error                   { return nil }
-func (tb *testBalances) AddBridgeMint(*state.Mint) error             { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer             { return nil }
 func (tb *testBalances) GetMagicBlock(round int64) *block.MagicBlock { return nil }
 func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)       {}

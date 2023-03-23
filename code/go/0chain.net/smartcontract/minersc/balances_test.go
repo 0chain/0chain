@@ -179,11 +179,3 @@ func (tb *testBalances) SetClientState(clientID datastore.Key, s *state.State) (
 }
 
 func (tb *testBalances) GetMissingNodeKeys() []util.Key { return nil }
-
-func (tb *testBalances) AddBridgeMint(mint *state.Mint) error {
-	if mint.Minter != ADDRESS {
-		panic("invalid miner: " + mint.Minter)
-	}
-	tb.balances[mint.ToClientID] += mint.Amount // mint!
-	return nil
-}

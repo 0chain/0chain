@@ -237,10 +237,6 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 	ctx.On("GetMints").Return(func() []*state.Mint {
 		return mints
 	})
-	ctx.On("AddBridgeMint", mock.AnythingOfType("*state.Mint")).Return(func(m *state.Mint) error {
-		mints = append(mints, m)
-		return nil
-	})
 
 	// EventsDB
 

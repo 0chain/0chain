@@ -161,10 +161,11 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 
 	payload.Amount = amount
 	for _, sig := range payload.Signatures {
-		err = ctx.AddBridgeMint(&state.Mint{
+		err = ctx.AddMint(&state.Mint{
 			Minter:     gn.ID,
 			ToClientID: sig.ID,
 			Amount:     share,
+			IsBridge:   true,
 		})
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("%s, AddMint for authorizers, %s", code, info))
