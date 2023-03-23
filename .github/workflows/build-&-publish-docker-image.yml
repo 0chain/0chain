@@ -58,8 +58,8 @@ jobs:
 
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-        docker tag zchain_build_run:latest ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
-        docker tag zchain_build_run:latest $ZCHAIN_BUILD_RUN_REGISTRY:staging
+        docker tag zchain_run_base:latest ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
+        docker tag zchain_run_base:latest $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
 
     - name: Login to Docker Hub
