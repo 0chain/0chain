@@ -5,7 +5,7 @@ RUN apk add ca-certificates
 RUN apk add libbz2 lz4-libs snappy zstd-libs  # For RocksDB
 RUN apk add gmp libcrypto1.1 libssl1.1               # For Herumi
 
-COPY --from=0chaindev/zchain-buildbase:staging /usr/local/lib/librocksdb.so.*.*.* \
+COPY --from=zchain_build_base /usr/local/lib/librocksdb.so.*.*.* \
                               /usr/local/lib/libmcl*.so \
                               /usr/local/lib/libbls*.so \
                               /usr/local/lib/
