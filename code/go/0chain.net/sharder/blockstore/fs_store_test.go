@@ -56,7 +56,7 @@ func TestBlockStoreWriteReadFromCache(t *testing.T) {
 	config := `
 cache:
     path: "path_to_cache"
-    size: "1GB"
+    total_blocks: "1000"
 `
 	viper.GetViper().SetConfigType("yaml")
 	err = viper.ReadConfig(bytes.NewReader([]byte(config)))

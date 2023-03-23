@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/0chain/common/core/logging"
 
@@ -58,6 +59,7 @@ func TestCacheWrite(t *testing.T) {
 	}
 	lruCache := c.(*cache).lru
 	require.EqualValues(t, 10, lruCache.Len())
+	time.Sleep(time.Second)
 	lruKeys := lruCache.Keys()
 	require.Equal(t, fmt.Sprintf("hash#%d", 19), lruKeys[len(lruKeys)-1]) // newest
 	require.Equal(t, fmt.Sprintf("hash#%d", 10), lruKeys[0])              //oldest
@@ -102,16 +104,19 @@ func TestCacheRead(t *testing.T) {
 	}
 
 	lruCache := c.(*cache).lru
+	time.Sleep(time.Second)
 	keys := lruCache.Keys()
 	require.Equal(t, s[0], keys[0])
-	require.Equal(t, s[2], keys[len(keys)-1])
+	require.Equal(t, s[2], keys[2])
 	_, err := c.Read(s[0])
 	require.NoError(t, err)
+	time.Sleep(time.Second)
 	keys = lruCache.Keys()
 	require.Equal(t, s[0], keys[len(keys)-1])
 
 	_, err = c.Read(s[1])
 	require.NoError(t, err)
+	time.Sleep(time.Second)
 	keys = lruCache.Keys()
 	require.Equal(t, s[1], keys[len(keys)-1])
 }
