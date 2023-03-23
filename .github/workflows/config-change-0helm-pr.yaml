@@ -1,4 +1,4 @@
-name: config_change_alert
+name: config_change_PR
 
 on:
   push:
@@ -19,7 +19,7 @@ on:
    
 jobs:
   ConfigChange:
-    runs-on: docker-builds
+    runs-on: arc-runner
     steps:
       - uses: actions/checkout@v1
 
@@ -48,7 +48,7 @@ jobs:
         with:
           personal_token: ${{ secrets.ACCESS_TOKEN }}
           publish_dir: ./0helm/values/activeset/common
-          destination_dir: ./0helm/values/activeset/common
+          destination_dir: ./0helm/updated_configs
           publish_branch: one-pool-staging-test
           keep_files: true
           external_repository: "0chain/0helm"
@@ -56,7 +56,7 @@ jobs:
           user_email: "github-actions[bot]@users.noreply.github.com"
 
   PR:
-    runs-on: 'docker-builds'
+    runs-on: 'arc-runner'
     environment: 'HelmRepo'
     needs: [ConfigChange]
     steps:
@@ -65,7 +65,7 @@ jobs:
         with:
           github_token: ${{ secrets.ACCESS_TOKEN }}
           source_branch: one-pool-staging-test
-          target_branch: one-pool-staging
+          target_branch: development
           title: Update miner/sharder config file
 
           
