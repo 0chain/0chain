@@ -47,7 +47,7 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: '1.18' # The Go version to download (if necessary) and use.
-
+    
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
@@ -57,211 +57,190 @@ jobs:
     - name: Build base images
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
-        docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
-        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
+
+        docker pull $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:$TAG $ZCHAIN_BUILDBASE
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-        docker tag $ZCHAIN_BUILDBASE ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
-        docker tag $ZCHAIN_BUILDBASE ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
-        docker images
-        
-        
-        # docker images
-        # docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG-$SHORT_SHA
-        # docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
 
-        # docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
+        # docker pull $ZCHAIN_BUILD_RUN_REGISTRY
         # docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-        # docker tag $ZCHAIN_BUILDRUN ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
-        # docker tag $ZCHAIN_BUILDRUN ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA  
-        # docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
-        # docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
-    
-  #   - name: Build & Push
-  #     run: |
-  #       sudo apt update -y
-  #       sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
-  #       make install-mockery
-  #       make build-mocks
 
-  #       sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
-  #       docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
+    - name: Build & Push
+      run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+        make install-mockery
+        make build-mocks
+
+        sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
 
 
-  #       docker tag miner:latest ${MINER_REGISTRY}:$TAG
-  #       docker tag miner:latest $MINER_REGISTRY:latest
-  #       docker push ${MINER_REGISTRY}:$TAG
+        docker tag miner:latest ${MINER_REGISTRY}:$TAG
+        docker tag miner:latest $MINER_REGISTRY:latest
+        docker push ${MINER_REGISTRY}:$TAG
 
-  #       SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
-  #       docker tag miner:latest ${MINER_REGISTRY}:$TAG-$SHORT_SHA
-  #       docker push ${MINER_REGISTRY}:$TAG-$SHORT_SHA
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+        docker tag miner:latest ${MINER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${MINER_REGISTRY}:$TAG-$SHORT_SHA
 
-  #     env:
-  #       DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
+      env:
+        DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
-  #   - name: Push latest
-  #     if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
-  #     run: |
-  #         docker push $MINER_REGISTRY:latest
-
-
-  # sharder:
-  #   runs-on: [self-hosted, build]
-  #   steps:
-
-  #   - name: Set docker image tag
-  #     id: get_info
-  #     run: |
-  #       if [[ "${{github.ref}}" == refs/pull/* ]]; then
-  #         tag=${GITHUB_REF/\/merge/}
-  #         echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
-  #       else
-  #         echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
-  #       fi
-  #       echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
-  #       echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
-
-  #   - uses: actions/checkout@v1
-
-  #   - name: Setup go 1.18
-  #     uses: actions/setup-go@v2
-  #     with:
-  #       go-version: '1.18' # The Go version to download (if necessary) and use.
+    - name: Push latest
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
+      run: |
+          docker push $MINER_REGISTRY:latest
 
 
-  #   - name: Login to Docker Hub
-  #     uses: docker/login-action@v1
-  #     with:
-  #       username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #       password: ${{ secrets.DOCKERHUB_PASSWORD }}
+  sharder:
+    runs-on: [self-hosted, build]
+    steps:
 
-  #   - name: Build base images
-  #     run: |
-  #       SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
-  #       docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
-  #       docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
-  #       docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-  #       docker tag $ZCHAIN_BUILDBASE ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
-  #       docker tag $ZCHAIN_BUILDBASE ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
+    - name: Set docker image tag
+      id: get_info
+      run: |
+        if [[ "${{github.ref}}" == refs/pull/* ]]; then
+          tag=${GITHUB_REF/\/merge/}
+          echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+        else
+          echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        fi
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
-  #       docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG-$SHORT_SHA
-  #       docker push ${ZCHAIN_BUILD_BASE_REGISTRY}:$TAG
+    - uses: actions/checkout@v1
 
-  #       docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
-  #       docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-  #       docker tag $ZCHAIN_BUILDRUN ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
-  #       docker tag $ZCHAIN_BUILDRUN ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA  
-  #       docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG-$SHORT_SHA
-  #       docker push ${ZCHAIN_BUILD_RUN_REGISTRY}:$TAG
-    
-  #   - name: generate swagger
-  #     run: docker.local/bin/test.swagger.sh
-
-  #   - name: Build & Push
-  #     run: |
-  #       sudo apt update -y
-  #       sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
-  #       make install-mockery
-  #       make build-mocks
-
-  #       docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
-
-  #       docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
-  #       docker tag sharder:latest $SHARDER_REGISTRY:latest
-  #       docker push ${SHARDER_REGISTRY}:$TAG
-
-  #       SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
-  #       docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
-  #       docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
+    - name: Setup go 1.18
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18' # The Go version to download (if necessary) and use.
 
 
-  #   - name: Push latest
-  #     if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
-  #     run: |
-  #         docker push $SHARDER_REGISTRY:latest
+    - name: Build base images
+      run: |
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: generate swagger
+      run: docker.local/bin/test.swagger.sh
+
+    - name: Build & Push
+      run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+        make install-mockery
+        make build-mocks
+
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
+
+        docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
+        docker tag sharder:latest $SHARDER_REGISTRY:latest
+        docker push ${SHARDER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+        docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
 
 
-  # system-tests:
-  #   if: github.event_name != 'workflow_dispatch'
-  #   needs: [miner, sharder]
-  #   runs-on: [ tests-suite ]
-  #   steps:
-  #     - name: "Get current PR"
-  #       uses: jwalton/gh-find-current-pr@v1
-  #       id: findPr
-  #       with:
-  #         github-token: ${{ github.token }}
+    - name: Push latest
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
+      run: |
+          docker push $SHARDER_REGISTRY:latest
 
-  #     - name: "Set PR status as pending"
-  #       uses: 0chain/actions/set-pr-status@master
-  #       if: steps.findPr.outputs.number
-  #       with:
-  #         pr_number: ${{ steps.findPr.outputs.pr }}
-  #         description: "System tests running with default config..."
-  #         state: "pending"
-  #         repository: ${{ github.repository }}
-  #         status_name: "0Chain System Tests"
-  #         target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  #         github_token: ${{ github.token }}
 
-  #     - name: "Setup"
-  #       run: |
-  #         if [[ "${{github.ref}}" == refs/pull/* ]]; then
-  #           tag=${GITHUB_REF/\/merge/}
-  #           echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
-  #         else
-  #           echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
-  #         fi
+  system-tests:
+    if: github.event_name != 'workflow_dispatch'
+    needs: [miner, sharder]
+    runs-on: [ tests-suite ]
+    steps:
+      - name: "Get current PR"
+        uses: jwalton/gh-find-current-pr@v1
+        id: findPr
+        with:
+          github-token: ${{ github.token }}
 
-  #         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
-  #         echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
+      - name: "Set PR status as pending"
+        uses: 0chain/actions/set-pr-status@master
+        if: steps.findPr.outputs.number
+        with:
+          pr_number: ${{ steps.findPr.outputs.pr }}
+          description: "System tests running with default config..."
+          state: "pending"
+          repository: ${{ github.repository }}
+          status_name: "0Chain System Tests"
+          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          github_token: ${{ github.token }}
 
-  #         echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
-  #         echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
+      - name: "Setup"
+        run: |
+          if [[ "${{github.ref}}" == refs/pull/* ]]; then
+            tag=${GITHUB_REF/\/merge/}
+            echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+          else
+            echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+          fi
 
-  #     - name: "Deploy 0Chain"
-  #       uses: 0chain/actions/deploy-0chain@master
-  #       with:
-  #         kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
-  #         teardown_condition: "TESTS_PASSED"
-  #         miner_image:  ${{ env.TAG }}-${{ env.SHORT_SHA }}
-  #         sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-  #         blobber_image: staging
-  #         validator_image: staging
-  #         authorizer_image: staging
-  #         zbox_image: staging
-  #         zblock_image: staging
-  #         zdns_image: staging
-  #         explorer_image: latest
-  #         zsearch_image: staging
-  #         zbox_cli_branch: staging
-  #         zwallet_cli_branch: staging
-  #         custom_go_sdk_version: staging
-  #         SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
-  #         TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
+          echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+          echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
 
-  #     - name: "Run System tests"
-  #       uses: 0chain/actions/run-system-tests@master
-  #       with:
-  #         system_tests_branch: master
-  #         network: ${{ env.NETWORK_URL }}
-  #         zbox_cli_branch: staging
-  #         zwallet_cli_branch: staging
-  #         svc_account_secret: ${{ github.token }}
-  #         deploy_report_page: false
-  #         archive_results: true
-  #         run_flaky_tests: false
-  #         retry_failures: true
-  #         TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
-  #         DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
+          echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
-  #     - name: "Set PR status as ${{ job.status }}"
-  #       if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
-  #       uses: 0chain/actions/set-pr-status@master
-  #       with:
-  #         pr_number: ${{ steps.findPr.outputs.pr }}
-  #         description: "System tests with default config"
-  #         state: ${{ job.status }}
-  #         repository: ${{ github.repository }}
-  #         status_name: "0Chain System Tests"
-  #         target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  #         github_token: ${{ github.token }}
+      - name: "Deploy 0Chain"
+        uses: 0chain/actions/deploy-0chain@master
+        with:
+          kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
+          teardown_condition: "TESTS_PASSED"
+          miner_image:  ${{ env.TAG }}-${{ env.SHORT_SHA }}
+          sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
+          blobber_image: staging
+          validator_image: staging
+          authorizer_image: staging
+          zbox_image: staging
+          zblock_image: staging
+          zdns_image: staging
+          explorer_image: latest
+          zsearch_image: staging
+          zbox_cli_branch: staging
+          zwallet_cli_branch: staging
+          custom_go_sdk_version: staging
+          SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
+          TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
+
+      - name: "Run System tests"
+        uses: 0chain/actions/run-system-tests@master
+        with:
+          system_tests_branch: master
+          network: ${{ env.NETWORK_URL }}
+          zbox_cli_branch: staging
+          zwallet_cli_branch: staging
+          svc_account_secret: ${{ github.token }}
+          deploy_report_page: false
+          archive_results: true
+          run_flaky_tests: false
+          retry_failures: true
+          TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
+          DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+
+      - name: "Set PR status as ${{ job.status }}"
+        if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
+        uses: 0chain/actions/set-pr-status@master
+        with:
+          pr_number: ${{ steps.findPr.outputs.pr }}
+          description: "System tests with default config"
+          state: ${{ job.status }}
+          repository: ${{ github.repository }}
+          status_name: "0Chain System Tests"
+          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          github_token: ${{ github.token }}
