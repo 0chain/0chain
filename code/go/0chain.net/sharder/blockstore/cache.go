@@ -9,6 +9,8 @@ package blockstore
 import (
 	"bytes"
 	"container/list"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -31,13 +33,13 @@ const (
 )
 
 type cacher interface {
-	Write(hash string, b *block.Block) error
+	Write(ctx context.Context, hash string, b *block.Block) error
 	Read(hash string) ([]byte, error)
 }
 
 type noOpCache struct{}
 
-func (noOpCache) Write(hash string, b *block.Block) error {
+func (noOpCache) Write(ctx context.Context, hash string, b *block.Block) error {
 	return nil
 }
 
@@ -61,7 +63,7 @@ type cache struct {
 
 // write will write block to the path and then run go routine to add its entry into
 // lru cache. If the size reaches cache limit, it will try to delete old block caches.
-func (c *cache) Write(hash string, b *block.Block) error {
+func (c *cache) Write(ctx context.Context, hash string, b *block.Block) error {
 	logging.Logger.Info(fmt.Sprintf("Writing %v to cache", hash))
 
 	bPath := filepath.Join(c.path, hash)
@@ -83,14 +85,17 @@ func (c *cache) Write(hash string, b *block.Block) error {
 		return err
 	}
 
-	c.bufferCh <- &cacheEntry{
+	select {
+	case <-ctx.Done():
+		return errors.New("context timeout")
+	case c.bufferCh <- &cacheEntry{
 		listEntry: listEntry{
 			key:  hash,
 			size: int64(n),
 		},
+	}:
+		return nil
 	}
-
-	return nil
 }
 
 // read read from cache and update the metadata cache.

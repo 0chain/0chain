@@ -2,6 +2,7 @@ package blockstore
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -71,8 +72,9 @@ cache:
 
 	b := new(block.Block)
 	b.Hash = "new hash"
-
-	err = bStore.cache.Write(b.Hash, b)
+	ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+	defer ctxCncl()
+	err = bStore.cache.Write(ctx, b.Hash, b)
 	require.NoError(t, err)
 
 	data, err := bStore.cache.Read(b.Hash)

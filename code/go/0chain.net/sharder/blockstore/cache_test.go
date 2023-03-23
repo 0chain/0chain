@@ -3,6 +3,7 @@ package blockstore
 import (
 	"bytes"
 	"container/list"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -94,7 +95,9 @@ func TestCacheWrite(t *testing.T) {
 	hash1 := "hash1"
 	b := new(block.Block)
 	b.Hash = hash1
-	err := c.Write(hash1, b)
+	ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+	defer ctxCncl()
+	err := c.Write(ctx, hash1, b)
 	require.Nil(t, err)
 
 	_, err = os.Stat(filepath.Join(p, hash1))
@@ -102,12 +105,16 @@ func TestCacheWrite(t *testing.T) {
 
 	hash2 := "hash2"
 	b.Hash = hash2
-	err = c.Write(hash2, b)
+	ctx, ctxCncl = context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+	defer ctxCncl()
+	err = c.Write(ctx, hash2, b)
 	require.Nil(t, err)
 
 	hash3 := "hash3"
 	b.Hash = hash3
-	err = c.Write(hash3, b)
+	ctx, ctxCncl = context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+	defer ctxCncl()
+	err = c.Write(ctx, hash3, b)
 	require.Nil(t, err)
 
 	time.Sleep(time.Second)
@@ -147,7 +154,9 @@ func TestCacheRead(t *testing.T) {
 	for _, hash := range s {
 		b := new(block.Block)
 		b.Hash = hash
-		err := c.Write(hash, b)
+		ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+		defer ctxCncl()
+		err := c.Write(ctx, hash, b)
 		require.Nil(t, err)
 
 		_, err = os.Stat(filepath.Join(p, hash))

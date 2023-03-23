@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"compress/zlib"
+	"context"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
@@ -31,6 +33,8 @@ const (
 	// subDirs 5 will create total of 16^5 + 16^4 + ..+ 16 =  1118480 directories which will store all the finalized
 	// blocks.
 	subDirs = 5
+	// CacheWriteTimeOut Cancel writing to cache if timeout is reached
+	CacheWriteTimeOut = 5 * time.Second
 )
 
 var (
@@ -113,7 +117,9 @@ func (bStore *BlockStore) write(hash string, b *block.Block) error {
 	}
 
 	go func() {
-		if err := bStore.cache.Write(hash, b); err != nil {
+		ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+		defer ctxCncl()
+		if err := bStore.cache.Write(ctx, hash, b); err != nil {
 			logging.Logger.Error(err.Error())
 		}
 	}()
@@ -153,7 +159,9 @@ func (bStore *BlockStore) Read(hash string) (*block.Block, error) {
 	}
 
 	go func() {
-		err := bStore.cache.Write(b.Hash, b)
+		ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+		defer ctxCncl()
+		err := bStore.cache.Write(ctx, b.Hash, b)
 		if err != nil {
 			logging.Logger.Error(err.Error())
 		}
