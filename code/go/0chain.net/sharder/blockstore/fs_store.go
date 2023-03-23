@@ -210,7 +210,15 @@ func Init(sViper *viper.Viper) {
 
 	err := hasEnoughInodesAndSize(basePath)
 	if err != nil {
-		panic(err)
+		// comment out for build integration tests.
+		// panic(err)
+		// only for development phase
+		// remove block below
+		err = os.MkdirAll(basePath, 0777)
+		if err != nil {
+			panic(err)
+		}
+		// remove above block
 	}
 
 	bStore := &BlockStore{
