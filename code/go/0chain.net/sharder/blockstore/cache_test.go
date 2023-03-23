@@ -2,12 +2,11 @@ package blockstore
 
 import (
 	"bytes"
-	"container/list"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/0chain/common/core/logging"
 
@@ -24,7 +23,7 @@ func TestInitCache(t *testing.T) {
 	config := `
 cache:
     path: "/path/to/cache"
-    size: "1GB"
+    total_blocks: "1000"
 `
 	viper.GetViper().SetConfigType("yaml")
 	err := viper.ReadConfig(bytes.NewReader([]byte(config)))
@@ -36,108 +35,48 @@ cache:
 
 }
 
-func TestLRUAdd(t *testing.T) {
-	l := lru{
-		list:  list.New(),
-		items: make(map[string]*list.Element),
-	}
-
-	m := map[string]int64{
-		"k1": 1,
-		"k2": 2,
-		"k3": 3,
-		"k4": 4,
-		"k5": 5,
-	}
-	for k, v := range m {
-		l.Add(k, v)
-		e := l.list.Front()
-		key := e.Value.(*listEntry).key
-		require.Equal(t, k, key)
-	}
-}
-
-func TestLRURemove(t *testing.T) {
-	l := lru{
-		list:  list.New(),
-		items: make(map[string]*list.Element),
-	}
-
-	m := map[string]int64{
-		"k1": 1,
-		"k2": 2,
-		"k3": 3,
-		"k4": 4,
-		"k5": 5,
-	}
-	for k, v := range m {
-		l.Add(k, v)
-	}
-
-	for k := range m {
-		l.Remove(k)
-		_, ok := l.items[k]
-		require.False(t, ok)
-	}
-}
-
 func TestCacheWrite(t *testing.T) {
 	p := "./cache"
+	defer os.RemoveAll(p)
 	v := viper.New()
 	v.Set("path", p)
-	v.Set("size", 500*MB)
+	v.Set("total_blocks", 10)
 
 	var c cacher
 	require.NotPanics(t, func() {
 		c = initCache(v)
 	})
 
-	hash1 := "hash1"
-	b := new(block.Block)
-	b.Hash = hash1
-	ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
-	defer ctxCncl()
-	err := c.Write(ctx, hash1, b)
-	require.Nil(t, err)
+	for i := 0; i < 20; i++ {
+		key := fmt.Sprintf("hash#%d", i)
+		b := new(block.Block)
+		b.Hash = key
+		ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
+		err := c.Write(ctx, key, b)
+		require.NoError(t, err)
+		ctxCncl()
+	}
+	lruCache := c.(*cache).lru
+	require.EqualValues(t, 10, lruCache.Len())
+	lruKeys := lruCache.Keys()
+	require.Equal(t, fmt.Sprintf("hash#%d", 19), lruKeys[len(lruKeys)-1]) // newest
+	require.Equal(t, fmt.Sprintf("hash#%d", 10), lruKeys[0])              //oldest
 
-	_, err = os.Stat(filepath.Join(p, hash1))
-	require.Nil(t, err)
-
-	hash2 := "hash2"
-	b.Hash = hash2
-	ctx, ctxCncl = context.WithTimeout(context.TODO(), CacheWriteTimeOut)
-	defer ctxCncl()
-	err = c.Write(ctx, hash2, b)
-	require.Nil(t, err)
-
-	hash3 := "hash3"
-	b.Hash = hash3
-	ctx, ctxCncl = context.WithTimeout(context.TODO(), CacheWriteTimeOut)
-	defer ctxCncl()
-	err = c.Write(ctx, hash3, b)
-	require.Nil(t, err)
-
-	time.Sleep(time.Second)
-	_, err = os.Stat(filepath.Join(p, hash1))
-	require.Nil(t, err)
-
-	_, err = os.Stat(filepath.Join(p, hash2))
-	require.Nil(t, err)
-
-	_, err = os.Stat(filepath.Join(p, hash3))
-	require.Nil(t, err)
-
-	l := c.(*cache).lru.list
-	e := l.Front()
-	k := e.Value.(*listEntry).key
-	require.Equal(t, k, hash3)
+	dirents, err := os.ReadDir(p)
+	require.NoError(t, err)
+	require.Len(t, dirents, 10)
+	for i := 10; i < 20; i++ {
+		bPath := filepath.Join(p, fmt.Sprintf("hash#%d", i))
+		_, err := os.Stat(bPath)
+		require.NoError(t, err)
+	}
 }
 
 func TestCacheRead(t *testing.T) {
 	p := "./cache"
 	v := viper.New()
 	v.Set("path", p)
-	v.Set("size", 500*MB)
+	v.Set("total_blocks", 10)
 
 	var c cacher
 	require.NotPanics(t, func() {
@@ -150,32 +89,29 @@ func TestCacheRead(t *testing.T) {
 		"hash3",
 	}
 
-	var lastKey string
 	for _, hash := range s {
 		b := new(block.Block)
 		b.Hash = hash
 		ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
-		defer ctxCncl()
 		err := c.Write(ctx, hash, b)
+		ctxCncl()
 		require.Nil(t, err)
 
 		_, err = os.Stat(filepath.Join(p, hash))
 		require.Nil(t, err)
-
-		lastKey = hash
 	}
 
-	time.Sleep(500 * time.Millisecond)
-	e := c.(*cache).lru.list.Front()
-	k := e.Value.(*listEntry).key
-	require.Equal(t, k, lastKey)
+	lruCache := c.(*cache).lru
+	keys := lruCache.Keys()
+	require.Equal(t, s[0], keys[0])
+	require.Equal(t, s[2], keys[len(keys)-1])
+	_, err := c.Read(s[0])
+	require.NoError(t, err)
+	keys = lruCache.Keys()
+	require.Equal(t, s[0], keys[len(keys)-1])
 
-	hash1 := "hash1"
-	_, err := c.Read(hash1)
-	require.Nil(t, err)
-
-	time.Sleep(500 * time.Millisecond)
-	e = c.(*cache).lru.list.Front()
-	k = e.Value.(*listEntry).key
-	require.Equal(t, k, hash1)
+	_, err = c.Read(s[1])
+	require.NoError(t, err)
+	keys = lruCache.Keys()
+	require.Equal(t, s[1], keys[len(keys)-1])
 }
