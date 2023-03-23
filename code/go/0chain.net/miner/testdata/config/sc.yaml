@@ -101,7 +101,7 @@ smart_contracts:
     # the time_unit is a duration used as divider for a write price; a write
     # price measured in tok / GB / time_unit, where the time_unit is this
     # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
-    time_unit: "10m"
+    time_unit: "20m"
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
