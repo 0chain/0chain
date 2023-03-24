@@ -50,7 +50,7 @@ jobs:
         with:
           personal_token: ${{ secrets.ACCESS_TOKEN }}
           publish_dir: ./0helm/updated_configs
-          destination_dir: ./0helm/updated_configs
+          destination_dir: updated_configs
           publish_branch: one-pool-staging-test
           keep_files: true
           external_repository: "0chain/0helm"
