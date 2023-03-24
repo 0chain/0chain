@@ -98,6 +98,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/reward-delegates", srh.rewardProviders),
 		rest.MakeEndpoint(storage+"/all-challenges", srh.getAllChallenges),
 		rest.MakeEndpoint(storage+"/block-rewards", srh.getBlockRewards),
+		rest.MakeEndpoint(storage+"/read-rewards", srh.getReadRewards),
 	}
 }
 
@@ -3069,12 +3070,35 @@ func (srh *StorageRestHandler) getBlockRewards(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	block_number := r.URL.Query().Get("block_number")
-	start_block_number := r.URL.Query().Get("start_block_number")
-	end_block_number := r.URL.Query().Get("end_block_number")
+	blockNumber := r.URL.Query().Get("block_number")
+	startBlockNumber := r.URL.Query().Get("start_block_number")
+	endBlockNumber := r.URL.Query().Get("end_block_number")
 
-	providerRewards := edb.GetBlockRewardsToProviders(block_number, start_block_number, end_block_number)
-	delegateRewards := edb.GetBlockRewardsToDelegates(block_number, start_block_number, end_block_number)
+	providerRewards := edb.GetBlockRewardsToProviders(blockNumber, startBlockNumber, endBlockNumber)
+	delegateRewards := edb.GetBlockRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber)
+
+	result := map[string]interface{}{
+		"provider_rewards": providerRewards,
+		"delegate_rewards": delegateRewards,
+	}
+
+	common.Respond(w, r, result, nil)
+}
+
+func (srh *StorageRestHandler) getReadRewards(w http.ResponseWriter, r *http.Request) {
+	// read all data from block_rewards table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	blockNumber := r.URL.Query().Get("block_number")
+	startBlockNumber := r.URL.Query().Get("start_block_number")
+	endBlockNumber := r.URL.Query().Get("end_block_number")
+
+	providerRewards := edb.GetReadRewardsToProviders(blockNumber, startBlockNumber, endBlockNumber)
+	delegateRewards := edb.GetReadRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber)
 
 	result := map[string]interface{}{
 		"provider_rewards": providerRewards,

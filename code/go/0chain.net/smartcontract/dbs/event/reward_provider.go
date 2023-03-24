@@ -114,18 +114,37 @@ func (edb *EventDb) RunWhereQueryInProviderRewards(query string) []RewardProvide
 
 }
 
-func (edb *EventDb) GetBlockRewardsToProviders(block_number, start_block_number, end_block_number string) []RewardProvider {
+func (edb *EventDb) GetBlockRewardsToProviders(blockNumber, startBlockNumber, endBlockNumber string) []RewardProvider {
 
-	if block_number != "" {
+	if blockNumber != "" {
 		var rps []RewardProvider
-		edb.Get().Where("block_number = ? AND reward_type IN (3)", block_number).Find(&rps)
+		edb.Get().Where("block_number = ? AND reward_type IN (3)", blockNumber).Find(&rps)
 
 		return rps
 	}
 
-	if start_block_number != "" && end_block_number != "" {
+	if startBlockNumber != "" && endBlockNumber != "" {
 		var rps []RewardProvider
-		edb.Get().Where("block_number >= ? AND block_number < ? AND reward_type IN (3)", start_block_number, end_block_number).Find(&rps)
+		edb.Get().Where("block_number >= ? AND block_number <= ? AND reward_type IN (3)", startBlockNumber, endBlockNumber).Find(&rps)
+
+		return rps
+	}
+
+	return nil
+}
+
+func (edb *EventDb) GetReadRewardsToProviders(blockNumber, startBlockNumber, endBlockNumber string) []RewardProvider {
+
+	if blockNumber != "" {
+		var rps []RewardProvider
+		edb.Get().Where("block_number = ? AND reward_type IN (7)", blockNumber).Find(&rps)
+
+		return rps
+	}
+
+	if startBlockNumber != "" && endBlockNumber != "" {
+		var rps []RewardProvider
+		edb.Get().Where("block_number >= ? AND block_number <= ? AND reward_type IN (7)", startBlockNumber, endBlockNumber).Find(&rps)
 
 		return rps
 	}

@@ -117,18 +117,38 @@ func (edb *EventDb) GetAllDelegateChallengeRewards() []RewardDelegate {
 	return rds
 }
 
-func (edb *EventDb) GetBlockRewardsToDelegates(block_number, start_block_number, end_block_number string) []RewardDelegate {
+func (edb *EventDb) GetBlockRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber string) []RewardDelegate {
 
-	if block_number != "" {
+	if blockNumber != "" {
 		var rds []RewardDelegate
-		edb.Get().Where("block_number = ? AND reward_type IN (3)", block_number).Find(&rds)
+		edb.Get().Where("block_number = ? AND reward_type IN (3)", blockNumber).Find(&rds)
 
 		return rds
 	}
 
-	if start_block_number != "" && end_block_number != "" {
+	if startBlockNumber != "" && endBlockNumber != "" {
 		var rds []RewardDelegate
-		edb.Get().Where("block_number >= ? AND block_number < ? AND reward_type IN (3)", start_block_number, end_block_number).Find(&rds)
+		edb.Get().Where("block_number >= ? AND block_number <= ? AND reward_type IN (3)", startBlockNumber, endBlockNumber).Find(&rds)
+
+		return rds
+	}
+
+	return nil
+
+}
+
+func (edb *EventDb) GetReadRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber string) []RewardDelegate {
+
+	if blockNumber != "" {
+		var rds []RewardDelegate
+		edb.Get().Where("block_number = ? AND reward_type IN (7)", blockNumber).Find(&rds)
+
+		return rds
+	}
+
+	if startBlockNumber != "" && endBlockNumber != "" {
+		var rds []RewardDelegate
+		edb.Get().Where("block_number >= ? AND block_number <= ? AND reward_type IN (7)", startBlockNumber, endBlockNumber).Find(&rds)
 
 		return rds
 	}
