@@ -166,6 +166,7 @@ func runSuite(
 			timer := time.Now()
 			log.Println("starting", bm.Name())
 			var err error
+			var runCount int
 			result := testing.Benchmark(func(b *testing.B) {
 				b.StopTimer()
 				var prevMptHashRoot string
@@ -180,12 +181,15 @@ func runSuite(
 					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 						return data.Now
 					})
+					log.Println("RootHash before:", util.ToHex(timedBalance.GetState().GetRoot()))
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
 					b.StopTimer()
 					if err != nil {
 						mockUpdateState(bm.Transaction(), balances)
 					}
+					runCount++
+					log.Println("RootHash after:", util.ToHex(timedBalance.GetState().GetRoot()))
 					currMptHashRoot := util.ToHex(timedBalance.GetState().GetRoot())
 					if i > 0 && currMptHashRoot != prevMptHashRoot {
 						log.Println("Run:", i, "Previous MPT root hash:", prevMptHashRoot, "Current MPT root hash:", currMptHashRoot)
@@ -195,6 +199,7 @@ func runSuite(
 					}
 				}
 			})
+			log.Println(bm.Name(), "run count is:", runCount)
 			var resTimings map[string]time.Duration
 			if wt, ok := bm.(benchmark.WithTimings); ok && len(wt.Timings()) > 0 {
 				resTimings = wt.Timings()
