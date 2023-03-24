@@ -218,7 +218,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // the part can be moved back to the blobber anytime or used to
 // increase blobber's capacity or write_price next time
 
-//only use this function to add blobber(for update call updateBlobberSettings)
+// only use this function to add blobber(for update call updateBlobberSettings)
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
@@ -367,6 +367,8 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
+
+	logging.Logger.Debug("jayash commit_blobber_read", zap.Any("input", string(input)))
 
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {

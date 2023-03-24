@@ -3,6 +3,8 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -104,6 +106,8 @@ func toJson(val interface{}) string {
 
 func (rp *readPool) moveToBlobber(allocID, blobID string,
 	sp *stakePool, value currency.Coin, balances cstate.StateContextI) (resp string, err error) {
+
+	logging.Logger.Debug("jayash read pool move to blobber", zap.String("allocation", allocID), zap.String("blobber", blobID), zap.Any("value", value))
 
 	// all redeems to response at the end
 	var redeems []readPoolRedeem
