@@ -187,20 +187,39 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balanc
 			return "", common.NewError("pour", fmt.Sprintf("adding tokens to global used amount resulted in an error: %v", err.Error()))
 		}
 		gn.Used = gnUsed
-		_, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
-		if err != nil {
-			logging.Logger.Error("pour_failed: error inserting user",
-				zap.String("txn", t.Hash),
-				zap.Error(err))
-			return "", common.NewErrorf("pour", "error inserting user: %v", err)
+
+		//REVERT WHEN DONE TESTING: Insert into MPT using map to test hash root mismatch check
+		nodesToInsert := map[string]util.MPTSerializable{
+			user.GetKey(gn.ID): user,
+			gn.GetKey():        gn,
 		}
-		_, err = balances.InsertTrieNode(gn.GetKey(), gn)
-		if err != nil {
-			logging.Logger.Error("pour_failed: error inserting global node",
-				zap.String("txn", t.Hash),
-				zap.Error(err))
-			return "", common.NewErrorf("pour", "error inserting global node: %v", err)
+
+		for key, value := range nodesToInsert {
+			_, err = balances.InsertTrieNode(key, value)
+			if err != nil {
+				logging.Logger.Error("pour_failed: error inserting node",
+					zap.String("txn", t.Hash),
+					zap.String("node_key", key),
+					zap.Error(err))
+				return "", common.NewErrorf("pour", "error inserting node with key %s: %v", key, err)
+			}
 		}
+
+		// ORIGINAL CODE, UNCOMMENT BELOW WHEN REVERTING
+		// _, err = balances.InsertTrieNode(user.GetKey(gn.ID), user)
+		// if err != nil {
+		// 	logging.Logger.Error("pour_failed: error inserting user",
+		// 		zap.String("txn", t.Hash),
+		// 		zap.Error(err))
+		// 	return "", common.NewErrorf("pour", "error inserting user: %v", err)
+		// }
+		// _, err = balances.InsertTrieNode(gn.GetKey(), gn)
+		// if err != nil {
+		// 	logging.Logger.Error("pour_failed: error inserting global node",
+		// 		zap.String("txn", t.Hash),
+		// 		zap.Error(err))
+		// 	return "", common.NewErrorf("pour", "error inserting global node: %v", err)
+		// }
 		tokensPoured.Update(int64(transfer.Amount))
 		return string(transfer.Encode()), nil
 	}
