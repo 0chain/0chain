@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	defaultConfigPath = "config/benchmark.yaml"
+	defaultConfigPath = "testdata/benchmark.yaml"
 )
 
 var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
