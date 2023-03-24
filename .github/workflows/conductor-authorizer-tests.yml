@@ -139,6 +139,29 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
+        ethereum_node_url: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
+        EOF
+        cat <<\EOF > ~/.zcn/bridge.yaml
+        owner:
+          Password: 02289b9
+          EthereumAddress: 0xD8c9156e782C68EE671C09b6b92de76C97948432
+          BridgeAddress: 0x2405e40161ea6da91AE0e95061e7A8462b4D5eEa
+          WzcnAddress: 0x10140fbca3a468A1c35F132D75659eF0EB5d95DB
+          EthereumNodeURL: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
+          GasLimit: 300000
+          Value: 0
+          AuthorizersAddress: 0xB132C20A02AD7C38d88805F0e3fFDdfb54224C58
+          ConsensusThreshold: 60
+        bridge:
+          AuthorizersAddress: 0xB132C20A02AD7C38d88805F0e3fFDdfb54224C58
+          Password: 02289b9
+          EthereumAddress: 0xD8c9156e782C68EE671C09b6b92de76C97948432
+          BridgeAddress: 0x2405e40161ea6da91AE0e95061e7A8462b4D5eEa
+          WzcnAddress: 0x10140fbca3a468A1c35F132D75659eF0EB5d95DB
+          EthereumNodeURL: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
+          GasLimit: 300000
+          Value: 0
+          ConsensusThreshold: 60
         EOF
 
     - name: List pwd zcn
@@ -161,7 +184,7 @@ jobs:
           0chain/conductor/logs/
           0chain/docker.local/
           token_bridge_authserver/docker.local/
-          
+
 
     # - name: Creating Artifact con-tests-logs.tar.gz file.
     #   run: |
