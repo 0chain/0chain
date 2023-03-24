@@ -988,7 +988,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	var (
-		selectedValidators  = make([]*ValidationNode, 0, len(randValidators))
+		selectedValidators  = make([]*ValidationNode, 0, minValidators)
 		perm                = r.Perm(len(randValidators))
 		remainingValidators = len(randValidators)
 	)
