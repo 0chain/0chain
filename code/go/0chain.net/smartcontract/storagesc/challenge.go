@@ -973,67 +973,78 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("invalid blobber for allocation")
 	}
 
+	if alloc.DataShards+1 > minValidators {
+		minValidators = alloc.DataShards + 1
+	}
+
 	var randValidators []ValidationPartitionNode
 	if err := validators.GetRandomItems(balances, r, &randValidators); err != nil {
 		return nil, common.NewError("add_challenge",
 			"error getting validators random slice: "+err.Error())
 	}
 
+	if len(randValidators) < minValidators {
+		return nil, errors.New("validators number does not meet minimum challenge requirement")
+	}
+
 	var (
-		needValidNum       = minInt(len(randValidators), alloc.DataShards+1)
-		selectedValidators = make([]*ValidationNode, 0, needValidNum)
-		perm               = r.Perm(len(randValidators))
+		selectedValidators  = make([]*ValidationNode, 0, len(randValidators))
+		perm                = r.Perm(len(randValidators))
+		remainingValidators = len(randValidators)
 	)
 
 	now := txn.CreationDate
 	filterValidator := filterHealthyValidators(now)
 
-	for i := 0; i < needValidNum; i++ {
+	for i := 0; i < len(randValidators) && len(selectedValidators) < minValidators; i++ {
+		if remainingValidators < minValidators {
+			return nil, errors.New("validators number does not meet minimum challenge requirement after filtering")
+		}
 		randValidator := randValidators[perm[i]]
-		if randValidator.Id != blobberID {
-			validator, err := getValidator(randValidator.Id, balances)
-			if err != nil {
-				if cstate.ErrInvalidState(err) {
-					return nil, common.NewError("add_challenge",
-						err.Error())
-				}
-				continue
-			}
-
-			kick, err := filterValidator(validator)
-			if err != nil {
-				return nil, common.NewError("add_challenge", "failed to filter validator: "+
+		if randValidator.Id == blobberID {
+			continue
+		}
+		validator, err := getValidator(randValidator.Id, balances)
+		if err != nil {
+			if cstate.ErrInvalidState(err) {
+				return nil, common.NewError("add_challenge",
 					err.Error())
 			}
-
-			if kick {
-				continue
-			}
-
-			sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
-			if err != nil {
-				return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
-			}
-
-			stake, err := sp.stake()
-			if err != nil {
-				return nil, err
-			}
-
-			if stake >= validator.StakePoolSettings.MinStake {
-				selectedValidators = append(selectedValidators,
-					&ValidationNode{
-						Provider: provider.Provider{
-							ID:           randValidator.Id,
-							ProviderType: spenum.Validator,
-						},
-						BaseURL: randValidator.Url,
-					})
-			}
+			continue
 		}
-		if len(selectedValidators) > alloc.DataShards {
-			break
+
+		kick, err := filterValidator(validator)
+		if err != nil {
+			return nil, common.NewError("add_challenge", "failed to filter validator: "+
+				err.Error())
 		}
+		if kick {
+			remainingValidators--
+			continue
+		}
+
+		sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
+		if err != nil {
+			return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
+		}
+		stake, err := sp.stake()
+		if err != nil {
+			return nil, err
+		}
+		if stake < validator.StakePoolSettings.MinStake {
+			remainingValidators--
+			continue
+		}
+
+		selectedValidators = append(selectedValidators,
+			&ValidationNode{
+				Provider: provider.Provider{
+					ID:           randValidator.Id,
+					ProviderType: spenum.Validator,
+				},
+				BaseURL: randValidator.Url,
+			})
+
 	}
 
 	if len(selectedValidators) < minValidators {
