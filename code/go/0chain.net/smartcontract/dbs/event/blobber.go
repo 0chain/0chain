@@ -190,7 +190,6 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
-	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)

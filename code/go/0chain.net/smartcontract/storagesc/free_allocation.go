@@ -259,6 +259,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed",
 			"marker verification failed: %v", err)
 	}
+	//todo query sharder on 0box to get the price of allocation
 	if err := assigner.validate(marker, txn.CreationDate, coin, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"marker verification failed: %v", err)
