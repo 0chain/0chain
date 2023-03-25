@@ -181,7 +181,6 @@ func runSuite(
 					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 						return data.Now
 					})
-					log.Println("RootHash before:", util.ToHex(timedBalance.GetState().GetRoot()))
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
 					b.StopTimer()
@@ -189,7 +188,6 @@ func runSuite(
 						mockUpdateState(bm.Transaction(), balances)
 					}
 					runCount++
-					log.Println("RootHash after:", util.ToHex(timedBalance.GetState().GetRoot()))
 					currMptHashRoot := util.ToHex(timedBalance.GetState().GetRoot())
 					if i > 0 && currMptHashRoot != prevMptHashRoot {
 						log.Println("Run:", i, "Previous MPT root hash:", prevMptHashRoot, "Current MPT root hash:", currMptHashRoot)
