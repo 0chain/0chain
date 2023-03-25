@@ -13,8 +13,8 @@ require (
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru/v2 v2.0.1
-	github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef
-	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
+	github.com/herumi/bls v1.30.0
+	github.com/herumi/mcl v1.72.1
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/mapstructure v1.5.0
@@ -44,6 +44,7 @@ require (
 
 require (
 	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+	github.com/go-faker/faker/v4 v4.0.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/lib/pq v1.10.7
 	github.com/ory/dockertest/v3 v3.9.1
@@ -68,7 +69,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-faker/faker/v4 v4.0.0 // indirect
 	github.com/go-ini/ini v1.66.4 // indirect
 	github.com/go-openapi/analysis v0.21.2 // indirect
 	github.com/go-openapi/errors v0.20.2 // indirect
