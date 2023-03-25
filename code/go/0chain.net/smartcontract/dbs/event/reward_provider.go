@@ -151,3 +151,14 @@ func (edb *EventDb) GetReadRewardsToProviders(blockNumber, startBlockNumber, end
 
 	return nil
 }
+
+func (edb *EventDb) GetChallengeRewardsToProviders(challengeID string) ([]RewardProvider, []RewardProvider) {
+
+	var blobberRewards []RewardProvider
+	edb.Get().Where("challenge_id = ? AND reward_type IN (8)", challengeID).Find(&blobberRewards)
+
+	var validatorRewards []RewardProvider
+	edb.Get().Where("challenge_id = ? AND reward_type IN (6)", challengeID).Find(&validatorRewards)
+
+	return blobberRewards, validatorRewards
+}

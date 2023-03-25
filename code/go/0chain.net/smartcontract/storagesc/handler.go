@@ -99,6 +99,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/all-challenges", srh.getAllChallenges),
 		rest.MakeEndpoint(storage+"/block-rewards", srh.getBlockRewards),
 		rest.MakeEndpoint(storage+"/read-rewards", srh.getReadRewards),
+		rest.MakeEndpoint(storage+"/challenge-rewards", srh.getChallengeRewards),
 	}
 }
 
@@ -3103,6 +3104,29 @@ func (srh *StorageRestHandler) getReadRewards(w http.ResponseWriter, r *http.Req
 	result := map[string]interface{}{
 		"provider_rewards": providerRewards,
 		"delegate_rewards": delegateRewards,
+	}
+
+	common.Respond(w, r, result, nil)
+}
+
+func (srh *StorageRestHandler) getChallengeRewards(w http.ResponseWriter, r *http.Request) {
+	// read all data from challenge_rewards table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	challengeID := r.URL.Query().Get("challenge_id")
+
+	blobberRewards, validatorRewards := edb.GetChallengeRewardsToProviders(challengeID)
+	blobberDelegateRewards, validatorDelegateRewards := edb.GetChallengeRewardsToDelegates(challengeID)
+
+	result := map[string]interface{}{
+		"blobber_rewards":            blobberRewards,
+		"validator_rewards":          validatorRewards,
+		"blobber_delegate_rewards":   blobberDelegateRewards,
+		"validator_delegate_rewards": validatorDelegateRewards,
 	}
 
 	common.Respond(w, r, result, nil)
