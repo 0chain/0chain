@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"fmt"
+	"math/rand"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -119,6 +120,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	nodeIDs = append(nodeIDs, newMiner.ID)
+
+	// REVERT AFTER TESTING
+	rand.Shuffle(len(nodeIDs), func(i, j int) {
+		nodeIDs[i], nodeIDs[j] = nodeIDs[j], nodeIDs[i]
+	})
+
 	if err := nodeIDs.save(balances, AllMinersKey); err != nil {
 		return "", common.NewErrorf("add_miner", "save miner to list failed: %v", err)
 	}
