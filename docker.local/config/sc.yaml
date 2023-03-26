@@ -69,8 +69,6 @@ smart_contracts:
       delete_sharder: 100
       miner_health_check: 100
       sharder_health_check: 100
-      blobber_health_check: 100
-      validator_health_check: 100
       contributeMpk: 100
       shareSignsOrShares: 100
       wait: 100
@@ -218,6 +216,7 @@ smart_contracts:
       free_allocation_request: 1500
       free_update_allocation: 2500
       blobber_health_check: 100
+      validator_health_check: 100
       update_blobber_settings: 100
       update_validator_settings: 100
       pay_blobber_block_rewards: 100
