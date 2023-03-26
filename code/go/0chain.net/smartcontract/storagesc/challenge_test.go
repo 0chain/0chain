@@ -1238,7 +1238,7 @@ func confirmBlobberReward(
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-f.rewardReturned()-f.validatorsReward(), int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.challengePoolBalance-f.blobberReward()-f.rewardReturned()-f.validatorsReward(), int64(challengePool.Balance), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 
