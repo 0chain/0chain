@@ -84,6 +84,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[dbs.ProviderID](TagShutdownProvider, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[dbs.ProviderID](TagKillProvider, withUniqueEventOverwrite()),
 
 			mergeAddAllocationEvents(),
 			mergeUpdateAllocEvents(),
@@ -406,23 +408,22 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	if len(events) == 0 {
 		return s, nil
 	}
-	gs := &globalSnapshot{
-		Snapshot: *s,
+
+	logging.Logger.Debug("getting blobber aggregate ids", zap.Any("snapshot_before", s))
+
+	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), s)
+	edb.updateMinerAggregate(round, edb.AggregatePeriod(), s)
+	edb.updateSharderAggregate(round, edb.AggregatePeriod(), s)
+	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), s)
+	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), s)
+	s.update(events)
+
+	s.Round = round
+	if err := edb.addSnapshot(*s); err != nil {
+		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", s, round), zap.Error(err))
 	}
 
-	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateMinerAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateSharderAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), gs)
-	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), gs)
-	gs.update(events)
-
-	gs.Round = round
-	if err := edb.addSnapshot(gs.Snapshot); err != nil {
-		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", gs, round), zap.Error(err))
-	}
-
-	return &gs.Snapshot, nil
+	return s, nil
 }
 
 func (edb *EventDb) addStat(event Event) (err error) {
@@ -802,6 +803,18 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addBurnTicket((*bt)[0])
+	case TagShutdownProvider:
+		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.providersSetBoolean(*u, "is_shutdown", true)
+	case TagKillProvider:
+		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.providersSetBoolean(*u, "is_killed", true)
 	default:
 		return nil
 	}

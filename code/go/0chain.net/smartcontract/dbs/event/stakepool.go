@@ -30,13 +30,13 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 	)
 	for i, sp := range spus {
 		if sp.Reward != 0 {
-			rewardsMap[sp.ProviderId] = rewardsMap[sp.ProviderId] + sp.Reward
+			rewardsMap[sp.ID] = rewardsMap[sp.ID] + sp.Reward
 		}
 		for poolId := range spus[i].DelegateRewards {
-			if _, found := dpRewardsMap[sp.ProviderId]; !found {
-				dpRewardsMap[sp.ProviderId] = make(map[string]currency.Coin, len(spus[i].DelegateRewards))
+			if _, found := dpRewardsMap[sp.ID]; !found {
+				dpRewardsMap[sp.ID] = make(map[string]currency.Coin, len(spus[i].DelegateRewards))
 			}
-			dpRewardsMap[sp.ProviderId][poolId] = dpRewardsMap[sp.ProviderId][poolId] + spus[i].DelegateRewards[poolId]
+			dpRewardsMap[sp.ID][poolId] = dpRewardsMap[sp.ID][poolId] + spus[i].DelegateRewards[poolId]
 		}
 		// todo https://github.com/0chain/0chain/issues/2122
 		// slash charges are no longer taken from rewards, but the stake pool. So related code has been removed.
@@ -54,10 +54,10 @@ func aggregateProviderPenalties(spus []dbs.StakePoolReward) (*providerPenaltiesD
 	)
 	for i, sp := range spus {
 		for poolId := range spus[i].DelegatePenalties {
-			if _, found := dpPenaltiesMap[sp.ProviderId]; !found {
-				dpPenaltiesMap[sp.ProviderId] = make(map[string]currency.Coin, len(spus[i].DelegatePenalties))
+			if _, found := dpPenaltiesMap[sp.ID]; !found {
+				dpPenaltiesMap[sp.ID] = make(map[string]currency.Coin, len(spus[i].DelegatePenalties))
 			}
-			dpPenaltiesMap[sp.ProviderId][poolId] = dpPenaltiesMap[sp.ProviderId][poolId] + spus[i].DelegatePenalties[poolId]
+			dpPenaltiesMap[sp.ID][poolId] = dpPenaltiesMap[sp.ID][poolId] + spus[i].DelegatePenalties[poolId]
 		}
 	}
 	return &providerPenaltiesDelegates{
@@ -273,17 +273,17 @@ func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: un
 	}
 
 	var provider interface{}
-	switch spu.ProviderType {
+	switch spu.Type {
 	case spenum.Blobber:
-		provider = &Blobber{Provider: Provider{ID: spu.ProviderId}}
+		provider = &Blobber{Provider: Provider{ID: spu.ID}}
 	case spenum.Validator:
-		provider = &Validator{Provider: Provider{ID: spu.ProviderId}}
+		provider = &Validator{Provider: Provider{ID: spu.ID}}
 	case spenum.Miner:
-		provider = &Miner{Provider: Provider{ID: spu.ProviderId}}
+		provider = &Miner{Provider: Provider{ID: spu.ID}}
 	case spenum.Sharder:
-		provider = &Sharder{Provider: Provider{ID: spu.ProviderId}}
+		provider = &Sharder{Provider: Provider{ID: spu.ID}}
 	default:
-		return fmt.Errorf("not implented provider type %v", spu.ProviderType)
+		return fmt.Errorf("not implented provider type %v", spu.Type)
 	}
 
 	vs := map[string]interface{}{
