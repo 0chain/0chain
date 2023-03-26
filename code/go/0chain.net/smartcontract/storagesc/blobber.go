@@ -587,10 +587,15 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 
 	var move currency.Coin
 	if size > 0 {
+
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("could not move tokens to challenge pool: %v", err)
 		}
+
+		logging.Logger.Debug("jayash specialRDTU", zap.Any("rdtu", rdtu), zap.Any("expiration", alloc.Expiration), zap.Any("timeunit", conf.TimeUnit), zap.Any("wmTime", wmTime), zap.Any("now", now), zap.Any("size", size), zap.Any("alloc", alloc))
+
+		logging.Logger.Debug("jayash commitMoveTokens", zap.Any("size", size), zap.Any("rdtu", rdtu), zap.Any("wmTime", wmTime))
 
 		move, err = details.upload(size, wmTime, rdtu)
 		if err != nil {
