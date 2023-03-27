@@ -230,10 +230,10 @@ func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
 	return newEventsMerger[dbs.DbHealthCheck](TagAuthorizerHealthCheck, withUniqueEventOverwrite())
 }
 
-func mergeBridgeMintEvents() *eventsMergerImpl[state.Mint] {
-	return newEventsMerger[state.Mint](TagBridgeMint, withUniqueEventOverwrite())
+func mergeAuthorizerMintEvents() *eventsMergerImpl[state.Mint] {
+	return newEventsMerger[state.Mint](TagAuthorizerMint, withUniqueEventOverwrite())
 }
 
-func mergeBridgeBurnEvents() *eventsMergerImpl[state.Burn] {
-	return newEventsMerger[state.Burn](TagBridgeBurn, withUniqueEventOverwrite())
+func mergeAuthorizerBurnEvents() *eventsMergerImpl[state.Burn] {
+	return newEventsMerger[state.Burn](TagAuthorizerBurn, withUniqueEventOverwrite())
 }

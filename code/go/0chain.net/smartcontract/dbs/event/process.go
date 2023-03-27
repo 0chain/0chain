@@ -144,8 +144,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUserWritePoolUnlockEvents(),
 			mergeUpdateUserPayedFeesEvents(),
 
-			mergeBridgeMintEvents(),
-			mergeBridgeBurnEvents(),
+			mergeAuthorizerMintEvents(),
+			mergeAuthorizerBurnEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -798,19 +798,19 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
-	case TagBridgeMint:
+	case TagAuthorizerMint:
 		m, ok := fromEvent[[]state.Mint](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		logging.Logger.Debug("TagBridgeMint", zap.Any("mints", m))
+		logging.Logger.Debug("TagAuthorizerMint", zap.Any("mints", m))
 		return edb.updateAuthorizersTotalMint(*m)
-	case TagBridgeBurn:
+	case TagAuthorizerBurn:
 		b, ok := fromEvent[[]state.Burn](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		logging.Logger.Debug("TagBridgeBurn", zap.Any("burns", b))
+		logging.Logger.Debug("TagAuthorizerBurn", zap.Any("burns", b))
 		return edb.updateAuthorizersTotalBurn(*b)
 	case TagAddBurnTicket:
 		bt, ok := fromEvent[[]BurnTicket](event.Data)

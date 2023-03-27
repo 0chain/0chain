@@ -166,9 +166,9 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 			ToClientID: sig.ID,
 			Amount:     share,
 		}
-		ctx.EmitEvent(event.TypeStats, event.TagBridgeMint, sig.ID, mint)
+		ctx.EmitEvent(event.TypeStats, event.TagAuthorizerMint, sig.ID, mint)
 	}
-	
+
 	err = sp.DistributeRewards(share, sig.ID, spenum.Authorizer, spenum.FeeRewardAuthorizer, ctx)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("failed to retrieve stake pool for authorizer %s", sig.ID))
