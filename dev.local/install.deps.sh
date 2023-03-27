@@ -21,7 +21,8 @@ echo ""
 echo "2> Build and install herumi/mcl"
 echo ""
 cd $root
-wget -O - https://github.com/herumi/mcl/archive/master.tar.gz | tar xz
+[ -f v1.81.tar.gz ] || wget https://github.com/herumi/mcl/archive/refs/tags/v1.81.tar.gz
+rm -rf mcl* && tar xzvf ./v1.81.tar.gz 
 mv mcl* mcl
 make -C mcl -j 4 lib/libmclbn256.dylib install
 
@@ -29,7 +30,8 @@ echo ""
 echo "3> Build and install herumi/bls"
 echo ""
 cd $root
-wget -O - https://github.com/herumi/bls/archive/master.tar.gz | tar xz 
+[ -f v1.35.tar.gz ] || wget https://github.com/herumi/bls/archive/refs/tags/v1.35.tar.gz
+rm -rf bls* && tar xzvf ./v1.35.tar.gz
 mv bls* bls
 make MCL_DIR=../mcl -C bls -j 4 install
 

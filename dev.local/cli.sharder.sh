@@ -70,7 +70,7 @@ start_sharder(){
     export LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
     export LD_LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
     export DYLD_LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
-    export CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
+    export CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lgmp"
     export CGO_CFLAGS="-I/usr/local/include"
     export CGO_CPPFLAGS="-I/usr/local/include"
     export LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4"
