@@ -70,7 +70,6 @@ func TestMint_Encode(t *testing.T) {
 		Minter     datastore.Key
 		ToClientID datastore.Key
 		Amount     currency.Coin
-		IsBridge   bool
 	}
 	tests := []struct {
 		name   string

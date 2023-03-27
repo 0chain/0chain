@@ -263,16 +263,11 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 	}
 	sc.mints = append(sc.mints, m)
 
-	ev := event.TagAddMint
-	if m.IsBridge {
-		ev = event.TagBridgeMint
-	}
-
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
 		Type:        event.TypeStats,
-		Tag:         ev,
+		Tag:         event.TagAddMint,
 		Index:       m.ToClientID,
 		Data:        m,
 	})

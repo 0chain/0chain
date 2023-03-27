@@ -15,7 +15,6 @@ type Mint struct {
 	Minter     datastore.Key `json:"minter"`
 	ToClientID datastore.Key `json:"to"`
 	Amount     currency.Coin `json:"amount"`
-	IsBridge   bool		  	 `json:"is_bridge"`
 }
 
 func NewMint(minter, toClientID datastore.Key, amount currency.Coin) *Mint {

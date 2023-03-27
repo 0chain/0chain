@@ -161,16 +161,12 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 
 	payload.Amount = amount
 	for _, sig := range payload.Signatures {
-		err = ctx.AddMint(&state.Mint{
+		mint := &state.Mint{
 			Minter:     gn.ID,
 			ToClientID: sig.ID,
 			Amount:     share,
-			IsBridge:   true,
-		})
-		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("%s, AddMint for authorizers, %s", code, info))
-			return
 		}
+		ctx.EmitEvent(event.TypeStats, event.TagBridgeMint, sig.ID, mint)
 	}
 	
 	err = sp.DistributeRewards(share, sig.ID, spenum.Authorizer, spenum.FeeRewardAuthorizer, ctx)
