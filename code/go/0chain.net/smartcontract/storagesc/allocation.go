@@ -321,7 +321,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			Delta:        bSize(request.Size, request.DataShards),
 		})
 
-		emitUpdateBlobber(b, balances)
+		emitUpdateBlobberAllocatedHealth(b, balances)
 	}
 
 	var options []WithOption
@@ -670,7 +670,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
-		emitUpdateBlobber(b, balances)
+		emitUpdateBlobberAllocatedHealth(b, balances)
 	}
 	// Save allocation
 	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
@@ -1033,7 +1033,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 				return fmt.Errorf("can't Save stake pool of %s: %v", ba.BlobberID,
 					err)
 			}
-			emitUpdateBlobber(b, balances)
+			emitUpdateBlobberAllocatedHealth(b, balances)
 		}
 	}
 
