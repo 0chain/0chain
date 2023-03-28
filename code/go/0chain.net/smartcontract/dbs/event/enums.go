@@ -113,6 +113,7 @@ const (
 	TagUpdateUserPayedFees
 	TagUpdateUserCollectedRewards
 	TagAddBurnTicket
+	TagAddBridgeMint
 	TagKillProvider
 	TagShutdownProvider
 	NumberOfTags
