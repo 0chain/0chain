@@ -128,7 +128,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	gn.WZCNNonceMinted[payload.Nonce] = true
 
 	// record mint nonce for a certain user
-	ctx.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, trans.ClientID, &event.User{
+	ctx.EmitEvent(event.TypeStats, event.TagAddBridgeMint, trans.ClientID, &event.User{
 		UserID:    trans.ClientID,
 		MintNonce: payload.Nonce,
 	})
@@ -177,12 +177,16 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
-		Minter:     gn.ID,
+		Minter:     ADDRESS,
 		ToClientID: trans.ClientID,
 		Amount:     payload.Amount,
 	})
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, Add mint operation, %s", code, info))
+		return
+	}
+
+	if err = sp.save("", sig.ID, ctx); err != nil {
 		return
 	}
 

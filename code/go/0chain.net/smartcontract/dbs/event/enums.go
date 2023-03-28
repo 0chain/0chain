@@ -113,8 +113,8 @@ const (
 	TagUpdateUserPayedFees
 	TagUpdateUserCollectedRewards
 	TagAddBurnTicket
-	TagAuthorizerMint
 	TagAuthorizerBurn
+	TagAddBridgeMint
 	TagKillProvider
 	TagShutdownProvider
 	NumberOfTags
@@ -212,7 +212,6 @@ func initTagString() {
 	TagString[TagValidatorHealthCheck] = "TagValidatorHealthCheck"
 	TagString[TagUpdateUserPayedFees] = "TagUpdateUserPayedFees"
 	TagString[TagUpdateUserCollectedRewards] = "TagUpdateUserCollectedRewards"
-	TagString[TagAuthorizerMint] = "TagAuthorizerMintMint"
 	TagString[TagAuthorizerBurn] = "TagAuthorizerBurn"
 	TagString[TagAddBurnTicket] = "TagAddBurnTicket"
 	TagString[TagKillProvider] = "TagKillProvider"
