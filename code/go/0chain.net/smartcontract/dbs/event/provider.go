@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"time"
 
 	"github.com/0chain/common/core/logging"
@@ -144,7 +145,9 @@ func mapProviders(
 
 func (edb *EventDb) providersSetBoolean(providers []dbs.ProviderID, field string, value bool) error {
 	mappedProviders := mapProviders(providers)
-	for pType, ids := range mappedProviders {
+	sortedTypes := sortProviderTypes(mappedProviders)
+	for _, pType := range sortedTypes {
+		ids := mappedProviders[pType]
 		table := providerToTableName(pType)
 		var values []bool
 		for i := 0; i < len(ids); i++ {
@@ -167,4 +170,15 @@ func (edb *EventDb) setBoolean(
 	return CreateBuilder(table, "id", ids).
 		AddUpdate(column, values).
 		Exec(edb).Error
+}
+
+func sortProviderTypes(m map[spenum.Provider][]string) []spenum.Provider {
+	var keys []spenum.Provider
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+	return keys
 }
