@@ -114,7 +114,9 @@ func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
 // The stake() returns total stake size including delegate pools want to unstake.
 func (sp *stakePool) stake() (stake currency.Coin, err error) {
 	var newStake currency.Coin
-	for _, dp := range sp.Pools {
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
 		newStake, err = currency.AddCoin(stake, dp.Balance)
 		if err != nil {
 			return
@@ -238,7 +240,9 @@ func (sp *stakePool) slash(
 	// stake should be moved;
 	var ratio = float64(slash) / float64(staked)
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty)
-	for id, dp := range sp.Pools {
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
 		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
 		if err != nil {
 			return 0, err
