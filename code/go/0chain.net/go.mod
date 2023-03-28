@@ -8,7 +8,7 @@ require (
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-playground/validator/v10 v10.11.2
-	github.com/gocql/gocql v1.3.1
+	github.com/gocql/gocql v1.3.2
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
@@ -44,6 +44,7 @@ require (
 
 require (
 	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+	github.com/go-faker/faker/v4 v4.0.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/lib/pq v1.10.7
 	github.com/ory/dockertest/v3 v3.9.1
@@ -68,7 +69,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-faker/faker/v4 v4.0.0 // indirect
 	github.com/go-ini/ini v1.66.4 // indirect
 	github.com/go-openapi/analysis v0.21.2 // indirect
 	github.com/go-openapi/errors v0.20.2 // indirect
