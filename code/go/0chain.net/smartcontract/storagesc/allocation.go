@@ -17,7 +17,6 @@ import (
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
@@ -336,16 +335,16 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			zap.Error(err))
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
-	i, _ := txn.Value.Int64()
-	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sa.ID, event.WritePoolLock{
-		Client:       txn.ClientID,
-		AllocationId: sa.ID,
-		Amount:       i,
-	})
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value)
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("write_pool_lock_failed", err.Error())
-	}
+	// i, _ := txn.Value.Int64()
+	// balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sa.ID, event.WritePoolLock{
+	// 	Client:       txn.ClientID,
+	// 	AllocationId: sa.ID,
+	// 	Amount:       i,
+	// })
+	// transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value)
+	// if err = balances.AddTransfer(transfer); err != nil {
+	// 	return "", common.NewError("write_pool_lock_failed", err.Error())
+	// }
 
 	cost, err := sa.cost()
 	if err != nil {
