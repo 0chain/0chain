@@ -27,10 +27,6 @@ on:
          description: 'gosdk branch branch to notify PR on test success'
          default: 'staging'
          required: true
-       zdns_branch:
-         description: '0dns branch branch to deploy'
-         default: 'staging'
-         required: true
        zs3server_branch:
          description: '0s3server branch branch to deploy'
          default: 'staging'
