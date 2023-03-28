@@ -1,5 +1,8 @@
 __debug_bin
 dev.local/build
+dev.local/rocksdb*
+dev.local/mcl*
+dev.local/bls*
 code/coverage.txt
 \.*
 !.gitignore
