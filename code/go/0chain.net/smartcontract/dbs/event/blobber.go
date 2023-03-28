@@ -213,7 +213,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 	ts := time.Now()
 	// fields match storagesc.emitUpdateBlobber
 	updateColumns := []string{
-		"uniqueIndex",
 		"latitude",
 		"longitude",
 		"read_price",
@@ -239,14 +238,14 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 	if err != nil {
 		return err
 	}
-	ids, ok := columns["primaryKey"]
+	ids, ok := columns["id"]
 	if !ok {
-		return common.NewError("update_allocation", "no id field provided in event Data")
+		return common.NewError("update_blobbers", "no id field provided in event Data")
 	}
 
-	updater := CreateBuilder("blobbers", "primaryKey", ids)
+	updater := CreateBuilder("blobbers", "id", ids)
 	for _, fieldKey := range updateColumns {
-		if fieldKey == "primaryKey" {
+		if fieldKey == "id" {
 			continue
 		}
 
