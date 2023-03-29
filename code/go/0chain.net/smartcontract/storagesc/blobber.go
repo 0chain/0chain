@@ -170,7 +170,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	if err = sp.Save(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
-
+	logging.Logger.Info("piers updateBlobber end", zap.Any("blober", blobber))
 	if err := emitUpdateBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
@@ -238,6 +238,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
 	blobber.ProviderType = spenum.Blobber
+	blobber.IsAvailable = true
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
@@ -291,6 +292,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())
 	}
+	logging.Logger.Info("piers updateBlobberSettings", zap.Any("update blobber", updatedBlobber))
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {
