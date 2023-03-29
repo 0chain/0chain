@@ -33,3 +33,10 @@ type ChallengePoolLock struct {
 	AllocationId string `json:"allocation_id"`
 	Amount       int64  `json:"amount"`
 }
+
+type BridgeMint struct {
+	UserID string `json:"user_id"`
+	MintNonce int64 `json:"mint_nonce"`
+	Amount currency.Coin `json:"amount"`
+	Signers []string `json:"signers"`
+}

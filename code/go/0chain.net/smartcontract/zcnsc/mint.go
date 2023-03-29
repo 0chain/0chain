@@ -127,12 +127,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	// record the global nonce from solidity smart contract
 	gn.WZCNNonceMinted[payload.Nonce] = true
 
-	// record mint nonce for a certain user
-	ctx.EmitEvent(event.TypeStats, event.TagAddBridgeMint, trans.ClientID, &event.User{
-		UserID:    trans.ClientID,
-		MintNonce: payload.Nonce,
-	})
-
 	var (
 		amount currency.Coin
 		share  currency.Coin
@@ -150,6 +144,18 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 	payload.Amount = amount
 
+	// record mint nonce for a certain user
+	signers := make([]string, 0, len(payload.Signatures))
+	for _, sig := range payload.Signatures {
+		signers = append(signers, sig.ID)
+	}
+	ctx.EmitEvent(event.TypeStats, event.TagAddBridgeMint, trans.ClientID, &event.BridgeMint{
+		UserID: trans.ClientID,
+		MintNonce: payload.Nonce,
+		Amount: payload.Amount,
+		Signers: signers,
+	})
+	
 	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
 	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
 
@@ -157,16 +163,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("failed to retrieve stake pool for authorizer %s", sig.ID))
 		return
-	}
-
-	payload.Amount = amount
-	for _, sig := range payload.Signatures {
-		mint := &state.Mint{
-			Minter:     gn.ID,
-			ToClientID: sig.ID,
-			Amount:     share,
-		}
-		ctx.EmitEvent(event.TypeStats, event.TagAuthorizerMint, sig.ID, mint)
 	}
 
 	err = sp.DistributeRewards(share, sig.ID, spenum.Authorizer, spenum.FeeRewardAuthorizer, ctx)

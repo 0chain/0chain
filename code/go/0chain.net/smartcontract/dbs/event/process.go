@@ -13,6 +13,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -806,13 +807,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
-	case TagAuthorizerMint:
-		m, ok := fromEvent[[]state.Mint](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		logging.Logger.Debug("TagAuthorizerMint", zap.Any("mints", m))
-		return edb.updateAuthorizersTotalMint(*m)
 	case TagAuthorizerBurn:
 		b, ok := fromEvent[[]state.Burn](event.Data)
 		if !ok {
@@ -831,11 +825,45 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.addBurnTicket((*bt)[0])
 	case TagAddBridgeMint:
 		// challenge pool
-		u, ok := fromEvent[[]User](event.Data)
+		bms, ok := fromEvent[[]BridgeMint](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateUserMintNonce(*u)
+		
+		users := make([]User, 0, len(*bms))
+		authMint := make(map[string]currency.Coin)
+		for _, bm := range *bms {
+			users = append(users, User{
+				UserID:       bm.UserID,
+				MintNonce: bm.MintNonce,
+			})
+
+			for _, sig := range bm.Signers {
+				mv, ok := authMint[sig]
+				if !ok {
+					mv = 0
+				}
+				authMint[sig] = mv + bm.Amount
+			}
+		}
+		mints := make([]state.Mint, 0, len(authMint))
+		for auth, amount := range authMint {
+			mints = append(mints, state.Mint{
+				Minter: auth,
+				Amount: amount,
+			})
+		}
+
+		err := edb.updateUserMintNonce(users)
+		if err != nil {
+			return err
+		}
+
+		err = edb.updateAuthorizersTotalMint(mints)
+		if err != nil {
+			return err
+		}
+		return nil
 
 	case TagShutdownProvider:
 		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
