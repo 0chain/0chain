@@ -874,7 +874,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	txn *transaction.Transaction,
 	challengeID string,
 	balances cstate.StateContextI,
-	minValidators int,
+	needValidNum int,
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(r.Intn(2))
@@ -973,22 +973,18 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("invalid blobber for allocation")
 	}
 
-	if alloc.DataShards+1 > minValidators {
-		minValidators = alloc.DataShards + 1
-	}
-
 	var randValidators []ValidationPartitionNode
 	if err := validators.GetRandomItems(balances, r, &randValidators); err != nil {
 		return nil, common.NewError("add_challenge",
 			"error getting validators random slice: "+err.Error())
 	}
 
-	if len(randValidators) < minValidators {
+	if len(randValidators) < needValidNum {
 		return nil, errors.New("validators number does not meet minimum challenge requirement")
 	}
 
 	var (
-		selectedValidators  = make([]*ValidationNode, 0, minValidators)
+		selectedValidators  = make([]*ValidationNode, 0, needValidNum)
 		perm                = r.Perm(len(randValidators))
 		remainingValidators = len(randValidators)
 	)
@@ -996,8 +992,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	now := txn.CreationDate
 	filterValidator := filterHealthyValidators(now)
 
-	for i := 0; i < len(randValidators) && len(selectedValidators) < minValidators; i++ {
-		if remainingValidators < minValidators {
+	for i := 0; i < len(randValidators) && len(selectedValidators) < needValidNum; i++ {
+		if remainingValidators < needValidNum {
 			return nil, errors.New("validators number does not meet minimum challenge requirement after filtering")
 		}
 		randValidator := randValidators[perm[i]]
@@ -1047,7 +1043,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	}
 
-	if len(selectedValidators) < minValidators {
+	if len(selectedValidators) < needValidNum {
 		return nil, errors.New("validators number does not meet minimum challenge requirement after filtering")
 	}
 
@@ -1104,18 +1100,18 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 			"error getting the validators list: %v", err)
 	}
 
-	// Check if the length of the list of validators is higher than the lower bound of validators
-	minValidators := conf.ValidatorsPerChallenge
+	// Check if the length of the list of validators is higher than the required number of validators
+	needValidNum := conf.ValidatorsPerChallenge
 	currentValidatorsCount, err := validators.Size(balances)
 	if err != nil {
 		return fmt.Errorf("can't get validators partition size: %v", err.Error())
 	}
 
-	if currentValidatorsCount < minValidators {
+	if currentValidatorsCount < needValidNum {
 		err := errors.New("validators number does not meet minimum challenge requirement")
 		logging.Logger.Error("generate_challenge", zap.Error(err),
 			zap.Int("validator num", currentValidatorsCount),
-			zap.Int("minimum required", minValidators))
+			zap.Int("minimum required", needValidNum))
 		return common.NewError("generate_challenge",
 			"validators number does not meet minimum challenge requirement")
 	}
@@ -1154,9 +1150,9 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		t,
 		challengeID,
 		balances,
-		minValidators)
+		needValidNum)
 	if err != nil {
-		return common.NewErrorf("adding_challenge_error", err.Error())
+		return common.NewErrorf("generate_challenge", err.Error())
 	}
 
 	if result == nil {
