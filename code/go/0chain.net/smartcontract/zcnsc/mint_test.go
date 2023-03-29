@@ -297,7 +297,7 @@ func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 
 	user, err := ctx.GetEventDB().GetUser(tr.ClientID)
 	require.NoError(t, err)
-	require.Equal(t, user.MintNonce, payload.Nonce)
+	require.Equal(t, payload.Nonce, user.MintNonce)
 }
 
 func Test_CheckAuthorizerStakePoolDistributedRewards(t *testing.T) {

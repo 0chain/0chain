@@ -285,9 +285,13 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			if !ok {
 				panic("failed to convert to user id")
 			}
-			user, ok := args.Get(3).(*event.User)
+			bm, ok := args.Get(3).(*event.BridgeMint)
 			if !ok {
 				panic("failed to convert to get user")
+			}
+			user := &event.User{
+				UserID:    bm.UserID,
+				MintNonce: bm.MintNonce,
 			}
 			if user.UserID != userId {
 				panic("user id must be equal to the id given as a param")
