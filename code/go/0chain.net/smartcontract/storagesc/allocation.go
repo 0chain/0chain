@@ -342,10 +342,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		AllocationId: sa.ID,
 		Amount:       i,
 	})
-	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value)
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("write_pool_lock_failed", err.Error())
-	}
 
 	cost, err := sa.cost()
 	if err != nil {
