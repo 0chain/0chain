@@ -404,6 +404,7 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:        mockReadPrice,
 					WritePrice:       mockWritePrice,
 				},
+				IsAvailable: true,
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
@@ -938,8 +939,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.1,
 				MaxOfferDuration: 200 * time.Second,
 			},
-			Capacity:  25 * GB, // 20 GB
-			Allocated: 5 * GB,  //  5 GB
+			Capacity:    25 * GB, // 20 GB
+			Allocated:   5 * GB,  //  5 GB
+			IsAvailable: true,
 		},
 		{
 			Provider: provider.Provider{
@@ -954,15 +956,15 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MinLockDemand:    0.05,
 				MaxOfferDuration: 250 * time.Second,
 			},
-			Capacity:  20 * GB, // 20 GB
-			Allocated: 10 * GB, // 10 GB
+			Capacity:    20 * GB, // 20 GB
+			Allocated:   10 * GB, // 10 GB
+			IsAvailable: true,
 		},
 	}
 	return
 }
 
 func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
-
 	const (
 		txHash, clientID, pubKey = "a5f4c3d2_tx_hex", "client_hex",
 			"pub_key_hex"
