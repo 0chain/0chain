@@ -82,7 +82,9 @@ func (mn *MinerNode) Decode(p []byte) error {
 
 func (mn *MinerNode) GetNodePools(status string) []*NodePool {
 	nodePools := make([]*NodePool, 0)
-	for id, pool := range mn.Pools {
+	orderedPoolIds := mn.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		pool := mn.Pools[id]
 		nodePool := NodePool{id, pool}
 		if len(status) == 0 || pool.Status.String() == status {
 			nodePools = append(nodePools, &nodePool)

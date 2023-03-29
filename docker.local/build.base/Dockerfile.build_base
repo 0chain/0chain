@@ -19,8 +19,8 @@ RUN cd /tmp/rocksdb* && \
 
 # Install Herumi's cryptography
 RUN cd /tmp && \
-    wget -O - https://github.com/herumi/mcl/archive/refs/tags/v1.57.tar.gz  | tar xz && \
-    wget -O - https://github.com/herumi/bls/archive/refs/tags/v1.22.tar.gz | tar xz && \
+    wget -O - https://github.com/herumi/mcl/archive/refs/tags/v1.81.tar.gz  | tar xz && \
+    wget -O - https://github.com/herumi/bls/archive/refs/tags/v1.35.tar.gz | tar xz && \
     mv mcl* mcl && \
     mv bls* bls 
     

@@ -108,6 +108,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberTotalUnStakesEvents(),
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
+			mergeStakePoolPenaltyEvents(),
 			mergeAddDelegatePoolsEvents(),
 
 			mergeUpdateMinerTotalStakesEvents(),
@@ -142,6 +143,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUserWritePoolLockEvents(),
 			mergeUserWritePoolUnlockEvents(),
 			mergeUpdateUserPayedFeesEvents(),
+			mergeAddBridgeMintEvents(),
 		}
 
 		others = make([]Event, 0, len(events))
@@ -193,16 +195,21 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		es := <-edb.eventsChannel
 
+		if es.round%edb.settings.PartitionChangePeriod == 0 {
+			edb.managePartitions(es.round)
+		}
+
 		tx, err := edb.Begin()
 		if err != nil {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
 		}
 
-		if es.round%edb.settings.PartitionChangePeriod == 0 {
-			edb.managePartitions(es.round)
+		if err = tx.addEvents(ctx, es); err != nil {
+			logging.Logger.Error("error saving events",
+				zap.Int64("round", es.round),
+				zap.Error(err))
 		}
 
-		tx.addEvents(ctx, es)
 		tse := time.Now()
 		tags := make([]string, 0, len(es.events))
 		for _, event := range es.events {
@@ -212,6 +219,8 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 					zap.Int64("round", event.BlockNumber),
 					zap.Any("tag", event.Tag),
 					zap.Error(err))
+				//logging.Logger.Panic(fmt.Sprintf("error processing event %v, %v, %v",
+				//	event.BlockNumber, event.Tag, err))
 			}
 		}
 
@@ -256,6 +265,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 }
 
 func (edb *EventDb) managePartitions(round int64) {
+	logging.Logger.Info("managing partitions", zap.Int64("round", round))
 	if err := edb.addPartition(round, "events"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
@@ -803,6 +813,14 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addBurnTicket((*bt)[0])
+	case TagAddBridgeMint:
+		// challenge pool
+		u, ok := fromEvent[[]User](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateUserMintNonce(*u)
+
 	case TagShutdownProvider:
 		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
 		if !ok {
