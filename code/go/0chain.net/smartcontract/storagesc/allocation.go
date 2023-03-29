@@ -380,7 +380,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	// emit event to eventDB
 	emitAddOrOverwriteAllocationBlobberTerms(sa, balances, txn)
-
+	logging.Logger.Info("transaction hash kishan", zap.Any("txn", txn))
 	return resp, err
 }
 
