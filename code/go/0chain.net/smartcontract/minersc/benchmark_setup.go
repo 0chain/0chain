@@ -166,7 +166,9 @@ func AddMockNodes(
 					log.Fatal(err)
 				}
 			}
-			for id, pool := range newNode.Pools {
+			orderedPoolIds := newNode.OrderedPoolIds()
+			for _, id := range orderedPoolIds {
+				pool := newNode.Pools[id]
 				dps = append(dps, event.DelegatePool{
 					PoolID:               id,
 					ProviderType:         nodeType,
