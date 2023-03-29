@@ -14,6 +14,22 @@ cd $root
 hostname=`ifconfig | grep "inet " | grep -Fv 127.0.0.1 | grep broadcast | awk '{print $2}'`
 
 
+# fixed LIBRARY_PATH
+snappy=$(brew --prefix snappy)
+lz4=$(brew --prefix lz4)
+gmp=$(brew --prefix gmp)
+openssl=$(brew --prefix openssl@1.1)
+export GMP_DIR=${gmp}
+export LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
+export LD_LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
+export DYLD_LIBRARY_PATH="/usr/local/lib:${openssl}/lib:${snappy}/lib:${lz4}/lib:${gmp}/lib"
+export CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lgmp"
+export CGO_CFLAGS="-I/usr/local/include"
+export CGO_CPPFLAGS="-I/usr/local/include"
+export LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lgmp"
+export CFLAGS="-I/usr/local/include"
+export CPPFLAGS="-I/usr/local/include"
+
 #include base 
 . ./cli.base.sh
 

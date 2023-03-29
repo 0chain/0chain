@@ -17,7 +17,9 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 	pType spenum.Provider,
 	balances cstate.StateContextI,
 ) {
-	for id, dp := range sp.Pools {
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
 		dpu := dbs.NewDelegatePoolUpdate(id, pId, pType)
 		dpu.Updates["balance"] = dp.Balance
 		balances.EmitEvent(event.TypeStats, event.TagUpdateDelegatePool, id, *dpu)
