@@ -46,6 +46,9 @@ type Snapshot struct {
 	SharderCount		 int64 `json:"sharder_count"`                    // Total number of sharders
 	ValidatorCount		 int64 `json:"validator_count"`                  // Total number of validators
 	AuthorizerCount		 int64 `json:"authorizer_count"`                  // Total number of authorizers
+	MinerTotalRewards	 int64 `json:"miner_total_rewards"`              // Total rewards of miners
+	SharderTotalRewards	 int64 `json:"sharder_total_rewards"`            // Total rewards of sharders
+	BlobberTotalRewards  int64 `json:"blobber_total_rewards"`            // Total rewards of blobbers
 }
 
 // ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
@@ -58,6 +61,9 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.MinedTotal += diff.MinedTotal
 	s.TotalStaked += diff.TotalStaked
 	s.TotalRewards += diff.TotalRewards
+	s.MinerTotalRewards += diff.MinerTotalRewards
+	s.SharderTotalRewards += diff.SharderTotalRewards
+	s.BlobberTotalRewards += diff.BlobberTotalRewards
 	s.StorageTokenStake += diff.StorageTokenStake
 	s.SuccessfulChallenges += diff.SuccessfulChallenges
 	s.TotalChallenges += diff.TotalChallenges
