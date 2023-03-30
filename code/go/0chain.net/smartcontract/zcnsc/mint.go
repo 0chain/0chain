@@ -3,12 +3,14 @@ package zcnsc
 import (
 	"fmt"
 	"math"
+	"math/rand"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
@@ -126,14 +128,13 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	gn.WZCNNonceMinted[payload.Nonce] = true
 
 	// record mint nonce for a certain user
-	ctx.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, trans.ClientID, &event.User{
+	ctx.EmitEvent(event.TypeStats, event.TagAddBridgeMint, trans.ClientID, &event.User{
 		UserID:    trans.ClientID,
 		MintNonce: payload.Nonce,
 	})
 
 	var (
 		amount currency.Coin
-		n      currency.Coin
 		share  currency.Coin
 	)
 	share, _, err = currency.DistributeCoin(gn.ZCNSConfig.MaxFee, int64(len(payload.Signatures)))
@@ -141,33 +142,32 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = errors.Wrap(err, fmt.Sprintf("%s, DistributeCoin operation, %s", code, info))
 		return
 	}
-	n, err = currency.Int64ToCoin(int64(len(payload.Signatures)))
+
+	amount, err = currency.MinusCoin(payload.Amount, share)
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, convert len signatures to coin, %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share, %s", code, info))
 		return
 	}
-	amount, err = currency.MinusCoin(payload.Amount, share*n)
+	payload.Amount = amount
+
+	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
+	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
+
+	sp, err := zcn.getStakePool(sig.ID, ctx)
 	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, payload.Amount - share * len(signatures), %s", code, info))
+		err = errors.Wrap(err, fmt.Sprintf("failed to retrieve stake pool for authorizer %s", sig.ID))
 		return
 	}
 
-	payload.Amount = amount
-	for _, sig := range payload.Signatures {
-		err = ctx.AddMint(&state.Mint{
-			Minter:     gn.ID,
-			ToClientID: sig.ID,
-			Amount:     share,
-		})
-		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("%s, AddMint for authorizers, %s", code, info))
-			return
-		}
+	err = sp.DistributeRewards(share, sig.ID, spenum.Authorizer, spenum.FeeRewardAuthorizer, ctx)
+	if err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("failed to retrieve stake pool for authorizer %s", sig.ID))
+		return
 	}
 
 	// mint the tokens
 	err = ctx.AddMint(&state.Mint{
-		Minter:     gn.ID,
+		Minter:     ADDRESS,
 		ToClientID: trans.ClientID,
 		Amount:     payload.Amount,
 	})
@@ -176,7 +176,11 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// Save the global node
+	if err = sp.save("", sig.ID, ctx); err != nil {
+		return
+	}
+
+	// Save the user node
 	err = gn.Save(ctx)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))

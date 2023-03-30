@@ -114,7 +114,9 @@ func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
 // The stake() returns total stake size including delegate pools want to unstake.
 func (sp *stakePool) stake() (stake currency.Coin, err error) {
 	var newStake currency.Coin
-	for _, dp := range sp.Pools {
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
 		newStake, err = currency.AddCoin(stake, dp.Balance)
 		if err != nil {
 			return
@@ -238,7 +240,9 @@ func (sp *stakePool) slash(
 	// stake should be moved;
 	var ratio = float64(slash) / float64(staked)
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty)
-	for id, dp := range sp.Pools {
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
 		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
 		if err != nil {
 			return 0, err
@@ -301,20 +305,27 @@ func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 //
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
+func (_ *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
 	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
 	return getStakePool(providerType, providerID, balances)
 }
 
-// getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
-	balances chainstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+func getStakePoolAdapter(
+	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+) (sp stakepool.AbstractStakePool, err error) {
 	pool, err := getStakePool(providerType, providerID, balances)
 	if err != nil {
 		return nil, err
 	}
 
 	return pool, nil
+}
+
+// getStakePool of given blobber
+func (_ *StorageSmartContract) getStakePoolAdapter(
+	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+) (sp stakepool.AbstractStakePool, err error) {
+	return getStakePoolAdapter(providerType, providerID, balances)
 }
 
 func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (

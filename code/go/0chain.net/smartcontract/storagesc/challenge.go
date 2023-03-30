@@ -176,9 +176,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
+	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances)
 	if err != nil {
-		return fmt.Errorf("can't move tokens to blobber: %v", err)
+		return fmt.Errorf("rewarding validators: %v", err)
 	}
 
 	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
@@ -924,6 +924,31 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			continue
 		}
 
+		if alloc.Finalized {
+			if err := blobberAllocParts.Remove(balances, allocID); err != nil {
+				logging.Logger.Error("could not remove allocation from blobber",
+					zap.Error(err),
+					zap.String("blobber", blobberID),
+					zap.String("allocation", allocID))
+				return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
+			}
+
+			allocNum, err := blobberAllocParts.Size(balances)
+			if err != nil {
+				return nil, fmt.Errorf("could not get challenge partition size: %v", err)
+			}
+
+			if allocNum == 0 {
+				// remove blobber from challenge ready partition when there's no allocation bind to it
+				err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
+				if err != nil && !partitions.ErrItemNotFound(err) {
+					// it could be empty if we finalize the allocation before committing any read or write
+					return nil, fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
+				}
+			}
+			continue
+		}
+
 		if alloc.Expiration >= txn.CreationDate {
 			foundAllocation = true
 			break
@@ -959,9 +984,33 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		perm               = r.Perm(len(randValidators))
 	)
 
+	now := txn.CreationDate
+	filterValidator := filterHealthyValidators(now)
+
 	for i := 0; i < needValidNum; i++ {
 		randValidator := randValidators[perm[i]]
 		if randValidator.Id != blobberID {
+			validator, err := getValidator(randValidator.Id, balances)
+
+			if err != nil {
+				if cstate.ErrInvalidState(err) {
+					return nil, common.NewError("add_challenge",
+						err.Error())
+				}
+				continue
+			}
+
+			kick, err := filterValidator(validator)
+
+			if err != nil {
+				return nil, common.NewError("add_challenge", "failed to filter validator: "+
+					err.Error())
+			}
+
+			if kick {
+				continue
+			}
+
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
 					Provider: provider.Provider{

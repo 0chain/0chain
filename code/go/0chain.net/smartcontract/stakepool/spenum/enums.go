@@ -16,21 +16,27 @@ const (
 	Authorizer
 )
 
-var providerString = []string{"unknown", "miner", "sharder", "blobber", "validator", "authorizer"}
+var providerString = []string{"invalid", "miner", "sharder", "blobber", "validator", "authorizer"}
+
+var Providers = map[string]Provider{
+	"miner":      Miner,
+	"sharder":    Sharder,
+	"blobber":    Blobber,
+	"validator":  Validator,
+	"authorizer": Authorizer,
+}
 
 func (p Provider) String() string {
-	if p < 0 || int(p) >= len(providerString) {
+	if p < 1 || int(p) >= len(providerString) {
 		return "unknown"
 	}
-
 	return providerString[p]
 }
 
 func ToProviderType(ps string) Provider {
-	for i, s := range providerString {
-		if s == ps {
-			return Provider(i)
-		}
+	provider, ok := Providers[ps]
+	if ok {
+		return provider
 	}
 	return 0
 }
@@ -67,6 +73,7 @@ const (
 	BlockRewardSharder
 	BlockRewardBlobber
 	FeeRewardMiner
+	FeeRewardAuthorizer
 	FeeRewardSharder
 	ValidationReward
 	FileDownloadReward

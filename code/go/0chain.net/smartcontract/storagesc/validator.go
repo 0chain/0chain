@@ -27,6 +27,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
 	newValidator.ProviderType = spenum.Validator
+	newValidator.LastHealthCheck = t.CreationDate
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
@@ -89,8 +90,6 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
-
-	newValidator.LastHealthCheck = t.CreationDate
 
 	if err = newValidator.emitAddOrOverwrite(sp, balances); err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())

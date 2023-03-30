@@ -3,10 +3,14 @@ package event
 import (
 	"errors"
 	"fmt"
+	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
 )
+
+const ActiveAuthorizerTimeLimit = 5 * time.Minute // 5 Minutes
 
 type Authorizer struct {
 	Provider
@@ -95,6 +99,16 @@ func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 	return &auth, nil
 }
 
+func (edb *EventDb) GetActiveAuthorizers() ([]Authorizer, error) {
+	now := common.Now()
+	var authorizers []Authorizer
+	result := edb.Store.Get().
+		Model(&Authorizer{}).
+		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveAuthorizerTimeLimit).Unix()).
+		Find(&authorizers)
+	return authorizers, result.Error
+}
+
 func (edb *EventDb) GetAuthorizers() ([]Authorizer, error) {
 	var authorizers []Authorizer
 	result := edb.Store.Get().
@@ -141,7 +155,7 @@ func NewUpdateAuthorizerTotalUnStakeEvent(ID string, totalUnstake currency.Coin)
 	return TagUpdateAuthorizerTotalStake, Authorizer{
 		Provider: Provider{
 			ID:         ID,
-			TotalStake: totalUnstake,
+			UnstakeTotal: totalUnstake,
 		},
 	}
 }
