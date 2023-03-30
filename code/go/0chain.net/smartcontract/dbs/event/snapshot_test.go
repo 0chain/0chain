@@ -23,6 +23,7 @@ func TestSnapshotFunctions(t *testing.T) {
 			ClientLocks: int64(100),
 			MinedTotal: int64(100),
 			TotalStaked: int64(100),
+			StorageTokenStake: int64(100),
 			TotalRewards: int64(100),
 			SuccessfulChallenges: int64(100),
 			TotalChallenges: int64(100),
@@ -54,6 +55,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.MinedTotal + snapshotDiff.MinedTotal, s.MinedTotal)
 		require.Equal(t, initialSnapshot.TotalTxnFee + snapshotDiff.TotalTxnFee , s.TotalTxnFee)
 		require.Equal(t, initialSnapshot.TotalStaked + snapshotDiff.TotalStaked, s.TotalStaked)
+		require.Equal(t, initialSnapshot.StorageTokenStake + snapshotDiff.StorageTokenStake, s.StorageTokenStake)
 		require.Equal(t, initialSnapshot.TotalRewards + snapshotDiff.TotalRewards, s.TotalRewards)
 		require.Equal(t, initialSnapshot.SuccessfulChallenges + snapshotDiff.SuccessfulChallenges, s.SuccessfulChallenges)
 		require.Equal(t, initialSnapshot.TotalChallenges + snapshotDiff.TotalChallenges, s.TotalChallenges)
@@ -118,6 +120,7 @@ func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {
 		ClientLocks: int64(100),
 		MinedTotal: int64(100),
 		TotalStaked: int64(100),
+		StorageTokenStake: int64(100),
 		TotalRewards: int64(100),
 		SuccessfulChallenges: int64(100),
 		TotalChallenges: int64(100),

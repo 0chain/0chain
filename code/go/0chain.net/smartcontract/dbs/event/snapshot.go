@@ -28,6 +28,7 @@ type Snapshot struct {
 	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
 	// updated from blobber snapshot aggregate table
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
+	StorageTokenStake	 int64 `json:"storage_token_stake"`              //*485 SUM of all stake amount for storage blobbers
 	TotalRewards         int64 `json:"total_rewards"`                    //SUM total of all rewards
 	SuccessfulChallenges int64 `json:"successful_challenges"`            //*493 SUM percentage of challenges failed by a particular blobber
 	TotalChallenges      int64 `json:"total_challenges"`                 //*493 SUM percentage of challenges failed by a particular blobber
@@ -63,6 +64,7 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.MinerTotalRewards += diff.MinerTotalRewards
 	s.SharderTotalRewards += diff.SharderTotalRewards
 	s.BlobberTotalRewards += diff.BlobberTotalRewards
+	s.StorageTokenStake += diff.StorageTokenStake
 	s.SuccessfulChallenges += diff.SuccessfulChallenges
 	s.TotalChallenges += diff.TotalChallenges
 	s.AllocatedStorage += diff.AllocatedStorage

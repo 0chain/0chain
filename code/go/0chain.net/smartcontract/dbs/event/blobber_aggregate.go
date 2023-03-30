@@ -159,6 +159,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.SuccessfulChallenges += int64(current.ChallengesPassed - old.ChallengesPassed)
 		gsDiff.TotalChallenges += int64(current.ChallengesCompleted - old.ChallengesCompleted)
 		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
+		gsDiff.StorageTokenStake += int64(current.TotalStake - old.TotalStake)
 		gsDiff.AllocatedStorage += current.Allocated - old.Allocated
 		gsDiff.MaxCapacityStorage += current.Capacity - old.Capacity
 		gsDiff.UsedStorage += current.SavedData - old.SavedData
@@ -198,6 +199,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.UsedStorage += -old.SavedData
 		gsDiff.TotalRewards += int64(-old.TotalRewards)
 		gsDiff.TotalStaked += int64(-old.TotalStake)
+		gsDiff.StorageTokenStake += int64(-old.TotalStake)
 		gsDiff.BlobberCount -= 1
 
 		if old.WritePrice > 0 {
