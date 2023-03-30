@@ -371,6 +371,7 @@ func calculateBlobberAggregate(round int64, current *Blobber, old *BlobberSnapsh
 	aggregate.RankMetric = current.RankMetric
 	aggregate.ChallengesPassed = current.ChallengesPassed
 	aggregate.ChallengesCompleted = current.ChallengesCompleted
+	aggregate.LastHealthCheck = current.LastHealthCheck
 	return aggregate
 }
 
@@ -426,6 +427,7 @@ func assertBlobberAggregate(t *testing.T, expected, actual *BlobberAggregate) {
 	require.Equal(t, expected.RankMetric, actual.RankMetric)
 	require.Equal(t, expected.ChallengesPassed, actual.ChallengesPassed)
 	require.Equal(t, expected.ChallengesCompleted, actual.ChallengesCompleted)
+	require.Equal(t, expected.LastHealthCheck, actual.LastHealthCheck)
 }
 
 func assertBlobberSnapshot(t *testing.T, expected, actual *BlobberSnapshot) {

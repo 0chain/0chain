@@ -251,6 +251,7 @@ func calculateMinerAggregate(round int64, current *Miner, old *MinerSnapshot) Mi
 	aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 	aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
 	aggregate.Fees = (old.Fees + current.Fees) / 2
+	aggregate.LastHealthCheck = current.LastHealthCheck
 	return aggregate
 }
 
@@ -295,6 +296,7 @@ func assertMinerAggregate(t *testing.T, expected, actual *MinerAggregate) {
 	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.ServiceCharge, actual.ServiceCharge)
 	require.Equal(t, expected.Fees, actual.Fees)
+	require.Equal(t, expected.LastHealthCheck, actual.LastHealthCheck)
 }
 
 func assertMinerSnapshot(t *testing.T, expected, actual *MinerSnapshot) {

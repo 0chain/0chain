@@ -2,6 +2,7 @@ package event
 
 import (
 	"0chain.net/chaincore/config"
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -18,6 +19,7 @@ type MinerAggregate struct {
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
 }
 
 func (m *MinerAggregate) GetTotalStake() currency.Coin {
@@ -144,6 +146,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 
 		recalculateProviderFields(&old, &current, &aggregate)
 		aggregate.Fees = (old.Fees + current.Fees) / 2
+		aggregate.LastHealthCheck = current.LastHealthCheck
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)

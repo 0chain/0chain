@@ -244,6 +244,7 @@ func calculateValidatorAggregate(round int64, current *Validator, old *Validator
 	aggregate.TotalRewards = (old.TotalRewards + current.Rewards.TotalRewards) / 2
 	aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 	aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
+	aggregate.LastHealthCheck = current.LastHealthCheck
 	return aggregate
 }
 
@@ -287,6 +288,7 @@ func assertValidatorAggregate(t *testing.T, expected, actual *ValidatorAggregate
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
 	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.ServiceCharge, actual.ServiceCharge)
+	require.Equal(t, expected.LastHealthCheck, actual.LastHealthCheck)
 }
 
 func assertValidatorSnapshot(t *testing.T, expected, actual *ValidatorSnapshot) {

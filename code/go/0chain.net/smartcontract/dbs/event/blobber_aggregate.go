@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -31,6 +32,7 @@ type BlobberAggregate struct {
 	InactiveRounds      int64         `json:"InactiveRounds"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
 	Downtime            uint64        `json:"downtime"`
+	LastHealthCheck     common.Timestamp `json:"last_health_check"`
 }
 
 func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *Snapshot) {
@@ -138,6 +140,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 			Round:     round,
 			BlobberID: current.ID,
 			BucketID:  current.BucketId,
+			LastHealthCheck: current.LastHealthCheck,
 		}
 		aggregate.WritePrice = (old.WritePrice + current.WritePrice) / 2
 		aggregate.Capacity = (old.Capacity + current.Capacity) / 2
