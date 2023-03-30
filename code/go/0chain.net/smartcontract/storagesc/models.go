@@ -811,7 +811,7 @@ func (sa *StorageAllocation) isActive(
 	}
 
 	if !blobber.IsAvailable {
-		return fmt.Errorf("blobber %s is not currently avaliable for new allocations", blobber.ID)
+		return fmt.Errorf("blobber %s is not currently available for new allocations", blobber.ID)
 	}
 
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
