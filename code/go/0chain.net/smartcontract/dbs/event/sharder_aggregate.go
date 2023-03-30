@@ -150,6 +150,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
+		gsDiff.SharderTotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
 		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
 
 		oldShardersProcessingMap[current.ID] = processingEntity

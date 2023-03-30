@@ -164,6 +164,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		gsDiff.MaxCapacityStorage += current.Capacity - old.Capacity
 		gsDiff.UsedStorage += current.SavedData - old.SavedData
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
+		gsDiff.BlobberTotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
 
 		// Change in staked storage (staked_storage = total_stake / write_price)
 		oldSS := old.Capacity
