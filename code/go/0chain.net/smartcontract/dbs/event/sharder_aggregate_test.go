@@ -316,11 +316,13 @@ func assertSharderGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBuck
 			continue
 		}
 		expectedGlobal.TotalRewards += int64(sharder.Rewards.TotalRewards)
+		expectedGlobal.SharderTotalRewards += int64(sharder.Rewards.TotalRewards)
 		expectedGlobal.TotalStaked += int64(sharder.TotalStake)
 		expectedGlobal.SharderCount += 1
 	}
 
 	assert.Equal(t, expectedGlobal.TotalRewards, actualSnapshot.TotalRewards)
+	assert.Equal(t, expectedGlobal.SharderTotalRewards, actualSnapshot.SharderTotalRewards)
 	assert.Equal(t, expectedGlobal.SharderCount, actualSnapshot.SharderCount)
 	assert.Equal(t, expectedGlobal.TotalStaked, actualSnapshot.TotalStaked)
 }

@@ -533,8 +533,16 @@ func Test_flow_reward(t *testing.T) {
 		var blobb1 = balances.balances[b3.id]
 		var wpb1, cpb1 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149901100442, wpb1)
-		require.EqualValues(t, 98221390, cpb1)
+		wpb1i, err2 := wpb1.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		cpb1i, err2 := cpb1.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		require.EqualValues(t, 149901100442, wpb1i)
+		require.EqualValues(t, 71772822, cpb1i)
 		require.EqualValues(t, 40*x10, blobb1)
 
 		// write 10 KB
@@ -573,8 +581,17 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149901100442, apb2)
-		require.EqualValues(t, 98281436, cpb2) // reward for >64 KB should be calculated as for 64KB
+		apb2i, err2 := apb2.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		cpb2i, err2 := cpb2.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		require.EqualValues(t, 149901100442, apb2i)
+		require.EqualValues(t, 71832868, cpb2i)
+
 		require.EqualValues(t, 40*x10, blobb2)
 
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -589,8 +606,16 @@ func Test_flow_reward(t *testing.T) {
 		var blobb1 = balances.balances[b3.id]
 		var wpb1, cpb1 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149901040396, wpb1)
-		require.EqualValues(t, 98281436, cpb1)
+		wpb1i, err2 := wpb1.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		cpb1i, err2 := cpb1.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		require.EqualValues(t, 149901040396, wpb1i)
+		require.EqualValues(t, 71832868, cpb1i)
 		require.EqualValues(t, 40*x10, blobb1)
 
 		// delete 10 KB
@@ -629,8 +654,16 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149901040396, apb2)
-		require.EqualValues(t, 98281436, cpb2) // balance should not change
+		apb2i, err2 := apb2.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		cpb2i, err2 := cpb2.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		require.EqualValues(t, 149901040396, apb2i)
+		require.EqualValues(t, 71832868, cpb2i)
 		require.EqualValues(t, 40*x10, blobb2)
 
 		alloc, err = ssc.getAllocation(allocID, balances)

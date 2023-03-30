@@ -130,6 +130,29 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	return nil
 }
 
+func (cp *challengePool) moveToBlobbers(sscKey string, reward currency.Coin,
+	blobberId datastore.Key,
+	sp *stakePool,
+	balances cstate.StateContextI,
+) error {
+
+	if reward == 0 {
+		return nil // nothing to move, or nothing to move to
+	}
+
+	if cp.ZcnPool.Balance < reward {
+		return fmt.Errorf("not enough tokens in challenge pool: %v < %v", cp.Balance, reward)
+	}
+
+	err := sp.DistributeRewards(reward, blobberId, spenum.Blobber, spenum.ChallengePassReward, balances)
+	if err != nil {
+		return fmt.Errorf("can't move tokens to blobber: %v", err)
+	}
+
+	cp.ZcnPool.Balance -= reward
+	return nil
+}
+
 func toChallengePoolStat(cp *event.ChallengePool) *challengePoolStat {
 	stat := challengePoolStat{
 		ID:         cp.ID,
