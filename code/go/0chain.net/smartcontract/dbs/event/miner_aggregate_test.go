@@ -316,6 +316,7 @@ func assertMinerGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucket
 			continue
 		}
 		expectedGlobal.TotalRewards += int64(miner.Rewards.TotalRewards)
+		expectedGlobal.MinerTotalRewards += int64(miner.Rewards.TotalRewards)
 		expectedGlobal.TotalStaked += int64(miner.TotalStake)
 		expectedGlobal.MinerCount += 1
 	}
@@ -323,4 +324,5 @@ func assertMinerGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucket
 	assert.Equal(t, expectedGlobal.TotalRewards, actualSnapshot.TotalRewards)
 	assert.Equal(t, expectedGlobal.MinerCount, actualSnapshot.MinerCount)
 	assert.Equal(t, expectedGlobal.TotalStaked, actualSnapshot.TotalStaked)
+	assert.Equal(t, expectedGlobal.MinerTotalRewards, actualSnapshot.MinerTotalRewards)
 }
