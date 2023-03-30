@@ -479,7 +479,9 @@ func confirmFinalizeAllocation(
 	for i, sp := range sps {
 		serviceCharge := f.blobberServiceCharge(i, cancellationCharge) + f.minLockServiceCharge(i)
 		require.Equal(t, serviceCharge, int64(sp.Reward))
-		for poolId, dp := range sp.Pools {
+		orderedPoolIds := sp.OrderedPoolIds()
+		for _, poolId := range orderedPoolIds {
+			dp := sp.Pools[poolId]
 			wSplit := strings.Split(poolId, " ")
 			dId, err := strconv.Atoi(wSplit[2])
 			require.NoError(t, err)
