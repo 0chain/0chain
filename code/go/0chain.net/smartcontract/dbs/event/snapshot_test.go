@@ -39,6 +39,9 @@ func TestSnapshotFunctions(t *testing.T) {
 			SharderCount: int64(1),
 			AuthorizerCount: int64(1),
 			ValidatorCount: int64(1),
+			BlobberTotalRewards: int64(100),
+			MinerTotalRewards: int64(100),
+			SharderTotalRewards: int64(100),
 		}
 
 		s.ApplyDiff(&snapshotDiff)
@@ -67,6 +70,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.SharderCount + snapshotDiff.SharderCount, s.SharderCount)
 		require.Equal(t, initialSnapshot.AuthorizerCount + snapshotDiff.AuthorizerCount, s.AuthorizerCount)
 		require.Equal(t, initialSnapshot.ValidatorCount + snapshotDiff.ValidatorCount, s.ValidatorCount)
+		require.Equal(t, initialSnapshot.BlobberTotalRewards + snapshotDiff.BlobberTotalRewards, s.BlobberTotalRewards)
+		require.Equal(t, initialSnapshot.MinerTotalRewards + snapshotDiff.MinerTotalRewards, s.MinerTotalRewards)
+		require.Equal(t, initialSnapshot.SharderTotalRewards + snapshotDiff.SharderTotalRewards, s.SharderTotalRewards)
 
 		// Test snapshot StakedStorage will not exceed MaxCapacityStorage
 		snapShotDiff2 := Snapshot{ StakedStorage: s.MaxCapacityStorage + 1 }
@@ -128,6 +134,9 @@ func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {
 		SharderCount: int64(5),
 		ValidatorCount: int64(5),
 		AuthorizerCount: int64(5),
+		BlobberTotalRewards: int64(100),
+		MinerTotalRewards: int64(100),
+		SharderTotalRewards: int64(100),
 	}
 
 	err := edb.addSnapshot(s)
