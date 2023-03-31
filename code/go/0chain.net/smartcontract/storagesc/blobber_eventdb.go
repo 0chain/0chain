@@ -4,8 +4,6 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
@@ -40,7 +38,6 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		},
 		OffersTotal: sp.TotalOffers,
 	}
-	logging.Logger.Info("piers emitUpdateBlobber", zap.Any("data", data))
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
 	return nil
 }

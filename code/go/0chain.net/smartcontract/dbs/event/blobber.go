@@ -233,7 +233,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"unstake_total",
 		"total_stake",
 	}
-	logging.Logger.Info("piers updateBlobber", zap.Any("blobbers", blobbers))
 	columns, err := Columnize(blobbers)
 	if err != nil {
 		return err
