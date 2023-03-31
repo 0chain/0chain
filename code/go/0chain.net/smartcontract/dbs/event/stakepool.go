@@ -215,12 +215,13 @@ func (edb *EventDb) rewardProviders(
 	for id, r := range prRewards {
 		ids = append(ids, id)
 		rewards = append(rewards, uint64(r))
+		tr, ok := prTotalRewards[id]
+		if !ok {
+			return fmt.Errorf("could not find total rewards for provider %s", id)
+		}
+		totalRewards = append(totalRewards, uint64(tr))
 		lastUpdated = append(lastUpdated, round)
 	}
-	for _, tr := range prTotalRewards {
-		totalRewards = append(totalRewards, uint64(tr))
-	}
-
 	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
 		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
