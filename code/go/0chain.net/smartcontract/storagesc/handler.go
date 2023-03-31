@@ -2185,7 +2185,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
 		IsKilled:                 blobber.IsKilled,
 		IsShutdown:               blobber.IsShutdown,
-		SavedData: 			  	  blobber.SavedData,
+		SavedData:                blobber.SavedData,
 		IsAvailable:              blobber.IsAvailable,
 	}
 }
