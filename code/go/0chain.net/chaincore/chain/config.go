@@ -717,14 +717,34 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	if err != nil {
 		return err
 	}
-	conf.MinTxnFee, err = cf.GetCoin(enums.TransactionMinFee)
+
+	minTxnFeeF, err := cf.GetFloat64(enums.TransactionMinFee)
 	if err != nil {
 		return err
 	}
-	conf.MaxTxnFee, err = cf.GetCoin(enums.TransactionMaxFee)
+
+	minTxnFee, err := currency.ParseZCN(minTxnFeeF)
 	if err != nil {
 		return err
 	}
+	conf.MinTxnFee = minTxnFee
+
+	// get max txn fee from cf and parse it to currency.Coin
+	maxTxnFeeF, err := cf.GetFloat64(enums.TransactionMaxFee)
+	if err != nil {
+		return err
+	}
+
+	maxTxnFee, err := currency.ParseZCN(maxTxnFeeF)
+	if err != nil {
+		return err
+	}
+
+	conf.MaxTxnFee = maxTxnFee
+	if maxTxnFee == 0 {
+		conf.MaxTxnFee = DefaultMaxTxnFee
+	}
+
 	conf.ClientSignatureScheme, err = cf.GetString(enums.ClientSignatureScheme)
 	if err != nil {
 		return err
