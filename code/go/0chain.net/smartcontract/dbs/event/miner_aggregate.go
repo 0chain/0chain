@@ -147,6 +147,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
+		gsDiff.MinerTotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
 		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
 
 		oldMinersProcessingMap[current.ID] = processingEntity
