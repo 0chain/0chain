@@ -745,6 +745,16 @@ func (sa *StorageAllocation) addToWritePool(
 			sa.WritePool = writePool
 		}
 	}
+
+	i, err := txn.Value.Int64()
+	if err != nil {
+		return err
+	}
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sa.ID, event.WritePoolLock{
+		Client:       txn.ClientID,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
 	return nil
 }
 
