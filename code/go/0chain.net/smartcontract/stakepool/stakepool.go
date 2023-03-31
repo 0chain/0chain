@@ -43,14 +43,18 @@ type AbstractStakePool interface {
 	GetSettings() Settings
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
+	Kill(float64, string, spenum.Provider, cstate.StateContextI) error
+	IsDead() bool
+	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
 }
 
 // StakePool holds delegate information for an 0chain providers
 type StakePool struct {
-	Pools    map[string]*DelegatePool `json:"pools"`
-	Reward   currency.Coin            `json:"rewards"`
-	Settings Settings                 `json:"settings"`
-	Minter   cstate.ApprovedMinter    `json:"minter"`
+	Pools         map[string]*DelegatePool `json:"pools"`
+	Reward        currency.Coin            `json:"rewards"`
+	Settings      Settings                 `json:"settings"`
+	Minter        cstate.ApprovedMinter    `json:"minter"`
+	HasBeenKilled bool                     `json:"is_dead"`
 }
 
 type Settings struct {
@@ -172,6 +176,22 @@ func (sp *StakePool) GetPools() map[string]*DelegatePool {
 	return sp.Pools
 }
 
+func (sp *StakePool) IsDead() bool {
+	return sp.HasBeenKilled
+}
+
+func (sp *StakePool) Kill(
+	killSlash float64, providerId string, pType spenum.Provider, balances cstate.StateContextI,
+) error {
+	sp.HasBeenKilled = true
+	return sp.SlashFraction(
+		killSlash,
+		providerId,
+		pType,
+		balances,
+	)
+}
+
 func (sp *StakePool) OrderedPoolIds() []string {
 	ids := make([]string, 0, len(sp.Pools))
 	for id := range sp.Pools {
@@ -284,7 +304,7 @@ func (sp *StakePool) MintRewards(
 			ProviderID:   providerId,
 		})
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.User{
+		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.UserAggregate{
 			CollectedReward: int64(dPool.Reward),
 			UserID:          clientId,
 		})
@@ -320,6 +340,40 @@ func (sp *StakePool) Empty(sscID, poolID, clientID string, balances cstate.State
 	return nil
 }
 
+// SlashFraction
+// slash stake pools funds, if a provider is killed
+func (sp *StakePool) SlashFraction(
+	killSlashFraction float64,
+	providerId string,
+	providerType spenum.Provider,
+	balances cstate.StateContextI,
+) error {
+	if killSlashFraction == 0.0 {
+		return nil
+	}
+	if killSlashFraction < 0 || killSlashFraction > 1 {
+		return fmt.Errorf("kill slash %v should be in the interval [0,1]", killSlashFraction)
+	}
+	reduction := 1 - killSlashFraction
+	if reduction < 0 {
+		reduction = 0
+	}
+	if reduction > 1 {
+		reduction = 1
+	}
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		var err error
+		dp := sp.Pools[id]
+		dp.Balance, err = currency.MultFloat64(dp.Balance, reduction)
+		if err != nil {
+			return err
+		}
+	}
+	sp.EmitStakePoolBalanceUpdate(providerId, providerType, balances)
+	return nil
+}
+
 // DistributeRewardsRandN distributes rewards to randomly selected N delegate pools
 func (sp *StakePool) DistributeRewardsRandN(
 	value currency.Coin,
@@ -330,7 +384,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
-	if value == 0 {
+	if value == 0 || sp.HasBeenKilled {
 		return nil // nothing to move
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
@@ -474,7 +528,7 @@ func (sp *StakePool) DistributeRewards(
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
-	if value == 0 {
+	if value == 0 || sp.HasBeenKilled {
 		return nil // nothing to move
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
@@ -525,11 +579,13 @@ func (sp *StakePool) DistributeRewards(
 		return fmt.Errorf("no stake")
 	}
 
-	for _, pool := range sp.GetOrderedPools() {
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
 		if valueBalance == 0 {
 			break
 		}
-		ratio := float64(pool.Balance) / float64(stake)
+		dp := sp.Pools[id]
+		ratio := float64(dp.Balance) / float64(stake)
 		reward, err := currency.MultFloat64(valueLeft, ratio)
 		if err != nil {
 			return err
@@ -540,7 +596,7 @@ func (sp *StakePool) DistributeRewards(
 		} else {
 			valueBalance -= reward
 		}
-		pool.Reward, err = currency.AddCoin(pool.Reward, reward)
+		dp.Reward, err = currency.AddCoin(dp.Reward, reward)
 		if err != nil {
 			return err
 		}
@@ -564,8 +620,10 @@ func (sp *StakePool) DistributeRewards(
 }
 
 func (sp *StakePool) stake() (stake currency.Coin, err error) {
-	for _, pool := range sp.GetOrderedPools() {
-		newStake, err := currency.AddCoin(stake, pool.Balance)
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
+		newStake, err := currency.AddCoin(stake, dp.Balance)
 		if err != nil {
 			return 0, err
 		}

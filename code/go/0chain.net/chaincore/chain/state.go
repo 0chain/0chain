@@ -754,7 +754,7 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
 
 	sc.EmitEvent(event.TypeStats, event.TagAddOrOverwriteUser, usr.UserID, usr,
 		func(events []event.Event, current event.Event) []event.Event {
-			return append([]event.Event{current}, events...)
+			return append(events, current)
 		})
 	return
 }

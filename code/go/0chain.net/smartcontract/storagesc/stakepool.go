@@ -259,8 +259,8 @@ func (sp *stakePool) slash(
 		}
 		edbSlash.DelegatePenalties[dp.DelegateID] = dpSlash
 	}
-	// todo we should slash from stake pools not rewards. 0chain issue 1495
-	if err := edbSlash.Emit(event.TagStakePoolReward, balances); err != nil {
+	//Added New Tag for StakePoolPenalty
+	if err := edbSlash.Emit(event.TagStakePoolPenalty, balances); err != nil {
 		return 0, err
 	}
 
@@ -301,20 +301,27 @@ func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 //
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
+func (_ *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
 	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
 	return getStakePool(providerType, providerID, balances)
 }
 
-// getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
-	balances chainstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+func getStakePoolAdapter(
+	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+) (sp stakepool.AbstractStakePool, err error) {
 	pool, err := getStakePool(providerType, providerID, balances)
 	if err != nil {
 		return nil, err
 	}
 
 	return pool, nil
+}
+
+// getStakePool of given blobber
+func (_ *StorageSmartContract) getStakePoolAdapter(
+	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+) (sp stakepool.AbstractStakePool, err error) {
+	return getStakePoolAdapter(providerType, providerID, balances)
 }
 
 func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (
@@ -358,6 +365,25 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	sp.Settings.MaxStake = settings.MaxStake
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+	return sp, nil
+}
+
+func (ssc *StorageSmartContract) createStakePool(
+	conf *Config,
+	settings stakepool.Settings,
+) (*stakePool, error) {
+	if err := validateStakePoolSettings(settings, conf); err != nil {
+		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
+	}
+
+	sp := newStakePool()
+	sp.Settings.DelegateWallet = settings.DelegateWallet
+	sp.Minter = chainstate.MinterStorage
+	sp.Settings.MinStake = settings.MinStake
+	sp.Settings.MaxStake = settings.MaxStake
+	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
+	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+
 	return sp, nil
 }
 

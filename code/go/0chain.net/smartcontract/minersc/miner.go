@@ -191,7 +191,9 @@ func (msc *MinerSmartContract) deleteNode(
 		return nil, err
 	}
 
-	for _, pool := range deleteNode.GetOrderedPools() {
+	orderedPoolIds := deleteNode.OrderedPoolIds()
+	for _, key := range orderedPoolIds {
+		pool := deleteNode.Pools[key]
 		switch pool.Status {
 		case spenum.Active:
 			pool.Status = spenum.Deleted

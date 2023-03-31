@@ -3,7 +3,13 @@ package event
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"time"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
@@ -27,6 +33,8 @@ type Provider struct {
 	Rewards         ProviderRewards  `json:"rewards" gorm:"foreignKey:ProviderID"`
 	Downtime        uint64           `json:"downtime"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	IsKilled        bool             `json:"is_killed"`
+	IsShutdown      bool             `json:"is_shutdown"`
 }
 
 type ProviderAggregate interface {
@@ -116,4 +124,61 @@ func (edb *EventDb) ReplicateProviderAggregates(round int64, limit int, offset i
 		return result.Error
 	}
 	return nil
+}
+
+func providerToTableName(pType spenum.Provider) string {
+	return pType.String() + "s"
+}
+
+func mapProviders(
+	providers []dbs.ProviderID,
+) map[spenum.Provider][]string {
+	idSlices := make(map[spenum.Provider][]string, 5)
+	for _, provider := range providers {
+		var ids []string
+		ids = idSlices[provider.Type]
+		ids = append(ids, provider.ID)
+		idSlices[provider.Type] = ids
+	}
+	return idSlices
+}
+
+func (edb *EventDb) providersSetBoolean(providers []dbs.ProviderID, field string, value bool) error {
+	mappedProviders := mapProviders(providers)
+	sortedTypes := sortProviderTypes(mappedProviders)
+	for _, pType := range sortedTypes {
+		ids := mappedProviders[pType]
+		table := providerToTableName(pType)
+		var values []bool
+		for i := 0; i < len(ids); i++ {
+			values = append(values, value)
+		}
+		if err := edb.setBoolean(table, ids, field, values); err != nil {
+			logging.Logger.Error("updating boolean field "+table+"."+field,
+				zap.Error(err))
+		}
+	}
+	return nil
+}
+
+func (edb *EventDb) setBoolean(
+	table string,
+	ids []string,
+	column string,
+	values []bool,
+) error {
+	return CreateBuilder(table, "id", ids).
+		AddUpdate(column, values).
+		Exec(edb).Error
+}
+
+func sortProviderTypes(m map[spenum.Provider][]string) []spenum.Provider {
+	var keys []spenum.Provider
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+	return keys
 }

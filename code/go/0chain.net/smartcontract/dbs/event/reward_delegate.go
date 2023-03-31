@@ -27,7 +27,7 @@ func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round in
 				Amount:      amount,
 				BlockNumber: round,
 				PoolID:      poolId,
-				ProviderID:  sp.ProviderId,
+				ProviderID:  sp.ID,
 				RewardType:  sp.RewardType,
 			}
 			drs = append(drs, dr)
@@ -37,7 +37,7 @@ func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round in
 				Amount:      amount,
 				BlockNumber: round,
 				PoolID:      poolId,
-				ProviderID:  sp.ProviderId,
+				ProviderID:  sp.ID,
 				RewardType:  sp.RewardType,
 			}
 			drs = append(drs, dp)

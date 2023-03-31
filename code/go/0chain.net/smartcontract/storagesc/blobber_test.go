@@ -123,31 +123,8 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = ssc.getBlobber(blob.id, balances)
-	require.NoError(t, err)
-}
-
-func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
-	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		tp       int64 = 100
-		err      error
-	)
-
-	setConfig(t, balances)
-
-	var blob = newClient(0, balances)
-	blob.terms = avgTerms
-	blob.cap = 2 * GB
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.EqualError(t, err, fmt.Sprintf("add_or_update_blobber_failed: blobber already exists,with id: %s ", blob.id))
 
 	_, err = ssc.getBlobber(blob.id, balances)
 	require.NoError(t, err)
@@ -556,8 +533,16 @@ func Test_flow_reward(t *testing.T) {
 		var blobb1 = balances.balances[b3.id]
 		var wpb1, cpb1 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149901100442, wpb1)
-		require.EqualValues(t, 98221390, cpb1)
+		wpb1i, err2 := wpb1.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		cpb1i, err2 := cpb1.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		require.EqualValues(t, 149901100442, wpb1i)
+		require.EqualValues(t, 71772822, cpb1i)
 		require.EqualValues(t, 40*x10, blobb1)
 
 		// write 10 KB
@@ -596,8 +581,17 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149901100442, apb2)
-		require.EqualValues(t, 98281436, cpb2) // reward for >64 KB should be calculated as for 64KB
+		apb2i, err2 := apb2.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		cpb2i, err2 := cpb2.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		require.EqualValues(t, 149901100442, apb2i)
+		require.EqualValues(t, 71832868, cpb2i)
+
 		require.EqualValues(t, 40*x10, blobb2)
 
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -612,8 +606,16 @@ func Test_flow_reward(t *testing.T) {
 		var blobb1 = balances.balances[b3.id]
 		var wpb1, cpb1 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149901040396, wpb1)
-		require.EqualValues(t, 98281436, cpb1)
+		wpb1i, err2 := wpb1.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		cpb1i, err2 := cpb1.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		require.EqualValues(t, 149901040396, wpb1i)
+		require.EqualValues(t, 71832868, cpb1i)
 		require.EqualValues(t, 40*x10, blobb1)
 
 		// delete 10 KB
@@ -652,8 +654,16 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149901040396, apb2)
-		require.EqualValues(t, 98281436, cpb2) // balance should not change
+		apb2i, err2 := apb2.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		cpb2i, err2 := cpb2.Int64()
+		if err2 != nil {
+			t.Error(err2)
+		}
+		require.EqualValues(t, 149901040396, apb2i)
+		require.EqualValues(t, 71832868, cpb2i)
 		require.EqualValues(t, 40*x10, blobb2)
 
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1320,5 +1330,29 @@ func TestBlobberHealthCheck(t *testing.T) {
 	// check health
 	_, err = healthCheckBlobber(t, b, 0, tp, ssc, balances)
 	require.NoError(t, err)
+
+}
+
+func TestOnlyAdd(t *testing.T) {
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+
+		tp int64 = 100
+	)
+
+	setConfig(t, balances)
+
+	var (
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		b, err = ssc.getBlobber(blob.id, balances)
+	)
+	require.NoError(t, err)
+
+	b.BaseURL = "https://newabcurl.com"
+	//should fail as only add is allowed
+	_, err = updateBlobberUsingAddBlobber(t, b, 0, tp, ssc, balances)
+	require.Error(t, err)
 
 }

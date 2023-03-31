@@ -127,8 +127,8 @@ func TestTagStakePoolReward(t *testing.T) {
 	var before int64
 	db.Get().Table("delegate_pools").Count(&before)
 	var spr dbs.StakePoolReward
-	spr.ProviderId = "provider_id"
-	spr.ProviderType = spenum.Blobber
+	spr.ID = "provider_id"
+	spr.Type = spenum.Blobber
 	spr.Reward = 17
 	spr.DelegateRewards = map[string]currency.Coin{
 		"pool_id_1": 15,
@@ -137,7 +137,7 @@ func TestTagStakePoolReward(t *testing.T) {
 	require.NoError(t, db.addStat(Event{
 		Type:  TypeStats,
 		Tag:   TagStakePoolReward,
-		Index: spr.ProviderId,
+		Index: spr.ID,
 		Data:  []dbs.StakePoolReward{spr},
 	}))
 
@@ -146,4 +146,74 @@ func TestTagStakePoolReward(t *testing.T) {
 	dps, err := db.GetDelegatePools("provider_id")
 	require.NoError(t, err)
 	require.Len(t, dps, 2)
+}
+
+func TestTagStakePoolPenalty(t *testing.T) {
+	t.Parallel()
+	db, clean := GetTestEventDB(t)
+	defer clean()
+
+	bl := Blobber{
+		Provider: Provider{ID: "provider_id",
+			Rewards: ProviderRewards{
+				ProviderID:   "provider_id",
+				Rewards:      11,
+				TotalRewards: 23,
+			}},
+	}
+	res := db.Store.Get().Create(&bl)
+	if res.Error != nil {
+		t.Errorf("Error while inserting blobber %v", bl)
+		return
+	}
+
+	dp := DelegatePool{
+		PoolID:       "pool_id_1",
+		ProviderType: spenum.Blobber,
+		ProviderID:   "provider_id",
+		DelegateID:   "delegate_id",
+		TotalReward:  29,
+		Balance:      3,
+	}
+
+	dp2 := DelegatePool{
+		PoolID:       "pool_id_2",
+		ProviderType: spenum.Blobber,
+		ProviderID:   "provider_id",
+		DelegateID:   "delegate_id",
+		Balance:      5,
+	}
+
+	err := db.addDelegatePools([]DelegatePool{dp})
+	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
+	err = db.addDelegatePools([]DelegatePool{dp2})
+	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
+
+	var before int64
+	db.Get().Table("delegate_pools").Count(&before)
+	var spr dbs.StakePoolReward
+	spr.ID = "provider_id"
+	spr.Type = spenum.Blobber
+	spr.Reward = 17
+	spr.DelegatePenalties = map[string]currency.Coin{
+		"pool_id_1": 2,
+	}
+	require.NoError(t, db.addStat(Event{
+		Type:  TypeStats,
+		Tag:   TagStakePoolPenalty,
+		Index: spr.ID,
+		Data:  []dbs.StakePoolReward{spr},
+	}))
+	var after int64
+	db.Get().Table("delegate_pools").Count(&after)
+	dps, err := db.GetDelegatePools("provider_id")
+	require.NoError(t, err)
+	require.Len(t, dps, 2)
+	for _, dp := range dps {
+		if dp.PoolID == "pool_id_1" {
+			require.Equal(t, dp.Balance, currency.Coin(1))
+			require.Equal(t, dp.TotalPenalty, currency.Coin(2))
+		}
+	}
+
 }

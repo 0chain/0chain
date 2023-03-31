@@ -14,7 +14,6 @@ simulation:
   num_blobber_delegates: 10
   num_miner_delegates: 10
   num_sharder_delegates: 10
-  num_curators: 1
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
   num_write_redeem_allocation: 1
@@ -66,7 +65,7 @@ smart_contracts:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_delegates: 0
     max_delegates: 200
-    min_stakke: 0.0
+    min_stake: 0.0
     max_stake: 170.0
     max_n: 7 # 100
     min_n: 3 # 3
@@ -198,6 +197,7 @@ smart_contracts:
       burn: 100
       delete-authorizer: 100
       add-authorizer: 100
+      authorizer-health-check: 100
 
   faucetsc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802

@@ -265,7 +265,7 @@ func NewUpdateSharderTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (t
 	return TagUpdateSharderTotalUnStake, Sharder{
 		Provider: Provider{
 			ID:         ID,
-			TotalStake: unstakeTotal,
+			UnstakeTotal: unstakeTotal,
 		},
 	}
 }
