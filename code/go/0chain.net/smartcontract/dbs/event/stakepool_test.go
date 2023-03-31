@@ -247,8 +247,8 @@ func TestEventDb_rewardProviders(t *testing.T) {
 		t.Error(err)
 	}
 
-	assertMinerRewards(t, db, mnMiner1.ID, uint64(20+5), uint64(50), 7)
-	assertMinerRewards(t, db, mnMiner2.ID, uint64(30+5), uint64(60), 7)
+	assertMinerRewards(t, db, mnMiner1.ID, uint64(20+5), uint64(50+5), 7)
+	assertMinerRewards(t, db, mnMiner2.ID, uint64(30+5), uint64(60+5), 7)
 }
 
 func TestEventDb_rewardProviderDelegates(t *testing.T) {
