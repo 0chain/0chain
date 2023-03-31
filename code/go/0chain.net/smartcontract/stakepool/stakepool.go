@@ -600,7 +600,7 @@ func (sp *StakePool) DistributeRewards(
 		if err != nil {
 			return err
 		}
-		spUpdate.DelegateRewards[pool.DelegateID] = reward
+		spUpdate.DelegateRewards[dp.DelegateID] = reward
 		if err != nil {
 			return err
 		}
