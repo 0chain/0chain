@@ -16,6 +16,7 @@ import (
 
 type providerRewardsDelegates struct {
 	rewards       map[string]currency.Coin
+	totalRewards  map[string]currency.Coin
 	delegatePools map[string]map[string]currency.Coin
 }
 
@@ -26,17 +27,20 @@ type providerPenaltiesDelegates struct {
 func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
 	var (
 		rewardsMap   = make(map[string]currency.Coin)
+		totalRewardsMap = make(map[string]currency.Coin)
 		dpRewardsMap = make(map[string]map[string]currency.Coin)
 	)
 	for i, sp := range spus {
 		if sp.Reward != 0 {
 			rewardsMap[sp.ID] = rewardsMap[sp.ID] + sp.Reward
+			totalRewardsMap[sp.ID] = totalRewardsMap[sp.ID] + sp.Reward
 		}
 		for poolId := range spus[i].DelegateRewards {
 			if _, found := dpRewardsMap[sp.ID]; !found {
 				dpRewardsMap[sp.ID] = make(map[string]currency.Coin, len(spus[i].DelegateRewards))
 			}
 			dpRewardsMap[sp.ID][poolId] = dpRewardsMap[sp.ID][poolId] + spus[i].DelegateRewards[poolId]
+			totalRewardsMap[sp.ID] = totalRewardsMap[sp.ID] + spus[i].DelegateRewards[poolId]
 		}
 		// todo https://github.com/0chain/0chain/issues/2122
 		// slash charges are no longer taken from rewards, but the stake pool. So related code has been removed.
@@ -44,6 +48,7 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 
 	return &providerRewardsDelegates{
 		rewards:       rewardsMap,
+		totalRewards:  totalRewardsMap,
 		delegatePools: dpRewardsMap,
 	}, nil
 }
@@ -130,7 +135,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}()
 
 	if len(rewards.rewards) > 0 {
-		if err := edb.rewardProviders(rewards.rewards, round); err != nil {
+		if err := edb.rewardProviders(rewards.rewards, rewards.totalRewards, round); err != nil {
 			return fmt.Errorf("could not rewards providers: %v", err)
 		}
 	}
@@ -198,19 +203,27 @@ func (edb *EventDb) penaltyUpdate(spus []dbs.StakePoolReward, round int64) error
 	return nil
 }
 
-func (edb *EventDb) rewardProviders(prRewards map[string]currency.Coin, round int64) error {
+func (edb *EventDb) rewardProviders(
+	prRewards map[string]currency.Coin,
+	prTotalRewards map[string]currency.Coin,
+	round int64,
+) error {
 	var ids []string
 	var rewards []uint64
+	var totalRewards []uint64
 	var lastUpdated []int64
 	for id, r := range prRewards {
 		ids = append(ids, id)
 		rewards = append(rewards, uint64(r))
 		lastUpdated = append(lastUpdated, round)
 	}
+	for _, tr := range prTotalRewards {
+		totalRewards = append(totalRewards, uint64(tr))
+	}
 
 	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
-		AddUpdate("total_rewards", rewards, "provider_rewards.total_rewards + t.rewards").
+		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
 		AddUpdate("round_service_charge_last_updated", lastUpdated).
 		Exec(edb).Error
 }
