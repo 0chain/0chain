@@ -34,10 +34,9 @@ func (p Provider) String() string {
 }
 
 func ToProviderType(ps string) Provider {
-	for name, pType := range Providers {
-		if name == ps {
-			return pType
-		}
+	provider, ok := Providers[ps]
+	if ok {
+		return provider
 	}
 	return 0
 }
@@ -74,6 +73,7 @@ const (
 	BlockRewardSharder
 	BlockRewardBlobber
 	FeeRewardMiner
+	FeeRewardAuthorizer
 	FeeRewardSharder
 	ValidationReward
 	FileDownloadReward

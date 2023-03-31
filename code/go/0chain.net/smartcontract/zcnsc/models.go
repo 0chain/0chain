@@ -344,3 +344,17 @@ func (dap *DeleteAuthorizerPayload) Decode(input []byte) error {
 	err := json.Unmarshal(input, dap)
 	return err
 }
+
+type AuthorizerHealthCheckPayload struct {
+	ID string `json:"id"`
+}
+
+func (ahp *AuthorizerHealthCheckPayload) Encode() (data []byte, err error) {
+	data, err = json.Marshal(ahp)
+	return
+}
+
+func (ahp *AuthorizerHealthCheckPayload) Decode(input []byte) error {
+	err := json.Unmarshal(input, ahp)
+	return err
+}
