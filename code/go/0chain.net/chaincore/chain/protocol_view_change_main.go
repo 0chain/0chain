@@ -15,12 +15,18 @@ import (
 func (c *Chain) SetupSC(ctx context.Context) {
 	logging.Logger.Info("SetupSC start...")
 	// create timer with 0 duration to start it immediately
-	tm := time.NewTimer(0)
-	timeout := time.Duration(viper.GetInt("server_chain.transaction.timeout")) //timeout is in seconds
+	var (
+		tm      = time.NewTicker(1)
+		timeout = time.Duration(viper.GetInt("server_chain.transaction.timeout")) //timeout is in seconds
+		doneC   = make(chan struct{})
+	)
 	for {
 		select {
+		case <-doneC:
+			logging.Logger.Debug("SetupSC is done - registered")
+			return
 		case <-ctx.Done():
-			logging.Logger.Debug("SetupSC is done")
+			logging.Logger.Debug("SetupSC - context is done")
 			return
 		case <-tm.C:
 			tm.Reset(timeout * time.Second)
@@ -28,10 +34,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 			func() {
 				isRegisteredC := make(chan bool)
 				cctx, cancel := context.WithTimeout(ctx, timeout*time.Second)
-				defer func() {
-					logging.Logger.Info("cancelling setup sc context")
-					cancel()
-				}()
+				defer cancel()
 
 				go func() {
 					isRegistered := c.isRegistered(cctx)
@@ -46,11 +49,11 @@ func (c *Chain) SetupSC(ctx context.Context) {
 				case reg := <-isRegisteredC:
 					if reg {
 						logging.Logger.Debug("SetupSC - node is already registered")
+						close(doneC)
 						return
 					}
 				case <-cctx.Done():
 					logging.Logger.Debug("SetupSC - check node registered timeout")
-					cancel()
 				}
 
 				logging.Logger.Debug("Request to register node")
@@ -63,6 +66,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 
 				if txn != nil && c.ConfirmTransaction(ctx, txn, 30) {
 					logging.Logger.Debug("Register node transaction confirmed")
+					close(doneC)
 					return
 				}
 
