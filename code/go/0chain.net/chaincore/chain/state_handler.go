@@ -64,7 +64,7 @@ func SetupScRestApiHandlers() {
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
-	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
+	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceFromMPTHandler))))
 	http.HandleFunc("/v1/client/get/balance/mpt", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceFromMPTHandler))))
 	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
 	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
@@ -150,14 +150,12 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 		return nil, common.NewError("get_balance_error", "event database not enabled")
 	}
 
-	return c.GetState(c.GetLatestFinalizedBlock().Clone(), clientID)
+	user, err := c.GetEventDb().GetUser(clientID)
+	if err != nil {
+		return nil, err
+	}
 
-	//user, err := c.GetEventDb().GetUser(clientID)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//return userToState(user), nil
+	return userToState(user), nil
 }
 
 func (c *Chain) GetBalanceFromMPTHandler(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -167,6 +165,10 @@ func (c *Chain) GetBalanceFromMPTHandler(ctx context.Context, r *http.Request) (
 	}
 
 	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, common.NewError("get_balance_error", "nil finalized block")
+	}
+
 	lfb = lfb.Clone()
 
 	s := &costate.State{}
