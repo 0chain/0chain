@@ -110,11 +110,7 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 	var moved currency.Coin
 	currentBalance := rp.Balance
 
-	if currentBalance == 0 {
-		return "", fmt.Errorf("no tokens in read pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
-	}
-	if value >= currentBalance {
+	if value > currentBalance {
 		return "", fmt.Errorf("not enough tokens in read pool for "+
 			"allocation: %s, blobber: %s", allocID, blobID)
 	} else {
