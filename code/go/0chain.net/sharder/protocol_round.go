@@ -78,9 +78,13 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 
 	select {
 	case <-doneC:
-		Logger.Debug("AddNotarizedBlock compute state successfully", zap.Duration("duration", time.Since(t)))
+		Logger.Debug("AddNotarizedBlock compute state successfully",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Duration("duration", time.Since(t)))
 	case err := <-errC:
 		Logger.Error("AddNotarizedBlock failed to compute state",
+
 			zap.Int64("round", b.Round),
 			zap.Error(err))
 		if node.Self.IsSharder() {

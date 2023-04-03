@@ -73,9 +73,9 @@ const (
 	StateComputing  = iota
 	StateCancelled  = iota
 	StateFailed     = iota
+	StateInvalid    = iota
 	StateSuccessful = iota
 	StateSynched    = iota
-	StateInvalid    = iota
 )
 
 const (
