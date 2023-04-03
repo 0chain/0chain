@@ -119,7 +119,7 @@ func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 	return gb
 }
 
-/*GetBlockFromStore - get the block from the store */
+// GetBlockFromStore - get the block from the store
 func (sc *Chain) GetBlockFromStore(blockHash string, round int64) (*block.Block, error) {
 	bs := block.BlockSummary{Hash: blockHash, Round: round}
 	return sc.GetBlockFromStoreBySummary(&bs)

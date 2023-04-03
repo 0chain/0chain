@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -105,6 +106,10 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	}
 	b, err = chain.GetServerChain().GetBlock(ctx, hash)
 	if err == nil {
+		if b.IsStateInvalid() {
+			return nil, errors.New("block state is invalid")
+		}
+
 		return chain.GetBlockResponse(b, parts)
 	}
 	/*NOTE: We store chain.RoundRange number of blocks in the same directory and that's a large number (10M).
@@ -116,6 +121,10 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if b.IsStateInvalid() {
+		return nil, errors.New("block state is invalid")
 	}
 	return chain.GetBlockResponse(b, parts)
 }

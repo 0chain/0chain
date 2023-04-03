@@ -272,6 +272,9 @@ func roundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}
 	if hash != "" {
 		b, err := sc.GetBlock(ctx, hash)
 		if err == nil {
+			if b.IsStateInvalid() {
+				return nil, errors.New("block state is invalid")
+			}
 			return b, nil
 		}
 	}
@@ -293,7 +296,16 @@ func roundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}
 		}
 	}
 
-	return sc.GetBlockFromStore(hash, roundNum)
+	b, err := sc.GetBlockFromStore(hash, roundNum)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.IsStateInvalid() {
+		return nil, errors.New("block state is invalid")
+	}
+
+	return b, nil
 }
 
 func (sc *Chain) getRoundSummaries(ctx context.Context, bounds RangeBounds) []*round.Round {
