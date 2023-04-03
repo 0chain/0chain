@@ -725,7 +725,12 @@ func TestExtendAllocation(t *testing.T) {
 					event.TagUpdateBlobberTotalOffers, mock.Anything, mock.Anything).Return().Maybe()
 			}
 		}
-
+		balances.On(
+			"EmitEvent",
+			event.TypeStats,
+			event.TagLockWritePool,
+			mock.Anything,
+			mock.Anything).Return().Maybe()
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, sa.ID),
 			mock.MatchedBy(func(p *challengePool) bool {
