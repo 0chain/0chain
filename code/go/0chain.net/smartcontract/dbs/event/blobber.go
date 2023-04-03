@@ -211,6 +211,7 @@ func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
 
 func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 	ts := time.Now()
+
 	// fields match storagesc.emitUpdateBlobber
 	updateColumns := []string{
 		"latitude",
