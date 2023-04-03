@@ -32,8 +32,8 @@ const (
 	//PreviousBlockUnavailable - to indicate an error condition when the previous
 	// block of a given block is not available.
 	PreviousBlockUnavailable = "previous_block_unavailable"
-	//StateMismatch - indicate if there is a mismatch between computed state and received state of a block
-	StateMismatch = "state_mismatch"
+	//BlockStateMismatch - indicate if there is a mismatch between computed state and received state of a block
+	BlockStateMismatch = "block_state_hash_mismatch"
 )
 
 var (
@@ -46,18 +46,15 @@ var (
 )
 
 var (
-	ErrBlockHashMismatch      = common.NewError("block_hash_mismatch", "block hash mismatch")
-	ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "block state hash mismatch")
-
+	ErrBlockHashMismatch        = common.NewError("block_hash_mismatch", "block hash mismatch")
 	ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Previous state not available")
 	ErrPreviousStateNotComputed = common.NewError("prev_state_not_computed", "Previous state not computed")
 	ErrCostTooBig               = common.NewError("cost_too_big", "Block cost is too big")
 
 	// ErrPreviousBlockUnavailable - error for previous block is not available.
-	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
-		"Previous block is not available")
+	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable, "Previous block is not available")
 
-	ErrStateMismatch = common.NewError(StateMismatch, "Computed state hash doesn't match with the state hash of the block")
+	ErrBlockStateMismatch = common.NewError(BlockStateMismatch, "computed state hash doesn't match with the state hash of the block")
 )
 
 const (
@@ -1016,7 +1013,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 			zap.String("prev_block", b.PrevHash),
 			zap.String("prev_block_client_state", util.ToHex(pb.ClientStateHash)))
-		return ErrStateMismatch
+		return ErrBlockStateMismatch
 	}
 
 	b.setClientState(bState)
@@ -1082,7 +1079,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	}
 
 	if !bytes.Equal(b.ClientStateHash, bsc.Hash) {
-		return ErrBlockStateHashMismatch
+		return ErrBlockStateMismatch
 	}
 
 	root := bsc.GetRoot()
@@ -1118,7 +1115,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	}
 
 	if !bytes.Equal(b.ClientStateHash, clientState.GetRoot()) {
-		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
+		return ErrBlockStateMismatch
 	}
 
 	b.setClientState(clientState)

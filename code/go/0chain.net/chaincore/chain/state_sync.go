@@ -322,7 +322,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 				zap.Error(errors.New("state hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			return nil, block.ErrBlockStateHashMismatch
+			return nil, block.ErrBlockStateMismatch
 		}
 
 		var root = rsc.GetRoot()

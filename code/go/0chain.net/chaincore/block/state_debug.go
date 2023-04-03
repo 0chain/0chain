@@ -24,7 +24,7 @@ func SetupStateLogger(file string) {
 	fmt.Fprintf(StateOut, "starting state log ...\n")
 }
 
-//StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
+// StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
 func StateSanityCheck(ctx context.Context, b *Block) {
 	if !state.DebugBlock() {
 		return
@@ -53,7 +53,7 @@ func validateStateChangesRoot(b *Block) error {
 			computedRoot = bsc.GetRoot().GetHash()
 		}
 		logging.Logger.Error("block state change - root mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_root", util.ToHex(b.ClientStateHash)), zap.String("computed_root", computedRoot))
-		return ErrStateMismatch
+		return ErrBlockStateMismatch
 	}
 	return nil
 }
