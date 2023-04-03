@@ -1918,3 +1918,38 @@ func (c *Chain) BlockTicketsVerifyWithLock(ctx context.Context, blockHash string
 		return ctx.Err()
 	}
 }
+
+func (c *Chain) SetInvalidStateForSuccessorBlocks(b *block.Block) {
+	// get successors of the block
+	cr := c.GetCurrentRound()
+	rd := b.Round + 1
+	for i := rd; i <= cr; i++ {
+		// get round with block that has previous block as b
+		r := c.GetRound(i)
+		if r == nil {
+			return
+		}
+
+		// get block with previous block as b
+		nbs := r.GetNotarizedBlocks()
+		var found bool
+		for _, nb := range nbs {
+			if nb.PrevHash == b.Hash {
+				nb.SetStateStatus(block.StateInvalid)
+				found = true
+				b = nb
+				logging.Logger.Debug("set invalid state blocks - set successor block state as invalid",
+					zap.Int64("round", nb.Round),
+					zap.String("hash", nb.Hash))
+				break
+			}
+		}
+
+		if !found {
+			logging.Logger.Debug("set invalid state blocks - block has no successor",
+				zap.Int64("round", b.Round),
+				zap.String("hash", b.Hash))
+			return
+		}
+	}
+}

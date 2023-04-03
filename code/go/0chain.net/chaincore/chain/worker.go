@@ -326,6 +326,21 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 				logging.Logger.Error("finalize block - compute state failed",
 					zap.Int64("round", fb.Round),
 					zap.Error(err))
+
+				if err == block.ErrBlockStateMismatch {
+					// sharder could not compute state of the finalizing block
+					logging.Logger.Error("finalize block - sharder could not verify finalzing block",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.Error(err))
+
+					// set block as invalid state
+					fb.SetStateStatus(block.StateInvalid)
+
+					// set all its successors' status as invalid
+					c.SetInvalidStateForSuccessorBlocks(fb)
+				}
+
 				return fmt.Errorf("compute state failed: %v", err)
 			}
 		} else {
