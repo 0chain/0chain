@@ -75,6 +75,7 @@ const (
 	StateFailed     = iota
 	StateSuccessful = iota
 	StateSynched    = iota
+	StateInvalid    = iota
 )
 
 const (
@@ -152,9 +153,9 @@ type Block struct {
 	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
 
 	ClientState           util.MerklePatriciaTrieI `json:"-" msgpack:"-"`
-	stateStatus           int8
-	stateStatusMutex      sync.RWMutex `json:"-" msgpack:"-"`
-	stateMutex            sync.RWMutex `json:"-" msgpack:"-"`
+	StateStatus           int8                     `json:"state_status"`
+	stateStatusMutex      sync.RWMutex             `json:"-" msgpack:"-"`
+	stateMutex            sync.RWMutex             `json:"-" msgpack:"-"`
 	blockState            int8
 	isNotarized           bool
 	isFinalised           bool         // set this field when the block is finalised
@@ -609,21 +610,29 @@ func (b *Block) GetClients() ([]*client.Client, error) {
 func (b *Block) GetStateStatus() int8 {
 	b.stateStatusMutex.RLock()
 	defer b.stateStatusMutex.RUnlock()
-	return b.stateStatus
+	return b.StateStatus
+}
+
+func (b *Block) IsStateInvalid() bool {
+	var isInvalid bool
+	b.stateStatusMutex.RLock()
+	isInvalid = b.StateStatus == StateInvalid
+	b.stateStatusMutex.RUnlock()
+	return isInvalid
 }
 
 /*IsStateComputed - is the state of this block computed? */
 func (b *Block) IsStateComputed() bool {
 	b.stateStatusMutex.RLock()
 	defer b.stateStatusMutex.RUnlock()
-	return b.stateStatus >= StateSuccessful
+	return b.StateStatus >= StateSuccessful
 }
 
 /*SetStateStatus - set if the client state is computed or not for the block */
 func (b *Block) SetStateStatus(status int8) {
 	b.stateStatusMutex.Lock()
 	defer b.stateStatusMutex.Unlock()
-	b.stateStatus = status
+	b.StateStatus = status
 }
 
 /*GetReceiptsMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
@@ -775,7 +784,7 @@ func (b *Block) Clone() *Block {
 		RoundRank:           b.RoundRank,
 		PrevBlock:           b.PrevBlock,
 		RunningTxnCount:     b.RunningTxnCount,
-		stateStatus:         b.stateStatus,
+		StateStatus:         b.StateStatus,
 		blockState:          b.blockState,
 		isNotarized:         b.isNotarized,
 		verificationStatus:  b.verificationStatus,
@@ -1059,7 +1068,7 @@ func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash st
 func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	b.stateMutex.Lock()
 	defer b.stateMutex.Unlock()
-	if b.stateStatus >= StateSuccessful {
+	if b.StateStatus >= StateSuccessful {
 		// already synced and applied by another goroutine
 		return nil
 	}
