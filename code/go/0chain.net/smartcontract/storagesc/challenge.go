@@ -176,9 +176,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	err = sp.DistributeRewards(blobberReward, blobAlloc.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
+	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances)
 	if err != nil {
-		return fmt.Errorf("can't move tokens to blobber: %v", err)
+		return fmt.Errorf("rewarding validators: %v", err)
 	}
 
 	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
@@ -876,7 +876,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	balances cstate.StateContextI,
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
-	blobberSelection := challengeBlobberSelection(r.Intn(2))
+	blobberSelection := challengeBlobberSelection(1) // challengeBlobberSelection(r.Intn(2))
 	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
 	if err != nil {
 		return nil, common.NewError("add_challenge", err.Error())

@@ -7,14 +7,14 @@ require (
 	github.com/alicebob/miniredis/v2 v2.30.1
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.25.0
-	github.com/go-playground/validator/v10 v10.11.2
-	github.com/gocql/gocql v1.3.1
+	github.com/go-playground/validator/v10 v10.12.0
+	github.com/gocql/gocql v1.3.2
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
-	github.com/hashicorp/golang-lru/v2 v2.0.1
-	github.com/herumi/bls v0.0.0-20220327072144-7ec09c557eef
-	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
+	github.com/hashicorp/golang-lru/v2 v2.0.2
+	github.com/herumi/bls v1.30.1-0.20230130075901-581cd7d9b3db
+	github.com/herumi/mcl v1.72.2-0.20230316105243-341daadde5a5
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/mapstructure v1.5.0
@@ -44,6 +44,7 @@ require (
 
 require (
 	github.com/0chain/common v0.0.6-0.20221123040931-4a3feacdb97c
+	github.com/go-faker/faker/v4 v4.1.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/lib/pq v1.10.7
 	github.com/ory/dockertest/v3 v3.9.1
@@ -68,7 +69,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-faker/faker/v4 v4.0.0 // indirect
 	github.com/go-ini/ini v1.66.4 // indirect
 	github.com/go-openapi/analysis v0.21.2 // indirect
 	github.com/go-openapi/errors v0.20.2 // indirect
@@ -93,7 +93,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/leodido/go-urn v1.2.2 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-sqlite3 v1.14.15 // indirect
@@ -102,7 +102,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
-	github.com/opencontainers/runc v1.1.4 // indirect
+	github.com/opencontainers/runc v1.1.5 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/philhofer/fwd v1.1.2-0.20210722190033-5c56ac6d0bb9 // indirect

@@ -138,8 +138,8 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
-	alloc.WritePool = 0
 	i, _ := alloc.WritePool.Int64()
+	alloc.WritePool = 0
 	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
 		Client:       txn.ClientID,
 		AllocationId: alloc.ID,

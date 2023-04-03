@@ -22,7 +22,9 @@ import (
 )
 
 func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
-	for _, pool := range mn.Pools {
+	orderedPoolIds := mn.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		pool := mn.Pools[id]
 		if pool.Status == spenum.Pending {
 			pool.Status = spenum.Active
 
@@ -43,7 +45,9 @@ func (msc *MinerSmartContract) unlockOffline(
 	mn *MinerNode,
 	balances cstate.StateContextI,
 ) error {
-	for _, pool := range mn.Pools {
+	orderedPoolIds := mn.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		pool := mn.Pools[id]
 		transfer := state.NewTransfer(ADDRESS, pool.DelegateID, pool.Balance)
 		if err := balances.AddTransfer(transfer); err != nil {
 			return fmt.Errorf("pay_fees/unlock_offline: adding transfer: %v", err)

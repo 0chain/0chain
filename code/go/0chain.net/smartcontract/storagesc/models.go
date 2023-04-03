@@ -730,20 +730,30 @@ func (sa *StorageAllocation) addToWritePool(
 		} else {
 			sa.WritePool = writePool
 		}
-		return nil
+	} else {
+		for _, opt := range opts {
+			value, err := opt(balances)
+			if err != nil {
+				return err
+			}
+			if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+				return err
+			} else {
+				sa.WritePool = writePool
+			}
+		}
+	
 	}
 
-	for _, opt := range opts {
-		value, err := opt(balances)
-		if err != nil {
-			return err
-		}
-		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
-			return err
-		} else {
-			sa.WritePool = writePool
-		}
+	i, err := txn.Value.Int64()
+	if err != nil {
+		return err
 	}
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sa.ID, event.WritePoolLock{
+		Client:       txn.ClientID,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
 	return nil
 }
 
