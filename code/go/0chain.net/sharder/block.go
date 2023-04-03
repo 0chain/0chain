@@ -91,18 +91,6 @@ func (sc *Chain) GetBlockSummary(ctx context.Context, hash string) (*block.Block
 	return blockSummary, nil
 }
 
-/*GetBlockFromHash - given the block hash, get the block */
-func (sc *Chain) GetBlockFromHash(ctx context.Context, hash string, roundNum int64) (*block.Block, error) {
-	b, err := sc.GetBlock(ctx, hash)
-	if err != nil {
-		b, err = sc.GetBlockFromStore(hash, roundNum)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return b, nil
-}
-
 /*StoreBlockSummaryFromBlock - gets block summary from block and stores it to ememory/rocksdb */
 func (sc *Chain) StoreBlockSummaryFromBlock(b *block.Block) error {
 	bs := b.GetSummary()
