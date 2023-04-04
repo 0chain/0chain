@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEventDb_updateUserAggregates(t *testing.T) {
@@ -16,7 +17,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 		t.Error()
 	}
 
-	aggregate := &UserAggregate{
+	snap := UserSnapshot{
 		UserID:          "client31",
 		Round:           3,
 		CollectedReward: 44,
@@ -26,13 +27,9 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 		PayedFees:       88,
 		CreatedAt:       time.Time{},
 	}
-	aggrs := map[string]*UserAggregate{
-		aggregate.UserID: aggregate,
-	}
-	if err := edb.addUserAggregates(aggrs); err != nil {
+	if err := edb.AddOrOverwriteUserSnapshots([]UserSnapshot{ snap }); err != nil {
 		t.Error(err)
 	}
-
 	type args struct {
 		e *blockEvents
 	}
@@ -124,4 +121,132 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 			tt.wantErr(t, edb.updateUserAggregates(tt.args.e), fmt.Sprintf("updateUserAggregates(%v)", tt.args.e))
 		})
 	}
+}
+
+func TestEventDb_updateUserSnapshots(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	if err := edb.addPartition(0, "user_aggregates"); err != nil {
+		t.Error()
+	}
+
+	snap := UserSnapshot{
+		UserID:          "test_client",
+		Round:           3,
+		CollectedReward: 44,
+		TotalStake:      55,
+		ReadPoolTotal:   66,
+		WritePoolTotal:  77,
+		PayedFees:       88,
+		CreatedAt:       time.Time{},
+	}
+	if err := edb.AddOrOverwriteUserSnapshots([]UserSnapshot{ snap }); err != nil {
+		t.Error(err)
+	}
+
+	events := &blockEvents{
+		events: []Event{
+			{
+				BlockNumber: 10,
+				TxHash:      "qwerty",
+				Tag:         TagLockReadPool,
+				Index:       "qwety",
+				Data: &[]ReadPoolLock{{
+					Client: "test_client",
+					PoolId: "test_read_pool",
+					Amount: 10,
+				}},
+			},
+			{
+				BlockNumber: 10,
+				TxHash:      "qwerty",
+				Tag:         TagUnlockReadPool,
+				Index:       "qwety",
+				Data: &[]ReadPoolLock{{
+					Client: "test_client",
+					PoolId: "test_read_pool",
+					Amount: 5,
+				}},
+			},
+			{
+				BlockNumber: 10,
+				TxHash:      "qwerty",
+				Tag:         TagLockWritePool,
+				Index:       "qwety",
+				Data: &[]WritePoolLock{{
+					Client: "test_client",
+					AllocationId: "test_allocation_id",
+					Amount: 10,
+				}},
+			},
+			{
+				BlockNumber: 10,
+				TxHash:      "qwerty",
+				Tag:         TagUnlockWritePool,
+				Index:       "qwety",
+				Data: &[]WritePoolLock{{
+					Client: "test_client",
+					AllocationId: "test_allocation_id",
+					Amount: 5,
+				}},
+			},
+			{
+				BlockNumber: 10,
+				TxHash:      "qwerty",
+				Tag:         TagLockStakePool,
+				Index:       "qwety",
+				Data: &[]DelegatePoolLock{{
+					Client: "test_client",
+					Amount: 10,
+				}},
+			},
+			{
+				BlockNumber: 10,
+				TxHash:      "qwerty",
+				Tag:         TagUnlockStakePool,
+				Index:       "qwety",
+				Data: &[]DelegatePoolLock{{
+					Client: "test_client",
+					Amount: 5,
+				}},
+			},
+			{
+				BlockNumber: 10,
+				TxHash:      "qwerty",
+				Tag:         TagUpdateUserPayedFees,
+				Index:       "qwety",
+				Data: &[]UserAggregate{{
+					UserID: "test_client",
+					PayedFees: 10,
+				}},
+			},
+			{
+				BlockNumber: 10,
+				TxHash:      "qwerty",
+				Tag:         TagUpdateUserCollectedRewards,
+				Index:       "qwety",
+				Data: &[]UserAggregate{{
+					UserID: "test_client",
+					CollectedReward: 10,
+				}},
+			},
+		},
+	}
+
+	err := edb.updateUserAggregates(events)
+	require.NoError(t, err)
+
+	snapsAfter, err := edb.GetUserSnapshotsByIds([]string{ "test_client" })
+	require.NoError(t, err)
+	require.Equal(t, 1, len(snapsAfter))
+
+	actualSnap := snapsAfter[0]
+	assert.Equal(t, "test_client", actualSnap.UserID)
+	assert.Equal(t, 10, actualSnap.Round)
+	assert.Equal(t, snap.TotalStake + 5, actualSnap.TotalStake)
+	assert.Equal(t, snap.ReadPoolTotal + 5, actualSnap.ReadPoolTotal)
+	assert.Equal(t, snap.WritePoolTotal + 5, actualSnap.WritePoolTotal)
+	assert.Equal(t, snap.PayedFees + 10, actualSnap.PayedFees)
+	assert.Equal(t, snap.CollectedReward + 10, actualSnap.CollectedReward)
 }

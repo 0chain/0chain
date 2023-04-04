@@ -197,7 +197,7 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 }
 
 func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
-	logging.Logger.Debug("calculating user aggregates", zap.Int64("round", e.round))
+	logging.Logger.Debug("calculating user_aggregates", zap.Int64("round", e.round))
 	var updatedAggrs []UserAggregate
 	for _, ev := range e.events {
 		if h, ok := handlers[ev.Tag]; ok {
@@ -206,41 +206,77 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 		}
 	}
 
-	ids := make(map[string]interface{})
-	for i := range updatedAggrs {
-		updatedAggrs[i].Round = e.round
-		ids[updatedAggrs[i].UserID] = struct{}{}
+	idSet := make(map[string]bool)
+	for _, aggr := range updatedAggrs {
+		idSet[aggr.UserID] = true
+	}
+	uniqueIds := make([]string, 0, len(idSet))
+	for id := range idSet {
+		uniqueIds = append(uniqueIds, id)
 	}
 
-	latest, err := edb.GetLatestUserAggregates(ids)
+	// load user snapshots  
+	snaps, err := edb.GetUserSnapshotsByIds(uniqueIds)
 	if err != nil {
-		logging.Logger.Error("can't load latest aggregates", zap.Error(err))
+		logging.Logger.Error("can't load latest snapshots", zap.Error(err))
 		return err
 	}
 
-	for _, aggr := range updatedAggrs {
-		u := aggr
-		//if u.Round == e.round {
-		//	logging.Logger.Error("duplicate round", zap.Any("aggr", aggr), zap.Any("latest", latest[u.UserID]))
-		//}
-		a, ok := latest[u.UserID]
-		if !ok {
-			latest[u.UserID] = &u
-			continue
-		}
-		merge(a, &u)
+	snapsMap := make(map[string]UserSnapshot, len(updatedAggrs))
+	for _, snap := range snaps {
+		snapsMap[snap.UserID] = snap
 	}
 
-	err = edb.addUserAggregates(latest)
+	for _, aggr := range updatedAggrs {
+		snap, ok := snapsMap[aggr.UserID]
+		if !ok {
+			snapsMap[aggr.UserID] = UserSnapshot{
+				UserID:          aggr.UserID,
+				CollectedReward: aggr.CollectedReward,
+				PayedFees:       aggr.PayedFees,
+				TotalStake:      aggr.TotalStake,
+				ReadPoolTotal:   aggr.ReadPoolTotal,
+				WritePoolTotal:  aggr.WritePoolTotal,
+			}
+			continue
+		}
+		merge(&snap, &aggr)
+		snap.UpdatedAt = time.Now()
+		snapsMap[aggr.UserID] = snap
+	}
+
+	var newAggregates map[string]*UserAggregate
+	for _, snap := range snapsMap {
+		newAggregates[snap.UserID] = &UserAggregate{
+			Round:           snap.Round,
+			UserID:          snap.UserID,
+			CollectedReward: snap.CollectedReward,
+			PayedFees:       snap.PayedFees,
+			TotalStake:      snap.TotalStake,
+			ReadPoolTotal:   snap.ReadPoolTotal,
+			WritePoolTotal:  snap.WritePoolTotal,
+		}
+	}
+	err = edb.addUserAggregates(newAggregates)
 	if err != nil {
 		logging.Logger.Error("saving user aggregate failed", zap.Error(err))
+		return err
+	}
+
+	updatedSnaps := make([]UserSnapshot, 0, len(snapsMap))
+	for _, snap := range snapsMap {
+		updatedSnaps = append(updatedSnaps, snap)
+	}
+	err = edb.AddOrOverwriteUserSnapshots(updatedSnaps)
+	if err != nil {
+		logging.Logger.Error("saving user aggregate snapshots failed", zap.Error(err))
 		return err
 	}
 
 	return nil
 }
 
-func merge(a *UserAggregate, u *UserAggregate) {
+func merge(a *UserSnapshot, u *UserAggregate) {
 	a.Round = u.Round
 	a.CollectedReward += u.CollectedReward
 	a.PayedFees += u.PayedFees
