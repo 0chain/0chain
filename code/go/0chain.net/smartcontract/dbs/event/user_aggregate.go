@@ -245,7 +245,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 		snapsMap[aggr.UserID] = snap
 	}
 
-	var newAggregates map[string]*UserAggregate
+	newAggregates := make(map[string]*UserAggregate, len(snapsMap))
 	for _, snap := range snapsMap {
 		newAggregates[snap.UserID] = &UserAggregate{
 			Round:           snap.Round,
