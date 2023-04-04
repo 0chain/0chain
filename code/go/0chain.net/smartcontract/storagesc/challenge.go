@@ -875,6 +875,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	challengeID string,
 	balances cstate.StateContextI,
 	needValidNum int,
+	minStake currency.Coin,
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(1) // challengeBlobberSelection(r.Intn(2))
@@ -1031,7 +1032,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if err != nil {
 			return nil, err
 		}
-		if stake < validator.StakePoolSettings.MinStake {
+		if stake < minStake {
 			remainingValidators--
 			continue
 		}
@@ -1106,6 +1107,7 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 
 	// Check if the length of the list of validators is higher than the required number of validators
 	needValidNum := conf.ValidatorsPerChallenge
+	minStake := conf.MinStake
 	currentValidatorsCount, err := validators.Size(balances)
 	if err != nil {
 		return fmt.Errorf("can't get validators partition size: %v", err.Error())
@@ -1154,7 +1156,8 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		t,
 		challengeID,
 		balances,
-		needValidNum)
+		needValidNum,
+		minStake)
 	if err != nil {
 		return common.NewErrorf("generate_challenge", err.Error())
 	}
