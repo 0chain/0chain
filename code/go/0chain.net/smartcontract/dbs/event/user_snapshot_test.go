@@ -99,7 +99,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 		err := edb.AddOrOverwriteUserSnapshots(testSnapshots)
 		require.NoError(t, err)
 
-		snapshots, err := edb.GetUserSnapshotsByIds([]string{"user1", "user2", "user3"})
+		snapshots, err := edb.GetUserSnapshotsByIds([]string{"user1", "user2", "user3", "user4"})
 		require.NoError(t, err)
 		require.Len(t, snapshots, 4)
 
