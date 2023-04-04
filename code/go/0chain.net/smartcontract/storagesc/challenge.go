@@ -918,7 +918,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 		// get the storage allocation from MPT
 		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
-		if err != nil {
+		if err != nil && partitions.ErrItemNotFound(err) {
 			return nil, err
 		}
 
