@@ -64,7 +64,8 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 				return
 			}
 		} else {
-			Logger.Debug("AddNotarizedBlock client state is nil", zap.Int64("round", b.Round))
+			Logger.Debug("AddNotarizedBlock client state is nil",
+				zap.Int64("round", b.Round))
 		}
 
 		if err := sc.ComputeState(ctx, b); err != nil {
@@ -81,6 +82,8 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		Logger.Debug("AddNotarizedBlock compute state successfully",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
+			zap.Bool("client is nil", b.ClientState == nil),
+			zap.Any("client state", b.GetStateStatus()),
 			zap.Duration("duration", time.Since(t)))
 	case err := <-errC:
 		Logger.Error("AddNotarizedBlock failed to compute state",

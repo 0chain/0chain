@@ -42,9 +42,6 @@ var ErrWrongNonce = common.NewError("wrong_nonce", "nonce of sender is not valid
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) (err error) {
 	return c.ComputeBlockStateWithLock(ctx, func() error {
 		//check whether we already computed it
-		if b.IsStateComputed() {
-			return nil
-		}
 		return c.computeState(ctx, b, waitC...)
 	})
 }

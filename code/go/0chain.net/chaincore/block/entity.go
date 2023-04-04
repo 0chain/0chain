@@ -625,7 +625,10 @@ func (b *Block) IsStateInvalid() bool {
 func (b *Block) IsStateComputed() bool {
 	b.stateStatusMutex.RLock()
 	defer b.stateStatusMutex.RUnlock()
-	return b.StateStatus >= StateSuccessful
+	if b.StateStatus > StateSuccessful {
+		return true
+	}
+	return b.StateStatus == StateSuccessful && b.ClientState != nil
 }
 
 /*SetStateStatus - set if the client state is computed or not for the block */
@@ -848,16 +851,16 @@ func CreateState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePat
 
 // ComputeState computes block client state
 func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struct{}) error {
+	if b.IsStateComputed() {
+		return nil
+	}
+
 	select {
 	case <-ctx.Done():
 		logging.Logger.Warn("computeState context done", zap.Error(ctx.Err()))
 		b.SetStateStatus(StateCancelled)
 		return ctx.Err()
 	default:
-	}
-
-	if b.IsStateComputed() {
-		return nil
 	}
 
 	b.stateMutex.Lock()
