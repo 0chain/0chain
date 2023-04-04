@@ -10,7 +10,7 @@ CREATE TABLE user_snapshots (
     payed_fees bigint,
     created_at timestamp with time zone,
     updated_at timestamp with time zone
-)
+);
 
 CREATE UNIQUE INDEX idx_user_snapshots ON user_snapshots USING btree (user_id);
 -- +goose StatementEnd
