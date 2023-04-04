@@ -1571,15 +1571,17 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 //	500:
 func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *http.Request) {
 	var (
-		clientID  = r.URL.Query().Get("client")
-		blobberID = r.URL.Query().Get("blobber")
+		clientID     = r.URL.Query().Get("client")
+		blobberID    = r.URL.Query().Get("blobber")
+		allocationID = r.URL.Query().Get("allocation")
 
 		commitRead = &ReadConnection{}
 	)
 
 	commitRead.ReadMarker = &ReadMarker{
-		BlobberID: blobberID,
-		ClientID:  clientID,
+		BlobberID:    blobberID,
+		ClientID:     clientID,
+		AllocationID: allocationID,
 	}
 
 	err := srh.GetQueryStateContext().GetTrieNode(commitRead.GetKey(ADDRESS), commitRead)
@@ -2182,7 +2184,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
 		IsKilled:                 blobber.IsKilled,
 		IsShutdown:               blobber.IsShutdown,
-		SavedData: 			  	  blobber.SavedData,
+		SavedData:                blobber.SavedData,
 	}
 }
 
