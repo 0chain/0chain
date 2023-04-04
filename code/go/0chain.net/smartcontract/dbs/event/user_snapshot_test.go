@@ -49,7 +49,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, snapshots, 3)
 
-		var uniqueSnaps map[string]bool
+		uniqueSnaps := make(map[string]bool, 3)
 		for _, snap := range snapshots {
 			uniqueSnaps[snap.UserID] = true
 			var expectedSnapshot UserSnapshot
@@ -103,7 +103,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, snapshots, 4)
 
-		var uniqueSnaps map[string]bool
+		uniqueSnaps := make(map[string]bool, 4)
 		for _, snap := range snapshots {
 			uniqueSnaps[snap.UserID] = true
 			var expectedSnapshot UserSnapshot

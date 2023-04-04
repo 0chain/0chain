@@ -243,10 +243,10 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 
 	actualSnap := snapsAfter[0]
 	assert.Equal(t, "test_client", actualSnap.UserID)
-	assert.Equal(t, 10, actualSnap.Round)
-	assert.Equal(t, snap.TotalStake + 5, actualSnap.TotalStake)
-	assert.Equal(t, snap.ReadPoolTotal + 5, actualSnap.ReadPoolTotal)
-	assert.Equal(t, snap.WritePoolTotal + 5, actualSnap.WritePoolTotal)
-	assert.Equal(t, snap.PayedFees + 10, actualSnap.PayedFees)
-	assert.Equal(t, snap.CollectedReward + 10, actualSnap.CollectedReward)
+	assert.Equal(t, int64(10), actualSnap.Round)
+	assert.Equal(t, snap.TotalStake + int64(5), actualSnap.TotalStake)
+	assert.Equal(t, snap.ReadPoolTotal + int64(5), actualSnap.ReadPoolTotal)
+	assert.Equal(t, snap.WritePoolTotal + int64(5), actualSnap.WritePoolTotal)
+	assert.Equal(t, snap.PayedFees + int64(10), actualSnap.PayedFees)
+	assert.Equal(t, snap.CollectedReward + int64(10), actualSnap.CollectedReward)
 }
