@@ -743,7 +743,7 @@ func (sa *StorageAllocation) addToWritePool(
 				sa.WritePool = writePool
 			}
 		}
-	
+
 	}
 
 	i, err := txn.Value.Int64()
@@ -1485,7 +1485,7 @@ type ReadConnection struct {
 
 func (rc *ReadConnection) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey +
-		encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
+		encryption.Hash(rc.ReadMarker.BlobberID+rc.ReadMarker.ClientID+rc.ReadMarker.AllocationID))
 }
 
 func (rc *ReadConnection) Decode(input []byte) error {
