@@ -210,7 +210,7 @@ func Init(sViper *viper.Viper) {
 
 	err := hasEnoughInodesAndSize(basePath)
 	if err != nil {
-		// comment out for build integration tests.
+		// TODO comment out for build integration tests.
 		// panic(err)
 		// only for development phase
 		// remove block below
