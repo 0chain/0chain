@@ -196,7 +196,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "capacity"}, //TODO order by price
+		Column: clause.Column{Name: "write_price"},
 		Desc:   limit.IsDescending,
 	})
 	var blobberIDs []string
@@ -234,7 +234,7 @@ func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 func NewUpdateBlobberTotalUnStakeEvent(ID string, totalUnStake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateBlobberTotalUnStake, Blobber{
 		Provider: Provider{
-			ID:         ID,
+			ID:           ID,
 			UnstakeTotal: totalUnStake,
 		},
 	}
