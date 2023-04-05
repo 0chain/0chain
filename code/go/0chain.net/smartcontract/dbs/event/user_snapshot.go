@@ -3,6 +3,7 @@ package event
 import (
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/gorm/clause"
 )
 
@@ -20,11 +21,19 @@ type UserSnapshot struct {
 }
 
 func (edb *EventDb) GetUserSnapshotsByIds(ids []string) (snapshots []UserSnapshot, err error) {
-	err = edb.Store.Get().Where("user_id in (?)", ids).Find(&snapshots).Error
+	err = edb.Store.Get().Exec(`CREATE TEMPORARY TABLE IF NOT EXISTS user_snapshot_ids_temp
+		ON COMMIT DROP AS SELECT t.id FROM UNNEST(?::[]text) AS t(id)`, pq.StringArray(ids),
+	).Error
+	if err != nil {
+		return
+	}
+	
+	err = edb.Store.Get().Exec(`SELECT us.* FROM user_snapshot_ids_temp tmp
+		INNER JOIN user_snapshots us ON tmp.id = us.user_id`).Scan(&snapshots).Error
 	return
 }
 
-func (edb *EventDb) AddOrOverwriteUserSnapshots(snapshots []UserSnapshot) error {
+func (edb *EventDb) AddOrOverwriteUserSnapshots(snapshots []*UserSnapshot) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:  []clause.Column{{Name: "user_id"}},
 		UpdateAll: true,

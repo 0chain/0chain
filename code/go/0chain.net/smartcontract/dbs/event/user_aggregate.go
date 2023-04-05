@@ -206,9 +206,9 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 		}
 	}
 
-	idSet := make(map[string]bool)
+	idSet := make(map[string]interface{})
 	for _, aggr := range updatedAggrs {
-		idSet[aggr.UserID] = true
+		idSet[aggr.UserID] = struct{}{}
 	}
 	uniqueIds := make([]string, 0, len(idSet))
 	for id := range idSet {
@@ -222,15 +222,15 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 		return err
 	}
 
-	snapsMap := make(map[string]UserSnapshot, len(updatedAggrs))
+	snapsMap := make(map[string]*UserSnapshot, len(updatedAggrs))
 	for _, snap := range snaps {
-		snapsMap[snap.UserID] = snap
+		snapsMap[snap.UserID] = &snap
 	}
 
 	for _, aggr := range updatedAggrs {
 		snap, ok := snapsMap[aggr.UserID]
 		if !ok {
-			snapsMap[aggr.UserID] = UserSnapshot{
+			snapsMap[aggr.UserID] = &UserSnapshot{
 				UserID:          aggr.UserID,
 				CollectedReward: aggr.CollectedReward,
 				PayedFees:       aggr.PayedFees,
@@ -240,9 +240,8 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 			}
 			continue
 		}
-		merge(&snap, &aggr)
+		merge(snap, &aggr)
 		snap.UpdatedAt = time.Now()
-		snapsMap[aggr.UserID] = snap
 	}
 
 	newAggregates := make(map[string]*UserAggregate, len(snapsMap))
@@ -263,7 +262,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 		return err
 	}
 
-	updatedSnaps := make([]UserSnapshot, 0, len(snapsMap))
+	updatedSnaps := make([]*UserSnapshot, 0, len(snapsMap))
 	for _, snap := range snapsMap {
 		updatedSnaps = append(updatedSnaps, snap)
 	}
