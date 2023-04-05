@@ -170,8 +170,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	if err = sp.Save(spenum.Blobber, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
-
-	if err := emitAddOrOverwriteBlobber(blobber, sp, balances); err != nil {
+	if err := emitUpdateBlobber(blobber, sp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 	return
@@ -238,6 +237,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
 	blobber.ProviderType = spenum.Blobber
+	blobber.IsAvailable = true
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {

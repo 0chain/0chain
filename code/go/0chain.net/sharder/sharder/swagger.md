@@ -4415,7 +4415,6 @@ it can be used as a scan destination, similar to NullString.
 if Blobbers are getting used in any smart-contract, we should avoid. |  |
 | Canceled | boolean| `bool` |  | | Canceled set to true where allocation finalized by cancel_allocation
 transaction. |  |
-| Curators | []string| `[]string` |  | |  |  |
 | DataShards | int64 (formatted integer)| `int64` |  | |  |  |
 | DiverseBlobbers | boolean| `bool` |  | |  |  |
 | FileOptions | uint8 (formatted integer)| `uint8` |  | | FileOptions to define file restrictions on an allocation for third-parties

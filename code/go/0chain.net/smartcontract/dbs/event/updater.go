@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"0chain.net/core/common"
+
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/lib/pq"
@@ -19,16 +21,17 @@ const ConditionTemplate = " AND %v %v %v"
 const QueryTemplate = "%v %v FROM (SELECT %v) AS t %v"
 
 var typeToSQL = map[reflect.Type]string{
-	reflect.TypeOf([]string{}):  "text",
-	reflect.TypeOf([]int64{}):   "bigint",
-	reflect.TypeOf([]uint64{}):  "bigint",
-	reflect.TypeOf([]int{}):     "bigint",
-	reflect.TypeOf([]uint16{}):  "smallint",
-	reflect.TypeOf([][]byte{}):  "bytea",
-	reflect.TypeOf([]float64{}): "decimal",
-	reflect.TypeOf([]float32{}): "decimal",
-	reflect.TypeOf([]bool{}):    "boolean",
-	reflect.TypeOf([]currency.Coin{}): "bigint",
+	reflect.TypeOf([]string{}):           "text",
+	reflect.TypeOf([]int64{}):            "bigint",
+	reflect.TypeOf([]uint64{}):           "bigint",
+	reflect.TypeOf([]int{}):              "bigint",
+	reflect.TypeOf([]uint16{}):           "smallint",
+	reflect.TypeOf([][]byte{}):           "bytea",
+	reflect.TypeOf([]float64{}):          "decimal",
+	reflect.TypeOf([]float32{}):          "decimal",
+	reflect.TypeOf([]bool{}):             "boolean",
+	reflect.TypeOf([]currency.Coin{}):    "bigint",
+	reflect.TypeOf([]common.Timestamp{}): "bigint",
 }
 
 // UpdateBuilder helps in building and execution batch updates for postgres sql dialect.
@@ -94,7 +97,7 @@ func (b *UpdateBuilder) build() *Query {
 	return &Query{Q: fmt.Sprintf(QueryTemplate, b.update, sets, unnests, b.where), V: b.values}
 }
 
-func (b *UpdateBuilder) addToSets(column string, values interface{}, expr ...string) *UpdateBuilder {
+func (b *UpdateBuilder) addToSets(column string, _ interface{}, expr ...string) *UpdateBuilder {
 	if b.sets != nil {
 		b.sets = append(b.sets, ", ")
 	}
@@ -112,8 +115,7 @@ func (b *UpdateBuilder) addToSets(column string, values interface{}, expr ...str
 }
 
 func (b *UpdateBuilder) addToUnnests(column string, values interface{}) *UpdateBuilder {
-	
-	goArrType  := reflect.TypeOf(values)
+	goArrType := reflect.TypeOf(values)
 	if goArrType == reflect.TypeOf([]interface{}{}) {
 		goArrType = reflect.SliceOf(reflect.TypeOf(values.([]interface{})[0]))
 	}
