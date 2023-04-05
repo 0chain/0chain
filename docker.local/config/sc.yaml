@@ -53,7 +53,7 @@ smart_contracts:
     # gives 10% for miner and rest for block sharders
     share_ratio: 0.8 # [0; 1)
     # reward for a block
-    block_reward: 0.21 # tokens
+    block_reward: 0.068 # tokens
     # max service charge can be set by a generator
     max_charge: 0.5 # %
     # epoch is number of rounds before rewards and interest are decreased
@@ -137,13 +137,12 @@ smart_contracts:
       data_shards: 2
       parity_shards: 2
       read_pool_fraction: 0
-      mint_amount: 0.5 #TODO remove it and calculate based on size and min_lock_demand and cancellation
       read_price_range:
         max: 0
         min: 0
       size: 10000000
       write_price_range:
-        max: 1 #todo use this price for allocation_min_lock calculation (for allocation price)
+        max: 1
         min: 0
     validator_reward: 0.025
     # blobber_slash represents blobber's stake penalty when a challenge not
@@ -171,16 +170,11 @@ smart_contracts:
     max_charge: 0.50
     # reward paid out every block
     block_reward:
-      block_reward: 1
-      block_reward_change_period: 10000
+      block_reward: 0.06
+      block_reward_change_period: 125000000
       block_reward_change_ratio: 0.1
       qualifying_stake: 1
-      sharder_ratio: 10
-      miner_ratio: 40
-      blobber_ratio: 50
       trigger_period: 30
-      blobber_capacity_ratio: 10
-      blobber_usage_ratio: 40
       gamma:
         alpha: 0.2
         a: 10

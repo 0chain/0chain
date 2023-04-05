@@ -363,7 +363,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		blobs = append(blobs, b)
 	}
 
-	var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
+	var resp, err = nar.callNewAllocReq(t, client.id, 1000*x10, ssc, now,
 		balances)
 	require.NoError(t, err)
 
@@ -385,16 +385,13 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf = newConfig()
 
-	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
+	conf.TimeUnit = 1 * time.Minute // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
 	conf.ValidatorsPerChallenge = 10
 	conf.MaxBlobbersPerAllocation = 10
-	conf.FailedChallengesToCancel = 100
-	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
-	conf.MinAllocDuration = 1 * time.Minute
 	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
@@ -428,7 +425,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		BlockRewardChangePeriod: 1000,
 		BlockRewardChangeRatio:  0.1,
 		TriggerPeriod:           30,
-		BlobberWeight:           0.5,
 		Gamma: blockRewardGamma{
 			Alpha: 0.2,
 			A:     10,

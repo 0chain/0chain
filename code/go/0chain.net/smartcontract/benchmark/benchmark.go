@@ -144,7 +144,6 @@ const (
 
 	StorageOwner                       = SmartContract + StorageSc + "owner_id"
 	StorageMinAllocSize                = SmartContract + StorageSc + "min_alloc_size"
-	StorageMinAllocDuration            = SmartContract + StorageSc + "min_alloc_duration"
 	StorageMaxReadPrice                = SmartContract + StorageSc + "max_read_price"
 	StorageMaxWritePrice               = SmartContract + StorageSc + "max_write_price"
 	StorageMaxChallengeCompletionTime  = SmartContract + StorageSc + "max_challenge_completion_time"
@@ -155,7 +154,6 @@ const (
 	StorageMaxStake                    = SmartContract + StorageSc + "max_stake"
 	StorageMaxDelegates                = SmartContract + StorageSc + "max_delegates"
 	StorageDiverseBlobbers             = SmartContract + StorageSc + "diverse_blobbers"
-	StorageFailedChallengesToCancel    = SmartContract + StorageSc + "failed_challenges_to_cancel"
 	StorageReadPoolMinLock             = SmartContract + StorageSc + "readpool.min_lock"
 	StorageWritePoolMinLock            = SmartContract + StorageSc + "writepool.min_lock"
 	StorageStakePoolMinLock            = SmartContract + StorageSc + "stakepool.min_lock"

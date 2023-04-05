@@ -29,7 +29,7 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 	)
 
 	conf.MinAllocSize = 10 * 1024
-	conf.MinAllocDuration = 48 * time.Hour
+	conf.TimeUnit = 48 * time.Hour
 	nar.DataShards = 1
 	nar.Blobbers = []string{"1", "2"}
 

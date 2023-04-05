@@ -220,23 +220,22 @@ func TestFreeAllocationRequest(t *testing.T) {
 	)
 	var (
 		mockMaxAnnualFreeAllocation = zcnToBalance(100354)
+		timeUnit                    = 24 * 365 * time.Hour
 		mockFreeAllocationSettings  = freeAllocationSettings{
 			DataShards:       5,
 			ParityShards:     5,
 			Size:             123456,
 			ReadPriceRange:   PriceRange{0, 5000},
 			WritePriceRange:  PriceRange{0, 5000},
-			Duration:         24 * 365 * time.Hour,
 			ReadPoolFraction: mockReadPoolFraction,
 		}
 		mockAllBlobbers = &StorageNodes{}
 		conf            = &Config{
 			MinAllocSize:               1027,
-			MinAllocDuration:           5 * time.Minute,
 			MaxChallengeCompletionTime: 1 * time.Hour,
 			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:     mockFreeAllocationSettings,
-			TimeUnit:                   time.Hour,
+			TimeUnit:                   timeUnit,
 			ReadPool: &readPoolConfig{
 				MinLock: mockMinLock,
 			},
@@ -257,7 +256,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
+				MaxOfferDuration: timeUnit * 2,
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 				MinLockDemand:    mockMinLock,
 			},
@@ -461,23 +460,22 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	)
 	var mockTimeUnit = 1 * time.Hour
 	var mockMaxAnnualFreeAllocation = zcnToBalance(100354)
+	timeUnit := 24 * 365 * time.Hour
 	var mockFreeAllocationSettings = freeAllocationSettings{
 		DataShards:      5,
 		ParityShards:    5,
 		Size:            123456,
 		ReadPriceRange:  PriceRange{0, 5000},
 		WritePriceRange: PriceRange{0, 5000},
-		Duration:        24 * 365 * time.Hour,
 	}
 	var mockAllBlobbers = &StorageNodes{}
 	var conf = &Config{
 		MinAllocSize:               1027,
-		MinAllocDuration:           5 * time.Minute,
 		MaxChallengeCompletionTime: 1 * time.Hour,
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
 		MaxBlobbersPerAllocation:   40,
-		TimeUnit:                   mockTimeUnit,
+		TimeUnit:                   timeUnit,
 	}
 	var now = common.Timestamp(29000000)
 
@@ -491,7 +489,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
+				MaxOfferDuration: timeUnit * 2,
 				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
 		}

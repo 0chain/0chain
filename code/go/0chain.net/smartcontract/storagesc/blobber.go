@@ -440,7 +440,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	var (
-		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
+		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr //todo check if it can be negative
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
 		value    = currency.Coin(float64(details.Terms.ReadPrice) * sizeRead)
 	)

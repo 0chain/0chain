@@ -110,8 +110,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				serviceCharge:     []float64{.1},
 			},
 			result: result{
-				blobberRewards:          []currency.Coin{50},
-				blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}},
+				blobberRewards:          []currency.Coin{100},
+				blobberDelegatesRewards: [][]currency.Coin{{225, 0, 675}},
 			},
 		},
 		{
@@ -127,8 +127,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				serviceCharge:     []float64{.1, .1},
 			},
 			result: result{
-				blobberRewards:          []currency.Coin{18, 31},
-				blobberDelegatesRewards: [][]currency.Coin{{43, 0, 124}, {29, 170, 85}},
+				blobberRewards:          []currency.Coin{36, 63},
+				blobberDelegatesRewards: [][]currency.Coin{{84, 0, 249}, {57, 341, 170}},
 			},
 		},
 	}

@@ -40,17 +40,16 @@ const blobberHealthTime = 60 * 60 // 1 Hour
 
 func TestSelectBlobbers(t *testing.T) {
 	const (
-		randomSeed           = 1
-		mockURL              = "mock_url"
-		mockOwner            = "mock owner"
-		mockPublicKey        = "mock public key"
-		mockBlobberId        = "mock_blobber_id"
-		mockPoolId           = "mock pool id"
-		mockMinPrice         = 0
-		confTimeUnit         = 720 * time.Hour
-		confMinAllocSize     = 800
-		confMinAllocDuration = 5 * time.Minute
-		mockMaxOffDuration   = 744 * time.Hour
+		randomSeed         = 1
+		mockURL            = "mock_url"
+		mockOwner          = "mock owner"
+		mockPublicKey      = "mock public key"
+		mockBlobberId      = "mock_blobber_id"
+		mockPoolId         = "mock pool id"
+		mockMinPrice       = 0
+		confTimeUnit       = 720 * time.Hour
+		confMinAllocSize   = 800
+		mockMaxOffDuration = 744 * time.Hour
 	)
 	var mockStatke = zcnToBalance(100)
 	var mockBlobberCapacity int64 = 1000 * confMinAllocSize
@@ -130,10 +129,9 @@ func TestSelectBlobbers(t *testing.T) {
 		}
 
 		var conf = &Config{
-			TimeUnit:         confTimeUnit,
-			MinAllocSize:     confMinAllocSize,
-			MinAllocDuration: confMinAllocDuration,
-			OwnerId:          owner,
+			TimeUnit:     confTimeUnit,
+			MinAllocSize: confMinAllocSize,
+			OwnerId:      owner,
 		}
 		balances.On("GetTrieNode", scConfigKey(ADDRESS), mock.MatchedBy(func(c *Config) bool {
 			*c = *conf
@@ -156,7 +154,7 @@ func TestSelectBlobbers(t *testing.T) {
 				numPreferredBlobbers: 2,
 				dataShards:           5,
 				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(now.Add(confMinAllocDuration).Unix()),
+				expiration:           common.Timestamp(now.Add(confTimeUnit).Unix()),
 			},
 			want: want{
 				blobberIds: []int{0, 1, 2, 3, 5},
@@ -170,7 +168,7 @@ func TestSelectBlobbers(t *testing.T) {
 				numPreferredBlobbers: 2,
 				dataShards:           5,
 				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(now.Add(confMinAllocDuration).Unix()),
+				expiration:           common.Timestamp(now.Add(confTimeUnit).Unix()),
 			},
 			want: want{
 				blobberIds: []int{0, 1, 5, 3, 2},
@@ -184,7 +182,7 @@ func TestSelectBlobbers(t *testing.T) {
 				numPreferredBlobbers: 6,
 				dataShards:           4,
 				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(now.Add(confMinAllocDuration).Unix()),
+				expiration:           common.Timestamp(now.Add(confTimeUnit).Unix()),
 			},
 			want: want{
 				blobberIds: []int{0, 1, 3, 5},
@@ -1001,9 +999,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	conf = setConfig(t, balances)
 	conf.MaxChallengeCompletionTime = 20 * time.Second
-	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 10 * GB
-	conf.TimeUnit = 2 * time.Minute
+	conf.TimeUnit = 20 * time.Second
 
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	require.NoError(t, err)
@@ -1430,10 +1427,9 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	balances.(*testBalances).setTransaction(t, &tx)
 
 	conf.MaxChallengeCompletionTime = 20 * time.Second
-	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 10 * GB
 	conf.MaxBlobbersPerAllocation = 4
-	conf.TimeUnit = 48 * time.Hour
+	conf.TimeUnit = 20 * time.Second
 
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), &conf)
 	require.NoError(t, err)
@@ -1718,7 +1714,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	var (
 		ssc                  = newTestStorageSC()
 		balances             = newTestBalances(t, false)
-		client               = newClient(1000*x10, balances)
+		client               = newClient(2000*x10, balances)
 		otherClient          = newClient(50*x10, balances)
 		tp, exp        int64 = 100, 1000
 		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, 0, balances)
@@ -1755,7 +1751,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	uar.Expiration = alloc.Expiration * 2
 	uar.Size = alloc.Size
 	tp += 100
-	resp, err = uar.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
+	resp, err = uar.callUpdateAllocReq(t, client.id, 300*x10, tp, ssc, balances)
 	require.NoError(t, err)
 
 	var deco StorageAllocation
@@ -2065,7 +2061,7 @@ func Test_finalize_allocation(t *testing.T) {
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
-		client         = newClient(100*x10, balances)
+		client         = newClient(1000*x10, balances)
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 		err      error
 	)
@@ -2217,7 +2213,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
-		client         = newClient(100*x10, balances)
+		client         = newClient(1000*x10, balances)
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 		err      error
 	)

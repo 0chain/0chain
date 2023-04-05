@@ -230,7 +230,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		return
 	}
 	var creationDate = balances.Now()
-	dur := common.ToTime(creationDate).Add(conf.FreeAllocationSettings.Duration)
+	dur := common.ToTime(creationDate).Add(conf.TimeUnit)
 	request := allocationBlobbersRequest{
 		DataShards:      conf.FreeAllocationSettings.DataShards,
 		ParityShards:    conf.FreeAllocationSettings.ParityShards,

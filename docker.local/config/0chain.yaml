@@ -21,12 +21,6 @@ development:
     refill_amount: 1000000000000000
   pprof: true
 
-zerochain:
-  id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
-  decimals: 10
-  genesis_block:
-    id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
-
 server_chain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
   owner: "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
@@ -36,7 +30,6 @@ server_chain:
     id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
   block:
     min_block_size: 1
-    max_block_size: 10
     max_block_cost: 10000 #equal to 100ms
     max_byte_size: 1638400
     min_generators: 2
@@ -60,7 +53,7 @@ server_chain:
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
 
-  round_range: 10000000
+  round_range: 10000000 #todo remove after laxmi is merge
   dkg: true
   view_change: false
   round_timeouts:
@@ -72,7 +65,7 @@ server_chain:
   transaction:
     payload:
       max_size: 98304 # bytes
-    timeout: 30 # seconds
+    timeout: 600 # seconds
     min_fee: 0
     transfer_cost: 10
     exempt:
@@ -86,7 +79,7 @@ server_chain:
   messages:
     verification_tickets_to: all_miners # generator or all_miners
   state:
-    enabled: true
+    enabled: true #todo we really need it?
     prune_below_count: 100 # rounds
     sync:
       timeout: 10 # seconds
@@ -99,10 +92,9 @@ server_chain:
     timeout: 8000ms
     storage: true
     faucet: true
-    interest: true
     miner: true
-    multisig: true
-    vesting: true
+    multisig: false
+    vesting: false
     zcn: true
   health_check:
     show_counters: true
@@ -123,7 +115,7 @@ server_chain:
   lfb_ticket:
     rebroadcast_timeout: "15s" #
     ahead: 5 # should be >= 5
-    fb_fetching_lifetime: "10s" #
+    fb_fetching_lifetime: "10s" #todo add to config
   async_blocks_fetching:
     max_simultaneous_from_miners: 100
     max_simultaneous_from_sharders: 30
@@ -170,24 +162,6 @@ delegate_wallet: ""
 service_charge: 0.10 # [0; 1) of all fees
 # max number of delegate pools allowed by a node in miner SC
 number_of_delegates: 10 # max number of delegate pools
-# min stake pool amount allowed by node; should not conflict with
-# SC min_stake
-min_stake: 0.0 # tokens
-# max stake pool amount allowed by node; should not conflict with
-# SC max_stake
-max_stake: 20000.0 # tokens
-# latitude is miner/sharder latitude geolocation
-latitude: 28.644800
-# longitude is miner/sharder longitude geolocation
-longitude: 77.216721
-
-minio:
-  enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
-  worker_frequency: 1800 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
-  use_ssl: false # Use SSL for connection or not
-  old_block_round_range: 250000 # How old the block should be to be considered for moving to cloud, Should be greater than proximity scan window
-  delete_local_copy: true # Delete local copy of block once it's moved to cloud
 
 cassandra:
   connection:
