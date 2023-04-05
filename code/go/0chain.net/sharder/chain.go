@@ -330,8 +330,14 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator, r *round.Round)
 		if rollBackCount >= sc.PruneStateBelowCount() {
 			// could not recovery as the state of round below prune count may have nodes missing, and
 			// we can not sync from remote neither, so just panic.
-			logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
-				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+			if lfb != nil {
+				logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
+					zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("round_block_hash", r.BlockHash),
+					zap.Int64("round_number", r.GetRoundNumber()))
+			} else {
+				logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
+					zap.String("round_block_hash", r.BlockHash), zap.Int64("round_number", r.GetRoundNumber()))
+			}
 		}
 
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
