@@ -40,7 +40,6 @@ const (
 	ReadPoolMinLock
 	WritePoolMinLock
 
-	StakePoolMinLock
 	StakePoolMinLockPeriod
 	StakePoolKillSlash
 	MaxTotalFreeAllocation
@@ -145,7 +144,6 @@ func initSettingName() {
 	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
 	SettingName[WritePoolMinLock] = "writepool.min_lock"
-	SettingName[StakePoolMinLock] = "stakepool.min_lock"
 	SettingName[StakePoolKillSlash] = "stakepool.kill_slash"
 	SettingName[StakePoolMinLockPeriod] = "stakepool.min_lock_period"
 	SettingName[MaxTotalFreeAllocation] = "max_total_free_allocation"
@@ -227,7 +225,6 @@ func initSettings() {
 		MinBlobberCapacity.String():               {MinBlobberCapacity, smartcontract.Int64},
 		ReadPoolMinLock.String():                  {ReadPoolMinLock, smartcontract.CurrencyCoin},
 		WritePoolMinLock.String():                 {WritePoolMinLock, smartcontract.CurrencyCoin},
-		StakePoolMinLock.String():                 {StakePoolMinLock, smartcontract.CurrencyCoin},
 		StakePoolMinLockPeriod.String():           {StakePoolMinLockPeriod, smartcontract.Duration},
 		StakePoolKillSlash.String():               {StakePoolKillSlash, smartcontract.Float64},
 		MaxTotalFreeAllocation.String():           {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
@@ -416,11 +413,6 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 			conf.ReadPool = &readPoolConfig{}
 		}
 		conf.ReadPool.MinLock = change
-	case StakePoolMinLock:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
-		}
-		conf.StakePool.MinLock = change
 	default:
 		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
@@ -630,8 +622,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ReadPool.MinLock
 	case WritePoolMinLock:
 		return conf.WritePool.MinLock
-	case StakePoolMinLock:
-		return conf.StakePool.MinLock
 	case StakePoolMinLockPeriod:
 		return conf.StakePool.MinLockPeriod
 	case MaxTotalFreeAllocation:

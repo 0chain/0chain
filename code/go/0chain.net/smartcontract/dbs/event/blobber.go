@@ -32,11 +32,12 @@ type Blobber struct {
 	MinLockDemand    float64       `json:"min_lock_demand"`
 	MaxOfferDuration int64         `json:"max_offer_duration"`
 
-	Capacity  int64 `json:"capacity"`   // total blobber capacity
-	Allocated int64 `json:"allocated"`  // allocated capacity
-	Used      int64 `json:"used"`       // total of files saved on blobber
-	SavedData int64 `json:"saved_data"` // total of files saved on blobber
-	ReadData  int64 `json:"read_data"`
+	Capacity    int64 `json:"capacity"`   // total blobber capacity
+	Allocated   int64 `json:"allocated"`  // allocated capacity
+	Used        int64 `json:"used"`       // total of files saved on blobber
+	SavedData   int64 `json:"saved_data"` // total of files saved on blobber
+	ReadData    int64 `json:"read_data"`
+	IsAvailable bool  `json:"is_available"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	//todo update
@@ -207,19 +208,64 @@ func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
 	return edb.Store.Get().Create(&blobbers).Error
 }
 
-func (edb *EventDb) addOrOverwriteBlobber(blobbers []Blobber) error {
-	err := edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		UpdateAll: true,
-	}).Create(&blobbers).Error
-	if err != nil {
-		bids := make([]string, 0, len(blobbers))
-		for _, b := range blobbers {
-			bids = append(bids, b.ID)
-		}
-		logging.Logger.Debug("add or overwrite blobbers failed", zap.Strings("ids", bids))
+func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
+	ts := time.Now()
+
+	// fields match storagesc.emitUpdateBlobber
+	updateColumns := []string{
+		"latitude",
+		"longitude",
+		"read_price",
+		"write_price",
+		"min_lock_demand",
+		"max_offer_duration",
+		"capacity",
+		"allocated",
+		"saved_data",
+		"is_available",
+		"offers_total",
+		"delegate_wallet",
+		"min_stake",
+		"max_stake",
+		"num_delegates",
+		"service_charge",
+		"last_health_check",
+		"unstake_total",
+		"total_stake",
 	}
-	return err
+	columns, err := Columnize(blobbers)
+	if err != nil {
+		return err
+	}
+	ids, ok := columns["id"]
+	if !ok {
+		return common.NewError("update_blobbers", "no id field provided in event Data")
+	}
+
+	updater := CreateBuilder("blobbers", "id", ids)
+	for _, fieldKey := range updateColumns {
+		if fieldKey == "id" {
+			continue
+		}
+
+		fieldList, ok := columns[fieldKey]
+		if !ok {
+			logging.Logger.Warn("update_blobbers required update field not found in event data", zap.String("field", fieldKey))
+		} else {
+			updater = updater.AddUpdate(fieldKey, fieldList)
+		}
+	}
+
+	defer func() {
+		du := time.Since(ts)
+		if du.Milliseconds() > 50 {
+			logging.Logger.Debug("event db - update blobbers slow",
+				zap.Duration("duration", du),
+				zap.Int("num", len(blobbers)))
+		}
+	}()
+
+	return updater.Exec(edb).Debug().Error
 }
 
 func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {

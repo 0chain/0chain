@@ -240,12 +240,15 @@ func TestEventDb_rewardProviders(t *testing.T) {
 	if err := db.rewardProviders(map[string]currency.Coin{
 		mnMiner1.ID: 20,
 		mnMiner2.ID: 30,
+	}, map[string]currency.Coin{
+		mnMiner1.ID: 50,
+		mnMiner2.ID: 60,
 	}, 7); err != nil {
 		t.Error(err)
 	}
 
-	assertMinerRewards(t, db, mnMiner1.ID, uint64(20+5), uint64(25), 7)
-	assertMinerRewards(t, db, mnMiner2.ID, uint64(30+5), uint64(35), 7)
+	assertMinerRewards(t, db, mnMiner1.ID, uint64(20+5), uint64(50+5), 7)
+	assertMinerRewards(t, db, mnMiner2.ID, uint64(30+5), uint64(60+5), 7)
 }
 
 func TestEventDb_rewardProviderDelegates(t *testing.T) {

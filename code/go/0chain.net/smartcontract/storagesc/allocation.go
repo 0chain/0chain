@@ -254,7 +254,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		request.OwnerPublicKey = txn.PublicKey
 	}
 
-	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers))
+	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers), zap.Any("amount", txn.Value))
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
 	if err != nil {
@@ -321,7 +321,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			Delta:        bSize(request.Size, request.DataShards),
 		})
 
-		emitUpdateBlobber(b, balances)
+		emitUpdateBlobberAllocatedHealth(b, balances)
 	}
 
 	var options []WithOption
@@ -670,7 +670,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
-		emitUpdateBlobber(b, balances)
+		emitUpdateBlobberAllocatedHealth(b, balances)
 	}
 	// Save allocation
 	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
@@ -1033,7 +1033,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 				return fmt.Errorf("can't Save stake pool of %s: %v", ba.BlobberID,
 					err)
 			}
-			emitUpdateBlobber(b, balances)
+			emitUpdateBlobberAllocatedHealth(b, balances)
 		}
 	}
 
@@ -1677,6 +1677,13 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err != nil {
 		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
 	}
+	// This event just decreases the cancelation charge from the write pool's reflection in global snapshot's total client locked tokens
+	i, _ := cancellationCharge.Int64()
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
+		Client:       t.ClientID,
+		AllocationId: alloc.ID,
+		Amount:       i,
+	})
 
 	reward, _, err := currency.DistributeCoin(cancellationCharge, int64(len(alloc.BlobberAllocs)))
 	if err != nil {
@@ -1715,7 +1722,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
-	i, err := prevBal.Int64()
+	i, err = prevBal.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}

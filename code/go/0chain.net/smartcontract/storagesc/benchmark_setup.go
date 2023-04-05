@@ -372,6 +372,7 @@ func AddMockBlobbers(
 			Allocated:         mockUsedData,
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
+			IsAvailable:       true,
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
@@ -407,6 +408,7 @@ func AddMockBlobbers(
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
+				IsAvailable:         blobber.IsAvailable,
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
 			if err != nil {
@@ -840,10 +842,6 @@ func SetMockConfig(
 	}
 	conf.OwnerId = viper.GetString(sc.FaucetOwner)
 	conf.StakePool = &stakePoolConfig{}
-	conf.StakePool.MinLock, err = currency.ParseZCN(viper.GetFloat64(sc.StorageStakePoolMinLock))
-	if err != nil {
-		panic(err)
-	}
 	conf.StakePool.KillSlash = 0.5
 	conf.FreeAllocationSettings = freeAllocationSettings{
 		DataShards:   viper.GetInt(sc.StorageFasDataShards),

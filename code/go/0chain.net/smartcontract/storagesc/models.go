@@ -344,6 +344,7 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
+	IsAvailable       bool               `json:"is_available"`
 }
 
 // validate the blobber configurations
@@ -730,20 +731,30 @@ func (sa *StorageAllocation) addToWritePool(
 		} else {
 			sa.WritePool = writePool
 		}
-		return nil
+	} else {
+		for _, opt := range opts {
+			value, err := opt(balances)
+			if err != nil {
+				return err
+			}
+			if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+				return err
+			} else {
+				sa.WritePool = writePool
+			}
+		}
+
 	}
 
-	for _, opt := range opts {
-		value, err := opt(balances)
-		if err != nil {
-			return err
-		}
-		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
-			return err
-		} else {
-			sa.WritePool = writePool
-		}
+	i, err := txn.Value.Int64()
+	if err != nil {
+		return err
 	}
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sa.ID, event.WritePoolLock{
+		Client:       txn.ClientID,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
 	return nil
 }
 
@@ -807,6 +818,10 @@ func (sa *StorageAllocation) isActive(
 	active, reason := blobber.Provider.IsActive(now, common.ToSeconds(conf.HealthCheckPeriod))
 	if !active {
 		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
+	}
+
+	if !blobber.IsAvailable {
+		return fmt.Errorf("blobber %s is not currently available for new allocations", blobber.ID)
 	}
 
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
@@ -1470,7 +1485,7 @@ type ReadConnection struct {
 
 func (rc *ReadConnection) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey +
-		encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
+		encryption.Hash(rc.ReadMarker.BlobberID+rc.ReadMarker.ClientID+rc.ReadMarker.AllocationID))
 }
 
 func (rc *ReadConnection) Decode(input []byte) error {

@@ -30,7 +30,6 @@ type freeAllocationSettings struct {
 }
 
 type stakePoolConfig struct {
-	MinLock       currency.Coin `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	KillSlash     float64       `json:"kill_slash"`
 }
@@ -196,10 +195,6 @@ func (conf *Config) validate() (err error) {
 	if conf.MaxWritePrice < conf.MinWritePrice {
 		return fmt.Errorf("max wirte price %v must be more than min_write_price: %v",
 			conf.MaxWritePrice, conf.MinWritePrice)
-	}
-	if conf.StakePool.MinLock <= 1 {
-		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
-			conf.StakePool.MinLock)
 	}
 	if conf.StakePool.KillSlash < 0 || conf.StakePool.KillSlash > 1 {
 		return fmt.Errorf("stakepool.kill_slash, %v must be in interval [0.1]", conf.StakePool.KillSlash)
@@ -396,10 +391,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
-	conf.StakePool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "stakepool.min_lock"))
-	if err != nil {
-		return nil, err
-	}
 	conf.StakePool.MinLockPeriod = scc.GetDuration(pfx + "stakepool.min_lock_period")
 	conf.StakePool.KillSlash = scc.GetFloat64(pfx + "stakepool.kill_slash")
 
@@ -505,7 +496,7 @@ func InitConfig(balances chainState.StateContextI) error {
 
 // getConfig
 func (ssc *StorageSmartContract) getConfig(
-	balances chainState.StateContextI, setup bool) (
+	balances chainState.StateContextI, _ bool) (
 	conf *Config, err error) {
 
 	conf = newConfig()

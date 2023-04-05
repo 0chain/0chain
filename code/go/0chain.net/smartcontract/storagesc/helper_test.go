@@ -415,9 +415,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		MinLock: 10,
 	}
 
-	conf.StakePool = &stakePoolConfig{
-		MinLock: 10,
-	}
+	conf.StakePool = &stakePoolConfig{}
 
 	conf.BlockReward = &blockReward{
 		BlockReward:             1000,
