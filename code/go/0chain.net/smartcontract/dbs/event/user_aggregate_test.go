@@ -27,7 +27,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 		PayedFees:       88,
 		CreatedAt:       time.Time{},
 	}
-	if err := edb.AddOrOverwriteUserSnapshots([]UserSnapshot{ snap }); err != nil {
+	if err := edb.AddOrOverwriteUserSnapshots([]*UserSnapshot{ &snap }); err != nil {
 		t.Error(err)
 	}
 	type args struct {
@@ -141,7 +141,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 		PayedFees:       88,
 		CreatedAt:       time.Time{},
 	}
-	if err := edb.AddOrOverwriteUserSnapshots([]UserSnapshot{ snap }); err != nil {
+	if err := edb.AddOrOverwriteUserSnapshots([]*UserSnapshot{ &snap }); err != nil {
 		t.Error(err)
 	}
 

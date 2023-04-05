@@ -22,14 +22,14 @@ type UserSnapshot struct {
 
 func (edb *EventDb) GetUserSnapshotsByIds(ids []string) (snapshots []UserSnapshot, err error) {
 	err = edb.Store.Get().Exec(`CREATE TEMPORARY TABLE IF NOT EXISTS user_snapshot_ids_temp
-		ON COMMIT DROP AS SELECT t.id FROM UNNEST(?::[]text) AS t(id)`, pq.StringArray(ids),
-	).Error
+		ON COMMIT DROP AS SELECT t.id FROM UNNEST(?::text[]) AS t(id)`, pq.StringArray(ids),
+	).Debug().Error
 	if err != nil {
 		return
 	}
 	
-	err = edb.Store.Get().Exec(`SELECT us.* FROM user_snapshot_ids_temp tmp
-		INNER JOIN user_snapshots us ON tmp.id = us.user_id`).Scan(&snapshots).Error
+	err = edb.Store.Get().Raw(`SELECT us.* FROM user_snapshot_ids_temp tmp
+		INNER JOIN user_snapshots us ON tmp.id = us.user_id`).Scan(&snapshots).Debug().Error
 	return
 }
 

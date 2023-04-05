@@ -221,6 +221,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 		logging.Logger.Error("can't load latest snapshots", zap.Error(err))
 		return err
 	}
+	logging.Logger.Debug("loading user_snapshots", zap.Any("snaps", snaps))
 
 	snapsMap := make(map[string]*UserSnapshot, len(updatedAggrs))
 	for _, snap := range snaps {
@@ -232,6 +233,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 		if !ok {
 			snapsMap[aggr.UserID] = &UserSnapshot{
 				UserID:          aggr.UserID,
+				Round:           aggr.Round,
 				CollectedReward: aggr.CollectedReward,
 				PayedFees:       aggr.PayedFees,
 				TotalStake:      aggr.TotalStake,
@@ -256,6 +258,10 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 			WritePoolTotal:  snap.WritePoolTotal,
 		}
 	}
+
+	logging.Logger.Debug("saving user_aggregates", zap.Any("uniqueIds", uniqueIds), zap.Any("updatedAggrs", updatedAggrs), zap.Any("newAggregates", newAggregates))
+	logging.Logger.Debug("saving user_aggregates", zap.Any("snaps", snaps), zap.Any("snapsMap", snapsMap))
+
 	err = edb.addUserAggregates(newAggregates)
 	if err != nil {
 		logging.Logger.Error("saving user aggregate failed", zap.Error(err))

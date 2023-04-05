@@ -12,7 +12,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
-	testSnapshots := []UserSnapshot{
+	testSnapshots := []*UserSnapshot{
 		{
 			UserID:          "user1",
 			Round:           1,
@@ -52,7 +52,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 		uniqueSnaps := make(map[string]bool, 3)
 		for _, snap := range snapshots {
 			uniqueSnaps[snap.UserID] = true
-			var expectedSnapshot UserSnapshot
+			var expectedSnapshot *UserSnapshot
 			switch snap.UserID {
 			case "user1":
 				expectedSnapshot = testSnapshots[0]
@@ -86,7 +86,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 		testSnapshots[2].ReadPoolTotal /= 2
 		testSnapshots[2].WritePoolTotal /= 2
 
-		testSnapshots = append(testSnapshots, UserSnapshot{
+		testSnapshots = append(testSnapshots, &UserSnapshot{
 			UserID:          "user4",
 			Round:           1000,
 			CollectedReward: 1000,
@@ -106,7 +106,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 		uniqueSnaps := make(map[string]bool, 4)
 		for _, snap := range snapshots {
 			uniqueSnaps[snap.UserID] = true
-			var expectedSnapshot UserSnapshot
+			var expectedSnapshot *UserSnapshot
 			switch snap.UserID {
 			case "user1":
 				expectedSnapshot = testSnapshots[0]
