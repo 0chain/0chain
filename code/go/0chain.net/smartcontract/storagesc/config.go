@@ -93,8 +93,6 @@ type Config struct {
 	MinAllocSize int64 `json:"min_alloc_size"`
 	// MaxChallengeCompletionTime is max time to complete a challenge.
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
-	// MinOfferDuration represents lower boundary of blobber's MaxOfferDuration.
-	MinOfferDuration time.Duration `json:"min_offer_duration"`
 	// MinBlobberCapacity allowed to register in the SC.
 	MinBlobberCapacity int64 `json:"min_blobber_capacity"`
 	// ReadPool related configurations.
@@ -183,10 +181,6 @@ func (conf *Config) validate() (err error) {
 	if conf.MinBlobberCapacity < 0 {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
 			conf.MinBlobberCapacity)
-	}
-	if conf.MinOfferDuration < 0 {
-		return fmt.Errorf("negative min_offer_duration: %v",
-			conf.MinOfferDuration)
 	}
 	if conf.MaxChallengeCompletionTime < 0 {
 		return fmt.Errorf("negative max_challenge_completion_time: %v",
@@ -370,7 +364,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
-	conf.MinOfferDuration = scc.GetDuration(pfx + "min_offer_duration")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")

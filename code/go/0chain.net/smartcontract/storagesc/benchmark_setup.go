@@ -812,7 +812,6 @@ func SetMockConfig(
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = viper.GetInt(sc.StorageMaxChallengesPerGeneration)
 	conf.MinAllocSize = viper.GetInt64(sc.StorageMinAllocSize)
-	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
 	conf.ValidatorReward = 0.025
 

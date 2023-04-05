@@ -744,7 +744,6 @@ func BenchmarkTests(
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
 					"max_challenge_completion_time": "3m",
-					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
 					"readpool.min_lock": "10",

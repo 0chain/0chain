@@ -273,7 +273,7 @@ func (t *Terms) validate(conf *Config) (err error) {
 	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
 		return errors.New("invalid min_lock_demand")
 	}
-	if t.MaxOfferDuration < conf.MinOfferDuration {
+	if t.MaxOfferDuration < conf.TimeUnit {
 		return errors.New("insufficient max_offer_duration")
 	}
 

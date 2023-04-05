@@ -392,7 +392,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.ValidatorsPerChallenge = 10
 	conf.MaxBlobbersPerAllocation = 10
 	conf.MinAllocSize = 1 * GB
-	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1

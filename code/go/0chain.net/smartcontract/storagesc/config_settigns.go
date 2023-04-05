@@ -35,7 +35,6 @@ const (
 	TimeUnit
 	MinAllocSize
 	MaxChallengeCompletionTime
-	MinOfferDuration
 	MinBlobberCapacity
 
 	ReadPoolMinLock
@@ -143,7 +142,6 @@ func initSettingName() {
 	SettingName[TimeUnit] = "time_unit"
 	SettingName[MinAllocSize] = "min_alloc_size"
 	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
-	SettingName[MinOfferDuration] = "min_offer_duration"
 	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
 	SettingName[WritePoolMinLock] = "writepool.min_lock"
@@ -226,7 +224,6 @@ func initSettings() {
 		TimeUnit.String():                         {TimeUnit, smartcontract.Duration},
 		MinAllocSize.String():                     {MinAllocSize, smartcontract.Int64},
 		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, smartcontract.Duration},
-		MinOfferDuration.String():                 {MinOfferDuration, smartcontract.Duration},
 		MinBlobberCapacity.String():               {MinBlobberCapacity, smartcontract.Int64},
 		ReadPoolMinLock.String():                  {ReadPoolMinLock, smartcontract.CurrencyCoin},
 		WritePoolMinLock.String():                 {WritePoolMinLock, smartcontract.CurrencyCoin},
@@ -502,8 +499,6 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 		conf.TimeUnit = change
 	case MaxChallengeCompletionTime:
 		conf.MaxChallengeCompletionTime = change
-	case MinOfferDuration:
-		conf.MinOfferDuration = change
 	case StakePoolMinLockPeriod:
 		if conf.StakePool == nil {
 			conf.StakePool = &stakePoolConfig{}
@@ -629,8 +624,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MinAllocSize
 	case MaxChallengeCompletionTime:
 		return conf.MaxChallengeCompletionTime
-	case MinOfferDuration:
-		return conf.MinOfferDuration
 	case MinBlobberCapacity:
 		return conf.MinBlobberCapacity
 	case ReadPoolMinLock:
