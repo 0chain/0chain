@@ -45,6 +45,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("GetUserSnapshotsByIds", func (t *testing.T) {
+		edb.Store.Get().Exec("DROP TABLE IF EXISTS temp_ids")
 		snapshots, err := edb.GetUserSnapshotsByIds([]string{"user1", "user2", "user3"})
 		require.NoError(t, err)
 		require.Len(t, snapshots, 3)
@@ -72,6 +73,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 	})
 
 	t.Run("AddOrOverwriteUserSnapshots", func (t *testing.T) {
+		edb.Store.Get().Exec("DROP TABLE IF EXISTS temp_ids")
 		testSnapshots[1].Round *= 2
 		testSnapshots[1].CollectedReward *= 2
 		testSnapshots[1].PayedFees *= 2

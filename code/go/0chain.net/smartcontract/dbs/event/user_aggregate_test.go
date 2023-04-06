@@ -118,6 +118,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			edb.Store.Get().Exec("DROP TABLE IF EXISTS temp_ids")
 			tt.wantErr(t, edb.updateUserAggregates(tt.args.e), fmt.Sprintf("updateUserAggregates(%v)", tt.args.e))
 		})
 	}
@@ -126,6 +127,8 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 func TestEventDb_updateUserSnapshots(t *testing.T) {
 	edb, clean := GetTestEventDB(t)
 	defer clean()
+
+	edb.Store.Get().Exec("DROP TABLE IF EXISTS temp_ids")
 
 	if err := edb.addPartition(0, "user_aggregates"); err != nil {
 		t.Error()
@@ -262,6 +265,6 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 	assert.Equal(t, snap.PayedFees + int64(10), snap1.PayedFees)
 	assert.Equal(t, snap.CollectedReward + int64(10), snap1.CollectedReward)
 
-	assert.Equal(t, int64(11), snap1.Round)
-	assert.Equal(t, snap.CollectedReward + int64(10), snap1.CollectedReward)	
+	assert.Equal(t, int64(11), snap2.Round)
+	assert.Equal(t, int64(10), snap2.CollectedReward)	
 }
