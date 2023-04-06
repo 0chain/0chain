@@ -888,7 +888,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, common.NewError("add_challenges", "empty blobber id")
 	}
 
-	logging.Logger.Info("generate_challenges", zap.String("blobber id", blobberID))
+	logging.Logger.Debug("generate_challenges", zap.String("blobber id", blobberID))
 
 	// get blobber allocations partitions
 	blobberAllocParts, err := partitionsBlobberAllocations(blobberID, balances)
@@ -1024,18 +1024,18 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			continue
 		}
 
-		sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
-		if err != nil {
-			return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
-		}
-		stake, err := sp.stake()
-		if err != nil {
-			return nil, err
-		}
-		if stake < minStake {
-			remainingValidators--
-			continue
-		}
+		// sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
+		// }
+		// stake, err := sp.stake()
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// if stake < minStake {
+		// 	remainingValidators--
+		// 	continue
+		// }
 
 		selectedValidators = append(selectedValidators,
 			&ValidationNode{
