@@ -229,6 +229,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 	}
 
 	for _, aggr := range updatedAggrs {
+		curAggr := aggr
 		snap, ok := snapsMap[aggr.UserID]
 		if !ok {
 			snapsMap[aggr.UserID] = &UserSnapshot{
@@ -242,7 +243,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 			}
 			continue
 		}
-		merge(snap, &aggr)
+		merge(snap, &curAggr)
 		snap.UpdatedAt = time.Now()
 	}
 

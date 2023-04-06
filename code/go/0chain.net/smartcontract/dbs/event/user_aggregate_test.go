@@ -231,22 +231,37 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 					CollectedReward: 10,
 				}},
 			},
+			{
+				BlockNumber: 11,
+				TxHash:      "qwerty",
+				Tag:         TagUpdateUserCollectedRewards,
+				Index:       "qwety",
+				Data: &[]UserAggregate{{
+					UserID: "test_client_2",
+					CollectedReward: 10,
+				}},
+			},
 		},
 	}
 
 	err := edb.updateUserAggregates(events)
 	require.NoError(t, err)
 
-	snapsAfter, err := edb.GetUserSnapshotsByIds([]string{ "test_client" })
+	snapsAfter, err := edb.GetUserSnapshotsByIds([]string{ "test_client", "test_client_2" })
 	require.NoError(t, err)
-	require.Equal(t, 1, len(snapsAfter))
+	require.Equal(t, 2, len(snapsAfter))
 
-	actualSnap := snapsAfter[0]
-	assert.Equal(t, "test_client", actualSnap.UserID)
-	assert.Equal(t, int64(10), actualSnap.Round)
-	assert.Equal(t, snap.TotalStake + int64(5), actualSnap.TotalStake)
-	assert.Equal(t, snap.ReadPoolTotal + int64(5), actualSnap.ReadPoolTotal)
-	assert.Equal(t, snap.WritePoolTotal + int64(5), actualSnap.WritePoolTotal)
-	assert.Equal(t, snap.PayedFees + int64(10), actualSnap.PayedFees)
-	assert.Equal(t, snap.CollectedReward + int64(10), actualSnap.CollectedReward)
+	snap1, snap2 := snapsAfter[0], snapsAfter[1]
+	if snap1.UserID == "test_client_2" {
+		snap1, snap2 = snap2, snap1
+	}
+	assert.Equal(t, int64(10), snap1.Round)
+	assert.Equal(t, snap.TotalStake + int64(5), snap1.TotalStake)
+	assert.Equal(t, snap.ReadPoolTotal + int64(5), snap1.ReadPoolTotal)
+	assert.Equal(t, snap.WritePoolTotal + int64(5), snap1.WritePoolTotal)
+	assert.Equal(t, snap.PayedFees + int64(10), snap1.PayedFees)
+	assert.Equal(t, snap.CollectedReward + int64(10), snap1.CollectedReward)
+
+	assert.Equal(t, int64(11), snap1.Round)
+	assert.Equal(t, snap.CollectedReward + int64(10), snap1.CollectedReward)	
 }
