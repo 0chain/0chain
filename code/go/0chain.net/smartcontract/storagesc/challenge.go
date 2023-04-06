@@ -888,7 +888,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, common.NewError("add_challenges", "empty blobber id")
 	}
 
-	logging.Logger.Debug("generate_challenges", zap.String("blobber id", blobberID))
+	logging.Logger.Info("generate_challenges", zap.String("blobber id", blobberID))
 
 	// get blobber allocations partitions
 	blobberAllocParts, err := partitionsBlobberAllocations(blobberID, balances)
