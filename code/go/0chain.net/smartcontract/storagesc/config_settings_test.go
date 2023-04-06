@@ -149,8 +149,6 @@ func TestUpdateSettings(t *testing.T) {
 					"max_read_price":                 "100",
 					"max_write_price":                "100",
 					"challenge_enabled":              "true",
-					"challenge_rate_per_mb_min":      "1.0",
-					"max_challenges_per_generation":  "100",
 					"validators_per_challenge":       "2",
 					"max_delegates":                  "100",
 					"owner_id":                       "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
@@ -392,8 +390,6 @@ func TestCommitSettingChanges(t *testing.T) {
 					"max_write_price":                "100",
 					"max_blobbers_per_allocation":    "40",
 					"challenge_enabled":              "true",
-					"challenge_rate_per_mb_min":      "1.0",
-					"max_challenges_per_generation":  "100",
 					"validators_per_challenge":       "2",
 					"max_delegates":                  "100",
 					"health_check_period":            "1h",
@@ -513,10 +509,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MinWritePrice
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
-	case ChallengeGenerationRate:
-		return conf.ChallengeGenerationRate
-	case MaxChallengesPerGeneration:
-		return conf.MaxChallengesPerGeneration
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case MaxDelegates:

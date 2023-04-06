@@ -64,8 +64,6 @@ const (
 	MaxWritePrice
 	MinWritePrice
 	ChallengeEnabled
-	ChallengeGenerationRate
-	MaxChallengesPerGeneration
 	ValidatorsPerChallenge
 	MaxDelegates
 
@@ -165,8 +163,6 @@ func initSettingName() {
 	SettingName[MaxWritePrice] = "max_write_price"
 	SettingName[MinWritePrice] = "min_write_price"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
-	SettingName[ChallengeGenerationRate] = "challenge_rate_per_mb_min"
-	SettingName[MaxChallengesPerGeneration] = "max_challenges_per_generation"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
 	SettingName[MaxDelegates] = "max_delegates"
 	SettingName[BlockRewardBlockReward] = "block_reward.block_reward"
@@ -246,8 +242,6 @@ func initSettings() {
 		MaxWritePrice.String():                    {MaxWritePrice, smartcontract.CurrencyCoin},
 		MinWritePrice.String():                    {MinWritePrice, smartcontract.CurrencyCoin},
 		ChallengeEnabled.String():                 {ChallengeEnabled, smartcontract.Boolean},
-		ChallengeGenerationRate.String():          {ChallengeGenerationRate, smartcontract.Float64},
-		MaxChallengesPerGeneration.String():       {MaxChallengesPerGeneration, smartcontract.Int},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, smartcontract.Int},
 		MaxDelegates.String():                     {MaxDelegates, smartcontract.Int},
 		BlockRewardBlockReward.String():           {BlockRewardBlockReward, smartcontract.CurrencyCoin},
@@ -358,8 +352,6 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.FreeAllocationSettings.ParityShards = change
 	case MaxBlobbersPerAllocation:
 		conf.MaxBlobbersPerAllocation = change
-	case MaxChallengesPerGeneration:
-		conf.MaxChallengesPerGeneration = change
 	case ValidatorsPerChallenge:
 		conf.ValidatorsPerChallenge = change
 	case MaxDelegates:
@@ -447,8 +439,6 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.StakePool.KillSlash = change
 	case BlobberSlash:
 		conf.BlobberSlash = change
-	case ChallengeGenerationRate:
-		conf.ChallengeGenerationRate = change
 	case BlockRewardGammaAlpha:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
@@ -664,10 +654,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MinWritePrice
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
-	case ChallengeGenerationRate:
-		return conf.ChallengeGenerationRate
-	case MaxChallengesPerGeneration:
-		return conf.MaxChallengesPerGeneration
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case MaxDelegates:

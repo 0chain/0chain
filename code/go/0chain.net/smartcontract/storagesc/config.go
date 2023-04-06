@@ -130,15 +130,9 @@ type Config struct {
 
 	// ChallengeEnabled is challenges generating pin.
 	ChallengeEnabled bool `json:"challenge_enabled"`
-	// MaxChallengesPerGeneration is max number of challenges can be generated
-	// at once for a blobber-allocation pair with size difference for the
-	// moment of the generation.
-	MaxChallengesPerGeneration int `json:"max_challenges_per_generation"`
 	// ValidatorsPerChallenge is the number of validators to select per
 	// challenges.
 	ValidatorsPerChallenge int `json:"validators_per_challenge"`
-	// ChallengeGenerationRate is number of challenges generated for a MB/min.
-	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake"`
@@ -224,20 +218,10 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
 			conf.FreeAllocationSettings.ReadPoolFraction)
 	}
-
-	if conf.MaxChallengesPerGeneration <= 0 {
-		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
-			conf.MaxChallengesPerGeneration)
-	}
 	if conf.ValidatorsPerChallenge <= 0 {
 		return fmt.Errorf("invalid validators_per_challenge <= 0: %v",
 			conf.ValidatorsPerChallenge)
 	}
-	if conf.ChallengeGenerationRate < 0 {
-		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
-			conf.ChallengeGenerationRate)
-	}
-
 	if conf.MaxStake < conf.MinStake {
 		return fmt.Errorf("max_stake less than min_stake: %v < %v", conf.MinStake,
 			conf.MaxStake)
@@ -442,12 +426,8 @@ func getConfiguredConfig() (conf *Config, err error) {
 
 	// challenges generating
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
-	conf.MaxChallengesPerGeneration = scc.GetInt(
-		pfx + "max_challenges_per_generation")
 	conf.ValidatorsPerChallenge = scc.GetInt(
 		pfx + "validators_per_challenge")
-	conf.ChallengeGenerationRate = scc.GetFloat64(
-		pfx + "challenge_rate_per_mb_min")
 
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")

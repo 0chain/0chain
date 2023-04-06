@@ -169,7 +169,6 @@ const (
 	StorageFasWritePriceMax            = SmartContract + StorageSc + Fas + "write_price_range.max"
 	StorageFasReadPoolFraction         = SmartContract + StorageSc + Fas + "read_pool_fraction"
 	StorageMaxMint                     = SmartContract + StorageSc + "max_mint"
-	StorageMaxChallengesPerGeneration  = SmartContract + StorageSc + "max_challenges_per_generation"
 	StorageValidatorsPerChallenge      = SmartContract + StorageSc + "validators_per_challenge"
 	StorageMaxBlobbersPerAllocation    = SmartContract + StorageSc + "max_blobbers_per_allocation"
 

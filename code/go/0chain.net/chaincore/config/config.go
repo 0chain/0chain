@@ -113,7 +113,6 @@ func SetupDefaultSmartContractConfig() {
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_reset", "24h")
 
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_enabled", true)
-	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_rate_per_mb_min", 1)
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", "3m")
 }
 
