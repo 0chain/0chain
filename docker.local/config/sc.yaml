@@ -39,7 +39,7 @@ smart_contracts:
     reward_rate: 1.0 # [0; 1)
     # share ratio is miner/block sharders rewards ratio, for example 0.1
     # gives 10% for miner and rest for block sharders
-    share_ratio: 0.8 # [0; 1)
+    share_ratio: 0.16 # [0; 1)
     # reward for a block
     block_reward: 0.068 # tokens
     # max service charge can be set by a generator
