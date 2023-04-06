@@ -118,7 +118,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			edb.Store.Get().Exec("DROP TABLE IF EXISTS temp_ids")
+			edb.Store.Get().Exec("DROP TABLE IF EXISTS user_snapshot_ids_temp")
 			tt.wantErr(t, edb.updateUserAggregates(tt.args.e), fmt.Sprintf("updateUserAggregates(%v)", tt.args.e))
 		})
 	}
@@ -128,7 +128,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
-	edb.Store.Get().Exec("DROP TABLE IF EXISTS temp_ids")
+	edb.Store.Get().Exec("DROP TABLE IF EXISTS user_snapshot_ids_temp")
 
 	if err := edb.addPartition(0, "user_aggregates"); err != nil {
 		t.Error()
