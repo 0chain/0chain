@@ -45,11 +45,11 @@ smart_contracts:
     # max service charge can be set by a generator
     max_charge: 0.5 # %
     # epoch is number of rounds before rewards and interest are decreased
-    epoch: 15000000 # rounds
+    epoch: 125000000 # rounds
     # decline rewards every new epoch by this value (the block_reward)
     reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     # no mints after miner SC total mints reaches this boundary
-    max_mint: 1500000.0 # tokens
+    max_mint: 85000000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
     # miner delegates to get paid each round when paying fees and rewards
@@ -91,15 +91,15 @@ smart_contracts:
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
-    max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
+    max_mint: 75000000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC
-    min_alloc_size: 1024
+    min_alloc_size: 1048576
     # max challenge completion time of a blobber allowed by the SC
     max_challenge_completion_time: "3m"
     # min blobber's offer duration allowed by the SC
     min_offer_duration: "10h" #todo based on timeunit
     # min blobber capacity allowed by the SC
-    min_blobber_capacity: 1024
+    min_blobber_capacity: 10737418240
     # fraction of the allocation cost that is locked in the cancellation charge
     cancellation_charge: 0.2
     # users' read pool related configurations
@@ -122,7 +122,7 @@ smart_contracts:
     # allocation settings for free storage
     # these values are applied to all free allocations
     free_allocation_settings:
-      data_shards: 2
+      data_shards: 4
       parity_shards: 2
       read_pool_fraction: 0
       read_price_range:
@@ -141,7 +141,7 @@ smart_contracts:
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
     max_write_price: 100.0
-    min_write_price: 0.1
+    min_write_price: 0.001
     max_blobbers_per_allocation: 40
     #
     # challenges
