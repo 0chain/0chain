@@ -63,10 +63,9 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 
 	if err := sc.BlockCache.Add(b.Hash, b); err != nil {
-		Logger.Panic("update finalized block, add block to cache failed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Error(err))
+		Logger.Panic(
+			fmt.Sprintf("update finalized block, add block to cache failed round: %d, block: %s, error: %s",
+				b.Round, b.Hash, err.Error()))
 	}
 
 	self := node.GetSelfNode(ctx)
@@ -78,7 +77,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		defer wg.Done()
 		err := sc.StoreTransactions(b)
 		if err != nil {
-			Logger.Panic("db store transaction failed", zap.Error(err))
+			Logger.Panic(fmt.Sprintf("db store transaction failed. Error: %v", err))
 		}
 	}()
 
@@ -86,7 +85,8 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	go func() {
 		defer wg.Done()
 		if err := sc.StoreBlockSummaryFromBlock(b); err != nil {
-			Logger.Panic("db error (store block summary)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+			Logger.Panic(
+				fmt.Sprintf("db error (store block summary) round: %d, block: %s, error: %s", b.Round, b.Hash, err.Error()))
 		}
 	}()
 
