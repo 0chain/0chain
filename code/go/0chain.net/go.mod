@@ -14,7 +14,7 @@ require (
 	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru/v2 v2.0.2
 	github.com/herumi/bls v1.30.1-0.20230130075901-581cd7d9b3db
-	github.com/herumi/mcl v1.72.2-0.20230316105243-341daadde5a5
+	github.com/herumi/mcl v1.82.0
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/mapstructure v1.5.0
