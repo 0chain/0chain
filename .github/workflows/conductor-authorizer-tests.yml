@@ -143,7 +143,7 @@ jobs:
         EOF
         cat <<\EOF > ~/.zcn/bridge.yaml
         owner:
-          Password: 02289b9
+          Password: ${{ secrets.AUTH_BRIDGE_PASSWORD }}
           EthereumAddress: 0xD8c9156e782C68EE671C09b6b92de76C97948432
           BridgeAddress: 0x2405e40161ea6da91AE0e95061e7A8462b4D5eEa
           WzcnAddress: 0x10140fbca3a468A1c35F132D75659eF0EB5d95DB
@@ -154,7 +154,7 @@ jobs:
           ConsensusThreshold: 60
         bridge:
           AuthorizersAddress: 0xB132C20A02AD7C38d88805F0e3fFDdfb54224C58
-          Password: 02289b9
+          Password: ${{ secrets.AUTH_BRIDGE_PASSWORD }}
           EthereumAddress: 0xD8c9156e782C68EE671C09b6b92de76C97948432
           BridgeAddress: 0x2405e40161ea6da91AE0e95061e7A8462b4D5eEa
           WzcnAddress: 0x10140fbca3a468A1c35F132D75659eF0EB5d95DB
