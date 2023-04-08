@@ -973,10 +973,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("invalid blobber for allocation")
 	}
 
-	if alloc.DataShards+1 > needValidNum {
-		needValidNum = alloc.DataShards + 1
-	}
-
 	var randValidators []ValidationPartitionNode
 	if err := validators.GetRandomItems(balances, r, &randValidators); err != nil {
 		return nil, common.NewError("add_challenge",
