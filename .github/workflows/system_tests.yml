@@ -57,7 +57,6 @@ jobs:
       zbox_branch: ${{ github.event.inputs.zbox_branch }}
       authorizer_branch: ${{ github.event.inputs.authorizer_branch }}
       test_file_filter: ${{ github.event.inputs.test_file_filter }}
-      zsearch_branch: staging
       zs3server_branch: ${{ github.event.inputs.zs3server_branch }}
       gosdk_branch: ${{ github.event.inputs.gosdk_branch }}
       skip_tests: ${{ github.event.inputs.skip_tests }}
