@@ -26,7 +26,7 @@ env:
 
 jobs:
   miner:
-    runs-on: [self-hosted, build]
+    runs-on: [self-hosted, arc-runner]
     steps:
 
     - name: Set docker image tag
@@ -106,7 +106,7 @@ jobs:
 
 
   sharder:
-    runs-on: [self-hosted, build]
+    runs-on: [self-hosted, arc-runner]
     steps:
 
     - name: Set docker image tag
