@@ -8,6 +8,7 @@ import (
 	"math"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
@@ -343,7 +344,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return nil, err
 		default:
 			if err != nil {
-				if bcstate.ErrInvalidState(err) {
+				if bcstate.ErrInvalidState(err) || partitions.ErrLoadLastPartition(err) {
 					logging.Logger.Error("Error executing the SC, internal error",
 						zap.Error(err),
 						zap.String("scname", scData.FunctionName),

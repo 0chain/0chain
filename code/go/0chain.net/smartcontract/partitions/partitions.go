@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -20,6 +21,7 @@ import (
 
 const (
 	ErrItemNotFoundCode = "item not found"
+	errLoadLastPart     = "load last partition failed: value not present"
 	errItemExistCode    = "item already exist"
 )
 
@@ -101,6 +103,11 @@ func ErrItemExist(err error) bool {
 	}
 
 	return cErr.Code == errItemExistCode
+}
+
+// ErrLoadLastPartition check whether it's load last partition failed error
+func ErrLoadLastPartition(err error) bool {
+	return strings.Contains(err.Error(), errLoadLastPart)
 }
 
 func newPartitions(name string, size int) (*Partitions, error) {
