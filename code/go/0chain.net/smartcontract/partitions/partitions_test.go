@@ -8,12 +8,19 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	logging.InitLogging("testing", "")
+}
 
 type StringItem string
 
@@ -42,6 +49,8 @@ func ItemFromString(name string) PartitionItem {
 type mockStateContextI struct {
 	*mocks.StateContextI
 	data map[string][]byte
+	b    *block.Block
+	txn  *transaction.Transaction
 }
 
 func (m *mockStateContextI) GetTrieNode(key string, v util.MPTSerializable) error {
@@ -68,6 +77,14 @@ func (m *mockStateContextI) DeleteTrieNode(key string) (string, error) {
 	return "", nil
 }
 
+func (m *mockStateContextI) GetBlock() *block.Block {
+	return m.b
+}
+
+func (m *mockStateContextI) GetTransaction() *transaction.Transaction {
+	return m.txn
+}
+
 type testItem struct {
 	ID string
 	V  string
@@ -91,7 +108,7 @@ func (ti *testItem) Msgsize() int {
 }
 
 func TestCreateIfNotExists(t *testing.T) {
-	s := &mockStateContextI{data: make(map[string][]byte)}
+	s := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
 	p, err := CreateIfNotExists(s, "foo", 100)
 	require.NoError(t, err)
 
@@ -117,7 +134,7 @@ func TestCreateIfNotExists(t *testing.T) {
 }
 
 func TestPartitionsSave(t *testing.T) {
-	balances := &mockStateContextI{data: make(map[string][]byte)}
+	balances := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
 	parts, err := newPartitions("test_rs", 10)
 	require.NoError(t, err)
 
@@ -160,7 +177,7 @@ func TestPartitionsSave(t *testing.T) {
 }
 
 func TestPartitionsForeach(t *testing.T) {
-	balances := &mockStateContextI{data: make(map[string][]byte)}
+	balances := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
 	parts, err := newPartitions("test_rs", 10)
 	require.NoError(t, err)
 
@@ -1204,7 +1221,7 @@ func TestErrItemExist(t *testing.T) {
 }
 
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
-	s := &mockStateContextI{data: make(map[string][]byte)}
+	s := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
 	parts, err := newPartitions(name, size)
 	require.NoError(t, err)
 

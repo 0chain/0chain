@@ -161,13 +161,40 @@ func (p *Partitions) add(state state.StateContextI, item PartitionItem) (int, er
 
 	if partsNum == 0 || part.length() >= p.PartitionSize {
 		part = p.addPartition()
+		b := state.GetBlock()
+		txn := state.GetTransaction()
+
+		// DEBUG: save the changes immediately
+		if err := p.update(state); err != nil {
+			return 0, fmt.Errorf("update partitions num failed: %v", err)
+		}
+
+		logging.Logger.Debug("partition add",
+			zap.Int("new partition num", p.partitionsNum()),
+			zap.String("txn", txn.Hash),
+			zap.String("block", b.Hash),
+			zap.Int64("round", b.Round))
 	}
 
 	if err := part.add(item); err != nil {
 		return 0, err
 	}
 
+	// DEBUG: save the partition immediately
+	if err := part.save(state); err != nil {
+		return 0, fmt.Errorf("add partition failed: %v", err)
+	}
+
 	return p.partitionsNum() - 1, nil
+}
+
+func (p *Partitions) update(state state.StateContextI) error {
+	_, err := state.InsertTrieNode(p.Name, p)
+	logging.Logger.Debug("try to save partitions",
+		zap.Int("num", p.NumPartitions),
+		zap.String("name", p.Name),
+		zap.Error(err))
+	return err
 }
 
 func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) error {
@@ -420,6 +447,9 @@ func (p *Partitions) Save(state state.StateContextI) error {
 	if err != nil {
 		return err
 	}
+	logging.Logger.Debug("save partitions",
+		zap.Int("num", p.NumPartitions),
+		zap.String("name", p.Name))
 
 	for _, k := range p.toAdd {
 		if err := p.saveItemLoc(state, k.ID, k.Idx); err != nil {
@@ -517,13 +547,24 @@ func (p *Partitions) deleteTail(balances state.StateContextI) error {
 			zap.Int("partition num", p.partitionsNum()))
 		return err
 	}
+	p.Partitions = p.Partitions[:p.partitionsNum()-1]
+	p.NumPartitions--
+
+	b := balances.GetBlock()
+	txn := balances.GetTransaction()
 	logging.Logger.Debug("delete tail partition",
 		zap.String("partition", p.Name),
 		zap.String("partition key", k),
-		zap.Int("partition num", p.partitionsNum()))
+		zap.Int("new partition num", p.partitionsNum()),
+		zap.String("txn", txn.Hash),
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash))
 
-	p.Partitions = p.Partitions[:p.partitionsNum()-1]
-	p.NumPartitions--
+	// DEBUG: save partitions number changes immediately
+	if err := p.update(balances); err != nil {
+		return fmt.Errorf("update partitions after deleting tail failed: %v", err)
+	}
+
 	return nil
 }
 
