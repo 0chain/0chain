@@ -317,7 +317,7 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 	}
 
 	co := NewClient()
-	if err = co.Read(ctx, key); err != nil {
+	if err := co.Read(ctx, key); err != nil {
 		return nil, err
 	}
 
@@ -326,22 +326,6 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 	}
 
 	return co, nil
-}
-
-// PutClient - Given a client data, it stores it
-func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	co, ok := entity.(*Client)
-	if !ok {
-		return nil, common.NewError("entity_invalid_type", "Invalid entity type")
-	}
-	response, err := datastore.PutEntityHandler(ctx, entity)
-	if err != nil {
-		return nil, err
-	}
-	if err := cacher.Add(co.GetKey(), co); err != nil {
-		logging.Logger.Warn("put client to cache failed", zap.Error(err))
-	}
-	return response, nil
 }
 
 // GetIDFromPublicKey computes the ID of a public key

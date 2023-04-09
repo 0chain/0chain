@@ -573,20 +573,13 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		btvTimer.UpdateSince(ts)
 		if mc.discoverClients {
 			go func() {
-				cs, err := b.GetClients()
+				_, err := b.GetClients()
 				if err != nil {
 					logging.Logger.Warn("validate transactions, get clients of block failed",
 						zap.Int64("round", b.Round),
 						zap.String("block", b.Hash),
 						zap.Error(err))
 					return
-				}
-
-				if err := mc.SaveClients(cs); err != nil {
-					logging.Logger.Warn("validate transactions, save discovered clients failed",
-						zap.Int64("round", b.Round),
-						zap.String("block", b.Hash),
-						zap.Error(err))
 				}
 			}()
 		}
