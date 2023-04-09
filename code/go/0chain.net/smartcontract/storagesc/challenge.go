@@ -875,6 +875,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	challengeID string,
 	balances cstate.StateContextI,
 	needValidNum int,
+	minStake currency.Coin,
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(1) // challengeBlobberSelection(r.Intn(2))
@@ -1019,6 +1020,19 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			continue
 		}
 
+		sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
+		if err != nil {
+			return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
+		}
+		stake, err := sp.stake()
+		if err != nil {
+			return nil, err
+		}
+		if stake < minStake {
+			remainingValidators--
+			continue
+		}
+
 		selectedValidators = append(selectedValidators,
 			&ValidationNode{
 				Provider: provider.Provider{
@@ -1130,6 +1144,8 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 			"Error in creating challenge seed: %v", err)
 	}
 
+	minStake := conf.MinStake
+
 	result, err := sc.populateGenerateChallenge(
 		challengeReadyParts,
 		int64(seedSource),
@@ -1138,6 +1154,7 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 		challengeID,
 		balances,
 		needValidNum,
+		minStake,
 	)
 	if err != nil {
 		return common.NewErrorf("generate_challenge", err.Error())
