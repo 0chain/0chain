@@ -973,7 +973,21 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return nil, err
 	}
-	addedBlobber.Allocated += sa.bSize()
+
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
+		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+	staked, err := sp.stake()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
+		return nil, err
+	}
+
+	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
 	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, addedBlobber.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: sa.ID,
@@ -995,24 +1009,12 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
 	}
 
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
-		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
-	}
-	staked, err := sp.stake()
-	if err != nil {
-		return nil, err
-	}
 
 	if err := sp.addOffer(ba.Offer()); err != nil {
 		return nil, fmt.Errorf("failed to add offter: %v", err)
 	}
 
 	if err := sp.Save(spenum.Blobber, addId, balances); err != nil {
-		return nil, err
-	}
-
-	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
 		return nil, err
 	}
 
