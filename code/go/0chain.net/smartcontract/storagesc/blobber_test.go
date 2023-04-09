@@ -10,7 +10,6 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
-	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
@@ -73,36 +72,6 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	_, err = updateBlobber(t, b2, 0, tp, ssc, balances)
 	require.Error(t, err)
 
-}
-
-func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
-	var (
-		ssc            = newTestStorageSC()        //
-		balances       = newTestBalances(t, false) //
-		terms          = avgTerms                  // copy
-		tp       int64 = 100                       //
-	)
-
-	var add = func(t *testing.T, ssc *StorageSmartContract, cap, now int64,
-		terms Terms, balacne currency.Coin, balances chainState.StateContextI) (
-		err error) {
-
-		var blob = newClient(0, balances)
-		blob.terms = terms
-		blob.cap = cap
-
-		_, err = blob.callAddBlobber(t, ssc, now, balances)
-		return
-	}
-
-	setConfig(t, balances)
-
-	var conf, err = ssc.getConfig(balances, false)
-	require.NoError(t, err)
-
-	terms.MaxOfferDuration = conf.TimeUnit - 1*time.Second
-	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
-	require.Error(t, err)
 }
 
 func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {

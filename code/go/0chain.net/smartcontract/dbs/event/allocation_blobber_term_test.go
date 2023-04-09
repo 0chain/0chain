@@ -3,7 +3,6 @@ package event
 import (
 	"strconv"
 	"testing"
-	"time"
 
 	"0chain.net/core/encryption"
 	common2 "0chain.net/smartcontract/common"
@@ -34,20 +33,18 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		terms := []AllocationBlobberTerm{
 			{
-				AllocationID:     allocId,
-				BlobberID:        blobber1Id,
-				ReadPrice:        int64(currency.Coin(29)),
-				WritePrice:       int64(currency.Coin(31)),
-				MinLockDemand:    37.0,
-				MaxOfferDuration: 39 * time.Minute,
+				AllocationID:  allocId,
+				BlobberID:     blobber1Id,
+				ReadPrice:     int64(currency.Coin(29)),
+				WritePrice:    int64(currency.Coin(31)),
+				MinLockDemand: 37.0,
 			},
 			{
-				AllocationID:     allocId,
-				BlobberID:        blobber2Id,
-				ReadPrice:        int64(currency.Coin(41)),
-				WritePrice:       int64(currency.Coin(43)),
-				MinLockDemand:    47.0,
-				MaxOfferDuration: 49 * time.Minute,
+				AllocationID:  allocId,
+				BlobberID:     blobber2Id,
+				ReadPrice:     int64(currency.Coin(41)),
+				WritePrice:    int64(currency.Coin(43)),
+				MinLockDemand: 47.0,
 			},
 		}
 
@@ -88,20 +85,18 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		terms := []AllocationBlobberTerm{
 			{
-				AllocationID:     allocId,
-				BlobberID:        blobber1Id,
-				ReadPrice:        int64(currency.Coin(29)),
-				WritePrice:       int64(currency.Coin(31)),
-				MinLockDemand:    37.0,
-				MaxOfferDuration: 39 * time.Minute,
+				AllocationID:  allocId,
+				BlobberID:     blobber1Id,
+				ReadPrice:     int64(currency.Coin(29)),
+				WritePrice:    int64(currency.Coin(31)),
+				MinLockDemand: 37.0,
 			},
 			{
-				AllocationID:     allocId,
-				BlobberID:        blobber2Id,
-				ReadPrice:        int64(currency.Coin(41)),
-				WritePrice:       int64(currency.Coin(43)),
-				MinLockDemand:    47.0,
-				MaxOfferDuration: 49 * time.Minute,
+				AllocationID:  allocId,
+				BlobberID:     blobber2Id,
+				ReadPrice:     int64(currency.Coin(41)),
+				WritePrice:    int64(currency.Coin(43)),
+				MinLockDemand: 47.0,
 			},
 		}
 
@@ -110,19 +105,17 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		err = eventDb.updateAllocationBlobberTerms([]AllocationBlobberTerm{
 			{
-				AllocationID:     allocId,
-				BlobberID:        blobber1Id,
-				ReadPrice:        int64(currency.Coin(59)),
-				WritePrice:       int64(currency.Coin(61)),
-				MinLockDemand:    57.0,
-				MaxOfferDuration: time.Duration(59 * time.Minute),
+				AllocationID:  allocId,
+				BlobberID:     blobber1Id,
+				ReadPrice:     int64(currency.Coin(59)),
+				WritePrice:    int64(currency.Coin(61)),
+				MinLockDemand: 57.0,
 			}, {
-				AllocationID:     allocId,
-				BlobberID:        blobber2Id,
-				ReadPrice:        int64(currency.Coin(61)),
-				WritePrice:       int64(currency.Coin(63)),
-				MinLockDemand:    67.0,
-				MaxOfferDuration: time.Duration(69 * time.Minute),
+				AllocationID:  allocId,
+				BlobberID:     blobber2Id,
+				ReadPrice:     int64(currency.Coin(61)),
+				WritePrice:    int64(currency.Coin(63)),
+				MinLockDemand: 67.0,
 			},
 		})
 		require.NoError(t, err, "Error while updating Allocation's Blobber's AllocationBlobberTerm to event database")
@@ -133,7 +126,6 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		require.Equal(t, int64(currency.Coin(59)), term.ReadPrice)
 		require.Equal(t, int64(currency.Coin(61)), term.WritePrice)
 		require.Equal(t, float64(57.0), term.MinLockDemand)
-		require.Equal(t, time.Duration(59*time.Minute), term.MaxOfferDuration)
 
 		term, err = eventDb.GetAllocationBlobberTerm(allocId, blobber2Id)
 		require.NoError(t, err, "Error while reading Allocation Blobber Terms")
@@ -141,6 +133,5 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		require.Equal(t, int64(currency.Coin(61)), term.ReadPrice)
 		require.Equal(t, int64(currency.Coin(63)), term.WritePrice)
 		require.Equal(t, float64(67.0), term.MinLockDemand)
-		require.Equal(t, time.Duration(69*time.Minute), term.MaxOfferDuration)
 	})
 }

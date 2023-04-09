@@ -83,9 +83,8 @@ func TestSelectBlobbers(t *testing.T) {
 			BaseURL:  mockURL + strconv.Itoa(index),
 			Capacity: mockBlobberCapacity,
 			Terms: Terms{
-				ReadPrice:        mockReadPrice,
-				WritePrice:       mockWritePrice,
-				MaxOfferDuration: mockMaxOffDuration,
+				ReadPrice:  mockReadPrice,
+				WritePrice: mockWritePrice,
 			},
 		}
 	}
@@ -361,9 +360,8 @@ func TestChangeBlobbers(t *testing.T) {
 				Size:         mockBlobberCapacity,
 				AllocationID: mockAllocationID,
 				Terms: Terms{
-					MaxOfferDuration: mockMaxOffDuration,
-					ReadPrice:        mockReadPrice,
-					WritePrice:       mockWritePrice,
+					ReadPrice:  mockReadPrice,
+					WritePrice: mockWritePrice,
 				},
 			}
 			if i < arg.blobberInChallenge {
@@ -398,9 +396,8 @@ func TestChangeBlobbers(t *testing.T) {
 				},
 				Capacity: mockBlobberCapacity,
 				Terms: Terms{
-					MaxOfferDuration: mockMaxOffDuration,
-					ReadPrice:        mockReadPrice,
-					WritePrice:       mockWritePrice,
+					ReadPrice:  mockReadPrice,
+					WritePrice: mockWritePrice,
 				},
 				IsAvailable: true,
 			}
@@ -629,9 +626,8 @@ func TestExtendAllocation(t *testing.T) {
 			BaseURL:  mockURL + strconv.Itoa(index),
 			Capacity: mockBlobberCapacity,
 			Terms: Terms{
-				ReadPrice:        mockReadPrice,
-				WritePrice:       mockWritePrice,
-				MaxOfferDuration: mockMaxOffDuration,
+				ReadPrice:  mockReadPrice,
+				WritePrice: mockWritePrice,
 			},
 		}
 	}
@@ -937,10 +933,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
-				ReadPrice:        20,
-				WritePrice:       200,
-				MinLockDemand:    0.1,
-				MaxOfferDuration: 200 * time.Second,
+				ReadPrice:     20,
+				WritePrice:    200,
+				MinLockDemand: 0.1,
 			},
 			Capacity:    25 * GB, // 20 GB
 			Allocated:   5 * GB,  //  5 GB
@@ -954,10 +949,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
-				ReadPrice:        25,
-				WritePrice:       250,
-				MinLockDemand:    0.05,
-				MaxOfferDuration: 250 * time.Second,
+				ReadPrice:     25,
+				WritePrice:    250,
+				MinLockDemand: 0.05,
 			},
 			Capacity:    20 * GB, // 20 GB
 			Allocated:   10 * GB, // 10 GB

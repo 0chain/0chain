@@ -30,10 +30,9 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	for _, t := range alloc.Terms {
 		blobberIDs = append(blobberIDs, t.BlobberID)
 		blobberTermsMap[t.BlobberID] = Terms{
-			ReadPrice:        currency.Coin(t.ReadPrice),
-			WritePrice:       currency.Coin(t.WritePrice),
-			MinLockDemand:    t.MinLockDemand,
-			MaxOfferDuration: t.MaxOfferDuration,
+			ReadPrice:     currency.Coin(t.ReadPrice),
+			WritePrice:    currency.Coin(t.WritePrice),
+			MinLockDemand: t.MinLockDemand,
 		}
 	}
 
@@ -174,12 +173,11 @@ func (sa *StorageAllocation) buildEventBlobberTerms() []event.AllocationBlobberT
 	bTerms := make([]event.AllocationBlobberTerm, 0, len(sa.BlobberAllocs))
 	for _, b := range sa.BlobberAllocs {
 		bTerms = append(bTerms, event.AllocationBlobberTerm{
-			AllocationID:     sa.ID,
-			BlobberID:        b.BlobberID,
-			ReadPrice:        int64(b.Terms.ReadPrice),
-			WritePrice:       int64(b.Terms.WritePrice),
-			MinLockDemand:    b.Terms.MinLockDemand,
-			MaxOfferDuration: b.Terms.MaxOfferDuration,
+			AllocationID:  sa.ID,
+			BlobberID:     b.BlobberID,
+			ReadPrice:     int64(b.Terms.ReadPrice),
+			WritePrice:    int64(b.Terms.WritePrice),
+			MinLockDemand: b.Terms.MinLockDemand,
 		})
 	}
 

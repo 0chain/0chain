@@ -128,12 +128,11 @@ func addMockAllocation(
 		allocationTerms := make([]event.AllocationBlobberTerm, 0)
 		for _, b := range sa.BlobberAllocs {
 			allocationTerms = append(allocationTerms, event.AllocationBlobberTerm{
-				BlobberID:        b.BlobberID,
-				AllocationID:     b.AllocationID,
-				ReadPrice:        int64(b.Terms.ReadPrice),
-				WritePrice:       int64(b.Terms.WritePrice),
-				MinLockDemand:    b.Terms.MinLockDemand,
-				MaxOfferDuration: b.Terms.MaxOfferDuration,
+				BlobberID:     b.BlobberID,
+				AllocationID:  b.AllocationID,
+				ReadPrice:     int64(b.Terms.ReadPrice),
+				WritePrice:    int64(b.Terms.WritePrice),
+				MinLockDemand: b.Terms.MinLockDemand,
 			})
 		}
 
@@ -386,16 +385,15 @@ func AddMockBlobbers(
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
-				BaseURL:          blobber.BaseURL,
-				Latitude:         blobber.Geolocation.Latitude,
-				Longitude:        blobber.Geolocation.Longitude,
-				ReadPrice:        blobber.Terms.ReadPrice,
-				WritePrice:       blobber.Terms.WritePrice,
-				MinLockDemand:    blobber.Terms.MinLockDemand,
-				MaxOfferDuration: blobber.Terms.MaxOfferDuration.Nanoseconds(),
-				Capacity:         blobber.Capacity,
-				Allocated:        blobber.Allocated,
-				ReadData:         blobber.Allocated * 2,
+				BaseURL:       blobber.BaseURL,
+				Latitude:      blobber.Geolocation.Latitude,
+				Longitude:     blobber.Geolocation.Longitude,
+				ReadPrice:     blobber.Terms.ReadPrice,
+				WritePrice:    blobber.Terms.WritePrice,
+				MinLockDemand: blobber.Terms.MinLockDemand,
+				Capacity:      blobber.Capacity,
+				Allocated:     blobber.Allocated,
+				ReadData:      blobber.Allocated * 2,
 				Provider: event.Provider{
 					ID:              blobber.ID,
 					DelegateWallet:  blobber.StakePoolSettings.DelegateWallet,
@@ -744,10 +742,9 @@ func AddMockWriteRedeems(
 
 func getMockBlobberTerms() Terms {
 	return Terms{
-		ReadPrice:        currency.Coin(0.1 * 1e10),
-		WritePrice:       currency.Coin(0.1 * 1e10),
-		MinLockDemand:    0.0007,
-		MaxOfferDuration: time.Hour * 744,
+		ReadPrice:     currency.Coin(0.1 * 1e10),
+		WritePrice:    currency.Coin(0.1 * 1e10),
+		MinLockDemand: 0.0007,
 	}
 }
 

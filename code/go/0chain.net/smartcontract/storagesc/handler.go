@@ -334,7 +334,6 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		return nil, fmt.Errorf("can't get config: %v", err)
 	}
 
-	var creationDate = balances.Now()
 	var numberOfBlobbers = request.DataShards + request.ParityShards
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
 		return nil, common.NewErrorf("allocation_creation_failed",
@@ -348,9 +347,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 
 	var allocationSize = bSize(request.Size, request.DataShards)
 
-	dur := common.ToTime(request.Expiration).Sub(common.ToTime(creationDate))
 	allocation := event.AllocationQuery{
-		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
@@ -372,7 +369,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
 		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
-		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
+		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max),
 		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Float64("AllocationSizeInGB", allocation.AllocationSizeInGB),
 		zap.Int64("last_health_check", int64(balances.Now())),
 	)
@@ -2164,10 +2161,9 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			Longitude: blobber.Longitude,
 		},
 		Terms: Terms{
-			ReadPrice:        blobber.ReadPrice,
-			WritePrice:       blobber.WritePrice,
-			MinLockDemand:    blobber.MinLockDemand,
-			MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
+			ReadPrice:     blobber.ReadPrice,
+			WritePrice:    blobber.WritePrice,
+			MinLockDemand: blobber.MinLockDemand,
 		},
 		Capacity:        blobber.Capacity,
 		Allocated:       blobber.Allocated,

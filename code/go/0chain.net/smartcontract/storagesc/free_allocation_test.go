@@ -256,9 +256,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration: timeUnit * 2,
-				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
-				MinLockDemand:    mockMinLock,
+				ReadPrice:     mockFreeAllocationSettings.ReadPriceRange.Max,
+				MinLockDemand: mockMinLock,
 			},
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
@@ -489,8 +488,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration: timeUnit * 2,
-				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
+				ReadPrice: mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)

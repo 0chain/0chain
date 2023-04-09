@@ -79,8 +79,7 @@ func TestNewAllocation(t *testing.T) {
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration: 1000 * scYaml.TimeUnit,
-				ReadPrice:        zcnToBalance(blobberYaml.readPrice),
+				ReadPrice: zcnToBalance(blobberYaml.readPrice),
 			},
 		}
 		nextBlobber.ID = strconv.Itoa(i)
@@ -152,8 +151,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 			},
 			Capacity: 536870912,
 			Terms: Terms{
-				MaxOfferDuration: 1000 * scYaml.TimeUnit,
-				ReadPrice:        zcnToBalance(blobberYaml.readPrice),
+				ReadPrice: zcnToBalance(blobberYaml.readPrice),
 			},
 		}
 		nextBlobber.ID = strconv.Itoa(i)
@@ -276,8 +274,7 @@ func TestFinalizeAllocation(t *testing.T) {
 				LastHealthCheck: now - blobberHealthTime,
 			},
 			Terms: Terms{
-				MaxOfferDuration: 1000 * scYaml.TimeUnit,
-				ReadPrice:        zcnToBalance(blobberYaml.readPrice),
+				ReadPrice: zcnToBalance(blobberYaml.readPrice),
 			},
 		}
 		nextBlobber.ID = strconv.Itoa(i)
