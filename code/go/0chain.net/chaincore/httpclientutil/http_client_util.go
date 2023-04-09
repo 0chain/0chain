@@ -37,6 +37,7 @@ import (
 // SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 500
 
+const RegisterClient = "/v1/client/put"
 const clientBalanceURL = "v1/client/get/balance?client_id="
 const txnSubmitURL = "v1/transaction/put"
 const txnVerifyURL = "v1/transaction/get/confirmation?hash="

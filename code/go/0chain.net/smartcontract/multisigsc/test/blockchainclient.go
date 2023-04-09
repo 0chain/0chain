@@ -235,6 +235,25 @@ func postTransaction(from mptwallet.Wallet, toClientID string, value int64, nonc
 	return txn.Hash
 }
 
+// Register a client on the blockchain's MPT.
+func registerMPTWallet(w mptwallet.Wallet) {
+	Logger.Info("Registering MPT wallet", zap.String("ClientID", w.ClientID))
+
+	data, err := json.Marshal(w)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, ip := range members.Miners {
+		body, err := httpclientutil.SendPostRequest(ip+httpclientutil.RegisterClient, data, "", "", nil)
+		if err != nil {
+			Logger.Fatal("HTTP POST error", zap.Error(err), zap.ByteString("body", body))
+		}
+	}
+
+	Logger.Info("Success on registering MPT wallet")
+}
+
 func confirmTransaction(hash string) (httpclientutil.Transaction, error) {
 	var e error
 

@@ -66,8 +66,29 @@ func newTestWallet(id int, signatureScheme string, t, n int) testWallet {
 		n: n,
 	}
 }
+func (t testWallet) getSignerMPTWallets() []mptwallet.Wallet {
+	var ws []mptwallet.Wallet
+
+	for i := range t.signerClientIDs {
+		w := mptwallet.Wallet{
+			SignatureScheme: t.signerKeys[i],
+			PublicKey:       t.signerKeys[i].GetPublicKey(),
+			ClientID:        t.signerClientIDs[i],
+		}
+		ws = append(ws, w)
+	}
+
+	return ws
+}
 
 func (t testWallet) registerMPTWallets() {
+	// Register MPT wallets for everyone in our group.
+	registerMPTWallet(t.getGroupMPTWallet())
+
+	for _, mptWallet := range t.getSignerMPTWallets() {
+		registerMPTWallet(mptWallet)
+	}
+
 	// Give the group and its sub-keys some tokens to play with.
 	owner := getOwnerWallet(c.signatureScheme, c.ownerKeysFile)
 
