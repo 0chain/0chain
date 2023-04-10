@@ -775,6 +775,7 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 	}
 	dp, ok := sp.GetPools()[t.ClientID]
 	if !ok {
+		logging.Logger.Debug("stake_pool_unlock_failed", zap.Any("sp", sp), zap.Any("delegates", sp.GetPools()))
 		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
 	}
 

@@ -198,7 +198,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		if es.round%edb.settings.PartitionChangePeriod == 0 {
 			edb.managePartitions(es.round)
 		}
-
 		tx, err := edb.Begin()
 		if err != nil {
 			logging.Logger.Error("error starting transaction", zap.Error(err))
