@@ -868,7 +868,10 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 		if err != nil {
 			return 0, err
 		}
-		cost += c
+		cost, err = currency.AddCoin(cost, c)
+		if err != nil {
+			return 0, err
+		}
 	}
 	return cost, nil
 }
@@ -1020,7 +1023,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
 	}
-
 
 	if err := sp.addOffer(ba.Offer()); err != nil {
 		return nil, fmt.Errorf("failed to add offter: %v", err)

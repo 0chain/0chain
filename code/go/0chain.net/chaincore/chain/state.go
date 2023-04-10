@@ -418,7 +418,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	ue := make(map[string]*event.User)
 	for _, transfer := range sctx.GetTransfers() {
-		tEvents, err := c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
+		tEvents, err := c.transferAmountWithAssert(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
 		if err != nil {
 			logging.Logger.Error("Failed to transfer amount",
 				zap.Int("txn type", txn.TransactionType),
@@ -435,7 +435,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	for _, signedTransfer := range sctx.GetSignedTransfers() {
-		tEvents, err := c.transferAmount(sctx, signedTransfer.ClientID,
+		tEvents, err := c.transferAmountWithAssert(sctx, signedTransfer.ClientID,
 			signedTransfer.ToClientID, signedTransfer.Amount)
 		if err != nil {
 			logging.Logger.Error("Failed to process signed transfer",
@@ -450,7 +450,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	for _, mint := range sctx.GetMints() {
-		u, err := c.mintAmount(sctx, mint.ToClientID, mint.Amount)
+		u, err := c.mintAmountWithAssert(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Error(err),
 				zap.Any("transaction", txn),
@@ -496,6 +496,54 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	return sctx.GetEvents(), nil
+}
+
+func sumOfFromToBalance(sctx bcstate.StateContextI, from, to string) (currency.Coin, error) {
+	ofb, err := sctx.GetClientBalance(from)
+	if err != nil {
+		return 0, err
+	}
+	otb, err := sctx.GetClientBalance(to)
+	if err != nil {
+		return 0, err
+	}
+
+	bal, err := currency.AddCoin(ofb, otb)
+	if err != nil {
+		return 0, fmt.Errorf("failed to sum up balances: %v", err)
+	}
+
+	return bal, nil
+}
+
+func (c *Chain) transferAmountWithAssert(sctx bcstate.StateContextI,
+	fromClient, toClient datastore.Key, amount currency.Coin) (eus []*event.User, err error) {
+	originBalance, err := sumOfFromToBalance(sctx, fromClient, toClient)
+	if err != nil {
+		return nil, err
+	}
+
+	tEvents, err := c.transferAmount(sctx, fromClient, toClient, amount)
+	if err != nil {
+		return nil, err
+	}
+
+	afterBalance, err := sumOfFromToBalance(sctx, fromClient, toClient)
+	if err != nil {
+		return nil, err
+	}
+
+	if originBalance != afterBalance {
+		logging.Logger.Panic("Transfer assertion failed",
+			zap.String("txn", sctx.GetTransaction().Hash),
+			zap.String("from", fromClient),
+			zap.String("to", toClient),
+			zap.Any("amount", amount),
+			zap.Any("origin_balance", originBalance),
+			zap.Any("after_balance", afterBalance))
+	}
+
+	return tEvents, nil
 }
 
 /*
@@ -547,7 +595,12 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 			zap.Error(err))
 		return nil, err
 	}
-	fs.Balance -= amount
+
+	fromBalance, err := currency.MinusCoin(fs.Balance, amount)
+	if err != nil {
+		return nil, fmt.Errorf("transfer tokens from client failed: %v", err)
+	}
+	fs.Balance = fromBalance
 
 	_, err = sctx.SetClientState(fromClient, fs)
 	if err != nil {
@@ -561,14 +614,17 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 			zap.Error(err))
 		return nil, err
 	}
-	ts.Balance, err = currency.AddCoin(ts.Balance, amount)
+
+	toBalance, err := currency.AddCoin(ts.Balance, amount)
 	if err != nil {
 		logging.Logger.Error("transfer amount - error",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Any("txn", txn), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("transfer tokens to client failed: %v", err)
 	}
+
+	ts.Balance = toBalance
 
 	_, err = sctx.SetClientState(toClient, ts)
 	if err != nil {
@@ -576,6 +632,34 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 
 	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
+}
+
+func (c *Chain) mintAmountWithAssert(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
+	originBalance, err := sctx.GetClientBalance(toClient)
+	if err != nil {
+		return nil, err
+	}
+
+	tEvent, err := c.mintAmount(sctx, toClient, amount)
+	if err != nil {
+		return nil, err
+	}
+
+	afterBalance, err := sctx.GetClientBalance(toClient)
+	if err != nil {
+		return nil, err
+	}
+
+	if originBalance+amount != afterBalance {
+		logging.Logger.Panic("Mint assertion failed",
+			zap.String("txn", sctx.GetTransaction().Hash),
+			zap.String("to", toClient),
+			zap.Any("amount", amount),
+			zap.Any("origin_balance", originBalance),
+			zap.Any("after_balance", afterBalance))
+	}
+
+	return tEvent, nil
 }
 
 func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
@@ -606,7 +690,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return nil, err
 	}
 
-	ts.Balance, err = currency.AddCoin(ts.Balance, amount)
+	toBalance, err := currency.AddCoin(ts.Balance, amount)
 	if err != nil {
 		logging.Logger.Error("transfer amount - error",
 			zap.Int64("round", b.Round),
@@ -615,6 +699,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 			zap.Error(err))
 		return nil, err
 	}
+	ts.Balance = toBalance
 
 	_, err = sctx.SetClientState(toClient, ts)
 	if err != nil {
