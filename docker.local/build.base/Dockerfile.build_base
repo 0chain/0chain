@@ -7,7 +7,7 @@ RUN apk add --update --no-cache  coreutils linux-headers perl zlib-dev bzip2-dev
 # For Herumi's cryptography
 RUN apk add --update --no-cache gmp gmp-dev openssl-dev 
 
-RUN apk add make
+RUN apk add make clang clang-dev
 
 # Install RocksDB
 RUN cd /tmp && \
