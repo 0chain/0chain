@@ -70,6 +70,7 @@ jobs:
         path: |
           0chain/conductor/logs/
           0chain/docker.local/
+        retention-days: 5
 
     # - name: Creating Artifact con-byz-tests-logs.tar.gz file.
     #   run: |
