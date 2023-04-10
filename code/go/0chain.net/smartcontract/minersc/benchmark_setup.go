@@ -84,8 +84,6 @@ func AddMockNodes(
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
-		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
-		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
 		newNode.Reward = providerReward
@@ -134,8 +132,6 @@ func AddMockNodes(
 						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
-						MinStake:      newNode.Settings.MinStake,
-						MaxStake:      newNode.Settings.MaxStake,
 						Rewards: event.ProviderRewards{
 							ProviderID:                    newNode.ID,
 							RoundServiceChargeLastUpdated: 7,
@@ -154,8 +150,6 @@ func AddMockNodes(
 						ID:              newNode.ID,
 						ServiceCharge:   newNode.Settings.ServiceChargeRatio,
 						NumDelegates:    newNode.Settings.MaxNumDelegates,
-						MinStake:        newNode.Settings.MinStake,
-						MaxStake:        newNode.Settings.MaxStake,
 						Rewards: event.ProviderRewards{
 							ProviderID:                    newNode.ID,
 							RoundServiceChargeLastUpdated: 11,

@@ -225,8 +225,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"is_available",
 		"offers_total",
 		"delegate_wallet",
-		"min_stake",
-		"max_stake",
 		"num_delegates",
 		"service_charge",
 		"last_health_check",

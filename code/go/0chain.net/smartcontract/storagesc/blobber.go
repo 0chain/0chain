@@ -161,8 +161,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
 
-	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
-	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
 	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 

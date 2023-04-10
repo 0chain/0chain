@@ -102,10 +102,6 @@ func TestAllocations(t *testing.T) {
 	type stakePoolSettings struct {
 		// DelegateWallet for pool owner.
 		DelegateWallet string `json:"delegate_wallet"`
-		// MinStake allowed.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed.
-		MaxStake currency.Coin `json:"max_stake"`
 		// NumDelegates maximum allowed.
 		NumDelegates int `json:"num_delegates"`
 		// ServiceCharge of the blobber. The blobber gets this % (actually, value in
@@ -326,8 +322,6 @@ func TestAllocations(t *testing.T) {
 					PublicKey:       "public_key",
 					StakePoolSettings: stakePoolSettings{
 						DelegateWallet: "delegate_wallet",
-						MinStake:       10,
-						MaxStake:       12,
 						NumDelegates:   2,
 						ServiceCharge:  0.5,
 					},

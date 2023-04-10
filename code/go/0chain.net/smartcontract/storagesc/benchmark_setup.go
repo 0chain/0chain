@@ -397,8 +397,6 @@ func AddMockBlobbers(
 				Provider: event.Provider{
 					ID:              blobber.ID,
 					DelegateWallet:  blobber.StakePoolSettings.DelegateWallet,
-					MinStake:        blobber.StakePoolSettings.MinStake,
-					MaxStake:        blobber.StakePoolSettings.MaxStake,
 					NumDelegates:    blobber.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:   blobber.StakePoolSettings.ServiceChargeRatio,
 					LastHealthCheck: blobber.LastHealthCheck,
@@ -546,8 +544,6 @@ func AddMockValidators(
 				Provider: event.Provider{
 					ID:             validator.ID,
 					DelegateWallet: validator.StakePoolSettings.DelegateWallet,
-					MinStake:       validator.StakePoolSettings.MaxStake,
-					MaxStake:       validator.StakePoolSettings.MaxStake,
 					NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
 				},
@@ -751,8 +747,6 @@ func getMockBlobberTerms() Terms {
 func getMockStakePoolSettings(blobber string) stakepool.Settings {
 	return stakepool.Settings{
 		DelegateWallet:     blobber,
-		MinStake:           currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10),
-		MaxStake:           currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10),
 		MaxNumDelegates:    viper.GetInt(sc.NumBlobberDelegates),
 		ServiceChargeRatio: viper.GetFloat64(sc.StorageMaxCharge),
 	}

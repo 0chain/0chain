@@ -25,10 +25,6 @@ func validateStakePoolSettings(
 	sps stakepool.Settings,
 	conf *Config,
 ) error {
-	err := conf.validateStakeRange(sps.MinStake, sps.MaxStake)
-	if err != nil {
-		return err
-	}
 	if sps.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
 	}
@@ -365,8 +361,6 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 		sp.Minter = chainstate.MinterStorage
 	}
 
-	sp.Settings.MinStake = settings.MinStake
-	sp.Settings.MaxStake = settings.MaxStake
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 	return sp, nil
@@ -383,8 +377,6 @@ func (ssc *StorageSmartContract) createStakePool(
 	sp := newStakePool()
 	sp.Settings.DelegateWallet = settings.DelegateWallet
 	sp.Minter = chainstate.MinterStorage
-	sp.Settings.MinStake = settings.MinStake
-	sp.Settings.MaxStake = settings.MaxStake
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 
@@ -406,7 +398,13 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 // add delegated stake pool
 func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
-	return stakepool.StakePoolLock(t, input, balances, ssc.getStakePoolAdapter)
+	gn, err := getConfig(balances)
+	if err != nil {
+		return "", err
+	}
+	return stakepool.StakePoolLock(t, input, balances,
+		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates},
+		ssc.getStakePoolAdapter)
 }
 
 // stake pool can return excess tokens from stake pool

@@ -100,8 +100,6 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.Allocated = 0
 	sn.LastHealthCheck = 0
 	sn.StakePoolSettings.MaxNumDelegates = 100
-	sn.StakePoolSettings.MinStake = 0
-	sn.StakePoolSettings.MaxStake = 1000e10
 	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
 	sn.StakePoolSettings.DelegateWallet = c.id
 	return mustEncode(t, &sn)
@@ -121,8 +119,6 @@ func (c *Client) addValidatorRequest(t testing.TB) []byte {
 	vn.ProviderType = spenum.Validator
 	vn.BaseURL = getValidatorURL(c.id)
 	vn.StakePoolSettings.MaxNumDelegates = 100
-	vn.StakePoolSettings.MinStake = 0
-	vn.StakePoolSettings.MaxStake = 1000e10
 	return mustEncode(t, &vn)
 }
 

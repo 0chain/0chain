@@ -200,6 +200,7 @@ const (
 	ZcnMinMintAmount      = SmartContract + ZcnSc + "min_mint"
 	ZcnMinBurnAmount      = SmartContract + ZcnSc + "min_burn"
 	ZcnMinStakeAmount     = SmartContract + ZcnSc + "min_stake"
+	ZcnMaxStakeAmount     = SmartContract + ZcnSc + "max_stake"
 	ZcnMinLockAmount      = SmartContract + ZcnSc + "min_lock"
 	ZcnMaxFee             = SmartContract + ZcnSc + "max_fee"
 	ZcnPercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"

@@ -58,11 +58,9 @@ type StakePool struct {
 }
 
 type Settings struct {
-	DelegateWallet     string        `json:"delegate_wallet"`
-	MinStake           currency.Coin `json:"min_stake"`
-	MaxStake           currency.Coin `json:"max_stake"`
-	MaxNumDelegates    int           `json:"num_delegates"`
-	ServiceChargeRatio float64       `json:"service_charge"`
+	DelegateWallet     string  `json:"delegate_wallet"`
+	MaxNumDelegates    int     `json:"num_delegates"`
+	ServiceChargeRatio float64 `json:"service_charge"`
 }
 
 type DelegatePool struct {
@@ -115,8 +113,6 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
 	spStat.Settings = Settings{
 		DelegateWallet:     provider.DelegateWallet,
-		MinStake:           provider.MinStake,
-		MaxStake:           provider.MaxStake,
 		MaxNumDelegates:    provider.NumDelegates,
 		ServiceChargeRatio: provider.ServiceCharge,
 	}
@@ -685,7 +681,7 @@ func (spr *StakePoolRequest) decode(p []byte) (err error) {
 	return json.Unmarshal(p, spr)
 }
 
-func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
+func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI, vs ValidationSettings,
 	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
 
 	var spr StakePoolRequest
@@ -700,7 +696,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"can't get stake pool: %v", err)
 	}
 
-	if s, err2 := validateLockRequest(t, sp); err2 != nil {
+	if s, err2 := validateLockRequest(t, sp, vs); err2 != nil {
 		return s, err2
 	}
 
@@ -726,10 +722,16 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	return out, err
 }
 
-func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool) (string, error) {
-	if t.Value < sp.GetSettings().MinStake {
+type ValidationSettings struct {
+	MinStake        currency.Coin
+	MaxStake        currency.Coin
+	MaxNumDelegates int
+}
+
+func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs ValidationSettings) (string, error) {
+	if t.Value < vs.MinStake {
 		return "", common.NewError("stake_pool_lock_failed",
-			fmt.Sprintf("too small stake to lock: %v < %v", t.Value, sp.GetSettings().MinStake))
+			fmt.Sprintf("too small stake to lock: %v < %v", t.Value, vs.MinStake))
 	}
 	poolStakeBefore := currency.Coin(0)
 	pool, ok := sp.GetPools()[t.ClientID]
@@ -741,15 +743,15 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool) (stri
 		return "", common.NewError("stake_pool_lock_failed", err.Error())
 	}
 
-	if poolStakeAfter > sp.GetSettings().MaxStake {
+	if poolStakeAfter > vs.MaxStake {
 		return "", common.NewError("stake_pool_lock_failed",
-			fmt.Sprintf("too large stake to lock: %v > %v", poolStakeAfter, sp.GetSettings().MaxStake))
+			fmt.Sprintf("too large stake to lock: %v > %v", poolStakeAfter, vs.MaxStake))
 	}
 
-	if len(sp.GetPools()) >= sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+	if len(sp.GetPools()) >= vs.MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
-			sp.GetSettings().MaxNumDelegates)
+			vs.MaxNumDelegates)
 	}
 
 	return "", nil

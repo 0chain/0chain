@@ -13,8 +13,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"github.com/0chain/common/core/currency"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -261,15 +259,6 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.Settings.ServiceChargeRatio = viper.GetFloat64("service_charge")
 	mn.Settings.MaxNumDelegates = viper.GetInt("number_of_delegates")
 
-	var err error
-	mn.Settings.MinStake, err = currency.ParseZCN(viper.GetFloat64("min_stake"))
-	if err != nil {
-		return nil, err
-	}
-	mn.Settings.MaxStake, err = currency.ParseZCN(viper.GetFloat64("max_stake"))
-	if err != nil {
-		return nil, err
-	}
 	mn.Geolocation = minersc.SimpleNodeGeolocation{
 		Latitude:  viper.GetFloat64("latitude"),
 		Longitude: viper.GetFloat64("longitude"),
@@ -292,7 +281,7 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	logging.Logger.Debug("Register nodes to",
 		zap.Strings("urls", minerUrls),
 		zap.String("id", mn.ID))
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
+	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
 

@@ -19,7 +19,7 @@ func TestConfigMap_Get(t *testing.T) {
 			PercentAuthorizers: 101,
 			MinAuthorizers:     102,
 			MinBurnAmount:      103,
-			MinStakeAmount:     104,
+			MaxStakeAmount:     204,
 			MaxFee:             105,
 			OwnerId:            "106",
 			Cost: map[string]int{
@@ -33,13 +33,14 @@ func TestConfigMap_Get(t *testing.T) {
 
 	stringMap := cfg.ToStringMap()
 
-	require.Equal(t, 14, len(stringMap.Fields))
+	require.Equal(t, 15, len(stringMap.Fields))
 	require.Contains(t, stringMap.Fields, OwnerID)
 	require.Contains(t, stringMap.Fields, MinBurnAmount)
 	require.Contains(t, stringMap.Fields, MinMintAmount)
 	require.Contains(t, stringMap.Fields, MinLockAmount)
 	require.Contains(t, stringMap.Fields, MinAuthorizers)
 	require.Contains(t, stringMap.Fields, MinStakeAmount)
+	require.Contains(t, stringMap.Fields, MaxStakeAmount)
 	require.Contains(t, stringMap.Fields, MaxFee)
 	require.Contains(t, stringMap.Fields, BurnAddress)
 	require.Contains(t, stringMap.Fields, PercentAuthorizers)
@@ -55,6 +56,7 @@ func TestConfigMap_Get(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("%v", cfg.MinLockAmount), stringMap.Fields[MinLockAmount])
 	require.Equal(t, fmt.Sprintf("%v", cfg.MinAuthorizers), stringMap.Fields[MinAuthorizers])
 	require.Equal(t, fmt.Sprintf("%v", cfg.MinStakeAmount), stringMap.Fields[MinStakeAmount])
+	require.Equal(t, fmt.Sprintf("%v", cfg.MaxStakeAmount), stringMap.Fields[MaxStakeAmount])
 	require.Equal(t, fmt.Sprintf("%v", cfg.MaxFee), stringMap.Fields[MaxFee])
 	require.Equal(t, fmt.Sprintf("%v", cfg.BurnAddress), stringMap.Fields[BurnAddress])
 	require.Equal(t, fmt.Sprintf("%v", cfg.PercentAuthorizers), stringMap.Fields[PercentAuthorizers])

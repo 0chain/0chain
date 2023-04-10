@@ -1258,11 +1258,9 @@ type validatorNodeResponse struct {
 	IsShutdown      bool             `json:"is_shutdown"`
 
 	// StakePoolSettings
-	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       currency.Coin `json:"min_stake"`
-	MaxStake       currency.Coin `json:"max_stake"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	DelegateWallet string  `json:"delegate_wallet"`
+	NumDelegates   int     `json:"num_delegates"`
+	ServiceCharge  float64 `json:"service_charge"`
 
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
@@ -1276,8 +1274,6 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 		UnstakeTotal:             v.UnstakeTotal,
 		PublicKey:                v.PublicKey,
 		DelegateWallet:           v.DelegateWallet,
-		MinStake:                 v.MinStake,
-		MaxStake:                 v.MaxStake,
 		NumDelegates:             v.NumDelegates,
 		ServiceCharge:            v.ServiceCharge,
 		UncollectedServiceCharge: v.Rewards.Rewards,
@@ -2170,8 +2166,6 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		LastHealthCheck: blobber.LastHealthCheck,
 		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:     blobber.DelegateWallet,
-			MinStake:           blobber.MinStake,
-			MaxStake:           blobber.MaxStake,
 			MaxNumDelegates:    blobber.NumDelegates,
 			ServiceChargeRatio: blobber.ServiceCharge,
 		},
