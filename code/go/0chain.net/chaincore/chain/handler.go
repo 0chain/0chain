@@ -1411,6 +1411,8 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			logging.Logger.Error("invalid transaction fee",
 				zap.String("txn", txn.Hash),
 				zap.String("func", txn.FunctionName),
+				zap.Any("txn fee", txn.Fee),
+				zap.Any("minFee", minFee),
 				zap.Error(err))
 			return nil, err
 		}
