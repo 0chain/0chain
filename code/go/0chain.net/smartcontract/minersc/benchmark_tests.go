@@ -188,6 +188,28 @@ func BenchmarkTests(
 			input: nil,
 		},
 		{
+			name: "storage.kill_miner",
+			input: (&provider.ProviderRequest{
+				ID: data.Miners[0],
+			}).Encode(),
+			endpoint: msc.killMiner,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.MinerMOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
+			name: "storage.kill_validator",
+			input: (&provider.ProviderRequest{
+				ID: data.Sharders[0],
+			}).Encode(),
+			endpoint: msc.killSharder,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.MinerMOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
 			name:     "miner.contributeMpk",
 			endpoint: msc.contributeMpk,
 			txn: &transaction.Transaction{
