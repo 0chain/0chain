@@ -108,9 +108,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			sc.SharderStats.ShardedBlocksCount++
 			ts := time.Now()
 			if err := blockstore.GetStore().Write(b); err != nil {
-				Logger.Panic("store block failed",
-					zap.Int64("round", b.Round),
-					zap.Error(err))
+				Logger.Panic(fmt.Sprintf("store block failed, round: %d, error: %v", b.Round, err))
 			}
 
 			duration := time.Since(ts)
