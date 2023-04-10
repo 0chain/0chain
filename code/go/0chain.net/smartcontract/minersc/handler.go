@@ -218,7 +218,9 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 		return
 	}
 
-	filter := event.SharderQuery{}
+	filter := event.SharderQuery{
+		IsKilled: null.BoolFrom(false),
+	}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
@@ -280,7 +282,9 @@ func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http
 		return
 	}
 
-	filter := event.MinerQuery{}
+	filter := event.MinerQuery{
+		IsKilled: null.BoolFrom(false),
+	}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
@@ -752,7 +756,9 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	filter := event.SharderQuery{}
+	filter := event.SharderQuery{
+		IsKilled: null.BoolFrom(false),
+	}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
@@ -853,7 +859,9 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	filter := event.MinerQuery{}
+	filter := event.MinerQuery{
+		IsKilled: null.BoolFrom(false),
+	}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {

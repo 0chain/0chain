@@ -114,6 +114,7 @@ type MinerQuery struct {
 	Active            null.Bool
 	Longitude         null.Float
 	Latitude          null.Float
+	IsKilled          null.Bool
 }
 
 func (m *Miner) GetTotalStake() currency.Coin {
@@ -289,7 +290,7 @@ func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag Eve
 func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateMinerTotalUnStake, Miner{
 		Provider: Provider{
-			ID:         ID,
+			ID:           ID,
 			UnstakeTotal: unstakeTotal,
 		},
 	}

@@ -5,6 +5,8 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/provider"
 )
 
@@ -66,6 +68,11 @@ func kill(
 	if err := node.save(balances); err != nil {
 		return err
 	}
+
+	balances.EmitEvent(event.TypeStats, event.TagKillProvider, node.Id(), dbs.ProviderID{
+		ID:   node.Id(),
+		Type: node.Type(),
+	})
 
 	return nil
 }
