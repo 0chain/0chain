@@ -415,7 +415,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 func getRewardedMiner(bk *block.Block, balances cstate.CommonStateContextI) (*MinerNode, error) {
 	mn, err := getMinerNode(bk.MinerID, balances)
 	if err != nil {
-		logging.Logger.Info("error getting block miner", zap.Int64("round", bk.Round), zap.Error(err))
+		logging.Logger.Error("error getting block miner",
+			zap.Int64("round", bk.Round),
+			zap.String("block miner id", bk.MinerID),
+			zap.Error(err))
 	} else {
 		if !mn.HasBeenKilled {
 			return mn, nil
