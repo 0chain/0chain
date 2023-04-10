@@ -913,7 +913,7 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 }
 
 // getMinersList returns miners list
-func getMinersList(state cstate.QueryStateContextI) (*MinerNodes, error) {
+func getMinersList(state cstate.CommonStateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(getMinerNode, state, AllMinersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
