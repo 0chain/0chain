@@ -500,11 +500,11 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 func sumOfFromToBalance(sctx bcstate.StateContextI, from, to string) (currency.Coin, error) {
 	ofb, err := sctx.GetClientBalance(from)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return 0, err
 	}
 	otb, err := sctx.GetClientBalance(to)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return 0, err
 	}
 
@@ -636,7 +636,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 
 func (c *Chain) mintAmountWithAssert(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
 	originBalance, err := sctx.GetClientBalance(toClient)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return nil, err
 	}
 
