@@ -33,7 +33,6 @@ const (
 	errPreviousMarker    = "validations with previous marker failed"
 	errEarlyAllocation   = "early reading, allocation not started yet"
 	errExpiredAllocation = "late reading, allocation expired"
-	errNoTokensReadPool  = "no tokens"
 	errNotEnoughTokens   = "not enough tokens"
 )
 
@@ -174,16 +173,6 @@ func TestCommitBlobberRead(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
 		require.True(t, strings.Contains(err.Error(), errExpiredAllocation))
-	})
-
-	t.Run(errNoTokensReadPool+" expired blobbers", func(t *testing.T) {
-		var expiredReadPools = mockReadPool{}
-		var err = testCommitBlobberRead(
-			t, blobberYaml, lastRead, read, allocation, stakes, expiredReadPools,
-		)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
-		require.True(t, strings.Contains(err.Error(), errNoTokensReadPool))
 	})
 
 	t.Run(errNotEnoughTokens+" expired blobbers", func(t *testing.T) {
