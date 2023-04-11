@@ -6,13 +6,12 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
+func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
 	}
 	data := &event.Blobber{
-
 		BaseURL:          sn.BaseURL,
 		Latitude:         sn.Geolocation.Latitude,
 		Longitude:        sn.Geolocation.Longitude,
@@ -21,10 +20,10 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		MinLockDemand:    sn.Terms.MinLockDemand,
 		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
 
-		Capacity:  sn.Capacity,
-		Allocated: sn.Allocated,
-		SavedData: sn.SavedData,
-
+		Capacity:    sn.Capacity,
+		Allocated:   sn.Allocated,
+		SavedData:   sn.SavedData,
+		IsAvailable: sn.IsAvailable,
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
@@ -39,7 +38,6 @@ func emitAddOrOverwriteBlobber(sn *StorageNode, sp *stakePool, balances cstate.S
 		},
 		OffersTotal: sp.TotalOffers,
 	}
-
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
 	return nil
 }
@@ -59,10 +57,10 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		MinLockDemand:    sn.Terms.MinLockDemand,
 		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
 
-		Capacity:  sn.Capacity,
-		Allocated: sn.Allocated,
-		SavedData: sn.SavedData,
-
+		Capacity:    sn.Capacity,
+		Allocated:   sn.Allocated,
+		SavedData:   sn.SavedData,
+		IsAvailable: true,
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
@@ -89,7 +87,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	return nil
 }
 
-func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) {
+func emitUpdateBlobberAllocatedHealth(sn *StorageNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedHealth, sn.ID, event.Blobber{
 		Provider: event.Provider{
 			ID:              sn.ID,

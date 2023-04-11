@@ -344,6 +344,7 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
+	IsAvailable       bool               `json:"is_available"`
 }
 
 // validate the blobber configurations
@@ -730,19 +731,19 @@ func (sa *StorageAllocation) addToWritePool(
 		} else {
 			sa.WritePool = writePool
 		}
-		return nil
-	}
+	} else {
+		for _, opt := range opts {
+			value, err := opt(balances)
+			if err != nil {
+				return err
+			}
+			if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+				return err
+			} else {
+				sa.WritePool = writePool
+			}
+		}
 
-	for _, opt := range opts {
-		value, err := opt(balances)
-		if err != nil {
-			return err
-		}
-		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
-			return err
-		} else {
-			sa.WritePool = writePool
-		}
 	}
 
 	i, err := txn.Value.Int64()
@@ -817,6 +818,10 @@ func (sa *StorageAllocation) isActive(
 	active, reason := blobber.Provider.IsActive(now, common.ToSeconds(conf.HealthCheckPeriod))
 	if !active {
 		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
+	}
+
+	if !blobber.IsAvailable {
+		return fmt.Errorf("blobber %s is not currently available for new allocations", blobber.ID)
 	}
 
 	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
@@ -980,7 +985,21 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return nil, err
 	}
-	addedBlobber.Allocated += sa.bSize()
+
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
+		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+	staked, err := sp.stake()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
+		return nil, err
+	}
+
+	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
 	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, addedBlobber.ID, event.AllocationBlobberValueChanged{
 		FieldType:    event.Allocated,
 		AllocationId: sa.ID,
@@ -1002,24 +1021,12 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
 	}
 
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
-		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
-	}
-	staked, err := sp.stake()
-	if err != nil {
-		return nil, err
-	}
 
 	if err := sp.addOffer(ba.Offer()); err != nil {
 		return nil, fmt.Errorf("failed to add offter: %v", err)
 	}
 
 	if err := sp.Save(spenum.Blobber, addId, balances); err != nil {
-		return nil, err
-	}
-
-	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
 		return nil, err
 	}
 
@@ -1476,7 +1483,7 @@ type ReadConnection struct {
 
 func (rc *ReadConnection) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey +
-		encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
+		encryption.Hash(rc.ReadMarker.BlobberID+rc.ReadMarker.ClientID+rc.ReadMarker.AllocationID))
 }
 
 func (rc *ReadConnection) Decode(input []byte) error {

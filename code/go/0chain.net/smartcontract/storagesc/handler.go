@@ -1571,15 +1571,17 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 //	500:
 func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *http.Request) {
 	var (
-		clientID  = r.URL.Query().Get("client")
-		blobberID = r.URL.Query().Get("blobber")
+		clientID     = r.URL.Query().Get("client")
+		blobberID    = r.URL.Query().Get("blobber")
+		allocationID = r.URL.Query().Get("allocation")
 
 		commitRead = &ReadConnection{}
 	)
 
 	commitRead.ReadMarker = &ReadMarker{
-		BlobberID: blobberID,
-		ClientID:  clientID,
+		BlobberID:    blobberID,
+		ClientID:     clientID,
+		AllocationID: allocationID,
 	}
 
 	err := srh.GetQueryStateContext().GetTrieNode(commitRead.GetKey(ADDRESS), commitRead)
@@ -2096,6 +2098,7 @@ type storageNodeResponse struct {
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	StakePoolSettings       stakepool.Settings     `json:"stake_pool_settings"`
 	RewardRound             RewardRound            `json:"reward_round"`
+	IsAvailable             bool                   `json:"is_available"`
 
 	TotalStake               currency.Coin `json:"total_stake"`
 	CreationRound            int64         `json:"creation_round"`
@@ -2123,6 +2126,7 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		RewardRound:             sn.RewardRound,
 		IsKilled:                sn.IsKilled(),
 		IsShutdown:              sn.IsShutDown(),
+		IsAvailable:             sn.IsAvailable,
 	}
 }
 
@@ -2146,6 +2150,7 @@ func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 		LastRewardDataReadRound: snr.LastRewardDataReadRound,
 		StakePoolSettings:       snr.StakePoolSettings,
 		RewardRound:             snr.RewardRound,
+		IsAvailable:             snr.IsAvailable,
 	}
 }
 
@@ -2182,7 +2187,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
 		IsKilled:                 blobber.IsKilled,
 		IsShutdown:               blobber.IsShutdown,
-		SavedData: 			  	  blobber.SavedData,
+		SavedData:                blobber.SavedData,
+		IsAvailable:              blobber.IsAvailable,
 	}
 }
 
