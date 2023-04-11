@@ -5,7 +5,10 @@ sets:
   - name: "Authorizer Consensus"
     tests:
       - "One authorizer is down"
-      - "Send faked tickets with signatures"
+    # TODO:
+    # 1. setup subgraph URI
+    # 2. create new zcn wallets and new ethereum wallets
+    #   - "Send faked tickets with signatures"
 
 tests:
   - name: "One authorizer is down"
