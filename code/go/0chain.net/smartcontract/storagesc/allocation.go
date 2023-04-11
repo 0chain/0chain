@@ -280,6 +280,22 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", err
 	}
 
+	// DEBUG: check blobber last partition before adding
+	for _, b := range blobberNodes {
+		bap, err := partitionsBlobberAllocations(b.ID, balances)
+		if err != nil {
+			logging.Logger.Debug("new allocation - could not find blobber alloc",
+				zap.String("blobber", b.ID),
+				zap.Error(err))
+		} else {
+			if err := bap.Last(balances); err != nil {
+				logging.Logger.Debug("new allocation - could not find last blobber alloc",
+					zap.String("blobber", b.ID),
+					zap.Error(err))
+			}
+		}
+	}
+
 	logging.Logger.Debug("new_allocation_request_debug",
 		zap.String("after setup allocation", util.ToHex(balances.GetState().GetRoot())),
 		zap.String("txn", txn.Hash))
