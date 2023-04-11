@@ -301,7 +301,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", common.NewErrorf("pay_fee", "cannot get miner to reward, %v", err)
 	}
 	if mn == nil {
-		logging.Logger.Error("pay fees could not find miner to reward")
+		logging.Logger.Info("pay fees could not find miner to reward", zap.Int64("round", b.Round))
 	} else {
 		logging.Logger.Debug("Pay fees, get miner id successfully",
 			zap.String("miner id", mn.ID),
@@ -378,7 +378,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			}
 		}
 	} else {
-		logging.Logger.Error("pay fees could not find sharder to reward")
+		logging.Logger.Info("pay fees could not find sharder to reward", zap.Int64("round", b.Round))
 	}
 
 	// save node first, for the VC pools work
