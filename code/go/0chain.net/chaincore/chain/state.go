@@ -344,7 +344,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return nil, err
 		default:
 			if err != nil {
-				if bcstate.ErrInvalidState(err) || partitions.ErrLoadLastPartition(err) {
+				if bcstate.ErrInvalidState(err) || partitions.ErrLoadPartition(err) {
 					logging.Logger.Error("Error executing the SC, internal error",
 						zap.Error(err),
 						zap.String("scname", scData.FunctionName),

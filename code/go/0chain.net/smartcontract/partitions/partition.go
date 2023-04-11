@@ -34,10 +34,7 @@ func (p *partition) save(state state.StateContextI) error {
 func (p *partition) load(state state.StateContextI, key datastore.Key) error {
 	err := state.GetTrieNode(key, p)
 	if err != nil {
-		return err
-		//if err != util.ErrValueNotPresent {
-		//	return err
-		//}
+		return fmt.Errorf("load partition failed: %v", err)
 	}
 
 	p.Key = key

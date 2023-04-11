@@ -35,12 +35,12 @@ func (p *Partitions) getLocKey(id string) datastore.Key {
 
 func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex int) error {
 	_, err := state.InsertTrieNode(p.getLocKey(id), &location{Location: partIndex})
-	return err
+	return fmt.Errorf("save item location failed: %v", err)
 }
 
 func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
 	_, err := state.DeleteTrieNode(p.getLocKey(id))
-	return err
+	return fmt.Errorf("remove item location failed: %v", err)
 }
 
 func (p *Partitions) loadLocations(idx int) {

@@ -22,6 +22,7 @@ import (
 const (
 	ErrItemNotFoundCode = "item not found"
 	errLoadLastPart     = "load last partition failed: value not present"
+	errLoadPart         = "load partition failed: value not present"
 	errItemExistCode    = "item already exist"
 )
 
@@ -105,9 +106,9 @@ func ErrItemExist(err error) bool {
 	return cErr.Code == errItemExistCode
 }
 
-// ErrLoadLastPartition check whether it's load last partition failed error
-func ErrLoadLastPartition(err error) bool {
-	return strings.Contains(err.Error(), errLoadLastPart)
+// ErrLoadPartition check whether it failed to load partition or last partition
+func ErrLoadPartition(err error) bool {
+	return strings.Contains(err.Error(), errLoadLastPart) || strings.Contains(err.Error(), errLoadPart)
 }
 
 func newPartitions(name string, size int) (*Partitions, error) {
@@ -159,9 +160,11 @@ func (p *Partitions) add(state state.StateContextI, item PartitionItem) (int, er
 	)
 
 	if partsNum > 0 {
-		part, err = p.getPartition(state, partsNum-1)
+		part, err = p.last(state)
 		if err != nil {
-			logging.Logger.Debug("partition add - failed to get last partition", zap.Error(err))
+			logging.Logger.Debug("partition add - failed to get last partition",
+				zap.String("name", p.Name),
+				zap.Error(err))
 			return 0, err
 		}
 	}
@@ -177,6 +180,7 @@ func (p *Partitions) add(state state.StateContextI, item PartitionItem) (int, er
 		}
 
 		logging.Logger.Debug("partition add",
+			zap.String("name", p.Name),
 			zap.Int("new partition num", p.partitionsNum()),
 			zap.String("txn", txn.Hash),
 			zap.String("block", b.Hash),
@@ -193,6 +197,23 @@ func (p *Partitions) add(state state.StateContextI, item PartitionItem) (int, er
 	}
 
 	return p.partitionsNum() - 1, nil
+}
+
+func (p *Partitions) last(state state.StateContextI) (*partition, error) {
+	if p.partitionsNum() == 0 {
+		return nil, fmt.Errorf("no partition exist")
+	}
+
+	lastPart, err := p.getPartition(state, p.partitionsNum()-1)
+	if err != nil {
+		logging.Logger.Error("load last partition failed",
+			zap.String("name", p.Name),
+			zap.Int("part number", p.partitionsNum()),
+			zap.Error(err))
+		return nil, fmt.Errorf("load last partition failed: %v", err)
+	}
+
+	return lastPart, nil
 }
 
 func (p *Partitions) update(state state.StateContextI) error {
@@ -335,12 +356,9 @@ func (p *Partitions) removeItem(
 		return err
 	}
 
-	lastPart, err := p.getPartition(state, p.partitionsNum()-1)
+	lastPart, err := p.last(state)
 	if err != nil {
-		logging.Logger.Error("load last partition failed",
-			zap.Error(err),
-			zap.Int("part number", p.partitionsNum()))
-		return fmt.Errorf("load last partition failed: %v", err)
+		return err
 	}
 
 	if index == p.partitionsNum()-1 {
@@ -423,12 +441,17 @@ func (p *Partitions) Size(state state.StateContextI) (int, error) {
 		return 0, nil
 	}
 
-	lastPart, err := p.getPartition(state, p.partitionsNum()-1)
+	lastPart, err := p.last(state)
 	if err != nil {
 		return 0, err
 	}
 
 	return (p.partitionsNum()-1)*p.PartitionSize + lastPart.length(), nil
+}
+
+func (p *Partitions) Last(state state.StateContextI) error {
+	_, err := p.last(state)
+	return err
 }
 
 func (p *Partitions) Exist(state state.StateContextI, id string) (bool, error) {
@@ -552,7 +575,7 @@ func (p *Partitions) deleteTail(balances state.StateContextI) error {
 		logging.Logger.Debug("partition delete tail failed",
 			zap.Error(err),
 			zap.Int("partition num", p.partitionsNum()))
-		return err
+		return fmt.Errorf("delete tail partition failed: %v", err)
 	}
 	p.Partitions = p.Partitions[:p.partitionsNum()-1]
 	p.NumPartitions--
