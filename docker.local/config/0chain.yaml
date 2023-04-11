@@ -50,8 +50,6 @@ server_chain:
     validation:
       batch_size: 1000
     reuse_txns: false
-    storage:
-      provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
 
   round_range: 10000000 #todo remove after laxmi is merge
   dkg: true
@@ -170,6 +168,11 @@ cassandra:
 #   host: cassandra
 #   port: 9042
 
+storage:
+  root_dir: "/path/to/root/directory"
+  cache:
+    path: "/path/to/cache"
+    total_blocks: 1000 # Total number of blocks this cache will store
 # integration tests related configurations
 integration_tests:
   # address of the server
