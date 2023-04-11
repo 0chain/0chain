@@ -181,6 +181,10 @@ func main() {
 	if node.Self.Underlying().Type != node.NodeTypeMiner {
 		logging.Logger.Panic("node not configured as miner")
 	}
+	err = common.NewError("saving self as client", "client save")
+	for err != nil {
+		_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
+	}
 	if config.Development() {
 		if *delayFile != "" {
 			node.ReadNetworkDelays(*delayFile)

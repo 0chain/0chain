@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -82,4 +83,24 @@ func TestClientID(t *testing.T) {
 	publicKey := "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305"
 	client := NewClient(SignatureScheme(encryption.SignatureSchemeEd25519))
 	require.NoError(t, client.SetPublicKey(publicKey))
+}
+
+func postClient(t *testing.T, sigScheme encryption.SignatureScheme, done chan<- bool) {
+	var client *Client
+	switch sigScheme.(type) {
+	case *encryption.ED25519Scheme:
+		client = NewClient(SignatureScheme(encryption.SignatureSchemeEd25519))
+	case *encryption.BLS0ChainScheme:
+		client = NewClient(SignatureScheme(encryption.SignatureSchemeBls0chain))
+	}
+
+	pk := sigScheme.GetPublicKey()
+	require.NoError(t, client.SetPublicKey(pk))
+	ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
+	ctx = memorystore.WithConnection(ctx)
+	_, err := PutClient(ctx, client)
+	if err != nil {
+		fmt.Printf("error for %v : %v %v\n", pk, client.GetKey(), err)
+	}
+	done <- true
 }
