@@ -30,4 +30,4 @@ docker $cmd -f $dockerfile . -t zchain_unit_test
 docker run --add-host=host.docker.internal:host-gateway -v /var/run/docker.sock:/var/run/docker.sock \
 	-e DOCKER_HOST_ENV=host.docker.internal \
 	$platform $INTERACTIVE -v $(pwd)/code:/codecov  \
-	zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..."
+	zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 development -coverprofile=/codecov/coverage.txt -covermode=atomic ./..."
