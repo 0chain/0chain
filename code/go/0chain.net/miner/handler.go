@@ -19,10 +19,18 @@ import (
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
-	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
-	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
-	http.HandleFunc("/_diagnostics/wallet_stats", common.UserRateLimit(GetWalletStats))
-	http.HandleFunc("/v1/miner/get/stats", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler))))
+	http.HandleFunc("/v1/chain/get/stats", common.WithCORS(
+		common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)),
+	))
+	http.HandleFunc("/_chain_stats", common.WithCORS(
+		common.UserRateLimit(ChainStatsWriter),
+	))
+	http.HandleFunc("/_diagnostics/wallet_stats", common.WithCORS(
+		common.UserRateLimit(GetWalletStats),
+	))
+	http.HandleFunc("/v1/miner/get/stats", common.WithCORS(
+		common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)),
+	))
 }
 
 // swagger:route GET /v1/chain/get/stats chainstatus
