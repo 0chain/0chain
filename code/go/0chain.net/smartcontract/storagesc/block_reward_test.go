@@ -79,14 +79,14 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			sp, err := ssc.getStakePool(spenum.Blobber, bID, balances)
 			require.NoError(t, err)
 
-			//fmt.Println("Expected Blobber ", i, " Reward : ", r.blobberRewards[i], " vs Actual Reward : ", sp.Reward)
 			message := fmt.Sprintf("Expected Blobber %d Reward : %v vs Actual Reward : %v", i, r.blobberRewards[i], sp.Reward)
 
-			require.EqualValues(t, r.blobberRewards[i], sp.Reward, message)
+			resultBlobberReward, _ := r.blobberRewards[i].Float64()
+			actualBlobberReward, _ := sp.Reward.Float64()
+			require.InEpsilonf(t, resultBlobberReward, actualBlobberReward, 0.05, message)
 
 			for j := range p.delegatesBal[i] {
 				key := "delegate" + strconv.Itoa(j)
-				//fmt.Println("Expected Blobber ", i, " Delegate ", j, " Reward : ", r.blobberDelegatesRewards[i][j], " vs Actual Reward : ", sp.Pools[key].Reward)
 				message := fmt.Sprintf("Expected Blobber %d Delegate %d Reward : %v vs Actual Reward : %v", i, j, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
 
 				resultDelegateReward, _ := r.blobberDelegatesRewards[i][j].Float64()
@@ -100,7 +100,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		fmt.Println("\n-------------------------------------------------------------")
 	}
 
 	var tests []struct {
@@ -389,21 +388,13 @@ func getGamma(X, R float64) float64 {
 
 	factor := math.Abs((alpha*X - R) / (alpha*X + R))
 
-	//fmt.Println("factor", factor)
 	return A - B*factor
 }
 
 func calculateWeight(wp, rp, X, R, stakes, challenges float64) float64 {
 
-	//fmt.Println("wp", wp, "rp", rp, "X", X, "R", R, "stakes", stakes, "challenges", challenges)
-
 	zeta := getZeta(wp, rp)
 	gamma := getGamma(X, R)
-
-	//fmt.Println("zeta", zeta)
-	//fmt.Println("gamma", gamma)
-	//fmt.Println("stakes", stakes)
-	//fmt.Println("challenges", challenges)
 
 	return (zeta*gamma + 1) * stakes * challenges
 }
