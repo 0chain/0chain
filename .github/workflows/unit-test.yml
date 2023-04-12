@@ -1,6 +1,7 @@
 name: Unit test & Lint
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master, staging ]
   pull_request:
