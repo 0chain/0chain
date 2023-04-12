@@ -433,6 +433,8 @@ func getGamma(X, R float64) float64 {
 
 func calculateWeight(wp, rp, X, R, stakes, challenges float64) float64 {
 
+	fmt.Println("wp", wp, "rp", rp, "X", X, "R", R, "stakes", stakes, "challenges", challenges)
+
 	zeta := getZeta(wp, rp)
 	gamma := getGamma(X, R)
 
