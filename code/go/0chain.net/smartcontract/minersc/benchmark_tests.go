@@ -199,7 +199,7 @@ func BenchmarkTests(
 			},
 		},
 		{
-			name: "storage.kill_validator",
+			name: "storage.kill_sharder",
 			input: (&provider.ProviderRequest{
 				ID: data.Sharders[0],
 			}).Encode(),

@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -60,6 +62,10 @@ func kill(
 	node, err := getNode(req.ID, balances)
 	if err != nil {
 		return err
+	}
+
+	if node.SimpleNode.HasBeenKilled && node.StakePool.HasBeenKilled {
+		return fmt.Errorf("%s already killed", req.ID)
 	}
 
 	node.SimpleNode.HasBeenKilled = true
