@@ -13,6 +13,8 @@ import (
 // R is data read by blobber
 func GetGamma(A, B, alpha, X, R float64) float64 {
 
+	fmt.Println("A : ", A, " B : ", B, " alpha : ", alpha, " X : ", X, " R : ", R)
+
 	if X == 0 {
 		return 0
 	}
@@ -22,6 +24,8 @@ func GetGamma(A, B, alpha, X, R float64) float64 {
 }
 
 func GetZeta(i, k, mu, wp, rp float64) float64 {
+
+	fmt.Println("i : ", i, " k : ", k, " mu : ", mu, " wp : ", wp, " rp : ", rp)
 
 	if wp == 0 {
 		return 0
