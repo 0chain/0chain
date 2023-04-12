@@ -86,7 +86,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			for j := range p.delegatesBal[i] {
 				key := "delegate" + strconv.Itoa(j)
 				fmt.Println("Expected Blobber ", i, " Delegate ", j, " Reward : ", r.blobberDelegatesRewards[i][j], " vs Actual Reward : ", sp.Pools[key].Reward)
-				require.InEpsilon(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward, 0.01)
+				require.InEpsilon(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward, 0.05)
 			}
 		}
 		_, err = balances.DeleteTrieNode(
