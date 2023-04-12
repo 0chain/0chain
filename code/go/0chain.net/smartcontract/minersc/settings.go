@@ -63,6 +63,8 @@ const (
 	CostAddToDelegatePool
 	CostDeleteFromDelegatePool
 	CostSharderKeep
+	CostKillMiner
+	CostKillSharder
 	NumberOfSettings
 )
 
@@ -128,6 +130,8 @@ func initSettingName() {
 	SettingName[CostAddToDelegatePool] = "cost.addToDelegatePool"
 	SettingName[CostDeleteFromDelegatePool] = "cost.deleteFromDelegatePool"
 	SettingName[CostSharderKeep] = "cost.sharder_keep"
+	SettingName[CostKillMiner] = "cost.kill_miner"
+	SettingName[CostKillSharder] = "cost.kill_sharder"
 }
 
 func initSettings() {
@@ -176,6 +180,8 @@ func initSettings() {
 		CostAddToDelegatePool.String():       {CostAddToDelegatePool, smartcontract.Cost},
 		CostDeleteFromDelegatePool.String():  {CostDeleteFromDelegatePool, smartcontract.Cost},
 		CostSharderKeep.String():             {CostSharderKeep, smartcontract.Cost},
+		CostKillMiner.String():               {CostKillMiner, smartcontract.Cost},
+		CostKillSharder.String():             {CostKillSharder, smartcontract.Cost},
 	}
 }
 

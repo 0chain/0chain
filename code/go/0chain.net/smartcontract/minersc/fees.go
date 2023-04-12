@@ -263,18 +263,18 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	b := balances.GetBlock()
 	if b.Round == gn.ViewChange {
 		if err := msc.SetMagicBlock(gn, balances); err != nil {
-			return "", common.NewErrorf("pay_fee",
+			return "", common.NewErrorf("pay_fees",
 				"can't set magic b round=%d viewChange=%d, %v",
 				b.Round, gn.ViewChange, err)
 		}
 	}
 
 	if t.ClientID != b.MinerID {
-		return "", common.NewError("pay_fee", "not block generator")
+		return "", common.NewError("pay_fees", "not block generator")
 	}
 
 	if b.Round <= gn.LastRound {
-		return "", common.NewError("pay_fee", "jumped back in time?")
+		return "", common.NewError("pay_fees", "jumped back in time?")
 	}
 
 	var minerRewards, sharderRewards, minerFees, sharderFees currency.Coin
@@ -298,12 +298,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	var mn *MinerNode
 	if mn, err = getRewardedMiner(b, balances); err != nil {
-		return "", common.NewErrorf("pay_fee", "cannot get miner to reward, %v", err)
+		return "", common.NewErrorf("pay_fees", "cannot get miner to reward, %v", err)
 	}
 	if mn == nil {
-		logging.Logger.Info("pay fees could not find miner to reward", zap.Int64("round", b.Round))
+		logging.Logger.Info("pay_fees could not find miner to reward", zap.Int64("round", b.Round))
 	} else {
-		logging.Logger.Debug("Pay fees, get miner id successfully",
+		logging.Logger.Debug("pay_fees, get miner id successfully",
 			zap.String("miner id", mn.ID),
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash))
@@ -378,7 +378,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			}
 		}
 	} else {
-		logging.Logger.Info("pay fees could not find sharder to reward", zap.Int64("round", b.Round))
+		logging.Logger.Info("pay_fee could not find sharder to reward", zap.Int64("round", b.Round))
 	}
 
 	// save node first, for the VC pools work
@@ -396,7 +396,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 				return "", err
 			}
 		} else {
-			return "", common.NewError("pay fees", "cannot find latest magic bock")
+			return "", common.NewError("pay_fees", "cannot find latest magic bock")
 		}
 	}
 

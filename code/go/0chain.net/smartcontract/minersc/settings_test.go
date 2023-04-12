@@ -218,6 +218,8 @@ func TestUpdateSettings(t *testing.T) {
 					"cost.addToDelegatePool":       "111",
 					"cost.deleteFromDelegatePool":  "111",
 					"cost.sharder_keep":            "111",
+					"cost.kill_miner":              "111",
+					"cost.kill_sharder":            "111",
 				},
 			},
 		},
