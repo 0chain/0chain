@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"math"
 	"math/rand"
 	"os"
 	"strconv"
@@ -91,47 +92,99 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	tests := []struct {
+	var tests []struct {
 		name    string
 		wantErr bool
 		params  params
 		result  result
-	}{
-		{
-			name: "1_blobber",
-			params: params{
-				numBlobbers:       1,
-				wp:                []currency.Coin{2},
-				rp:                []currency.Coin{1},
-				totalData:         []float64{10},
-				dataRead:          []float64{2},
-				successChallenges: []int{10},
-				delegatesBal:      [][]currency.Coin{{1, 0, 3}},
-				serviceCharge:     []float64{.1},
-			},
-			result: result{
-				blobberRewards:          []currency.Coin{50},
-				blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}},
-			},
-		},
-		{
-			name: "2_blobber",
-			params: params{
-				numBlobbers:       2,
-				wp:                []currency.Coin{3, 1},
-				rp:                []currency.Coin{1, 0},
-				totalData:         []float64{10, 50},
-				dataRead:          []float64{2, 15},
-				successChallenges: []int{5, 2},
-				delegatesBal:      [][]currency.Coin{{1, 0, 3}, {1, 6, 3}},
-				serviceCharge:     []float64{.1, .1},
-			},
-			result: result{
-				blobberRewards:          []currency.Coin{18, 31},
-				blobberDelegatesRewards: [][]currency.Coin{{43, 0, 124}, {29, 170, 85}},
-			},
-		},
 	}
+
+	readPrices := [][]float64{{0, 0.01}, {0, 0}}
+	writePrices := [][]float64{{0.1, 0.2}}
+	totalReads := [][]float64{{1, 1}, {1, 3}}
+	totalData := [][]float64{{1, 3}, {1, 1}}
+	challenges := [][]float64{{1000, 1300}, {1000, 1000}}
+
+	for _, readPrice := range readPrices {
+		for _, writePrice := range writePrices {
+			for _, readData := range totalReads {
+				for _, writeData := range totalData {
+					for _, challenge := range challenges {
+
+						blobber1Weight := calculateWeight(writePrice[0], readPrice[0], writeData[0], readData[0], 8, challenge[0])
+						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 9, challenge[1])
+
+						blobber1ExpectedReward := blobber1Weight / (blobber1Weight + blobber2Weight) * 100
+						blobber2ExpectedReward := blobber2Weight / (blobber1Weight + blobber2Weight) * 100
+
+						tests = append(tests, struct {
+							name    string
+							wantErr bool
+							params  params
+							result  result
+						}{
+							name: "blobber_block_rewards",
+							params: params{
+								numBlobbers:       2,
+								wp:                []currency.Coin{currency.Coin(writePrice[0]), currency.Coin(writePrice[1])},
+								rp:                []currency.Coin{currency.Coin(readPrice[0]), currency.Coin(readPrice[1])},
+								totalData:         []float64{writeData[0], writeData[1]},
+								dataRead:          []float64{readData[0], readData[1]},
+								successChallenges: []int{int(challenge[0]), int(challenge[1])},
+								delegatesBal:      [][]currency.Coin{{1, 0, 3}, {1, 6, 3}},
+								serviceCharge:     []float64{.1, .1},
+							}, result: result{
+								blobberRewards:          []currency.Coin{currency.Coin(blobber1ExpectedReward), currency.Coin(blobber2ExpectedReward)},
+								blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}, {113, 338, 337}},
+							},
+						})
+					}
+				}
+			}
+		}
+	}
+
+	//tests := []struct {
+	//	name    string
+	//	wantErr bool
+	//	params  params
+	//	result  result
+	//}{
+	//	{
+	//		name: "1_blobber",
+	//		params: params{
+	//			numBlobbers:       1,
+	//			wp:                []currency.Coin{2},
+	//			rp:                []currency.Coin{1},
+	//			totalData:         []float64{10},
+	//			dataRead:          []float64{2},
+	//			successChallenges: []int{10},
+	//			delegatesBal:      [][]currency.Coin{{1, 0, 3}},
+	//			serviceCharge:     []float64{.1},
+	//		},
+	//		result: result{
+	//			blobberRewards:          []currency.Coin{50},
+	//			blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}},
+	//		},
+	//	},
+	//	{
+	//		name: "2_blobber",
+	//		params: params{
+	//			numBlobbers:       2,
+	//			wp:                []currency.Coin{3, 1},
+	//			rp:                []currency.Coin{1, 0},
+	//			totalData:         []float64{10, 50},
+	//			dataRead:          []float64{2, 15},
+	//			successChallenges: []int{5, 2},
+	//			delegatesBal:      [][]currency.Coin{{1, 0, 3}, {1, 6, 3}},
+	//			serviceCharge:     []float64{.1, .1},
+	//		},
+	//		result: result{
+	//			blobberRewards:          []currency.Coin{18, 31},
+	//			blobberDelegatesRewards: [][]currency.Coin{{43, 0, 124}, {29, 170, 85}},
+	//		},
+	//	},
+	//}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -315,4 +368,39 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, 2, s)
+}
+
+func getZeta(wp, rp float64) float64 {
+
+	i := float64(1)
+	k := float64(0.9)
+	mu := float64(0.2)
+
+	if wp == 0 {
+		return 0
+	}
+
+	return i - (k * (rp / (rp + (mu * wp))))
+}
+
+func getGamma(X, R float64) float64 {
+
+	A := float64(10)
+	B := float64(1)
+	alpha := float64(0.2)
+
+	if X == 0 {
+		return 0
+	}
+
+	factor := math.Abs((alpha*X - R) / (alpha*X + R))
+	return A - B*factor
+}
+
+func calculateWeight(wp, rp, X, R, stakes, challenges float64) float64 {
+
+	zeta := getZeta(wp, rp)
+	gamma := getGamma(X, R)
+
+	return (zeta*gamma + 1) * stakes * challenges
 }
