@@ -79,14 +79,11 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			sp, err := ssc.getStakePool(spenum.Blobber, bID, balances)
 			require.NoError(t, err)
 
-			fmt.Println("Expected Blobber ", i, " Reward : ", r.blobberRewards[i], " vs Actual Reward : ", sp.Reward)
-
-			//require.EqualValues(t, r.blobberRewards[i], sp.Reward)
+			require.EqualValues(t, r.blobberRewards[i], sp.Reward)
 
 			for j := range p.delegatesBal[i] {
 				key := "delegate" + strconv.Itoa(j)
-				fmt.Println("Expected Blobber ", i, " Delegate ", j, " Reward : ", r.blobberDelegatesRewards[i][j], " vs Actual Reward : ", sp.Pools[key].Reward)
-				//require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
+				require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
 			}
 		}
 		_, err = balances.DeleteTrieNode(
@@ -95,7 +92,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		fmt.Println("\n-------------------------------------------------------------")
 	}
 
 	var tests []struct {
@@ -117,38 +113,28 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				for _, writeData := range totalData {
 					for _, challenge := range challenges {
 
+						totalReward := 500.0
+
 						blobber1Weight := calculateWeight(writePrice[0], readPrice[0], writeData[0], readData[0], 4, challenge[0])
 						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 2, challenge[1])
+						totalWeight := blobber1Weight + blobber2Weight
 
-						fmt.Println("Blobber 1 Weight : ", blobber1Weight)
-						fmt.Println("Blobber 2 Weight : ", blobber2Weight)
+						blobber1ExpectedReward, _ := currency.Float64ToCoin(totalReward * (blobber1Weight / totalWeight))
+						blobber2ExpectedReward, _ := currency.Float64ToCoin(totalReward * (blobber2Weight / totalWeight))
 
-						blobber1ExpectedReward := blobber1Weight * 500 / (blobber1Weight + blobber2Weight)
-						blobber2ExpectedReward := 500 - blobber1ExpectedReward
-						fmt.Println("blobber1ExpectedReward", blobber1ExpectedReward)
-						fmt.Println("blobber2ExpectedReward", blobber2ExpectedReward)
+						blobber1Reward, _ := currency.MultFloat64(blobber1ExpectedReward, 0.1)
+						blobber2Reward, _ := currency.MultFloat64(blobber2ExpectedReward, 0.1)
+
+						blobber1Delegate1Reward, _ := currency.MultFloat64(blobber1ExpectedReward, 0.25)
+						blobber1Delegate2Reward, _ := currency.MinusCoin(blobber1ExpectedReward, blobber1Delegate1Reward)
+
+						blobber2Delegate1Reward, _ := currency.MultFloat64(blobber2ExpectedReward, 0.5)
+						blobber2Delegate2Reward, _ := currency.MinusCoin(blobber2ExpectedReward, blobber2Delegate1Reward)
 
 						wp1, _ := currency.Float64ToCoin(writePrice[0])
 						wp2, _ := currency.Float64ToCoin(writePrice[1])
 						rp1, _ := currency.Float64ToCoin(readPrice[0])
 						rp2, _ := currency.Float64ToCoin(readPrice[1])
-
-						br1, _ := currency.Float64ToCoin(blobber1ExpectedReward * 0.1)
-						br2, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.1)
-						blobber1ExpectedReward = blobber1ExpectedReward - blobber1ExpectedReward*0.1
-						blobber2ExpectedReward = blobber2ExpectedReward - blobber2ExpectedReward*0.1
-
-						b1d1, _ := currency.Float64ToCoin(blobber1ExpectedReward * 0.25)
-						b1d2, _ := currency.Float64ToCoin(blobber1ExpectedReward * 0.75)
-						b2d1, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.5)
-						b2d2, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.5)
-
-						fmt.Println("br1", br1)
-						fmt.Println("br2", br2)
-						fmt.Println("b1d1", b1d1)
-						fmt.Println("b1d2", b1d2)
-						fmt.Println("b2d1", b2d1)
-						fmt.Println("b2d2", b2d2)
 
 						tests = append(tests, struct {
 							name    string
@@ -167,8 +153,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 								delegatesBal:      [][]currency.Coin{{1, 3}, {1, 1}},
 								serviceCharge:     []float64{.1, .1},
 							}, result: result{
-								blobberRewards:          []currency.Coin{br1, br2},
-								blobberDelegatesRewards: [][]currency.Coin{{b1d1, b1d2}, {b2d1, b2d2}},
+								blobberRewards:          []currency.Coin{blobber1Reward, blobber2Reward},
+								blobberDelegatesRewards: [][]currency.Coin{{blobber1Delegate1Reward, blobber1Delegate2Reward}, {blobber2Delegate1Reward, blobber2Delegate2Reward}},
 							},
 						})
 					}
@@ -176,48 +162,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			}
 		}
 	}
-
-	//tests := []struct {
-	//	name    string
-	//	wantErr bool
-	//	params  params
-	//	result  result
-	//}{
-	//	{
-	//		name: "1_blobber",
-	//		params: params{
-	//			numBlobbers:       1,
-	//			wp:                []currency.Coin{2},
-	//			rp:                []currency.Coin{1},
-	//			totalData:         []float64{10},
-	//			dataRead:          []float64{2},
-	//			successChallenges: []int{10},
-	//			delegatesBal:      [][]currency.Coin{{1, 0, 3}},
-	//			serviceCharge:     []float64{.1},
-	//		},
-	//		result: result{
-	//			blobberRewards:          []currency.Coin{50},
-	//			blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}},
-	//		},
-	//	},
-	//	{
-	//		name: "2_blobber",
-	//		params: params{
-	//			numBlobbers:       2,
-	//			wp:                []currency.Coin{3, 1},
-	//			rp:                []currency.Coin{1, 0},
-	//			totalData:         []float64{10, 50},
-	//			dataRead:          []float64{2, 15},
-	//			successChallenges: []int{5, 2},
-	//			delegatesBal:      [][]currency.Coin{{1, 0, 3}, {1, 6, 3}},
-	//			serviceCharge:     []float64{.1, .1},
-	//		},
-	//		result: result{
-	//			blobberRewards:          []currency.Coin{18, 31},
-	//			blobberDelegatesRewards: [][]currency.Coin{{43, 0, 124}, {29, 170, 85}},
-	//		},
-	//	},
-	//}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -227,7 +171,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			err := ssc.blobberBlockRewards(balances)
 			require.EqualValues(t, tt.wantErr, err != nil)
 			compareResult(t, tt.params, tt.result, balances, ssc)
-			require.EqualValues(t, true, false)
 		})
 	}
 }
