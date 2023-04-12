@@ -828,8 +828,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		bms, ok := fromEvent[[]BridgeMint](event.Data)
 		if !ok {
 			return ErrInvalidEventData
-		}
-		
+		}		
 		users := make([]User, 0, len(*bms))
 		authMint := make(map[string]currency.Coin)
 		for _, bm := range *bms {
@@ -846,6 +845,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 				authMint[sig] = mv + bm.Amount
 			}
 		}
+
 		mints := make([]state.Mint, 0, len(authMint))
 		for auth, amount := range authMint {
 			mints = append(mints, state.Mint{

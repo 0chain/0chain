@@ -149,6 +149,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	for _, sig := range payload.Signatures {
 		signers = append(signers, sig.ID)
 	}
+
 	ctx.EmitEvent(event.TypeStats, event.TagAddBridgeMint, trans.ClientID, &event.BridgeMint{
 		UserID: trans.ClientID,
 		MintNonce: payload.Nonce,

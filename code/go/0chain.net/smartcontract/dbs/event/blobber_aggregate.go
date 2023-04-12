@@ -156,10 +156,15 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		aggregate.TotalReadIncome = (old.TotalReadIncome + current.TotalReadIncome) / 2
 		aggregate.TotalSlashedStake = (old.TotalSlashedStake + current.TotalSlashedStake) / 2
 		aggregate.Downtime = current.Downtime
-		aggregate.RankMetric = current.RankMetric
-
+		
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
+		
+		if current.ChallengesCompleted == 0 {
+			aggregate.RankMetric = 0
+		} else {
+			aggregate.RankMetric = float64(current.ChallengesPassed) / float64(current.ChallengesCompleted)
+		}
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.SuccessfulChallenges += int64(current.ChallengesPassed - old.ChallengesPassed)

@@ -278,7 +278,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		event.TypeStats,
 		event.TagAddBridgeMint,
 		mock.AnythingOfType("string"),
-		mock.AnythingOfType("*event.User"),
+		mock.AnythingOfType("*event.BridgeMint"),
 	).Run(
 		func(args mock.Arguments) {
 			userId, ok := args.Get(2).(string)
@@ -299,7 +299,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 
 			err := ctx.eventDb.Get().Clauses(clause.OnConflict{
 				Columns:   []clause.Column{{Name: "user_id"}},
-				DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce", "mint_nonce"}),
+				DoUpdates: clause.AssignmentColumns([]string{"mint_nonce"}),
 			}).Create(user).Error
 			if err != nil {
 				panic(err)
