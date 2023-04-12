@@ -120,8 +120,13 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 						blobber1Weight := calculateWeight(writePrice[0], readPrice[0], writeData[0], readData[0], 8, challenge[0])
 						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 9, challenge[1])
 
+						fmt.Println("Blobber 1 Weight : ", blobber1Weight)
+						fmt.Println("Blobber 2 Weight : ", blobber2Weight)
+
 						blobber1ExpectedReward := blobber1Weight * 500 / (blobber1Weight + blobber2Weight)
 						blobber2ExpectedReward := 500 - blobber1ExpectedReward
+						fmt.Println("blobber1ExpectedReward", blobber1ExpectedReward)
+						fmt.Println("blobber2ExpectedReward", blobber2ExpectedReward)
 
 						wp1, _ := currency.Float64ToCoin(writePrice[0])
 						wp2, _ := currency.Float64ToCoin(writePrice[1])
@@ -138,8 +143,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 						b2d1, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.5)
 						b2d2, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.5)
 
-						fmt.Println("blobber1ExpectedReward", blobber1ExpectedReward)
-						fmt.Println("blobber2ExpectedReward", blobber2ExpectedReward)
 						fmt.Println("br1", br1)
 						fmt.Println("br2", br2)
 						fmt.Println("b1d1", b1d1)
