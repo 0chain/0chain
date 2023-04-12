@@ -79,14 +79,16 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			sp, err := ssc.getStakePool(spenum.Blobber, bID, balances)
 			require.NoError(t, err)
 
-			fmt.Println("Expected Blobber ", i, " Reward : ", r.blobberRewards[i], " vs Actual Reward : ", sp.Reward)
+			//fmt.Println("Expected Blobber ", i, " Reward : ", r.blobberRewards[i], " vs Actual Reward : ", sp.Reward)
+			message := fmt.Sprintf("Expected Blobber %d Reward : %v vs Actual Reward : %v", i, r.blobberRewards[i], sp.Reward)
 
-			require.EqualValues(t, r.blobberRewards[i], sp.Reward)
+			require.EqualValues(t, r.blobberRewards[i], sp.Reward, message)
 
 			for j := range p.delegatesBal[i] {
 				key := "delegate" + strconv.Itoa(j)
-				fmt.Println("Expected Blobber ", i, " Delegate ", j, " Reward : ", r.blobberDelegatesRewards[i][j], " vs Actual Reward : ", sp.Pools[key].Reward)
-				require.InEpsilon(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward, 0.05)
+				//fmt.Println("Expected Blobber ", i, " Delegate ", j, " Reward : ", r.blobberDelegatesRewards[i][j], " vs Actual Reward : ", sp.Pools[key].Reward)
+				message := fmt.Sprintf("Expected Blobber %d Delegate %d Reward : %v vs Actual Reward : %v", i, j, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
+				require.InEpsilon(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward, 0.05, message)
 			}
 		}
 		_, err = balances.DeleteTrieNode(
@@ -125,12 +127,12 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 2, challenge[1])
 						totalWeight := blobber1Weight + blobber2Weight
 
-						fmt.Println("Blobber 1 Weight : ", blobber1Weight, " vs Blobber 2 Weight : ", blobber2Weight, " vs Total Weight : ", totalWeight)
+						//fmt.Println("Blobber 1 Weight : ", blobber1Weight, " vs Blobber 2 Weight : ", blobber2Weight, " vs Total Weight : ", totalWeight)
 
 						blobber1ExpectedReward, _ := currency.Float64ToCoin(totalReward * (blobber1Weight / totalWeight))
 						blobber2ExpectedReward, _ := currency.MinusCoin(totalExpectedReward, blobber1ExpectedReward)
 
-						fmt.Println("Blobber 1 Expected Reward : ", blobber1ExpectedReward, " vs Blobber 2 Expected Reward : ", blobber2ExpectedReward)
+						//fmt.Println("Blobber 1 Expected Reward : ", blobber1ExpectedReward, " vs Blobber 2 Expected Reward : ", blobber2ExpectedReward)
 
 						blobber1Reward, _ := currency.MultFloat64(blobber1ExpectedReward, 0.1)
 						blobber2Reward, _ := currency.MultFloat64(blobber2ExpectedReward, 0.1)
@@ -183,7 +185,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			err := ssc.blobberBlockRewards(balances)
 			require.EqualValues(t, tt.wantErr, err != nil)
 			compareResult(t, tt.params, tt.result, balances, ssc)
-			//require.EqualValues(t, true, false)
 		})
 	}
 }

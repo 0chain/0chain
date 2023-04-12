@@ -120,8 +120,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	qualifyingBlobberIds := make([]string, len(blobberRewards))
 
-	fmt.Println("Blobber Rewards : ", blobberRewards)
-
 	for i, br := range blobberRewards {
 		sp := stakePools[i]
 
@@ -132,8 +130,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 		stake := float64(staked)
 
-		fmt.Println("Stake : ", stake)
-
 		gamma := maths.GetGamma(
 			conf.BlockReward.Gamma.A,
 			conf.BlockReward.Gamma.B,
@@ -141,8 +137,6 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			br.TotalData,
 			br.DataRead,
 		)
-
-		fmt.Println("Gamma : ", gamma)
 
 		zeta := maths.GetZeta(
 			conf.BlockReward.Zeta.I,
@@ -152,17 +146,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			float64(br.ReadPrice),
 		)
 
-		fmt.Println("Zeta : ", zeta)
-
 		qualifyingBlobberIds[i] = br.ID
 		totalQStake += stake
 		blobberWeight := ((gamma * zeta) + 1) * stake * float64(br.SuccessChallenges)
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
 	}
-
-	fmt.Println("Weight : ", weight)
-	fmt.Println("Total Weight : ", totalWeight)
 
 	if totalWeight == 0 {
 		totalWeight = 1
