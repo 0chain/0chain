@@ -117,8 +117,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				for _, writeData := range totalData {
 					for _, challenge := range challenges {
 
-						blobber1Weight := calculateWeight(writePrice[0], readPrice[0], writeData[0], readData[0], 8, challenge[0])
-						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 9, challenge[1])
+						blobber1Weight := calculateWeight(writePrice[0], readPrice[0], writeData[0], readData[0], 4, challenge[0])
+						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 2, challenge[1])
 
 						fmt.Println("Blobber 1 Weight : ", blobber1Weight)
 						fmt.Println("Blobber 2 Weight : ", blobber2Weight)
