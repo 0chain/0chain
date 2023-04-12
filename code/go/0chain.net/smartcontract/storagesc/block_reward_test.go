@@ -79,10 +79,13 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			sp, err := ssc.getStakePool(spenum.Blobber, bID, balances)
 			require.NoError(t, err)
 
+			fmt.Println("Expected Blobber ", i, " Reward : ", r.blobberRewards[i], " vs Actual Reward : ", sp.Reward)
+
 			require.EqualValues(t, r.blobberRewards[i], sp.Reward)
 
 			for j := range p.delegatesBal[i] {
 				key := "delegate" + strconv.Itoa(j)
+				fmt.Println("Expected Blobber ", i, " Delegate ", j, " Reward : ", r.blobberDelegatesRewards[i][j], " vs Actual Reward : ", sp.Pools[key].Reward)
 				require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
 			}
 		}
@@ -92,6 +95,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+		fmt.Println("\n-------------------------------------------------------------")
 	}
 
 	var tests []struct {
