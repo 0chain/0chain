@@ -420,7 +420,7 @@ func getZeta(wp, rp float64) float64 {
 func getGamma(X, R float64) float64 {
 
 	A := float64(10)
-	B := float64(1)
+	B := float64(9)
 	alpha := float64(0.2)
 
 	if X == 0 {
