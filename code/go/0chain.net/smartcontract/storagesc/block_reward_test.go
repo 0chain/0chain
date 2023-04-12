@@ -91,7 +91,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 				resultDelegateReward, _ := r.blobberDelegatesRewards[i][j].Float64()
 				actualDelegateReward, _ := sp.Pools[key].Reward.Float64()
-				require.InEpsilonf(t, resultDelegateReward, actualDelegateReward, 0.05, message)
+				require.LessOrEqualf(t, math.Abs(resultDelegateReward-actualDelegateReward), 2.0, message)
+				//require.InEpsilonf(t, resultDelegateReward, actualDelegateReward, 0.05, message)
 			}
 		}
 		_, err = balances.DeleteTrieNode(
