@@ -120,6 +120,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 
 	qualifyingBlobberIds := make([]string, len(blobberRewards))
 
+	fmt.Println("Blobber Rewards : ", blobberRewards)
+
 	for i, br := range blobberRewards {
 		sp := stakePools[i]
 
@@ -150,6 +152,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 		weight = append(weight, blobberWeight)
 		totalWeight += blobberWeight
 	}
+
+	fmt.Println("Weight : ", weight)
+	fmt.Println("Total Weight : ", totalWeight)
 
 	if totalWeight == 0 {
 		totalWeight = 1
