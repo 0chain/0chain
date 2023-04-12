@@ -94,6 +94,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)),
 		)
 		require.NoError(t, err)
+
+		fmt.Println("\n-------------------------------------------------------------\n")
 	}
 
 	var tests []struct {
@@ -222,6 +224,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			err := ssc.blobberBlockRewards(balances)
 			require.EqualValues(t, tt.wantErr, err != nil)
 			compareResult(t, tt.params, tt.result, balances, ssc)
+			require.Equal(t, true, false)
 		})
 	}
 }
