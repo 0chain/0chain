@@ -115,7 +115,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 9, challenge[1])
 
 						blobber1ExpectedReward := blobber1Weight * 500 / (blobber1Weight + blobber2Weight)
-						blobber2ExpectedReward := blobber2Weight * 500 / (blobber1Weight + blobber2Weight)
+						blobber2ExpectedReward := 500 - blobber1ExpectedReward
 
 						wp1, _ := currency.Float64ToCoin(writePrice[0])
 						wp2, _ := currency.Float64ToCoin(writePrice[1])
@@ -124,6 +124,13 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 						br1, _ := currency.Float64ToCoin(blobber1ExpectedReward * 0.1)
 						br2, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.1)
+						blobber1ExpectedReward = blobber1ExpectedReward - blobber1ExpectedReward*0.1
+						blobber2ExpectedReward = blobber2ExpectedReward - blobber2ExpectedReward*0.1
+
+						b1d1, _ := currency.Float64ToCoin(blobber1ExpectedReward * 0.25)
+						b1d2, _ := currency.Float64ToCoin(blobber1ExpectedReward * 0.75)
+						b2d1, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.5)
+						b2d2, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.5)
 
 						tests = append(tests, struct {
 							name    string
@@ -139,11 +146,11 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 								totalData:         []float64{writeData[0], writeData[1]},
 								dataRead:          []float64{readData[0], readData[1]},
 								successChallenges: []int{int(challenge[0]), int(challenge[1])},
-								delegatesBal:      [][]currency.Coin{{1, 0, 3}, {1, 6, 3}},
+								delegatesBal:      [][]currency.Coin{{1, 3}, {1, 1}},
 								serviceCharge:     []float64{.1, .1},
 							}, result: result{
 								blobberRewards:          []currency.Coin{br1, br2},
-								blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}, {113, 338, 337}},
+								blobberDelegatesRewards: [][]currency.Coin{{b1d1, b1d2}, {b2d1, b2d2}},
 							},
 						})
 					}
