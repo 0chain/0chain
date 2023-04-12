@@ -775,7 +775,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	}
 	sharders, err := edb.GetShardersWithFilterAndPagination(filter, pagination)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
+		common.Respond(w, r, nil, common.NewErrInternal("can't get sharders list", err.Error()))
 		return
 	}
 	shardersArr := make([]nodeStat, len(sharders))
