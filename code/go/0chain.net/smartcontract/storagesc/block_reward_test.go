@@ -105,8 +105,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		result  result
 	}
 
-	readPrices := [][]float64{{0, 1}, {0, 0}, {1, 1}}
 	writePrices := [][]float64{{1, 1}, {1, 3}}
+	readPrices := [][]float64{{0, 1}, {0, 0}, {1, 1}}
 	totalReads := [][]float64{{1, 1}, {1, 3}}
 	totalData := [][]float64{{1, 3}, {1, 1}}
 	challenges := [][]float64{{1000, 1300}, {1000, 1000}}
@@ -435,6 +435,11 @@ func calculateWeight(wp, rp, X, R, stakes, challenges float64) float64 {
 
 	zeta := getZeta(wp, rp)
 	gamma := getGamma(X, R)
+
+	fmt.Println("zeta", zeta)
+	fmt.Println("gamma", gamma)
+	fmt.Println("stakes", stakes)
+	fmt.Println("challenges", challenges)
 
 	return (zeta*gamma + 1) * stakes * challenges
 }
