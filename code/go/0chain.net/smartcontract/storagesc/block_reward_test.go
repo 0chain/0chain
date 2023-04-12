@@ -95,7 +95,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		fmt.Println("\n-------------------------------------------------------------\n")
+		fmt.Println("\n-------------------------------------------------------------")
 	}
 
 	var tests []struct {
