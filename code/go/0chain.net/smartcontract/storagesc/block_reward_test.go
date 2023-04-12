@@ -119,6 +119,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 						totalReward := 500.0
 
+						totalExpectedReward, _ := currency.Float64ToCoin(totalReward)
+
 						blobber1Weight := calculateWeight(writePrice[0], readPrice[0], writeData[0], readData[0], 4, challenge[0])
 						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 2, challenge[1])
 						totalWeight := blobber1Weight + blobber2Weight
@@ -126,12 +128,14 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 						fmt.Println("Blobber 1 Weight : ", blobber1Weight, " vs Blobber 2 Weight : ", blobber2Weight, " vs Total Weight : ", totalWeight)
 
 						blobber1ExpectedReward, _ := currency.Float64ToCoin(totalReward * (blobber1Weight / totalWeight))
-						blobber2ExpectedReward, _ := currency.Float64ToCoin(totalReward * (blobber2Weight / totalWeight))
+						blobber2ExpectedReward, _ := currency.MinusCoin(totalExpectedReward, blobber1ExpectedReward)
 
 						fmt.Println("Blobber 1 Expected Reward : ", blobber1ExpectedReward, " vs Blobber 2 Expected Reward : ", blobber2ExpectedReward)
 
 						blobber1Reward, _ := currency.MultFloat64(blobber1ExpectedReward, 0.1)
 						blobber2Reward, _ := currency.MultFloat64(blobber2ExpectedReward, 0.1)
+						blobber1ExpectedReward, _ = currency.MinusCoin(blobber1ExpectedReward, blobber1Reward)
+						blobber2ExpectedReward, _ = currency.MinusCoin(blobber2ExpectedReward, blobber2Reward)
 
 						blobber1Delegate1Reward, _ := currency.MultFloat64(blobber1ExpectedReward, 0.25)
 						blobber1Delegate2Reward, _ := currency.MinusCoin(blobber1ExpectedReward, blobber1Delegate1Reward)
