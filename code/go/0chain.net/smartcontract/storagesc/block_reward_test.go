@@ -81,12 +81,12 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 			fmt.Println("Expected Blobber ", i, " Reward : ", r.blobberRewards[i], " vs Actual Reward : ", sp.Reward)
 
-			//require.EqualValues(t, r.blobberRewards[i], sp.Reward)
+			require.EqualValues(t, r.blobberRewards[i], sp.Reward)
 
 			for j := range p.delegatesBal[i] {
 				key := "delegate" + strconv.Itoa(j)
 				fmt.Println("Expected Blobber ", i, " Delegate ", j, " Reward : ", r.blobberDelegatesRewards[i][j], " vs Actual Reward : ", sp.Pools[key].Reward)
-				//require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
+				require.InEpsilon(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward, 0.01)
 			}
 		}
 		_, err = balances.DeleteTrieNode(
@@ -183,7 +183,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			err := ssc.blobberBlockRewards(balances)
 			require.EqualValues(t, tt.wantErr, err != nil)
 			compareResult(t, tt.params, tt.result, balances, ssc)
-			require.EqualValues(t, true, false)
+			//require.EqualValues(t, true, false)
 		})
 	}
 }
