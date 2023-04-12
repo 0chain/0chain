@@ -179,6 +179,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			err := ssc.blobberBlockRewards(balances)
 			require.EqualValues(t, tt.wantErr, err != nil)
 			compareResult(t, tt.params, tt.result, balances, ssc)
+			require.EqualValues(t, true, false)
 		})
 	}
 }
