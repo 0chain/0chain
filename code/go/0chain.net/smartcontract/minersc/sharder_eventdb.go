@@ -34,6 +34,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		NodeType:                      NodeTypeSharder,
 		Status:                        status,
 		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
+		IsKilled:                      edbSharder.IsKilled,
 	}
 
 	sn := NodeResponse{
@@ -94,6 +95,7 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 				TotalRewards: sn.Reward,
 			},
 			LastHealthCheck: sn.LastHealthCheck,
+			IsKilled:        sn.IsKilled(),
 		},
 
 		Active:    sn.Status == node.NodeStatusActive,
