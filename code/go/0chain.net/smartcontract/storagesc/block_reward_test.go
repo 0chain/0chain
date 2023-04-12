@@ -83,7 +83,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 			resultBlobberReward, _ := r.blobberRewards[i].Float64()
 			actualBlobberReward, _ := sp.Reward.Float64()
-			require.InEpsilonf(t, resultBlobberReward, actualBlobberReward, 0.05, message)
+			require.LessOrEqualf(t, math.Abs(resultBlobberReward-actualBlobberReward), 1.0, message)
 
 			for j := range p.delegatesBal[i] {
 				key := "delegate" + strconv.Itoa(j)
