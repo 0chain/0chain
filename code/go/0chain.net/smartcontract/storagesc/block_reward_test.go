@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"os"
@@ -80,8 +81,11 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 			require.EqualValues(t, r.blobberRewards[i], sp.Reward)
 
+			fmt.Println(sp.Reward.Int64())
+
 			for j := range p.delegatesBal[i] {
 				key := "delegate" + strconv.Itoa(j)
+				fmt.Println(sp.Pools[key].Reward.Int64())
 				require.EqualValues(t, r.blobberDelegatesRewards[i][j], sp.Pools[key].Reward)
 			}
 		}
@@ -131,6 +135,15 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 						b1d2, _ := currency.Float64ToCoin(blobber1ExpectedReward * 0.75)
 						b2d1, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.5)
 						b2d2, _ := currency.Float64ToCoin(blobber2ExpectedReward * 0.5)
+
+						fmt.Println("blobber1ExpectedReward", blobber1ExpectedReward)
+						fmt.Println("blobber2ExpectedReward", blobber2ExpectedReward)
+						fmt.Println("br1", br1)
+						fmt.Println("br2", br2)
+						fmt.Println("b1d1", b1d1)
+						fmt.Println("b1d2", b1d2)
+						fmt.Println("b2d1", b2d1)
+						fmt.Println("b2d2", b2d2)
 
 						tests = append(tests, struct {
 							name    string
