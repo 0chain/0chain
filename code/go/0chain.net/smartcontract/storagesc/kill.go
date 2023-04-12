@@ -12,10 +12,6 @@ import (
 	"0chain.net/core/common"
 )
 
-func kill() {
-
-}
-
 // killBlobber
 // punitively disables a blobber. it will no longer be used for new allocations
 // or receive further rewards. Stakeholders will have their stakes slashed.

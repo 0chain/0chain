@@ -61,7 +61,7 @@ services:
       - ./blobber${BLOBBER}/data/tmp:/tmp
     ports:
       - "505${BLOBBER}:505${BLOBBER}"
-    command: ./bin/blobber --port 505${BLOBBER} --hostname localhost --deployment_mode 0 --keys_file keysconfig/b0bnode${BLOBBER}_keys.txt --files_dir /blobber/files --log_dir /blobber/log --db_dir /blobber/data --minio_file keysconfig/minio_config.txt
+    command: ./bin/blobber --port 505${BLOBBER} --hostname localhost --deployment_mode 0 --keys_file keysconfig/b0bnode${BLOBBER}_keys.txt --files_dir /blobber/files --log_dir /blobber/log --db_dir /blobber/data
     networks:
       default:
       testnet0:
