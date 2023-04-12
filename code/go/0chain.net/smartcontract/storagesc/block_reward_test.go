@@ -428,6 +428,8 @@ func getGamma(X, R float64) float64 {
 	}
 
 	factor := math.Abs((alpha*X - R) / (alpha*X + R))
+
+	fmt.Println("factor", factor)
 	return A - B*factor
 }
 
