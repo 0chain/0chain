@@ -1,7 +1,9 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/rand"
 	"os"
@@ -179,6 +181,10 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			}
 		}
 	}
+
+	// write all tests data to a json file
+	data, _ := json.MarshalIndent(tests, "", " ")
+	_ = ioutil.WriteFile("tests.json", data, 0644)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
