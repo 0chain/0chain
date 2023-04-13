@@ -303,7 +303,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if mn == nil {
 		logging.Logger.Info("pay_fees could not find miner to reward", zap.Int64("round", b.Round))
 	} else {
-		logging.Logger.Debug("pay_fees, get miner id successfully",
+		logging.Logger.Debug("pay_fees, got miner id successfully",
 			zap.String("miner id", mn.ID),
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash))
