@@ -354,6 +354,7 @@ func TestBlobberReward(t *testing.T) {
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
+		require.EqualValues(t, true, false)
 	})
 
 	t.Run(errLate, func(t *testing.T) {
@@ -1241,6 +1242,7 @@ func confirmBlobberReward(
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
+	fmt.Println("challengePool.Balance", challengePool.Balance, "f.challengePoolBalance", f.challengePoolBalance, "f.reward()", f.reward(), "f.blobberReward()", f.blobberReward(), "f.rewardReturned()", f.rewardReturned(), "f.validatorsReward()", f.validatorsReward())
 	require.InDelta(t, f.challengePoolBalance-f.blobberReward()-f.rewardReturned()-f.validatorsReward(), int64(challengePool.Balance), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
