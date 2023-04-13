@@ -183,7 +183,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	}
 
 	// write all tests data to a json file
-	data, _ := json.MarshalIndent(tests, "", " ")
+	data, _ := json.Marshal(tests)
+	fmt.Println(data)
 	_ = ioutil.WriteFile("tests.json", data, 0644)
 
 	for _, tt := range tests {
