@@ -301,7 +301,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", common.NewErrorf("pay_fees", "cannot get miner to reward, %v", err)
 	}
 	if mn == nil {
-		logging.Logger.Info("pay_fees could not find miner to reward", zap.Int64("round", b.Round))
+		logging.Logger.Info("pay_fees, could not find miner to reward", zap.Int64("round", b.Round))
 	} else {
 		logging.Logger.Debug("pay_fees, got miner id successfully",
 			zap.String("miner id", mn.ID),
