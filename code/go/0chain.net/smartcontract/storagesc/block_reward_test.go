@@ -182,6 +182,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		}
 	}
 
+	fmt.Println(tests)
+
 	// write all tests data to a json file
 	data, _ := json.Marshal(tests[0])
 	fmt.Println("Printing Data : ", data)
