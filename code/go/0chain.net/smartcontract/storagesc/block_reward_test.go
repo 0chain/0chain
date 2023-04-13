@@ -183,8 +183,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	}
 
 	// write all tests data to a json file
-	data, _ := json.Marshal(tests)
-	fmt.Println(data)
+	data, _ := json.Marshal(tests[0])
+	fmt.Println("Printing Data : ", data)
 	_ = ioutil.WriteFile("~/tests.json", data, 0644)
 
 	require.EqualValues(t, true, false)
@@ -371,6 +371,43 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, 2, s)
+}
+
+func TestGetBlockReward(t *testing.T) {
+	type params struct {
+		br             currency.Coin
+		currentRound   int64
+		brChangePeriod int64
+		brChangeRatio  float64
+		blobberWeight  float64
+	}
+
+	type result struct {
+		reward currency.Coin
+		err    error
+	}
+	//
+	//compareResult := func(t *testing.T, expected, actual result) {
+	//	require.Equal(t, expected.err, actual.err)
+	//	require.Equal(t, expected.reward, actual.reward)
+	//}
+	//
+	//tests := []struct {
+	//	name   string
+	//	params params
+	//	result result
+	//}{
+	//	{
+	//		name: "Test 1",
+	//		params: params{
+	//			br:             currency.Coin(500),
+	//			currentRound:   0,
+	//			brChangePeriod: 100,
+	//			brChangeRatio:  1,
+	//			blobberWeight:  0.5,
+	//		},
+	//	},
+	//}
 }
 
 func getZeta(wp, rp float64) float64 {
