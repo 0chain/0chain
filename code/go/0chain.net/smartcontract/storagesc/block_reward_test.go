@@ -185,11 +185,14 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	fmt.Println(tests)
 
 	// write all tests data to a json file
-	data, _ := json.Marshal(tests[0])
+	data, err := json.Marshal(tests)
+	if err != nil {
+		fmt.Println("Error in Marshalling tests data : ", err)
+	}
 	fmt.Println("Printing Data : ", data)
-	_ = ioutil.WriteFile("~/tests.json", data, 0644)
+	_ = ioutil.WriteFile("tests.json", data, 0644)
 
-	require.EqualValues(t, true, false)
+	//require.EqualValues(t, true, false)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
