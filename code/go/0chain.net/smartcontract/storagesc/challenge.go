@@ -83,7 +83,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// time of this challenge
 	challengeCompletedTime := blobAlloc.LatestCompletedChallenge.Created
-	fmt.Println("challengeCompletedTime", challengeCompletedTime, "alloc.Expiration", alloc.Expiration, "getMaxChallengeCompletionTime()", getMaxChallengeCompletionTime())
 	if challengeCompletedTime > alloc.Expiration+toSeconds(getMaxChallengeCompletionTime()) {
 		return errors.New("late challenge response")
 	}
@@ -96,7 +95,12 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	}
 
 	if challengeCompletedTime > alloc.Expiration {
+		fmt.Println("challengeCompletedTime", challengeCompletedTime, "alloc.Expiration", alloc.Expiration, "getMaxChallengeCompletionTime()", getMaxChallengeCompletionTime())
+
 		challengeCompletedTime = alloc.Expiration // last challenge
+
+		fmt.Println("challengeCompletedTime", challengeCompletedTime, "alloc.Expiration", alloc.Expiration, "getMaxChallengeCompletionTime()", getMaxChallengeCompletionTime())
+
 	}
 
 	// pool
