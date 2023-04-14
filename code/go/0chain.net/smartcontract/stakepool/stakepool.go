@@ -729,6 +729,10 @@ type ValidationSettings struct {
 }
 
 func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs ValidationSettings) (string, error) {
+	if t.Value == 0 {
+		return "", common.NewError("stake_pool_lock_failed",
+			fmt.Sprintf("no stake to lock: %v", t.Value))
+	}
 	if t.Value < vs.MinStake {
 		return "", common.NewError("stake_pool_lock_failed",
 			fmt.Sprintf("too small stake to lock: %v < %v", t.Value, vs.MinStake))
