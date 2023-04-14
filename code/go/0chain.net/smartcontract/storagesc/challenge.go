@@ -75,12 +75,7 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCompletedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation, validators []string, partial float64,
-	balances cstate.StateContextI, options ...string) error {
-
-	var uniqueIDForLogging string
-	if len(options) > 0 {
-		uniqueIDForLogging = options[0]
-	}
+	balances cstate.StateContextI) error {
 
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
@@ -101,15 +96,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	}
 
 	if challengeCompletedTime > alloc.Expiration {
-		if len(options) > 0 {
-			fmt.Println("jayash ", uniqueIDForLogging, " : ", "challengeCompletedTime", challengeCompletedTime, "alloc.Expiration", alloc.Expiration, "getMaxChallengeCompletionTime()", getMaxChallengeCompletionTime())
-		}
 		challengeCompletedTime = alloc.Expiration // last challenge
-
-		if len(options) > 0 {
-			fmt.Println("jayash ", uniqueIDForLogging, " : ", "challengeCompletedTime", challengeCompletedTime, "alloc.Expiration", alloc.Expiration, "getMaxChallengeCompletionTime()", getMaxChallengeCompletionTime())
-		}
-
 	}
 
 	// pool
@@ -133,19 +120,11 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	if len(options) > 0 {
-		fmt.Println("jayash move"+uniqueIDForLogging, move)
-	}
-
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
 	if err != nil {
 		return err
-	}
-
-	if len(options) > 0 {
-		fmt.Println("jayash validatorsReward"+uniqueIDForLogging, validatorsReward)
 	}
 
 	move, err = currency.MinusCoin(move, validatorsReward)
@@ -157,10 +136,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
 	if err != nil {
 		return err
-	}
-
-	if len(options) > 0 {
-		fmt.Println("jayash blobberReward"+uniqueIDForLogging, blobberReward)
 	}
 
 	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool

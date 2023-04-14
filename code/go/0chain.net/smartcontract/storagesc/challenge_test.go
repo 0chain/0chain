@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -370,9 +369,7 @@ func TestBlobberReward(t *testing.T) {
 
 	// Add case (thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime)) should calculate the reward according to the value thisChallenge=alloc.Expiry() (OK)
 	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
-		fmt.Println("thisChallenge : ", thisChallenge, "thisExpires : ", thisExpires, "MaxChallengeCompletionTime : ", scYaml.MaxChallengeCompletionTime)
 		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - toSeconds(1*time.Minute)
-		fmt.Println("thisChallenge : ", thisChallenge, "thisExpires : ", thisExpires, "MaxChallengeCompletionTime : ", scYaml.MaxChallengeCompletionTime)
 
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
@@ -995,13 +992,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	// conver thisChallenge to string
-	thisChallengeString := strconv.FormatInt(int64(thisChallange), 10)
-
-	// generate 3 digit random unique string for logging
-	uniqueIDForLogging := fmt.Sprintf("%03d", rand.Intn(1000)) + " _ " + thisChallengeString
-
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx, uniqueIDForLogging)
+	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx)
 	if err != nil {
 		return err
 	}
@@ -1282,7 +1273,6 @@ func confirmBlobberReward(
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	fmt.Println("challengePool.Balance", challengePool.Balance, "f.challengePoolBalance", f.challengePoolBalance, "f.reward()", f.reward(), "f.blobberReward()", f.blobberReward(), "f.rewardReturned()", f.rewardReturned(), "f.validatorsReward()", f.validatorsReward())
 	require.InDelta(t, f.challengePoolBalance-f.blobberReward()-f.rewardReturned()-f.validatorsReward(), int64(challengePool.Balance), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
