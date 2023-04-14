@@ -3,6 +3,7 @@ package storagesc
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -1164,7 +1165,7 @@ type formulaeBlobberReward struct {
 func (f formulaeBlobberReward) reward() int64 {
 	var challengePool = float64(f.challengePoolIntegralValue)
 	var passedPrevious = float64(f.previousChallange)
-	var passedCurrent = float64(f.thisChallange)
+	var passedCurrent = math.Min(float64(f.thisChallange), float64(f.thisExpires))
 	var currentExpires = float64(f.thisExpires)
 	var interpolationFraction = (passedCurrent - passedPrevious) / (currentExpires - passedPrevious)
 
