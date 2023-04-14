@@ -339,7 +339,7 @@ func TestBlobberReward(t *testing.T) {
 	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
 		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 30 * time.Minute,
+		MaxChallengeCompletionTime: 5 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
