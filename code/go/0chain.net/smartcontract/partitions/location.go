@@ -6,7 +6,9 @@ import (
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int, bool, error) {
@@ -15,6 +17,10 @@ func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int
 	kid := p.getLocKey(id)
 	loc, ok := p.locations[kid]
 	if ok {
+		logging.Logger.Debug("get item part from location cache",
+			zap.String("kid", kid),
+			zap.String("id", id),
+			zap.String("partition", p.Name))
 		return loc, true, nil
 	}
 
@@ -26,6 +32,10 @@ func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int
 		return -1, false, err
 	}
 
+	logging.Logger.Debug("get item part from location state",
+		zap.String("kid", kid),
+		zap.String("id", id),
+		zap.String("partition", p.Name))
 	return pl.Location, true, nil
 }
 
@@ -44,6 +54,10 @@ func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex
 func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
 	_, err := state.DeleteTrieNode(p.getLocKey(id))
 	if err != nil {
+		logging.Logger.Error("remove item location failed",
+			zap.String("kid", p.getLocKey(id)),
+			zap.String("id", id),
+			zap.Error(err))
 		return fmt.Errorf("remove item location failed: %v", err)
 	}
 	return nil
@@ -67,4 +81,6 @@ func (p *Partitions) loadLocations(idx int) {
 		kid := p.getLocKey(it.ID)
 		p.locations[kid] = idx
 	}
+
+	logging.Logger.Debug("load cache locations", zap.Any("locations", p.locations))
 }

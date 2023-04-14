@@ -337,6 +337,7 @@ func (p *Partitions) Remove(state state.StateContextI, id string) error {
 
 	p.loadLocations(loc)
 	delete(p.locations, p.getLocKey(id))
+	logging.Logger.Debug("remove item from partition cache", zap.String("kid", p.getLocKey(id)))
 
 	return p.removeItemLoc(state, id)
 }
