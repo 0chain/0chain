@@ -53,7 +53,7 @@ func kill(
 		return err
 	}
 
-	if err := smartcontractinterface.AuthorizeWithOwner("kill_miner", func() bool {
+	if err := smartcontractinterface.AuthorizeWithOwner("only the owner can kill a provider", func() bool {
 		return ownerId == clientId
 	}); err != nil {
 		return err
