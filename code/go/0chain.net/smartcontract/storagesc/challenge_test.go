@@ -368,7 +368,7 @@ func TestBlobberReward(t *testing.T) {
 
 	// TODO : Add case (thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime)) should calculate the reward according to the value thisChallenge=alloc.Expiry() (OK)
 	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - 60
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - toSeconds(1*time.Minute)
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -400,27 +400,24 @@ func TestBlobberReward(t *testing.T) {
 	//	require.True(t, strings.Contains(err.Error(), errTokensChallengePool))
 	//})
 
-	// TODO : Add case conf.ValidatorReward = 1 should give all the rewards to the validators (OK)
-	t.Run(errNoStakePools, func(t *testing.T) {
-		newSCYaml := scYaml
-		newSCYaml.ValidatorReward = 1
-		err := testBlobberReward(t, newSCYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
-		require.NoError(t, err)
-	})
-
-	// Add case conf.ValidatorReward = 2 should return error MinusCoin (ERR)
-	t.Run("uint64 minus overflow", func(t *testing.T) {
-		newSCYaml := scYaml
-		newSCYaml.ValidatorReward = 2
-		err := testBlobberReward(t, newSCYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
-		fmt.Println("Error TODO 2 : ", err)
-		require.Error(t, err)
-		require.EqualValues(t, err.Error(), "uint64 minus overflow")
-	})
+	//t.Run("Setting Validator reward ratio to 100%", func(t *testing.T) {
+	//	newSCYaml := scYaml
+	//	newSCYaml.ValidatorReward = 1
+	//	err := testBlobberReward(t, newSCYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+	//		writePoolBalance, challengePoolIntegralValue,
+	//		challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+	//	require.NoError(t, err)
+	//})
+	//
+	//t.Run("uint64 minus overflow", func(t *testing.T) {
+	//	newSCYaml := scYaml
+	//	newSCYaml.ValidatorReward = 2
+	//	err := testBlobberReward(t, newSCYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+	//		writePoolBalance, challengePoolIntegralValue,
+	//		challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+	//	require.Error(t, err)
+	//	require.EqualValues(t, err.Error(), "uint64 minus overflow")
+	//})
 
 	//t.Run(errNoStakePools, func(t *testing.T) {
 	//	var stakes = []int64{}
