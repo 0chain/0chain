@@ -368,7 +368,7 @@ func TestBlobberReward(t *testing.T) {
 
 	// TODO : Add case (thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime)) should calculate the reward according to the value thisChallenge=alloc.Expiry() (OK)
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - 1
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - 60
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -459,7 +459,7 @@ func TestBlobberPenalty(t *testing.T) {
 		MaxMint:                    zcnToBalance(4000000.0),
 		BlobberSlash:               0.1,
 		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 30 * time.Minute,
+		MaxChallengeCompletionTime: 5 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
