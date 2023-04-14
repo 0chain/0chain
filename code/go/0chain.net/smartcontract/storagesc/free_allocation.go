@@ -254,7 +254,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	coin, err := currency.Float64ToCoin(marker.FreeTokens)
+	coin, err := currency.ParseZCN(marker.FreeTokens)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"marker verification failed: %v", err)
