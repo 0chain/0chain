@@ -372,6 +372,9 @@ func TestBlobberReward(t *testing.T) {
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+
+		fmt.Println("Max Challenge Completion time : ", scYaml.MaxChallengeCompletionTime, " - ", toSeconds(scYaml.MaxChallengeCompletionTime))
+		fmt.Println("Max Challenge Completion time : ", scYaml.MaxChallengeCompletionTime-1, " - ", toSeconds(scYaml.MaxChallengeCompletionTime)-1)
 		fmt.Println("Error TODO 1 : ", err)
 		require.NoError(t, err)
 		//require.Error(t, err)
@@ -401,7 +404,7 @@ func TestBlobberReward(t *testing.T) {
 	t.Run(errNoStakePools, func(t *testing.T) {
 		newSCYaml := scYaml
 		newSCYaml.ValidatorReward = 1
-		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+		err := testBlobberReward(t, newSCYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
@@ -412,7 +415,7 @@ func TestBlobberReward(t *testing.T) {
 	t.Run(errNoStakePools, func(t *testing.T) {
 		newSCYaml := scYaml
 		newSCYaml.ValidatorReward = 2
-		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+		err := testBlobberReward(t, newSCYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
