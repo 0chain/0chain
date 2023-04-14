@@ -122,6 +122,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
+	fmt.Println("conf.ValidatorReward : ", conf.ValidatorReward, "move : ", move, "partial : ", partial, "validators : ", validators)
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
 	if err != nil {
 		return err
