@@ -326,7 +326,7 @@ func TestBlobberReward(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
 	var challengePoolIntegralValue = currency.Coin(73000000)
 	var challengePoolBalance = currency.Coin(700000)
-	var partial = 1
+	var partial = 1.0
 	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
 	var thisExpires = common.Timestamp(222)
