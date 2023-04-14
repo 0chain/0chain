@@ -3,6 +3,7 @@ package storagesc
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -1012,7 +1013,13 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx)
+	// conver thisChallenge to string
+	thisChallengeString := strconv.FormatInt(int64(thisChallange), 10)
+
+	// generate 3 digit random unique string for logging
+	uniqueIDForLogging := fmt.Sprintf("%03d", rand.Intn(1000)) + " _ " + thisChallengeString
+
+	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx, uniqueIDForLogging)
 	if err != nil {
 		return err
 	}
