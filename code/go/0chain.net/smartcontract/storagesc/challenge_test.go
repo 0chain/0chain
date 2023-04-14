@@ -328,7 +328,7 @@ func TestBlobberReward(t *testing.T) {
 	var challengePoolBalance = currency.Coin(700000)
 	var partial = 0.9
 	var previousChallenge = common.Timestamp(3)
-	var thisChallenge = common.Timestamp(5)
+	//var thisChallenge = common.Timestamp(5)
 	var thisExpires = common.Timestamp(222)
 	var now = common.Timestamp(99)
 	var validators = []string{
