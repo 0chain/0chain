@@ -76,6 +76,9 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCompletedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation, validators []string, partial float64,
 	balances cstate.StateContextI) error {
+
+	uniqueIDForLogging := strconv.FormatInt(rand.Int63(), 10)
+
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
@@ -124,12 +127,17 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
+	fmt.Println("move"+uniqueIDForLogging, move)
+
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("validatorsReward"+uniqueIDForLogging, validatorsReward)
+
 	move, err = currency.MinusCoin(move, validatorsReward)
 	if err != nil {
 		return err
@@ -140,6 +148,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("blobberReward"+uniqueIDForLogging, blobberReward)
+
 	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
 	if err != nil {
 		return err
