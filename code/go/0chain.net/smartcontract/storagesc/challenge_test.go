@@ -354,11 +354,21 @@ func TestBlobberReward(t *testing.T) {
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
-		require.EqualValues(t, true, false)
+		//require.EqualValues(t, true, false)
 	})
 
 	t.Run(errLate, func(t *testing.T) {
 		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
+		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+		require.Error(t, err)
+		require.EqualValues(t, err.Error(), errLate)
+	})
+
+	// TODO : Add case (thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime)) should calculate the reward according to the value thisChallenge=alloc.Expiry() (OK)
+	t.Run(errLate, func(t *testing.T) {
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime)
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -382,6 +392,26 @@ func TestBlobberReward(t *testing.T) {
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errTokensChallengePool))
+	})
+
+	// TODO : Add case conf.ValidatorReward = 1 should give all the rewards to the validators (OK)
+	t.Run(errNoStakePools, func(t *testing.T) {
+		newSCYaml := scYaml
+		newSCYaml.ValidatorReward = 1
+		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+		require.NoError(t, err)
+	})
+
+	// TODO : Add case conf.ValidatorReward = 2 should return error MinusCoin (ERR)
+	t.Run(errNoStakePools, func(t *testing.T) {
+		newSCYaml := scYaml
+		newSCYaml.ValidatorReward = 2
+		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+		require.NoError(t, err)
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {
