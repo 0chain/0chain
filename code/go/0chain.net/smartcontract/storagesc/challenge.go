@@ -183,7 +183,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances)
 	if err != nil {
-		return fmt.Errorf("rewarding validators: %v", err)
+		return fmt.Errorf("rewarding blobbers: %v", err)
 	}
 
 	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
