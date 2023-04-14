@@ -328,7 +328,7 @@ func TestBlobberReward(t *testing.T) {
 	var challengePoolBalance = currency.Coin(700000)
 	var partial = 0.9
 	var previousChallenge = common.Timestamp(3)
-	//var thisChallenge = common.Timestamp(5)
+	var thisChallenge = common.Timestamp(5)
 	var thisExpires = common.Timestamp(222)
 	var now = common.Timestamp(99)
 	var validators = []string{
@@ -368,13 +368,14 @@ func TestBlobberReward(t *testing.T) {
 
 	// TODO : Add case (thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime)) should calculate the reward according to the value thisChallenge=alloc.Expiry() (OK)
 	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
+		fmt.Println("thisChallenge : ", thisChallenge, "thisExpires : ", thisExpires, "MaxChallengeCompletionTime : ", scYaml.MaxChallengeCompletionTime)
 		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - toSeconds(1*time.Minute)
+		fmt.Println("thisChallenge : ", thisChallenge, "thisExpires : ", thisExpires, "MaxChallengeCompletionTime : ", scYaml.MaxChallengeCompletionTime)
+
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 
-		fmt.Println("Max Challenge Completion time : ", scYaml.MaxChallengeCompletionTime, " - ", toSeconds(scYaml.MaxChallengeCompletionTime))
-		fmt.Println("Max Challenge Completion time : ", scYaml.MaxChallengeCompletionTime-1, " - ", toSeconds(scYaml.MaxChallengeCompletionTime)-1)
 		fmt.Println("Error TODO 1 : ", err)
 		require.NoError(t, err)
 		//require.Error(t, err)
