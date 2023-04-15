@@ -176,6 +176,12 @@ func TestVerifyClientID(t *testing.T) {
 	}
 }
 
+//func TestDTU(t *testing.T) {
+//	timeUnit := 720 * time.Hour
+//	sa := StorageAllocation{}
+//
+//}
+//
 //func TestRDTU(t *testing.T) {
 //
 //	timeUnit := 720 * time.Hour
@@ -195,5 +201,4 @@ func TestVerifyClientID(t *testing.T) {
 //		assert.Equal(t, int64(1), rdtu)
 //		require.NoError(t, err)
 //	})
-//
 //}
