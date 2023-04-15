@@ -929,12 +929,16 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 
 		if alloc.Finalized {
-			if err := blobberAllocParts.Remove(balances, allocID); err != nil {
-				logging.Logger.Error("could not remove allocation from blobber",
-					zap.Error(err),
-					zap.String("blobber", blobberID),
-					zap.String("allocation", allocID))
-				return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
+			err := blobberAllocParts.Remove(balances, allocID)
+			if err != nil {
+				if !partitions.ErrItemNotFound(err) {
+					logging.Logger.Error("could not remove allocation from blobber",
+						zap.Error(err),
+						zap.String("blobber", blobberID),
+						zap.String("allocation", allocID))
+					return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
+				}
+				continue
 			}
 
 			allocNum, err := blobberAllocParts.Size(balances)
