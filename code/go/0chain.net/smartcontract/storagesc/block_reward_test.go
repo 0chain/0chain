@@ -39,6 +39,110 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		blobberDelegatesRewards [][]currency.Coin
 	}
 
+	getZeta := func(wp, rp float64) float64 {
+
+		i := float64(1)
+		k := float64(0.9)
+		mu := float64(0.2)
+
+		if wp == 0 {
+			return 0
+		}
+
+		return i - (k * (rp / (rp + (mu * wp))))
+	}
+
+	getGamma := func(X, R float64) float64 {
+
+		A := float64(10)
+		B := float64(9)
+		alpha := float64(0.2)
+
+		if X == 0 {
+			return 0
+		}
+
+		factor := math.Abs((alpha*X - R) / (alpha*X + R))
+
+		return A - B*factor
+	}
+
+	calculateWeight := func(wp, rp, X, R, stakes, challenges float64) float64 {
+
+		zeta := getZeta(wp, rp)
+		gamma := getGamma(X, R)
+
+		return (zeta*gamma + 1) * stakes * challenges
+	}
+
+	calculateExpectedRewards := func(p params) result {
+		wp1, _ := p.wp[0].Float64()
+		rp1, _ := p.rp[0].Float64()
+		totalData1 := p.totalData[0]
+		dataRead1 := p.dataRead[0]
+		successChallenges1 := p.successChallenges[0]
+		delegatesBal1 := p.delegatesBal[0]
+		serviceCharge1 := p.serviceCharge[0]
+
+		totalStakes1 := 0.0
+		for _, bal := range delegatesBal1 {
+			totalStakes1 += float64(bal)
+		}
+
+		blobber1Weight := calculateWeight(wp1, rp1, totalData1, dataRead1, totalStakes1, float64(successChallenges1))
+
+		wp2, _ := p.wp[1].Float64()
+		rp2, _ := p.rp[1].Float64()
+		totalData2 := p.totalData[1]
+		dataRead2 := p.dataRead[1]
+		successChallenges2 := p.successChallenges[1]
+		delegatesBal2 := p.delegatesBal[1]
+		serviceCharge2 := p.serviceCharge[1]
+
+		totalStakes2 := 0.0
+		for _, bal := range delegatesBal2 {
+			totalStakes2 += float64(bal)
+		}
+
+		blobber2Weight := calculateWeight(wp2, rp2, totalData2, dataRead2, totalStakes2, float64(successChallenges2))
+
+		totalWeight := blobber1Weight + blobber2Weight
+
+		blobber1TotalReward := (blobber1Weight / totalWeight) * 500
+		blobber2TotalReward := (blobber2Weight / totalWeight) * 500
+
+		blobber1Reward := blobber1TotalReward * serviceCharge1
+		blobber2Reward := blobber2TotalReward * serviceCharge2
+
+		blobber1DelegatesTotalReward := blobber1TotalReward - blobber1Reward
+		blobber2DelegatesTotalReward := blobber2TotalReward - blobber2Reward
+
+		blobber1DelegatesRewards := make([]currency.Coin, len(delegatesBal1))
+		blobber2DelegatesRewards := make([]currency.Coin, len(delegatesBal2))
+
+		for i, bal := range delegatesBal1 {
+			blobber1DelegatesRewards[i], _ = currency.Float64ToCoin(blobber1DelegatesTotalReward * (float64(bal) / totalStakes1))
+		}
+
+		for i, bal := range delegatesBal2 {
+			blobber2DelegatesRewards[i], _ = currency.Float64ToCoin(blobber2DelegatesTotalReward * (float64(bal) / totalStakes2))
+		}
+
+		blobber1RewardInCoin, _ := currency.Float64ToCoin(blobber1Reward)
+		blobber2RewardInCoin, _ := currency.Float64ToCoin(blobber2Reward)
+
+		return result{
+			blobberRewards: []currency.Coin{
+				blobber1RewardInCoin,
+				blobber2RewardInCoin,
+			},
+			blobberDelegatesRewards: [][]currency.Coin{
+				blobber1DelegatesRewards,
+				blobber2DelegatesRewards,
+			},
+		}
+	}
+
 	setupRewards := func(t *testing.T, p params, balances state.StateContextI, sc *StorageSmartContract) state.StateContextI {
 		conf := setConfig(t, balances)
 		allBR, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
@@ -105,82 +209,264 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 	}
 
-	var tests []struct {
+	type TestCase struct {
 		name    string
-		wantErr bool
 		params  params
 		result  result
+		wantErr bool
 	}
 
-	writePrices := [][]float64{{1, 1}, {1, 3}}
-	readPrices := [][]float64{{0, 1}, {0, 0}, {1, 1}}
-	totalReads := [][]float64{{1, 1}, {1, 3}}
-	totalData := [][]float64{{1, 3}, {1, 1}}
-	challenges := [][]float64{{1000, 1300}, {1000, 1000}}
+	var tests []TestCase
 
-	for _, readPrice := range readPrices {
-		for _, writePrice := range writePrices {
-			for _, readData := range totalReads {
-				for _, writeData := range totalData {
-					for _, challenge := range challenges {
-
-						totalReward := 500.0
-
-						totalExpectedReward, _ := currency.Float64ToCoin(totalReward)
-
-						blobber1Weight := calculateWeight(writePrice[0], readPrice[0], writeData[0], readData[0], 4, challenge[0])
-						blobber2Weight := calculateWeight(writePrice[1], readPrice[1], writeData[1], readData[1], 2, challenge[1])
-						totalWeight := blobber1Weight + blobber2Weight
-
-						//fmt.Println("Blobber 1 Weight : ", blobber1Weight, " vs Blobber 2 Weight : ", blobber2Weight, " vs Total Weight : ", totalWeight)
-
-						blobber1ExpectedReward, _ := currency.Float64ToCoin(totalReward * (blobber1Weight / totalWeight))
-						blobber2ExpectedReward, _ := currency.MinusCoin(totalExpectedReward, blobber1ExpectedReward)
-
-						//fmt.Println("Blobber 1 Expected Reward : ", blobber1ExpectedReward, " vs Blobber 2 Expected Reward : ", blobber2ExpectedReward)
-
-						blobber1Reward, _ := currency.MultFloat64(blobber1ExpectedReward, 0.1)
-						blobber2Reward, _ := currency.MultFloat64(blobber2ExpectedReward, 0.1)
-						blobber1ExpectedReward, _ = currency.MinusCoin(blobber1ExpectedReward, blobber1Reward)
-						blobber2ExpectedReward, _ = currency.MinusCoin(blobber2ExpectedReward, blobber2Reward)
-
-						blobber1Delegate1Reward, _ := currency.MultFloat64(blobber1ExpectedReward, 0.25)
-						blobber1Delegate2Reward, _ := currency.MinusCoin(blobber1ExpectedReward, blobber1Delegate1Reward)
-
-						blobber2Delegate1Reward, _ := currency.MultFloat64(blobber2ExpectedReward, 0.5)
-						blobber2Delegate2Reward, _ := currency.MinusCoin(blobber2ExpectedReward, blobber2Delegate1Reward)
-
-						wp1, _ := currency.Float64ToCoin(writePrice[0])
-						wp2, _ := currency.Float64ToCoin(writePrice[1])
-						rp1, _ := currency.Float64ToCoin(readPrice[0])
-						rp2, _ := currency.Float64ToCoin(readPrice[1])
-
-						tests = append(tests, struct {
-							name    string
-							wantErr bool
-							params  params
-							result  result
-						}{
-							name: "blobber_block_rewards",
-							params: params{
-								numBlobbers:       2,
-								wp:                []currency.Coin{wp1, wp2},
-								rp:                []currency.Coin{rp1, rp2},
-								totalData:         []float64{writeData[0], writeData[1]},
-								dataRead:          []float64{readData[0], readData[1]},
-								successChallenges: []int{int(challenge[0]), int(challenge[1])},
-								delegatesBal:      [][]currency.Coin{{1, 3}, {1, 1}},
-								serviceCharge:     []float64{.1, .1},
-							}, result: result{
-								blobberRewards:          []currency.Coin{blobber1Reward, blobber2Reward},
-								blobberDelegatesRewards: [][]currency.Coin{{blobber1Delegate1Reward, blobber1Delegate2Reward}, {blobber2Delegate1Reward, blobber2Delegate2Reward}},
-							},
-						})
-					}
-				}
-			}
-		}
+	// When there is only one blobber
+	caseParams := params{
+		numBlobbers:       1,
+		wp:                []currency.Coin{2},
+		rp:                []currency.Coin{1},
+		totalData:         []float64{10},
+		dataRead:          []float64{2},
+		successChallenges: []int{10},
+		delegatesBal:      [][]currency.Coin{{1, 0, 3}},
+		serviceCharge:     []float64{.1},
 	}
+	caseResult := result{
+		blobberRewards:          []currency.Coin{50},
+		blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}},
+	}
+	tests = append(tests, TestCase{
+		name:    "Only one blobber in the partition",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates each same data
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{1000000000, 1000000000},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .1},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates each same data",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with write price {1000000000, 9000000000}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 9000000000},
+		rp:                []currency.Coin{1000000000, 1000000000},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with write price {1000000000, 9000000000}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with read price to verify free reads {0, 1000000000}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 1000000000},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .1},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with read price {0, 1000000000}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different read price {1000000000, 9000000000}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{1000000000, 9000000000},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .1},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with read price {1000000000, 9000000000}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different total data {10, 90}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 0},
+		totalData:         []float64{10, 90},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .1},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with different total data {10, 90}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different data read {10, 90}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 0},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 90},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .1},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with different data read {10, 90}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different success challenges {40, 90}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 0},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 90},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .1},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with different success challenges {40, 90}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different success challenges {40, 0}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 0},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 0},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .1},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with different success challenges {40, 0}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different delegates balances {{1, 0, 3}, {2, 6, 7}}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 0},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{1, 0, 3}, {2, 6, 7}},
+		serviceCharge:     []float64{.1, .1},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with different delegates balances {{1, 0, 3}, {2, 6, 7}}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different service charge {.1, .3}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 0},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .3},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with different service charge {.1, .3}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different service charge {1, 0}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 0},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{1, 0},
+	}
+	caseResult = calculateExpectedRewards(caseParams)
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with different service charge {1, 0}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: false,
+	})
+
+	// 2 Blobbers with 3 delegates with different service charge {2, 0}
+	caseParams = params{
+		numBlobbers:       2,
+		wp:                []currency.Coin{1000000000, 1000000000},
+		rp:                []currency.Coin{0, 0},
+		totalData:         []float64{10, 10},
+		dataRead:          []float64{10, 10},
+		successChallenges: []int{40, 40},
+		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{2, 0},
+	}
+	caseResult = result{}
+	tests = append(tests, TestCase{
+		name:    "2 Blobbers with 3 delegates with different service charge {2, 0}",
+		params:  caseParams,
+		result:  caseResult,
+		wantErr: true,
+	})
+
 	// write all tests data to a json file
 	data, err := json.Marshal(tests)
 	if err != nil {
@@ -421,39 +707,3 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 //		})
 //	}
 //}
-
-func getZeta(wp, rp float64) float64 {
-
-	i := float64(1)
-	k := float64(0.9)
-	mu := float64(0.2)
-
-	if wp == 0 {
-		return 0
-	}
-
-	return i - (k * (rp / (rp + (mu * wp))))
-}
-
-func getGamma(X, R float64) float64 {
-
-	A := float64(10)
-	B := float64(9)
-	alpha := float64(0.2)
-
-	if X == 0 {
-		return 0
-	}
-
-	factor := math.Abs((alpha*X - R) / (alpha*X + R))
-
-	return A - B*factor
-}
-
-func calculateWeight(wp, rp, X, R, stakes, challenges float64) float64 {
-
-	zeta := getZeta(wp, rp)
-	gamma := getGamma(X, R)
-
-	return (zeta*gamma + 1) * stakes * challenges
-}
