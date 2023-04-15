@@ -268,6 +268,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		dataRead:          []float64{10, 10},
 		successChallenges: []int{40, 40},
 		delegatesBal:      [][]currency.Coin{{2, 2, 2}, {2, 2, 2}},
+		serviceCharge:     []float64{.1, .1},
 	}
 	caseResult = calculateExpectedRewards(caseParams)
 	tests = append(tests, TestCase{
