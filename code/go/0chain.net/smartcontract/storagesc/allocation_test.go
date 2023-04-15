@@ -1048,8 +1048,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.OwnerPublicKey = pubKey
 		nar.Blobbers = nil // not set
 
-		//_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-		//requireErrMsg(t, err, errMsg5p9)
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
+		requireErrMsg(t, err, errMsg6)
 	})
 
 	t.Run("Blobbers provided are not enough to honour the allocation", func(t *testing.T) {

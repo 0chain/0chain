@@ -367,7 +367,6 @@ func TestBlobberReward(t *testing.T) {
 		require.EqualValues(t, err.Error(), errLate)
 	})
 
-	// Add case (thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime)) should calculate the reward according to the value thisChallenge=alloc.Expiry() (OK)
 	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
 		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - toSeconds(1*time.Minute)
 
