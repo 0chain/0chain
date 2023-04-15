@@ -640,50 +640,60 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	require.Equal(t, 2, s)
 }
 
-//func TestGetBlockReward(t *testing.T) {
-//	type params struct {
-//		br             currency.Coin
-//		currentRound   int64
-//		brChangePeriod int64
-//		brChangeRatio  float64
-//		blobberWeight  float64
-//	}
-//
-//	type result struct {
-//		reward currency.Coin
-//		err    error
-//	}
-//
-//	compareResult := func(t *testing.T, expected, actual result) {
-//		require.Equal(t, expected.err, actual.err)
-//		require.Equal(t, expected.reward, actual.reward)
-//	}
-//
-//	tests := []struct {
-//		name   string
-//		params params
-//		result result
-//	}{
-//		{
-//			name: "Test 1",
-//			params: params{
-//				br:             currency.Coin(500),
-//				currentRound:   1,
-//				brChangePeriod: 0,
-//				brChangeRatio:  0.1,
-//				blobberWeight:  0.5,
-//			},
-//			result: result{
-//				reward: currency.Coin(250),
-//				err:    nil,
-//			},
-//		},
-//	}
-//
-//	for _, test := range tests {
-//		t.Run(test.name, func(t *testing.T) {
-//			reward, err := getBlockReward(test.params.br, test.params.currentRound, test.params.brChangePeriod, test.params.brChangeRatio, test.params.blobberWeight)
-//			compareResult(t, test.result, result{reward, err})
-//		})
-//	}
-//}
+func TestGetBlockReward(t *testing.T) {
+
+	br, _ := currency.Float64ToCoin(800000)
+	brChangePeriod := int64(10000)
+	brChangeRatio := 0.1
+	blobberWeight := 0.5
+
+	type result struct {
+		reward currency.Coin
+		err    error
+	}
+
+	compareResult := func(t *testing.T, expected, actual result) {
+		fmt.Println("expected", expected.reward, "actual", actual.reward)
+		require.Equal(t, expected.err, actual.err)
+		require.Equal(t, expected.reward, actual.reward)
+	}
+
+	calculateResult := func(currentRound int64) currency.Coin {
+		changeBalance := 1 - brChangeRatio
+		changePeriods := currentRound / brChangePeriod
+
+		factor := math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
+		result, _ := currency.MultFloat64(br, factor)
+		return result
+	}
+
+	tests := []struct {
+		name         string
+		currentRound int64
+		result       result
+	}{
+		{
+			name:         "Test 1",
+			currentRound: 500,
+			result: result{
+				reward: calculateResult(500),
+				err:    nil,
+			},
+		},
+		{
+			name:         "Test 1",
+			currentRound: 23420,
+			result: result{
+				reward: calculateResult(23420),
+				err:    nil,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			reward, err := getBlockReward(br, test.currentRound, brChangePeriod, brChangeRatio, blobberWeight)
+			compareResult(t, test.result, result{reward, err})
+		})
+	}
+}
