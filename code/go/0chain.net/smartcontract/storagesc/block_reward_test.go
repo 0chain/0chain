@@ -214,7 +214,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)),
 		)
 		require.NoError(t, err)
-		require.EqualValues(t, true, false)
 	}
 
 	type TestCase struct {
