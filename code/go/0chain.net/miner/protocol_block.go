@@ -939,7 +939,8 @@ func txnIterHandlerFunc(
 					zap.Any("txn", txn),
 					zap.Any("estimated fee", fee),
 					zap.Error(err))
-				return true, err // skipping and continue
+				tii.invalidTxns = append(tii.invalidTxns, txn)
+				return true, nil // skipping and continue
 			}
 		}
 
