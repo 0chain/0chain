@@ -219,7 +219,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)),
 		)
 		require.NoError(t, err)
-
+		require.EqualValues(t, true, false)
 	}
 
 	type TestCase struct {
@@ -478,7 +478,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		name:    "2 Blobbers with 3 delegates with different service charge {2, 0}",
 		params:  caseParams,
 		result:  caseResult,
-		wantErr: true,
+		wantErr: false,
 	})
 
 	// write all tests data to a json file
