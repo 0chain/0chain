@@ -1020,18 +1020,18 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			continue
 		}
 
-		// sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
-		// }
-		// stake, err := sp.stake()
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// if stake < conf.MinStake {
-		// 	remainingValidators--
-		// 	continue
-		// }
+		sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
+		if err != nil {
+			return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
+		}
+		stake, err := sp.stake()
+		if err != nil {
+			return nil, err
+		}
+		if stake <= 0 {
+			remainingValidators--
+			continue
+		}
 
 		selectedValidators = append(selectedValidators,
 			&ValidationNode{
