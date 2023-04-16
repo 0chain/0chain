@@ -993,15 +993,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	now := txn.CreationDate
 	filterValidator := filterHealthyValidators(now)
 
-	logging.Logger.Info("generate_challenges", zap.Int("conf.MinStake:", int(conf.MinStake)))
-	logging.Logger.Info("generate_challenges", zap.Int("len(randValidators)", remainingValidators))
-
 	for i := 0; i < len(randValidators) && len(selectedValidators) < needValidNum; i++ {
 		if remainingValidators < needValidNum {
 			return nil, errors.New("validators number does not meet minimum challenge requirement after filtering")
 		}
 		randValidator := randValidators[perm[i]]
-		logging.Logger.Info("generate_challenges", zap.String("Selected RandValidator ID", randValidator.Id))
 		if randValidator.Id == blobberID {
 			continue
 		}
@@ -1024,19 +1020,18 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			continue
 		}
 
-		sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
-		if err != nil {
-			return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
-		}
-		stake, err := sp.stake()
-		if err != nil {
-			return nil, err
-		}
-		logging.Logger.Info("generate_challenges", zap.String("Validator ID:", validator.ID), zap.Int("Validator stake:", int(stake)))
-		if stake < conf.MinStake {
-			remainingValidators--
-			continue
-		}
+		// sp, err := sc.getStakePool(spenum.Validator, validator.ID, balances)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("can't get validator %s stake pool: %v", randValidator.Id, err)
+		// }
+		// stake, err := sp.stake()
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// if stake < conf.MinStake {
+		// 	remainingValidators--
+		// 	continue
+		// }
 
 		selectedValidators = append(selectedValidators,
 			&ValidationNode{
@@ -1048,7 +1043,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			})
 
 	}
-	logging.Logger.Info("generate_challenges", zap.Int("selectedValidators:", len(selectedValidators)))
 
 	if len(selectedValidators) < needValidNum {
 		return nil, errors.New("validators number does not meet minimum challenge requirement after filtering")
