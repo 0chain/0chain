@@ -119,7 +119,12 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 		err := sc.storeTransactions(sTxns)
 		if err != nil {
 			delay = 2 * delay
-			logging.Logger.Error("save transactions error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
+			logging.Logger.Error("save transactions error",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Int("block_size", len(b.Txns)),
+				zap.Int("retry", tries),
+				zap.Duration("delay", delay), zap.Error(err))
 			time.Sleep(delay)
 			continue
 		}
