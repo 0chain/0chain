@@ -1028,7 +1028,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if err != nil {
 			return nil, err
 		}
-		if stake <= 0 {
+		if stake < conf.MinStake {
 			remainingValidators--
 			continue
 		}
