@@ -13,6 +13,7 @@ smart_contracts:
       pour: 100
       refill: 100
 
+
   minersc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     # miners
@@ -68,8 +69,6 @@ smart_contracts:
       delete_sharder: 100
       miner_health_check: 100
       sharder_health_check: 100
-      blobber_health_check: 100
-      validator_health_check: 100
       contributeMpk: 100
       shareSignsOrShares: 100
       wait: 100
@@ -215,6 +214,7 @@ smart_contracts:
       free_allocation_request: 1500
       free_update_allocation: 2500
       blobber_health_check: 100
+      validator_health_check: 100
       update_blobber_settings: 100
       update_validator_settings: 100
       pay_blobber_block_rewards: 100
@@ -269,3 +269,15 @@ smart_contracts:
       add-authorizer: 100
       authorizer-health-check: 100
       delete-authorizer: 100
+  interestpoolsc:
+    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    min_lock: 10
+    interest_rate: 0.0
+    apr: 0.1
+    min_lock_period: 1m
+    max_lock_period: 8760h
+    max_mint: 1500000.0
+    cost:
+      lock: 100
+      unlock: 100
+      updateVariables: 100

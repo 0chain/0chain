@@ -266,7 +266,13 @@ func TestExecuteWithStats(t *testing.T) {
 				sc:       smcoi.SmartContract,
 				funcName: "unknown func",
 				balances: stateContextIMock,
-				t:        &transaction.Transaction{},
+				t: &transaction.Transaction{
+					TransactionType: transaction.TxnTypeSmartContract,
+					SmartContractData: &transaction.SmartContractData{
+						FunctionName: "unknown func",
+						InputData:    json.RawMessage{},
+					},
+				},
 			},
 			wantErr: true,
 		},
@@ -277,7 +283,13 @@ func TestExecuteWithStats(t *testing.T) {
 				sc:       smcoi.SmartContract,
 				funcName: "refill",
 				balances: stateContextIMock,
-				t:        &transaction.Transaction{},
+				t: &transaction.Transaction{
+					TransactionType: transaction.TxnTypeSmartContract,
+					SmartContractData: &transaction.SmartContractData{
+						FunctionName: "refill",
+						InputData:    json.RawMessage{},
+					},
+				},
 			},
 			want:    "{\"from\":\"\",\"to\":\"\",\"amount\":0}",
 			wantErr: false,
@@ -288,7 +300,7 @@ func TestExecuteWithStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ExecuteWithStats(tt.args.smcoi, tt.args.t, tt.args.funcName, tt.args.input, tt.args.balances)
+			got, err := ExecuteWithStats(tt.args.smcoi, tt.args.t, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecuteWithStats() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -395,10 +407,10 @@ func TestExecuteSmartContract(t *testing.T) {
 			args: args{
 				t: &transaction.Transaction{
 					ToClientID: "unknown",
-				},
-				td: &sci.SmartContractTransactionData{
-					FunctionName: "miner_health_check",
-					InputData:    json.RawMessage{},
+					SmartContractData: &transaction.SmartContractData{
+						FunctionName: "miner_health_check",
+						InputData:    json.RawMessage{},
+					},
 				},
 			},
 			wantErr: true,
@@ -409,10 +421,10 @@ func TestExecuteSmartContract(t *testing.T) {
 				balances: stateContextIMock,
 				t: &transaction.Transaction{
 					ToClientID: faucetsc.ADDRESS,
-				},
-				td: &sci.SmartContractTransactionData{
-					FunctionName: "update-settings",
-					InputData:    json.RawMessage("}{"),
+					SmartContractData: &transaction.SmartContractData{
+						FunctionName: "update-settings",
+						InputData:    json.RawMessage("}{"),
+					},
 				},
 			},
 			wantErr: true,
@@ -423,10 +435,10 @@ func TestExecuteSmartContract(t *testing.T) {
 				balances: stateContextIMock,
 				t: &transaction.Transaction{
 					ToClientID: minersc.ADDRESS,
-				},
-				td: &sci.SmartContractTransactionData{
-					FunctionName: "miner_health_check",
-					InputData:    scData,
+					SmartContractData: &transaction.SmartContractData{
+						FunctionName: "miner_health_check",
+						InputData:    scData,
+					},
 				},
 			},
 			want:    "{\"simple_miner\":{\"id\":\"\",\"is_shut_down\":false,\"is_killed\":false,\"provider_type\":1,\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":{\"pools\":{},\"rewards\":0,\"settings\":{\"delegate_wallet\":\"\",\"min_stake\":0,\"max_stake\":0,\"num_delegates\":0,\"service_charge\":0},\"minter\":0,\"is_dead\":false}}",
@@ -437,8 +449,10 @@ func TestExecuteSmartContract(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
-			got, err := ExecuteSmartContract(tt.args.t, tt.args.td, tt.args.balances)
+			//txnData, err := json.Marshal(tt.args.td)
+			//require.NoError(t, err)
+			//tt.args.t.TransactionData = string(txnData)
+			got, err := ExecuteSmartContract(tt.args.t, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecuteSmartContract() error = %v, wantErr %v", err, tt.wantErr)
 				return

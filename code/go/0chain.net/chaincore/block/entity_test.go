@@ -388,8 +388,12 @@ func TestBlock_ComputeProperties(t *testing.T) {
 	b := NewBlock("", 1)
 	txn := new(transaction.Transaction)
 
+	td, err := json.Marshal(struct{}{})
+	require.NoError(t, err)
+	txn.TransactionData = string(td)
+
 	scheme := encryption.NewBLS0ChainScheme()
-	err := scheme.GenerateKeys()
+	err = scheme.GenerateKeys()
 	require.NoError(t, err)
 	txn.PublicKey = scheme.GetPublicKey()
 
