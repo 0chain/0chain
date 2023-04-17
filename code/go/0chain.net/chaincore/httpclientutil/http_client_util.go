@@ -745,24 +745,7 @@ func syncClientNonce(sharders []string) (int64, error) {
 	return MakeClientNonceRequest(ctx, node.Self.Underlying().GetKey(), sharders, 33)
 }
 
-func SendSmartContractTxn(txn *Transaction,
-	address string,
-	value, fee int64,
-	scData *SmartContractTxnData,
-	minerUrls []string,
-	sharderUrls []string,
-) error {
-	txn.ToClientID = address
-	txn.Value = value
-	txn.Fee = fee
-	txn.TransactionType = TxnTypeSmartContract
-	txnBytes, err := json.Marshal(scData)
-	if err != nil {
-		logging.Logger.Error("Returning error", zap.Error(err))
-		return err
-	}
-	txn.TransactionData = string(txnBytes)
-
+func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []string) error {
 	nextNonce := node.Self.GetNextNonce()
 	if nextNonce == 0 {
 		nonce, err := syncClientNonce(sharderUrls)
@@ -778,7 +761,7 @@ func SendSmartContractTxn(txn *Transaction,
 		return node.Self.Sign(hash)
 	}
 
-	err = txn.ComputeHashAndSign(signer)
+	err := txn.ComputeHashAndSign(signer)
 	if err != nil {
 		logging.Logger.Error("Signing Failed during registering miner to the mining network", zap.Error(err))
 		return err
