@@ -153,10 +153,10 @@ File: 0Chain/code/go/0chain.net/smartcontract/storagesc/sc.go
 | /getchallenge | ssc.GetChallengeHandler |
 
 | Endpoint: fc.SmartContractExecutionStats | Handler |
-| ------ | ------ |
-| challenge_request | metrics.GetOrRegisterTimer |
-| challenge_response | metrics.GetOrRegisterTimer |
-| generate_challenge | metrics.GetOrRegisterTimer |
+|------------------------------------------| ------ |
+| challenge_request                        | metrics.GetOrRegisterTimer |
+| challenge_response                       | metrics.GetOrRegisterTimer |
+| generate_challenges                      | metrics.GetOrRegisterTimer |
 
 
 > validator
