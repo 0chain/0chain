@@ -2386,12 +2386,12 @@ func Test_add_Allocation(t *testing.T) {
 	alloc := StorageAllocation{ID: "test"}
 
 	output, err := ssc.addAllocation(&alloc, balances)
-	fmt.Println(output)
-	fmt.Println(err)
+	fmt.Println("Output1 : ", output)
+	fmt.Println("Error 1 : ", err)
 
 	output, err = ssc.addAllocation(&alloc, balances)
-	fmt.Println(output)
-	fmt.Println(err)
+	fmt.Println("Output1 : ", output)
+	fmt.Println("Error 1 : ", err)
 
 	require.EqualValues(t, true, false)
 }
