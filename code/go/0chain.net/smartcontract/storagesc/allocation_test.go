@@ -2376,3 +2376,28 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
 		"should receive min_lock_demand")
 }
+
+func Test_add_Allocation(t *testing.T) {
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+	)
+
+	alloc := StorageAllocation{ID: "test"}
+
+	output, err := ssc.addAllocation(&alloc, balances)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(output)
+
+	output, err = ssc.addAllocation(&alloc, balances)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(output)
+
+	require.EqualValues(t, true, false)
+}
