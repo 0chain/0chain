@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 
 	"go.uber.org/zap"
 
