@@ -156,7 +156,7 @@ File: 0Chain/code/go/0chain.net/smartcontract/storagesc/sc.go
 | ------ | ------ |
 | challenge_request | metrics.GetOrRegisterTimer |
 | challenge_response | metrics.GetOrRegisterTimer |
-| generate_challenges | metrics.GetOrRegisterTimer |
+| generate_challenge | metrics.GetOrRegisterTimer |
 
 
 > validator
