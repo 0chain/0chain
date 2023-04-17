@@ -115,18 +115,18 @@ func initSettingName() {
 	SettingName[CostDeleteMiner] = "cost.delete_miner"
 	SettingName[CostMinerHealthCheck] = "cost.miner_health_check"
 	SettingName[CostSharderHealthCheck] = "cost.sharder_health_check"
-	SettingName[CostContributeMpk] = "cost.contributeMpk"
-	SettingName[CostShareSignsOrShares] = "cost.shareSignsOrShares"
+	SettingName[CostContributeMpk] = strings.ToLower("cost.contributeMpk")
+	SettingName[CostShareSignsOrShares] = strings.ToLower("cost.shareSignsOrShares")
 	SettingName[CostWait] = "cost.wait"
 	SettingName[CostUpdateGlobals] = "cost.update_globals"
 	SettingName[CostUpdateSettings] = "cost.update_settings"
 	SettingName[CostUpdateMinerSettings] = "cost.update_miner_settings"
 	SettingName[CostUpdateSharderSettings] = "cost.update_sharder_settings"
-	SettingName[CostPayFees] = "cost.payFees"
-	SettingName[CostFeesPaid] = "cost.feesPaid"
-	SettingName[CostMintedTokens] = "cost.mintedTokens"
-	SettingName[CostAddToDelegatePool] = "cost.addToDelegatePool"
-	SettingName[CostDeleteFromDelegatePool] = "cost.deleteFromDelegatePool"
+	SettingName[CostPayFees] = strings.ToLower("cost.payFees")
+	SettingName[CostFeesPaid] = strings.ToLower("cost.feesPaid")
+	SettingName[CostMintedTokens] = strings.ToLower("cost.mintedTokens")
+	SettingName[CostAddToDelegatePool] = strings.ToLower("cost.addToDelegatePool")
+	SettingName[CostDeleteFromDelegatePool] = strings.ToLower("cost.deleteFromDelegatePool")
 	SettingName[CostSharderKeep] = "cost.sharder_keep"
 }
 
