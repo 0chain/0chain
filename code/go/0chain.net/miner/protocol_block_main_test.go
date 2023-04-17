@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -317,6 +318,7 @@ func initDefaultPool() error {
 
 func TestChain_deletingTxns(t *testing.T) {
 
+	transaction.SetTxnTimeout(int64(3 * time.Minute))
 	txs1 := []*transaction.Transaction{
 		{Nonce: 0},
 		{Nonce: 1},
@@ -406,6 +408,14 @@ func TestChain_deletingTxns(t *testing.T) {
 				txn.PublicKey = cl.PublicKey
 				txn.ClientID = cl.ID
 				txn.Hash = txn.ComputeHash()
+
+				txnData, err := json.Marshal(struct {
+					name string
+				}{
+					name: "test",
+				})
+				require.NoError(t, err)
+				txn.TransactionData = string(txnData)
 
 				sig, err := txn.Sign(sigScheme)
 				require.NoError(t, err)

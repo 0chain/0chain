@@ -448,8 +448,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	commitRead.ReadMarker.ReadSize = sizeRead
 
 	// move tokens from read pool to blobber
-	rp, err := sc.getReadPool(commitRead.ReadMarker.ClientID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	var rp *readPool
+	if rp, err = sc.getReadPool(commitRead.ReadMarker.ClientID, balances); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}

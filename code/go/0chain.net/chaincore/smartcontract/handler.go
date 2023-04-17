@@ -46,11 +46,11 @@ func GetSmartContract(scAddress string) sci.SmartContractInterface {
 	return getSmartContract(scAddress)
 }
 
-func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+func ExecuteWithStats(smcoi sci.SmartContractInterface, txn *transaction.Transaction, balances c_state.StateContextI) (string, error) {
 	ts := time.Now()
-	inter, err := smcoi.Execute(t.Clone(), funcName, input, balances)
+	inter, err := smcoi.Execute(txn.Clone(), txn.FunctionName, txn.InputData, balances)
 	if err == nil {
-		if tm := smcoi.GetExecutionStats()[funcName]; tm != nil {
+		if tm := smcoi.GetExecutionStats()[txn.FunctionName]; tm != nil {
 			if timer, ok := tm.(metrics.Timer); ok {
 				timer.Update(time.Since(ts))
 			}
@@ -60,10 +60,10 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 }
 
 // ExecuteSmartContract - executes the smart contract in the context of the given transaction
-func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
-	contractObj := getSmartContract(t.ToClientID)
+func ExecuteSmartContract(txn *transaction.Transaction, balances c_state.StateContextI) (string, error) {
+	contractObj := getSmartContract(txn.ToClientID)
 	if contractObj != nil {
-		transactionOutput, err := ExecuteWithStats(contractObj, t, scData.FunctionName, scData.InputData, balances)
+		transactionOutput, err := ExecuteWithStats(contractObj, txn, balances)
 		if err != nil {
 			return "", err
 		}

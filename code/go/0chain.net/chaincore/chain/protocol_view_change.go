@@ -243,9 +243,6 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 
 func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	selfNode := node.Self.Underlying()
-	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		c.ID, selfNode.PublicKey)
-
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
 	mn.N2NHost = selfNode.N2NHost
@@ -285,15 +282,65 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 
 	scData.InputArgs = mn
 
-	txn.ToClientID = minersc.ADDRESS
-	txn.PublicKey = selfNode.PublicKey
+	txn := httpclientutil.NewSmartContractTxn(selfNode.GetKey(), c.ID, selfNode.PublicKey, minersc.ADDRESS)
+
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	logging.Logger.Debug("Register nodes to",
 		zap.Strings("urls", minerUrls),
 		zap.String("id", mn.ID))
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
+	err = c.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
+}
+
+func (c *Chain) estimateTxnFee(txn *httpclientutil.Transaction) (currency.Coin, error) {
+	tTxn := &transaction.Transaction{
+		TransactionType: txn.TransactionType,
+		TransactionData: txn.TransactionData,
+		CreationDate:    txn.CreationDate,
+		ToClientID:      txn.ToClientID,
+		PublicKey:       txn.PublicKey,
+	}
+
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		err := errors.New("could not get latest finalized block")
+		logging.Logger.Error("could not register miner", zap.Error(err))
+		return 0, err
+	}
+
+	lfb = lfb.Clone()
+
+	_, fee, err := c.EstimateTransactionCostFee(common.GetRootContext(), lfb.ClientState, tTxn)
+	if err != nil {
+		logging.Logger.Error("estimate transaction cost fee failed", zap.Error(err))
+		return 0, err
+	}
+
+	return fee, nil
+}
+
+func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
+	scData *httpclientutil.SmartContractTxnData,
+	minerUrls []string,
+	sharderUrls []string) error {
+	txn.TransactionType = httpclientutil.TxnTypeSmartContract
+	if txn.Fee == 0 {
+		scBytes, err := json.Marshal(scData)
+		if err != nil {
+			return err
+		}
+
+		txn.TransactionData = string(scBytes)
+		fee, err := c.estimateTxnFee(txn)
+		if err != nil {
+			return err
+		}
+
+		txn.Fee = int64(fee)
+	}
+
+	return httpclientutil.SendSmartContractTxn(txn, minerUrls, sharderUrls)
 }
 
 func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
@@ -301,9 +348,6 @@ func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 
 	if selfNode.Type != node.NodeTypeSharder {
 		return nil, errors.New("only sharder")
 	}
-	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		c.ID, selfNode.PublicKey)
-
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
 	mn.N2NHost = selfNode.N2NHost
@@ -317,11 +361,11 @@ func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 
 	scData.Name = scNameSharderKeep
 	scData.InputArgs = mn
 
-	txn.ToClientID = minersc.ADDRESS
-	txn.PublicKey = selfNode.PublicKey
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
-	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
+
+	txn := httpclientutil.NewSmartContractTxn(selfNode.GetKey(), c.ID, selfNode.PublicKey, minersc.ADDRESS)
+	err := c.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
 
