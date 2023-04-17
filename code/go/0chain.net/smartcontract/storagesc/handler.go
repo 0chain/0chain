@@ -2451,8 +2451,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
 		logging.Logger.Error("get blobber failed with error: ", zap.Error(err))
-		err := common.NewErrInternal("missing blobber: " + blobberID)
-		common.Respond(w, r, nil, err)
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
