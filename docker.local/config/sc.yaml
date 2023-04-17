@@ -231,7 +231,7 @@ smart_contracts:
       stake_pool_unlock: 100
       stake_pool_pay_interests: 100
       commit_settings_changes: 0
-      generate_challenge: 100
+      generate_challenges: 100
       blobber_block_rewards: 0
       collect_reward: 100
       kill_blobber: 100
