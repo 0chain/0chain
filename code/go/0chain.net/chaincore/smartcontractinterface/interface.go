@@ -40,7 +40,8 @@ type SmartContractInterface interface {
 	GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error)
 }
 
-/*BCContextI interface for smart contracts to access blockchain.
+/*
+BCContextI interface for smart contracts to access blockchain.
 These functions should not modify blockchain states in anyway.
 */
 type BCContextI interface {

@@ -176,14 +176,12 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		}
 	}
 
-	tx = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID,
-		selfNode.PublicKey)
+	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID,
+		selfNode.PublicKey, minersc.ADDRESS)
 
 	var data = &httpclientutil.SmartContractTxnData{}
 	data.Name = scNamePublishShares
 	data.InputArgs = clone
-
-	tx.ToClientID = minersc.ADDRESS
 
 	var minerUrls []string
 	for id := range dmn.SimpleNodes {
@@ -194,8 +192,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		}
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
-	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		minerUrls, mb.Sharders.N2NURLs())
+	err = mc.SendSmartContractTxn(tx, data, minerUrls, mb.Sharders.N2NURLs())
 	return
 }
 
@@ -223,11 +220,9 @@ func (mc *Chain) sendMpkTransaction(selfNode *node.Node, mpk *block.MPK,
 	var scData = new(httpclientutil.SmartContractTxnData)
 	scData.Name = scNameContributeMpk
 	scData.InputArgs = mpk
-	tx = httpclientutil.NewTransactionEntity(selfNode.GetKey(), mc.ID,
-		selfNode.PublicKey)
-	tx.ToClientID = minersc.ADDRESS
-	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0,
-		scData, urls, sharders)
+	tx = httpclientutil.NewSmartContractTxn(selfNode.GetKey(), mc.ID,
+		selfNode.PublicKey, minersc.ADDRESS)
+	err = mc.SendSmartContractTxn(tx, scData, urls, sharders)
 	return
 }
 

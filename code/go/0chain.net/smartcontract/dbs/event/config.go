@@ -38,8 +38,10 @@ type TestConfigData struct {
 	TxnMaxPayload         int           `json:"transaction_max_payload"`   // Max payload allowed in the transaction
 	TxnTransferCost       int           `json:"transaction_transfer_cost"` // Transaction transfer cost
 	MinTxnFee             currency.Coin `json:"min_txn_fee"`               // Minimum txn fee allowed
-	PruneStateBelowCount  int           `json:"prune_state_below_count"`   // Prune state below these many rounds
-	RoundRange            int64         `json:"round_range"`               // blocks are stored in separate directory for each range of rounds
+	MaxTxnFee             currency.Coin `json:"max_txn_fee"`               // Maximum txn fee allowed
+	TxnCostFeeCoeff       int
+	PruneStateBelowCount  int   `json:"prune_state_below_count"` // Prune state below these many rounds
+	RoundRange            int64 `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
 
 	// todo move BlocksToSharder out of ConfigData
 	BlocksToSharder       int `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
@@ -251,6 +253,14 @@ func (t *TestConfig) TxnExempt() map[string]bool {
 
 func (t *TestConfig) MinTxnFee() currency.Coin {
 	return t.conf.MinTxnFee
+}
+
+func (t *TestConfig) MaxTxnFee() currency.Coin {
+	return t.conf.MaxTxnFee
+}
+
+func (t *TestConfig) TxnCostFeeCoeff() int {
+	return t.conf.TxnCostFeeCoeff
 }
 
 func (t *TestConfig) TxnTransferCost() int {
