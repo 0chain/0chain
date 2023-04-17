@@ -44,6 +44,9 @@ func (p *Partitions) getLocKey(id string) datastore.Key {
 }
 
 func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex int) error {
+	logging.Logger.Debug("save item location",
+		zap.String("kid", p.getLocKey(id)),
+		zap.String("id", id))
 	_, err := state.InsertTrieNode(p.getLocKey(id), &location{Location: partIndex})
 	if err != nil {
 		return fmt.Errorf("save item location failed: %v", err)
@@ -52,12 +55,11 @@ func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex
 }
 
 func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
+	logging.Logger.Debug("remove item location",
+		zap.String("kid", p.getLocKey(id)),
+		zap.String("id", id))
 	_, err := state.DeleteTrieNode(p.getLocKey(id))
 	if err != nil {
-		logging.Logger.Error("remove item location failed",
-			zap.String("kid", p.getLocKey(id)),
-			zap.String("id", id),
-			zap.Error(err))
 		return fmt.Errorf("remove item location failed: %v", err)
 	}
 	return nil
