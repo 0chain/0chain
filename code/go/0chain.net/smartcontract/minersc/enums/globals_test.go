@@ -26,6 +26,6 @@ func TestGlobalSettings(t *testing.T) {
 
 	for _, name := range GlobalSettingName {
 		_, ok := GlobalSettingInfo[name]
-		require.True(t, ok || name == NumOfGlobalSettings.String())
+		require.True(t, ok || name == NumOfGlobalSettings.String(), name)
 	}
 }
