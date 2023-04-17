@@ -7,7 +7,6 @@ import (
 	"context"
 	"time"
 
-	"0chain.net/core/viper"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
@@ -16,8 +15,9 @@ func (c *Chain) SetupSC(ctx context.Context) {
 	logging.Logger.Info("SetupSC start...")
 	// create timer with 0 duration to start it immediately
 	var (
-		tm      = time.NewTicker(1)
-		timeout = time.Duration(viper.GetInt("server_chain.transaction.timeout")) //timeout is in seconds
+		tm = time.NewTicker(1)
+		//timeout = time.Duration(viper.GetInt("server_chain.transaction.timeout")) //timeout is in seconds todo piers test
+		timeout = 10 * time.Second
 		doneC   = make(chan struct{})
 	)
 	for {
