@@ -14,7 +14,7 @@ import (
 )
 
 /*BATCH_SIZE size of the batch */
-const BATCH_SIZE = 16
+const BATCH_SIZE = 8
 
 var storageAPI = &Store{}
 
@@ -170,12 +170,16 @@ func (ps *Store) multiWriteAux(ctx context.Context, entityMetadata datastore.Ent
 	c := GetCon(ctx)
 	sql := getJSONInsert(entityMetadata.GetName())
 	batch := c.NewBatch(gocql.LoggedBatch)
+	var size int
 	for _, entity := range entities {
-		batch.Query(sql, datastore.ToJSON(entity).String())
+		d := datastore.ToJSON(entity).String()
+		size += len(d)
+		batch.Query(sql, d)
 	}
 	err := c.ExecuteBatch(batch)
 	if err != nil {
 		ps.shouldReconnect(err, entityMetadata)
+		logging.Logger.Error("multi write failed", zap.Int("data size", size))
 	}
 	return err
 }

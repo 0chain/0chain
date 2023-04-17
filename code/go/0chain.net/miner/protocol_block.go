@@ -56,6 +56,11 @@ func init() {
 
 func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
 	clients[txn.ClientID] = nil
+	if txn.SmartContractData == nil {
+		if err := txn.ComputeProperties(); err != nil {
+			return nil
+		}
+	}
 	events, err := mc.UpdateState(ctx, b, bState, txn)
 	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
@@ -71,7 +76,8 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 
 func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn := transaction.Provider().(*transaction.Transaction)
-	feeTxn.ClientID = b.MinerID
+	feeTxn.ClientID = node.Self.ID
+	feeTxn.PublicKey = node.Self.PublicKey
 	feeTxn.ToClientID = minersc.ADDRESS
 	feeTxn.CreationDate = b.CreationDate
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -100,7 +106,8 @@ func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState 
 
 func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Transaction {
 	scTxn := transaction.Provider().(*transaction.Transaction)
-	scTxn.ClientID = b.MinerID
+	scTxn.ClientID = node.Self.ID
+	scTxn.PublicKey = node.Self.PublicKey
 	scTxn.ToClientID = storagesc.ADDRESS
 	scTxn.CreationDate = b.CreationDate
 	scTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -111,7 +118,8 @@ func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Tr
 
 func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = b.MinerID
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -122,7 +130,8 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 
 func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = b.MinerID
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -904,10 +913,11 @@ func txnIterHandlerFunc(
 			return false, nil
 		}
 
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn,
-			chain.WithSync(), chain.WithNotifyC(waitC))
+		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
-			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
+			logging.Logger.Debug("Bad transaction cost fee",
+				zap.Error(err),
+				zap.String("txn_hash", txn.Hash))
 
 			// return error to break iteration due to the invalid state error
 			if cstate.ErrInvalidState(err) {
@@ -917,6 +927,23 @@ func txnIterHandlerFunc(
 			// skipping and continue
 			return true, nil
 		}
+
+		if mc.IsFeeEnabled() {
+			confMinFee := mc.ChainConfig.MinTxnFee()
+			if confMinFee > fee {
+				fee = confMinFee
+			}
+
+			if err := txn.ValidateFee(mc.ChainConfig.TxnExempt(), fee); err != nil {
+				logging.Logger.Error("invalid transaction fee",
+					zap.Any("txn", txn),
+					zap.Any("estimated fee", fee),
+					zap.Error(err))
+				tii.invalidTxns = append(tii.invalidTxns, txn)
+				return true, nil // skipping and continue
+			}
+		}
+
 		if tii.cost+cost >= mc.ChainConfig.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			return true, nil

@@ -108,7 +108,7 @@ func roundTimeoutProcess(ctx context.Context, proto Protocol, rn int64) {
 	}
 }
 
-//RoundWorker - a worker that monitors the round progress
+// RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
 
 	var (
@@ -226,17 +226,14 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 			return
 		default:
 			selfNode := node.Self.Underlying()
-			txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(), mc.ID, selfNode.PublicKey)
+			txn := httpclientutil.NewSmartContractTxn(selfNode.GetKey(), mc.ID, selfNode.PublicKey, minersc.ADDRESS)
 			scData := &httpclientutil.SmartContractTxnData{}
 			scData.Name = minerScMinerHealthCheck
-
-			txn.ToClientID = minersc.ADDRESS
-			txn.PublicKey = selfNode.PublicKey
 
 			mb := mc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
 			go func() {
-				if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
+				if err := mc.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
 					logging.Logger.Warn("miner health check -  send smart contract failed",
 						zap.Int("urls len", len(minerUrls)),
 						zap.Error(err))
