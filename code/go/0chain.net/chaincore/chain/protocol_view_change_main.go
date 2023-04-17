@@ -15,8 +15,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 	logging.Logger.Info("SetupSC start...")
 	// create timer with 0 duration to start it immediately
 	var (
-		tm = time.NewTicker(1)
-		//timeout = time.Duration(viper.GetInt("server_chain.transaction.timeout")) //timeout is in seconds todo piers test
+		tm      = time.NewTicker(1)
 		timeout = 10 * time.Second
 		doneC   = make(chan struct{})
 	)
