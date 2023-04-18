@@ -252,6 +252,19 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	}
 }
 
+func (c *Chain) EstimateTransactionFeeLFB(ctx context.Context,
+	txn *transaction.Transaction,
+	opts ...SyncNodesOption) (currency.Coin, error) {
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return 0, errors.New("LFB not ready yet")
+	}
+	lfb = lfb.Clone()
+
+	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, opts...)
+	return fee, err
+}
+
 func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	mpt util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
