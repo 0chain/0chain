@@ -261,6 +261,12 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 		return 0, 0, err
 	}
 
+	if txn.SmartContractData == nil {
+		if err := txn.ComputeProperties(); err != nil {
+			return 0, 0, err
+		}
+	}
+
 	if _, ok := c.ChainConfig.TxnExempt()[txn.FunctionName]; ok {
 		return cost, 0, nil
 	}
