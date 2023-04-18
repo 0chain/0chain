@@ -277,7 +277,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", common.NewError("pay_fees", "jumped back in time?")
 	}
 
-	var minerRewards, sharderRewards, minerFees, sharderFees currency.Coin
 	fees, err := msc.sumFee(b, true)
 	if err != nil {
 		return "", err
@@ -287,11 +286,11 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 
-	minerRewards, sharderRewards, err = gn.splitByShareRatio(blockReward)
+	minerRewards, sharderRewards, err := gn.splitByShareRatio(blockReward)
 	if err != nil {
 		return "", fmt.Errorf("error splitting rewards by ratio: %v", err)
 	}
-	minerFees, sharderFees, err = gn.splitByShareRatio(fees)
+	minerFees, sharderFees, err := gn.splitByShareRatio(fees)
 	if err != nil {
 		return "", fmt.Errorf("error splitting fees by ratio: %v", err)
 	}
@@ -428,7 +427,7 @@ func getRewardedMiner(bk *block.Block, balances cstate.CommonStateContextI) (*Mi
 	if err != nil {
 		return nil, err
 	}
-	miners := removeDeadNodes(nodeList.Nodes)
+	miners := filterDeadNodes(nodeList.Nodes)
 	if len(miners) == 0 {
 		return nil, nil
 	}
@@ -437,7 +436,7 @@ func getRewardedMiner(bk *block.Block, balances cstate.CommonStateContextI) (*Mi
 	return miners[randS.Intn(len(miners))], nil
 }
 
-func removeDeadNodes(nodes []*MinerNode) []*MinerNode {
+func filterDeadNodes(nodes []*MinerNode) []*MinerNode {
 	var filteredNodes []*MinerNode
 	for _, node := range nodes {
 		if !node.SimpleNode.HasBeenKilled {
