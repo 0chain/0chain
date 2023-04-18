@@ -82,6 +82,7 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
+        cd blobber && git checkout maxstake
 
     - name: Git clone zboxcli
       run: |
