@@ -37,6 +37,7 @@ var transactionCount uint64 = 0
 var (
 	ErrTxnMissingPublicKey = errors.New("transaction missing public key")
 	ErrTxnInvalidPublicKey = errors.New("transaction public key is invalid")
+	ErrTxnInsufficientFee  = errors.New("insufficient transaction fee")
 )
 
 func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
@@ -53,6 +54,7 @@ type Transaction struct {
 	datastore.HashIDField
 	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
+	*SmartContractData `json:"-" msgpack:"-"`
 
 	ClientID  string `json:"client_id" msgpack:"cid,omitempty"`
 	PublicKey string `json:"public_key,omitempty" msgpack:"puk,omitempty"`
@@ -91,10 +93,18 @@ func (t *Transaction) ComputeProperties() error {
 	if t.ChainID == "" {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
+	t.SmartContractData = &SmartContractData{}
+	if t.TransactionType == TxnTypeSmartContract {
+		if err := json.Unmarshal([]byte(t.TransactionData), t.SmartContractData); err != nil {
+			logging.Logger.Debug("transaction data", zap.Any("data", t.TransactionData))
+			return fmt.Errorf("invalid smart contract data: %v", err)
+		}
+	}
 	return t.ComputeClientID()
 }
 
-type smartContractTransactionData struct {
+// SmartContractData represents the smart contract data
+type SmartContractData struct {
 	FunctionName string          `json:"name"`
 	InputData    json.RawMessage `json:"input"`
 }
@@ -110,20 +120,12 @@ func (t *Transaction) ValidateNonce() error {
 // ValidateFee - Validate fee
 func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currency.Coin) error {
 	if t.TransactionData != "" {
-		var smartContractData smartContractTransactionData
-		dataBytes := []byte(t.TransactionData)
-		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err != nil {
-			logging.Logger.Error("unmarshal txn data failed", zap.Error(err))
-			return errors.New("invalid transaction data")
-		}
-
-		if _, ok := txnExempted[smartContractData.FunctionName]; ok {
+		if _, ok := txnExempted[t.FunctionName]; ok {
 			return nil
 		}
 	}
 	if t.Fee < minTxnFee {
-		return common.InvalidRequest("The given fee is less than the minimum required fee to process the txn")
+		return ErrTxnInsufficientFee
 	}
 	return nil
 }
@@ -450,6 +452,12 @@ func (t *Transaction) Clone() *Transaction {
 		TransactionOutput: t.TransactionOutput,
 		OutputHash:        t.OutputHash,
 		Status:            t.Status,
+	}
+
+	if t.SmartContractData != nil {
+		scData := &SmartContractData{}
+		*scData = *t.SmartContractData
+		clone.SmartContractData = scData
 	}
 
 	if ent := t.CollectionMemberField.EntityCollection; ent != nil {

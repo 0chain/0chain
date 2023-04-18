@@ -102,7 +102,7 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 			}(),
 			want: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
-				http.Error(w, "Error decoding json", 500)
+				http.Error(w, "Error decoding json", 400)
 				return w
 			}(),
 		},

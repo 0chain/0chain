@@ -112,8 +112,7 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 // ExecuteSmartContract - executes the smart contract for the transaction
 func (c *Chain) ExecuteSmartContract(
 	ctx context.Context,
-	t *transaction.Transaction,
-	scData *sci.SmartContractTransactionData,
+	txn *transaction.Transaction,
 	balances bcstate.StateContextI) (string, error) {
 
 	type result struct {
@@ -134,7 +133,7 @@ func (c *Chain) ExecuteSmartContract(
 	}
 
 	go func() {
-		output, err := smartcontract.ExecuteSmartContract(t, scData, balances)
+		output, err := smartcontract.ExecuteSmartContract(txn, balances)
 		resultC <- result{output: output, err: err}
 	}()
 	select {
@@ -213,6 +212,11 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 				zap.String("input", txn.TransactionData), zap.Error(err))
 			return math.MaxInt32, err
 		}
+
+		if _, ok := c.ChainConfig.TxnExempt()[scData.FunctionName]; ok {
+			return 0, nil
+		}
+
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
 		if missingKeys := sctx.GetMissingNodeKeys(); len(missingKeys) > 0 {
 			syncOpts := &SyncReplyC{}
@@ -251,6 +255,27 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
 		return math.MaxInt32, fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
+}
+
+func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
+	mpt util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	opts ...SyncNodesOption) (int, currency.Coin, error) {
+	cost, err := c.EstimateTransactionCost(ctx, nil, mpt, txn, opts...)
+	if err != nil {
+		return 0, 0, err
+	}
+	logging.Logger.Debug("estimate transaction cost fee",
+		zap.Int("cost", cost),
+		zap.String("txn hash", txn.Hash),
+		zap.String("txn", txn.TransactionData))
+
+	maxFee := c.ChainConfig.MaxTxnFee()
+	if maxFee > 0 && currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > maxFee {
+		return cost, maxFee, nil
+	}
+
+	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
 }
 
 // NewStateContext creation helper.
@@ -305,25 +330,14 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:
-		var (
-			scData    sci.SmartContractTransactionData
-			dataBytes = []byte(txn.TransactionData)
-		)
-
-		if err = json.Unmarshal(dataBytes, &scData); err != nil {
-			logging.Logger.Error("Error while decoding the JSON from transaction",
-				zap.String("input", txn.TransactionData), zap.Error(err))
-			return nil, err
-		}
-
 		t := time.Now()
-		output, err := c.ExecuteSmartContract(ctx, txn, &scData, sctx)
+		output, err := c.ExecuteSmartContract(ctx, txn, sctx)
 		switch err {
 		//internal errors
 		case context.DeadlineExceeded, transaction.ErrSmartContractContext, util.ErrNodeNotFound:
 			logging.Logger.Error("Error executing the SC, internal error",
 				zap.Error(err),
-				zap.String("scname", scData.FunctionName),
+				zap.String("scname", txn.FunctionName),
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
@@ -334,7 +348,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		case context.Canceled:
 			logging.Logger.Debug("Error executing the SC, internal error",
 				zap.Error(err),
-				zap.String("scname", scData.FunctionName),
+				zap.String("scname", txn.FunctionName),
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
@@ -347,7 +361,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				if bcstate.ErrInvalidState(err) || partitions.ErrLoadPartition(err) {
 					logging.Logger.Error("Error executing the SC, internal error",
 						zap.Error(err),
-						zap.String("scname", scData.FunctionName),
+						zap.String("scname", txn.FunctionName),
 						zap.String("block", b.Hash),
 						zap.String("begin client state", util.ToHex(startRoot)),
 						zap.String("prev block", b.PrevBlock.Hash),
@@ -383,7 +397,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
 			zap.String("txn_hash", txn.Hash),
 			zap.Int64("txn_nonce", txn.Nonce),
-			zap.String("txn_func", scData.FunctionName),
+			zap.String("txn_func", txn.FunctionName),
 			zap.Int("txn_status", txn.Status),
 			zap.Duration("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
@@ -391,6 +405,16 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.String("output", output))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
+		// check src balance
+		balance, err := sctx.GetClientBalance(txn.ClientID)
+		if err != nil {
+			return nil, err
+		}
+
+		if balance < txn.Fee+txn.Value {
+			return nil, errors.New("insufficient balance to send")
+		}
+
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, txn.Value))
 		if err != nil {
 			logging.Logger.Error("Failed to add transfer",
@@ -533,7 +557,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if fs.Balance < amount {
 		logging.Logger.Error("transfer amount - insufficient balance",
 			zap.Any("balance", fs.Balance),
-			zap.Any("transfer", amount))
+			zap.Any("transfer", amount),
+			zap.String("from", fromClient))
 		return nil, transaction.ErrInsufficientBalance
 	}
 
