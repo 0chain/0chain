@@ -800,7 +800,7 @@ func BenchmarkTests(
 					"cost.pay_blobber_block_rewards": "105",
 					"cost.challenge_request":         "105",
 					"cost.challenge_response":        "105",
-					"cost.generate_challenges":       "105",
+					"cost.generate_challenge":        "105",
 					"cost.add_validator":             "105",
 					"cost.update_validator_settings": "105",
 					"cost.add_blobber":               "105",

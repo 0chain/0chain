@@ -878,7 +878,7 @@ func SetMockConfig(
 		"cost.pay_blobber_block_rewards": mockCost,
 		"cost.challenge_request":         mockCost,
 		"cost.challenge_response":        mockCost,
-		"cost.generate_challenges":       mockCost,
+		"cost.generate_challenge":        mockCost,
 		"cost.add_validator":             mockCost,
 		"cost.update_validator_settings": mockCost,
 		"cost.add_blobber":               mockCost,
