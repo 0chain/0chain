@@ -118,8 +118,25 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 	for tries := 1; tries <= 9; tries++ {
 		err := sc.storeTransactions(sTxns)
 		if err != nil {
+			var (
+				txnNames      []string
+				txnOutputSize []int
+			)
+
+			for _, txn := range b.Txns {
+				txnNames = append(txnNames, txn.TransactionData)
+				txnOutputSize = append(txnOutputSize, len(txn.TransactionOutput))
+			}
+
 			delay = 2 * delay
-			logging.Logger.Error("save transactions error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
+			logging.Logger.Error("save transactions error",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Int("block_size", len(b.Txns)),
+				zap.Strings("txns", txnNames),
+				zap.Ints("txn_output_size", txnOutputSize),
+				zap.Int("retry", tries),
+				zap.Duration("delay", delay), zap.Error(err))
 			time.Sleep(delay)
 			continue
 		}
