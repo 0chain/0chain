@@ -45,7 +45,7 @@ require (
 	github.com/go-faker/faker/v4 v4.1.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/lib/pq v1.10.7
-	github.com/ory/dockertest/v3 v3.9.1
+	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.10.0
 	golang.org/x/sys v0.7.0
 	gorm.io/driver/sqlite v1.5.0
