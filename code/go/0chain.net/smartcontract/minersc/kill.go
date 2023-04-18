@@ -65,7 +65,7 @@ func kill(
 	}
 
 	if node.SimpleNode.HasBeenKilled && node.StakePool.HasBeenKilled {
-		return fmt.Errorf("%s already killed", req.ID)
+		return fmt.Errorf("%s is already killed", req.ID)
 	}
 
 	node.SimpleNode.HasBeenKilled = true
