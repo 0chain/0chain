@@ -262,6 +262,7 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	}
 
 	if txn.SmartContractData == nil {
+		logging.Logger.Warn("txn properties not computed", zap.Any("txn", txn))
 		if err := txn.ComputeProperties(); err != nil {
 			return 0, 0, err
 		}
