@@ -233,3 +233,7 @@ func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
 func mergeAuthorizerBurnEvents() *eventsMergerImpl[state.Burn] {
 	return newEventsMerger[state.Burn](TagAuthorizerBurn, withUniqueEventOverwrite())
 }
+
+func mergeAddBridgeMintEvents() *eventsMergerImpl[BridgeMint] {
+	return newEventsMerger[BridgeMint](TagAddBridgeMint, withUniqueEventOverwrite())
+}
