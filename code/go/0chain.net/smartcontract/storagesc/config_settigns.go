@@ -209,7 +209,7 @@ func initSettingName() {
 	SettingName[CostPayBlobberBlockRewards] = "cost.pay_blobber_block_rewards"
 	SettingName[CostChallengeRequest] = "cost.challenge_request"
 	SettingName[CostChallengeResponse] = "cost.challenge_response"
-	SettingName[CostGenerateChallenges] = "cost.generate_challenges"
+	SettingName[CostGenerateChallenges] = "cost.generate_challenge"
 	SettingName[CostAddValidator] = "cost.add_validator"
 	SettingName[CostUpdateValidatorSettings] = "cost.update_validator_settings"
 	SettingName[CostAddBlobber] = "cost.add_blobber"
