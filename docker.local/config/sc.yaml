@@ -3,9 +3,9 @@ smart_contracts:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     pour_limit: 1
     pour_amount: 1
-    max_pour_amount: 100000
-    periodic_limit: 100000000
-    global_limit: 100000000
+    max_pour_amount: 10
+    periodic_limit: 1000
+    global_limit: 100000
     individual_reset: 3h # in hours
     global_reset: 48h # in hours
     cost:
