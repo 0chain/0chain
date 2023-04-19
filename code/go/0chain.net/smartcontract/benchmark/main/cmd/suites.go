@@ -189,7 +189,7 @@ func runSuite(
 					}
 					runCount++
 					currMptHashRoot := util.ToHex(timedBalance.GetState().GetRoot())
-					if i > 0 && currMptHashRoot != prevMptHashRoot {
+					if i > 0 {
 						log.Println("MPT state root mismatch detected! benchmark test name:", bm.Name())
 						log.Println("Run:", i, "Previous MPT state root:", prevMptHashRoot, "Current MPT state root:", currMptHashRoot)
 						err = fmt.Errorf("MPT hash root mismatch detected: running same function resulted in different MPT states")
