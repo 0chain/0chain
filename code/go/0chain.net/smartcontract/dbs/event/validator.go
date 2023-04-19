@@ -96,7 +96,9 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Validator{}).
-		Offset(pg.Offset).Limit(pg.Limit).
+		Where("is_killed = ? AND is_shutdown = ?", false, false).
+		Offset(pg.Offset).
+		Limit(pg.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "id"},
 			Desc:   pg.IsDescending,
@@ -111,7 +113,9 @@ func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, err
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Validator{}).
-		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix()).Limit(pg.Limit).
+		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
+			common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix(), false, false).
+		Limit(pg.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "id"},
 			Desc:   pg.IsDescending,
@@ -168,7 +172,7 @@ func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag
 func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateValidatorUnStakeTotal, Validator{
 		Provider: Provider{
-			ID:         ID,
+			ID:           ID,
 			UnstakeTotal: totalUntake},
 	}
 }
