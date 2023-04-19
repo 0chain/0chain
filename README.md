@@ -123,6 +123,8 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 
   1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
 
+  1.5) If you want to turn off fees adjust `server_chain.smart_contract.mine` from `true` to `false`
+
 **_Note: Remove sharder72 and miner75 from docker.local/config/b0snode2_keys.txt and docker.local/config/b0mnode5_keys.txt respectively if you are joining to local network._**
 
 ## Starting the nodes
