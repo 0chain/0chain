@@ -45,7 +45,7 @@ Provide
 
 The transaction also updates blobber's 'last health check' making it healthy.
 
-The blobber will need tokens enough in its operational wallet to pay the fee for registration transaction.
+The blobber will need enough tokens in its operational wallet to pay the fee for registration transaction.
 If that is a problem fees can be switched off by adjusting
 the `server_chain.smart_contract.mine` setting in 0chain.yaml from `true` to `false`.
 
