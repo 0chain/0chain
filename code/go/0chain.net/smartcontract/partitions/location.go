@@ -51,16 +51,25 @@ func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex
 	if err != nil {
 		return fmt.Errorf("save item location failed: %v", err)
 	}
+	if p.locations == nil {
+		p.locations = make(map[string]int)
+	}
+	p.locations[p.getLocKey(id)] = partIndex
 	return nil
 }
 
 func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
+	kid := p.getLocKey(id)
 	logging.Logger.Debug("remove item location",
-		zap.String("kid", p.getLocKey(id)),
+		zap.String("kid", kid),
 		zap.String("id", id))
-	_, err := state.DeleteTrieNode(p.getLocKey(id))
+	_, err := state.DeleteTrieNode(kid)
 	if err != nil {
 		return fmt.Errorf("remove item location failed: %v", err)
+	}
+	if len(p.locations) > 0 {
+		logging.Logger.Debug("remove item from partition cache", zap.String("kid", kid))
+		delete(p.locations, kid)
 	}
 	return nil
 }
@@ -69,16 +78,15 @@ func (p *Partitions) loadLocations(idx int) {
 	if p.locations == nil {
 		p.locations = make(map[string]int)
 	}
-	if idx < 0 {
+	if idx <= 0 {
 		return
 	}
 
-	// could happen removing last item and it's the last one in a partition
-	if idx >= len(p.Partitions) {
+	part, ok := p.Partitions[idx]
+	if !ok {
 		return
 	}
 
-	part := p.Partitions[idx]
 	for _, it := range part.Items {
 		kid := p.getLocKey(it.ID)
 		p.locations[kid] = idx

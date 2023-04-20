@@ -22,6 +22,7 @@ type item struct {
 
 type partition struct {
 	Key     string `json:"-" msg:"-"`
+	Loc     int    `json:"loc"`
 	Items   []item `json:"items"`
 	Changed bool   `json:"-" msg:"-"`
 }
@@ -34,7 +35,7 @@ func (p *partition) save(state state.StateContextI) error {
 func (p *partition) load(state state.StateContextI, key datastore.Key) error {
 	err := state.GetTrieNode(key, p)
 	if err != nil {
-		return fmt.Errorf("load partition failed: %v", err)
+		return fmt.Errorf("load partition failed, key: %s, %v", key, err)
 	}
 
 	p.Key = key
