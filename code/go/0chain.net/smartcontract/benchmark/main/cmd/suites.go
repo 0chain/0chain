@@ -193,6 +193,7 @@ func runSuite(
 						log.Println("MPT state root mismatch detected! benchmark test name:", bm.Name())
 						log.Println("Run:", i, "Previous MPT state root:", prevMptHashRoot, "Current MPT state root:", currMptHashRoot)
 						err = fmt.Errorf("MPT hash root mismatch detected")
+						b.FailNow()
 					} else {
 						prevMptHashRoot = currMptHashRoot
 					}
