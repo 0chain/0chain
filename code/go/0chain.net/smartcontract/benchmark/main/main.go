@@ -1,12 +1,17 @@
 package main
 
 import (
-	"0chain.net/smartcontract/benchmark/main/cmd"
 	"fmt"
+	"os"
+
+	"0chain.net/smartcontract/benchmark/main/cmd"
 )
 
 func main() {
-	_ = cmd.Execute()
+	err := cmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
 
 	defer func() {
 		if err := recover(); err != nil {
