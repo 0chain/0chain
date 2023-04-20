@@ -895,14 +895,14 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	// get blobber allocations partitions
 	blobberAllocParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
-		return nil, common.NewErrorf("generate_challenges",
+		return nil, common.NewErrorf("generate_challenge",
 			"error getting blobber_challenge_allocation list: %v", err)
 	}
 
 	// get random allocations from the partitions
 	var randBlobberAllocs []BlobberAllocationNode
 	if err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs); err != nil {
-		return nil, common.NewErrorf("generate_challenges",
+		return nil, common.NewErrorf("generate_challenge",
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 

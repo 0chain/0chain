@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
-	github.com/alicebob/miniredis/v2 v2.30.1
+	github.com/alicebob/miniredis/v2 v2.30.2
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-playground/validator/v10 v10.12.0
@@ -44,8 +44,8 @@ require (
 	github.com/0chain/common v0.0.6-0.20230127095721-8df4d1d72565
 	github.com/go-faker/faker/v4 v4.1.0
 	github.com/jackc/pgx/v5 v5.3.1
-	github.com/lib/pq v1.10.7
-	github.com/ory/dockertest/v3 v3.9.1
+	github.com/lib/pq v1.10.8
+	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.10.0
 	golang.org/x/sys v0.7.0
 	gorm.io/driver/sqlite v1.5.0
