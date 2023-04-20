@@ -47,7 +47,7 @@ The transaction also updates blobber's 'last health check' making it healthy.
 
 The blobber will need enough tokens in its operational wallet to pay the fee for registration transaction.
 If that is a problem fees can be switched off by adjusting
-the `server_chain.smart_contract.mine` setting in 0chain.yaml from `true` to `false`.
+the `server_chain.smart_contract.miner` setting in 0chain.yaml from `true` to `false`.
 
 ### 2. SC: check capacity, the registration transaction handling
 
