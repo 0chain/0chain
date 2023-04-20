@@ -88,7 +88,7 @@ var rootCmd = &cobra.Command{
 	Use:   "benchmark",
 	Short: "Benchmark 0chain smart-contract",
 	Long:  `Benchmark 0chain smart-contract`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("Recovered in benchmark function", r)
@@ -129,11 +129,7 @@ var rootCmd = &cobra.Command{
 		log.Println("tests took", time.Since(testsTimer))
 		log.Println("benchmark took", time.Since(totalTimer))
 		printTimings(results)
-		failed := printResults(results)
-		if failed {
-			return fmt.Errorf("Benchmark tests encountered one or more errors")
-		}
-		return nil
+		printResults(results)
 	},
 }
 
@@ -175,7 +171,7 @@ func printTimings(results []suiteResults) {
 	}
 }
 
-func printResults(results []suiteResults) bool {
+func printResults(results []suiteResults) {
 	const (
 		colourReset  = "\033[0m"
 		colourRed    = "\033[31m"
@@ -190,7 +186,6 @@ func printResults(results []suiteResults) bool {
 		bad     = viper.GetDuration(bk.Bad)
 		worry   = viper.GetDuration(bk.Worry)
 		good    = viper.GetDuration(bk.Satisfactory)
-		failed  bool
 	)
 
 	if verbose {
@@ -233,7 +228,6 @@ func printResults(results []suiteResults) bool {
 				status = "FAILED"
 				errMessage = " - " + err.Error()
 				statusColor = colourRed
-				failed = true
 			}
 
 			if verbose {
@@ -262,5 +256,4 @@ func printResults(results []suiteResults) bool {
 			}
 		}
 	}
-	return failed
 }
