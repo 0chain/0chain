@@ -43,7 +43,7 @@ jobs:
           cd docker.local/benchmarks
           ../bin/start.benchmarks.sh | tee benchmark_run_output
           grep -R "Results" -A 1000 benchmark_run_output > benchmark_results
-          if grep -q "FAILED" benchmark_results; then
+          if grep -aq "FAILED" benchmark_results; then
             echo "TESTS_RAN=false" >> $GITHUB_ENV
           else
             echo "TESTS_RAN=true" >> $GITHUB_ENV
