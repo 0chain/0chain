@@ -789,9 +789,9 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	case nil:
 	case util.ErrValueNotPresent:
 		logging.Logger.Error("client state has invalid allocations",
-			zap.String("selected_allocation", allocID))
-		return nil, common.NewErrorf("invalid_allocation",
-			"client state has invalid allocations")
+			zap.String("selected_allocation", allocID),
+			zap.Error(err))
+		return nil, fmt.Errorf("could not find allocation to challenge: %v", err)
 	default:
 		return nil, common.NewErrorf("adding_challenge_error",
 			"unexpected error getting allocation: %v", err)
@@ -906,7 +906,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 
-	const findValidAllocRetries = 5
+	var findValidAllocRetries = 1 // avoid retry for debugging
 	var (
 		alloc                       *StorageAllocation
 		blobberAllocPartitionLength = len(randBlobberAllocs)
@@ -914,13 +914,17 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		randPerm                    = r.Perm(blobberAllocPartitionLength)
 	)
 
+	if findValidAllocRetries > blobberAllocPartitionLength {
+		findValidAllocRetries = blobberAllocPartitionLength
+	}
+
 	for i := 0; i < findValidAllocRetries; i++ {
 		// get a random allocation
 		allocID := randBlobberAllocs[randPerm[i]].ID
 
 		// get the storage allocation from MPT
 		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
-		if err != nil && partitions.ErrItemNotFound(err) {
+		if err != nil {
 			return nil, err
 		}
 
@@ -931,14 +935,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if alloc.Finalized {
 			err := blobberAllocParts.Remove(balances, allocID)
 			if err != nil {
-				if !partitions.ErrItemNotFound(err) {
-					logging.Logger.Error("could not remove allocation from blobber",
-						zap.Error(err),
-						zap.String("blobber", blobberID),
-						zap.String("allocation", allocID))
-					return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
-				}
-				continue
+				return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
 			}
 
 			allocNum, err := blobberAllocParts.Size(balances)
