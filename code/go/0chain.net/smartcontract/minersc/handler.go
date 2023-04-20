@@ -747,7 +747,8 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 //	484:
 func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Request) {
 	var (
-		activeString = r.URL.Query().Get("active")
+		activeString   = r.URL.Query().Get("active")
+		isKilledString = r.URL.Query().Get("killed")
 	)
 
 	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -758,6 +759,14 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 
 	filter := event.SharderQuery{
 		IsKilled: null.BoolFrom(false),
+	}
+	if isKilledString != "" {
+		active, err := strconv.ParseBool(isKilledString)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("killed parameter is not valid: "+err.Error()))
+			return
+		}
+		filter.IsKilled = null.BoolFrom(active)
 	}
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
@@ -851,7 +860,8 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 //	484:
 func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request) {
 	var (
-		activeString = r.URL.Query().Get("active")
+		activeString   = r.URL.Query().Get("active")
+		isKilledString = r.URL.Query().Get("killed")
 	)
 	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
@@ -862,6 +872,15 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	filter := event.MinerQuery{
 		IsKilled: null.BoolFrom(false),
 	}
+	if isKilledString != "" {
+		active, err := strconv.ParseBool(isKilledString)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrBadRequest("killed parameter is not valid: "+err.Error()))
+			return
+		}
+		filter.IsKilled = null.BoolFrom(active)
+	}
+
 	if activeString != "" {
 		active, err := strconv.ParseBool(activeString)
 		if err != nil {
