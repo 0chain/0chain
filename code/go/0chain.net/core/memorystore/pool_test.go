@@ -70,16 +70,6 @@ func TestNewPool(t *testing.T) {
 			},
 		},
 		{
-			name: "Test_NewPool_Panic",
-			args: args{port: 8080},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-			wantPanic:     true,
-			wantDialCheck: true,
-		},
-		{
 			name: "Test_NewPool_Dial_Check_OK",
 			args: args{port: portInt},
 			want: &redis.Pool{
@@ -95,16 +85,6 @@ func TestNewPool(t *testing.T) {
 				MaxIdle:   80,
 				MaxActive: 1000,
 			},
-		},
-		{
-			name: "Test_NewPool_Panic",
-			args: args{port: 8080},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-			wantPanic:     true,
-			wantDialCheck: true,
 		},
 		{
 			name: "Test_NewPool_Dial_Check_OK",

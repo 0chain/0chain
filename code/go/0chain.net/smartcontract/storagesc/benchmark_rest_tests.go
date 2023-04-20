@@ -148,7 +148,7 @@ func BenchmarkRestTests(
 							DataShards:      len(blobbers) / 2,
 							ParityShards:    len(blobbers) / 2,
 							Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:      common.Timestamp(2*viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
+							Expiration:      common.Timestamp(2*viper.GetDuration(bk.TimeUnit).Seconds()) + creationTime,
 							Blobbers:        blobbers,
 							ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 							WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
@@ -270,7 +270,7 @@ func BenchmarkRestTests(
 							DataShards:      viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							ParityShards:    viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							Size:            100 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:      2 * common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
+							Expiration:      2 * common.Timestamp(viper.GetDuration(bk.TimeUnit).Seconds()),
 							ReadPriceRange:  PriceRange{0, maxReadPrice},
 							WritePriceRange: PriceRange{0, maxWritePrice},
 						}).encode()
