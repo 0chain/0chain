@@ -707,7 +707,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, true)
-		client         = newClient(100*x10, balances)
+		client         = newClient(2000*x10, balances)
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 
 		// no owner

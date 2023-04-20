@@ -28,10 +28,9 @@ type Blobber struct {
 	Longitude float64 `json:"longitude"`
 
 	// terms
-	ReadPrice        currency.Coin `json:"read_price"`
-	WritePrice       currency.Coin `json:"write_price"`
-	MinLockDemand    float64       `json:"min_lock_demand"`
-	MaxOfferDuration int64         `json:"max_offer_duration"`
+	ReadPrice     currency.Coin `json:"read_price"`
+	WritePrice    currency.Coin `json:"write_price"`
+	MinLockDemand float64       `json:"min_lock_demand"`
 
 	Capacity    int64 `json:"capacity"`   // total blobber capacity
 	Allocated   int64 `json:"allocated"`  // allocated capacity
@@ -195,7 +194,6 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
-	dbStore = dbStore.Where("max_offer_duration >= ?", allocation.MaxOfferDuration.Nanoseconds())
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
@@ -203,7 +201,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("is_shutdown = false")
 	dbStore = dbStore.Where("is_available = true")
 	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "capacity"},
+		Column: clause.Column{Name: "write_price"},
 		Desc:   limit.IsDescending,
 	})
 	var blobberIDs []string
@@ -231,8 +229,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"is_available",
 		"offers_total",
 		"delegate_wallet",
-		"min_stake",
-		"max_stake",
 		"num_delegates",
 		"service_charge",
 		"last_health_check",

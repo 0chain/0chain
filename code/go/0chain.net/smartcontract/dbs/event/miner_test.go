@@ -123,10 +123,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
-		// MinStake allowed by node.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed by node.
-		MaxStake currency.Coin `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -158,8 +154,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 				DelegateWallet: mn.DelegateWallet,
 				ServiceCharge:  mn.ServiceCharge,
 				NumDelegates:   mn.NumberOfDelegates,
-				MinStake:       mn.MinStake,
-				MaxStake:       mn.MaxStake,
 				Rewards: ProviderRewards{
 					ProviderID: mn.ID,
 					Rewards:    mn.Stat.GeneratorRewards,
@@ -207,8 +201,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -235,8 +227,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -322,11 +312,6 @@ func TestMiners(t *testing.T) {
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
-		// MinStake allowed by node.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed by node.
-		MaxStake currency.Coin `json:"max_stake"`
-
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
 
@@ -358,8 +343,6 @@ func TestMiners(t *testing.T) {
 				DelegateWallet: mn.DelegateWallet,
 				ServiceCharge:  mn.ServiceCharge,
 				NumDelegates:   mn.NumberOfDelegates,
-				MinStake:       mn.MinStake,
-				MaxStake:       mn.MaxStake,
 				Rewards: ProviderRewards{
 					ProviderID: mn.ID,
 					Rewards:    mn.Stat.GeneratorRewards,
@@ -397,8 +380,6 @@ func TestMiners(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -425,8 +406,6 @@ func TestMiners(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -672,8 +651,6 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) []string {
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
-				MinStake:       0,
-				MaxStake:       1000000000000,
 				Rewards: ProviderRewards{
 					ProviderID: id,
 					Rewards:    9725520000000,
@@ -714,8 +691,6 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
-				MinStake:       0,
-				MaxStake:       1000000000000,
 				Rewards: ProviderRewards{
 					ProviderID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
 					Rewards:    9725520000000,
@@ -771,8 +746,6 @@ func ReturnValue() Miner {
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
 			NumDelegates:   10,
-			MinStake:       0,
-			MaxStake:       1000000000000,
 			Rewards: ProviderRewards{
 				ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 				Rewards:    9725520000000,
@@ -798,8 +771,6 @@ func ReturnPointer() *Miner {
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
 			NumDelegates:   10,
-			MinStake:       0,
-			MaxStake:       1000000000000,
 			Rewards: ProviderRewards{
 				ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 				Rewards:    9725520000000,
