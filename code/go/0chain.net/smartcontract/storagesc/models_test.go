@@ -29,7 +29,7 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 	)
 
 	conf.MinAllocSize = 10 * 1024
-	conf.MinAllocDuration = 48 * time.Hour
+	conf.TimeUnit = 48 * time.Hour
 	nar.DataShards = 1
 	nar.Blobbers = []string{"1", "2"}
 
@@ -63,12 +63,8 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	)
 
 	list = []*StorageNode{
-		{Terms: Terms{
-			MaxOfferDuration: 8 * time.Second,
-		}},
-		{Terms: Terms{
-			MaxOfferDuration: 6 * time.Second,
-		}},
+		{Terms: Terms{}},
+		{Terms: Terms{}},
 	}
 
 	// 1. filter all by max offer duration

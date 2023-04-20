@@ -122,10 +122,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
-		// MinStake allowed by node.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed by node.
-		MaxStake currency.Coin `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -158,8 +154,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 				DelegateWallet: mn.DelegateWallet,
 				ServiceCharge:  mn.ServiceCharge,
 				NumDelegates:   mn.NumberOfDelegates,
-				MinStake:       mn.MinStake,
-				MaxStake:       mn.MaxStake,
 				Rewards: ProviderRewards{
 					ProviderID:   mn.ID,
 					Rewards:      mn.Stat.GeneratorRewards,
@@ -189,8 +183,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -217,8 +209,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,

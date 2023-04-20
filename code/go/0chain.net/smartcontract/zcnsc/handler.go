@@ -214,11 +214,9 @@ type authorizerResponse struct {
 	LastHealthCheck int64 `json:"last_health_check"`
 
 	// stake_pool_settings
-	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       currency.Coin `json:"min_stake"`
-	MaxStake       currency.Coin `json:"max_stake"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	DelegateWallet string  `json:"delegate_wallet"`
+	NumDelegates   int     `json:"num_delegates"`
+	ServiceCharge  float64 `json:"service_charge"`
 }
 
 // swagger:model authorizerNodesResponse
@@ -240,8 +238,6 @@ func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 		Longitude:       auth.Longitude,
 		LastHealthCheck: int64(auth.LastHealthCheck),
 		DelegateWallet:  auth.DelegateWallet,
-		MinStake:        auth.MinStake,
-		MaxStake:        auth.MaxStake,
 		NumDelegates:    auth.NumDelegates,
 		ServiceCharge:   auth.ServiceCharge,
 	}
