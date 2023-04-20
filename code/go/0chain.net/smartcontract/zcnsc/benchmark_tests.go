@@ -148,8 +148,6 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				input: (&UpdateAuthorizerStakePoolPayload{
 					StakePoolSettings: stakepool.Settings{
 						DelegateWallet:     data.Clients[0],
-						MinStake:           currency.Coin(1.1 * 1e10),
-						MaxStake:           currency.Coin(103 * 1e10),
 						MaxNumDelegates:    7,
 						ServiceChargeRatio: 0.17,
 					},

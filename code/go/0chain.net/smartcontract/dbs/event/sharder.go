@@ -196,8 +196,6 @@ type SharderQuery struct {
 	DelegateWallet    null.String
 	ServiceCharge     null.Float
 	NumberOfDelegates null.Int
-	MinStake          null.Int
-	MaxStake          null.Int
 	LastHealthCheck   null.Int
 	Rewards           null.Int
 	Fees              null.Int
@@ -264,7 +262,7 @@ func NewUpdateSharderTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 func NewUpdateSharderTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateSharderTotalUnStake, Sharder{
 		Provider: Provider{
-			ID:         ID,
+			ID:           ID,
 			UnstakeTotal: unstakeTotal,
 		},
 	}
