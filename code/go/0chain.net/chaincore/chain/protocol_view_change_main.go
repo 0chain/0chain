@@ -19,6 +19,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 		timeout = 10 * time.Second
 		doneC   = make(chan struct{})
 	)
+
 	for {
 		select {
 		case <-doneC:
