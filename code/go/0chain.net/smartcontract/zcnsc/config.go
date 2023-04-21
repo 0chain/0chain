@@ -27,6 +27,7 @@ const (
 	MinAuthorizers     = "min_authorizers"
 	MinBurnAmount      = "min_burn"
 	MinStakeAmount     = "min_stake"
+	MaxStakeAmount     = "max_stake"
 	MinLockAmount      = "min_lock"
 	BurnAddress        = "burn_address"
 	MaxFee             = "max_fee"
@@ -102,6 +103,7 @@ func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 		MinMintAmount:      fmt.Sprintf("%v", gn.MinMintAmount),
 		MinBurnAmount:      fmt.Sprintf("%v", gn.MinBurnAmount),
 		MinStakeAmount:     fmt.Sprintf("%v", gn.MinStakeAmount),
+		MaxStakeAmount:     fmt.Sprintf("%v", gn.MaxStakeAmount),
 		PercentAuthorizers: fmt.Sprintf("%v", gn.PercentAuthorizers),
 		MinAuthorizers:     fmt.Sprintf("%v", gn.MinAuthorizers),
 		MinLockAmount:      fmt.Sprintf("%v", gn.MinLockAmount),
@@ -129,6 +131,7 @@ func getConfig() (conf *ZCNSConfig) {
 	conf.MinMintAmount = currency.Coin(cfg.GetInt(postfix(MinMintAmount)))
 	conf.MinBurnAmount = currency.Coin(cfg.GetInt64(postfix(MinBurnAmount)))
 	conf.MinStakeAmount = currency.Coin(cfg.GetInt64(postfix(MinStakeAmount)))
+	conf.MaxStakeAmount = currency.Coin(cfg.GetInt64(postfix(MaxStakeAmount)))
 	conf.PercentAuthorizers = cfg.GetFloat64(postfix(PercentAuthorizers))
 	conf.MinAuthorizers = cfg.GetInt64(postfix(MinAuthorizers))
 	conf.MinLockAmount = currency.Coin(cfg.GetUint64(postfix(MinLockAmount)))

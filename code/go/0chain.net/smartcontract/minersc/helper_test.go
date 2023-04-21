@@ -108,8 +108,6 @@ func (c *Client) addNodeRequest(delegateWallet string) *MinerNode {
 	mn.Settings.DelegateWallet = delegateWallet
 	mn.Settings.ServiceChargeRatio = minerServiceCharge
 	mn.Settings.MaxNumDelegates = 10
-	mn.Settings.MinStake = 1e10
-	mn.Settings.MaxStake = 100e10
 	return mn
 }
 

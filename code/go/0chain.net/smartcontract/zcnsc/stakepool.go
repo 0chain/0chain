@@ -11,7 +11,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 )
 
@@ -101,21 +100,6 @@ func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, p
 	return pool, nil
 }
 
-// add delegated stake pool
-func (zcn *ZCNSmartContract) stakePoolLock(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI) (res string, err error) {
-	return stakepool.StakePoolLock(t, input, balances, zcn.getStakePoolAdapter)
-}
-
-// stake pool can return excess tokens from stake pool
-func (zcn *ZCNSmartContract) stakePoolUnlock(
-	t *transaction.Transaction,
-	input []byte,
-	balances cstate.StateContextI,
-) (resp string, err error) {
-	return stakepool.StakePoolUnlock(t, input, balances, zcn.getStakePoolAdapter)
-}
-
 // initial or successive method should be used by add_authorizer
 
 // SC functions
@@ -145,16 +129,6 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		changed = true
 	}
 
-	if sp.Settings.MinStake != settings.MinStake {
-		sp.Settings.MinStake = settings.MinStake
-		changed = true
-	}
-
-	if sp.Settings.MaxStake != settings.MaxStake {
-		sp.Settings.MaxStake = settings.MaxStake
-		changed = true
-	}
-
 	if sp.Settings.ServiceChargeRatio != settings.ServiceChargeRatio {
 		sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 		changed = true
@@ -173,10 +147,6 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 }
 
 func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode) error {
-	err := conf.validateStakeRange(poolSettings.MinStake, poolSettings.MaxStake)
-	if err != nil {
-		return err
-	}
 	if poolSettings.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
 	}
@@ -187,22 +157,16 @@ func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode
 	return nil
 }
 
-func (gn *GlobalNode) validateStakeRange(min, max currency.Coin) (err error) {
-	if min < gn.MinStakeAmount {
-		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min, gn.MinStakeAmount)
-	}
-	if max < min {
-		return fmt.Errorf("max_stake less than min_stake: %v < %v", min, max)
-	}
-
-	return
-}
-
 func (zcn *ZCNSmartContract) AddToDelegatePool(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (
 	resp string, err error) {
+	conf := getConfig()
 
-	return stakepool.StakePoolLock(t, input, balances, zcn.getStakePoolAdapter)
+	return stakepool.StakePoolLock(t, input, balances, stakepool.ValidationSettings{
+		MinStake:        conf.MinStakeAmount,
+		MaxStake:        conf.MaxStakeAmount,
+		MaxNumDelegates: conf.MaxDelegates,
+	}, zcn.getStakePoolAdapter)
 }
 
 func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
