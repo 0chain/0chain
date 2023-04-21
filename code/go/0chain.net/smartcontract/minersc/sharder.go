@@ -51,8 +51,6 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 
 	sn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
 	sn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
-	sn.Settings.MinStake = update.Settings.MinStake
-	sn.Settings.MaxStake = update.Settings.MaxStake
 
 	if err = sn.save(balances); err != nil {
 		return "", common.NewErrorf("update_sharder_settings", "saving: %v", err)
@@ -103,9 +101,7 @@ func (msc *MinerSmartContract) AddSharder(
 		zap.String("mscID", msc.ID),
 		zap.String("delegate_wallet", newSharder.Settings.DelegateWallet),
 		zap.Float64("service_charge", newSharder.Settings.ServiceChargeRatio),
-		zap.Int("number_of_delegates", newSharder.Settings.MaxNumDelegates),
-		zap.Int64("min_stake", int64(newSharder.Settings.MinStake)),
-		zap.Int64("max_stake", int64(newSharder.Settings.MaxStake)))
+		zap.Int("number_of_delegates", newSharder.Settings.MaxNumDelegates))
 
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")

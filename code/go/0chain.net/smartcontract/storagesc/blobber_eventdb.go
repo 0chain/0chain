@@ -12,13 +12,12 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		return err
 	}
 	data := &event.Blobber{
-		BaseURL:          sn.BaseURL,
-		Latitude:         sn.Geolocation.Latitude,
-		Longitude:        sn.Geolocation.Longitude,
-		ReadPrice:        sn.Terms.ReadPrice,
-		WritePrice:       sn.Terms.WritePrice,
-		MinLockDemand:    sn.Terms.MinLockDemand,
-		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
+		BaseURL:       sn.BaseURL,
+		Latitude:      sn.Geolocation.Latitude,
+		Longitude:     sn.Geolocation.Longitude,
+		ReadPrice:     sn.Terms.ReadPrice,
+		WritePrice:    sn.Terms.WritePrice,
+		MinLockDemand: sn.Terms.MinLockDemand,
 
 		Capacity:    sn.Capacity,
 		Allocated:   sn.Allocated,
@@ -27,8 +26,6 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
-			MinStake:        sn.StakePoolSettings.MinStake,
-			MaxStake:        sn.StakePoolSettings.MaxStake,
 			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: sn.LastHealthCheck,
@@ -49,13 +46,12 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	data := &event.Blobber{
-		BaseURL:          sn.BaseURL,
-		Latitude:         sn.Geolocation.Latitude,
-		Longitude:        sn.Geolocation.Longitude,
-		ReadPrice:        sn.Terms.ReadPrice,
-		WritePrice:       sn.Terms.WritePrice,
-		MinLockDemand:    sn.Terms.MinLockDemand,
-		MaxOfferDuration: sn.Terms.MaxOfferDuration.Nanoseconds(),
+		BaseURL:       sn.BaseURL,
+		Latitude:      sn.Geolocation.Latitude,
+		Longitude:     sn.Geolocation.Longitude,
+		ReadPrice:     sn.Terms.ReadPrice,
+		WritePrice:    sn.Terms.WritePrice,
+		MinLockDemand: sn.Terms.MinLockDemand,
 
 		Capacity:    sn.Capacity,
 		Allocated:   sn.Allocated,
@@ -64,8 +60,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
-			MinStake:        sn.StakePoolSettings.MinStake,
-			MaxStake:        sn.StakePoolSettings.MaxStake,
 			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: sn.LastHealthCheck,

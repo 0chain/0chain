@@ -127,7 +127,7 @@ func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, err
 func (edb *EventDb) updateValidators(validators []Validator) error {
 	updateFields := []string{
 		"base_url", "public_key", "total_stake",
-		"unstake_total", "min_stake", "max_stake",
+		"unstake_total",
 		"delegate_wallet", "num_delegates",
 		"service_charge",
 	}

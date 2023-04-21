@@ -125,7 +125,7 @@ func (nar *newAllocationRequest) validate(now time.Time, conf *Config) error {
 	}
 
 	dur := common.ToTime(nar.Expiration).Sub(now)
-	if dur < conf.MinAllocDuration {
+	if dur < conf.TimeUnit {
 		return errors.New("insufficient allocation duration")
 	}
 	return nil
@@ -764,7 +764,6 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 
 	// just copy from next
 	avg.MinLockDemand = next.MinLockDemand
-	avg.MaxOfferDuration = next.MaxOfferDuration
 	return
 }
 
@@ -895,11 +894,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		details.Size = size // new size
-
-		if req.Expiration > toSeconds(b.Terms.MaxOfferDuration) {
-			return common.NewErrorf("allocation_extending_failed",
-				"blobber %s doesn't allow so long offers", b.ID)
-		}
 
 		// since, new terms is weighted average based on previous terms and
 		// past allocation time and new terms and new allocation time; then
@@ -1155,7 +1149,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		// an allocation can't be shorter than configured in SC
 		// (prevent allocation shortening for entire period)
-		if newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {
+		if newExpiration-t.CreationDate < toSeconds(conf.TimeUnit) {
 			return "", common.NewError("allocation_updating_failed",
 				"allocation duration becomes too short")
 		}
@@ -1189,7 +1183,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 					bd.Terms.ReadPrice = blobbers[i].Terms.ReadPrice
 				}
 				bd.Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
-				bd.Terms.MaxOfferDuration = blobbers[i].Terms.MaxOfferDuration
 			}
 		}
 
