@@ -29,11 +29,11 @@ func (c *Chain) SetupSC(ctx context.Context) {
 			logging.Logger.Debug("SetupSC - context is done")
 			return
 		case <-tm.C:
-			tm.Reset(timeout * time.Second)
+			tm.Reset(timeout)
 			logging.Logger.Debug("SetupSC - check if node is registered")
 			func() {
 				isRegisteredC := make(chan bool)
-				cctx, cancel := context.WithTimeout(ctx, timeout*time.Second)
+				cctx, cancel := context.WithTimeout(ctx, timeout)
 				defer cancel()
 
 				go func() {
