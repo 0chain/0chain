@@ -362,6 +362,7 @@ func Provider() datastore.Entity {
 	t.CreationDate = common.Now()
 	t.ChainID = datastore.ToKey(config.GetServerChainID())
 	t.EntityCollection = txnEntityCollection
+	t.SmartContractData = &SmartContractData{}
 	return t
 }
 
@@ -390,7 +391,7 @@ func SetupEntity(store datastore.Store) {
 	TransactionEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &chunkingOptions)
 }
 
-/*Sign - given a client and client's private key, sign this tranasction */
+/*Sign - given a client and client's private key, sign this transaction */
 func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme) (string, error) {
 	t.Hash = t.ComputeHash()
 	signature, err := signatureScheme.Sign(t.Hash)
