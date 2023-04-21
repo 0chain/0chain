@@ -3,7 +3,7 @@ package wallet
 import (
 	"fmt"
 	"math/rand"
-	"0chain.net/chaincore/client"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
