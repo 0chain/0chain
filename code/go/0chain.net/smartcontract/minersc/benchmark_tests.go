@@ -8,8 +8,6 @@ import (
 
 	"0chain.net/core/common"
 
-	"github.com/0chain/common/core/currency"
-
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -118,8 +116,6 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -144,8 +140,6 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -285,8 +279,6 @@ func BenchmarkTests(
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
-					"min_stake":                    "0.0",
-					"max_stake":                    "100",
 					"max_n":                        "7",
 					"min_n":                        "3",
 					"t_percent":                    "0.66",
@@ -346,8 +338,6 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -371,8 +361,6 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),

@@ -106,8 +106,6 @@ type MinerQuery struct {
 	DelegateWallet    null.String
 	ServiceCharge     null.Float
 	NumberOfDelegates null.Int
-	MinStake          null.Int
-	MaxStake          null.Int
 	LastHealthCheck   null.Int
 	Rewards           null.Int
 	Fees              null.Int
