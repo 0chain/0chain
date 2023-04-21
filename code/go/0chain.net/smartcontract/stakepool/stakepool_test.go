@@ -204,6 +204,7 @@ func Test_validateLockRequest(t *testing.T) {
 	type args struct {
 		t   *transaction.Transaction
 		sp  AbstractStakePool
+		vs  ValidationSettings
 		err error
 	}
 	clientId := "randomHash"
@@ -232,11 +233,13 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						MinStake:           0,
-						MaxStake:           50,
-						MaxNumDelegates:    2,
 						ServiceChargeRatio: 0,
 					},
+				},
+				vs: ValidationSettings{
+					MinStake:        0,
+					MaxStake:        50,
+					MaxNumDelegates: 2,
 				},
 				err: nil,
 			},
@@ -259,11 +262,13 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						MinStake:           0,
-						MaxStake:           50,
-						MaxNumDelegates:    2,
 						ServiceChargeRatio: 0,
 					},
+				},
+				vs: ValidationSettings{
+					MinStake:        0,
+					MaxStake:        50,
+					MaxNumDelegates: 2,
 				},
 				err: nil,
 			},
@@ -287,11 +292,13 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						MinStake:           0,
-						MaxStake:           50,
-						MaxNumDelegates:    2,
 						ServiceChargeRatio: 0,
 					},
+				},
+				vs: ValidationSettings{
+					MinStake:        0,
+					MaxStake:        50,
+					MaxNumDelegates: 2,
 				},
 				err: nil,
 			},
@@ -314,11 +321,13 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						MinStake:           0,
-						MaxStake:           50,
-						MaxNumDelegates:    2,
 						ServiceChargeRatio: 0,
 					},
+				},
+				vs: ValidationSettings{
+					MinStake:        0,
+					MaxStake:        50,
+					MaxNumDelegates: 2,
 				},
 				err: nil,
 			},
@@ -341,11 +350,13 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						MinStake:           20,
-						MaxStake:           50,
-						MaxNumDelegates:    2,
 						ServiceChargeRatio: 0,
 					},
+				},
+				vs: ValidationSettings{
+					MinStake:        20,
+					MaxStake:        50,
+					MaxNumDelegates: 2,
 				},
 				err: nil,
 			},
@@ -368,11 +379,13 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						MinStake:           0,
-						MaxStake:           50,
-						MaxNumDelegates:    2,
 						ServiceChargeRatio: 0,
 					},
+				},
+				vs: ValidationSettings{
+					MinStake:        0,
+					MaxStake:        50,
+					MaxNumDelegates: 2,
 				},
 				err: nil,
 			},
@@ -382,7 +395,7 @@ func Test_validateLockRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := validateLockRequest(tt.args.t, tt.args.sp)
+			got, err := validateLockRequest(tt.args.t, tt.args.sp, tt.args.vs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateLockRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return

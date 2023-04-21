@@ -253,8 +253,6 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 //		URL           string
 //		ClientID      string
 //		ClientKey     string
-//		MinStake      int64
-//		MaxStake      int64
 //		NumDelegates  int
 //		ServiceCharge float64
 //	}

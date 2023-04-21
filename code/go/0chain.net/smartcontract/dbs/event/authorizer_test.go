@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"github.com/0chain/common/core/currency"
-
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
@@ -48,8 +46,6 @@ func TestAuthorizers(t *testing.T) {
 		Provider: Provider{
 			ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 			DelegateWallet:  "delegate wallet",
-			MinStake:        currency.Coin(53),
-			MaxStake:        currency.Coin(57),
 			NumDelegates:    59,
 			ServiceCharge:   61.0,
 			LastHealthCheck: common.Timestamp(time.Now().Unix()),
@@ -63,8 +59,6 @@ func TestAuthorizers(t *testing.T) {
 		Provider: Provider{
 			ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 			DelegateWallet:  "delegate wallet",
-			MinStake:        currency.Coin(52),
-			MaxStake:        currency.Coin(57),
 			NumDelegates:    60,
 			ServiceCharge:   50.0,
 			LastHealthCheck: common.Timestamp(time.Now().Unix()),

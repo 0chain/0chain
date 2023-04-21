@@ -255,8 +255,6 @@ type Terms struct {
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
 	MinLockDemand float64 `json:"min_lock_demand"`
-	// MaxOfferDuration with this prices and the demand.
-	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }
 
 // The minLockDemand returns min lock demand value for this Terms (the
@@ -273,10 +271,6 @@ func (t *Terms) validate(conf *Config) (err error) {
 	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
 		return errors.New("invalid min_lock_demand")
 	}
-	if t.MaxOfferDuration < conf.MinOfferDuration {
-		return errors.New("insufficient max_offer_duration")
-	}
-
 	if t.ReadPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
@@ -824,12 +818,6 @@ func (sa *StorageAllocation) isActive(
 		return fmt.Errorf("blobber %s is not currently available for new allocations", blobber.ID)
 	}
 
-	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
-	// filter by max offer duration
-	if blobber.Terms.MaxOfferDuration < duration {
-		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
-			duration, blobber.ID, blobber.Terms.MaxOfferDuration)
-	}
 	// filter by read price
 	if !sa.ReadPriceRange.isMatch(blobber.Terms.ReadPrice) {
 		return fmt.Errorf("read price range %v does not match blobber %s read price %v",
@@ -1111,16 +1099,11 @@ func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	filtered []*StorageNode, err error) {
 
 	var (
-		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
-		i   int
+		i int
 	)
 
 List:
 	for _, b := range list {
-		// filter by max offer duration
-		if b.Terms.MaxOfferDuration < dur {
-			continue
-		}
 		// filter by read price
 		if !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice) {
 			continue

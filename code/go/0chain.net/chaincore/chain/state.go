@@ -213,10 +213,6 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 			return math.MaxInt32, err
 		}
 
-		if _, ok := c.ChainConfig.TxnExempt()[scData.FunctionName]; ok {
-			return 0, nil
-		}
-
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
 		if missingKeys := sctx.GetMissingNodeKeys(); len(missingKeys) > 0 {
 			syncOpts := &SyncReplyC{}
@@ -257,6 +253,19 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	}
 }
 
+func (c *Chain) EstimateTransactionFeeLFB(ctx context.Context,
+	txn *transaction.Transaction,
+	opts ...SyncNodesOption) (currency.Coin, error) {
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return 0, errors.New("LFB not ready yet")
+	}
+	lfb = lfb.Clone()
+
+	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, opts...)
+	return fee, err
+}
+
 func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	mpt util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
@@ -265,6 +274,18 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	if err != nil {
 		return 0, 0, err
 	}
+
+	if txn.SmartContractData == nil {
+		logging.Logger.Warn("txn properties not computed", zap.Any("txn", txn))
+		if err := txn.ComputeProperties(); err != nil {
+			return 0, 0, err
+		}
+	}
+
+	if _, ok := c.ChainConfig.TxnExempt()[txn.FunctionName]; ok {
+		return cost, 0, nil
+	}
+
 	logging.Logger.Debug("estimate transaction cost fee",
 		zap.Int("cost", cost),
 		zap.String("txn hash", txn.Hash),

@@ -144,12 +144,11 @@ smart_contracts:
     # these values are applied to all free allocations
     free_allocation_settings:
       data_shards: 2
-      duration: 50h
       parity_shards: 2
       read_pool_fraction: 0.2
       mint_amount: 0.5
       read_price_range:
-        max: 1
+        max: 0
         min: 0
       size: 10000000
       write_price_range:
