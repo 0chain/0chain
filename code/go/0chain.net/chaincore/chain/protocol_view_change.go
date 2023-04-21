@@ -291,6 +291,9 @@ func (c *Chain) estimateTxnFee(txn *httpclientutil.Transaction) (currency.Coin, 
 		ToClientID:      txn.ToClientID,
 		PublicKey:       txn.PublicKey,
 	}
+	if err := tTxn.ComputeProperties(); err != nil {
+		return 0, err
+	}
 
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
