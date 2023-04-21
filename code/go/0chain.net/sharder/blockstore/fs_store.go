@@ -78,6 +78,11 @@ func getBlockFilePath(hash string) string {
 }
 
 type BlockStore struct {
+	// basePath is the path to directory where blocks will be permanently stored.
+	// It can be any mounted drive but to make it both efficient and cost effective
+	// its better to have basePath to be mounted HDD drive and cache as SSD drive.
+	// If sharder wants to provide basePath to be mounted SSD drive then they don't
+	// need to provide cache.
 	basePath              string
 	blockMetadataProvider datastore.EntityMetadata
 	cache                 cacher
@@ -199,7 +204,6 @@ func (bStore *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.B
 // Init checks for minimum disk size, inodes requirement and assigns
 // block storer to a variable. If any error occurs during initialization
 // it will panic.
-// It will register read and write function based on whether cache config is provided or not.
 func Init(sViper *viper.Viper) {
 	logging.Logger.Info("Initializing storage")
 

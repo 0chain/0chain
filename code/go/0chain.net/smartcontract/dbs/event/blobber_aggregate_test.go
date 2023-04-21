@@ -368,7 +368,11 @@ func calculateBlobberAggregate(round int64, current *Blobber, old *BlobberSnapsh
 	aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 	aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
 	aggregate.Downtime = current.Downtime
-	aggregate.RankMetric = current.RankMetric
+	if current.ChallengesCompleted == 0 {
+		aggregate.RankMetric = 0
+	} else {
+		aggregate.RankMetric = float64(current.ChallengesPassed) / float64(current.ChallengesCompleted)
+	}
 	aggregate.ChallengesPassed = current.ChallengesPassed
 	aggregate.ChallengesCompleted = current.ChallengesCompleted
 	return aggregate

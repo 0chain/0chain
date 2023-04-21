@@ -114,10 +114,6 @@ func TestSharders(t *testing.T) {
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
-		// MinStake allowed by node.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed by node.
-		MaxStake currency.Coin `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -150,8 +146,6 @@ func TestSharders(t *testing.T) {
 				DelegateWallet: sn.DelegateWallet,
 				ServiceCharge:  sn.ServiceCharge,
 				NumDelegates:   sn.NumberOfDelegates,
-				MinStake:       sn.MinStake,
-				MaxStake:       sn.MaxStake,
 				Rewards: ProviderRewards{
 					ProviderID: sn.ID,
 					Rewards:    sn.Stat.GeneratorRewards,
@@ -201,8 +195,6 @@ func TestSharders(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,

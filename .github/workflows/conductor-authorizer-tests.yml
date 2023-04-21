@@ -1,8 +1,8 @@
 name: CONDUCTOR AUTHORIZER TESTS
 
 on:
-  schedule:
-    - cron: '0 10 * * * '
+  # schedule:
+  #   - cron: '0 10 * * * '
   workflow_dispatch:
 
 jobs:

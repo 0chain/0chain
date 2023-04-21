@@ -54,7 +54,7 @@ func AddMockAllocations(
 }
 
 func benchAllocationExpire(now common.Timestamp) common.Timestamp {
-	return common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + now
+	return common.Timestamp(viper.GetDuration(sc.TimeUnit).Seconds()) + now
 }
 
 func addMockAllocation(
@@ -128,12 +128,11 @@ func addMockAllocation(
 		allocationTerms := make([]event.AllocationBlobberTerm, 0)
 		for _, b := range sa.BlobberAllocs {
 			allocationTerms = append(allocationTerms, event.AllocationBlobberTerm{
-				BlobberID:        b.BlobberID,
-				AllocationID:     b.AllocationID,
-				ReadPrice:        int64(b.Terms.ReadPrice),
-				WritePrice:       int64(b.Terms.WritePrice),
-				MinLockDemand:    b.Terms.MinLockDemand,
-				MaxOfferDuration: b.Terms.MaxOfferDuration,
+				BlobberID:     b.BlobberID,
+				AllocationID:  b.AllocationID,
+				ReadPrice:     int64(b.Terms.ReadPrice),
+				WritePrice:    int64(b.Terms.WritePrice),
+				MinLockDemand: b.Terms.MinLockDemand,
 			})
 		}
 
@@ -386,21 +385,18 @@ func AddMockBlobbers(
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
-				BaseURL:          blobber.BaseURL,
-				Latitude:         blobber.Geolocation.Latitude,
-				Longitude:        blobber.Geolocation.Longitude,
-				ReadPrice:        blobber.Terms.ReadPrice,
-				WritePrice:       blobber.Terms.WritePrice,
-				MinLockDemand:    blobber.Terms.MinLockDemand,
-				MaxOfferDuration: blobber.Terms.MaxOfferDuration.Nanoseconds(),
-				Capacity:         blobber.Capacity,
-				Allocated:        blobber.Allocated,
-				ReadData:         blobber.Allocated * 2,
+				BaseURL:       blobber.BaseURL,
+				Latitude:      blobber.Geolocation.Latitude,
+				Longitude:     blobber.Geolocation.Longitude,
+				ReadPrice:     blobber.Terms.ReadPrice,
+				WritePrice:    blobber.Terms.WritePrice,
+				MinLockDemand: blobber.Terms.MinLockDemand,
+				Capacity:      blobber.Capacity,
+				Allocated:     blobber.Allocated,
+				ReadData:      blobber.Allocated * 2,
 				Provider: event.Provider{
 					ID:              blobber.ID,
 					DelegateWallet:  blobber.StakePoolSettings.DelegateWallet,
-					MinStake:        blobber.StakePoolSettings.MinStake,
-					MaxStake:        blobber.StakePoolSettings.MaxStake,
 					NumDelegates:    blobber.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:   blobber.StakePoolSettings.ServiceChargeRatio,
 					LastHealthCheck: blobber.LastHealthCheck,
@@ -548,8 +544,6 @@ func AddMockValidators(
 				Provider: event.Provider{
 					ID:             validator.ID,
 					DelegateWallet: validator.StakePoolSettings.DelegateWallet,
-					MinStake:       validator.StakePoolSettings.MaxStake,
-					MaxStake:       validator.StakePoolSettings.MaxStake,
 					NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
 					ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
 				},
@@ -744,18 +738,15 @@ func AddMockWriteRedeems(
 
 func getMockBlobberTerms() Terms {
 	return Terms{
-		ReadPrice:        currency.Coin(0.1 * 1e10),
-		WritePrice:       currency.Coin(0.1 * 1e10),
-		MinLockDemand:    0.0007,
-		MaxOfferDuration: time.Hour * 744,
+		ReadPrice:     currency.Coin(0.1 * 1e10),
+		WritePrice:    currency.Coin(0.1 * 1e10),
+		MinLockDemand: 0.0007,
 	}
 }
 
 func getMockStakePoolSettings(blobber string) stakepool.Settings {
 	return stakepool.Settings{
 		DelegateWallet:     blobber,
-		MinStake:           currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10),
-		MaxStake:           currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10),
 		MaxNumDelegates:    viper.GetInt(sc.NumBlobberDelegates),
 		ServiceChargeRatio: viper.GetFloat64(sc.StorageMaxCharge),
 	}
@@ -811,13 +802,7 @@ func SetMockConfig(
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
-	conf.ChallengeGenerationRate = 1
-	conf.MaxChallengesPerGeneration = viper.GetInt(sc.StorageMaxChallengesPerGeneration)
-	conf.FailedChallengesToCancel = viper.GetInt(sc.StorageFailedChallengesToCancel)
-	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = viper.GetInt64(sc.StorageMinAllocSize)
-	conf.MinAllocDuration = viper.GetDuration(sc.StorageMinAllocDuration)
-	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
 	conf.ValidatorReward = 0.025
 
@@ -851,7 +836,6 @@ func SetMockConfig(
 		DataShards:   viper.GetInt(sc.StorageFasDataShards),
 		ParityShards: viper.GetInt(sc.StorageFasParityShards),
 		Size:         viper.GetInt64(sc.StorageFasSize),
-		Duration:     viper.GetDuration(sc.StorageFasDuration),
 		ReadPriceRange: PriceRange{
 			Min: currency.Coin(viper.GetFloat64(sc.StorageFasReadPriceMin) * 1e10),
 			Max: currency.Coin(viper.GetFloat64(sc.StorageFasReadPriceMax) * 1e10),
@@ -869,11 +853,6 @@ func SetMockConfig(
 	conf.BlockReward.QualifyingStake = currency.Coin(viper.GetFloat64(sc.StorageBlockRewardQualifyingStake) * 1e10)
 	conf.MaxBlobbersPerAllocation = viper.GetInt(sc.StorageMaxBlobbersPerAllocation)
 	conf.BlockReward.TriggerPeriod = viper.GetInt64(sc.StorageBlockRewardTriggerPeriod)
-	err = conf.BlockReward.setWeightsFromRatio(
-		viper.GetFloat64(sc.StorageBlockRewardSharderRatio),
-		viper.GetFloat64(sc.StorageBlockRewardMinerRatio),
-		viper.GetFloat64(sc.StorageBlockRewardBlobberRatio),
-	)
 	if err != nil {
 		panic(err)
 	}
@@ -899,7 +878,7 @@ func SetMockConfig(
 		"cost.pay_blobber_block_rewards": mockCost,
 		"cost.challenge_request":         mockCost,
 		"cost.challenge_response":        mockCost,
-		"cost.generate_challenges":       mockCost,
+		"cost.generate_challenge":        mockCost,
 		"cost.add_validator":             mockCost,
 		"cost.update_validator_settings": mockCost,
 		"cost.add_blobber":               mockCost,

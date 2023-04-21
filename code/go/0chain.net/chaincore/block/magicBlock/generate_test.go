@@ -6,7 +6,9 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
@@ -58,6 +60,13 @@ func TestMagicBlockValidity(t *testing.T) {
 	if err = dkgShare.Verify(bls.ComputeIDdkg(miner3), mpks); err != nil {
 		t.Error(err)
 	}
+
+}
+
+func TestLeyValidity(t *testing.T) {
+	scheme := encryption.BLS0ChainScheme{}
+	err := scheme.SetPublicKey("de52c0a51872d5d2ec04dbc15a6f0696cba22657b80520e1d070e72de64c9b04e19ce3223cae3c743a20184158457582ffe9c369ca9218c04bfe83a26a62d88d")
+	assert.NoError(t, err)
 
 }
 

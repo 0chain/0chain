@@ -3,12 +3,11 @@ package wallet
 import (
 	"fmt"
 	"math/rand"
-
-	"github.com/0chain/common/core/currency"
-
+	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
+	"github.com/0chain/common/core/currency"
 )
 
 var transactionMetadataProvider datastore.EntityMetadata
@@ -21,14 +20,16 @@ func SetupWallet() {
 }
 
 /*CreateRandomSendTransaction - create a transaction */
-func (w *Wallet) CreateRandomSendTransaction(toClient string, value, fee currency.Coin) *transaction.Transaction {
+func (w *Wallet) CreateRandomSendTransaction(toClient string, value currency.Coin, estimateFeeFunc func(t *transaction.Transaction) currency.Coin) *transaction.Transaction {
 	msg := fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), value)
-	return w.CreateSendTransaction(toClient, value, msg, fee)
+	return w.CreateSendTransaction(toClient, value, msg, estimateFeeFunc)
 }
 
 /*CreateSendTransaction - create a send transaction */
-func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg string, fee currency.Coin) *transaction.Transaction {
+func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg string,
+	estimateFeeFunc func(t *transaction.Transaction) currency.Coin) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
+	txn.PublicKey = w.PublicKey
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
 	txn.Value = value
@@ -36,7 +37,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg
 
 	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 	if isFeeEnabled {
-		txn.Fee = fee
+		txn.Fee = estimateFeeFunc(txn)
 	}
 	if _, err := txn.Sign(w.SignatureScheme); err != nil {
 		panic(err)
@@ -44,23 +45,29 @@ func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg
 	return txn
 }
 
-/*CreateSendTransaction - create a send transaction */
-func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg string, fee currency.Coin) *transaction.Transaction {
+// CreateSCTransaction creates a faucet refill transaction
+func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg string,
+	estimateFeeFunc func(txn *transaction.Transaction) currency.Coin) (*transaction.Transaction, error) {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
+	txn.PublicKey = w.PublicKey
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
 	txn.Value = value
 	txn.TransactionData = msg
+	txn.TransactionType = transaction.TxnTypeSmartContract
+	if err := txn.ComputeProperties(); err != nil {
+		return nil, err
+	}
 
 	isFeeEnabled := config.Configuration().ChainConfig.IsFeeEnabled()
 	if isFeeEnabled {
-		txn.Fee = fee
+		txn.Fee = estimateFeeFunc(txn)
 	}
 	txn.TransactionType = transaction.TxnTypeSmartContract
 	if _, err := txn.Sign(w.SignatureScheme); err != nil {
-		panic(err)
+		return nil, err
 	}
-	return txn
+	return txn, nil
 }
 
 /*CreateRandomDataTransaction - creat a random data transaction */

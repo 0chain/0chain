@@ -22,11 +22,10 @@ type mockStateContext struct {
 }
 
 type mockBlobberYaml struct {
-	serviceCharge    float64
-	readPrice        float64
-	writePrice       float64
-	MaxOfferDuration int64
-	minLockDemand    float64
+	serviceCharge float64
+	readPrice     float64
+	writePrice    float64
+	minLockDemand float64
 }
 
 var (

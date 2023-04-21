@@ -48,7 +48,9 @@ const (
 	TransactionPayloadMaxSize
 	TransactionTimeout // todo from global
 	TransactionMinFee  // todo from global
+	TransactionMaxFee
 	TransactionExempt
+	TransactionCostFeeCoeff
 
 	ClientSignatureScheme
 	ClientDiscover // todo from chain
@@ -180,7 +182,9 @@ func initGlobalSettingNames() {
 	GlobalSettingName[TransactionPayloadMaxSize] = "server_chain.transaction.payload.max_size"
 	GlobalSettingName[TransactionTimeout] = "server_chain.transaction.timeout"
 	GlobalSettingName[TransactionMinFee] = "server_chain.transaction.min_fee"
+	GlobalSettingName[TransactionMaxFee] = "server_chain.transaction.max_fee"
 	GlobalSettingName[TransactionExempt] = "server_chain.transaction.exempt"
+	GlobalSettingName[TransactionCostFeeCoeff] = "server_chain.transaction.cost_fee_coeff"
 
 	GlobalSettingName[ClientSignatureScheme] = "server_chain.client.signature_scheme"
 	GlobalSettingName[ClientDiscover] = "server_chain.client.discover"
@@ -269,8 +273,8 @@ func initGlobalSettings() {
 		GlobalSettingName[Storage]:      {smartcontract.Boolean, false},
 		GlobalSettingName[Faucet]:       {smartcontract.Boolean, false},
 		GlobalSettingName[Miner]:        {smartcontract.Boolean, false},
-		GlobalSettingName[Multisig]:     {smartcontract.Boolean, false},
-		GlobalSettingName[Vesting]:      {smartcontract.Boolean, false},
+		GlobalSettingName[Multisig]:     {smartcontract.Boolean, true},
+		GlobalSettingName[Vesting]:      {smartcontract.Boolean, true},
 		GlobalSettingName[Zcn]:          {smartcontract.Boolean, false},
 
 		GlobalSettingName[Owner]: {smartcontract.String, false},
@@ -280,8 +284,8 @@ func initGlobalSettings() {
 		GlobalSettingName[BlockMaxCost]:                      {smartcontract.Int, true},
 		GlobalSettingName[BlockMaxByteSize]:                  {smartcontract.Int64, true},
 		GlobalSettingName[BlockReplicators]:                  {smartcontract.Int, true},
-		GlobalSettingName[BlockGenerationTimout]:             {smartcontract.Int, false},
-		GlobalSettingName[BlockGenerationRetryWaitTime]:      {smartcontract.Int, false},
+		GlobalSettingName[BlockGenerationTimout]:             {smartcontract.Int, true},
+		GlobalSettingName[BlockGenerationRetryWaitTime]:      {smartcontract.Int, true},
 		GlobalSettingName[BlockProposalMaxWaitTime]:          {smartcontract.Duration, true},
 		GlobalSettingName[BlockProposalWaitMode]:             {smartcontract.String, true},
 		GlobalSettingName[BlockConsensusThresholdByCount]:    {smartcontract.Int, true},
@@ -297,12 +301,14 @@ func initGlobalSettings() {
 		GlobalSettingName[RoundTimeoutsSofttoMin]:        {smartcontract.Int, true},
 		GlobalSettingName[RoundTimeoutsSofttoMult]:       {smartcontract.Int, true},
 		GlobalSettingName[RoundTimeoutsRoundRestartMult]: {smartcontract.Int, true},
-		GlobalSettingName[RoundTimeoutsTimeoutCap]:       {smartcontract.Int, false},
+		GlobalSettingName[RoundTimeoutsTimeoutCap]:       {smartcontract.Int, true},
 
 		GlobalSettingName[TransactionPayloadMaxSize]: {smartcontract.Int, true},
 		GlobalSettingName[TransactionTimeout]:        {smartcontract.Int, false},
-		GlobalSettingName[TransactionMinFee]:         {smartcontract.Int64, false},
+		GlobalSettingName[TransactionMinFee]:         {smartcontract.Int64, true},
+		GlobalSettingName[TransactionMaxFee]:         {smartcontract.Int64, false},
 		GlobalSettingName[TransactionExempt]:         {smartcontract.Strings, true},
+		GlobalSettingName[TransactionCostFeeCoeff]:   {smartcontract.Int, true},
 
 		GlobalSettingName[ClientSignatureScheme]: {smartcontract.String, true},
 		GlobalSettingName[ClientDiscover]:        {smartcontract.Boolean, false},

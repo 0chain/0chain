@@ -2,6 +2,7 @@ package memorystore_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -70,15 +71,20 @@ func TestStore_IterateCollection(t *testing.T) {
 
 	handler := makeTestCollectionIterationHandler()
 
+	txnData, err := json.Marshal(struct{}{})
+	require.NoError(t, err)
+
 	txn := transaction.Transaction{}
 	txn.SetKey("key")
+	txn.TransactionData = string(txnData)
 	scheme := encryption.NewBLS0ChainScheme()
-	err := scheme.GenerateKeys()
+	err = scheme.GenerateKeys()
 	require.NoError(t, err)
 	txn.PublicKey = scheme.GetPublicKey()
 
 	txn2 := transaction.Transaction{}
 	txn2.SetKey("key2")
+	txn2.TransactionData = string(txnData)
 	err = scheme.GenerateKeys()
 	require.NoError(t, err)
 
@@ -208,6 +214,9 @@ func TestStore_IterateCollectionAsc(t *testing.T) {
 
 	txn.SetKey("key")
 	txn.PublicKey = sch.GetPublicKey()
+	txnData, err := json.Marshal(struct{}{})
+	require.NoError(t, err)
+	txn.TransactionData = string(txnData)
 	writeTxnsToStorage(t, &txn)
 	addTxnsToCollection(t, &txn)
 

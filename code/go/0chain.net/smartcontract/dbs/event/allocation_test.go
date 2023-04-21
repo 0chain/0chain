@@ -102,10 +102,6 @@ func TestAllocations(t *testing.T) {
 	type stakePoolSettings struct {
 		// DelegateWallet for pool owner.
 		DelegateWallet string `json:"delegate_wallet"`
-		// MinStake allowed.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed.
-		MaxStake currency.Coin `json:"max_stake"`
 		// NumDelegates maximum allowed.
 		NumDelegates int `json:"num_delegates"`
 		// ServiceCharge of the blobber. The blobber gets this % (actually, value in
@@ -124,8 +120,6 @@ func TestAllocations(t *testing.T) {
 		// allocation should be locked for the blobber rewards even if
 		// user never write something to the blobber.
 		MinLockDemand float64 `json:"min_lock_demand"`
-		// MaxOfferDuration with this prices and the demand.
-		MaxOfferDuration time.Duration `json:"max_offer_duration"`
 	}
 
 	type PriceRange struct {
@@ -251,12 +245,11 @@ func TestAllocations(t *testing.T) {
 		var allocationTerms []AllocationBlobberTerm
 		for _, b := range sa.BlobberDetails {
 			allocationTerms = append(allocationTerms, AllocationBlobberTerm{
-				BlobberID:        b.BlobberID,
-				AllocationID:     b.AllocationID,
-				ReadPrice:        int64(b.Terms.ReadPrice),
-				WritePrice:       int64(b.Terms.WritePrice),
-				MinLockDemand:    b.Terms.MinLockDemand,
-				MaxOfferDuration: b.Terms.MaxOfferDuration,
+				BlobberID:     b.BlobberID,
+				AllocationID:  b.AllocationID,
+				ReadPrice:     int64(b.Terms.ReadPrice),
+				WritePrice:    int64(b.Terms.WritePrice),
+				MinLockDemand: b.Terms.MinLockDemand,
 			})
 		}
 
@@ -319,10 +312,9 @@ func TestAllocations(t *testing.T) {
 						Longitude: 141,
 					},
 					Terms: Terms{
-						ReadPrice:        10,
-						WritePrice:       10,
-						MinLockDemand:    2,
-						MaxOfferDuration: 100,
+						ReadPrice:     10,
+						WritePrice:    10,
+						MinLockDemand: 2,
 					},
 					Capacity:        100,
 					Allocated:       50,
@@ -330,8 +322,6 @@ func TestAllocations(t *testing.T) {
 					PublicKey:       "public_key",
 					StakePoolSettings: stakePoolSettings{
 						DelegateWallet: "delegate_wallet",
-						MinStake:       10,
-						MaxStake:       12,
 						NumDelegates:   2,
 						ServiceCharge:  0.5,
 					},
@@ -354,10 +344,9 @@ func TestAllocations(t *testing.T) {
 					BlobberID:    "blobber_1",
 					AllocationID: "storage_allocation_id",
 					Terms: Terms{
-						ReadPrice:        10,
-						WritePrice:       10,
-						MinLockDemand:    2,
-						MaxOfferDuration: 100,
+						ReadPrice:     10,
+						WritePrice:    10,
+						MinLockDemand: 2,
 					},
 				},
 			},
@@ -366,10 +355,9 @@ func TestAllocations(t *testing.T) {
 					BlobberID:    "blobber_1",
 					AllocationID: "storage_allocation_id",
 					Terms: Terms{
-						ReadPrice:        10,
-						WritePrice:       10,
-						MinLockDemand:    2,
-						MaxOfferDuration: 100,
+						ReadPrice:     10,
+						WritePrice:    10,
+						MinLockDemand: 2,
 					},
 				},
 			},

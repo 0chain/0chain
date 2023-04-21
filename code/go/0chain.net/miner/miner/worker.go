@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -24,6 +25,8 @@ import (
 	"0chain.net/smartcontract/faucetsc"
 	"github.com/0chain/common/core/logging"
 )
+
+const defaultGenerateTxnFee = 1e9
 
 var (
 	wallets  []*wallet.Wallet
@@ -172,15 +175,19 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) (*transaction.Transa
 			break
 		}
 	}
-	fee, err := currency.Int64ToCoin(prng.Int63n(maxFee-minFee) + minFee)
-	if err != nil {
-		return nil, err
-	}
 	value, err := currency.Int64ToCoin(prng.Int63n(maxValue-minValue) + minValue)
 	if err != nil {
 		return nil, err
 	}
-	txn := wf.CreateRandomSendTransaction(wt.ClientID, value, fee)
+
+	txn := wf.CreateRandomSendTransaction(wt.ClientID, value, func(txn *transaction.Transaction) currency.Coin {
+		fee, err := c.EstimateTransactionFeeLFB(context.Background(), txn)
+		if err != nil {
+			return defaultGenerateTxnFee
+		}
+
+		return fee
+	})
 	return txn, nil
 }
 
@@ -242,26 +249,42 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 	}
 	time.Sleep(1 * time.Second)
 	for _, w := range wallets {
-		//generous airdrop in dev/test mode :)
-		fee, err := currency.Int64ToCoin(prng.Int63n(10) + 1)
-		if err != nil {
-			logging.Logger.Error("client generator", zap.Error(err))
-		}
 		val, err := currency.Int64ToCoin(prng.Int63n(100) * 10000000000)
 		if err != nil {
 			logging.Logger.Error("client generator", zap.Error(err))
 		}
-		txn := ownerWallet.CreateSendTransaction(w.ClientID, val, "generous air drop! :)", fee)
+
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, val, "generous air drop! :)",
+			func(txn *transaction.Transaction) currency.Coin {
+				fee, err := c.EstimateTransactionFeeLFB(context.Background(), txn)
+				if err != nil {
+					return defaultGenerateTxnFee
+				}
+
+				return fee
+			})
+
 		_, err = transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
 			logging.Logger.Error("client generator", zap.Error(err))
 		}
 	}
 	if c.ChainConfig.IsFaucetEnabled() {
-		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
+		txn, err := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
 			currency.Coin(viper.GetUint64("development.faucet.refill_amount")),
-			`{"name":"refill","input":{}}`, 0)
-		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn)
+			`{"name":"refill","input":{}}`,
+			func(txn *transaction.Transaction) currency.Coin {
+				fee, err := c.EstimateTransactionFeeLFB(context.Background(), txn)
+				if err != nil {
+					return defaultGenerateTxnFee
+				}
+				return fee
+			})
+		if err != nil {
+			logging.Logger.Error("client generator - faucet refill", zap.Error(err))
+		}
+
+		_, err = transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
 			logging.Logger.Error("client generator - faucet refill", zap.Error(err))
 		}
