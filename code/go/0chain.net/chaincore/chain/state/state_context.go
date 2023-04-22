@@ -268,7 +268,7 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		TxHash:      sc.txn.Hash,
 		Type:        event.TypeStats,
 		Tag:         event.TagAddMint,
-		Index:       sc.txn.ClientID,
+		Index:       m.ToClientID,
 		Data:        m,
 	})
 
